@@ -1,0 +1,27 @@
+# docker-compose.yml: local build of the app (web + worker from the same image).
+services:
+  web:
+    build: .
+    ports:
+      - "3000:8000"
+    environment: &env
+      AUTH_SECRET: dev-only-not-secret
+      APP_URL: http://localhost:3000
+      WEBAUTHN_RP_ID: localhost
+      WEBAUTHN_ORIGIN: http://localhost:3000
+    volumes:
+      - app-data-dev:/app/data
+    restart: unless-stopped
+
+  worker:
+    build: .
+    command: ["worker"]
+    environment: *env
+    volumes:
+      - app-data-dev:/app/data
+    depends_on:
+      - web
+    restart: unless-stopped
+
+volumes:
+  app-data-dev:
