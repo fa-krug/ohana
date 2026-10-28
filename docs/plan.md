@@ -16,13 +16,14 @@ and one installed PWA. The modules know about each other (see
 
 | Topic           | Decision                                                                                                                                                       |
 | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Name / repo     | **Ohana**, repo `fa-krug/ohana`, `ohana.fa-krug.de`                                                                                                            |
+| Name / repo     | **Ohana**, repo `fa-krug/ohana` (the app at the repo root), `ohana.fa-krug.de`                                                                                 |
 | Approach        | A **new app**, taking the best parts of the three; the old apps run on until their data has moved                                                              |
 | Hosting         | **Raspberry Pi**, one Docker image, Traefik on the `gitops_default` network, redeployed by CI through Arcane (GitHub OIDC), like cookless and findmyappointment |
 | Database        | **SQLite** (`better-sqlite3`, WAL) with **Drizzle**; one file under `/app/data`, plus `/app/data/media` for images                                             |
 | Framework       | **Next.js 16** (App Router), React 19, TypeScript, Tailwind 4, Radix / shadcn-style `components/ui`                                                            |
 | Processes       | **web** (Next.js) and **worker** (scheduler, AI turns, notifications): the same image, two entrypoints, so a hanging scrape never blocks the UI                 |
 | Existing data   | **Imported**: users, families, calendars, finances, recipes, meal plans, searches. Accounts merged by email                                                    |
+| Old apps        | Shut down after the import; their domains are **not redirected** but removed. The Supabase project stays **read-only** for a while as an extra backup          |
 | Roles           | **Admin** (manages users) + per family **editor / viewer** (from family-planner). cookless / findmyappointment OWNER and MEMBER both become editor             |
 | Joining         | Admin **setup links** (family-planner) _and_ **invite codes** (cookless)                                                                                       |
 | AI              | Any **OpenAI-compatible** model, per family (family-planner). cookless's Gemini key moves over via Gemini's OpenAI-compatible endpoint                          |
@@ -58,7 +59,7 @@ shapes, so the SPA components and API-token scripts keep working.
 ## Architecture
 
 ```
-ohana/  (the repo root; see Open questions)
+ohana/  (the repo root)
 ├─ app/
 │  ├─ (auth)/            sign-in, setup link, onboarding
 │  ├─ (app)/f/[familyId]/
@@ -96,7 +97,7 @@ UUIDs; money is integer cents; days are ISO `YYYY-MM-DD` text; timestamps are in
 
 | Group        | Tables                                                                                                                                                   |
 | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Accounts     | `users` (email, name, password hash, is_admin, must_change_password, language), `auth_tokens`, `passkeys`, `webauthn_challenges`, `rate_limits`        |
+| Accounts     | `users` (email, name, password hash, is_admin, language, onboarding step, last family), `auth_tokens`, `passkey_credentials`, `rate_limits` (WebAuthn challenges live in a signed cookie) |
 | Families     | `families` (name, feed_id, legacy_id, language, currency, home address + lat/lng, enabled modules), `family_members` (role), `invites`                 |
 | Shared       | `ai_settings` (base URL, model, encrypted keys, search provider, image model), `notification_channels`                                                  |
 | Calendar     | `cal_entry_types` (per year), `cal_entries`, `cal_notes`                                                                                                 |
@@ -113,8 +114,12 @@ UUIDs; money is integer cents; days are ISO `YYYY-MM-DD` text; timestamps are in
   `fma.fa-krug.de`, `family-planner.fa-krug.de`), and Ohana has its own. Everyone adds a passkey
   on first sign-in to Ohana. Accounts without a password (passkey only) get a **setup link** from
   the admin.
-- **First run:** `admin` / `admin` with a forced password change (as all three apps do), unless the
-  import brings users.
+- **First run:** `/setup` creates the first account (password or passkey), which becomes the
+  administrator; it's only open while there are no users (no default `admin` / `admin`). The
+  import brings the existing accounts instead.
+- **Tokens:** sessions, API tokens and setup links are one table, `auth_tokens`, holding only
+  the SHA-256 of each token (as family-planner does), so family-planner's API tokens can be
+  imported as they are.
 
 ## Connections between modules
 
@@ -164,31 +169,33 @@ empty Ohana database. It has a **dry run** that only reports what it would do.
 - `docker-compose.production.yml`: services `web` and `worker` from the same image, one volume
   `/app/data`, Traefik labels for `ohana.fa-krug.de`, network `gitops_default`.
 - Migrations run at boot in `web` (as in cookless); `worker` waits for them.
-- **Backups:** the finances move from Supabase's cloud to the Pi, so a nightly SQLite
-  `.backup` + media sync to off-site storage (e.g. restic to a cloud bucket) is part of the
-  first release, with a documented restore.
-- Environment: `AUTH_SECRET`, `ENCRYPTION_KEY` (AI and channel secrets), `DATABASE_FILE`,
-  `MEDIA_ROOT`, `WEBAUTHN_RP_ID`, `WEBAUTHN_RP_NAME`, `WEBAUTHN_ORIGIN`, `BASE_URL`, `PORT`.
+- **Backups:** the finances move from Supabase's cloud to the Pi, so the worker writes a
+  nightly SQLite backup to `/app/data/backups` (14 kept), and a job on the Pi copies it off-site
+  (e.g. restic to a cloud bucket); the README documents both and the restore.
+- Environment: `AUTH_SECRET`, `APP_URL`, `DATABASE_FILE`, `WEBAUTHN_RP_ID`, `WEBAUTHN_RP_NAME`,
+  `WEBAUTHN_ORIGIN`, `BACKUP_DIR` / `BACKUP_KEEP` / `BACKUP_HOUR`, `PORT`; later `ENCRYPTION_KEY`
+  (AI and channel secrets, phase 3) and `MEDIA_ROOT` (recipe images, phase 4).
 
 ## Phases
 
 | #  | Phase              | Delivers                                                                                                                                   |
 | -- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0  | Foundation         | Repo, Next.js app, schema for accounts + families, auth (passkeys, passwords, tokens, setup links, invites), admin, layout with sidebars, i18n, CI, deploy, backups |
+| 0  | Foundation ✅      | Repo, Next.js app, schema for accounts + families, auth (passkeys, passwords, tokens, setup links, invites), admin, layout with sidebars, i18n, CI, deploy, backups |
 | 1  | Calendar           | Store implementation over Drizzle, year grid + mobile months, types per year, coverage, notes, ICS feed                                    |
 | 2  | Finance            | Transactions, accounts, category tree, transfers, splits, CSV import, overview, comparison, benchmark                                      |
 | 3  | Assistant          | Chats in the worker, calendar + finance tools, web search, analytics, calc, auto-categorize                                                |
 | 4  | Meals              | Recipes, meal plan, shopping list, cook view, offline queue, recipe generation; assistant tools for meals                                  |
 | 5  | Appointments       | Doctolib + jameda searches, worker scheduling, slot detail, notification channels; assistant tools for appointments                        |
-| 6  | Import + cut-over  | `import-legacy.ts` with dry run, a rehearsal on a copy, then the real import; old domains redirect to Ohana; old repos archived            |
+| 6  | Import + cut-over  | `import-legacy.ts` with dry run, a rehearsal on a copy, then the real import; old apps shut down, Supabase set read-only, old repos archived |
 | 7  | Connections        | The cross-module features above                                                                                                           |
 
 Each phase ends deployed and usable. The old apps stay live until phase 6, so nothing is lost
 while Ohana grows.
 
-## Open questions
+## Decided
 
-- Should the repo hold the app at the root, or under `web/` like cookless? (Proposed: root, since
-  there's only one app.)
-- Should the old domains redirect to Ohana for good, or be removed after a few months?
-- Is the Supabase project deleted after the import, or kept read-only as an extra backup for a while?
+- The app lives at the repo root (no `web/`).
+- The old domains are not redirected to Ohana; they go away with the old apps. (The calendar
+  feed redirect above is the one exception, so iCloud subscriptions survive; drop it if the
+  feeds should be re-subscribed instead.)
+- After the import, the Supabase project is kept read-only for a while as an extra backup.
