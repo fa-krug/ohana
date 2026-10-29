@@ -4,6 +4,7 @@ import { getI18n } from "@/lib/i18n/server";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
 import { MODULES } from "@/components/shell/modules";
+import { MealsOverviewCard } from "@/components/meals/meals-overview-card";
 
 export default async function FamilyOverviewPage({ params }: { params: Promise<{ familyId: string }> }) {
   const { familyId } = await params;
@@ -30,6 +31,9 @@ export default async function FamilyOverviewPage({ params }: { params: Promise<{
             </Card>
           </Link>
         ))}
+      </div>
+      <div className="mt-6 grid gap-4">
+        <MealsOverviewCard familyId={familyId} />
       </div>
     </>
   );

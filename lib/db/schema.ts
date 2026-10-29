@@ -114,3 +114,7 @@ export const invites = sqliteTable(
   },
   (t) => ({ invitesCodeIdx: uniqueIndex("invites_code_idx").on(t.code) }),
 );
+
+// ---- modules ----
+
+export * from "./schema/meals";

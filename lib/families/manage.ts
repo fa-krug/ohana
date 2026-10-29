@@ -3,6 +3,7 @@ import { asc, eq, sql } from "drizzle-orm";
 import type { Db } from "@/lib/db";
 import { families, familyMembers, users } from "@/lib/db/schema";
 import { AuthError } from "@/lib/auth/errors";
+import { seedDefaultTags } from "@/lib/meals/recipes/tags";
 import { type Actor, type Role, isRole, requireRole } from "./roles";
 
 export type Family = typeof families.$inferSelect;
@@ -30,6 +31,7 @@ export function createFamily(db: Db, args: { name: string; editorId?: string }, 
       .values({ id: randomUUID(), name, createdAt: now, updatedAt: now })
       .returning()
       .get();
+    seedDefaultTags(tx as unknown as Db, family.id); // the meal tags every family starts with
     if (args.editorId) {
       tx.insert(familyMembers)
         .values({ familyId: family.id, userId: args.editorId, role: "editor", joinedAt: now })

@@ -2,7 +2,8 @@
 # migrations and serves Next.js; `docker-entrypoint.sh worker` runs the background worker.
 FROM node:22-bookworm-slim AS deps
 WORKDIR /app
-# Build tools for native modules (better-sqlite3, argon2).
+# Build tools for native modules (better-sqlite3, argon2). sharp needs none: npm installs
+# its prebuilt binary for the build platform (@img/sharp-linux-x64 / -arm64, glibc).
 RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ \
     && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json* ./
@@ -40,8 +41,10 @@ COPY --from=build /app/drizzle ./drizzle
 COPY --from=build /app/tsconfig.json ./tsconfig.json
 COPY --from=build /app/package.json ./package.json
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
-RUN chmod +x ./docker-entrypoint.sh && mkdir -p /app/data
+RUN chmod +x ./docker-entrypoint.sh && mkdir -p /app/data/media
 ENV DATABASE_FILE=/app/data/ohana.db
+# Recipe images, inside the data volume.
+ENV MEDIA_ROOT=/app/data/media
 ENV PORT=8000
 # Next.js standalone server.js binds to $HOSTNAME; Docker auto-sets HOSTNAME to the
 # container ID, so force 0.0.0.0 or loopback (healthcheck) can't reach it.

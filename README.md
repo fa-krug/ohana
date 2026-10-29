@@ -16,7 +16,7 @@ there already.
   account: the link creates one and joins the family as editor or viewer; 7 days, once).
   A family always keeps an editor; the last member deletes it instead of leaving.
 - **Modules:** Calendar, Finance, Meals and Appointments are in the sidebar and on the
-  overview, marked *coming soon* until their phase is done. The right sidebar (✨,
+  overview; the ones not built yet are marked *coming soon*. The right sidebar (✨,
   `Ctrl/⌘+J`) is where the assistant will live.
 - **Account:** name, email (confirmed with the password or a passkey), language (English /
   German), passkeys (add one per device, rename, delete), the password (set, change, or
@@ -27,6 +27,27 @@ there already.
   link also helps with a forgotten password. *Families* creates, renames and deletes families
   and decides who is a member with which role. Being an admin doesn't open a family: admins
   add themselves as members for that.
+- **Meals** (phase 4, from cookless), with tabs *Recipes*, *Plan*, *Shopping* and *Tags*:
+  - **Recipes** in two lists, *Favourites* and *Want to try*: search, sort, filter by tags,
+    infinite scroll. A recipe has servings, prep/cooking time, ingredients (from a shared
+    German/English ingredient list; unknown ones are added), steps by hand and for a kitchen
+    machine (programs with temperature, time, speed, direction; drag to reorder; ingredients
+    per step), tags and a **photo** (uploaded, scaled to WebP). Share a recipe as text or
+    **PDF** for any number of portions; delete with *undo*.
+  - **Cook view:** one step at a time (swipe on phones), servings scale the amounts, the
+    screen stays on, progress is remembered.
+  - **Meal plan:** iterations of 1–3 weeks, a lunch per day picked from favourites and
+    want-to-try recipes (a ratio you choose) so that recipes share ingredients, leftovers for
+    the next days, tags to leave out, *refresh* and *next iteration*.
+  - **Shopping lists** per shopping day (one or two per week), summed and converted units,
+    grouped by aisle. Ticking items works **offline**: changes wait on the phone and are sent
+    when it's back online (the meals pages are cached by a service worker).
+  - **Tags** per family (dietary, protein, cuisine, meal type), with defaults.
+  - Viewers see everything and can cook, but change nothing. The family overview shows
+    today's meal and what's left on the shopping list. The REST API (session or API token)
+    has `GET /api/v1/families/{id}/recipes`, `GET /api/v1/families/{id}/recipes/{recipeId}`
+    and `POST /api/v1/families/{id}/shopping/toggle`.
+  - Not yet: generating recipes and photos with AI (follows after the assistant).
 - Password sign-in is **rate limited** (10 failures per name and 15 minutes). Sessions, API
   tokens and setup links are stored only as SHA-256 hashes.
 
@@ -34,7 +55,7 @@ there already.
 
 ```bash
 npm install
-npm run db:migrate   # creates ./data/ohana.db
+npm run db:migrate   # creates ./data/ohana.db and loads the units + ingredients (db:seed)
 npm run dev          # http://localhost:3000
 npm run worker       # the background worker (cleanup, backups), in a second terminal
 npm test             # Vitest
@@ -51,12 +72,14 @@ container: `docker compose exec web ./node_modules/.bin/tsx scripts/setup-link.t
 
 One Docker image, two containers ([`docker-compose.production.yml`](docker-compose.production.yml)):
 
-- **web** applies the database migrations at start, then serves Next.js on port 8000
+- **web** applies the database migrations and the seed data (units, ingredients) at start,
+  then serves Next.js on port 8000
   (Traefik routes `ohana.fa-krug.de` to it, on the external `gitops_default` network).
 - **worker** waits for the migrations, then runs the background jobs: cleanup of expired
   tokens and invites, and the **daily backup**.
 
-Both share the volume `ohana-data` (`/app/data`: the SQLite database and `backups/`).
+Both share the volume `ohana-data` (`/app/data`: the SQLite database, `media/` with the
+recipe photos (`MEDIA_ROOT`) and `backups/`).
 Pushes to `main` run the tests, build the `linux/amd64` + `linux/arm64` image, push
 `sascha384/ohana:latest` to Docker Hub and redeploy the Arcane project `ohana` (GitHub OIDC,
 no deploy secret), then wait for `/api/health`. The repository needs the secrets
@@ -71,4 +94,5 @@ too, e.g. with a nightly `restic` or `rclone` job on the host that reads the vol
 (`docker volume inspect ohana-data` shows its path).
 
 To restore: stop both containers, replace `/app/data/ohana.db` with a backup (and delete
-`ohana.db-wal` / `ohana.db-shm` next to it), start them again.
+`ohana.db-wal` / `ohana.db-shm` next to it), start them again. The backups hold the database
+only: copy `/app/data/media` (recipe photos) off the Pi along with `backups/`.

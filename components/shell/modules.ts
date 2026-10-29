@@ -4,7 +4,7 @@ import { Banknote, CalendarDays, LayoutGrid, Stethoscope, UtensilsCrossed, type 
 export const MODULES: { key: string; icon: LucideIcon; ready: boolean }[] = [
   { key: "calendar", icon: CalendarDays, ready: false },
   { key: "finance", icon: Banknote, ready: false },
-  { key: "meals", icon: UtensilsCrossed, ready: false },
+  { key: "meals", icon: UtensilsCrossed, ready: true },
   { key: "appointments", icon: Stethoscope, ready: false },
 ];
 
