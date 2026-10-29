@@ -145,14 +145,18 @@ npm run import-legacy -- --family-planner dump.sql --cookless cookless.db --cook
   home address. `notify.ts` is the "assistant turn finished" notification (`RunnerEnv.turnEnded`
   from the `ChatRunner`; `chats.seen_at`, set every 15 s by a follower, says someone looks).
   `net.ts` refuses private addresses (`AiEnv.modelNet` may allow them for the endpoint with `AI_ALLOW_PRIVATE_ENDPOINT`). Client: `ChatStore`
-  (`chat-store.ts`) in `AssistantProvider` (the shell, per family), `chat-panel.tsx`,
+  (`chat-store.ts`) in `AssistantProvider` (the shell, per family), `chat-panel.tsx` (`ChatView`:
+  the chat list is a column left of the chat from 42rem of its own width, a container query),
+  `chat-page.tsx` (the page `/f/{id}/assistant`; the shell hides the panel there),
   `ai-settings.tsx` (Settings → AI); changes notify the pages through `events.ts`. Tests use
   `lib/test/assistant.ts` (fake fetch + `lib/test/mock-ai.ts`, a ticking `ChatRunner`);
   `npm run mock-ai` serves the mock for trying it out.
 - **UI:** `components/shell/app-shell.tsx` is the frame (left sidebar with family switcher,
   modules from `components/shell/modules.ts`, account menu; collapsible to an icon rail,
-  `Ctrl/⌘+B`, remembered per device; right assistant panel, `Ctrl/⌘+J`; both are sheets on
-  phones). A module that isn't built yet is served by
+  `Ctrl/⌘+B`, remembered per device; right assistant panel, `Ctrl/⌘+J`, its width dragged
+  at its left edge and remembered per device; both are sheets on phones). The calendar picks
+  the month view by its own width (`watchMonthView` in `grid.ts`, below 880px), not the
+  screen's, so an open sidebar and panel switch it too. A module that isn't built yet is served by
   `app/(app)/f/[familyId]/[module]/page.tsx`; a built one gets its own folder, which wins over
   the dynamic segment; set `ready: true` in `modules.ts` then. Theme: light / dark / system
   per device (Account page; `lib/theme.ts`, `theme-client.ts`), applied by a blocking script

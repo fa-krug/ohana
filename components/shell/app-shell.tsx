@@ -63,6 +63,27 @@ function writeAssistantOpen(open: boolean): void {
   }
 }
 
+const WIDTH_KEY = "ohana.assistantWidth";
+/** The desktop panel's width in px; CSS keeps it below the screen's width minus 35rem. */
+const PANEL = { min: 320, initial: 384, step: 32 };
+
+function readAssistantWidth(): number {
+  try {
+    const n = Number(localStorage.getItem(WIDTH_KEY));
+    return n >= PANEL.min ? n : PANEL.initial;
+  } catch {
+    return PANEL.initial;
+  }
+}
+
+function writeAssistantWidth(width: number): void {
+  try {
+    localStorage.setItem(WIDTH_KEY, String(width));
+  } catch {
+    // Private mode or blocked storage: the width just isn't remembered.
+  }
+}
+
 const SIDEBAR_KEY = "ohana.sidebarCollapsed";
 
 function readSidebarCollapsed(): boolean {
@@ -161,8 +182,10 @@ export function AppShell({
     return () => window.removeEventListener("keydown", onKey);
   }, [toggleAssistant, toggleSidebar]);
 
-  // The year calendar uses the whole width.
-  const wide = /^\/f\/[^/]+\/calendar$/.test(pathname);
+  // The year calendar and the assistant's page use the whole width.
+  const wide = /^\/f\/[^/]+\/(calendar|assistant)$/.test(pathname);
+  // The assistant's own page: no panel beside it.
+  const assistantPage = /^\/f\/[^/]+\/assistant$/.test(pathname);
 
   const nav = <SidebarContent user={user} families={families} family={family} pathname={pathname} />;
 
@@ -204,17 +227,22 @@ export function AppShell({
             <Menu className="size-5" />
           </Button>
           <span className="min-w-0 flex-1 truncate font-semibold">{family?.name ?? "Ohana"}</span>
-          <Button variant="ghost" size="icon" aria-label={t("nav.assistant")} onClick={toggleAssistant}>
-            <Sparkles className="size-5" />
-          </Button>
+          {!assistantPage && (
+            <Button variant="ghost" size="icon" aria-label={t("nav.assistant")} onClick={toggleAssistant}>
+              <Sparkles className="size-5" />
+            </Button>
+          )}
         </header>
         <main className={cn("mx-auto w-full flex-1 px-4 py-6 sm:px-6", wide ? "max-w-none" : "max-w-5xl")}>{children}</main>
       </div>
 
       {/* Right sidebar: desktop rail + panel */}
-      <aside className="sticky top-0 hidden h-dvh shrink-0 border-l bg-sidebar lg:flex" aria-label={t("assistant.title")}>
+      <aside
+        className={cn("sticky top-0 hidden h-dvh shrink-0 border-l bg-sidebar", !assistantPage && "lg:flex")}
+        aria-label={t("assistant.title")}
+      >
         {assistantOpen ? (
-          <div className="flex w-96 flex-col">{assistant}</div>
+          <ResizablePanel>{assistant}</ResizablePanel>
         ) : (
           <button
             type="button"
@@ -235,7 +263,7 @@ export function AppShell({
           {nav}
         </SheetContent>
       </Sheet>
-      <Sheet open={assistantSheet} onOpenChange={setAssistantSheet}>
+      <Sheet open={assistantSheet && !assistantPage} onOpenChange={setAssistantSheet}>
         <SheetContent
           side="right"
           closeLabel={t("common.close")}
@@ -256,6 +284,72 @@ export function AppShell({
     </AssistantProvider>
   ) : (
     frame
+  );
+}
+
+/** The desktop assistant panel, wider or narrower by dragging its left edge (or with the
+ *  arrow keys on it; a double click goes back to the default). Remembered per device. */
+function ResizablePanel({ children }: { children: React.ReactNode }) {
+  const { t } = useT();
+  const [width, setWidth] = useState(PANEL.initial);
+  useEffect(() => setWidth(readAssistantWidth()), []);
+
+  const resize = (w: number) => {
+    const next = Math.round(Math.max(PANEL.min, w));
+    setWidth(next);
+    return next;
+  };
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const handle = e.currentTarget;
+    const panel = handle.parentElement!;
+    const startX = e.clientX;
+    // From the width it shows (CSS may hold it below the stored one).
+    const start = panel.getBoundingClientRect().width;
+    let last = start;
+    handle.setPointerCapture(e.pointerId);
+    const move = (ev: PointerEvent) => {
+      last = resize(start + startX - ev.clientX);
+    };
+    const up = () => {
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", up);
+      handle.removeEventListener("pointercancel", up);
+      // As far as CSS let it go.
+      writeAssistantWidth(resize(Math.min(last, panel.getBoundingClientRect().width)));
+    };
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", up);
+    handle.addEventListener("pointercancel", up);
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const dir = ({ ArrowLeft: 1, ArrowRight: -1 } as Record<string, number>)[e.key];
+    if (!dir) return;
+    e.preventDefault();
+    const shown = e.currentTarget.parentElement!.getBoundingClientRect().width;
+    writeAssistantWidth(resize(shown + dir * PANEL.step));
+  };
+
+  return (
+    <div className="relative flex max-w-[calc(100vw-35rem)] min-w-80 flex-col" style={{ width }}>
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label={t("assistant.resize")}
+        title={t("assistant.resize")}
+        aria-valuenow={width}
+        aria-valuemin={PANEL.min}
+        tabIndex={0}
+        onPointerDown={onPointerDown}
+        onKeyDown={onKeyDown}
+        onDoubleClick={() => writeAssistantWidth(resize(PANEL.initial))}
+        className="absolute inset-y-0 -left-1.5 z-20 w-3 cursor-col-resize touch-none outline-none after:absolute after:inset-y-0 after:left-1/2 after:w-0.5 after:-translate-x-1/2 after:transition-colors hover:after:bg-primary/50 focus-visible:after:bg-primary"
+      />
+      {children}
+    </div>
   );
 }
 
@@ -359,6 +453,7 @@ function SidebarContent({
               ),
             ),
           )}
+          {link(`${base}/assistant`, t("nav.assistant"), Sparkles)}
         </nav>
       )}
 
