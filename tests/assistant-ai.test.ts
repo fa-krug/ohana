@@ -106,6 +106,7 @@ describe("AI settings", () => {
       searchKeyHint: "9876",
       allowWrites: false,
       contextWindow: 0,
+      imageModel: "",
       serverReady: true,
     });
     const row = (await t.store.getAiSettings(t.familyId))!;
@@ -354,7 +355,7 @@ describe("a turn of the assistant", () => {
   });
 
   it("condenses a conversation too long for the context instead of cutting it off", async () => {
-    const t = await configured({}, { contextWindow: 12000 });
+    const t = await configured({}, { contextWindow: 16000 });
     const user = { role: "user", content: "keep looking 40 times" };
     const ev = await chat(t, user.content);
     // It looked 40 times in all: the summary keeps count of the looks it condensed.
@@ -373,7 +374,7 @@ describe("a turn of the assistant", () => {
     expect(next.role).toBe("assistant");
     // The context never got full.
     const usage = ev.filter((e) => e.event === "usage").map((e) => e.data);
-    expect(usage.every((u) => u.max === 12000 && u.used < 12000), JSON.stringify(usage)).toBe(true);
+    expect(usage.every((u) => u.max === 16000 && u.used < 16000), JSON.stringify(usage)).toBe(true);
   });
 
   it("condenses the conversation when the endpoint says the context is full", async () => {

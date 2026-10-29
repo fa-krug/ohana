@@ -54,6 +54,7 @@ export function renewIteration(
   familyId: string,
   iterationId: string,
   rng: Rng = mulberry32((Math.random() * 2 ** 32) >>> 0),
+  opts: { excludedTagIds?: string[] } = {},
 ): void {
   const it = ownedIteration(db, familyId, iterationId);
   // A2: exclude the DATE-PREVIOUS iteration's recipes (Django parity), not this
@@ -70,6 +71,7 @@ export function renewIteration(
     endDate: it.endDate,
     excludeRecipeIds: exclude,
     rng,
+    extraExcludedTagIds: opts.excludedTagIds,
   });
 }
 
@@ -78,6 +80,7 @@ export function generateNextIteration(
   familyId: string,
   now: Date,
   rng: Rng = mulberry32((Math.random() * 2 ** 32) >>> 0),
+  opts: { excludedTagIds?: string[] } = {},
 ): { iterationId: string } {
   const plan = db.select().from(mealPlans).where(eq(mealPlans.familyId, familyId)).get();
   if (!plan) throw new AuthError(404, "No meal plan");
@@ -111,7 +114,15 @@ export function generateNextIteration(
     .run();
 
   const exclude = prev ? previousRecipeIds(db, prev.id) : new Set<string>();
-  populateIteration(db, { plan, iterationId, startDate: start, endDate: end, excludeRecipeIds: exclude, rng });
+  populateIteration(db, {
+    plan,
+    iterationId,
+    startDate: start,
+    endDate: end,
+    excludeRecipeIds: exclude,
+    rng,
+    extraExcludedTagIds: opts.excludedTagIds,
+  });
 
   return { iterationId };
 }

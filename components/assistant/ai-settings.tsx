@@ -58,6 +58,7 @@ export function AiSettingsSection({ familyId, readOnly }: { familyId: string; re
   const [baseUrl, setBaseUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [model, setModel] = useState("");
+  const [imageModel, setImageModel] = useState("");
   // Tokens as typed; "" finds the window out.
   const [contextWindow, setContextWindow] = useState("");
   const [models, setModels] = useState<string[] | null>(null);
@@ -70,6 +71,7 @@ export function AiSettingsSection({ familyId, readOnly }: { familyId: string; re
     setSettings(s);
     setBaseUrl(s.baseUrl ?? "");
     setModel(s.model);
+    setImageModel(s.imageModel ?? "");
     setContextWindow(s.contextWindow ? String(s.contextWindow) : "");
     setSearchProvider(s.searchProvider ?? "none");
     setApiKey("");
@@ -101,6 +103,7 @@ export function AiSettingsSection({ familyId, readOnly }: { familyId: string; re
         model,
         contextWindow: Number(contextWindow) || 0,
         searchProvider,
+        imageModel,
         ...patch,
       };
       if (apiKey) body.apiKey = apiKey;
@@ -143,6 +146,7 @@ export function AiSettingsSection({ familyId, readOnly }: { familyId: string; re
     model !== settings.model ||
     (Number(contextWindow) || 0) !== (settings.contextWindow ?? 0) ||
     !!apiKey ||
+    imageModel !== (settings.imageModel ?? "") ||
     searchProvider !== (settings.searchProvider ?? "none") ||
     !!searchKey;
 
@@ -255,6 +259,29 @@ export function AiSettingsSection({ familyId, readOnly }: { familyId: string; re
             </span>
           )}
         </div>
+      </SettingsCard>
+
+      <SettingsCard title={t("aiSettings.photos")} description={t("aiSettings.photosHelp")}>
+        <Field id="ai-image-model" label={t("aiSettings.imageModel")} help={t("aiSettings.imageModelHelp")}>
+          <Input
+            id="ai-image-model"
+            value={imageModel}
+            list={models?.length ? "ai-image-models" : undefined}
+            placeholder="gpt-image-1"
+            spellCheck={false}
+            onChange={(e) => setImageModel(e.target.value)}
+          />
+          {models?.length ? (
+            <datalist id="ai-image-models">
+              {models.map((m) => (
+                <option key={m} value={m} />
+              ))}
+            </datalist>
+          ) : null}
+        </Field>
+        <Button className="justify-self-start" disabled={!!busy || !dirty} onClick={() => save()}>
+          {t("common.save")}
+        </Button>
       </SettingsCard>
 
       <SettingsCard title={t("aiSettings.search")} description={t("aiSettings.searchHelp")}>

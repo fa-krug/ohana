@@ -88,6 +88,8 @@ interface RecipeDetailProps {
   /** `/f/<familyId>/meals` */
   base: string;
   canEdit: boolean;
+  /** The family has an image model (Settings → AI): offer an AI photo. */
+  canGeneratePhoto?: boolean;
 }
 
 export function RecipeDetail({
@@ -98,6 +100,7 @@ export function RecipeDetail({
   t,
   base,
   canEdit,
+  canGeneratePhoto = false,
 }: RecipeDetailProps): JSX.Element {
   const imageUrl = recipeImageUrl(recipe.image);
 
@@ -132,7 +135,7 @@ export function RecipeDetail({
       )}
 
       {/* Image actions */}
-      {canEdit && <RecipeImageActions recipeId={recipe.id} hasImage={imageUrl !== null} />}
+      {canEdit && <RecipeImageActions recipeId={recipe.id} hasImage={imageUrl !== null} canGenerate={canGeneratePhoto} />}
 
       {/* Title */}
       <h1 className="text-3xl font-bold">{recipe.title}</h1>

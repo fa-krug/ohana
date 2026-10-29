@@ -1,7 +1,9 @@
+import { randomUUID } from "node:crypto";
 import { and, eq, inArray } from "drizzle-orm";
 import type { Db } from "@/lib/db";
 import { AuthError } from "@/lib/auth/errors";
 import { shoppingListItems, shoppingLists, planIterations, mealPlans } from "@/lib/db/schema";
+import { Decimal, quantize2 } from "@/lib/meals/domain/decimal";
 
 /** Returns the set of item ids (from `candidateIds`) that belong to `familyId`. */
 function ownedItemIds(db: Db, familyId: string, candidateIds: string[]): Set<string> {
@@ -47,4 +49,84 @@ export function setShoppingItemsChecked(
     .where(inArray(shoppingListItems.id, owned))
     .run();
   return owned.length;
+}
+
+/** The list, if it belongs to the family (via its plan); else a 404. */
+function ownedList(db: Db, familyId: string, listId: string): void {
+  const row = db
+    .select({ id: shoppingLists.id })
+    .from(shoppingLists)
+    .innerJoin(planIterations, eq(shoppingLists.iterationId, planIterations.id))
+    .innerJoin(mealPlans, eq(planIterations.mealPlanId, mealPlans.id))
+    .where(and(eq(shoppingLists.id, listId), eq(mealPlans.familyId, familyId)))
+    .get();
+  if (!row) throw new AuthError(404, "Shopping list not found");
+}
+
+/**
+ * Adds an item to one of the family's shopping lists. An unticked item of the same ingredient
+ * and unit gets the quantity added instead (`merged`, with the quantity it had before).
+ */
+export function addShoppingItem(
+  db: Db,
+  familyId: string,
+  listId: string,
+  input: { ingredientId: number; unitId: number; quantity: string },
+): { id: string; merged: boolean; previousQuantity: string | null } {
+  ownedList(db, familyId, listId);
+  let quantity: Decimal;
+  try {
+    quantity = new Decimal(input.quantity);
+  } catch {
+    throw new AuthError(422, "The quantity must be a number");
+  }
+  if (!quantity.isFinite() || quantity.lte(0)) throw new AuthError(422, "The quantity must be more than 0");
+  const same = db
+    .select()
+    .from(shoppingListItems)
+    .where(
+      and(
+        eq(shoppingListItems.shoppingListId, listId),
+        eq(shoppingListItems.ingredientId, input.ingredientId),
+        eq(shoppingListItems.unitId, input.unitId),
+        eq(shoppingListItems.isChecked, false),
+      ),
+    )
+    .get();
+  if (same) {
+    const sum = quantize2(new Decimal(same.quantity).plus(quantity)).toString();
+    db.update(shoppingListItems).set({ quantity: sum }).where(eq(shoppingListItems.id, same.id)).run();
+    return { id: same.id, merged: true, previousQuantity: same.quantity };
+  }
+  const id = randomUUID();
+  db.insert(shoppingListItems)
+    .values({
+      id,
+      shoppingListId: listId,
+      ingredientId: input.ingredientId,
+      unitId: input.unitId,
+      quantity: quantize2(quantity).toString(),
+      isChecked: false,
+    })
+    .run();
+  return { id, merged: false, previousQuantity: null };
+}
+
+/** Sets an item's quantity (the undo of a merged add). */
+export function setShoppingItemQuantity(db: Db, familyId: string, itemId: string, quantity: string): void {
+  if (!ownedItemIds(db, familyId, [itemId]).has(itemId)) throw new AuthError(404, "Item not found");
+  let q: Decimal;
+  try {
+    q = new Decimal(quantity);
+  } catch {
+    throw new AuthError(422, "The quantity must be a number");
+  }
+  if (!q.isFinite() || q.lte(0)) throw new AuthError(422, "The quantity must be more than 0");
+  db.update(shoppingListItems).set({ quantity: q.toString() }).where(eq(shoppingListItems.id, itemId)).run();
+}
+
+/** Deletes one of the family's shopping-list items. */
+export function deleteShoppingItem(db: Db, familyId: string, itemId: string): void {
+  if (!ownedItemIds(db, familyId, [itemId]).has(itemId)) throw new AuthError(404, "Item not found");
+  db.delete(shoppingListItems).where(eq(shoppingListItems.id, itemId)).run();
 }

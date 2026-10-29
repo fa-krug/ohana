@@ -1,19 +1,27 @@
 // The assistant's tool registry: every module's tools in one list. A module adds its own file
 // (e.g. meals.ts) exporting `Record<string, Tool>` and spreads it into TOOLS.
 
+import { ZodError } from "zod";
 import { HttpError, objectOf } from "@/lib/api/http";
+import { AuthError } from "@/lib/auth/errors";
 import type { ToolSpec } from "../provider";
 import { calendarTools } from "./calendar";
 import { NeedsConfirmation, type Tool, type ToolContext, type ToolResult } from "./common";
 import { financeTools } from "./finance";
+import { appointmentTools } from "./appointments";
+import { eventTools } from "./events";
 import { generalTools } from "./general";
+import { mealTools } from "./meals";
 import { webTools } from "./web";
 
 export * from "./common";
 
 export const TOOLS: Record<string, Tool> = {
   ...calendarTools,
+  ...eventTools,
   ...financeTools,
+  ...mealTools,
+  ...appointmentTools,
   ...generalTools,
   ...webTools,
 };
@@ -50,10 +58,15 @@ export async function runTool(
   try {
     return { ok: true, ...(await tool.run(args, ctx)) };
   } catch (err) {
-    const message = err instanceof HttpError || err instanceof NeedsConfirmation
-      ? err.message
-      : "The tool failed";
-    if (!(err instanceof HttpError || err instanceof NeedsConfirmation)) console.error(err);
+    // The modules' own errors (AuthError of lib/meals and lib/appointments, zod's) are the
+    // model's to read too.
+    const known = err instanceof HttpError || err instanceof NeedsConfirmation || err instanceof AuthError;
+    const message = known
+      ? (err as Error).message
+      : err instanceof ZodError
+        ? `${err.issues[0]?.path.join(".") || "input"}: ${err.issues[0]?.message ?? "invalid"}`
+        : "The tool failed";
+    if (!known && !(err instanceof ZodError)) console.error(err);
     return {
       ok: false,
       result: {

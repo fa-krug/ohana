@@ -414,9 +414,11 @@ function SetupHint({ canEdit, familyId }: { canEdit: boolean; familyId: string }
 
 /** Examples for a new chat, fitting the page it starts on. */
 const EXAMPLES: Record<string, string[]> = {
-  overview: ["assistant.example.gaps", "assistant.example.spending"],
+  overview: ["assistant.example.gaps", "assistant.example.planWithout"],
   calendar: ["assistant.example.gaps", "assistant.example.holidays"],
   finance: ["assistant.example.spending", "assistant.example.uncategorized"],
+  meals: ["assistant.example.planWithout", "assistant.example.shopping"],
+  appointments: ["assistant.example.dermatologist", "assistant.example.earliest"],
   settings: ["assistant.example.types", "assistant.example.categories"],
 };
 

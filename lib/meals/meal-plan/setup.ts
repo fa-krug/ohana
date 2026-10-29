@@ -95,6 +95,9 @@ export function populateIteration(
     endDate: string;
     excludeRecipeIds: Set<string>;
     rng: Rng;
+    /** Tags left out of this iteration only, on top of the plan's (e.g. "next week without
+     *  fish" from the assistant). */
+    extraExcludedTagIds?: string[];
   },
 ): void {
   const { plan, iterationId, startDate, endDate, excludeRecipeIds, rng } = args;
@@ -109,6 +112,7 @@ export function populateIteration(
     .where(eq(mealPlanExcludedTags.mealPlanId, plan.id))
     .all()
     .map((r) => r.tagId);
+  for (const id of args.extraExcludedTagIds ?? []) if (!excludedTagIds.includes(id)) excludedTagIds.push(id);
 
   const { known, tryList, all } = loadSelectablePools(db, plan.familyId, excludedTagIds);
 
@@ -134,8 +138,20 @@ export function populateIteration(
   // only when the "others" pool is empty. Excluded tags are intentionally NOT
   // applied here, matching Django.
   const selectedIds = new Set(selected.map((r) => r.id));
-  const others = all.filter((r) => !selectedIds.has(r.id));
-  const fallbackPool = others.length > 0 ? others : all;
+  // Tags left out for this iteration only were asked for explicitly ("without fish"): they
+  // stay out of the gap-fill too (days stay empty rather than break the request).
+  const hardOut = args.extraExcludedTagIds?.length
+    ? new Set(
+        db
+          .select({ recipeId: recipeTags.recipeId })
+          .from(recipeTags)
+          .where(inArray(recipeTags.tagId, args.extraExcludedTagIds))
+          .all()
+          .map((r) => r.recipeId),
+      )
+    : null;
+  const others = all.filter((r) => !selectedIds.has(r.id) && !hardOut?.has(r.id));
+  const fallbackPool = others.length > 0 ? others : all.filter((r) => !hardOut?.has(r.id));
   const fallbackRecipes: ScheduleRecipe[] = fallbackPool.map((r) => ({
     id: r.id,
     leftoverDays: r.leftoverDays,

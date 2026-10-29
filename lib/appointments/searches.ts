@@ -162,3 +162,31 @@ export function channelIdsForSearch(db: Db, searchId: string): string[] {
     .all()
     .map((r) => r.channelId);
 }
+
+/** A stored search as the input that saves it again (the assistant's undo of a change). */
+export function searchInputOf(db: Db, s: SearchRow): SearchInput {
+  return {
+    name: s.name,
+    sources: s.sources as SearchInput["sources"],
+    specialitySlug: s.specialitySlug,
+    specialityLabel: s.specialityLabel,
+    jamedaSpecialitySlug: s.jamedaSpecialitySlug,
+    jamedaSpecialityLabel: s.jamedaSpecialityLabel,
+    jamedaSpecialityType: s.jamedaSpecialityType as SearchInput["jamedaSpecialityType"],
+    jamedaInsuranceType: s.jamedaInsuranceType as SearchInput["jamedaInsuranceType"],
+    jamedaKidsFriendly: s.jamedaKidsFriendly,
+    jamedaVideo: s.jamedaVideo as SearchInput["jamedaVideo"],
+    latitude: s.latitude,
+    longitude: s.longitude,
+    locationLabel: s.locationLabel,
+    insuranceSector: s.insuranceSector as SearchInput["insuranceSector"],
+    dayLimit: s.dayLimit,
+    maxPages: s.maxPages,
+    enabled: s.enabled,
+    scheduleType: s.scheduleType as SearchInput["scheduleType"],
+    scheduleMinutes: s.scheduleMinutes,
+    cron: s.cron,
+    notifyOnlyEarlier: s.notifyOnlyEarlier,
+    channelIds: channelIdsForSearch(db, s.id),
+  };
+}
