@@ -10,6 +10,8 @@ x-env: &env
   WEBAUTHN_RP_NAME: Ohana
   WEBAUTHN_ORIGIN: https://${OHANA_DOMAIN:-ohana.fa-krug.de}
   BACKUP_KEEP: ${BACKUP_KEEP:-14}
+  # Optional: allow the family's AI endpoint on the home network (e.g. Ollama).
+  AI_ALLOW_PRIVATE_ENDPOINT: ${AI_ALLOW_PRIVATE_ENDPOINT:-}
   TZ: ${TZ:-Europe/Berlin}
   # DATABASE_FILE=/app/data/ohana.db, BACKUP_DIR=/app/data/backups and
   # MEDIA_ROOT=/app/data/media (recipe images) are image defaults, all in the ohana-data volume.

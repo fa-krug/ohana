@@ -17,6 +17,8 @@ import {
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useT } from "@/lib/i18n/provider";
 import { logoutAction } from "@/app/actions/auth";
+import { AssistantProvider } from "@/components/assistant/context";
+import { ChatView } from "@/components/assistant/chat-panel";
 import { MODULES, OVERVIEW_ICON } from "./modules";
 
 export interface ShellFamily {
@@ -101,7 +103,18 @@ export function AppShell({
 
   const nav = <SidebarContent user={user} families={families} family={family} pathname={pathname} />;
 
-  return (
+  const closeAssistant = () => {
+    setAssistantSheet(false);
+    setAssistantOpen(false);
+    writeAssistantOpen(false);
+  };
+  const assistant = family ? (
+    <ChatView onClose={closeAssistant} />
+  ) : (
+    <AssistantPlaceholder onClose={closeAssistant} />
+  );
+
+  const frame = (
     <div className="flex min-h-dvh bg-background">
       {/* Left sidebar: desktop */}
       <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground md:flex">
@@ -123,19 +136,9 @@ export function AppShell({
       </div>
 
       {/* Right sidebar: desktop rail + panel */}
-      <aside className="sticky top-0 hidden h-dvh shrink-0 border-l bg-sidebar lg:flex">
+      <aside className="sticky top-0 hidden h-dvh shrink-0 border-l bg-sidebar lg:flex" aria-label={t("assistant.title")}>
         {assistantOpen ? (
-          <div className="flex w-96 flex-col">
-            <div className="flex items-center justify-between border-b px-4 py-3">
-              <span className="flex items-center gap-2 font-semibold">
-                <Sparkles className="size-4 text-primary" /> {t("assistant.title")}
-              </span>
-              <Button variant="ghost" size="icon" aria-label={t("common.close")} onClick={toggleAssistant}>
-                <span aria-hidden>×</span>
-              </Button>
-            </div>
-            <AssistantPlaceholder />
-          </div>
+          <div className="flex w-96 flex-col">{assistant}</div>
         ) : (
           <button
             type="button"
@@ -157,23 +160,46 @@ export function AppShell({
         </SheetContent>
       </Sheet>
       <Sheet open={assistantSheet} onOpenChange={setAssistantSheet}>
-        <SheetContent side="right" closeLabel={t("common.close")}>
-          <SheetTitle className="flex items-center gap-2 border-b px-4 py-3 font-semibold">
-            <Sparkles className="size-4 text-primary" /> {t("assistant.title")}
-          </SheetTitle>
-          <AssistantPlaceholder />
+        <SheetContent
+          side="right"
+          closeLabel={t("common.close")}
+          className="w-full max-w-none pt-0 sm:max-w-md [&>button:last-child]:hidden"
+          aria-describedby={undefined}
+        >
+          <SheetTitle className="sr-only">{t("assistant.title")}</SheetTitle>
+          {assistant}
         </SheetContent>
       </Sheet>
     </div>
   );
+
+  // One chat store per family (the panel keeps its chat while it is closed and reopened).
+  return family ? (
+    <AssistantProvider key={family.id} familyId={family.id}>
+      {frame}
+    </AssistantProvider>
+  ) : (
+    frame
+  );
 }
 
-function AssistantPlaceholder() {
+/** Outside a family (no family yet): the assistant needs one. */
+function AssistantPlaceholder({ onClose }: { onClose: () => void }) {
   const { t } = useT();
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
-      <Sparkles className="size-8 text-primary" />
-      <p className="text-sm text-muted-foreground">{t("assistant.soon")}</p>
+    <div className="flex h-full flex-col">
+      <div className="flex h-14 items-center justify-between border-b px-3">
+        <span className="flex items-center gap-2 font-semibold">
+          <Sparkles className="size-4 text-primary" /> {t("assistant.title")}
+        </span>
+        <Button variant="ghost" size="icon" aria-label={t("common.close")} onClick={onClose}>
+          <span aria-hidden>×</span>
+        </Button>
+      </div>
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+        <Sparkles className="size-8 text-primary" />
+        <p className="text-sm text-muted-foreground">{t("assistant.noFamily")}</p>
+      </div>
     </div>
   );
 }

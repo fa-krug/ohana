@@ -4,13 +4,18 @@ import { handleFamily } from "@/lib/calendar/family-routes";
 import { handleCalendar } from "@/lib/calendar/vacation";
 import { handleEvents } from "@/lib/calendar/events";
 import { handleFinance } from "@/lib/finance/finance";
+import { defaultAiEnv, handleAi } from "@/lib/assistant/routes";
 
 export const dynamic = "force-dynamic";
 
 // family-planner's API under /api/v1/families/{id}/...: the family with its calendar, types,
 // entries, notes, export / import, the public calendar.ics feed (by feed id), and the finances
-// (/finance/...), and the timed events (/events, phase 7). Later modules add their route functions to this list.
-const handler = createFamilyApi([handleFamily, handleCalendar, handleEvents, handleFinance], { db });
+// (/finance/...), the timed events (/events, phase 7) and the assistant (/ai/..., /agent).
+// Later modules add their route functions to this list.
+const handler = createFamilyApi(
+  [handleFamily, handleCalendar, handleEvents, handleFinance, handleAi(defaultAiEnv(db))],
+  { db },
+);
 
 export const GET = handler;
 export const POST = handler;

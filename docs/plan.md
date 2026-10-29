@@ -183,7 +183,7 @@ empty Ohana database. It has a **dry run** that only reports what it would do.
 | 0  | Foundation ✅      | Repo, Next.js app, schema for accounts + families, auth (passkeys, passwords, tokens, setup links, invites), admin, layout with sidebars, i18n, CI, deploy, backups |
 | 1  | Calendar ✅        | Store implementation over Drizzle, year grid + mobile months, types per year, coverage, notes, ICS feed                                    |
 | 2  | Finance ✅         | Transactions, accounts, category tree, transfers, splits, CSV import, overview, comparison, benchmark                                      |
-| 3  | Assistant          | Chats in the worker, calendar + finance tools, web search, analytics, calc, auto-categorize                                                |
+| 3  | Assistant ✅ (part A) | Chats in the worker, calendar + finance tools, web search, analytics, calc, auto-categorize ✅ — part B: tools for meals and appointments, recipe generation and photos, import of the AI data |
 | 4  | Meals ✅           | Recipes, meal plan, shopping list, cook view, offline queue ✅ — recipe generation and assistant tools for meals follow after the assistant (phase 3) |
 | 5  | Appointments ✅    | Doctolib + jameda searches, worker scheduling, slot detail, notification channels; assistant tools for appointments                        |
 | 6  | Import + cut-over  | `import-legacy.ts` with dry run, a rehearsal on a copy, then the real import; old apps shut down, Supabase set read-only, old repos archived |
@@ -311,6 +311,52 @@ while Ohana grows.
   Supabase store broke ties by id).
 - The import's review step also lists the rows, with those imported before struck through.
   The family overview has a finance card (this month in / out, where most went, balance).
+
+### Phase 3 notes (the assistant, part A; deviations)
+
+- **Code:** `lib/assistant/` — `store.ts` (the AI part of family-planner's `Store` over
+  Drizzle: `ai_settings`, `chats`, `chat_items`, `chat_messages`; `ctx.assistant`),
+  `routes.ts` (`handleAi`: settings, models, test, categorize, `/agent`; `prepareTurn`),
+  `chat-routes.ts` (the chat routes, following a chat from the database), `chats.ts` (the
+  `Runner` of a turn), `runner.ts` (the worker's `ChatRunner`), `chat.ts` (system prompt,
+  `runChat`), `provider.ts`, `net.ts`, `context.ts`, `analytics.ts`, `calc.ts`,
+  `categorize.ts`, `agent.ts`, and the tools by module in `tools/` (`calendar.ts`,
+  `finance.ts`, `general.ts`, `web.ts`; part B adds `meals.ts` and `appointments.ts` to the
+  registry in `tools/index.ts`). UI in `components/assistant/`.
+- **Turns run in the worker only.** Posting a message saves it and leaves the chat *running*
+  without a holder (`run_token` null); the worker looks every second (`ASSISTANT_TICK_MS`) for
+  such chats, for idle chats with queued messages and for running chats whose lease ran out,
+  claims each (`claimChat`) and runs it without awaiting (`ASSISTANT_MAX_CONCURRENT`, 4). The
+  lease (renewed every 5 s) stays: a worker that dies leaves the turn to the next one, which
+  repairs it as family-planner did (counted as a failed try). Stop and delete are noticed on
+  the next tick. family-planner's hand-off between Edge Function invocations
+  (`POST …/resume`, `handOffMs`, `deadlineMs`) is gone: the worker passes no time limit (a
+  model call still times out after 2 minutes).
+- **Following a chat** keeps family-planner's event stream (`GET …/events?since=rev`), now
+  read from the database every 0.5 s; streaming text is saved every 0.5 s, so it arrives in
+  pieces instead of token by token (there are no `delta` events any more).
+- `POST /ai/chat` (a turn of a chat the caller keeps, run in the request) is not ported: the
+  web process never runs a turn. Its tests run `runChat` directly. `POST /ai/models`,
+  `/ai/test` and `/ai/categorize` still call the model in the request (short; with timeouts).
+- **Viewers** chat too (family-planner's assistant was for editors only): their turns get only
+  the tools that read, and the instructions say why. `GET /ai/settings` tells viewers only
+  whether the assistant is set up. Settings, models, test and categorize need an editor.
+- **Pages** are Ohana's (`overview`, `calendar`, `finance`, `meals`, `appointments`,
+  `settings`); family-planner's `vacation` is read as `calendar`. For meals and appointments
+  the instructions say that the tools come later.
+- **Private networks:** the family's AI endpoint may be on one when `AI_ALLOW_PRIVATE_ENDPOINT`
+  is set (family-planner allowed that only in development); pages and search never.
+- The keys are sealed with Ohana's `SecretBox` (`ENCRYPTION_KEY`, else derived from
+  `AUTH_SECRET`), so `serverReady` is always true. `ai_settings.image_model` is there for the
+  recipe photos (part B). Chat times are milliseconds (`timestamp_ms`).
+- `GET /api/v1/families/{id}/agent` (family-planner's instructions for AI agents) is ported;
+  *Settings → AI* links it. Not ported: moving device-kept chats on first load (the route
+  `POST …/chats/import` is there for the import), rate limits on AI requests (Ohana's API
+  needs an account).
+- After a change of the assistant (or its undo) the calendar and finance pages reload, and
+  server-rendered pages refresh (`components/assistant/events.ts`).
+- The transaction rows switch to their wide layout by the list's own width (a container
+  query), so they keep the payee when the assistant panel is open.
 
 ### Phase 1 notes (deviations)
 
