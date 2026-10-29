@@ -158,9 +158,8 @@ empty Ohana database. It has a **dry run** that only reports what it would do.
   The secrets are decrypted with the old key and encrypted with Ohana's.
 - **Appointments:** searches, channels and ignore list move; run history and results don't
   (disposable, as in findmyappointment's own Django import).
-- **Calendar feeds** keep their `feed_id` / `legacy_id`, so the feed URLs only change their host.
-  The last family-planner release answers its `calendar.ics` route with a **301 redirect** to
-  Ohana, so existing iCloud subscriptions keep working.
+- **Calendar feeds** keep their `feed_id` / `legacy_id`, but their URLs change host with the
+  old apps gone: subscriptions (e.g. in iCloud) are made again from Ohana's feed settings.
 
 ## Deployment
 
@@ -195,7 +194,5 @@ while Ohana grows.
 ## Decided
 
 - The app lives at the repo root (no `web/`).
-- The old domains are not redirected to Ohana; they go away with the old apps. (The calendar
-  feed redirect above is the one exception, so iCloud subscriptions survive; drop it if the
-  feeds should be re-subscribed instead.)
+- Nothing is redirected: the old domains, calendar feeds included, go away with the old apps.
 - After the import, the Supabase project is kept read-only for a while as an extra backup.
