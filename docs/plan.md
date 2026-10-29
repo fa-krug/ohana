@@ -250,6 +250,45 @@ while Ohana grows.
 - Calendar view settings (zoom, always show weekdays, skip weekends) are per device in
   `localStorage`. The settings page got tabs (General, Calendar, Calendar feed).
 
+### Phase 6 notes (the importer, part A)
+
+`scripts/import-legacy.ts` (`npm run import-legacy`, README → "Importing the old apps") is
+built for everything but the finances and the assistant; the rehearsal, the real import and
+the cut-over are still to do.
+
+- **Code:** `lib/import/` — `accounts.ts` merges users / families / members (stage 1), then the
+  `AREAS` list in `index.ts` runs one function per source and area:
+  `family-planner/{accounts,calendar}.ts` (API tokens, calendar), `cookless/{accounts,meals}.ts`
+  (invites, meals and photos, the Gemini key only reported), `fma/{accounts,appointments}.ts`
+  (invites, channels, searches). Finance and the assistant are two more entries there
+  (`family-planner/finance.ts`, `family-planner/assistant.ts`, and cookless's Gemini key →
+  `ai_settings`); until then the dry run lists the family-planner tables it didn't read.
+- **family-planner input:** a `pg_dump --data-only --schema=public` file (no direct
+  connection): pg_dump's default COPY format, or `--column-inserts`; a plain `--inserts` dump
+  has no column names and is refused. Only `public.*` is read (Supabase's `auth.users` is not
+  family-planner's users).
+- **One transaction** (deferred foreign keys, checked before the end); `--dry-run` runs it all
+  and rolls back. Photos are copied inside it and removed again on failure.
+- **Target:** must be migrated; refused when it has accounts or families unless `--force`
+  (an existing account with the same email is then kept as it is and gets the memberships).
+  The families it would create must not exist, so a second run fails cleanly.
+- **Ids:** kept (family-planner's user and family ids, the uuids of cookless and
+  findmyappointment), except integer ones (recipe ingredients, steps, …) and the shared
+  ingredients / units, which are matched by English name / abbreviation or added.
+  `createdAt`s are kept (timestamps are seconds in Ohana, so milliseconds go).
+- **Passwords** carried over only when usable: not family-planner's `must_change_password`
+  ones, not cookless's / findmyappointment's `CHANGE_PASSWORD` ones, not a hash that verifies
+  `admin` or `password` (findmyappointment's Django import gave everyone `password`). Accounts
+  without one get `SET_CREDENTIALS` and are listed for a setup link; the others start at
+  `ADD_PASSKEY`. Language: cookless's, else findmyappointment's.
+- **Defaults:** families from family-planner keep their calendar as it was (no preset types
+  added); the others get the preset types (in findmyappointment's household language, else the
+  first member's). Default meal tags only for families without cookless tags.
+- **Not imported:** sessions, setup links, passkeys, expired / used invites, deactivated
+  accounts, findmyappointment's runs, results and profile cache. Searches keep `next_run_at`,
+  so the worker runs them soon after; without the run history their first run notifies about
+  everything available.
+
 ## Decided
 
 - The app lives at the repo root (no `web/`).
