@@ -36,6 +36,9 @@ export interface TypeRow {
   color: string;
   role: Role;
   position: number;
+  /** The whole family is away from home on its days (the meal plan skips them).
+   *  Optional: family-planner's rows and files have none (false). */
+  away?: boolean;
 }
 
 export interface EntryRow {
@@ -112,6 +115,7 @@ function typeRow(t: typeof calEntryTypes.$inferSelect): TypeRow {
     color: t.color,
     role: isRole(t.role) ? t.role : "none",
     position: t.position,
+    away: t.away,
   };
 }
 
@@ -172,12 +176,13 @@ export class DrizzleCalendarStore implements CalendarStore {
           color: t.color,
           role: t.role,
           position: t.position,
+          away: t.away ?? false,
         };
         tx.insert(calEntryTypes)
           .values(values)
           .onConflictDoUpdate({
             target: [calEntryTypes.familyId, calEntryTypes.year, calEntryTypes.id],
-            set: { name: t.name, color: t.color, role: t.role, position: t.position },
+            set: { name: t.name, color: t.color, role: t.role, position: t.position, away: values.away },
           })
           .run();
       }
@@ -297,6 +302,7 @@ export class DrizzleCalendarStore implements CalendarStore {
               color: t.color,
               role: t.role,
               position: t.position,
+              away: t.away ?? false,
             })),
           )
           .run();

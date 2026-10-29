@@ -14,8 +14,21 @@ import { googleSearchUrl } from "@/lib/appointments/google-search";
 import { ignoreResultAction } from "@/app/actions/appointments";
 import { Pill } from "./status-badge";
 import { formatSlot } from "./format";
+import { BookSlot, type BookingInfo } from "./book-dialog";
 
-export function SlotDetail({ familyId, data, canEdit }: { familyId: string; data: SlotDetailData; canEdit: boolean }) {
+export function SlotDetail({
+  familyId,
+  data,
+  canEdit,
+  booking = null,
+  searchEnabled = false,
+}: {
+  familyId: string;
+  data: SlotDetailData;
+  canEdit: boolean;
+  booking?: BookingInfo | null;
+  searchEnabled?: boolean;
+}) {
   const { t, locale } = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -36,7 +49,7 @@ export function SlotDetail({ familyId, data, canEdit }: { familyId: string; data
     distance = (
       <span className="text-muted-foreground">
         {t("appointments.slot.noHome")}{" "}
-        <Link href={`/f/${familyId}/settings#home-address`} className="text-primary hover:underline">{t("appointments.slot.setHome")}</Link>
+        <Link href={`/f/${familyId}/settings?tab=household#home-address`} className="text-primary hover:underline">{t("appointments.slot.setHome")}</Link>
       </span>
     );
   }
@@ -88,7 +101,10 @@ export function SlotDetail({ familyId, data, canEdit }: { familyId: string; data
             </div>
           ))}
         </dl>
-        <div className="flex flex-col gap-2 sm:flex-row">
+        {booking && (
+          <BookSlot familyId={familyId} searchId={data.searchId} resultId={s.resultId} slot={s.slot} searchEnabled={searchEnabled} booking={booking} canEdit={canEdit} />
+        )}
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           {bookingUrl && (
             <Button asChild className="w-full sm:w-auto">
               <a href={bookingUrl} target="_blank" rel="noopener noreferrer">
@@ -101,6 +117,9 @@ export function SlotDetail({ familyId, data, canEdit }: { familyId: string; data
               <SearchIcon className="size-4" /> {t("appointments.slot.google")}
             </a>
           </Button>
+          {!booking && (
+            <BookSlot familyId={familyId} searchId={data.searchId} resultId={s.resultId} slot={s.slot} searchEnabled={searchEnabled} booking={null} canEdit={canEdit} />
+          )}
           {canEdit && (
             <Button variant="ghost" className="w-full sm:w-auto" onClick={onIgnore} disabled={pending} title={t("appointments.slot.ignoreHint")}>
               <EyeOff className="size-4" /> {t("appointments.slot.ignore")}

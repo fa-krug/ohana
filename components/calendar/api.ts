@@ -24,6 +24,22 @@ export interface FamilyState {
   typeYears?: number[];
   entries: Record<string, string[]>;
   notes?: Record<string, { icon: string; comment: string }>;
+  /** Timed events by day, e.g. booked appointments (phase 7). */
+  events?: Record<string, CalEvent[]>;
+}
+
+export interface CalEvent {
+  id: string;
+  date: string;
+  start: string | null;
+  end: string | null;
+  title: string;
+  location: string;
+  person: string;
+  note: string;
+  url: string;
+  source: "manual" | "appointment";
+  searchId: string | null;
 }
 
 export const api = {

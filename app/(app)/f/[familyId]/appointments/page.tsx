@@ -7,6 +7,8 @@ import { listSearchesWithLatest } from "@/lib/appointments/serialize";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/page-header";
 import { SearchList } from "@/components/appointments/search-list";
+import { BookedList } from "@/components/appointments/booked-list";
+import { listBookedAppointments, publicEvent } from "@/lib/calendar/events";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +26,11 @@ export default async function AppointmentsPage({ params }: { params: Promise<{ f
           </Button>
         )}
       </PageHeader>
+      <BookedList
+        familyId={familyId}
+        canEdit={canEdit}
+        events={listBookedAppointments(db, familyId, new Date().toISOString().slice(0, 10)).map(publicEvent)}
+      />
       <SearchList familyId={familyId} searches={listSearchesWithLatest(db, familyId)} canEdit={canEdit} />
     </>
   );

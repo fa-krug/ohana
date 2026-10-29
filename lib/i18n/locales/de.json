@@ -177,6 +177,30 @@
       "ignore": "Ignorieren",
       "ignoreHint": "Diese Ärztin/diesen Arzt mit diesem Anliegen in dieser Suche ab jetzt überspringen",
       "ignored": "Ignoriert."
+    },
+    "booking": {
+      "mark": "Als gebucht eintragen",
+      "title": "Diesen Termin gebucht?",
+      "hint": "Buche ihn zuerst auf der Seite der Praxis. Ohana zeigt ihn dann im Kalender (und im Kalender-Feed, wenn du ihn mit gebuchten Terminen abonniert hast).",
+      "date": "Datum",
+      "start": "Uhrzeit",
+      "end": "Bis (optional)",
+      "person": "Für wen",
+      "personPlaceholder": "z. B. Mia",
+      "note": "Notiz",
+      "stop": "Diese Suche beenden",
+      "stopHint": "Schaltet die Suche aus; beim Bearbeiten kannst du sie wieder einschalten.",
+      "save": "In den Kalender",
+      "saved": "In den Kalender eingetragen.",
+      "bookedFor": "Gebucht für {{when}}",
+      "inCalendar": "Kalender",
+      "remove": "Entfernen",
+      "removeConfirm": "Diesen Termin aus Ohana entfernen? Bei der Praxis wird er dadurch nicht abgesagt.",
+      "removed": "Termin entfernt."
+    },
+    "booked": {
+      "title": "Gebuchte Termine",
+      "hint": "Termine, die ihr als gebucht eingetragen habt; sie stehen im Kalender."
     }
   },
   "notifications": {
@@ -223,6 +247,30 @@
       "viewAllResults": "Alle Ergebnisse ansehen",
       "nextAvailable": "nächster freier Termin",
       "openInApp": "In Ohana öffnen"
+    },
+    "coverage": {
+      "title_one": "{{count}} Tag ohne Betreuung in den nächsten zwei Wochen",
+      "title_other": "{{count}} Tage ohne Betreuung in den nächsten zwei Wochen",
+      "new": "neu"
+    },
+    "shopping": {
+      "title_one": "Morgen einkaufen: {{count}} Artikel",
+      "title_other": "Morgen einkaufen: {{count}} Artikel",
+      "more": "… und {{count}} weitere"
+    },
+    "events": {
+      "title": "Worüber Ohana dich informiert",
+      "hint": "Welche Neuigkeiten an die Kanäle unten gehen. Jede Nachricht kommt einmal; nichts wiederholt sich täglich.",
+      "appointment_found": "Termin gefunden",
+      "appointment_foundHint": "Wenn eine Suche einen neuen oder früheren Termin findet. Jede Suche wählt ihre Kanäle selbst.",
+      "coverage_gap": "Tag ohne Betreuung",
+      "coverage_gapHint": "Morgens, wenn ein Werktag in den nächsten zwei Wochen Betreuung braucht (z. B. eine Kita-Schließung) und noch niemand übernimmt.",
+      "shopping_reminder": "Einkaufserinnerung",
+      "shopping_reminderHint": "Am Abend vor einem Einkaufstag: was noch auf der Liste steht.",
+      "allChannels": "Alle Kanäle",
+      "noChannels": "Lege zuerst unten einen Kanal an.",
+      "saved": "Gespeichert.",
+      "channelsLabel": "Senden an"
     }
   },
   "homeAddress": {
@@ -239,7 +287,15 @@
     "intro": "Alles, was eure Familie plant, an einem Ort.",
     "noFamilyTitle": "Noch keine Familie",
     "noFamilyText": "Lege eine Familie an, oder bitte jemanden, dich zu seiner hinzuzufügen (mit der E-Mail deines Kontos) oder dir einen Einladungslink zu schicken.",
-    "createFamily": "Familie anlegen"
+    "createFamily": "Familie anlegen",
+    "modules": "Bereiche",
+    "today": "Heute",
+    "open": "Öffnen",
+    "searches": "Terminsuchen",
+    "noSearches": "Noch keine Suchen: Ohana kann Doctolib und jameda für euch beobachten.",
+    "searchNothing": "Noch nichts gefunden",
+    "searchFirst_one": "{{doctor}} und 1 weitere Praxis",
+    "searchFirst_other": "{{doctor}} und {{count}} weitere Praxen"
   },
   "families": {
     "nameLabel": "Name",
@@ -282,7 +338,8 @@
     "tabGeneral": "Allgemein",
     "tabCalendar": "Kalender",
     "tabFeed": "Kalender-Abo",
-    "tabFinance": "Finanzen"
+    "tabFinance": "Finanzen",
+    "tabHousehold": "Haushalt"
   },
   "account": {
     "title": "Konto",
@@ -582,7 +639,10 @@
       "newName": "Neue Art {{n}}",
       "confirmDelete": "„{{name}}“ löschen?",
       "confirmDeleteUsed": "„{{name}}“ löschen? Die Art wird an {{days}} in {{year}} verwendet. Das kann nicht rückgängig gemacht werden.",
-      "readonly": "Nur wer die Familie bearbeiten darf, kann die Arten ändern."
+      "readonly": "Nur wer die Familie bearbeiten darf, kann die Arten ändern.",
+      "away": "Unterwegs",
+      "awayTitle": "Die ganze Familie ist an diesen Tagen nicht zu Hause: Der Essensplan plant für sie keine Mahlzeiten",
+      "helpAway": "<b>Unterwegs</b> (Häkchen, bei jeder Rolle) – die ganze Familie ist nicht zu Hause: Der Essensplan lässt diese Tage aus."
     },
     "note": {
       "title": "Symbol & Notiz",
@@ -666,7 +726,9 @@
       "legacyHelp": "Die Abo-Adresse dieser Familie im Familienplaner. Ihre Termin-IDs bleiben erhalten, damit umgezogene Abos ihre Termine behalten.",
       "legacyRemove": "Entfernen",
       "legacyConfirm": "Den alten Kalender-Link entfernen? Damit angelegte Kalender-Abos werden nicht mehr aktualisiert.",
-      "legacyRemoved": "Alter Link entfernt."
+      "legacyRemoved": "Alter Link entfernt.",
+      "events": "Gebuchte Termine (mit Uhrzeit)",
+      "eventsTitle": "Termine mit Uhrzeit, z. B. gebuchte Arzttermine; sie nennen Arzt und Praxis"
     },
     "overview": {
       "nextGap": "Nächster nicht abgedeckter Tag: {{date}}",
@@ -794,7 +856,8 @@
         "Fr",
         "Sa",
         "So"
-      ]
+      ],
+      "away": "Unterwegs · {{types}}"
     },
     "shopping": {
       "title": "Einkaufsliste",
@@ -956,6 +1019,14 @@
       "noList": "Noch keine Einkaufsliste",
       "allBought": "Alles eingekauft",
       "toBuy": "Noch {{open}} von {{total}} Artikeln zu kaufen"
+    },
+    "spent": {
+      "title": "Ausgegeben",
+      "hint": "{{category}} in euren Finanzen, {{from}} – {{to}}",
+      "noCategory": "Hier zeigt Ohana, was dieser Einkauf gekostet hat – aus der Lebensmittel-Kategorie der Finanzen.",
+      "setCategory": "Lebensmittel-Kategorie wählen",
+      "none": "Noch keine Buchungen.",
+      "openFinance": "Finanzen öffnen"
     }
   },
   "finance": {
@@ -1182,6 +1253,13 @@
       "top": "Das meiste ging an {{name}}",
       "balance": "Auf den Konten: {{amount}}",
       "nothing": "Noch keine Buchungen in diesem Monat."
+    },
+    "shoppingList": "Einkaufsliste dieses Tages",
+    "groceries": {
+      "title": "Lebensmittel",
+      "help": "Die Kategorie eurer Lebensmitteleinkäufe (mit ihren Unterkategorien): Eine Einkaufsliste zeigt, was am Einkaufstag (± 1 Tag) darin ausgegeben wurde, und diese Buchungen verlinken auf die Liste.",
+      "auto": "Automatisch: {{name}}",
+      "autoNone": "Automatisch (eine Kategorie namens Lebensmittel)"
     }
   }
 }

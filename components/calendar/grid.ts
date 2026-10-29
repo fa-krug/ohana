@@ -17,6 +17,7 @@ import {
   roleMap,
   weekday,
 } from "@/lib/calendar/core";
+import type { CalEvent } from "./api";
 import { type Change, type PlannerStore, todayIso } from "./planner-store";
 import { SHOW_WEEKDAYS, subscribeViewPrefs, viewPrefs } from "./view-prefs";
 
@@ -53,6 +54,11 @@ export function fmtDate(
 
 export function noteText(note: Note) {
   return [note.icon, note.comment].filter(Boolean).join(" ");
+}
+
+/** "10:30 Dr. Berg (Mia)": a timed event in one line. */
+export function eventText(e: CalEvent) {
+  return [e.start, e.person ? `${e.title} (${e.person})` : e.title].filter(Boolean).join(" ");
 }
 
 /** Phones show one calendar per month (7 columns) instead of the 12 × 31 year grid. */
@@ -191,9 +197,11 @@ export class GridView {
     icon.className = "note-icon";
     const mark = document.createElement("span");
     mark.className = "note-mark";
+    const event = document.createElement("span");
+    event.className = "event-mark";
     const overlay = document.createElement("div");
     overlay.className = "sel-overlay";
-    cell.append(fills, wd, icon, mark, overlay);
+    cell.append(fills, wd, icon, mark, event, overlay);
     if (isWeekend(date)) cell.classList.add("weekend");
     if (date === this.today) cell.classList.add("today");
     this.cells.set(date, cell);
@@ -283,7 +291,7 @@ export class GridView {
   // ------------------------------------------------------------- rendering
 
   private renderCells() {
-    const { types, entries, notes } = this.store;
+    const { types, entries, notes, events } = this.store;
     const sig = JSON.stringify(types.map((t) => [t.id, t.name, t.color, t.role]));
     if (sig !== this.cellTypesSig) {
       this.cellSigs = new WeakMap();
@@ -295,7 +303,9 @@ export class GridView {
     for (const [date, cell] of this.cells) {
       const ids = (entries.get(date) ?? []).filter((id) => order.has(id)).sort((a, b) => order.get(a)! - order.get(b)!);
       const note = notes.get(date);
-      const key = ids.join(",") + (note ? "|" + note.icon + "|" + note.comment : "");
+      const dayEvents = events.get(date) ?? [];
+      const evText = dayEvents.map(eventText);
+      const key = ids.join(",") + (note ? "|" + note.icon + "|" + note.comment : "") + "|" + evText.join("|");
       if (this.cellSigs.get(cell) === key) continue;
       this.cellSigs.set(cell, key);
       const fills = cell.firstChild as HTMLElement;
@@ -312,11 +322,13 @@ export class GridView {
       cell.classList.toggle("gap", isGap(date, ids, roles));
       cell.querySelector(".note-icon")!.textContent = note?.icon ?? "";
       cell.classList.toggle("has-comment", !!note?.comment);
+      cell.classList.toggle("has-event", dayEvents.length > 0);
       const names = ids.map((id) => byId.get(id)!.name).join(", ");
       cell.title =
         fmtDate(this.store.i18n.locale, date, LONG_DATE) +
         (names ? "\n" + names : "") +
-        (note ? "\n" + noteText(note) : "");
+        (note ? "\n" + noteText(note) : "") +
+        evText.map((x) => "\n🕑 " + x).join("");
     }
   }
 

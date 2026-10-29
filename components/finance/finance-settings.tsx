@@ -26,6 +26,7 @@ import { useT } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils";
 import type { Account, Benchmark, Category, CategoryKind, CentsRange } from "./api";
 import { FinanceProvider, useFinance } from "./context";
+import { CategoryOptions } from "./category-options";
 
 const CURRENCIES = ["EUR", "USD", "GBP", "CHF", "SEK", "NOK", "DKK", "PLN", "CZK", "HUF", "JPY", "CAD", "AUD"];
 const KINDS: CategoryKind[] = ["expense", "income", "both"];
@@ -134,6 +135,7 @@ function FinanceSection() {
           </SelectContent>
         </Select>
       </SettingsCard>
+      <GroceriesCard edit={edit} />
       <SettingsCard title={t("finance.accounts")} description={t("finance.accountsHelp")}>
         {accounts.length === 0 && <p className="text-sm text-muted-foreground">{t("finance.noAccounts")}</p>}
         <div className="space-y-2">
@@ -613,6 +615,39 @@ function RangeInput({
  * stay as they are; a top-level category without its own shows their sum. Saved with the
  * button; without any amount it is removed.
  */
+/** Meals → Finance (phase 7): the category whose transactions a shopping list shows as spent. */
+function GroceriesCard({ edit }: { edit: boolean }) {
+  const finance = useFinance();
+  const { t } = useT();
+  const cats = finance.categories;
+  const configured = finance.overview?.groceriesCategoryId ?? null;
+  // The default, as lib/finance/groceries.ts picks it.
+  const auto = [...cats]
+    .filter((c) => c.id === "groceries" || ["groceries", "lebensmittel"].includes(c.name.trim().toLowerCase()))
+    .sort((a, b) => Number(!!a.parentId) - Number(!!b.parentId))[0];
+  return (
+    <SettingsCard title={t("finance.groceries.title")} description={t("finance.groceries.help")}>
+      <Select
+        value={configured ?? "auto"}
+        disabled={!edit}
+        onValueChange={(v) => void finance.setGroceriesCategory(v === "auto" ? null : v)}
+      >
+        <SelectTrigger className="h-10 w-full sm:w-72" aria-label={t("finance.groceries.title")}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent position="popper" className="max-h-80">
+          <SelectItem value="auto">
+            {auto
+              ? t("finance.groceries.auto", { name: `${auto.icon ? `${auto.icon} ` : ""}${auto.name}` })
+              : t("finance.groceries.autoNone")}
+          </SelectItem>
+          <CategoryOptions fits={(c) => c.kind !== "income"} />
+        </SelectContent>
+      </Select>
+    </SettingsCard>
+  );
+}
+
 function BenchmarkCard({ edit }: { edit: boolean }) {
   const finance = useFinance();
   const { t, locale } = useT();

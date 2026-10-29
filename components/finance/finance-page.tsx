@@ -19,6 +19,8 @@ import { ImportDialog } from "./import-dialog";
 import { SummaryView } from "./summary-view";
 import { TransactionDialog } from "./transaction-dialog";
 import { TransactionsView } from "./transactions-view";
+import { ShoppingLinksProvider } from "./shopping-links";
+import type { ShoppingLinks } from "@/lib/finance/groceries-links";
 
 /** True once mounted: the page works with the browser's date and time zone. */
 function useMounted() {
@@ -27,7 +29,16 @@ function useMounted() {
   return mounted;
 }
 
-export function FinancePage({ familyId, readOnly }: { familyId: string; readOnly: boolean }) {
+export function FinancePage({
+  familyId,
+  readOnly,
+  shoppingLinks = { categoryIds: [], lists: [] },
+}: {
+  familyId: string;
+  readOnly: boolean;
+  /** Groceries transactions link to the shopping list of their day (phase 7). */
+  shoppingLinks?: ShoppingLinks;
+}) {
   const mounted = useMounted();
   const { t } = useT();
   if (!mounted) {
@@ -41,7 +52,9 @@ export function FinancePage({ familyId, readOnly }: { familyId: string; readOnly
   }
   return (
     <FinanceProvider familyId={familyId} readOnly={readOnly}>
-      <Finance />
+      <ShoppingLinksProvider familyId={familyId} links={shoppingLinks}>
+        <Finance />
+      </ShoppingLinksProvider>
     </FinanceProvider>
   );
 }

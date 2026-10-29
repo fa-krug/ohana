@@ -18,12 +18,27 @@ export interface IcsInput {
   gaps?: boolean;
   /** day -> note; each note (run of identical notes) becomes an event if set. */
   notes?: Map<string, { icon: string; comment: string }>;
+  /** Timed events (booked appointments, phase 7); each becomes an event at its wall-clock time
+   *  ("floating": the subscriber's own time zone). */
+  events?: IcsEvent[];
   /** Language of generated texts (gap summaries, descriptions). Default "en". */
   lang?: Lang;
   now?: Date;
 }
 
 export type Lang = "en" | "de";
+
+export interface IcsEvent {
+  id: string;
+  day: string;
+  start: string | null; // HH:MM; null: all day
+  end: string | null;
+  title: string;
+  location: string;
+  person: string;
+  note: string;
+  url: string;
+}
 
 const TEXT: Record<Lang, { notCovered: string; span: (days: number, work: number) => string }> = {
   en: {
@@ -156,6 +171,28 @@ export function buildIcs(input: IcsInput): string {
       const summary = `${icon} ${comment.split(/\r?\n/)[0]}`.trim();
       event(`${input.uidPrefix}-note-${run[0]}@vacation-planner`, run, summary, comment || summary);
     }
+  }
+
+  for (const e of input.events ?? []) {
+    const summary = e.person ? `${e.title} (${e.person})` : e.title;
+    const description = [e.note, e.url].filter(Boolean).join("\n");
+    const when = e.start
+      ? [
+          `DTSTART:${compact(e.day)}T${e.start.replace(":", "")}00`,
+          e.end ? `DTEND:${compact(e.day)}T${e.end.replace(":", "")}00` : "DURATION:PT1H",
+        ]
+      : [`DTSTART;VALUE=DATE:${compact(e.day)}`, `DTEND;VALUE=DATE:${compact(addDays(e.day, 1))}`];
+    lines.push(
+      "BEGIN:VEVENT",
+      `UID:${input.uidPrefix}-event-${e.id}@ohana`,
+      `DTSTAMP:${stamp(now)}`,
+      ...when,
+      "SUMMARY:" + escapeText(summary),
+      ...(e.location ? ["LOCATION:" + escapeText(e.location)] : []),
+      ...(description ? ["DESCRIPTION:" + escapeText(description)] : []),
+      ...(/^https?:\/\//i.test(e.url) ? ["URL:" + e.url] : []),
+      "END:VEVENT",
+    );
   }
 
   lines.push("END:VCALENDAR");

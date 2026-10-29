@@ -16,6 +16,7 @@ import { getAppUrl } from "@/lib/auth/config";
 import { type Message, type Sender, notifyFamily } from "@/lib/notifications";
 import { familyLocale, translator, type TFn } from "@/lib/notifications/locale";
 import { channelIdsForSearch } from "./searches";
+import { getPref } from "@/lib/notifications/prefs";
 
 export interface SlotResult {
   doctorName: string;
@@ -229,6 +230,9 @@ export async function notifyRun(
   }
 
   if (changed.size === 0) return false;
+  // The family can turn appointment notifications off (Settings, phase 7); the search's
+  // channels still say where they go when on.
+  if (!getPref(db, search.familyId, "appointment_found").enabled) return false;
 
   const slots = buildSlotList(results, changed);
   const msg: NotifyMessage = {

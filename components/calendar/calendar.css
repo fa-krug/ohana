@@ -184,6 +184,23 @@
   color: inherit;
   opacity: 0.85;
 }
+/* A timed event on the day (a booked appointment): a dot in the bottom left corner. */
+.cell .event-mark {
+  display: none;
+}
+.cell.has-event .event-mark {
+  display: block;
+  position: absolute;
+  left: 3px;
+  bottom: 3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--cal-accent);
+  box-shadow: 0 0 0 1.5px var(--cal-cell);
+  z-index: 3;
+  pointer-events: none;
+}
 .cell.today::before {
   content: "";
   position: absolute;
@@ -419,6 +436,12 @@
   .grid.mv .cell.fill-preview .sel-overlay {
     inset: 0;
     border-radius: 9px;
+  }
+  .grid.mv .cell.has-event .event-mark {
+    left: 6px;
+    bottom: 6px;
+    width: 8px;
+    height: 8px;
   }
   .grid.mv .cell.has-comment .note-mark {
     top: 0;

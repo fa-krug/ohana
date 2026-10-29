@@ -10,10 +10,12 @@ import { type SettingsTab, SettingsTabs } from "@/components/families/settings-t
 import { HomeAddressCard } from "@/components/families/home-address-card";
 import { NotificationsCard } from "@/components/families/notifications-card";
 import { listChannels } from "@/lib/notifications/channels";
+import { getPrefs } from "@/lib/notifications/prefs";
+import { NotificationEventsCard } from "@/components/families/notification-events-card";
 
 export const dynamic = "force-dynamic";
 
-const TABS: SettingsTab[] = ["general", "calendar", "feed", "finance"];
+const TABS: SettingsTab[] = ["general", "household", "calendar", "feed", "finance"];
 
 export default async function SettingsPage({
   params,
@@ -55,18 +57,45 @@ export default async function SettingsPage({
                   }))
                 : []
             }
-          >
-            <HomeAddressCard
-              familyId={family.id}
-              home={{ address: family.homeAddress, lat: family.homeLat, lng: family.homeLng }}
-              editor={role === "editor"}
-            />
-            {role === "editor" && (
-              <NotificationsCard familyId={family.id} channels={listChannels(db, { id: user.id }, familyId)} />
-            )}
-          </FamilySettings>
+          />
         }
+        household={<HouseholdSettings familyId={family.id} userId={user.id} family={family} editor={role === "editor"} />}
       />
     </>
+  );
+}
+
+/** Settings → Household: the home address (distances to practices) and, for editors, which
+ *  news go where and the notification channels. */
+function HouseholdSettings({
+  familyId,
+  userId,
+  family,
+  editor,
+}: {
+  familyId: string;
+  userId: string;
+  family: { homeAddress: string | null; homeLat: number | null; homeLng: number | null };
+  editor: boolean;
+}) {
+  const channels = editor ? listChannels(db, { id: userId }, familyId) : [];
+  return (
+    <div className="space-y-6">
+      {editor && (
+        <>
+          <NotificationEventsCard
+            familyId={familyId}
+            prefs={getPrefs(db, familyId)}
+            channels={channels.map((c) => ({ id: c.id, name: c.name, enabled: c.enabled }))}
+          />
+          <NotificationsCard familyId={familyId} channels={channels} />
+        </>
+      )}
+      <HomeAddressCard
+        familyId={familyId}
+        home={{ address: family.homeAddress, lat: family.homeLat, lng: family.homeLng }}
+        editor={editor}
+      />
+    </div>
   );
 }
