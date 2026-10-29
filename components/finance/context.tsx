@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, useSyncExternalStore } from "react";
 import { toast } from "@/components/ui/sonner";
 import { useT } from "@/lib/i18n/provider";
+import { moduleOf, useAssistantChanges } from "@/components/assistant/events";
 import { FinanceStore } from "./finance-store";
 
 const FinanceContext = createContext<FinanceStore | null>(null);
@@ -28,6 +29,12 @@ export function FinanceProvider({
   );
   // The dictionary functions are new on each render (a language switch).
   useEffect(() => store.setI18n({ t, locale }));
+  // The assistant changed the finances: what is shown reloads.
+  useAssistantChanges(familyId, (kind) => {
+    if (moduleOf(kind) !== "finance") return;
+    if (kind === "transactions") store.refresh();
+    else store.refreshCategories();
+  });
   return <FinanceContext.Provider value={store}>{children}</FinanceContext.Provider>;
 }
 

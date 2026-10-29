@@ -15,7 +15,7 @@ import { NotificationEventsCard } from "@/components/families/notification-event
 
 export const dynamic = "force-dynamic";
 
-const TABS: SettingsTab[] = ["general", "household", "calendar", "feed", "finance"];
+const TABS: SettingsTab[] = ["general", "household", "calendar", "feed", "finance", "ai"];
 
 export default async function SettingsPage({
   params,

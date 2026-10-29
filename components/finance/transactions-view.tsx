@@ -2,7 +2,8 @@
 
 // The transactions of the period: search and filters, inline category change, transfers and
 // split bookings (combine the ticked rows, find transfers, auto-combine). Ported from
-// family-planner's TransactionsView.tsx; its "auto-categorize" button comes with the assistant.
+// family-planner's TransactionsView.tsx, with its auto-categorize button (sorts uncategorized
+// transactions like similar ones, the rest with the family's AI).
 
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -10,8 +11,10 @@ import {
   Download,
   Link,
   ListTree,
+  Loader2,
   Pencil,
   Search,
+  Sparkles,
   Split,
   Trash2,
   Ungroup,
@@ -28,6 +31,7 @@ import { useT } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils";
 import type { Account, Category, Transaction } from "./api";
 import { CategoryOptions } from "./category-options";
+import { useOptionalChat } from "@/components/assistant/context";
 import { useFinance } from "./context";
 import type { Filter } from "./finance-store";
 import { TransferDialog } from "./transfer-dialog";
@@ -64,6 +68,36 @@ export function AccountChip({ account }: { account: Account }) {
 
 /** The filtered transactions of the period, newest first; categories can be set inline. In
  *  edit mode rows can be ticked and combined into a transfer or a split booking. */
+/** Sorts the period's uncategorized transactions like similar ones, and with the AI if it is
+ *  set up. */
+function AutoCategorizeButton() {
+  const finance = useFinance();
+  const chat = useOptionalChat();
+  const { t } = useT();
+
+  useEffect(() => {
+    void chat?.loadSettings();
+  }, [chat]);
+
+  if (!finance.overview?.categories.length) return null;
+  const progress = finance.categorizing;
+  const ai = !!chat?.settings?.configured;
+  return (
+    <Button
+      variant="outline"
+      disabled={!!progress}
+      title={progress ? undefined : t(ai ? "finance.categorize.help" : "finance.categorize.helpSimilar")}
+      aria-label={progress?.total ? t("finance.categorize.progress", progress) : t("finance.categorize.button")}
+      onClick={() => void finance.autoCategorize()}
+    >
+      {progress ? <Loader2 className="animate-spin" /> : <Sparkles />}{" "}
+      <span className="tabular-nums max-sm:sr-only">
+        {progress?.total ? `${progress.done}/${progress.total}` : t("finance.categorize.button")}
+      </span>
+    </Button>
+  );
+}
+
 export function TransactionsView({ onEdit }: { onEdit?: (t: Transaction) => void }) {
   const finance = useFinance();
   const { t, locale } = useT();
@@ -195,6 +229,7 @@ export function TransactionsView({ onEdit }: { onEdit?: (t: Transaction) => void
         </Select>
         {onEdit && (
           <>
+            <AutoCategorizeButton />
             <Button variant="outline" title={t("finance.findTransfers")} onClick={() => setFinding(true)}>
               <ArrowLeftRight /> <span className="max-sm:sr-only">{t("finance.findTransfers")}</span>
             </Button>
@@ -211,7 +246,7 @@ export function TransactionsView({ onEdit }: { onEdit?: (t: Transaction) => void
         </p>
       )}
       {!list && !finance.error && <div className="m-3 h-40 animate-pulse rounded-lg bg-muted" />}
-      <ul className={cn("divide-y", finance.loadingList && "opacity-60")} aria-busy={finance.loadingList}>
+      <ul className={cn("@container divide-y", finance.loadingList && "opacity-60")} aria-busy={finance.loadingList}>
         {list?.transactions.map((tx) => {
           const account = finance.accountById(tx.accountId);
           return (
@@ -219,7 +254,7 @@ export function TransactionsView({ onEdit }: { onEdit?: (t: Transaction) => void
               key={tx.id}
               className={cn(
                 "grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-1 px-3 py-2.5",
-                onEdit ? "sm:grid-cols-[8rem_1fr_12rem_8rem_8.5rem]" : "sm:grid-cols-[6.5rem_1fr_12rem_8rem_2.5rem]",
+                onEdit ? "@2xl:grid-cols-[8rem_1fr_12rem_8rem_8.5rem]" : "@2xl:grid-cols-[6.5rem_1fr_12rem_8rem_2.5rem]",
                 finance.selected.has(tx.id) && "bg-accent/50",
               )}
               // a stripe in the category's color down the row's left edge
@@ -233,11 +268,11 @@ export function TransactionsView({ onEdit }: { onEdit?: (t: Transaction) => void
                     onCheckedChange={(v) => finance.toggleSelected(tx.id, !!v)}
                   />
                 )}
-                <time className="text-xs text-muted-foreground tabular-nums sm:text-sm" dateTime={tx.date}>
+                <time className="text-xs text-muted-foreground tabular-nums @2xl:text-sm" dateTime={tx.date}>
                   {dateFormat.format(new Date(tx.date + "T00:00:00"))}
                 </time>
               </div>
-              <div className="col-start-1 col-end-3 row-start-2 min-w-0 sm:col-auto sm:row-auto">
+              <div className="col-start-1 col-end-3 row-start-2 min-w-0 @2xl:col-auto @2xl:row-auto">
                 <div className="truncate font-medium">{tx.payee || tx.description || "—"}</div>
                 {tx.transferId ? (
                   <div className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
@@ -258,7 +293,7 @@ export function TransactionsView({ onEdit }: { onEdit?: (t: Transaction) => void
                   )
                 )}
               </div>
-              <div className="col-start-1 col-end-3 row-start-3 min-w-0 text-sm sm:col-auto sm:row-auto">
+              <div className="col-start-1 col-end-3 row-start-3 min-w-0 text-sm @2xl:col-auto @2xl:row-auto">
                 {onEdit ? (
                   <Select
                     value={tx.categoryId ?? "none"}
@@ -287,7 +322,7 @@ export function TransactionsView({ onEdit }: { onEdit?: (t: Transaction) => void
               </div>
               <div
                 className={cn(
-                  "col-start-3 row-start-1 text-right font-semibold whitespace-nowrap tabular-nums sm:col-auto sm:row-auto",
+                  "col-start-3 row-start-1 text-right font-semibold whitespace-nowrap tabular-nums @2xl:col-auto @2xl:row-auto",
                   // a transfer leg doesn't count on its own, a split booking only through its
                   // parts (and what they leave over)
                   tx.transferId || tx.split
@@ -306,7 +341,7 @@ export function TransactionsView({ onEdit }: { onEdit?: (t: Transaction) => void
               >
                 {formatMoney(tx.amountCents, finance.currency, locale, { sign: tx.amountCents > 0 })}
               </div>
-              <div className="col-start-3 row-span-2 row-start-2 flex justify-end gap-0.5 sm:col-auto sm:row-auto">
+              <div className="col-start-3 row-span-2 row-start-2 flex justify-end gap-0.5 @2xl:col-auto @2xl:row-auto">
                 <ShoppingListLink tx={tx} />
                 {tx.imported && (
                   <span className="self-center" title={t("finance.importedRow")}>

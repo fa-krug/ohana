@@ -13,6 +13,7 @@ import { type User, findToken, touchToken } from "@/lib/auth/tokens";
 import { getRole } from "@/lib/families/roles";
 import { type CalendarStore, DrizzleCalendarStore, type FamilyRow } from "@/lib/calendar/store";
 import { DrizzleFinanceStore, type FinanceStore } from "@/lib/finance/store";
+import { type AssistantStore, DrizzleAssistantStore } from "@/lib/assistant/store";
 import { CORS, HttpError, json } from "./http";
 
 /**
@@ -36,6 +37,8 @@ export interface Ctx {
   store: CalendarStore;
   /** The finance part of family-planner's Store. */
   finance: FinanceStore;
+  /** The AI part of family-planner's Store (settings, chats). */
+  assistant: AssistantStore;
   req: Request;
   url: URL;
   method: string;
@@ -115,6 +118,7 @@ export function createFamilyApi(routes: FamilyRoute[], options: FamilyApiOptions
     const now = options.now?.() ?? new Date();
     const store = new DrizzleCalendarStore(db, () => now);
     const finance = new DrizzleFinanceStore(db);
+    const assistant = new DrizzleAssistantStore(db);
     const path = url.pathname.replace(/^.*?\/api\/v1(?=\/)/, "").replace(/\/+$/, "");
     const parts = path.split("/").filter(Boolean).map(decodeURIComponent);
     if (parts[0] !== "families" || parts.length < 2) throw new HttpError(404, "Not found");
@@ -172,6 +176,7 @@ export function createFamilyApi(routes: FamilyRoute[], options: FamilyApiOptions
       db,
       store,
       finance,
+      assistant,
       req,
       url,
       method,

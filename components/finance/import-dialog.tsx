@@ -26,6 +26,7 @@ import { formatMoney } from "@/lib/finance/money";
 import { useT } from "@/lib/i18n/provider";
 import type { ImportRow } from "./api";
 import { useFinance } from "./context";
+import { useOptionalChat } from "@/components/assistant/context";
 
 const NONE = "-1";
 const DELIMITERS: [string, string][] = [
@@ -55,6 +56,9 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
   const [remember, setRemember] = useState(true);
   const [account, setAccount] = useState("none");
   const [auto, setAuto] = useState(true);
+  const [categorize, setCategorize] = useState(true);
+  const chat = useOptionalChat();
+  const aiReady = !!chat?.settings?.configured;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -115,7 +119,9 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
   async function run() {
     setBusy(true);
     try {
-      await finance.importRows(rowsToSend(), accountId(), auto);
+      const res = await finance.importRows(rowsToSend(), accountId(), auto);
+      // Runs on after the dialog closed; its toast reports.
+      if (categorize && finance.overview?.categories.length) void finance.categorizeIds(res.ids);
       if (remember && mapping?.signature) {
         await finance.saveMapping({ ...mapping, accountId: accountId(), autoTransfers: auto });
       }
@@ -229,6 +235,12 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
               <label className="flex items-center gap-2 pt-1">
                 <Checkbox checked={remember} onCheckedChange={(v) => setRemember(!!v)} />
                 {t("finance.import.remember")}
+              </label>
+            )}
+            {!!finance.overview?.categories.length && (
+              <label className="flex items-center gap-2 pt-1">
+                <Checkbox checked={categorize} onCheckedChange={(v) => setCategorize(!!v)} />
+                {t(aiReady ? "finance.categorize.onImport" : "finance.categorize.onImportSimilar")}
               </label>
             )}
           </div>

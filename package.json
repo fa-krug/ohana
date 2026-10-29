@@ -16,7 +16,8 @@
     "db:migrate": "tsx scripts/db-migrate.ts && tsx scripts/seed.ts",
     "db:seed": "tsx scripts/seed.ts",
     "setup-link": "tsx scripts/setup-link.ts",
-    "import-legacy": "tsx scripts/import-legacy.ts"
+    "import-legacy": "tsx scripts/import-legacy.ts",
+    "mock-ai": "tsx scripts/mock-ai.ts"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.4.1",

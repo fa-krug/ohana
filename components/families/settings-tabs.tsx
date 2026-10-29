@@ -1,18 +1,19 @@
 "use client";
 
-import { Banknote, CalendarDays, House, Rss, Settings2 } from "lucide-react";
+import { Banknote, CalendarDays, House, Rss, Settings2, Sparkles } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useT } from "@/lib/i18n/provider";
 import { PlannerProvider } from "@/components/calendar/context";
 import { CalendarSettings } from "@/components/calendar/calendar-settings";
 import { FeedSettings } from "@/components/calendar/feed-settings";
 import { FinanceSettings } from "@/components/finance/finance-settings";
+import { AiSettingsSection } from "@/components/assistant/ai-settings";
 
-export type SettingsTab = "general" | "household" | "calendar" | "feed" | "finance";
+export type SettingsTab = "general" | "household" | "calendar" | "feed" | "finance" | "ai";
 
 /** The family settings in tabs: general (name, members, invites), household (home address,
- *  notifications), the calendar's types and view, the calendar feed, and the finances. The tab
- *  is kept in the address (?tab=). */
+ *  notifications), the calendar's types and view, the calendar feed, the finances, and the AI
+ *  assistant. The tab is kept in the address (?tab=). */
 export function SettingsTabs({
   familyId,
   tab,
@@ -57,6 +58,9 @@ export function SettingsTabs({
           <TabsTrigger value="finance">
             <Banknote /> {t("settings.tabFinance")}
           </TabsTrigger>
+          <TabsTrigger value="ai">
+            <Sparkles /> {t("settings.tabAi")}
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="general">{general}</TabsContent>
         {household && <TabsContent value="household">{household}</TabsContent>}
@@ -68,6 +72,9 @@ export function SettingsTabs({
         </TabsContent>
         <TabsContent value="finance">
           <FinanceSettings familyId={familyId} readOnly={readOnly} />
+        </TabsContent>
+        <TabsContent value="ai">
+          <AiSettingsSection familyId={familyId} readOnly={readOnly} />
         </TabsContent>
       </Tabs>
     </PlannerProvider>

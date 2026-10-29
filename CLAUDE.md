@@ -6,9 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 AI assistant. It replaces `fa-krug/family-planner`, `fa-krug/cookless` and
 `fa-krug/findmyappointment`; [docs/plan.md](docs/plan.md) has the decisions, what comes from
 which app, and the phases. Phase 0 (accounts, families, admin, shell, worker, deploy),
-phase 1 (Calendar), phase 2 (Finance), phase 4 (Meals, without AI recipe generation) and
-phase 5 (Appointments, notification channels) are done, and phase 7 (connections between
-the modules) except the assistant's tools; the assistant follows in phase 3.
+phase 1 (Calendar), phase 2 (Finance), phase 3 part A (the assistant: chats in the worker,
+calendar + finance tools), phase 4 (Meals, without AI recipe generation), phase 5
+(Appointments, notification channels) and phase 7 (connections between the modules) are
+done; assistant tools for meals and appointments and recipe generation follow (phase 3 part B).
 
 ## Commands
 
@@ -22,6 +23,7 @@ npm run db:generate   # Drizzle migration from lib/db/schema.ts changes
 npm run db:migrate    # apply migrations to DATABASE_FILE (default ./data/ohana.db), then db:seed
 npm run db:seed       # load the shared units + ingredients (idempotent; also run at `web` boot)
 npm run setup-link -- <email>   # print a new setup link for an account
+npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (web + worker need AI_ALLOW_PRIVATE_ENDPOINT=1)
 npm run import-legacy -- --family-planner dump.sql --cookless cookless.db --cookless-media media \
   --fma fma.db --map import-map.json --dry-run   # one-time import of the old apps (README)
 ```
@@ -35,7 +37,8 @@ npm run import-legacy -- --family-planner dump.sql --cookless cookless.db --cook
   `docker-entrypoint.sh worker` runs `worker/index.ts` (waits for the migrations, then loops
   every `APPT_TICK_SECONDS` (15): the appointment `SearchRunner`, and every
   `WORKER_TICK_SECONDS` (60) `lib/maintenance/cleanup.ts`, the nightly
-  `lib/maintenance/backup.ts` and `lib/notifications/daily.ts`). Long-running jobs (appointment searches, assistant turns,
+  `lib/maintenance/backup.ts` and `lib/notifications/daily.ts`; the loop itself ticks every
+  `ASSISTANT_TICK_MS` (1000) for the assistant's `ChatRunner`). Long-running jobs (appointment searches, assistant turns,
   notifications) belong in the worker, never in a request.
 - **Auth (`lib/auth/`):** passkeys (`@simplewebauthn`, ceremony state in a signed cookie) and
   argon2id passwords; family-planner's `pbkdf2-sha256$…` hashes are still verified and replaced
@@ -79,8 +82,8 @@ npm run import-legacy -- --family-planner dump.sql --cookless cookless.db --cook
   language. The page is client-side: `PlannerStore` (`planner-store.ts`: save queue, polling,
   undo/redo, selection) + the imperative `GridView` (`grid.ts`, CSS in `calendar.css`, colors
   `--cal-*` in `globals.css`); per-device prefs in `view-prefs.ts`. Settings has tabs
-  (`components/families/settings-tabs.tsx`: general, household, calendar, feed, finance); the
-  overview shows `lib/calendar/summary.ts`.
+  (`components/families/settings-tabs.tsx`: general, household, calendar, feed, finance, ai);
+  the overview shows `lib/calendar/summary.ts`.
 - **Finance (`lib/finance/`, `components/finance/`):** family-planner's finances. `store.ts`
   is the finance part of its `Store` over Drizzle (`DrizzleFinanceStore`, snake_case rows,
   promise API; `replaceFinance` runs inside the calendar store's `replaceContents`, so an
@@ -99,8 +102,29 @@ npm run import-legacy -- --family-planner dump.sql --cookless cookless.db --cook
   day transactions list newest created first, then in insertion order (rowid); one request's
   ops share one `created_at`. The page is client-side: `FinanceStore` (`finance-store.ts`:
   period, filters, selection, undo toasts) with the views; settings in
-  `finance-settings.tsx` (a tab of Settings). The AI categorize route and tools come with
-  phase 3 (`similarKey`, `netItems`, `applyTransactionOps` are their seams).
+  `finance-settings.tsx` (a tab of Settings). Auto-categorize (button, import option) calls
+  the assistant's `POST …/ai/categorize`.
+- **Assistant (`lib/assistant/`, `components/assistant/`):** family-planner's `ai/*`. Tables
+  `ai_settings` (keys sealed with `getSecretBox()`), `chats` (status, lease `run_token` /
+  `run_until`, `stop`, JSON `context` / `activity` / `notes` / `usage` / `queue`, `rev`),
+  `chat_items` (what the chat shows, by `seq`, with the `rev` it changed in), `chat_messages`
+  (what the model gets, append-only, summaries among them) in `lib/db/schema/assistant.ts`;
+  `store.ts` is the AI part of the `Store` (`DrizzleAssistantStore`, `ctx.assistant`; queue and
+  item revisions in immediate transactions). Routes: `routes.ts` `handleAi(env)` (settings,
+  models, test, categorize, `/agent`) and `chat-routes.ts` (chats; they save the message and
+  leave the chat running without a holder, then stream it from the database). **Turns run
+  only in the worker:** `runner.ts` `ChatRunner.tick()` claims waiting chats (`pendingChats`,
+  `claimChatNow`) and runs `chats.ts` `Runner` (the tool loop `chat.ts` `runChat` against
+  `provider.ts`, items/messages saved as it goes, lease renewed, stop/delete noticed per
+  tick). `prepareTurn` builds the instructions and tools; viewers and `allow_writes: false`
+  get only the tools that read. Tools by module in `tools/` (`calendar.ts`, `finance.ts`,
+  `general.ts`, `web.ts`, registry `index.ts`); every change returns undo steps (requests on
+  the family API the client replays). `net.ts` refuses private addresses (`AiEnv.modelNet`
+  may allow them for the endpoint with `AI_ALLOW_PRIVATE_ENDPOINT`). Client: `ChatStore`
+  (`chat-store.ts`) in `AssistantProvider` (the shell, per family), `chat-panel.tsx`,
+  `ai-settings.tsx` (Settings → AI); changes notify the pages through `events.ts`. Tests use
+  `lib/test/assistant.ts` (fake fetch + `lib/test/mock-ai.ts`, a ticking `ChatRunner`);
+  `npm run mock-ai` serves the mock for trying it out.
 - **UI:** `components/shell/app-shell.tsx` is the frame (left sidebar with family switcher,
   modules from `components/shell/modules.ts`, account menu; right assistant panel, `Ctrl/⌘+J`;
   both are sheets on phones). A module that isn't built yet is served by
@@ -108,8 +132,7 @@ npm run import-legacy -- --family-planner dump.sql --cookless cookless.db --cook
   the dynamic segment; set `ready: true` in `modules.ts` then.
 - **Secrets (`lib/secrets.ts`):** `SecretBox` (port of family-planner's): AES-256-GCM,
   `v1:<base64 iv+ciphertext+tag>`, keyed by `ENCRYPTION_KEY` or else HKDF(`AUTH_SECRET`,
-  info "ohana-secrets"). `getSecretBox()` for channel tokens / SMTP passwords (and the AI keys
-  later). Stored secrets never go back to the browser: DTOs say `hasToken`, a blank field on
+  info "ohana-secrets"). `getSecretBox()` for channel tokens / SMTP passwords and the AI / search keys. Stored secrets never go back to the browser: DTOs say `hasToken`, a blank field on
   edit keeps the stored value.
 - **Notifications (`lib/notifications/`), family-wide:** `notification_channels` (Pushbullet,
   Pushover, Telegram, email/SMTP; `token` sealed). `channels.ts` CRUD (editors),
@@ -137,7 +160,8 @@ npm run import-legacy -- --family-planner dump.sql --cookless cookless.db --cook
   autocomplete routes under `app/api/v1/families/[familyId]/` (members; session or API token).
 - **Schema files:** `lib/db/schema.ts` holds accounts + families and re-exports one file per
   module from `lib/db/schema/` (`notifications.ts`, `appointments.ts`, `finance.ts`,
-  `meals.ts`, `connections.ts`).
+  `meals.ts`, `connections.ts`,
+  `assistant.ts`).
 - **Connections between modules (phase 7):**
   - *Appointments → Calendar:* `cal_events` (`lib/db/schema/connections.ts`): timed events
     (`day`, wall-clock `start`/`end` "HH:MM" or null = all day, title, location, person,
