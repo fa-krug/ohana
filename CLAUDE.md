@@ -22,6 +22,8 @@ npm run db:generate   # Drizzle migration from lib/db/schema.ts changes
 npm run db:migrate    # apply migrations to DATABASE_FILE (default ./data/ohana.db), then db:seed
 npm run db:seed       # load the shared units + ingredients (idempotent; also run at `web` boot)
 npm run setup-link -- <email>   # print a new setup link for an account
+npm run import-legacy -- --family-planner dump.sql --cookless cookless.db --cookless-media media \
+  --fma fma.db --map import-map.json --dry-run   # one-time import of the old apps (README)
 ```
 
 ## Architecture
@@ -135,6 +137,19 @@ npm run setup-link -- <email>   # print a new setup link for an account
   IndexedDB (idempotent `set` ops) and replays them to their family's route;
   `public/sw.js` caches the meals pages (registered by the meals layout in production,
   cleared on sign-out). AI recipe/photo generation isn't ported yet (needs phase 3).
+- **Legacy import (`lib/import/`, `scripts/import-legacy.ts`):** one-time import of
+  family-planner (a `pg_dump --data-only` file, parsed by `pgdump.ts`: COPY or
+  `--column-inserts`, `public` schema only), cookless and findmyappointment (their SQLite
+  files, read-only, schema checked). Stage 1 (`accounts.ts`): users merged by lowercased email,
+  families by `import-map.json`, members combined (editor wins); fills `ctx.userIds` /
+  `ctx.familyIds` (source id → Ohana id). Stage 2: the `AREAS` list in `index.ts`, one function
+  per source and area (`family-planner/`, `cookless/`, `fma/`); a new module's import (finance,
+  assistant) is one more entry. All in one SQLite transaction (deferred FKs, checked at the
+  end); `--dry-run` rolls back; photos copied into `MEDIA_ROOT` inside it and removed on
+  failure. Refuses a non-empty target without `--force` and families that exist already.
+  Tests: `tests/import-*.test.ts`, fixtures built by `lib/test/legacy.ts` from the old apps'
+  migrations in `tests/fixtures/legacy/{cookless,fma}/drizzle` and the hand-written dump
+  `tests/fixtures/legacy/family-planner.sql`.
 - **i18n:** `lib/i18n/locales/{en,de}.json`, `useT()` on the client, `getI18n()` on the server.
   Tests check that both files have the same keys and that every literal `t("…")` key exists.
 

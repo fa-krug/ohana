@@ -15,7 +15,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/db-migrate.ts && tsx scripts/seed.ts",
     "db:seed": "tsx scripts/seed.ts",
-    "setup-link": "tsx scripts/setup-link.ts"
+    "setup-link": "tsx scripts/setup-link.ts",
+    "import-legacy": "tsx scripts/import-legacy.ts"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.4.1",
