@@ -9,6 +9,7 @@ services:
       APP_URL: http://localhost:3000
       WEBAUTHN_RP_ID: localhost
       WEBAUTHN_ORIGIN: http://localhost:3000
+      MEDIA_ROOT: /app/data/media
     volumes:
       - app-data-dev:/app/data
     restart: unless-stopped

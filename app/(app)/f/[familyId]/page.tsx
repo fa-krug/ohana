@@ -7,6 +7,7 @@ import { type CalendarSummary, calendarSummary } from "@/lib/calendar/summary";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
 import { MODULES } from "@/components/shell/modules";
+import { MealsOverviewCard } from "@/components/meals/meals-overview-card";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,9 @@ export default async function FamilyOverviewPage({ params }: { params: Promise<{
             </Card>
           </Link>
         ))}
+      </div>
+      <div className="mt-6 grid gap-4">
+        <MealsOverviewCard familyId={familyId} />
       </div>
     </>
   );

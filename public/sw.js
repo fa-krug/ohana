@@ -1,0 +1,90 @@
+/* Ohana service worker (from cookless) — runtime caching only, so the meals pages
+   (above all the shopping list) open offline. Registered by the meals module. */
+const VERSION = "v1";
+const STATIC_CACHE = `ohana-static-${VERSION}`;
+const PAGES_CACHE = `ohana-pages-${VERSION}`;
+// /f/<familyId>/meals and everything below it.
+const OFFLINE_ROUTE = /^\/f\/[^/]+\/meals(\/|$)/;
+
+self.addEventListener("install", () => self.skipWaiting());
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(
+        keys
+          .filter((k) => k !== STATIC_CACHE && k !== PAGES_CACHE)
+          .map((k) => caches.delete(k)),
+      );
+      await self.clients.claim();
+    })(),
+  );
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "CLEAR_CACHES") {
+    event.waitUntil(
+      caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))),
+    );
+  }
+});
+
+function isStaticAsset(url, request) {
+  return (
+    url.pathname.startsWith("/_next/static/") ||
+    url.pathname.startsWith("/api/images/") ||
+    ["style", "script", "image", "font"].includes(request.destination)
+  );
+}
+
+function isCacheableNav(url, request) {
+  const isRsc = request.headers.get("RSC") === "1" || url.searchParams.has("_rsc");
+  const isNav = request.mode === "navigate" || isRsc;
+  if (!isNav) return false;
+  return OFFLINE_ROUTE.test(url.pathname);
+}
+
+function pageCacheKey(url, request) {
+  const u = new URL(url);
+  u.searchParams.delete("_rsc");
+  const isRsc = request.headers.get("RSC") === "1" || url.searchParams.has("_rsc");
+  u.searchParams.set("__sw", isRsc ? "rsc" : "doc");
+  return u.toString();
+}
+
+async function cacheFirst(request) {
+  const cache = await caches.open(STATIC_CACHE);
+  const cached = await cache.match(request);
+  if (cached) return cached;
+  const res = await fetch(request);
+  if (res.ok) cache.put(request, res.clone());
+  return res;
+}
+
+async function networkFirst(request, url) {
+  const cache = await caches.open(PAGES_CACHE);
+  const key = pageCacheKey(url, request);
+  try {
+    const res = await fetch(request);
+    if (res.ok) cache.put(key, res.clone());
+    return res;
+  } catch (err) {
+    const cached = await cache.match(key);
+    if (cached) return cached;
+    throw err;
+  }
+}
+
+self.addEventListener("fetch", (event) => {
+  const { request } = event;
+  if (request.method !== "GET") return;
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+
+  if (isStaticAsset(url, request)) {
+    event.respondWith(cacheFirst(request));
+  } else if (isCacheableNav(url, request)) {
+    event.respondWith(networkFirst(request, url));
+  }
+});

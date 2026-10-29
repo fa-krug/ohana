@@ -11,7 +11,8 @@ x-env: &env
   WEBAUTHN_ORIGIN: https://${OHANA_DOMAIN:-ohana.fa-krug.de}
   BACKUP_KEEP: ${BACKUP_KEEP:-14}
   TZ: ${TZ:-Europe/Berlin}
-  # DATABASE_FILE=/app/data/ohana.db and BACKUP_DIR=/app/data/backups are image defaults.
+  # DATABASE_FILE=/app/data/ohana.db, BACKUP_DIR=/app/data/backups and
+  # MEDIA_ROOT=/app/data/media (recipe images) are image defaults, all in the ohana-data volume.
 
 services:
   web:

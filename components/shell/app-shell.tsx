@@ -285,6 +285,8 @@ function AccountMenu({ user }: { user: ShellUser }) {
   const { t } = useT();
   async function onSignOut() {
     await logoutAction();
+    // The service worker (meals) caches pages and recipe images: drop them with the session.
+    navigator.serviceWorker?.controller?.postMessage({ type: "CLEAR_CACHES" });
     window.location.href = "/login";
   }
   return (
