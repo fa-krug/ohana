@@ -6,8 +6,7 @@
 //    families by the import map — and written. That fills `ctx.userIds` / `ctx.familyIds`,
 //    which translate a source's ids into Ohana's.
 // 2. Areas (`AREAS` in `index.ts`): one function per source and area (calendar, meals,
-//    appointments, …) copies its rows, looking up users and families in those maps. A new
-//    area (the assistant) is one more function in that list.
+//    appointments, the assistant, …) copies its rows, looking up users and families in those maps.
 import type Database from "better-sqlite3";
 import type { Db } from "@/lib/db";
 import type { SecretBox } from "@/lib/secrets";
@@ -126,6 +125,8 @@ export interface ImportReport {
   skipped: Array<{ source: SourceName; table: string; key: string; reason: string }>;
   notes: string[];
   media: { copied: number; missing: string[] };
+  /** Families whose AI keys didn't come over (they have to be entered again). */
+  aiKeys: Array<{ familyId: string; family: string; keys: string[]; reason: string }>;
 }
 
 // ---- stage 2: the context every area gets ----
@@ -138,6 +139,8 @@ export interface ImportContext {
   dryRun: boolean;
   /** Seals secrets with Ohana's key (lib/secrets.ts). */
   secrets: SecretBox;
+  /** Opens family-planner's AI keys (its AI_CONFIG_KEY), if given. */
+  familyPlannerSecrets: SecretBox | null;
   /** Ohana's MEDIA_ROOT. */
   mediaRoot: string;
   /** Source id → Ohana id, per source. */

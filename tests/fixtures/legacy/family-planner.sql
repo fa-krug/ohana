@@ -161,8 +161,45 @@ fpKrugFamily00000001	aaaaaaaa-0000-4000-8000-000000000004	2026-10-05	-8000	Amazo
 -- Data for Name: ai_settings; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.ai_settings (family_id, base_url, model, api_key_enc, search_provider, search_key_enc, allow_writes, updated_at) FROM stdin;
-fpKrugFamily00000001	https://api.openai.com/v1	gpt-4o-mini	v1:abc	none		t	2026-10-01 07:00:00+00
+COPY public.ai_settings (family_id, base_url, model, api_key_enc, search_provider, search_key_enc, allow_writes, updated_at, context_window) FROM stdin;
+fpKrugFamily00000001	https://api.openai.com/v1	gpt-4o-mini	v1:c7IoXYKFtsnq5u2OhXIZSLHPH7NzhMFW3TT6uNW/GSk/SwTbK4bGFXozC68HugIkrQ==	tavily	v1:srWidrq0bmz5FcCxYPNFXPwoQglzAAcCy48/Zpbg77ZLvG/+Iv3OsU65+Su5og==	f	2026-10-01 07:00:00+00	64000
+fpOmaFamily000000002	https://openrouter.ai/api/v1	mistral-small	v1:bB0PO5w7lCVUhCLo01B609CHliky6sm6zmIQrxBZv70a0Z+IoHLl5mK2lQ==	none		t	2026-09-01 07:00:00+00	0
+\.
+
+
+--
+-- Data for Name: ai_chats; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.ai_chats (id, family_id, user_id, title, status, run_token, run_until, stop, retries, context, activity, notes, rev, created_at, updated_at, usage, queue) FROM stdin;
+fpChatIdle0000000001	fpKrugFamily00000001	fpUserAnna000000001	Urlaub planen	idle	\N	\N	f	0	{"day": "2026-10-01", "lang": "de", "page": "calendar", "year": 2026}	\N	["Undid: vacation on 2026-08-03"]	3	2026-10-01 07:00:00.123456+00	2026-10-01 07:01:30.456789+00	{"max": 128000, "used": 2100}	[]
+fpChatRunning0000002	fpOmaFamily000000002	fpUserAdmin00000002	Wetter	running	tok-held-by-edge	2026-10-02 08:00:30+00	f	2	{"day": "2026-10-02", "lang": "de", "page": "calendar", "year": 2026}	{"kind": "tool"}	[]	2	2026-10-02 08:00:00+00	2026-10-02 08:00:10+00	\N	[{"id": "q1", "item": {"kind": "user", "text": "Und morgen?"}, "content": "Und morgen?", "context": {"day": "2026-10-02", "lang": "de", "page": "calendar", "year": 2026}}]
+\.
+
+
+--
+-- Data for Name: ai_chat_items; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.ai_chat_items (chat_id, seq, rev, item) FROM stdin;
+fpChatIdle0000000001	0	1	{"kind": "user", "text": "Plane Urlaub vom 3. bis 7. August"}
+fpChatIdle0000000001	1	2	{"id": "call_1", "args": {"from": "2026-08-03", "to": "2026-08-07"}, "kind": "tool", "name": "add_entries", "status": "ok", "summary": "5 Tage Urlaub"}
+fpChatIdle0000000001	2	3	{"kind": "assistant", "text": "Erledigt: 5 Tage Urlaub."}
+fpChatRunning0000002	0	1	{"kind": "user", "text": "Wie wird das Wetter?"}
+fpChatRunning0000002	1	2	{"id": "call_9", "args": {"query": "Wetter Berlin"}, "kind": "tool", "name": "web_search", "status": "running"}
+\.
+
+
+--
+-- Data for Name: ai_chat_messages; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.ai_chat_messages (chat_id, seq, message) FROM stdin;
+fpChatIdle0000000001	0	{"role": "user", "content": "Plane Urlaub vom 3. bis 7. August"}
+fpChatIdle0000000001	1	{"role": "assistant", "content": null, "tool_calls": [{"id": "call_1", "type": "function", "function": {"name": "add_entries", "arguments": "{}"}}]}
+fpChatIdle0000000001	2	{"role": "tool", "content": "ok", "tool_call_id": "call_1"}
+fpChatIdle0000000001	3	{"role": "assistant", "content": "Erledigt: 5 Tage Urlaub."}
+fpChatRunning0000002	0	{"role": "user", "content": "Wie wird das Wetter?"}
 \.
 
 

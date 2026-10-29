@@ -19,6 +19,14 @@ export const FP = {
   anna: "fpUserAnna000000001",
   apiToken: "fp_test_api_token",
   annaPassword: "anna-fp-pass",
+  /** family-planner's AI_CONFIG_KEY of the fixture: Krug's keys are sealed with it, Oma's key
+   *  with another one. */
+  aiSecret: Buffer.alloc(32, 7).toString("base64"),
+  krugApiKey: "sk-fp-openai-key-1234",
+  krugSearchKey: "tvly-fp-search-key",
+  idleChat: "fpChatIdle0000000001",
+  runningChat: "fpChatRunning0000002",
+  admin: "fpUserAdmin00000002",
 };
 
 export const CK = {
@@ -41,6 +49,7 @@ export const CK = {
   item: "s0000000-0000-4000-8000-000000000001",
   pastaImage: "recipes/r0000000-0000-4000-8000-000000000001_1700000000000.webp",
   benPassword: "ben-cookless-pass",
+  carlGeminiKey: "AIzaCarlGeminiKey",
 };
 
 export const FMA = {
@@ -72,7 +81,7 @@ export async function makeCooklessDb(dir: string, nowSec: number): Promise<{ pat
   const ins = (sql: string, ...args: unknown[]) => db.prepare(sql).run(...args);
 
   ins("INSERT INTO households (id, name, ai_enabled, gemini_api_key, created_at) VALUES (?, ?, 1, ?, ?)", CK.krug, "Krug Küche", "AIzaFakeGeminiKey", T0);
-  ins("INSERT INTO households (id, name, created_at) VALUES (?, ?, ?)", CK.carl, "Carls Küche", T0 + DAY);
+  ins("INSERT INTO households (id, name, ai_enabled, gemini_api_key, created_at) VALUES (?, ?, 1, ?, ?)", CK.carl, "Carls Küche", CK.carlGeminiKey, T0 + DAY);
   const user = (id: string, email: string, password: string, extra: { step?: string; active?: number; lang?: string; household?: string } = {}) =>
     ins(
       "INSERT INTO users (id, email, password, preferred_language, active_household_id, onboarding_step, is_active, is_staff, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)",

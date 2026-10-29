@@ -327,13 +327,16 @@ first: it does the whole import, rolls it back and prints what it would do.
 ```bash
 npm run import-legacy -- --family-planner family-planner.sql \
   --cookless cookless.db --cookless-media media --fma findmyappointment.db \
-  --map import-map.json [--dry-run] [--force] [--report report.json]
+  --map import-map.json [--family-planner-ai-secret <base64>] [--dry-run] [--force] \
+  [--report report.json]
 ```
 
 `--family-planner`: a `pg_dump --data-only` of family-planner's Supabase `public` schema;
 `--cookless` / `--cookless-media`: cookless's SQLite file and its media folder (recipe photos);
-`--fma`: findmyappointment's SQLite file; `--map`: which households are which family. The
-target is `DATABASE_FILE` (migrated), photos go to `MEDIA_ROOT`.
+`--fma`: findmyappointment's SQLite file; `--map`: which households are which family;
+`--family-planner-ai-secret` (or `FAMILY_PLANNER_AI_SECRET`): family-planner's `AI_CONFIG_KEY`
+(the Supabase secret its AI keys are encrypted with), so the families' AI and search keys come
+over. The target is `DATABASE_FILE` (migrated), photos go to `MEDIA_ROOT`.
 
 Every source is optional. What moves:
 
@@ -341,16 +344,26 @@ Every source is optional. What moves:
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | all three         | **Accounts**, merged by lowercased email: name from family-planner, admin if admin in family-planner or `is_staff` in cookless / findmyappointment, the password hash of family-planner, else cookless, else findmyappointment (all work in Ohana) |
 | all three         | **Families**: `import-map.json` joins a family-planner family with a cookless and a findmyappointment household; unmapped ones become families of their own. Members are combined, **editor wins** over viewer (OWNER and MEMBER are editors) |
-| family-planner    | family `id`, name, `feed_id`, `legacy_id`; the **calendar** (types per year, entries, notes); the **finances** (currency, CSV mappings, statistic average, category tree, accounts, transactions with transfers, split bookings and import hashes); **API tokens** as they are (same SHA-256), so scripts keep working |
-| cookless          | tags, recipes with steps and **photos** (copied into `MEDIA_ROOT`), meal plans, shopping lists; open invite codes                                                                                                                        |
+| family-planner    | family `id`, name, `feed_id`, `legacy_id`; the **calendar** (types per year, entries, notes); the **finances** (currency, CSV mappings, statistic average, category tree, accounts, transactions with transfers, split bookings and import hashes); **API tokens** as they are (same SHA-256), so scripts keep working; the **assistant**: AI settings (keys re-encrypted with Ohana's key) and everyone's **chats** |
+| cookless          | tags, recipes with steps and **photos** (copied into `MEDIA_ROOT`), meal plans, shopping lists; open invite codes; the household's **Gemini key** as the family's AI settings when family-planner has none for it |
 | findmyappointment | the **home address**, notification channels (tokens encrypted with Ohana's key), searches with their channels and ignore lists; open invite codes                                                                                        |
 
 Not moved: sessions and setup links (everyone signs in again), **passkeys** (bound to the old
 domains: everyone adds one at the first sign-in), expired or used invites, deactivated cookless
 / findmyappointment accounts, findmyappointment's run history and results (the first runs in
-Ohana notify about what is available then). Not yet: family-planner's **assistant** (AI
-settings, chats) and cookless's Gemini key; the dry run lists them, they come with the
-assistant.
+Ohana notify about what is available then), messages that waited in a chat's queue.
+
+- **AI keys:** with `--family-planner-ai-secret` family-planner's API and search keys are
+  decrypted and encrypted again with Ohana's key. Without it, or for a key that doesn't open
+  with it, the settings come over without that key: the report lists those families under
+  "AI keys to enter again" (Settings → AI).
+- **cookless's Gemini key** (only where AI was on in cookless, only for families without
+  family-planner AI settings, which win) becomes Gemini's OpenAI-compatible endpoint
+  (`https://generativelanguage.googleapis.com/v1beta/openai/`, model `gemini-2.5-flash`, image
+  model `gemini-2.5-flash-image` for recipe photos), no web search, and the assistant may only
+  read until an editor allows changes in Settings → AI.
+- **Chats** keep their history. A chat whose answer was still running when family-planner was
+  dumped is ended as stopped by the worker (no model call); it is named in the report.
 
 - Families that come from family-planner keep their calendar and finances exactly; the others
   get the preset types, as a new family does. Families without family-planner finance
@@ -405,12 +418,16 @@ assistant.
    pg_dump's default COPY format is what the import reads best; `--column-inserts` works too
    (a plain `--inserts` dump has no column names and is refused).
 4. **Dry run** inside Ohana's image, with Ohana's environment (its `AUTH_SECRET` /
-   `ENCRYPTION_KEY` encrypt the channel tokens). In the Arcane project's folder on the Pi (the
+   `ENCRYPTION_KEY` encrypt the channel tokens and AI keys). Get family-planner's
+   `AI_CONFIG_KEY` (where it was set with `supabase secrets set`; Supabase doesn't show it
+   again, so from your password manager), `export FAMILY_PLANNER_AI_SECRET=…` in the shell
+   (`-e FAMILY_PLANNER_AI_SECRET` below passes it in, and also to the real import); without it
+   the AI keys are entered again afterwards. In the Arcane project's folder on the Pi (the
    one with Ohana's compose file and `.env`, e.g. `/home/pi/docker/ohana`; add `-f <file>` if
    the compose file has another name):
 
    ```bash
-   docker compose run --rm --no-deps -v ~/ohana-import:/import web \
+   docker compose run --rm --no-deps -v ~/ohana-import:/import -e FAMILY_PLANNER_AI_SECRET web \
      ./node_modules/.bin/tsx scripts/import-legacy.ts \
      --family-planner /import/family-planner.sql \
      --cookless /import/cookless/cookless.db --cookless-media /import/cookless/media \
@@ -419,21 +436,22 @@ assistant.
 
    Read the family list, write `~/ohana-import/import-map.json`, and run the dry run again with
    `--map /import/import-map.json` until the report looks right (families, members and roles,
-   accounts without a password, skipped rows, missing photos).
+   accounts without a password, skipped rows, missing photos, AI keys to enter again).
 5. **The real import**, with the old apps stopped for good (copy their data again, step 2
    without the `docker start`, and dump family-planner again, step 3, once nobody changes it
    any more) and Ohana stopped:
 
    ```bash
    docker compose stop web worker
-   docker compose run --rm --no-deps -v ~/ohana-import:/import web \
+   docker compose run --rm --no-deps -v ~/ohana-import:/import -e FAMILY_PLANNER_AI_SECRET web \
      ./node_modules/.bin/tsx scripts/import-legacy.ts … --map /import/import-map.json --report /import/report.json
    docker compose up -d
    ```
 
 6. **Check**: sign in with an old password (Ohana offers a passkey), open each family's
    calendar, recipes (with photos), plan, shopping list and searches; send a *Test* from
-   Settings → Notifications; make the setup links the report lists
+   Settings → Notifications; enter the AI keys the report lists under "AI keys to enter
+   again" (Settings → AI, then *Test*) and open an old chat; make the setup links the report lists
    (`docker compose exec web ./node_modules/.bin/tsx scripts/setup-link.ts <email>`);
    re-subscribe calendar feeds from Settings → Calendar feed (the old feed URLs go away with
    family-planner). If something is wrong: stop Ohana, delete `ohana.db*` and `media/recipes`

@@ -373,22 +373,39 @@ while Ohana grows.
 - Calendar view settings (zoom, always show weekdays, skip weekends) are per device in
   `localStorage`. The settings page got tabs (General, Calendar, Calendar feed).
 
-### Phase 6 notes (the importer, parts A and B)
+### Phase 6 notes (the importer, parts A, B and C)
 
 `scripts/import-legacy.ts` (`npm run import-legacy`, README → "Importing the old apps") is
-built for everything but the assistant (part A: accounts, calendar, meals, appointments;
-part B: family-planner's finances); the assistant's import (AI settings, chats, cookless's
-Gemini key) follows once phase 3 is merged, then the rehearsal, the real import and the
+complete (part A: accounts, calendar, meals, appointments; part B: family-planner's finances;
+part C: the assistant). What remains of phase 6 is the rehearsal, the real import and the
 cut-over.
 
 - **Code:** `lib/import/` — `accounts.ts` merges users / families / members (stage 1), then the
   `AREAS` list in `index.ts` runs one function per source and area:
-  `family-planner/{accounts,calendar,finance}.ts` (API tokens, calendar, finances),
-  `cookless/{accounts,meals}.ts` (invites, meals and photos, the Gemini key only reported),
-  `fma/{accounts,appointments}.ts` (invites, channels, searches). The assistant is one more
-  entry there (`family-planner/assistant.ts`, and cookless's Gemini key → `ai_settings`);
-  until then the dry run lists the family-planner tables it didn't read (`ai_settings`,
-  `ai_chats*`).
+  `family-planner/{accounts,calendar,finance,assistant}.ts` (API tokens, calendar, finances,
+  AI settings and chats), `cookless/{accounts,meals,assistant}.ts` (invites, meals and photos,
+  the Gemini key), `fma/{accounts,appointments}.ts` (invites, channels, searches). The dry run
+  lists any family-planner table no area read (none of the known ones is left;
+  `auth_challenges` and `rate_limits` are ignored on purpose).
+- **Assistant (part C):** `ai_settings` → `ai_settings` (`context_window` kept, `image_model`
+  empty). The API and search keys are sealed with family-planner's `AI_CONFIG_KEY` (same
+  `v1:` AES-GCM format as `lib/secrets.ts`): with `--family-planner-ai-secret` /
+  `FAMILY_PLANNER_AI_SECRET` they are opened and sealed again with Ohana's key; without it, or
+  when a key doesn't open, the settings come without it and the report lists the family under
+  "AI keys to enter again" (`report.aiKeys`; a note when no key opened at all, likely the wrong
+  secret). `ai_chats` / `ai_chat_items` / `ai_chat_messages` → `chats` / `chat_items` /
+  `chat_messages` with ids, revisions, `context` / `notes` / `usage`, times in milliseconds;
+  chats whose family or user isn't imported are skipped. **Running turns:** a chat that was
+  running comes over as running *without a holder and with `stop` asked*, so the worker's
+  `Runner` takes it, repairs it (tools that ran marked interrupted, told to the model) and ends
+  it with "(stopped)", without calling the model, leaving a history that is valid for the
+  next message (simply marking it idle could leave tool calls without results). Queued
+  messages are dropped (they'd start turns long after they were written); both are noted.
+  **cookless's Gemini key** (plaintext there) → `ai_settings` for a family without
+  family-planner settings (those win; a skipped entry says so), only when `ai_enabled`: base
+  URL `https://generativelanguage.googleapis.com/v1beta/openai/`, cookless's models
+  (`gemini-2.5-flash`, image model `gemini-2.5-flash-image`), key sealed, `allow_writes` off,
+  search none, `context_window` 0.
 - **Finances (part B):** `family_settings` → `fin_settings` (currency; `csv_mappings` and
   `benchmark` stay JSON text), `finance_categories` → `fin_categories` (tree order, parents
   first), `finance_accounts` → `fin_accounts`, `transactions` → `fin_transactions` (bookings
@@ -419,9 +436,9 @@ cut-over.
   longest-standing editor's). Default finance categories (same language) only for families
   without family-planner categories, default meal tags only for families without cookless tags.
 - **Not imported:** sessions, setup links, passkeys, expired / used invites, deactivated
-  accounts, findmyappointment's runs, results and profile cache. Searches keep `next_run_at`,
-  so the worker runs them soon after; without the run history their first run notifies about
-  everything available.
+  accounts, findmyappointment's runs, results and profile cache, messages waiting in a
+  chat's queue. Searches keep `next_run_at`, so the worker runs them soon after; without the
+  run history their first run notifies about everything available.
 
 ## Decided
 

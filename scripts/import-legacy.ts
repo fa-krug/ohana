@@ -2,11 +2,13 @@
 //
 //   npm run import-legacy -- [--family-planner dump.sql] [--cookless cookless.db]
 //     [--cookless-media ./media] [--fma findmyappointment.db] [--map import-map.json]
-//     [--dry-run] [--force] [--report report.json]
+//     [--family-planner-ai-secret <base64>] [--dry-run] [--force] [--report report.json]
 //
 // (in the container: docker compose run --rm web ./node_modules/.bin/tsx scripts/import-legacy.ts …)
 // Every source is optional. --dry-run does the whole import in a transaction and rolls it
-// back, printing what it would do. See README → "Importing the old apps".
+// back, printing what it would do. --family-planner-ai-secret (or FAMILY_PLANNER_AI_SECRET):
+// family-planner's AI_CONFIG_KEY, to carry its AI keys over; without it they are entered
+// again. See README → "Importing the old apps".
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { openCookless } from "../lib/import/cookless/accounts";
@@ -16,7 +18,10 @@ import type { ImportMap, ImportSources } from "../lib/import/types";
 
 const USAGE = `Usage: npm run import-legacy -- [--family-planner <dump.sql>] [--cookless <cookless.db>]
   [--cookless-media <media dir>] [--fma <findmyappointment.db>] [--map <import-map.json>]
-  [--dry-run] [--force] [--report <report.json>]`;
+  [--family-planner-ai-secret <base64>] [--dry-run] [--force] [--report <report.json>]
+
+  --family-planner-ai-secret: family-planner's AI_CONFIG_KEY (or set FAMILY_PLANNER_AI_SECRET),
+  so its AI keys come over; without it they have to be entered again.`;
 
 function fail(message: string): never {
   console.error(message);
@@ -24,7 +29,15 @@ function fail(message: string): never {
 }
 
 function parseArgs(argv: string[]) {
-  const valued = new Set(["--family-planner", "--cookless", "--cookless-media", "--fma", "--map", "--report"]);
+  const valued = new Set([
+    "--family-planner",
+    "--family-planner-ai-secret",
+    "--cookless",
+    "--cookless-media",
+    "--fma",
+    "--map",
+    "--report",
+  ]);
   const flags = new Set(["--dry-run", "--force"]);
   const out: Record<string, string | boolean> = {};
   for (let i = 0; i < argv.length; i++) {
@@ -57,15 +70,17 @@ async function main() {
   const fma = args["--fma"] as string | undefined;
   if (!fp && !cookless && !fma) fail(`Name at least one source.\n${USAGE}`);
   if (media && !cookless) fail("--cookless-media needs --cookless");
+  const aiSecret = (args["--family-planner-ai-secret"] as string | undefined) ?? process.env.FAMILY_PLANNER_AI_SECRET?.trim();
+  if (args["--family-planner-ai-secret"] && !fp) fail("--family-planner-ai-secret needs --family-planner");
 
   // lib/db/client creates the file when it's missing: check first.
   const dbFile = resolve(process.env.DATABASE_FILE ?? "./data/ohana.db");
   if (!existsSync(dbFile)) fail(`No Ohana database at ${dbFile} (set DATABASE_FILE; run npm run db:migrate first).`);
 
-  // Channel tokens are sealed with Ohana's key: a missing secret would seal them with the
-  // development fallback, unreadable for the real app.
+  // Channel tokens and AI keys are sealed with Ohana's key: a missing secret would seal them
+  // with the development fallback, unreadable for the real app.
   if (!args["--dry-run"] && !process.env.AUTH_SECRET && !process.env.ENCRYPTION_KEY) {
-    fail("Set Ohana's AUTH_SECRET (and ENCRYPTION_KEY, if it has one): channel tokens are encrypted with it.");
+    fail("Set Ohana's AUTH_SECRET (and ENCRYPTION_KEY, if it has one): channel tokens and AI keys are encrypted with it.");
   }
 
   const map: ImportMap = args["--map"]
@@ -89,6 +104,7 @@ async function main() {
       map,
       dryRun: args["--dry-run"] === true,
       force: args["--force"] === true,
+      familyPlannerAiSecret: (fp && aiSecret) || undefined,
     });
     console.log(formatReport(report));
     if (args["--report"]) writeFileSync(resolve(args["--report"] as string), JSON.stringify(report, null, 2));

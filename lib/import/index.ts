@@ -15,11 +15,13 @@ import { insertPresetTypes } from "@/lib/calendar/presets";
 import { insertDefaultCategories } from "@/lib/finance/presets";
 import { seedDefaultTags } from "@/lib/meals/recipes/tags";
 import { mediaRoot as defaultMediaRoot } from "@/lib/meals/images/config";
-import { getSecretBox, type SecretBox } from "@/lib/secrets";
+import { getSecretBox, SecretBox } from "@/lib/secrets";
 import { planAccounts, writeAccounts, type AccountsPlan } from "./accounts";
 import { importCooklessInvites } from "./cookless/accounts";
-import { importCooklessMeals, noteCooklessAi } from "./cookless/meals";
+import { importCooklessAi } from "./cookless/assistant";
+import { importCooklessMeals } from "./cookless/meals";
 import { importFamilyPlannerTokens } from "./family-planner/accounts";
+import { importFamilyPlannerAiSettings, importFamilyPlannerChats } from "./family-planner/assistant";
 import { importFamilyPlannerCalendar } from "./family-planner/calendar";
 import { importFamilyPlannerFinance } from "./family-planner/finance";
 import { FP_IGNORED_TABLES } from "./family-planner/source";
@@ -32,17 +34,18 @@ import type { ImportArea, ImportContext, ImportMap, ImportReport, ImportSources,
 export type { ImportMap, ImportReport, ImportSources } from "./types";
 
 /**
- * The areas, in order; each copies one area of one source (see types.ts). The assistant
- * (family-planner's ai_settings, ai_chats*, and cookless's Gemini key → AI settings) is added
- * here as its own entries once Ohana has that module.
+ * The areas, in order; each copies one area of one source (see types.ts). family-planner's
+ * AI settings go before cookless's Gemini key, which only fills families without them.
  */
 export const AREAS: Array<{ name: string; run: ImportArea }> = [
   { name: "family-planner: API tokens", run: importFamilyPlannerTokens },
   { name: "family-planner: calendar", run: importFamilyPlannerCalendar },
   { name: "family-planner: finance", run: importFamilyPlannerFinance },
+  { name: "family-planner: AI settings", run: importFamilyPlannerAiSettings },
+  { name: "family-planner: chats", run: importFamilyPlannerChats },
   { name: "cookless: invites", run: importCooklessInvites },
   { name: "cookless: meals", run: importCooklessMeals },
-  { name: "cookless: Gemini key", run: noteCooklessAi },
+  { name: "cookless: Gemini key", run: importCooklessAi },
   { name: "findmyappointment: invites", run: importFmaInvites },
   { name: "findmyappointment: appointments", run: importFmaAppointments },
 ];
@@ -57,6 +60,9 @@ export interface ImportOptions {
   force?: boolean;
   now?: Date;
   secrets?: SecretBox;
+  /** family-planner's AI_CONFIG_KEY (32 bytes, base64): opens its AI keys to seal them again
+   *  with Ohana's. Without it the AI settings come over without keys. */
+  familyPlannerAiSecret?: string;
   mediaRoot?: string;
 }
 
@@ -120,7 +126,7 @@ function noteLeftovers(ctx: ImportContext): void {
     const rest = [...fp.tables.entries()]
       .filter(([t, rows]) => rows.length > 0 && !fp.used.has(t) && !FP_IGNORED_TABLES.includes(t))
       .map(([t, rows]) => `${t} (${rows.length})`);
-    if (rest.length > 0) ctx.note(`family-planner tables not imported (yet): ${rest.join(", ")}`);
+    if (rest.length > 0) ctx.note(`family-planner tables not imported: ${rest.join(", ")}`);
   }
   for (const s of ["cookless", "fma"] as const) {
     const src = ctx.sources[s];
@@ -140,8 +146,16 @@ export async function runImport(db: Db, sources: ImportSources, opts: ImportOpti
   const dryRun = opts.dryRun ?? false;
   const sqlite = (db as unknown as { $client: Database.Database }).$client;
   checkTarget(db, opts.force ?? false);
+  let familyPlannerSecrets: SecretBox | null = null;
+  if (opts.familyPlannerAiSecret) {
+    try {
+      familyPlannerSecrets = new SecretBox(opts.familyPlannerAiSecret);
+    } catch {
+      throw new ImportRefused("The family-planner AI secret must be 32 bytes, base64-encoded (family-planner's AI_CONFIG_KEY).");
+    }
+  }
 
-  const report: ImportReport = { dryRun, counts: {}, users: [], families: [], skipped: [], notes: [], media: { copied: 0, missing: [] } };
+  const report: ImportReport = { dryRun, counts: {}, users: [], families: [], skipped: [], notes: [], media: { copied: 0, missing: [] }, aiKeys: [] };
   const skip = (source: SourceName, table: string, key: string, reason: string) =>
     report.skipped.push({ source, table, key, reason });
   const note = (message: string) => report.notes.push(message);
@@ -155,6 +169,7 @@ export async function runImport(db: Db, sources: ImportSources, opts: ImportOpti
     sources,
     dryRun,
     secrets: opts.secrets ?? getSecretBox(),
+    familyPlannerSecrets,
     mediaRoot: opts.mediaRoot ?? defaultMediaRoot(),
     userIds: { familyPlanner: new Map(), cookless: new Map(), fma: new Map() },
     familyIds: { familyPlanner: new Map(), cookless: new Map(), fma: new Map() },
