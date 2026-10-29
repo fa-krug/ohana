@@ -5,7 +5,7 @@ export const MODULES: { key: string; icon: LucideIcon; ready: boolean }[] = [
   { key: "calendar", icon: CalendarDays, ready: true },
   { key: "finance", icon: Banknote, ready: false },
   { key: "meals", icon: UtensilsCrossed, ready: false },
-  { key: "appointments", icon: Stethoscope, ready: false },
+  { key: "appointments", icon: Stethoscope, ready: true },
 ];
 
 export const OVERVIEW_ICON = LayoutGrid;

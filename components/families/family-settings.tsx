@@ -30,6 +30,9 @@ interface Props {
   selfId: string;
   members: { userId: string; email: string; name: string; role: Role }[];
   invites: { id: string; url: string; role: string; expiresAt: Date }[];
+  /** More sections (one component each, e.g. home address, notifications), shown before
+   *  "Leave or delete". */
+  children?: React.ReactNode;
 }
 
 export function FamilySettings(props: Props) {
@@ -41,6 +44,7 @@ export function FamilySettings(props: Props) {
       <GeneralCard family={props.family} editor={editor} />
       <MembersCard {...props} editor={editor} />
       {editor && <InvitesCard familyId={props.family.id} invites={props.invites} />}
+      {props.children}
       <LeaveCard family={props.family} selfId={props.selfId} editor={editor} memberCount={props.members.length} />
     </div>
   );

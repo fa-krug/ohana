@@ -172,8 +172,9 @@ empty Ohana database. It has a **dry run** that only reports what it would do.
   nightly SQLite backup to `/app/data/backups` (14 kept), and a job on the Pi copies it off-site
   (e.g. restic to a cloud bucket); the README documents both and the restore.
 - Environment: `AUTH_SECRET`, `APP_URL`, `DATABASE_FILE`, `WEBAUTHN_RP_ID`, `WEBAUTHN_RP_NAME`,
-  `WEBAUTHN_ORIGIN`, `BACKUP_DIR` / `BACKUP_KEEP` / `BACKUP_HOUR`, `PORT`; later `ENCRYPTION_KEY`
-  (AI and channel secrets, phase 3) and `MEDIA_ROOT` (recipe images, phase 4).
+  `WEBAUTHN_ORIGIN`, `BACKUP_DIR` / `BACKUP_KEEP` / `BACKUP_HOUR`, `PORT`, optionally
+  `ENCRYPTION_KEY` (channel and AI secrets; derived from `AUTH_SECRET` when unset, phase 5), the
+  worker's `APPT_*` settings (see `.env.example`); later `MEDIA_ROOT` (recipe images, phase 4).
 
 ## Phases
 
@@ -184,9 +185,26 @@ empty Ohana database. It has a **dry run** that only reports what it would do.
 | 2  | Finance            | Transactions, accounts, category tree, transfers, splits, CSV import, overview, comparison, benchmark                                      |
 | 3  | Assistant          | Chats in the worker, calendar + finance tools, web search, analytics, calc, auto-categorize                                                |
 | 4  | Meals              | Recipes, meal plan, shopping list, cook view, offline queue, recipe generation; assistant tools for meals                                  |
-| 5  | Appointments       | Doctolib + jameda searches, worker scheduling, slot detail, notification channels; assistant tools for appointments                        |
+| 5  | Appointments ✅    | Doctolib + jameda searches, worker scheduling, slot detail, notification channels; assistant tools for appointments                        |
 | 6  | Import + cut-over  | `import-legacy.ts` with dry run, a rehearsal on a copy, then the real import; old apps shut down, Supabase set read-only, old repos archived |
 | 7  | Connections        | The cross-module features above                                                                                                           |
+
+### Notes on phase 5
+
+- Built ahead of phases 1–4. The **assistant tools for appointments** wait for the assistant
+  (phase 3); `lib/appointments/*` is ready for them. The calendar connection is phase 7.
+- Scheduling is the worker's: due searches are claimed through the database (`next_run_at`,
+  a lease `locked_until`, `run_requested_at` for "Run now"), so two workers never run one
+  search; the web process has no scheduler (findmyappointment's `instrumentation.ts` and
+  `/api/cron/tick` are gone). Every outbound request has a 30 s timeout (the source had none).
+- Notification channels are family-wide (`notification_channels`, `lib/notifications`,
+  `notifyFamily`) with tokens sealed by `lib/secrets.ts` (`ENCRYPTION_KEY`, else derived from
+  `AUTH_SECRET`). Families have no language yet: notifications use the language of the
+  family's longest-standing editor.
+- The home address is `families.home_address` / `home_lat` / `home_lng` (real numbers, null
+  when unset) instead of findmyappointment's text columns.
+- Searches are edited on their own page rather than in a modal (as findmyappointment's code
+  does); the list shows the three earliest doctors per search inline.
 
 Each phase ends deployed and usable. The old apps stay live until phase 6, so nothing is lost
 while Ohana grows.

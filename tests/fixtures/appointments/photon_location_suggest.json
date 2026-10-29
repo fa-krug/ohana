@@ -1,0 +1,68 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "W",
+        "osm_id": 384555173,
+        "osm_key": "highway",
+        "osm_value": "tertiary",
+        "type": "street",
+        "name": "Röntgenstraße",
+        "locality": "Martinsried",
+        "district": "Steinkirchen",
+        "city": "Planegg",
+        "county": "Landkreis München",
+        "state": "Bayern",
+        "country": "Deutschland",
+        "postcode": "82152",
+        "countrycode": "DE",
+        "extent": [
+          11.4437204,
+          48.1046351,
+          11.444304,
+          48.1045775
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          11.4440151,
+          48.1045777
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "W",
+        "osm_id": 142779560,
+        "osm_key": "highway",
+        "osm_value": "residential",
+        "type": "street",
+        "name": "Röntgenstraße",
+        "district": "Martinsried",
+        "city": "Planegg",
+        "county": "Landkreis München",
+        "state": "Bayern",
+        "country": "Deutschland",
+        "postcode": "82152",
+        "countrycode": "DE",
+        "extent": [
+          11.4493302,
+          48.1092217,
+          11.45204,
+          48.1088865
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          11.4506844,
+          48.1090488
+        ]
+      }
+    }
+  ]
+}

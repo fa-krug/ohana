@@ -6,6 +6,7 @@ import {
   index,
   integer,
   primaryKey,
+  real,
   sqliteTable,
   text,
   uniqueIndex,
@@ -84,6 +85,10 @@ export const families = sqliteTable("families", {
   /** The view id of a family-planner planner from before families (filled by the import):
    *  its feed keeps working under this id, and the feed's event UIDs keep it as prefix. */
   legacyId: text("legacy_id").unique(),
+  /** Home address (geocoded with Photon): the origin for distances, e.g. to a practice. */
+  homeAddress: text("home_address"),
+  homeLat: real("home_lat"),
+  homeLng: real("home_lng"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });
@@ -179,3 +184,8 @@ export const calNotes = sqliteTable(
   },
   (t) => ({ pk: primaryKey({ columns: [t.familyId, t.day] }) }),
 );
+
+// ---- modules (one file each) ----
+
+export * from "./schema/notifications";
+export * from "./schema/appointments";

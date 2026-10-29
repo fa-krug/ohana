@@ -1,0 +1,1367 @@
+[
+  {
+    "slug": "abszess",
+    "label": "Abszess",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "adhs",
+    "label": "ADHS",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "adhs-bei-erwachsenen",
+    "label": "ADHS bei Erwachsenen",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "adipositas",
+    "label": "Adipositas",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "angststoerung",
+    "label": "Angststörung",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "asthma",
+    "label": "Asthma",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "autismus",
+    "label": "Autismus",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "autoimmunerkrankungen",
+    "label": "Autoimmunerkrankungen",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "bandscheibenvorfall",
+    "label": "Bandscheibenvorfall",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "besenreiser",
+    "label": "Besenreiser",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "blasenentzuendung",
+    "label": "Blasenentzündung",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "bluthochdruck-hypertonie",
+    "label": "Bluthochdruck (Hypertonie)",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "borderline-persoenlichkeitsstoerung",
+    "label": "Borderline-Persönlichkeitsstörung",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "borreliose",
+    "label": "Borreliose",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "burnout",
+    "label": "Burnout",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "chronische-entzuendungen-silent-inflammation",
+    "label": "Chronische Entzündungen (Silent Inflammation)",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "chronisches-muedigkeitssyndrom",
+    "label": "Chronisches Müdigkeitssyndrom",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "coxarthrose-huefte",
+    "label": "Coxarthrose (Hüfte)",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "demenz",
+    "label": "Demenz",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "depressionen",
+    "label": "Depressionen",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "diabetes",
+    "label": "Diabetes",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "dysplasiesprechstunde",
+    "label": "Dysplasiesprechstunde",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "ellenbogen",
+    "label": "Ellenbogen",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "endometriose",
+    "label": "Endometriose",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "epilepsie",
+    "label": "Epilepsie",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "erektile-dysfunktion",
+    "label": "Erektile Dysfunktion",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "fehlgeburt",
+    "label": "Fehlgeburt",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "fersensporn",
+    "label": "Fersensporn",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "fibromyalgie",
+    "label": "Fibromyalgie",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "gallensteine",
+    "label": "Gallensteine",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "gynaekomastie",
+    "label": "Gynäkomastie",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "haarausfall",
+    "label": "Haarausfall",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "hallux-rigidus",
+    "label": "Hallux rigidus",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "hallux-valgus",
+    "label": "Hallux valgus",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "haemopyrrollaktamurie-hpu",
+    "label": "Hämopyrrollaktamurie (HPU)",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "haemorrhoiden",
+    "label": "Hämorrhoiden",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "hashimoto",
+    "label": "Hashimoto",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "histaminintoleranz",
+    "label": "Histaminintoleranz",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "hyperhidrose",
+    "label": "Hyperhidrose",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "impingementsyndrom-schulter",
+    "label": "Impingementsyndrom Schulter",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "inkontinenz",
+    "label": "Inkontinenz",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "karpaltunnelsyndrom-kts",
+    "label": "Karpaltunnelsyndrom (KTS)",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "keratokonus",
+    "label": "Keratokonus",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "kleptomanie",
+    "label": "Kleptomanie",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "knie",
+    "label": "Knie",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "knieverletzung",
+    "label": "Knieverletzung",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "knochenmarkoedem",
+    "label": "Knochenmarködem",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "kopfschmerz",
+    "label": "Kopfschmerz",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "leistenbruch",
+    "label": "Leistenbruch",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "leistenschmerzen",
+    "label": "Leistenschmerzen",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "lichen-sclerosus",
+    "label": "Lichen sclerosus",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "lipoedem",
+    "label": "Lipödem",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "lipom",
+    "label": "Lipom",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "long-covid-19",
+    "label": "Long-Covid-19",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "long-covid-syndrom-post-covid-syndrom",
+    "label": "Long-Covid-Syndrom/Post-Covid-Syndrom",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "lupus",
+    "label": "Lupus",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "makuladegeneration",
+    "label": "Makuladegeneration",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "migraene",
+    "label": "Migräne",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "mobbing",
+    "label": "Mobbing",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "morbus-bechterew",
+    "label": "Morbus Bechterew",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "morbus-crohn",
+    "label": "Morbus Crohn",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "morbus-dupuytren",
+    "label": "Morbus Dupuytren",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "morbus-parkinson",
+    "label": "Morbus Parkinson",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "multiple-sklerose",
+    "label": "Multiple Sklerose",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "myome",
+    "label": "Myome",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "nabelbruch",
+    "label": "Nabelbruch",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "nackenschmerzen",
+    "label": "Nackenschmerzen",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "nagelpilz",
+    "label": "Nagelpilz",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "nahrungsmittelunvertraeglichkeit",
+    "label": "Nahrungsmittelunverträglichkeit",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "neurodermitis",
+    "label": "Neurodermitis",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "osteoporose",
+    "label": "Osteoporose",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "panikattacken",
+    "label": "Panikattacken",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "pms-praemenstruelles-syndrom",
+    "label": "PMS (Prämenstruelles Syndrom)",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "polyneuropathie",
+    "label": "Polyneuropathie",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "posttraumatische-belastungsstoerung-ptbs",
+    "label": "Posttraumatische Belastungsstörung (PTBS)",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "pruefungsangst",
+    "label": "Prüfungsangst",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "reizdarm",
+    "label": "Reizdarm",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "restless-legs-syndrom",
+    "label": "Restless-legs-Syndrom",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "rheuma",
+    "label": "Rheuma",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "risikoschwangerschaft",
+    "label": "Risikoschwangerschaft",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "rosacea",
+    "label": "Rosacea",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "rueckenschmerzen",
+    "label": "Rückenschmerzen",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "schilddruesenentzuendung",
+    "label": "Schilddrüsenentzündung",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "schilddruesenunterfunktion",
+    "label": "Schilddrüsenunterfunktion",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "schizophrenie",
+    "label": "Schizophrenie",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "schlafapnoe",
+    "label": "Schlafapnoe",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "schlaganfall",
+    "label": "Schlaganfall",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "schnarchen",
+    "label": "Schnarchen",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "schulterschmerzen",
+    "label": "Schulterschmerzen",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "schuppenflechte-psoriasis",
+    "label": "Schuppenflechte/Psoriasis",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "schwangerschaft",
+    "label": "Schwangerschaft",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "schwindel",
+    "label": "Schwindel",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "skoliose",
+    "label": "Skoliose",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "steissbeinfistel",
+    "label": "Steißbeinfistel",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "thrombose",
+    "label": "Thrombose",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "tinnitus",
+    "label": "Tinnitus",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "trockenes-auge",
+    "label": "Trockenes Auge",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "vaginismus",
+    "label": "Vaginismus",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "wechseljahre",
+    "label": "Wechseljahre",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "zwangsstoerung",
+    "label": "Zwangsstörung",
+    "type": "erkrankung"
+  },
+  {
+    "slug": "adhs-testung",
+    "label": "ADHS Testung",
+    "type": "leistung"
+  },
+  {
+    "slug": "akupunktur",
+    "label": "Akupunktur",
+    "type": "leistung"
+  },
+  {
+    "slug": "allergietest",
+    "label": "Allergietest",
+    "type": "leistung"
+  },
+  {
+    "slug": "angstpatient-zahnarztangst",
+    "label": "Angstpatient/Zahnarztangst",
+    "type": "leistung"
+  },
+  {
+    "slug": "arthrosetherapie",
+    "label": "Arthrosetherapie",
+    "type": "leistung"
+  },
+  {
+    "slug": "aesthetische-zahnmedizin",
+    "label": "Ästhetische Zahnmedizin",
+    "type": "leistung"
+  },
+  {
+    "slug": "augenlasern-beratung",
+    "label": "Augenlasern (Beratung)",
+    "type": "leistung"
+  },
+  {
+    "slug": "augenoperation",
+    "label": "Augenoperation",
+    "type": "leistung"
+  },
+  {
+    "slug": "behandlung-von-akne",
+    "label": "Behandlung von Akne",
+    "type": "leistung"
+  },
+  {
+    "slug": "beschneidung-beratung",
+    "label": "Beschneidung (Beratung)",
+    "type": "leistung"
+  },
+  {
+    "slug": "bio-identische-hormontherapie",
+    "label": "Bio-identische Hormontherapie",
+    "type": "leistung"
+  },
+  {
+    "slug": "bioresonanztherapie",
+    "label": "Bioresonanztherapie",
+    "type": "leistung"
+  },
+  {
+    "slug": "blutegeltherapie",
+    "label": "Blutegeltherapie",
+    "type": "leistung"
+  },
+  {
+    "slug": "botox-gegen-zaehneknirschen-bruxismus",
+    "label": "Botox gegen Zähneknirschen (Bruxismus)",
+    "type": "leistung"
+  },
+  {
+    "slug": "botoxbehandlung",
+    "label": "Botoxbehandlung",
+    "type": "leistung"
+  },
+  {
+    "slug": "brustchirurgie",
+    "label": "Brustchirurgie",
+    "type": "leistung"
+  },
+  {
+    "slug": "brustvergroesserung-beratung",
+    "label": "Brustvergrößerung (Beratung)",
+    "type": "leistung"
+  },
+  {
+    "slug": "brustverkleinerung-beratung",
+    "label": "Brustverkleinerung (Beratung)",
+    "type": "leistung"
+  },
+  {
+    "slug": "chiropraktik-wirbelsaeulenbeschwerden",
+    "label": "Chiropraktik / Wirbelsäulenbeschwerden",
+    "type": "leistung"
+  },
+  {
+    "slug": "cmd-kiefergelenk-beratung",
+    "label": "CMD / Kiefergelenk (Beratung)",
+    "type": "leistung"
+  },
+  {
+    "slug": "colon-hydro-therapie",
+    "label": "Colon-Hydro-Therapie",
+    "type": "leistung"
+  },
+  {
+    "slug": "darm-sprechstunde",
+    "label": "Darm-Sprechstunde",
+    "type": "leistung"
+  },
+  {
+    "slug": "darmspiegelung-koloskopie",
+    "label": "Darmspiegelung / Koloskopie",
+    "type": "leistung"
+  },
+  {
+    "slug": "dialektisch-behaviorale-therapie-dbt",
+    "label": "Dialektisch-Behaviorale Therapie (DBT)",
+    "type": "leistung"
+  },
+  {
+    "slug": "dunkelfelddiagnostik",
+    "label": "Dunkelfelddiagnostik",
+    "type": "leistung"
+  },
+  {
+    "slug": "echokardiographie-herzultraschall",
+    "label": "Echokardiographie / Herzultraschall",
+    "type": "leistung"
+  },
+  {
+    "slug": "eiseninfusionen",
+    "label": "Eiseninfusionen",
+    "type": "leistung"
+  },
+  {
+    "slug": "ekg",
+    "label": "EKG",
+    "type": "leistung"
+  },
+  {
+    "slug": "emdr-traumatherapie",
+    "label": "EMDR-Traumatherapie",
+    "type": "leistung"
+  },
+  {
+    "slug": "endokrinologie",
+    "label": "Endokrinologie",
+    "type": "leistung"
+  },
+  {
+    "slug": "erstuntersuchung-neupatient-in",
+    "label": "Erstuntersuchung (Neupatient/in)",
+    "type": "leistung"
+  },
+  {
+    "slug": "facelift",
+    "label": "Facelift",
+    "type": "leistung"
+  },
+  {
+    "slug": "faeden-ziehen",
+    "label": "Fäden ziehen",
+    "type": "leistung"
+  },
+  {
+    "slug": "faltenbehandlung-beratung",
+    "label": "Faltenbehandlung (Beratung)",
+    "type": "leistung"
+  },
+  {
+    "slug": "fettabsaugung-liposuktion",
+    "label": "Fettabsaugung (Liposuktion)",
+    "type": "leistung"
+  },
+  {
+    "slug": "funktionelle-medizin",
+    "label": "Funktionelle Medizin",
+    "type": "leistung"
+  },
+  {
+    "slug": "gesundheits-check-up",
+    "label": "Gesundheits-Check-up",
+    "type": "leistung"
+  },
+  {
+    "slug": "haarsprechstunde",
+    "label": "Haarsprechstunde",
+    "type": "leistung"
+  },
+  {
+    "slug": "hausbesuch",
+    "label": "Hausbesuch",
+    "type": "leistung"
+  },
+  {
+    "slug": "hautkrebsvorsorge",
+    "label": "Hautkrebsvorsorge",
+    "type": "leistung"
+  },
+  {
+    "slug": "hilfe-bei-essstoerung",
+    "label": "Hilfe bei Essstörung",
+    "type": "leistung"
+  },
+  {
+    "slug": "hormonsprechstunde",
+    "label": "Hormonsprechstunde",
+    "type": "leistung"
+  },
+  {
+    "slug": "hueftoperation",
+    "label": "Hüftoperation",
+    "type": "leistung"
+  },
+  {
+    "slug": "hypnose",
+    "label": "Hypnose",
+    "type": "leistung"
+  },
+  {
+    "slug": "impfung-impfberatung",
+    "label": "Impfung/Impfberatung",
+    "type": "leistung"
+  },
+  {
+    "slug": "implantologie",
+    "label": "Implantologie",
+    "type": "leistung"
+  },
+  {
+    "slug": "kinder-hno",
+    "label": "Kinder-HNO",
+    "type": "leistung"
+  },
+  {
+    "slug": "kinderzahnbehandlung",
+    "label": "Kinderzahnbehandlung",
+    "type": "leistung"
+  },
+  {
+    "slug": "kinesiologie",
+    "label": "Kinesiologie",
+    "type": "leistung"
+  },
+  {
+    "slug": "knie-operation",
+    "label": "Knie-Operation",
+    "type": "leistung"
+  },
+  {
+    "slug": "knochendichtemessung",
+    "label": "Knochendichtemessung",
+    "type": "leistung"
+  },
+  {
+    "slug": "krampfader-behandlung-beratung",
+    "label": "Krampfader-Behandlung (Beratung)",
+    "type": "leistung"
+  },
+  {
+    "slug": "langzeit-ekg",
+    "label": "Langzeit-EKG",
+    "type": "leistung"
+  },
+  {
+    "slug": "laserbehandlung",
+    "label": "Laserbehandlung",
+    "type": "leistung"
+  },
+  {
+    "slug": "lidstraffung-beratung",
+    "label": "Lidstraffung (Beratung)",
+    "type": "leistung"
+  },
+  {
+    "slug": "lippen-aufspritzen",
+    "label": "Lippen aufspritzen",
+    "type": "leistung"
+  },
+  {
+    "slug": "lymphdrainage",
+    "label": "Lymphdrainage",
+    "type": "leistung"
+  },
+  {
+    "slug": "magenspiegelung-gastroskopie",
+    "label": "Magenspiegelung / Gastroskopie",
+    "type": "leistung"
+  },
+  {
+    "slug": "magnetfeldtherapie",
+    "label": "Magnetfeldtherapie",
+    "type": "leistung"
+  },
+  {
+    "slug": "mammographie",
+    "label": "Mammographie",
+    "type": "leistung"
+  },
+  {
+    "slug": "manuelle-therapie",
+    "label": "Manuelle Therapie",
+    "type": "leistung"
+  },
+  {
+    "slug": "medizinische-kosmetik",
+    "label": "Medizinische Kosmetik",
+    "type": "leistung"
+  },
+  {
+    "slug": "mrt-kernspintomographie",
+    "label": "MRT (Kernspintomographie)",
+    "type": "leistung"
+  },
+  {
+    "slug": "mrt-abdomen",
+    "label": "MRT Abdomen",
+    "type": "leistung"
+  },
+  {
+    "slug": "mrt-hand-handgelenk",
+    "label": "MRT Hand / Handgelenk",
+    "type": "leistung"
+  },
+  {
+    "slug": "mrt-kopf",
+    "label": "MRT Kopf",
+    "type": "leistung"
+  },
+  {
+    "slug": "muttermalentfernung-beratung",
+    "label": "Muttermalentfernung (Beratung)",
+    "type": "leistung"
+  },
+  {
+    "slug": "nasenoperation",
+    "label": "Nasenoperation",
+    "type": "leistung"
+  },
+  {
+    "slug": "neuro-urologische-behandlung",
+    "label": "Neuro-urologische Behandlung",
+    "type": "leistung"
+  },
+  {
+    "slug": "ohrenreinigung",
+    "label": "Ohrenreinigung",
+    "type": "leistung"
+  },
+  {
+    "slug": "osteopathie",
+    "label": "Osteopathie",
+    "type": "leistung"
+  },
+  {
+    "slug": "paartherapie",
+    "label": "Paartherapie",
+    "type": "leistung"
+  },
+  {
+    "slug": "parodontitis-behandlung",
+    "label": "Parodontitis (Behandlung)",
+    "type": "leistung"
+  },
+  {
+    "slug": "physiotherapie",
+    "label": "Physiotherapie",
+    "type": "leistung"
+  },
+  {
+    "slug": "professionelle-zahnreinigung-prophylaxe",
+    "label": "Professionelle Zahnreinigung (Prophylaxe)",
+    "type": "leistung"
+  },
+  {
+    "slug": "proktologie",
+    "label": "Proktologie",
+    "type": "leistung"
+  },
+  {
+    "slug": "prp-behandlung",
+    "label": "PRP-Behandlung",
+    "type": "leistung"
+  },
+  {
+    "slug": "prp-therapie-gegen-haarausfall",
+    "label": "PRP-Therapie gegen Haarausfall",
+    "type": "leistung"
+  },
+  {
+    "slug": "psychotherapie",
+    "label": "Psychotherapie",
+    "type": "leistung"
+  },
+  {
+    "slug": "psychotherapie-erstgespraech",
+    "label": "Psychotherapie (Erstgespräch)",
+    "type": "leistung"
+  },
+  {
+    "slug": "raucherentwoehnung",
+    "label": "Raucherentwöhnung",
+    "type": "leistung"
+  },
+  {
+    "slug": "schamlippenverkleinerung",
+    "label": "Schamlippenverkleinerung",
+    "type": "leistung"
+  },
+  {
+    "slug": "schroepfen",
+    "label": "Schröpfen",
+    "type": "leistung"
+  },
+  {
+    "slug": "schwangerschaftsabbruch-beratung",
+    "label": "Schwangerschaftsabbruch (Beratung)",
+    "type": "leistung"
+  },
+  {
+    "slug": "sculptra-behandlung",
+    "label": "Sculptra Behandlung",
+    "type": "leistung"
+  },
+  {
+    "slug": "sehschule-sehtest",
+    "label": "Sehschule / Sehtest",
+    "type": "leistung"
+  },
+  {
+    "slug": "spermiogramm",
+    "label": "Spermiogramm",
+    "type": "leistung"
+  },
+  {
+    "slug": "sportmedizinische-untersuchung",
+    "label": "Sportmedizinische Untersuchung",
+    "type": "leistung"
+  },
+  {
+    "slug": "stosswellentherapie",
+    "label": "Stoßwellentherapie",
+    "type": "leistung"
+  },
+  {
+    "slug": "tiefenpsychologie",
+    "label": "Tiefenpsychologie",
+    "type": "leistung"
+  },
+  {
+    "slug": "traditionelle-chinesische-medizin-tcm",
+    "label": "Traditionelle Chinesische Medizin (TCM)",
+    "type": "leistung"
+  },
+  {
+    "slug": "traumatherapie",
+    "label": "Traumatherapie",
+    "type": "leistung"
+  },
+  {
+    "slug": "ultraschall-halsschlagader-carotis",
+    "label": "Ultraschall Halsschlagader / Carotis",
+    "type": "leistung"
+  },
+  {
+    "slug": "ultraschalluntersuchung",
+    "label": "Ultraschalluntersuchung",
+    "type": "leistung"
+  },
+  {
+    "slug": "vasektomie",
+    "label": "Vasektomie",
+    "type": "leistung"
+  },
+  {
+    "slug": "verhaltenstherapie",
+    "label": "Verhaltenstherapie",
+    "type": "leistung"
+  },
+  {
+    "slug": "weisheitszahnentfernung",
+    "label": "Weisheitszahnentfernung",
+    "type": "leistung"
+  },
+  {
+    "slug": "wirbelsaeulentherapie-nach-dorn",
+    "label": "Wirbelsäulentherapie nach Dorn",
+    "type": "leistung"
+  },
+  {
+    "slug": "wurzelbehandlung-endodontie",
+    "label": "Wurzelbehandlung (Endodontie)",
+    "type": "leistung"
+  },
+  {
+    "slug": "zahnaerzte-fuer-naturheilwesen",
+    "label": "Zahnärzte für Naturheilwesen",
+    "type": "leistung"
+  },
+  {
+    "slug": "akupunkteur",
+    "label": "Akupunkteur",
+    "type": "specialization"
+  },
+  {
+    "slug": "allergologe",
+    "label": "Allergologe",
+    "type": "specialization"
+  },
+  {
+    "slug": "facharzt-fuer-allgemeinchirurgie",
+    "label": "Allgemeinchirurgen",
+    "type": "specialization"
+  },
+  {
+    "slug": "allgemeinmediziner",
+    "label": "Allgemeinmediziner",
+    "type": "specialization"
+  },
+  {
+    "slug": "anaesthesiologe",
+    "label": "Anästhesiologe",
+    "type": "specialization"
+  },
+  {
+    "slug": "androloge",
+    "label": "Androloge",
+    "type": "specialization"
+  },
+  {
+    "slug": "angiologe",
+    "label": "Angiologe",
+    "type": "specialization"
+  },
+  {
+    "slug": "arzt",
+    "label": "Arzt",
+    "type": "specialization"
+  },
+  {
+    "slug": "augenarzt",
+    "label": "Augenarzt",
+    "type": "specialization"
+  },
+  {
+    "slug": "chirotherapeut",
+    "label": "Chirotherapeut",
+    "type": "specialization"
+  },
+  {
+    "slug": "d-arzt",
+    "label": "D-Arzt",
+    "type": "specialization"
+  },
+  {
+    "slug": "diabetologe",
+    "label": "Diabetologe",
+    "type": "specialization"
+  },
+  {
+    "slug": "endokrinologe-diabetologe",
+    "label": "Endokrinologe & Diabetologe",
+    "type": "specialization"
+  },
+  {
+    "slug": "ernaehrungsmediziner",
+    "label": "Ernährungsmediziner",
+    "type": "specialization"
+  },
+  {
+    "slug": "facharzt-fuer-nervenheilkunde",
+    "label": "Facharzt für Nervenheilkunde",
+    "type": "specialization"
+  },
+  {
+    "slug": "frauenarzt-gynaekologe",
+    "label": "Frauenarzt (Gynäkologe)",
+    "type": "specialization"
+  },
+  {
+    "slug": "fusschirurg",
+    "label": "Fußchirurg",
+    "type": "specialization"
+  },
+  {
+    "slug": "gastroenterologe",
+    "label": "Gastroenterologe",
+    "type": "specialization"
+  },
+  {
+    "slug": "gefaesschirurg",
+    "label": "Gefäßchirurg",
+    "type": "specialization"
+  },
+  {
+    "slug": "geriatrie-altersheilkunde",
+    "label": "Geriatrie (Altersheilkunde)",
+    "type": "specialization"
+  },
+  {
+    "slug": "hals-nasen-ohren-arzt",
+    "label": "Hals-Nasen-Ohren-Arzt",
+    "type": "specialization"
+  },
+  {
+    "slug": "haematologe-internistischer-onkologe",
+    "label": "Hämatologe & Internistischer Onkologe",
+    "type": "specialization"
+  },
+  {
+    "slug": "handchirurg",
+    "label": "Handchirurg",
+    "type": "specialization"
+  },
+  {
+    "slug": "hautarzt-dermatologe",
+    "label": "Hautarzt (Dermatologe)",
+    "type": "specialization"
+  },
+  {
+    "slug": "heilpraktiker",
+    "label": "Heilpraktiker",
+    "type": "specialization"
+  },
+  {
+    "slug": "heilpraktiker-fuer-psychotherapie",
+    "label": "Heilpraktiker für Psychotherapie",
+    "type": "specialization"
+  },
+  {
+    "slug": "herzchirurg",
+    "label": "Herzchirurg",
+    "type": "specialization"
+  },
+  {
+    "slug": "homoeopath",
+    "label": "Homöopath",
+    "type": "specialization"
+  },
+  {
+    "slug": "infektiologe",
+    "label": "Infektiologe",
+    "type": "specialization"
+  },
+  {
+    "slug": "internist",
+    "label": "Internist",
+    "type": "specialization"
+  },
+  {
+    "slug": "kardiologe",
+    "label": "Kardiologe",
+    "type": "specialization"
+  },
+  {
+    "slug": "kieferorthopaede",
+    "label": "Kieferorthopäde",
+    "type": "specialization"
+  },
+  {
+    "slug": "kinder-und-jugend-pneumologe",
+    "label": "Kinder- und Jugend-Pneumologe",
+    "type": "specialization"
+  },
+  {
+    "slug": "kinder-und-jugendarzt",
+    "label": "Kinder- und Jugendarzt",
+    "type": "specialization"
+  },
+  {
+    "slug": "kinder-und-jugendpsychiater-und-psychotherapeut",
+    "label": "Kinder- und Jugendpsychiater und -psychotherapeut",
+    "type": "specialization"
+  },
+  {
+    "slug": "laboratoriumsmediziner",
+    "label": "Laboratoriumsmediziner",
+    "type": "specialization"
+  },
+  {
+    "slug": "masseur",
+    "label": "Masseur",
+    "type": "specialization"
+  },
+  {
+    "slug": "mund-kiefer-gesichtschirurg",
+    "label": "Mund-Kiefer-Gesichtschirurg",
+    "type": "specialization"
+  },
+  {
+    "slug": "neonatologe",
+    "label": "Neonatologe",
+    "type": "specialization"
+  },
+  {
+    "slug": "nephrologe",
+    "label": "Nephrologe",
+    "type": "specialization"
+  },
+  {
+    "slug": "neurochirurg",
+    "label": "Neurochirurg",
+    "type": "specialization"
+  },
+  {
+    "slug": "neurologe",
+    "label": "Neurologe",
+    "type": "specialization"
+  },
+  {
+    "slug": "notfallmediziner",
+    "label": "Notfallmediziner",
+    "type": "specialization"
+  },
+  {
+    "slug": "nuklearmediziner",
+    "label": "Nuklearmediziner",
+    "type": "specialization"
+  },
+  {
+    "slug": "onkologe",
+    "label": "Onkologe",
+    "type": "specialization"
+  },
+  {
+    "slug": "orthopaede",
+    "label": "Orthopäde",
+    "type": "specialization"
+  },
+  {
+    "slug": "orthopaede-unfallchirurg",
+    "label": "Orthopäde & Unfallchirurg",
+    "type": "specialization"
+  },
+  {
+    "slug": "palliativmediziner",
+    "label": "Palliativmediziner",
+    "type": "specialization"
+  },
+  {
+    "slug": "pathologe",
+    "label": "Pathologe",
+    "type": "specialization"
+  },
+  {
+    "slug": "phlebologe",
+    "label": "Phlebologe",
+    "type": "specialization"
+  },
+  {
+    "slug": "physiotherapeut",
+    "label": "Physiotherapeut",
+    "type": "specialization"
+  },
+  {
+    "slug": "plastischer-aesthetischer-chirurg",
+    "label": "Plastischer & Ästhetischer Chirurg",
+    "type": "specialization"
+  },
+  {
+    "slug": "pneumologe",
+    "label": "Pneumologe",
+    "type": "specialization"
+  },
+  {
+    "slug": "praktischer-arzt",
+    "label": "Praktischer Arzt",
+    "type": "specialization"
+  },
+  {
+    "slug": "proktologe",
+    "label": "Proktologe",
+    "type": "specialization"
+  },
+  {
+    "slug": "psychiater",
+    "label": "Psychiater",
+    "type": "specialization"
+  },
+  {
+    "slug": "psychoanalyse",
+    "label": "Psychoanalyse",
+    "type": "specialization"
+  },
+  {
+    "slug": "psychologischer-psychotherapeut",
+    "label": "Psychologischer Psychotherapeut",
+    "type": "specialization"
+  },
+  {
+    "slug": "psychosomatiker",
+    "label": "Psychosomatiker",
+    "type": "specialization"
+  },
+  {
+    "slug": "radiologe",
+    "label": "Radiologe",
+    "type": "specialization"
+  },
+  {
+    "slug": "rheumatologe",
+    "label": "Rheumatologe",
+    "type": "specialization"
+  },
+  {
+    "slug": "schlafmediziner",
+    "label": "Schlafmediziner",
+    "type": "specialization"
+  },
+  {
+    "slug": "spezieller-schmerztherapeut",
+    "label": "Spezieller Schmerztherapeut",
+    "type": "specialization"
+  },
+  {
+    "slug": "spezieller-unfallchirurg",
+    "label": "Spezieller Unfallchirurg",
+    "type": "specialization"
+  },
+  {
+    "slug": "sportmediziner",
+    "label": "Sportmediziner",
+    "type": "specialization"
+  },
+  {
+    "slug": "strahlentherapeut",
+    "label": "Strahlentherapeut",
+    "type": "specialization"
+  },
+  {
+    "slug": "tierarzt",
+    "label": "Tierarzt",
+    "type": "specialization"
+  },
+  {
+    "slug": "tropenmediziner",
+    "label": "Tropenmediziner",
+    "type": "specialization"
+  },
+  {
+    "slug": "urologe",
+    "label": "Urologe",
+    "type": "specialization"
+  },
+  {
+    "slug": "venerologe",
+    "label": "Venerologe",
+    "type": "specialization"
+  },
+  {
+    "slug": "viszeralchirurg",
+    "label": "Viszeralchirurg",
+    "type": "specialization"
+  },
+  {
+    "slug": "wirbelsaeulenchirurg",
+    "label": "Wirbelsäulenchirurg",
+    "type": "specialization"
+  },
+  {
+    "slug": "zahnarzt",
+    "label": "Zahnarzt",
+    "type": "specialization"
+  }
+]

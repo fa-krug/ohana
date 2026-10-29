@@ -1,0 +1,64 @@
+{
+  "searchEntries": [
+    {
+      "slug": "kinderheilkunde-kinder-und-jugendmedizin",
+      "name": "Kinderarzt",
+      "id": 1287,
+      "kind": "SPECIALITY"
+    },
+    {
+      "slug": "kinder-jugendpsychiatrie-und-psychotherapie-2",
+      "name": "Kinder- und Jugendpsychiater und -psychotherapeut",
+      "id": 1316,
+      "kind": "SPECIALITY"
+    },
+    {
+      "slug": "kinderorthopadie",
+      "name": "Kinder- und Jugend-Orthopäde",
+      "id": 1142,
+      "kind": "SPECIALITY"
+    },
+    {
+      "slug": "kinder-hno",
+      "name": "Kinder-HNO",
+      "id": 1419,
+      "kind": "SPECIALITY"
+    },
+    {
+      "slug": "kinderaugenarzt-kinderophthalmologe",
+      "name": "Kinderaugenarzt / Kinderophthalmologe",
+      "id": 14350,
+      "kind": "SPECIALITY"
+    },
+    {
+      "slug": "kinder-dermatologie",
+      "name": "Kinderhautarzt / Kinderdermatologe",
+      "id": 2051,
+      "kind": "SPECIALITY"
+    },
+    {
+      "slug": "kinder-und-jugendlichenpsychotherapeut",
+      "name": "Kinder- und Jugendlichenpsychotherapeut",
+      "id": 3173,
+      "kind": "SPECIALITY"
+    },
+    {
+      "slug": "kinderchirurgie",
+      "name": "Kinder- und Jugendchirurg",
+      "id": 1330,
+      "kind": "SPECIALITY"
+    },
+    {
+      "slug": "kinderzahnarzt",
+      "name": "Kinderzahnarzt",
+      "id": 1400,
+      "kind": "SPECIALITY"
+    },
+    {
+      "slug": "kinder-kardiologe",
+      "name": "Kinderkardiologe",
+      "id": 1799,
+      "kind": "SPECIALITY"
+    }
+  ]
+}
