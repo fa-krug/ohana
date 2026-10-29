@@ -209,7 +209,22 @@ describe("legacy import: accounts and families", () => {
     await expect(
       runImport(db, sources, { map: { families: [{ fma: FMA.krug }, { fma: FMA.krug }] }, now: NOW, secrets, mediaRoot }),
     ).rejects.toThrow(/mapped twice/);
+    await expect(
+      runImport(db, sources, { map: { ...MAP, skip: [{ fma: FMA.krug }] }, now: NOW, secrets, mediaRoot }),
+    ).rejects.toThrow(/mapped twice/);
+    await expect(
+      runImport(db, sources, { map: { ...MAP, skip: [{ familyPlanner: "nope" }] }, now: NOW, secrets, mediaRoot }),
+    ).rejects.toThrow(/family-planner has no family nope/);
     expect(db.select().from(users).all()).toHaveLength(0);
+  });
+
+  it("leaves out the families the map skips", async () => {
+    const report = await runImport(db, sources, { map: { ...MAP, skip: [{ familyPlanner: FP.oma }] }, now: NOW, secrets, mediaRoot });
+    expect(db.select().from(families).where(eq(families.id, FP.oma)).all()).toHaveLength(0);
+    expect(db.select().from(calEntries).where(eq(calEntries.familyId, FP.oma)).all()).toHaveLength(0);
+    expect(report.families.map((f) => f.id)).not.toContain(FP.oma);
+    expect(report.skipped.some((s) => s.reason === "its family isn't imported")).toBe(true);
+    expect(db.select().from(families).where(eq(families.id, FP.krug)).all()).toHaveLength(1);
   });
 });
 

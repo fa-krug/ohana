@@ -43,9 +43,11 @@ export interface ImportSources {
   fma?: FmaSource;
 }
 
-/** import-map.json: which cookless / findmyappointment household is which family. */
+/** import-map.json: which cookless / findmyappointment household is which family, and
+ *  (`skip`) the families and households that aren't imported at all. */
 export interface ImportMap {
   families: Array<{ familyPlanner?: string; cookless?: string; fma?: string }>;
+  skip?: Array<{ familyPlanner?: string; cookless?: string; fma?: string }>;
 }
 
 // ---- stage 1: what each source says about accounts ----

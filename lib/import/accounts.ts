@@ -73,13 +73,14 @@ export function readAccounts(sources: ImportSources, now: Date): Partial<Record<
 }
 
 /** Checks import-map.json against the sources: every id must exist (when that source is
- *  given) and be mapped at most once. */
+ *  given) and be mapped or skipped at most once. */
 export function validateMap(map: ImportMap, accounts: Partial<Record<SourceName, SourceAccounts>>, log: Log): void {
   if (!map || !Array.isArray(map.families)) throw new Error('import map: expected { "families": [ … ] }');
+  if (map.skip !== undefined && !Array.isArray(map.skip)) throw new Error('import map: "skip" must be a list');
   const seen = new Set<string>();
-  map.families.forEach((entry, i) => {
+  const check = (list: string, entry: ImportMap["families"][number], i: number) => {
     const ids = SOURCE_NAMES.filter((s) => entry[s]);
-    if (ids.length === 0) throw new Error(`import map: entry ${i + 1} names no family`);
+    if (ids.length === 0) throw new Error(`import map: ${list} entry ${i + 1} names no family`);
     for (const s of SOURCE_NAMES) {
       const id = entry[s];
       if (!id) continue;
@@ -88,12 +89,14 @@ export function validateMap(map: ImportMap, accounts: Partial<Record<SourceName,
       seen.add(key);
       const acc = accounts[s];
       if (!acc) {
-        log.note(`import map: entry ${i + 1} names ${SOURCE_LABEL[s]} ${id}, but no ${SOURCE_LABEL[s]} source was given`);
+        log.note(`import map: ${list} entry ${i + 1} names ${SOURCE_LABEL[s]} ${id}, but no ${SOURCE_LABEL[s]} source was given`);
       } else if (!acc.families.some((f) => f.id === id)) {
         throw new Error(`import map: ${SOURCE_LABEL[s]} has no ${s === "familyPlanner" ? "family" : "household"} ${id}`);
       }
     }
-  });
+  };
+  map.families.forEach((entry, i) => check("families", entry, i));
+  (map.skip ?? []).forEach((entry, i) => check("skip", entry, i));
 }
 
 function normEmail(email: string): string {
@@ -149,6 +152,10 @@ export async function planAccounts(
       from: Object.fromEntries(all.map((f) => [f.source, f.id])),
     });
   };
+  // Skipped families are never planned: their rows are reported as "its family isn't imported".
+  for (const entry of map.skip ?? []) {
+    for (const s of SOURCE_NAMES) if (entry[s]) mapped.add(`${s}:${entry[s]}`);
+  }
   for (const entry of map.families) {
     const parts: Partial<Record<SourceName, SourceFamily>> = {};
     for (const s of SOURCE_NAMES) {
