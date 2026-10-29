@@ -414,6 +414,8 @@
     "modules": "Bereiche",
     "today": "Heute",
     "open": "Öffnen",
+    "birthdays": "Geburtstage",
+    "birthdayTurns": "{{name}} wird {{age}}",
     "searches": "Terminsuchen",
     "noSearches": "Noch keine Suchen: Ohana kann Doctolib und jameda für euch beobachten.",
     "searchNothing": "Noch nichts gefunden",
@@ -435,14 +437,14 @@
     "viewerNote": "Du darfst diese Familie nur ansehen: du siehst alles, kannst aber nichts ändern.",
     "members": "Mitglieder",
     "addMember": "Person hinzufügen",
-    "addMemberHint": "Mit der E-Mail ihres Ohana-Kontos.",
+    "addMemberHint": "Für jemanden ohne Konto, z. B. ein Kind. Einen Einladungslink kannst du jetzt oder später erstellen.",
     "emailPlaceholder": "E-Mail",
     "memberAdded": "Hinzugefügt.",
     "roleChanged": "Rolle geändert.",
     "memberRemoved": "Entfernt.",
     "removeConfirm": "{{name}} aus der Familie entfernen?",
     "invites": "Einladungslinks",
-    "invitesHint": "Für Leute ohne Konto: Der Link legt eines an und tritt der Familie bei. 7 Tage gültig, einmal nutzbar.",
+    "invitesHint": "Mit dem Link tritt jemand der Familie bei, mit einem neuen oder dem eigenen Konto. 7 Tage gültig, einmal nutzbar.",
     "createInvite": "Einladungslink erstellen",
     "inviteAs": "Tritt bei als",
     "inviteCreated": "Einladungslink erstellt.",
@@ -478,7 +480,22 @@
       "imported": "Importiert.",
       "importFailed": "Die Datei konnte nicht importiert werden: {{msg}}",
       "waitSaving": "Änderungen werden noch gespeichert – versuch es gleich noch einmal."
-    }
+    },
+    "namePlaceholder": "Name",
+    "withInvite": "Einladungslink erstellen, damit die Person sich anmelden kann",
+    "addByEmail": "Schon ein Ohana-Konto? Per E-Mail hinzufügen",
+    "noAccount": "Kein Konto",
+    "inviteOpen": "Einladungslink offen",
+    "invitePerson": "Einladen",
+    "personSaved": "Gespeichert.",
+    "birthday": "Geburtstag",
+    "birthdayOptional": "Geburtstag (optional)",
+    "setBirthday": "Geburtstag eintragen",
+    "birthdaySaved": "Geburtstag gespeichert.",
+    "birthdayAge_one": "{{date}} · {{count}} Jahr",
+    "birthdayAge_other": "{{date}} · {{count}} Jahre",
+    "inviteCopied": "Einladungslink erstellt und kopiert.",
+    "inviteFor": "für {{name}}"
   },
   "account": {
     "title": "Konto",
@@ -608,7 +625,8 @@
     "passwordLabel": "Passwort",
     "createAccount": "Konto anlegen",
     "registerWithPasskey": "Mit Passkey anlegen",
-    "accept": "Einladung annehmen"
+    "accept": "Einladung annehmen",
+    "forPerson": "Du wurdest der Familie als {{name}} hinzugefügt."
   },
   "onboarding": {
     "credentials": {
@@ -631,6 +649,7 @@
     "de": "Deutsch"
   },
   "calendar": {
+    "birthday": "🎂 {{name}} wird {{age}}",
     "months": [
       "Jan",
       "Feb",
@@ -874,7 +893,8 @@
       "legacyConfirm": "Den alten Kalender-Link entfernen? Damit angelegte Kalender-Abos werden nicht mehr aktualisiert.",
       "legacyRemoved": "Alter Link entfernt.",
       "events": "Gebuchte Termine (mit Uhrzeit)",
-      "eventsTitle": "Termine mit Uhrzeit, z. B. gebuchte Arzttermine; sie nennen Arzt und Praxis"
+      "eventsTitle": "Termine mit Uhrzeit, z. B. gebuchte Arzttermine; sie nennen Arzt und Praxis",
+      "birthdays": "Geburtstage"
     },
     "overview": {
       "nextGap": "Nächster nicht abgedeckter Tag: {{date}}",

@@ -184,6 +184,23 @@
   color: inherit;
   opacity: 0.85;
 }
+/* A member's birthday on the day: a small cake in the bottom right corner. */
+.cell .birthday-mark {
+  display: none;
+}
+.cell.has-birthday .birthday-mark {
+  display: block;
+  position: absolute;
+  right: 1px;
+  bottom: 0;
+  font-size: 9px;
+  line-height: 1;
+  z-index: 3;
+  pointer-events: none;
+}
+.cell.has-birthday .birthday-mark::before {
+  content: "🎂";
+}
 /* A timed event on the day (a booked appointment): a dot in the bottom left corner. */
 .cell .event-mark {
   display: none;
@@ -442,6 +459,11 @@
     bottom: 6px;
     width: 8px;
     height: 8px;
+  }
+  .grid.mv .cell.has-birthday .birthday-mark {
+    right: 5px;
+    bottom: 4px;
+    font-size: 12px;
   }
   .grid.mv .cell.has-comment .note-mark {
     top: 0;

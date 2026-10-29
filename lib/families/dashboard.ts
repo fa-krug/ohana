@@ -1,6 +1,7 @@
 // The family overview (phase 7): one dashboard over all modules. Today (meal or "away", the
 // day's appointments), what comes up (calendar runs and booked appointments together), the
-// shopping list, this month's finances and the latest finds of the appointment searches.
+// shopping list, this month's finances, the next birthdays and the latest finds of the
+// appointment searches.
 
 import type { Db } from "@/lib/db";
 import { addDays } from "@/lib/calendar/dates";
@@ -10,6 +11,8 @@ import { type MonthSummary, monthSummary } from "@/lib/finance/summary";
 import { getMealsSummary, type MealsSummary } from "@/lib/meals/queries/meal-plan";
 import { awayDays } from "@/lib/meals/meal-plan/away";
 import { listSearchesWithLatest } from "@/lib/appointments/serialize";
+import { type BirthdayDay, birthdaysIn } from "./birthdays";
+import { familyNames } from "./people";
 
 /** One line of "coming up": a run of a calendar type, or a timed event. */
 export type UpcomingItem =
@@ -37,6 +40,8 @@ export interface Dashboard {
   meals: MealsSummary;
   finance: MonthSummary;
   searches: SearchFind[];
+  /** Birthdays from today to 29 days on, by day (with the age they turn). */
+  birthdays: BirthdayDay[];
 }
 
 const UPCOMING_DAYS = 30;
@@ -82,5 +87,6 @@ export async function familyDashboard(
     meals: getMealsSummary(db, familyId, today),
     finance,
     searches,
+    birthdays: birthdaysIn(familyNames(db, familyId), today, addDays(today, UPCOMING_DAYS - 1)),
   };
 }

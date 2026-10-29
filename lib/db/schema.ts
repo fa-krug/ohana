@@ -103,12 +103,31 @@ export const familyMembers = sqliteTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     role: text("role").notNull().default("editor"), // editor | viewer
+    /** "YYYY-MM-DD", or null when not known; per family, like a member without an account's. */
+    birthday: text("birthday"),
     joinedAt: integer("joined_at", { mode: "timestamp" }).notNull(),
   },
   (t) => ({
     pk: primaryKey({ columns: [t.familyId, t.userId] }),
     familyMembersUserIdIdx: index("family_members_user_id_idx").on(t.userId),
   }),
+);
+
+/** A family member without an account (a child, a grandparent): a name the family's modules
+ *  can refer to. An invite for them (`invites.person_id`) turns them into an account member. */
+export const familyPeople = sqliteTable(
+  "family_people",
+  {
+    id: text("id").primaryKey(),
+    familyId: text("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    /** "YYYY-MM-DD", or null when not known. */
+    birthday: text("birthday"),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  },
+  (t) => ({ familyPeopleFamilyNameIdx: uniqueIndex("family_people_family_name_idx").on(t.familyId, t.name) }),
 );
 
 export const invites = sqliteTable(
@@ -121,6 +140,8 @@ export const invites = sqliteTable(
     createdById: text("created_by_id").references(() => users.id, { onDelete: "set null" }),
     code: text("code").notNull(),
     role: text("role").notNull().default("editor"),
+    /** The person without an account this invite is for: accepting it replaces them. */
+    personId: text("person_id").references(() => familyPeople.id, { onDelete: "cascade" }),
     expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
     usedById: text("used_by_id").references(() => users.id, { onDelete: "set null" }),
     createdAt: integer("created_at", { mode: "timestamp" }).notNull(),

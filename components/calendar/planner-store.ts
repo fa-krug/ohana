@@ -35,7 +35,7 @@ import {
   toOps,
 } from "@/lib/calendar/core";
 import type { TVars } from "@/lib/i18n/translate";
-import { api, ApiError, type CalEvent, type Family, type FamilyState } from "./api";
+import { api, ApiError, type Birthday, type CalEvent, type Family, type FamilyState } from "./api";
 import { setSkipWeekends, viewPrefs } from "./view-prefs";
 
 const POLL_MS = 15000;
@@ -73,6 +73,8 @@ export class PlannerStore {
   notes: Notes = new Map();
   /** Timed events (booked appointments) by day; read-only here. */
   events = new Map<string, CalEvent[]>();
+  /** The members' birthdays by day; read-only here. */
+  birthdays = new Map<string, Birthday[]>();
   year: number;
   readOnly: boolean;
   notFound = false;
@@ -167,6 +169,7 @@ export class PlannerStore {
     this.entries = new Map(Object.entries(data.entries));
     this.notes = new Map(Object.entries(data.notes ?? {}));
     this.events = new Map(Object.entries(data.events ?? {}));
+    this.birthdays = new Map(Object.entries(data.birthdays ?? {}));
     this.lastResponse = json;
     this.appliedVersion = this.version;
   }

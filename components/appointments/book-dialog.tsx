@@ -57,6 +57,7 @@ export function BookSlot({
   searchEnabled,
   booking,
   canEdit,
+  people = [],
 }: {
   familyId: string;
   searchId: string;
@@ -65,6 +66,8 @@ export function BookSlot({
   searchEnabled: boolean;
   booking: BookingInfo | null;
   canEdit: boolean;
+  /** The family's members by name: one click fills "who is it for". */
+  people?: string[];
 }) {
   const { t, locale } = useT();
   const router = useRouter();
@@ -169,6 +172,23 @@ export function BookSlot({
                 value={person}
                 onChange={(e) => setPerson(e.target.value)}
               />
+              {people.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {people.map((name) => (
+                    <Button
+                      key={name}
+                      type="button"
+                      size="sm"
+                      variant={person === name ? "secondary" : "outline"}
+                      aria-pressed={person === name}
+                      className="h-7 rounded-full px-3 text-xs"
+                      onClick={() => setPerson(person === name ? "" : name)}
+                    >
+                      {name}
+                    </Button>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="book-note">{t("appointments.booking.note")}</Label>

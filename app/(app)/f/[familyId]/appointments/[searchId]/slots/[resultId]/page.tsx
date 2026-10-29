@@ -5,6 +5,7 @@ import { getI18n } from "@/lib/i18n/server";
 import { getSlotDetail } from "@/lib/appointments/serialize";
 import { findBooking } from "@/lib/calendar/events";
 import { assertSearch } from "@/lib/appointments/searches";
+import { familyNames } from "@/lib/families/people";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { SlotDetail } from "@/components/appointments/slot-detail";
 
@@ -34,7 +35,14 @@ export default async function SlotPage({
           { label: data.slot.doctorName },
         ]}
       />
-      <SlotDetail familyId={familyId} data={data} canEdit={role === "editor"} booking={booking} searchEnabled={searchEnabled} />
+      <SlotDetail
+        familyId={familyId}
+        data={data}
+        canEdit={role === "editor"}
+        booking={booking}
+        searchEnabled={searchEnabled}
+        people={familyNames(db, familyId).map((p) => p.name)}
+      />
     </div>
   );
 }

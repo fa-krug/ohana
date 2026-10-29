@@ -25,7 +25,7 @@ const eventProps = {
   end: { type: "string", description: "HH:MM" },
   title: { type: "string" },
   location: { type: "string" },
-  person: { type: "string", description: "Who it is for" },
+  person: { type: "string", description: "Who it is for: a family member's name" },
   note: { type: "string" },
   url: { type: "string" },
 };

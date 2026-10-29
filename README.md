@@ -14,6 +14,12 @@ there already.
   family you are an **editor** (change everything, add people) or a **viewer** (only look).
   *Settings* holds the name, the members and **invite links** (for people without an
   account: the link creates one and joins the family as editor or viewer; 7 days, once).
+  Members can also be added **without an account** (children, grandparents): just a name
+  and optionally a birthday, optionally with an invite link for them; whoever accepts it
+  takes their place. Members with an account can enter their birthday too (🎂; editors for
+  everyone). Birthdays show in the calendar (🎂 on the day, "Mia turns 8" in its tooltip)
+  and the next 30 days' on the overview. Everyone's name is offered as "who is it for" when
+  marking an appointment as booked, and the assistant knows them and their ages.
   A family always keeps an editor; the last member deletes it instead of leaving.
 - **Modules:** Calendar, Finance, Meals and Appointments are in the sidebar and on the
   overview; those not built yet are marked *coming soon*. The right sidebar (✨,
@@ -84,8 +90,8 @@ holidays, sick days, day-care closures.
 - Viewers see everything but can't change anything. Changes of other family members show up
   within 15 seconds.
 - **Calendar feed** (*Settings → Calendar feed*): an iCalendar subscription for Apple Calendar,
-  iCloud, Google Calendar and others, with the types, "⚠ Not covered" warnings and notes you
-  choose. Its address is the only one that works without signing in, and it opens nothing but
+  iCloud, Google Calendar and others, with the types, "⚠ Not covered" warnings, notes and
+  (if ticked, `birthdays=1`) the members' birthdays, every year, you choose. Its address is the only one that works without signing in, and it opens nothing but
   the feed; *New feed address* makes the old one stop working.
 - **REST API** for scripts and AI agents, with an API token (`Authorization: Bearer ohana_…`),
   the same as family-planner's:
