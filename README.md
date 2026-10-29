@@ -5,7 +5,7 @@ Ohana replaces three apps, `family-planner`, `cookless` and `findmyappointment`,
 their data over. See [the plan](docs/plan.md) for why and how, and its phases for what is
 there already.
 
-## What works today (phases 0, 1, 4 and 5)
+## What works today (phases 0, 1, 2, 4 and 5)
 
 - **Sign in** with a **passkey** (fingerprint, face or device PIN) or an email and a
   **password**. A fresh install asks for the first account at `/setup`; it becomes the
@@ -96,6 +96,63 @@ holidays, sick days, day-care closures.
     `POST …/links` `{"link": "feed"}` (new feed address), `PATCH /api/v1/families/{id}` (rename)
   - `GET /api/v1/families/{feedId}/calendar.ics?types=vacation,holiday&gaps=1&notes=1&lang=de&name=…`
     – the public feed
+
+## Finance
+
+The family's money (family-planner's finances): a transactions log, accounts, nested
+categories, bank statement import and overviews. Amounts are in the family's currency.
+
+- **Transactions:** money in or out, with payee, description, note, an account and a
+  **category** (new families get defaults like Groceries, Housing, Salary, named in the
+  creator's language; edit them in *Settings → Finance*). Pick a month, a year or all time;
+  search, filter by account, category (or *Uncategorized*) and in / out / transfers; change a
+  category right in the list. Every change can be undone from its message.
+- **Nested categories:** a category can have subcategories, as deep as you like (Food ›
+  Groceries › Bakery); add and move them in *Settings → Finance* (the ⋯ menu of a category).
+  A category's totals and its filter include its subcategories; a subcategory has the kind
+  (income / expense) of its top category. Deleting a category moves its subcategories and
+  transactions up to its parent.
+- **Accounts:** bank accounts, cash or cards, each with an opening balance. The balances show
+  above the list (click one to see only its transactions): for a past month or year at its
+  end, with today's below; for the running one today's.
+- **Transfers between your own accounts count as 0:** tick related transactions and
+  *Combine as transfer*: they count once, by their sum (500 out and 480 in is a 20 expense).
+  *Find transfers* suggests pairs (the same amount out of one account and into another, at
+  most 4 days apart); *Auto-combine* combines them all at once.
+- **Split bookings:** some banks list a booking (an Amazon *Splitbuchung*) and its order lines
+  too. *Combine as split booking* (the largest becomes the booking): the parts count with their
+  own categories, the booking only with what they leave over, so nothing counts twice and the
+  balances count the booking. *Auto-combine* and the import find them by order number
+  ("Bestellnr. 306-…") or the "Splitbuchung" mark.
+- **Import bank statements (CSV):** the import guesses the format (UTF-8 or Windows-1252,
+  separator, lines before the table, date, amount or debit / credit, payee and description
+  columns, German or English numbers and dates) and shows a preview to correct it, then which
+  rows are new. Rows imported before are skipped (also from overlapping statements; identical
+  rows on one day stay apart). Pick the account; transfers and split bookings can be combined
+  right away. The format, account and that choice are remembered per bank.
+- **Overview:** income, expenses and the balance of the period; a **comparison** per month
+  with the month before (a year's or all time's average completed month); the **statistic
+  average** (ranges per month from e.g. a statistics office, set in *Settings → Finance*) with
+  where the period is in each range; a chart per month (year, all time) and the spending or
+  income per category, unfolding into subcategories. The family overview shows this month.
+- Viewers see the finances read-only; the calendar feed never shows them. *Settings → Finance*
+  also has the currency, the saved bank formats and *Delete all finance data*. The family
+  export (`GET /api/v1/families/{id}/export`) carries the finances, and its import replaces
+  them.
+- **REST API** (family-planner's, with an API token; amounts in cents, negative going out):
+  - `GET|DELETE /api/v1/families/{id}/finance` – currency, CSV mappings, statistic average,
+    categories and accounts (with balances) / delete all finance data
+  - `PATCH …/finance/settings` `{"currency", "csvMappings", "benchmark"}`
+  - `GET|POST …/finance/accounts` (`?at=YYYY-MM-DD`: balances at the end of that day),
+    `PATCH|DELETE …/finance/accounts/{id or name}`
+  - `POST …/finance/categories`, `POST …/finance/categories/defaults` `{"lang": "de"}`,
+    `PATCH|DELETE …/finance/categories/{id, name or path like "Food > Groceries"}`
+  - `GET …/finance/transactions?from=&to=&account=&category=&kind=income|expense|transfer&q=&limit=&offset=`
+  - `POST …/finance/transactions` `{"ops": [...]}` with actions `add`, `update`, `delete`,
+    `link`, `unlink`, `split`, `unsplit`; the answer's `inverse` undoes it
+  - `POST …/finance/import` `{"rows": [...], "accountId", "autoTransfers": true, "dryRun": true}`
+  - `GET …/finance/transfers/suggestions?from=&to=`, `POST …/finance/transfers/auto` `{"from", "to"}`
+  - `GET …/finance/summary?from=&to=` – per month and per category
 
 ## Appointments
 
