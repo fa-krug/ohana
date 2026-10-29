@@ -7,7 +7,7 @@
 //    which translate a source's ids into Ohana's.
 // 2. Areas (`AREAS` in `index.ts`): one function per source and area (calendar, meals,
 //    appointments, …) copies its rows, looking up users and families in those maps. A new
-//    area (finance, the assistant) is one more function in that list.
+//    area (the assistant) is one more function in that list.
 import type Database from "better-sqlite3";
 import type { Db } from "@/lib/db";
 import type { SecretBox } from "@/lib/secrets";

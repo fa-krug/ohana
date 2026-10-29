@@ -265,19 +265,21 @@ Every source is optional. What moves:
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | all three         | **Accounts**, merged by lowercased email: name from family-planner, admin if admin in family-planner or `is_staff` in cookless / findmyappointment, the password hash of family-planner, else cookless, else findmyappointment (all work in Ohana) |
 | all three         | **Families**: `import-map.json` joins a family-planner family with a cookless and a findmyappointment household; unmapped ones become families of their own. Members are combined, **editor wins** over viewer (OWNER and MEMBER are editors) |
-| family-planner    | family `id`, name, `feed_id`, `legacy_id`; the **calendar** (types per year, entries, notes); **API tokens** as they are (same SHA-256), so scripts keep working                                                                         |
+| family-planner    | family `id`, name, `feed_id`, `legacy_id`; the **calendar** (types per year, entries, notes); the **finances** (currency, CSV mappings, statistic average, category tree, accounts, transactions with transfers, split bookings and import hashes); **API tokens** as they are (same SHA-256), so scripts keep working |
 | cookless          | tags, recipes with steps and **photos** (copied into `MEDIA_ROOT`), meal plans, shopping lists; open invite codes                                                                                                                        |
 | findmyappointment | the **home address**, notification channels (tokens encrypted with Ohana's key), searches with their channels and ignore lists; open invite codes                                                                                        |
 
 Not moved: sessions and setup links (everyone signs in again), **passkeys** (bound to the old
 domains: everyone adds one at the first sign-in), expired or used invites, deactivated cookless
 / findmyappointment accounts, findmyappointment's run history and results (the first runs in
-Ohana notify about what is available then). Not yet: family-planner's **finances** and
-**assistant** (AI settings, chats) and cookless's Gemini key; the dry run lists them, they come
-with those modules.
+Ohana notify about what is available then). Not yet: family-planner's **assistant** (AI
+settings, chats) and cookless's Gemini key; the dry run lists them, they come with the
+assistant.
 
-- Families that come from family-planner keep their calendar exactly; the others get the
-  preset types, as a new family does. Families without cookless tags get the default meal tags.
+- Families that come from family-planner keep their calendar and finances exactly; the others
+  get the preset types, as a new family does. Families without family-planner finance
+  categories get the default categories (in the family's language), families without cookless
+  tags the default meal tags.
 - A password is **not** carried over when it is a temporary one the user never changed
   (family-planner's `admin` / `admin`, cookless's `CHANGE_PASSWORD` step) or one of the known
   defaults `admin` / `password` (findmyappointment's Django import gave everyone `password`).
