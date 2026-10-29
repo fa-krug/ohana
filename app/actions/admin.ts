@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createUser, deleteUser, resetUser, updateUser } from "@/lib/admin/users";
+import { resolveLocale } from "@/lib/i18n/server";
 import { createFamily, deleteFamily, renameFamily } from "@/lib/families/manage";
 import { addMember, removeMember, setRole } from "@/lib/families/members";
 import { run } from "@/lib/actions/result";
@@ -40,8 +41,9 @@ export const adminResetUserAction = async (userId: string) =>
   }, admin);
 
 export const adminCreateFamilyAction = async (input: unknown) =>
-  run(({ db, now }) => {
-    const family = createFamily(db, { name: familyNameSchema.parse(input).name }, now);
+  run(async ({ db, now }) => {
+    const lang = await resolveLocale(); // the calendar's preset types are named in it
+    const family = createFamily(db, { name: familyNameSchema.parse(input).name, lang }, now);
     refresh();
     return { id: family.id };
   }, admin);

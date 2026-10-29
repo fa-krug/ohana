@@ -180,7 +180,7 @@ empty Ohana database. It has a **dry run** that only reports what it would do.
 | #  | Phase              | Delivers                                                                                                                                   |
 | -- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | 0  | Foundation ✅      | Repo, Next.js app, schema for accounts + families, auth (passkeys, passwords, tokens, setup links, invites), admin, layout with sidebars, i18n, CI, deploy, backups |
-| 1  | Calendar           | Store implementation over Drizzle, year grid + mobile months, types per year, coverage, notes, ICS feed                                    |
+| 1  | Calendar ✅        | Store implementation over Drizzle, year grid + mobile months, types per year, coverage, notes, ICS feed                                    |
 | 2  | Finance            | Transactions, accounts, category tree, transfers, splits, CSV import, overview, comparison, benchmark                                      |
 | 3  | Assistant          | Chats in the worker, calendar + finance tools, web search, analytics, calc, auto-categorize                                                |
 | 4  | Meals              | Recipes, meal plan, shopping list, cook view, offline queue, recipe generation; assistant tools for meals                                  |
@@ -190,6 +190,21 @@ empty Ohana database. It has a **dry run** that only reports what it would do.
 
 Each phase ends deployed and usable. The old apps stay live until phase 6, so nothing is lost
 while Ohana grows.
+
+### Phase 1 notes (deviations)
+
+- The calendar part of family-planner's `Store` is `lib/calendar/store.ts` over Drizzle; its
+  tests run against the in-memory SQLite database (no memory store). Entries of a day come
+  back ordered by type id (as from Supabase), not in insertion order.
+- The family API (`/api/v1/families/{id}/...`) serves family-planner's family routes that
+  belong to the calendar: GET/PATCH the family, types, entries, notes, `links`, `export`,
+  `import`, `calendar.ics`. Not ported: `POST /families`, `clone`, `members`, `agent` (Ohana's
+  own family management and the assistant replace them), the `/sessions` alias, rate limits on
+  writes (Ohana's API needs an account; sign-in is rate limited) and the SPA's offline cache.
+- Export files are `family-planner` version 2 without `finance` until phase 2; an import leaves
+  the finances alone.
+- Calendar view settings (zoom, always show weekdays, skip weekends) are per device in
+  `localStorage`. The settings page got tabs (General, Calendar, Calendar feed).
 
 ## Decided
 

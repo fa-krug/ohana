@@ -5,8 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Ohana** is one Next.js app for a family: calendar, finance, meals, doctor appointments and an
 AI assistant. It replaces `fa-krug/family-planner`, `fa-krug/cookless` and
 `fa-krug/findmyappointment`; [docs/plan.md](docs/plan.md) has the decisions, what comes from
-which app, and the phases. Phase 0 (accounts, families, admin, shell, worker, deploy) is done;
-the modules are placeholders until their phase.
+which app, and the phases. Phase 0 (accounts, families, admin, shell, worker, deploy) and
+phase 1 (Calendar) are done; the other modules are placeholders until their phase.
 
 ## Commands
 
@@ -49,6 +49,31 @@ npm run setup-link -- <email>   # print a new setup link for an account
 - **Server actions** live in `app/actions/*.ts` and wrap their work in `run()`
   (`lib/actions/result.ts`), which signs in the user (and checks admin with `{ admin: true }`)
   and turns `AuthError` / `ZodError` into `{ ok: false, status, message }`.
+- **Family REST API** (`lib/api/family-api.ts`, family-planner's `handler.ts`): one route,
+  `app/api/v1/families/[familyId]/[[...path]]/route.ts`, runs `createFamilyApi([...routes])`.
+  Each module adds a route function `(ctx: Ctx) => Promise<Response> | null` (null: not my
+  path) to that list. `Ctx` has `db`, `store`, `rest` (path after the id), `principal`,
+  `requireUser()`, `load(need)` / `loadWith(need, query)` with `need` = `edit` | `view` | `feed`
+  (404 for non-members — admins too —, 403 "You can only view this family" for viewers).
+  Signed in by an API token (Bearer) or the session cookie (read from the request; cookie
+  writes need a same-origin request). `HttpError` / `AuthError` / `ZodError` become
+  `{ "error": … }`. Input helpers in `lib/api/http.ts`. Paths and JSON shapes are
+  family-planner's, so its scripts keep working.
+- **Calendar (`lib/calendar/`, `components/calendar/`):** family-planner's vacation module.
+  `store.ts` is the calendar part of its `Store` interface over Drizzle (`DrizzleCalendarStore`,
+  snake_case rows, promise API); `vacation.ts` (types per year, entries, notes, the ICS feed
+  route `GET /api/v1/families/{feedId|legacyId}/calendar.ics`, public, never by family id),
+  `family-routes.ts` (GET/PATCH family, `links`, `export`/`import`), `ics.ts`, `dates.ts` and
+  `core.ts` (pure client logic) are ported with few changes. Tables `cal_entry_types` (PK
+  family+year+id), `cal_entries` (with the day's `year`, composite FK to its type: deleting a
+  type cascades to its days; never `INSERT OR REPLACE` a type), `cal_notes`; `families.feed_id`
+  (random, unique) and `legacy_id` (family-planner's old view id, for the import; also the
+  feed's UID prefix). `createFamily` adds the preset types (`presets.ts`) in the creator's
+  language. The page is client-side: `PlannerStore` (`planner-store.ts`: save queue, polling,
+  undo/redo, selection) + the imperative `GridView` (`grid.ts`, CSS in `calendar.css`, colors
+  `--cal-*` in `globals.css`); per-device prefs in `view-prefs.ts`. Settings has tabs
+  (`components/families/settings-tabs.tsx`: general, calendar, feed); the overview shows
+  `lib/calendar/summary.ts`.
 - **UI:** `components/shell/app-shell.tsx` is the frame (left sidebar with family switcher,
   modules from `components/shell/modules.ts`, account menu; right assistant panel, `Ctrl/⌘+J`;
   both are sheets on phones). A module that isn't built yet is served by

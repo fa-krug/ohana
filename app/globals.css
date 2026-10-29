@@ -40,6 +40,8 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --color-ok: var(--cal-ok);
+  --color-gap: var(--cal-gap);
 }
 
 @theme {
@@ -81,6 +83,25 @@
   --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
   --sidebar-border: oklch(0.92 0.004 286.32);
   --sidebar-ring: oklch(0.6 0.118 184.704);
+
+  /* the year calendar (components/calendar) */
+  --cal-surface: var(--card);
+  --cal-text: var(--foreground);
+  --cal-muted: var(--muted-foreground);
+  --cal-border: var(--border);
+  --cal-line: oklch(0.945 0.003 286.32);
+  --cal-cell: oklch(1 0 0);
+  --cal-weekend: oklch(0.97 0.002 286.35);
+  --cal-invalid: oklch(0.985 0.001 286.35); /* days a month doesn't have (Feb 30) are hatched */
+  --cal-invalid-hatch: oklch(0.88 0.005 286.3);
+  --cal-accent: var(--primary);
+  --cal-accent-soft: color-mix(in oklch, var(--primary) 18%, transparent);
+  --cal-accent-faint: color-mix(in oklch, var(--primary) 8%, transparent);
+  --cal-ok: oklch(0.55 0.13 162);
+  --cal-gap: oklch(0.577 0.215 27.3);
+  --cal-hatch: rgba(255, 255, 255, 0.5);
+  --cal-shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 8px 24px -8px rgba(16, 24, 40, 0.12);
+  --tile-r: 5px;
 }
 
 /* Theme follows the OS preference via CSS only — no JS, no class toggling, so
@@ -120,6 +141,19 @@
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.6 0.118 184.704);
+
+    --cal-line: oklch(0.26 0.006 286);
+    --cal-cell: oklch(0.235 0.006 286);
+    --cal-weekend: oklch(0.175 0.005 286);
+    --cal-invalid: oklch(0.21 0.006 286);
+    --cal-invalid-hatch: oklch(0.3 0.006 286);
+    --cal-accent: oklch(0.7 0.12 184.7);
+    --cal-accent-soft: color-mix(in oklch, var(--cal-accent) 24%, transparent);
+    --cal-accent-faint: color-mix(in oklch, var(--cal-accent) 10%, transparent);
+    --cal-ok: oklch(0.77 0.13 162);
+    --cal-gap: oklch(0.704 0.191 22.216);
+    --cal-hatch: rgba(255, 255, 255, 0.38);
+    --cal-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 32px -12px rgba(0, 0, 0, 0.6);
   }
 }
 
