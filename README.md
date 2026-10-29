@@ -369,7 +369,7 @@ Every source is optional. What moves:
 | From              | What                                                                                                                                                                                                                                       |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | all three         | **Accounts**, merged by lowercased email: name from family-planner, admin if admin in family-planner or `is_staff` in cookless / findmyappointment, the password hash of family-planner, else cookless, else findmyappointment (all work in Ohana) |
-| all three         | **Families**: `import-map.json` joins a family-planner family with a cookless and a findmyappointment household; unmapped ones become families of their own. Members are combined, **editor wins** over viewer (OWNER and MEMBER are editors) |
+| all three         | **Families**: `import-map.json` joins a family-planner family with a cookless and a findmyappointment household; unmapped ones become families of their own, unless the map's `skip` leaves them out. Members are combined, **editor wins** over viewer (OWNER and MEMBER are editors) |
 | family-planner    | family `id`, name, `feed_id`, `legacy_id`; the **calendar** (types per year, entries, notes); the **finances** (currency, CSV mappings, statistic average, category tree, accounts, transactions with transfers, split bookings and import hashes); **API tokens** as they are (same SHA-256), so scripts keep working; the **assistant**: AI settings (keys re-encrypted with Ohana's key) and everyone's **chats** |
 | cookless          | tags, recipes with steps and **photos** (copied into `MEDIA_ROOT`), meal plans, shopping lists; open invite codes; the household's **Gemini key** as the family's AI settings when family-planner has none for it |
 | findmyappointment | the **home address**, notification channels (tokens encrypted with Ohana's key), searches with their channels and ignore lists; open invite codes                                                                                        |
@@ -405,12 +405,14 @@ Ohana notify about what is available then), messages that waited in a chat's que
   account whose email exists is kept as it is and only gets the memberships). It also refuses
   when the families it would create exist already, so running it twice fails cleanly, even
   with `--force`.
-- `import-map.json` (ids from the dry run's family list):
+- `import-map.json` (ids from the dry run's family list); `skip` (optional) lists families and
+  households that aren't imported at all, their rows are reported as skipped:
 
   ```json
   { "families": [
       { "familyPlanner": "<family-planner family id>", "cookless": "<household id>", "fma": "<household id>" }
-  ] }
+    ],
+    "skip": [ { "familyPlanner": "<family-planner family id>" } ] }
   ```
 
 ### On the Pi
