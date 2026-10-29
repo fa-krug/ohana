@@ -632,6 +632,35 @@ export class PlannerStore {
     }
   }
 
+  // ------------------------------------------------------------- export + import
+
+  /** The whole family (all years, finances) as an export file. */
+  exportFile(): Promise<Record<string, unknown>> {
+    return api.exportFamily(this.familyId);
+  }
+
+  /** Replaces the calendar (all years) and the finances with an export file's, then shows the
+   *  result. Throws the ApiError (nothing changed then). */
+  async importFile(data: unknown) {
+    this.setSync("saving");
+    try {
+      const res = await api.importFamily(this.familyId, this.year, data);
+      // Undo steps hold the replaced data.
+      this.undoStack = [];
+      this.redoStack = [];
+      this.selection.clear();
+      this.anchor = this.focus = null;
+      this.version++;
+      this.applyResponse(res);
+      this.emit("data");
+      this.setSync("saved");
+    } catch (err) {
+      const e = err as ApiError;
+      this.setSync(e.status ? "saved" : "offline", !e.status);
+      throw e;
+    }
+  }
+
   /** Lets the backoff of a failed save end early (e.g. the network came back). */
   retryNow() {
     this.wake?.();

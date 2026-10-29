@@ -6,10 +6,13 @@ import { Copy, KeyRound, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/sonner";
 import { useT } from "@/lib/i18n/provider";
+import { parseTheme, THEMES } from "@/lib/theme";
+import { setTheme, useTheme } from "@/lib/theme-client";
 import { addPasskey, reauthAndChangeEmail } from "@/lib/auth-client/webauthn";
 import { copyText } from "@/lib/clipboard";
 import { formatDate } from "@/lib/format";
@@ -63,6 +66,7 @@ export function AccountClient(props: {
           <NameSection name={props.name} />
           <EmailSection email={props.email} hasPassword={props.hasPassword} hasPasskey={props.passkeys.length > 0} />
           <LanguageSection />
+          <ThemeSection />
         </CardContent>
       </Card>
       <Card>
@@ -181,6 +185,29 @@ function LanguageSection() {
           </Button>
         ))}
       </div>
+    </div>
+  );
+}
+
+/** Light / dark / like the system; kept per device (localStorage), not in the account. */
+function ThemeSection() {
+  const { t } = useT();
+  const theme = useTheme();
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="theme">{t("account.theme")}</Label>
+      <NativeSelect
+        id="theme"
+        className="sm:w-60"
+        value={theme}
+        onChange={(e) => setTheme(parseTheme(e.target.value))}
+        aria-describedby="theme-hint"
+      >
+        {THEMES.map((th) => (
+          <option key={th} value={th}>{t(`account.themes.${th}`)}</option>
+        ))}
+      </NativeSelect>
+      <p id="theme-hint" className="text-xs text-muted-foreground">{t("account.themeHint")}</p>
     </div>
   );
 }

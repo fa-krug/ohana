@@ -494,6 +494,16 @@ cut-over.
   chat's queue. Searches keep `next_run_at`, so the worker runs them soon after; without the
   run history their first run notifies about everything available.
 
+### Parity check (after phase 7)
+
+A feature-by-feature comparison with the three apps' last `main` found only small UI gaps, now
+closed: Settings → *Data* (family-planner's export / import of the family file, without
+*Clone*), the theme switch (light / dark / system, per device, on the Account page; both
+family-planner and cookless had one), the warning before closing the calendar while changes
+are being saved (family-planner), and the collapsible sidebar (cookless; `Ctrl/⌘+B`). Left
+out on purpose: joining a family by typing an invite code (cookless); Ohana's invites are
+links.
+
 ## Decided
 
 - The app lives at the repo root (no `web/`).
