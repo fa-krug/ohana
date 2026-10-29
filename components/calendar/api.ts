@@ -1,7 +1,10 @@
 // Client of the family API (/api/v1/families/{id}/...) for the calendar pages: family-planner's
 // app/src/lib/api.ts (calendar calls), signed in by the session cookie.
 
+import { ApiError, enc, fam, request } from "@/lib/api/client";
 import type { EntryOp, EntryType, NoteOp, Role } from "@/lib/calendar/core";
+
+export { ApiError };
 
 export type Access = "edit" | "view";
 
@@ -21,37 +24,6 @@ export interface FamilyState {
   typeYears?: number[];
   entries: Record<string, string[]>;
   notes?: Record<string, { icon: string; comment: string }>;
-}
-
-export class ApiError extends Error {
-  constructor(
-    message: string,
-    /** 0: no answer (offline). */
-    public status: number,
-  ) {
-    super(message);
-  }
-}
-
-const enc = encodeURIComponent;
-const fam = (id: string) => `/api/v1/families/${enc(id)}`;
-
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-  let res: Response;
-  try {
-    res = await fetch(path, {
-      method,
-      credentials: "same-origin",
-      cache: "no-store",
-      headers: body === undefined ? {} : { "content-type": "application/json" },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
-  } catch (err) {
-    throw new ApiError((err as Error).message || "Network error", 0);
-  }
-  const data = await res.json().catch(() => null);
-  if (!res.ok) throw new ApiError(data?.error ?? res.statusText, res.status);
-  return data as T;
 }
 
 export const api = {

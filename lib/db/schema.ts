@@ -189,3 +189,4 @@ export const calNotes = sqliteTable(
 
 export * from "./schema/notifications";
 export * from "./schema/appointments";
+export * from "./schema/finance";

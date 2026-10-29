@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 import { requireFamily } from "@/lib/families/page";
 import { getI18n } from "@/lib/i18n/server";
 import { type CalendarSummary, calendarSummary } from "@/lib/calendar/summary";
+import { monthSummary } from "@/lib/finance/summary";
+import { FinanceOverviewCard } from "@/components/finance/overview-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
 import { MODULES } from "@/components/shell/modules";
@@ -15,7 +17,10 @@ export default async function FamilyOverviewPage({ params }: { params: Promise<{
   const { family } = await requireFamily(familyId);
   const { t, locale } = await getI18n();
   const today = new Date().toISOString().slice(0, 10);
-  const calendar = await calendarSummary(db, familyId, today);
+  const [calendar, finance] = await Promise.all([
+    calendarSummary(db, familyId, today),
+    monthSummary(db, familyId, today),
+  ]);
   return (
     <>
       <PageHeader title={t("home.welcome", { family: family.name })} description={t("home.intro")} />
@@ -37,6 +42,11 @@ export default async function FamilyOverviewPage({ params }: { params: Promise<{
               {key === "calendar" && (
                 <CardContent>
                   <CalendarCard summary={calendar} t={t} locale={locale} />
+                </CardContent>
+              )}
+              {key === "finance" && (
+                <CardContent>
+                  <FinanceOverviewCard summary={finance} t={t} locale={locale} />
                 </CardContent>
               )}
             </Card>

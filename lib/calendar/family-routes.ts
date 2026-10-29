@@ -6,6 +6,7 @@
 import type { Ctx, Loaded } from "@/lib/api/family-api";
 import { HttpError, json, NO_STORE, randomToken, readBody, slug } from "@/lib/api/http";
 import { renameFamily } from "@/lib/families/manage";
+import { exportFinance, parseFinanceImport } from "@/lib/finance/finance";
 import type { FamilyPatch, FamilyRow } from "./store";
 import {
   groupEntries,
@@ -23,7 +24,7 @@ import {
 export const EXPORT_FORMAT = "family-planner";
 /** Files exported before the rename; same content. */
 const OLD_EXPORT_FORMAT = "vacation-planner";
-/** 2 adds the finances (phase 2 of Ohana); files of version 1 only have the calendar. */
+/** 2 adds the finances; files of version 1 only have the calendar. */
 export const EXPORT_VERSION = 2;
 
 /** Links that rotate: the feed link, and the legacy link (only removed). */
@@ -49,8 +50,14 @@ export function familyState(loaded: Loaded, range: Range, data: VacationData) {
   return { family, session: family, ...vacationState(range, data) };
 }
 
-/** The whole calendar as a file: all years, types, entries and notes, but never its ids. */
-export function exportData(family: FamilyRow, [types, rows, notes]: VacationData, now: Date) {
+/** The whole family as a file: all years, types, entries and notes, and the finances, but
+ *  never its ids. */
+export function exportData(
+  family: FamilyRow,
+  [types, rows, notes]: VacationData,
+  finance: Awaited<ReturnType<typeof exportFinance>>,
+  now: Date,
+) {
   return {
     format: EXPORT_FORMAT,
     version: EXPORT_VERSION,
@@ -59,19 +66,22 @@ export function exportData(family: FamilyRow, [types, rows, notes]: VacationData
     types: types.map(publicType),
     entries: groupEntries(rows),
     notes: notesMap(notes),
+    finance,
   };
 }
 
-/** Validates an export file. Its finances (`finance`) are left alone until the finance module
- *  reads them. */
-export function parseImport(body: Record<string, unknown>) {
+/** Validates an export file. A file without finances (version 1) leaves them as they are. */
+export function parseImport(body: Record<string, unknown>, familyId: string) {
   if (body.format !== EXPORT_FORMAT && body.format !== OLD_EXPORT_FORMAT) {
     throw new HttpError(400, "Not a Family Planner export");
   }
   if (body.version !== 1 && body.version !== EXPORT_VERSION) {
     throw new HttpError(400, `Unsupported export version ${body.version}`);
   }
-  return parseVacationImport(body);
+  return {
+    ...parseVacationImport(body),
+    finance: body.finance === undefined ? undefined : parseFinanceImport(body.finance, familyId),
+  };
 }
 
 /** Routes /families/{id} and its family-wide sub-paths; null for anything else. */
@@ -127,23 +137,23 @@ async function rotateLink({ store, req, url, loadWith }: Ctx): Promise<Response>
 }
 
 /** Viewers may export too: they can read all of that anyway. */
-async function exportFamily({ store, loadWith, now }: Ctx): Promise<Response> {
+async function exportFamily({ store, finance, loadWith, now }: Ctx): Promise<Response> {
   const [{ family }, data] = await loadWith("view", (id) => listVacation(store, id, {}));
-  return json(exportData(family, data, now), 200, {
+  return json(exportData(family, data, await exportFinance(finance, family.id), now), 200, {
     ...NO_STORE,
     "content-disposition": `attachment; filename="${slug(family.name)}.json"`,
   });
 }
 
-/** Replaces all years, types, entries and notes with those of an export file; the name and
- *  the links stay. Answers like GET /families/{id} (with ?year= etc.). */
+/** Replaces all years, types, entries and notes, and the finances if the file has them, with
+ *  those of an export file; the name and the links stay. Answers like GET /families/{id} (with ?year= etc.). */
 async function importFamily({ store, req, url, load }: Ctx): Promise<Response> {
   const range = rangeFromQuery(url);
   const loaded = await load("edit");
   const { family } = loaded;
-  const data = parseImport(await readBody(req));
+  const data = parseImport(await readBody(req), family.id);
   const types = data.types.map((t) => ({ ...t, family_id: family.id }));
-  await store.replaceContents(family.id, types, data.entries, data.notes);
+  await store.replaceContents(family.id, types, data.entries, data.notes, data.finance);
   const updated = (await store.getFamily(family.id))!;
   return json(familyState({ ...loaded, family: updated }, range, await listVacation(store, family.id, range)));
 }

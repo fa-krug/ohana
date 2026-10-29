@@ -5,9 +5,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Ohana** is one Next.js app for a family: calendar, finance, meals, doctor appointments and an
 AI assistant. It replaces `fa-krug/family-planner`, `fa-krug/cookless` and
 `fa-krug/findmyappointment`; [docs/plan.md](docs/plan.md) has the decisions, what comes from
-which app, and the phases. Phase 0 (accounts, families, admin, shell, worker, deploy) and
-phase 1 (Calendar) and phase 5 (Appointments, notification channels) are done; the other
-modules are placeholders until their phase.
+which app, and the phases. Phase 0 (accounts, families, admin, shell, worker, deploy),
+phase 1 (Calendar), phase 2 (Finance) and phase 5 (Appointments, notification channels) are
+done; the other modules are placeholders until their phase.
 
 ## Commands
 
@@ -54,7 +54,8 @@ npm run setup-link -- <email>   # print a new setup link for an account
 - **Family REST API** (`lib/api/family-api.ts`, family-planner's `handler.ts`): one route,
   `app/api/v1/families/[familyId]/[[...path]]/route.ts`, runs `createFamilyApi([...routes])`.
   Each module adds a route function `(ctx: Ctx) => Promise<Response> | null` (null: not my
-  path) to that list. `Ctx` has `db`, `store`, `rest` (path after the id), `principal`,
+  path) to that list. `Ctx` has `db`, `store` (calendar part of family-planner's `Store`),
+  `finance` (its finance part), `rest` (path after the id), `principal`,
   `requireUser()`, `load(need)` / `loadWith(need, query)` with `need` = `edit` | `view` | `feed`
   (404 for non-members — admins too —, 403 "You can only view this family" for viewers).
   Signed in by an API token (Bearer) or the session cookie (read from the request; cookie
@@ -74,8 +75,28 @@ npm run setup-link -- <email>   # print a new setup link for an account
   language. The page is client-side: `PlannerStore` (`planner-store.ts`: save queue, polling,
   undo/redo, selection) + the imperative `GridView` (`grid.ts`, CSS in `calendar.css`, colors
   `--cal-*` in `globals.css`); per-device prefs in `view-prefs.ts`. Settings has tabs
-  (`components/families/settings-tabs.tsx`: general, calendar, feed); the overview shows
+  (`components/families/settings-tabs.tsx`: general, calendar, feed, finance); the overview shows
   `lib/calendar/summary.ts`.
+- **Finance (`lib/finance/`, `components/finance/`):** family-planner's finances. `store.ts`
+  is the finance part of its `Store` over Drizzle (`DrizzleFinanceStore`, snake_case rows,
+  promise API; `replaceFinance` runs inside the calendar store's `replaceContents`, so an
+  export file's import is all or nothing), `finance.ts` (routes under
+  `/api/v1/families/{id}/finance/...`, `applyTransactionOps` with `inverse` undo ops, transfer
+  groups and split bookings with net counting `netItems`, `matchSplits` / `matchTransfers` /
+  `autoCombine`, import hashes, `financeSummary`, benchmark, `exportFinance` /
+  `parseFinanceImport` / `copyFinance`), `category-tree.ts`, `csv.ts` and `money.ts`
+  (shared with the client) are ported with few changes; `summary.ts` is the overview card,
+  `presets.ts` the default categories `createFamily` adds (creator's language). Tables
+  `fin_settings` (currency, CSV mappings and benchmark as JSON text), `fin_categories` (tree
+  via `parent_id`), `fin_accounts`, `fin_transactions` (`transfer_id`, `split_of`,
+  `import_hash` unique per family). References inside a family are composite FKs without an
+  action (SQLite can't null one column of a composite key): the store moves or clears them
+  before deleting (category → parent, parts of a deleted booking become normal). Within a
+  day transactions list newest created first, then in insertion order (rowid); one request's
+  ops share one `created_at`. The page is client-side: `FinanceStore` (`finance-store.ts`:
+  period, filters, selection, undo toasts) with the views; settings in
+  `finance-settings.tsx` (a tab of Settings). The AI categorize route and tools come with
+  phase 3 (`similarKey`, `netItems`, `applyTransactionOps` are their seams).
 - **UI:** `components/shell/app-shell.tsx` is the frame (left sidebar with family switcher,
   modules from `components/shell/modules.ts`, account menu; right assistant panel, `Ctrl/⌘+J`;
   both are sheets on phones). A module that isn't built yet is served by
@@ -111,7 +132,7 @@ npm run setup-link -- <email>   # print a new setup link for an account
   `app/(app)/f/[familyId]/appointments/`, actions in `app/actions/appointments.ts`,
   autocomplete routes under `app/api/v1/families/[familyId]/` (members; session or API token).
 - **Schema files:** `lib/db/schema.ts` holds accounts + families and re-exports one file per
-  module from `lib/db/schema/` (`notifications.ts`, `appointments.ts`).
+  module from `lib/db/schema/` (`notifications.ts`, `appointments.ts`, `finance.ts`).
 - **Family settings:** `FamilySettings` renders its `children` before "Leave or delete": each
   module adds its own section component there (see `settings/page.tsx`).
 - **i18n:** `lib/i18n/locales/{en,de}.json`, `useT()` on the client, `getI18n()` on the server.

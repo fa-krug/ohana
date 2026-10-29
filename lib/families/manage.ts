@@ -5,6 +5,7 @@ import { families, familyMembers, users } from "@/lib/db/schema";
 import { AuthError } from "@/lib/auth/errors";
 import { randomToken } from "@/lib/api/http";
 import { insertPresetTypes } from "@/lib/calendar/presets";
+import { insertDefaultCategories } from "@/lib/finance/presets";
 import { type Actor, type Role, isRole, requireRole } from "./roles";
 
 export type Family = typeof families.$inferSelect;
@@ -23,8 +24,8 @@ function cleanName(name: string): string {
   return trimmed;
 }
 
-/** Creates a family with the calendar's preset types (named in `lang`) for this year;
- *  `editorId` (if given) becomes its first editor. */
+/** Creates a family with the calendar's preset types for this year and the default finance
+ *  categories (both named in `lang`); `editorId` (if given) becomes its first editor. */
 export function createFamily(
   db: Db,
   args: { name: string; editorId?: string; lang?: string },
@@ -37,7 +38,9 @@ export function createFamily(
       .values({ id: randomUUID(), name, feedId: randomToken(20), createdAt: now, updatedAt: now })
       .returning()
       .get();
-    insertPresetTypes(tx, family.id, args.lang === "de" ? "de" : "en", now.getUTCFullYear());
+    const lang = args.lang === "de" ? "de" : "en";
+    insertPresetTypes(tx, family.id, lang, now.getUTCFullYear());
+    insertDefaultCategories(tx, family.id, lang);
     if (args.editorId) {
       tx.insert(familyMembers)
         .values({ familyId: family.id, userId: args.editorId, role: "editor", joinedAt: now })
