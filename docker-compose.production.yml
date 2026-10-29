@@ -1,0 +1,67 @@
+# docker-compose.production.yml: the published image, as Arcane runs it on the Pi.
+# web and worker share one image and one data volume (SQLite in WAL mode).
+x-env: &env
+  NODE_ENV: production
+  AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET}
+  APP_URL: https://${OHANA_DOMAIN:-ohana.fa-krug.de}
+  WEBAUTHN_RP_ID: ${OHANA_DOMAIN:-ohana.fa-krug.de}
+  WEBAUTHN_RP_NAME: Ohana
+  WEBAUTHN_ORIGIN: https://${OHANA_DOMAIN:-ohana.fa-krug.de}
+  BACKUP_KEEP: ${BACKUP_KEEP:-14}
+  TZ: ${TZ:-Europe/Berlin}
+  # DATABASE_FILE=/app/data/ohana.db and BACKUP_DIR=/app/data/backups are image defaults.
+
+services:
+  web:
+    image: ${DOCKER_USERNAME:-sascha384}/ohana:latest
+    container_name: ohana
+    command: ["web"]
+    restart: always
+    expose:
+      - "8000"
+    environment:
+      <<: *env
+      PORT: "8000"
+    volumes:
+      - ohana-data:/app/data
+    networks:
+      - gitops_default
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits: { cpus: "1", memory: 1G }
+        reservations: { cpus: "0.25", memory: 256M }
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ohana.rule=Host(`${OHANA_DOMAIN:-ohana.fa-krug.de}`)"
+      - "traefik.http.routers.ohana.entrypoints=web"
+      - "traefik.http.services.ohana.loadbalancer.server.port=8000"
+
+  worker:
+    image: ${DOCKER_USERNAME:-sascha384}/ohana:latest
+    container_name: ohana-worker
+    command: ["worker"]
+    restart: always
+    environment: *env
+    volumes:
+      - ohana-data:/app/data
+    depends_on:
+      web:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+    deploy:
+      resources:
+        limits: { cpus: "1", memory: 512M }
+
+networks:
+  gitops_default:
+    external: true
+
+volumes:
+  ohana-data:
