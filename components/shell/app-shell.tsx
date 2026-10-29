@@ -332,13 +332,6 @@ function AccountMenu({ user }: { user: ShellUser }) {
             <UserRound className="size-4" /> {t("nav.account")}
           </Link>
         </DropdownMenuItem>
-        {user.isAdmin && (
-          <DropdownMenuItem asChild>
-            <Link href="/admin" className="flex items-center gap-2">
-              <ShieldCheck className="size-4" /> {t("nav.administration")}
-            </Link>
-          </DropdownMenuItem>
-        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={onSignOut} className="flex items-center gap-2">
           <LogOut className="size-4" /> {t("nav.signOut")}
