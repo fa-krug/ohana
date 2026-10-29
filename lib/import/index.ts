@@ -9,8 +9,10 @@ import { rmSync } from "node:fs";
 import type Database from "better-sqlite3";
 import { count, eq } from "drizzle-orm";
 import type { Db } from "@/lib/db";
-import { families, familyMembers, mealTags, users } from "@/lib/db/schema";
+import { and } from "drizzle-orm";
+import { families, familyMembers, finCategories, mealTags, users } from "@/lib/db/schema";
 import { insertPresetTypes } from "@/lib/calendar/presets";
+import { insertDefaultCategories } from "@/lib/finance/presets";
 import { seedDefaultTags } from "@/lib/meals/recipes/tags";
 import { mediaRoot as defaultMediaRoot } from "@/lib/meals/images/config";
 import { getSecretBox, type SecretBox } from "@/lib/secrets";
@@ -19,6 +21,7 @@ import { importCooklessInvites } from "./cookless/accounts";
 import { importCooklessMeals, noteCooklessAi } from "./cookless/meals";
 import { importFamilyPlannerTokens } from "./family-planner/accounts";
 import { importFamilyPlannerCalendar } from "./family-planner/calendar";
+import { importFamilyPlannerFinance } from "./family-planner/finance";
 import { FP_IGNORED_TABLES } from "./family-planner/source";
 import { importFmaAppointments } from "./fma/appointments";
 import { importFmaInvites } from "./fma/accounts";
@@ -29,14 +32,14 @@ import type { ImportArea, ImportContext, ImportMap, ImportReport, ImportSources,
 export type { ImportMap, ImportReport, ImportSources } from "./types";
 
 /**
- * The areas, in order; each copies one area of one source (see types.ts). The finances and
- * the assistant (family-planner's family_settings, finance_*, transactions, ai_settings,
- * ai_chats*, and cookless's Gemini key → AI settings) are added here as their own entries
- * once Ohana has those modules.
+ * The areas, in order; each copies one area of one source (see types.ts). The assistant
+ * (family-planner's ai_settings, ai_chats*, and cookless's Gemini key → AI settings) is added
+ * here as its own entries once Ohana has that module.
  */
 export const AREAS: Array<{ name: string; run: ImportArea }> = [
   { name: "family-planner: API tokens", run: importFamilyPlannerTokens },
   { name: "family-planner: calendar", run: importFamilyPlannerCalendar },
+  { name: "family-planner: finance", run: importFamilyPlannerFinance },
   { name: "cookless: invites", run: importCooklessInvites },
   { name: "cookless: meals", run: importCooklessMeals },
   { name: "cookless: Gemini key", run: noteCooklessAi },
@@ -83,13 +86,16 @@ class Rollback extends Error {}
 
 /** New families get what `createFamily` gives them, unless the import brought it: the
  *  preset calendar types (only families that don't come from family-planner, whose calendar
- *  is taken as it was) and the default meal tags (only families without cookless tags). */
+ *  is taken as it was), the default finance categories (only families without
+ *  family-planner categories) and the default meal tags (only families without cookless
+ *  tags). Presets and categories are named in the family's language. */
 function addDefaults(ctx: ImportContext, plan: AccountsPlan): void {
   const { db } = ctx;
   for (const f of plan.families) {
-    if (!ctx.calendarFamilies.has(f.id)) {
-      insertPresetTypes(db, f.id, familyLanguage(ctx, f.id, f.language), ctx.now.getUTCFullYear());
-    }
+    const lang = familyLanguage(ctx, f.id, f.language);
+    if (!ctx.calendarFamilies.has(f.id)) insertPresetTypes(db, f.id, lang, ctx.now.getUTCFullYear());
+    const categories = db.select({ n: count() }).from(finCategories).where(eq(finCategories.familyId, f.id)).get()!.n;
+    if (categories === 0) insertDefaultCategories(db, f.id, lang);
     const tags = db.select({ n: count() }).from(mealTags).where(eq(mealTags.familyId, f.id)).get()!.n;
     if (tags === 0) seedDefaultTags(db, f.id);
   }
@@ -102,7 +108,7 @@ function familyLanguage(ctx: ImportContext, familyId: string, own?: string): "en
     .select({ lang: users.preferredLanguage })
     .from(familyMembers)
     .innerJoin(users, eq(users.id, familyMembers.userId))
-    .where(eq(familyMembers.familyId, familyId))
+    .where(and(eq(familyMembers.familyId, familyId), eq(familyMembers.role, "editor")))
     .orderBy(familyMembers.joinedAt)
     .all()[0];
   return editor?.lang === "de" ? "de" : "en";

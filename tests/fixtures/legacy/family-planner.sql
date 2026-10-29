@@ -111,11 +111,58 @@ fpKrugFamily00000001	2026-07-01		Back\\slash
 
 
 --
+-- Data for Name: family_settings; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.family_settings (family_id, currency, csv_mappings, benchmark) FROM stdin;
+fpKrugFamily00000001	EUR	[{"date": 0, "debit": null, "payee": 2, "amount": 4, "credit": null, "decimal": ",", "encoding": "utf-8", "skipRows": 4, "accountId": "giro", "delimiter": ";", "hasHeader": true, "signature": "Buchungstag;Wertstellung;Empf\\u00e4nger;Verwendungszweck;Betrag", "dateFormat": "dd.mm.yyyy", "description": [3]}]	{"label": "Destatis 2023", "income": {"lowCents": 400000, "highCents": 500000}, "expense": {"lowCents": 350000, "highCents": 350000}, "categories": [{"lowCents": 50000, "highCents": 60000, "categoryId": "food"}]}
+fpOmaFamily000000002	CHF	[]	\N
+\.
+
+
+--
+-- Data for Name: finance_accounts; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.finance_accounts (family_id, id, name, color, icon, opening_cents, "position") FROM stdin;
+fpKrugFamily00000001	giro	Girokonto	#3b82f6	🏦	100000	0
+fpKrugFamily00000001	savings	Sparkonto	#a855f7	🐷	500000	1
+\.
+
+
+--
 -- Data for Name: finance_categories; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public.finance_categories (family_id, id, name, color, icon, kind, "position", parent_id) FROM stdin;
-fpKrugFamily00000001	groceries	Lebensmittel	#22c55e	🛒	expense	0	\N
+fpKrugFamily00000001	bakery	Bäckerei	#f97316	🥐	expense	0	groceries
+fpKrugFamily00000001	groceries	Lebensmittel	#22c55e	🛒	expense	0	food
+fpKrugFamily00000001	food	Essen	#16a34a	🍽️	expense	0	\N
+fpKrugFamily00000001	salary	Gehalt	#0ea5e9	💼	income	1	\N
+fpKrugFamily00000001	household	Haushalt	#eab308	🏠	expense	2	\N
+\.
+
+
+--
+-- Data for Name: transactions; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.transactions (family_id, id, day, amount_cents, payee, description, category_id, note, import_hash, created_at, account_id, transfer_id, split_of) FROM stdin;
+fpKrugFamily00000001	aaaaaaaa-0000-4000-8000-000000000005	2026-10-05	-3000	Amazon	Bestellnr. 302-1 Brötchenbackmischung	bakery	für\tSonntag\nund Montag	\N	2026-10-06 09:00:00.250123+00	giro	\N	aaaaaaaa-0000-4000-8000-000000000004
+fpKrugFamily00000001	aaaaaaaa-0000-4000-8000-000000000006	2026-10-05	-2000	Amazon	Bestellnr. 302-1 Nudeln	groceries		\N	2026-10-06 09:00:00.250123+00	giro	\N	aaaaaaaa-0000-4000-8000-000000000004
+fpKrugFamily00000001	aaaaaaaa-0000-4000-8000-000000000001	2026-09-30	300000	Arbeitgeber GmbH	Gehalt September	salary		dkb:2026-09-30:300000:arbeitgeber	2026-10-01 08:00:00.123456+00	giro	\N	\N
+fpKrugFamily00000001	aaaaaaaa-0000-4000-8000-000000000002	2026-10-02	-50000		Sparen	\N		\N	2026-10-02 07:00:00+00	giro	bbbbbbbb-0000-4000-8000-000000000001	\N
+fpKrugFamily00000001	aaaaaaaa-0000-4000-8000-000000000003	2026-10-02	50000		Sparen	\N		\N	2026-10-02 07:00:00+00	savings	bbbbbbbb-0000-4000-8000-000000000001	\N
+fpKrugFamily00000001	aaaaaaaa-0000-4000-8000-000000000004	2026-10-05	-8000	Amazon	Bestellnr. 302-1	household		\N	2026-10-06 09:00:00.250123+00	giro	\N	\N
+\.
+
+
+--
+-- Data for Name: ai_settings; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.ai_settings (family_id, base_url, model, api_key_enc, search_provider, search_key_enc, allow_writes, updated_at) FROM stdin;
+fpKrugFamily00000001	https://api.openai.com/v1	gpt-4o-mini	v1:abc	none		t	2026-10-01 07:00:00+00
 \.
 
 

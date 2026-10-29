@@ -163,8 +163,10 @@ npm run import-legacy -- --family-planner dump.sql --cookless cookless.db --cook
   files, read-only, schema checked). Stage 1 (`accounts.ts`): users merged by lowercased email,
   families by `import-map.json`, members combined (editor wins); fills `ctx.userIds` /
   `ctx.familyIds` (source id → Ohana id). Stage 2: the `AREAS` list in `index.ts`, one function
-  per source and area (`family-planner/`, `cookless/`, `fma/`); a new module's import (finance,
-  assistant) is one more entry. All in one SQLite transaction (deferred FKs, checked at the
+  per source and area (`family-planner/` accounts + tokens, calendar, finance; `cookless/`,
+  `fma/`); the assistant's import is one more entry. Afterwards `addDefaults` gives families
+  what `createFamily` would where the import brought nothing (preset types, finance
+  categories, meal tags). All in one SQLite transaction (deferred FKs, checked at the
   end); `--dry-run` rolls back; photos copied into `MEDIA_ROOT` inside it and removed on
   failure. Refuses a non-empty target without `--force` and families that exist already.
   Tests: `tests/import-*.test.ts`, fixtures built by `lib/test/legacy.ts` from the old apps'

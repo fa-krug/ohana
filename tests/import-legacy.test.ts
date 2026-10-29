@@ -16,6 +16,10 @@ import {
   cookingSteps,
   families,
   familyMembers,
+  finAccounts,
+  finCategories,
+  finSettings,
+  finTransactions,
   ingredients,
   invites,
   mealPlanEntries,
@@ -38,6 +42,9 @@ import { loadFamilyPlannerDump } from "@/lib/import/family-planner/source";
 import { openFma } from "@/lib/import/fma/accounts";
 import { ImportRefused, runImport, type ImportSources } from "@/lib/import";
 import { formatReport } from "@/lib/import/report";
+import { categoryTree } from "@/lib/finance/category-tree";
+import { defaultCategories, financeSummary, findTransactions, listAccounts, publicTransaction } from "@/lib/finance/finance";
+import { DrizzleFinanceStore } from "@/lib/finance/store";
 import { DEFAULT_TAGS } from "@/lib/meals/recipes/tag-defaults";
 import { SecretBox, devSecret } from "@/lib/secrets";
 import { createTestDb } from "@/lib/test/db";
@@ -311,11 +318,112 @@ describe("legacy import: modules", () => {
     expect(report.skipped).toContainEqual(expect.objectContaining({ source: "fma", table: "search_runs" }));
   });
 
+  it("imports the finances as they were; families without categories get the defaults", async () => {
+    await run();
+    const store = new DrizzleFinanceStore(db);
+    const tx = (n: number) => `aaaaaaaa-0000-4000-8000-00000000000${n}`;
+
+    // Settings: currency, the CSV mappings and the statistic average (JSON) come back as saved.
+    const krug = await store.getFinanceSettings(FP.krug);
+    expect(krug?.currency).toBe("EUR");
+    expect(krug?.csv_mappings).toEqual([
+      expect.objectContaining({ delimiter: ";", skipRows: 4, accountId: "giro", description: [3], signature: "Buchungstag;Wertstellung;Empfänger;Verwendungszweck;Betrag" }),
+    ]);
+    expect(krug?.benchmark).toEqual({
+      label: "Destatis 2023",
+      income: { lowCents: 400000, highCents: 500000 },
+      expense: { lowCents: 350000, highCents: 350000 },
+      categories: [{ categoryId: "food", lowCents: 50000, highCents: 60000 }],
+    });
+    expect(await store.getFinanceSettings(FP.oma)).toEqual({ family_id: FP.oma, currency: "CHF", csv_mappings: [], benchmark: null });
+
+    // The category tree, three levels, ids kept; no default categories next to it.
+    const cats = await store.listCategories(FP.krug);
+    expect(cats.map((c) => c.id).sort()).toEqual(["bakery", "food", "groceries", "household", "salary"]);
+    const tree = categoryTree(cats);
+    expect(tree.path("bakery")).toBe("Essen > Lebensmittel > Bäckerei");
+    expect(tree.depth("bakery")).toBe(3);
+    expect(cats.find((c) => c.id === "salary")).toMatchObject({ kind: "income", position: 1, parent_id: null, icon: "💼" });
+
+    // Accounts with their balances: opening + transactions, parts of a split booking not
+    // counted (their booking is).
+    expect((await listAccounts(store, FP.krug)).map((a) => [a.id, a.openingCents, a.balanceCents])).toEqual([
+      ["giro", 100000, 100000 + 300000 - 50000 - 8000],
+      ["savings", 500000, 550000],
+    ]);
+
+    // Transactions: ids, transfer id, booking, import hash, escapes and created_at (ms) kept.
+    const rows = db.select().from(finTransactions).where(eq(finTransactions.familyId, FP.krug)).all();
+    expect(rows).toHaveLength(6);
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    expect(byId.get(tx(1))).toMatchObject({ day: "2026-09-30", amountCents: 300000, categoryId: "salary", accountId: "giro", importHash: "dkb:2026-09-30:300000:arbeitgeber" });
+    expect(byId.get(tx(1))!.createdAt.toISOString()).toBe("2026-10-01T08:00:00.123Z");
+    expect(byId.get(tx(2))!.transferId).toBe("bbbbbbbb-0000-4000-8000-000000000001");
+    expect(byId.get(tx(3))).toMatchObject({ transferId: "bbbbbbbb-0000-4000-8000-000000000001", accountId: "savings", categoryId: null });
+    expect(byId.get(tx(5))).toMatchObject({ splitOf: tx(4), categoryId: "bakery", note: "für\tSonntag\nund Montag" });
+    expect(byId.get(tx(6))!.splitOf).toBe(tx(4));
+    expect(await store.existingImportHashes(FP.krug, ["dkb:2026-09-30:300000:arbeitgeber", "other"])).toEqual(
+      new Set(["dkb:2026-09-30:300000:arbeitgeber"]),
+    );
+
+    // The list shows the transfer as a pair and the booking with its parts.
+    const { rows: listed, links, incomeCents, expenseCents } = await findTransactions(store, FP.krug, new URLSearchParams());
+    const items = listed.map((t) => publicTransaction(t, links));
+    expect(items.map((t) => t.id)).toEqual([tx(4), tx(5), tx(6), tx(2), tx(3), tx(1)]); // newest day first, then as created
+    expect(items.find((t) => t.id === tx(3))!.transferId).toBe("bbbbbbbb-0000-4000-8000-000000000001");
+    expect(items.find((t) => t.id === tx(4))!.split).toEqual({ parts: 2, remainderCents: -3000 });
+    expect({ incomeCents, expenseCents }).toEqual({ incomeCents: 300000, expenseCents: 8000 });
+
+    // The summary counts the transfer once (net 0) and the booking by its parts and remainder.
+    const summary = await financeSummary(store, FP.krug);
+    expect(summary).toMatchObject({ currency: "EUR", incomeCents: 300000, expenseCents: 8000 });
+    const byCat = new Map(summary.categories.map((c) => [c.categoryId, c]));
+    expect(byCat.get("bakery")?.expenseCents).toBe(3000);
+    expect(byCat.get("groceries")?.expenseCents).toBe(2000);
+    expect(byCat.get("household")?.expenseCents).toBe(3000);
+    expect(byCat.get("salary")?.incomeCents).toBe(300000);
+
+    // Families without family-planner categories get the defaults, in their language (Oma's
+    // settings came over, its categories are the defaults).
+    const defaults = (familyId: string, lang: "en" | "de") =>
+      defaultCategories(familyId, lang).map((c) => `${c.id}:${c.name}`).sort();
+    const names = (familyId: string) =>
+      db.select().from(finCategories).where(eq(finCategories.familyId, familyId)).all().map((c) => `${c.id}:${c.name}`).sort();
+    expect(names(FP.oma)).toEqual(defaults(FP.oma, "en"));
+    expect(names(FMA.erik)).toEqual(defaults(FMA.erik, "de")); // findmyappointment's household language
+    expect(names(CK.carl)).toEqual(defaults(CK.carl, "en"));
+    expect(db.select().from(finAccounts).where(eq(finAccounts.familyId, FP.oma)).all()).toHaveLength(0);
+    expect(db.select().from(finSettings).all()).toHaveLength(2);
+  });
+
+  it("clears finance references to rows that aren't there, and reports them", async () => {
+    const s = allSources();
+    const t = s.familyPlanner!.tables;
+    t.get("finance_categories")!.push({ family_id: FP.krug, id: "orphan", name: "Waise", color: "#000000", icon: "", kind: "nope", position: "9", parent_id: "gone" });
+    t.get("transactions")!.push({
+      family_id: FP.krug, id: "cccccccc-0000-4000-8000-000000000001", day: "2026-10-07", amount_cents: "-100", payee: "", description: "",
+      category_id: "gone", note: "", import_hash: null, created_at: "2026-10-07 10:00:00+00", account_id: "gone", transfer_id: null,
+      split_of: "cccccccc-0000-4000-8000-00000000dead",
+    });
+    const report = await run({}, s);
+    expect(db.select().from(finCategories).where(and(eq(finCategories.familyId, FP.krug), eq(finCategories.id, "orphan"))).get())
+      .toMatchObject({ parentId: null, kind: "expense" });
+    expect(db.select().from(finTransactions).where(eq(finTransactions.id, "cccccccc-0000-4000-8000-000000000001")).get())
+      .toMatchObject({ categoryId: null, accountId: null, splitOf: null, amountCents: -100 });
+    expect(report.skipped.filter((r) => r.table === "finance_categories" || r.table === "transactions")).toHaveLength(4);
+  });
+
   it("reports the counts and what family-planner has that isn't imported yet", async () => {
-    const report = await run();
+    const report = await run({ dryRun: true });
     expect(report.counts).toMatchObject({ users: 5, families: 4, family_members: 6, recipes: 3, appt_searches: 2, cal_notes: 2 });
-    expect(report.notes.some((n) => n.includes("finance_categories (1)"))).toBe(true);
-    expect(report.notes.join("\n")).not.toContain("rate_limits");
+    expect(report.counts).toMatchObject({ fin_settings: 2, fin_accounts: 2, fin_transactions: 6 });
+    // Krug's five categories and the defaults of the three other families.
+    expect(report.counts.fin_categories).toBe(5 + 3 * defaultCategories("x", "en").length);
+    expect(formatReport(report)).toMatch(/fin_transactions\s+6/);
+    const notes = report.notes.join("\n");
+    expect(notes).toContain("ai_settings (1)");
+    expect(notes).not.toMatch(/finance_|transactions|family_settings/);
+    expect(notes).not.toContain("rate_limits");
   });
 
   it("works with one source alone", async () => {

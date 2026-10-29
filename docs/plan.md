@@ -267,19 +267,29 @@ while Ohana grows.
 - Calendar view settings (zoom, always show weekdays, skip weekends) are per device in
   `localStorage`. The settings page got tabs (General, Calendar, Calendar feed).
 
-### Phase 6 notes (the importer, part A)
+### Phase 6 notes (the importer, parts A and B)
 
 `scripts/import-legacy.ts` (`npm run import-legacy`, README → "Importing the old apps") is
-built for everything but the finances and the assistant; the rehearsal, the real import and
-the cut-over are still to do.
+built for everything but the assistant (part A: accounts, calendar, meals, appointments;
+part B: family-planner's finances); the assistant's import (AI settings, chats, cookless's
+Gemini key) follows once phase 3 is merged, then the rehearsal, the real import and the
+cut-over.
 
 - **Code:** `lib/import/` — `accounts.ts` merges users / families / members (stage 1), then the
   `AREAS` list in `index.ts` runs one function per source and area:
-  `family-planner/{accounts,calendar}.ts` (API tokens, calendar), `cookless/{accounts,meals}.ts`
-  (invites, meals and photos, the Gemini key only reported), `fma/{accounts,appointments}.ts`
-  (invites, channels, searches). Finance and the assistant are two more entries there
-  (`family-planner/finance.ts`, `family-planner/assistant.ts`, and cookless's Gemini key →
-  `ai_settings`); until then the dry run lists the family-planner tables it didn't read.
+  `family-planner/{accounts,calendar,finance}.ts` (API tokens, calendar, finances),
+  `cookless/{accounts,meals}.ts` (invites, meals and photos, the Gemini key only reported),
+  `fma/{accounts,appointments}.ts` (invites, channels, searches). The assistant is one more
+  entry there (`family-planner/assistant.ts`, and cookless's Gemini key → `ai_settings`);
+  until then the dry run lists the family-planner tables it didn't read (`ai_settings`,
+  `ai_chats*`).
+- **Finances (part B):** `family_settings` → `fin_settings` (currency; `csv_mappings` and
+  `benchmark` stay JSON text), `finance_categories` → `fin_categories` (tree order, parents
+  first), `finance_accounts` → `fin_accounts`, `transactions` → `fin_transactions` (bookings
+  before their parts, otherwise the dump's order, which is the order within a day for rows
+  created at once). Ids, transfer ids, `split_of`, import hashes and `created_at` (ms) are kept.
+  A reference to a row that isn't in the dump (a parent, category, account or booking) is
+  cleared and reported; family-planner's foreign keys make that unlikely.
 - **family-planner input:** a `pg_dump --data-only --schema=public` file (no direct
   connection): pg_dump's default COPY format, or `--column-inserts`; a plain `--inserts` dump
   has no column names and is refused. Only `public.*` is read (Supabase's `auth.users` is not
@@ -300,7 +310,8 @@ the cut-over are still to do.
   `ADD_PASSKEY`. Language: cookless's, else findmyappointment's.
 - **Defaults:** families from family-planner keep their calendar as it was (no preset types
   added); the others get the preset types (in findmyappointment's household language, else the
-  first member's). Default meal tags only for families without cookless tags.
+  longest-standing editor's). Default finance categories (same language) only for families
+  without family-planner categories, default meal tags only for families without cookless tags.
 - **Not imported:** sessions, setup links, passkeys, expired / used invites, deactivated
   accounts, findmyappointment's runs, results and profile cache. Searches keep `next_run_at`,
   so the worker runs them soon after; without the run history their first run notifies about
