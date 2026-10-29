@@ -2,7 +2,7 @@ import { Banknote, CalendarDays, LayoutGrid, Stethoscope, UtensilsCrossed, type 
 
 /** The family's modules, in sidebar order. `ready`: built already (else "coming soon"). */
 export const MODULES: { key: string; icon: LucideIcon; ready: boolean }[] = [
-  { key: "calendar", icon: CalendarDays, ready: false },
+  { key: "calendar", icon: CalendarDays, ready: true },
   { key: "finance", icon: Banknote, ready: false },
   { key: "meals", icon: UtensilsCrossed, ready: false },
   { key: "appointments", icon: Stethoscope, ready: false },

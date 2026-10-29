@@ -1,0 +1,438 @@
+/* The year calendar (components/calendar/grid.ts), ported from family-planner's index.css;
+   the --cal-* colors are defined in app/globals.css.
+
+   ---------- year calendar ----------
+   The zoom sets --days, the number of days that fit across; cells grow in both directions.
+   The calendar ends at the bottom of the screen and scrolls inside, so the day numbers and
+   month names stay in view (grid.ts measures --wrap-top and --wrap-below). */
+.planner {
+  container-type: inline-size;
+}
+.grid-wrap {
+  --days: 31;
+  --month-w: 56px;
+  /* 28px: 31 days still fit between Ohana's sidebar and assistant rail on a 1280px screen */
+  --cell-w: max(28px, (100cqi - 2px - var(--month-w)) / var(--days));
+  --cell-h: calc(38px * 31 / var(--days));
+  overflow: auto;
+  max-height: max(320px, calc(100dvh - var(--wrap-top, 0px) - var(--wrap-below,
+    0px)));
+  background: var(--cal-surface);
+  border: 1px solid var(--cal-border);
+  border-radius: 14px;
+  box-shadow: var(--cal-shadow);
+  position: relative;
+  color: var(--cal-text);
+}
+.grid.yv {
+  display: grid;
+  grid-template-columns: var(--month-w) repeat(31, minmax(var(--cell-w), 1fr));
+  min-width: calc(var(--month-w) + 31 * var(--cell-w));
+  user-select: none;
+  -webkit-user-select: none;
+  outline: none;
+  touch-action: pan-x pan-y;
+}
+.grid:focus-visible {
+  outline: none;
+}
+.grid .head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--cal-muted);
+  padding: 7px 0 6px;
+  border-bottom: 1px solid var(--cal-border);
+  background: var(--cal-surface);
+}
+.grid .head.is-today {
+  color: var(--cal-accent);
+  font-weight: 700;
+}
+.grid .head.corner {
+  left: 0;
+  z-index: 3;
+  border-right: 1px solid var(--cal-border);
+}
+.grid .month {
+  display: flex;
+  align-items: center;
+  padding-left: 14px;
+  font-weight: 600;
+  font-size: 12.5px;
+  border-bottom: 1px solid var(--cal-line);
+  border-right: 1px solid var(--cal-border);
+  position: sticky;
+  left: 0;
+  background: var(--cal-surface);
+  z-index: 2;
+}
+.grid .month.is-today {
+  color: var(--cal-accent);
+}
+.grid .month.is-today::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  margin: 0 6px 0 -11px;
+  border-radius: 50%;
+  background: var(--cal-accent);
+}
+.grid.yv > :nth-last-child(-n + 32) {
+  border-bottom: 0;
+}
+.cell {
+  position: relative;
+  height: var(--cell-h);
+  border-left: 1px solid var(--cal-line);
+  border-bottom: 1px solid var(--cal-line);
+  background: var(--cal-cell);
+  cursor: cell;
+  overflow: hidden;
+  isolation: isolate;
+  scroll-margin: 64px 8px 8px 60px;
+}
+.grid .month + .cell {
+  border-left: 0;
+}
+.cell.weekend {
+  background: var(--cal-weekend);
+}
+.cell.invalid {
+  background: repeating-linear-gradient(135deg, transparent 0 4px,
+    var(--cal-invalid-hatch) 4px 5px), var(--cal-invalid);
+  cursor: default;
+}
+.cell .wd {
+  position: absolute;
+  top: 4px;
+  left: 5px;
+  font-size: 9.5px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--cal-muted);
+  opacity: 0.8;
+  z-index: 2;
+  pointer-events: none;
+}
+.cell.weekend .wd {
+  opacity: 0.5;
+}
+.grid.yv .cell .wd {
+  display: none;
+}
+.grid-wrap.show-wd .grid.yv .cell .wd {
+  display: block;
+}
+.cell.has-fill .wd {
+  color: inherit;
+  opacity: 0.8;
+}
+.cell .fills {
+  position: absolute;
+  inset: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border-radius: var(--tile-r);
+  overflow: hidden;
+  pointer-events: none;
+}
+.cell .fills > span {
+  flex: 1;
+}
+.cell .fills > span.needs {
+  background-image: repeating-linear-gradient(135deg, var(--cal-hatch) 0 2px,
+    transparent 2px 6px);
+}
+.cell .note-icon {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -40%);
+  font-size: clamp(16px, var(--cell-h) * 0.42, 32px);
+  line-height: 1;
+  white-space: nowrap;
+  z-index: 2;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
+}
+.cell.gap .note-icon {
+  transform: translate(-58%, -55%);
+}
+.cell .note-mark {
+  display: none;
+}
+.cell.has-comment .note-mark {
+  display: block;
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  border-style: solid;
+  border-width: 0 7px 7px 0;
+  border-top-right-radius: var(--tile-r);
+  border-color: transparent currentColor transparent transparent;
+  color: var(--cal-accent);
+  z-index: 3;
+  pointer-events: none;
+}
+.cell.has-fill.has-comment .note-mark {
+  color: inherit;
+  opacity: 0.85;
+}
+.cell.today::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border: 2px solid var(--cal-accent);
+  border-radius: calc(var(--tile-r) + 1px);
+  z-index: 3;
+  pointer-events: none;
+}
+.cell.gap::after {
+  content: "!";
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  font-weight: 800;
+  font-size: 10px;
+  color: #fff;
+  background: var(--cal-gap);
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  line-height: 14px;
+  text-align: center;
+  box-shadow: 0 0 0 1.5px var(--cal-cell);
+  z-index: 3;
+  pointer-events: none;
+}
+.cell.gap .fills {
+  box-shadow: inset 0 0 0 2px var(--cal-gap);
+}
+.cell.gap:not(.has-fill) .fills {
+  background: color-mix(in srgb, var(--cal-gap) 12%, transparent);
+}
+.cell.sel .sel-overlay,
+.cell.fill-preview .sel-overlay {
+  position: absolute;
+  inset: 0;
+  background: var(--cal-accent-soft);
+  z-index: 4;
+  pointer-events: none;
+}
+.cell.fill-preview .sel-overlay {
+  inset: 1px;
+  border-radius: calc(var(--tile-r) + 1px);
+  background: var(--cal-accent-faint);
+  border: 1.5px dashed var(--cal-accent);
+}
+.cell.focus .sel-overlay {
+  inset: 1px;
+  border-radius: calc(var(--tile-r) + 1px);
+  box-shadow: inset 0 0 0 2px var(--cal-accent);
+}
+@media (hover: hover) {
+  .planner:not(.readonly) .cell[data-date]:not(.sel):not(.fill-preview):hover .sel-overlay {
+    position: absolute;
+    inset: 1px;
+    border-radius: calc(var(--tile-r) + 1px);
+    background: var(--cal-accent-faint);
+    box-shadow: inset 0 0 0 1px var(--cal-accent-soft);
+    z-index: 4;
+    pointer-events: none;
+  }
+}
+.fill-handle {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--cal-accent);
+  border: 2px solid var(--cal-surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  z-index: 5;
+  cursor: crosshair;
+  touch-action: none;
+}
+.readonly .cell {
+  cursor: default;
+}
+
+/* Type chips */
+.chip {
+  --c: var(--cal-accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 999px;
+  padding: 0 7px 0 9px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+  transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
+  flex: none;
+}
+.chip:hover {
+  border-color: color-mix(in srgb, var(--c) 55%, var(--border));
+}
+.chip:disabled {
+  cursor: default;
+}
+.chip:disabled:hover {
+  border-color: var(--border);
+}
+.chip.active {
+  border-color: var(--c);
+  background: color-mix(in srgb, var(--c) 14%, var(--card));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 28%, transparent);
+}
+.chip .name {
+  min-width: 0;
+  max-width: 16em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chip .swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  flex: none;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+.chip .swatch.needs {
+  background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.55) 0
+    3px, transparent 3px 7px);
+}
+.chip .count {
+  flex: none;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  background: var(--muted);
+  border-radius: 999px;
+  padding: 2px 7px;
+  color: var(--muted-foreground);
+}
+.chip.active .count {
+  background: color-mix(in srgb, var(--c) 22%, var(--card));
+  color: var(--foreground);
+}
+
+/* ---------- phones: one calendar per month, scrolling with the page ---------- */
+@media (max-width: 640px) {
+  .grid-wrap {
+    overflow: visible;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+  .grid.mv {
+    display: block;
+    padding: 0 8px 12px;
+    touch-action: pan-y;
+  }
+  .mv-month + .mv-month {
+    margin-top: 6px;
+  }
+  .mv-title {
+    position: sticky;
+    top: var(--mv-top, 0px);
+    z-index: 6;
+    margin: 0 -8px;
+    padding: 10px 14px 6px;
+    font-size: 17px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    background: color-mix(in srgb, var(--background) 92%, transparent);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+  .mv-month.is-today .mv-title {
+    color: var(--cal-accent);
+  }
+  .mv-days {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 3px;
+  }
+  .mv-wd {
+    padding: 0 0 4px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--cal-muted);
+  }
+  .grid.mv .cell {
+    height: auto;
+    aspect-ratio: 1 / 0.8;
+    border: 0;
+    border-radius: 9px;
+    scroll-margin: 104px 0 170px;
+  }
+  .grid.mv .cell .wd {
+    top: 6px;
+    left: 7px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--cal-text);
+    opacity: 1;
+  }
+  .grid.mv .cell.weekend {
+    background: color-mix(in srgb, var(--cal-cell) 40%, transparent);
+  }
+  .grid.mv .cell.weekend .wd {
+    color: var(--cal-muted);
+  }
+  .grid.mv .cell.has-fill .wd {
+    color: inherit;
+  }
+  .grid.mv .cell .fills {
+    inset: 0;
+    border-radius: 9px;
+  }
+  .grid.mv .cell .note-icon {
+    font-size: 20px;
+    transform: translate(-50%, -30%);
+  }
+  .grid.mv .cell.today::before {
+    inset: 0;
+    border-radius: 9px;
+  }
+  .grid.mv .cell.sel .sel-overlay,
+  .grid.mv .cell.focus .sel-overlay,
+  .grid.mv .cell.fill-preview .sel-overlay {
+    inset: 0;
+    border-radius: 9px;
+  }
+  .grid.mv .cell.has-comment .note-mark {
+    top: 0;
+    right: 0;
+    border-top-right-radius: 9px;
+  }
+  .grid.mv,
+  .grid.mv .cell {
+    -webkit-touch-callout: none;
+  }
+  .chip {
+    font-size: 15px;
+  }
+  .chip .count {
+    font-size: 12px;
+  }
+}

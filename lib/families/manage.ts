@@ -3,6 +3,8 @@ import { asc, eq, sql } from "drizzle-orm";
 import type { Db } from "@/lib/db";
 import { families, familyMembers, users } from "@/lib/db/schema";
 import { AuthError } from "@/lib/auth/errors";
+import { randomToken } from "@/lib/api/http";
+import { insertPresetTypes } from "@/lib/calendar/presets";
 import { type Actor, type Role, isRole, requireRole } from "./roles";
 
 export type Family = typeof families.$inferSelect;
@@ -21,15 +23,21 @@ function cleanName(name: string): string {
   return trimmed;
 }
 
-/** Creates a family; `editorId` (if given) becomes its first editor. */
-export function createFamily(db: Db, args: { name: string; editorId?: string }, now: Date): Family {
+/** Creates a family with the calendar's preset types (named in `lang`) for this year;
+ *  `editorId` (if given) becomes its first editor. */
+export function createFamily(
+  db: Db,
+  args: { name: string; editorId?: string; lang?: string },
+  now: Date,
+): Family {
   const name = cleanName(args.name);
   return db.transaction((tx) => {
     const family = tx
       .insert(families)
-      .values({ id: randomUUID(), name, createdAt: now, updatedAt: now })
+      .values({ id: randomUUID(), name, feedId: randomToken(20), createdAt: now, updatedAt: now })
       .returning()
       .get();
+    insertPresetTypes(tx, family.id, args.lang === "de" ? "de" : "en", now.getUTCFullYear());
     if (args.editorId) {
       tx.insert(familyMembers)
         .values({ familyId: family.id, userId: args.editorId, role: "editor", joinedAt: now })

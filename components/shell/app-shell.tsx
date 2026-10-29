@@ -96,6 +96,9 @@ export function AppShell({
     return () => window.removeEventListener("keydown", onKey);
   }, [toggleAssistant]);
 
+  // The year calendar uses the whole width.
+  const wide = /^\/f\/[^/]+\/calendar$/.test(pathname);
+
   const nav = <SidebarContent user={user} families={families} family={family} pathname={pathname} />;
 
   return (
@@ -116,7 +119,7 @@ export function AppShell({
             <Sparkles className="size-5" />
           </Button>
         </header>
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6">{children}</main>
+        <main className={cn("mx-auto w-full flex-1 px-4 py-6 sm:px-6", wide ? "max-w-none" : "max-w-5xl")}>{children}</main>
       </div>
 
       {/* Right sidebar: desktop rail + panel */}

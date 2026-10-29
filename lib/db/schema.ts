@@ -1,5 +1,8 @@
+import { sql } from "drizzle-orm";
 import {
   blob,
+  check,
+  foreignKey,
   index,
   integer,
   primaryKey,
@@ -76,6 +79,11 @@ export const rateLimits = sqliteTable(
 export const families = sqliteTable("families", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
+  /** The calendar feed's secret id: opens calendar.ics and nothing else, without signing in. */
+  feedId: text("feed_id").notNull().unique(),
+  /** The view id of a family-planner planner from before families (filled by the import):
+   *  its feed keeps working under this id, and the feed's event UIDs keep it as prefix. */
+  legacyId: text("legacy_id").unique(),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });
@@ -113,4 +121,61 @@ export const invites = sqliteTable(
     createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   },
   (t) => ({ invitesCodeIdx: uniqueIndex("invites_code_idx").on(t.code) }),
+);
+
+// ---- calendar ----
+
+/** An entry type (e.g. Vacation) belongs to one year; each year of a family has its own set. */
+export const calEntryTypes = sqliteTable(
+  "cal_entry_types",
+  {
+    familyId: text("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    year: integer("year").notNull(),
+    /** Unique within the family's year (a slug of the name, e.g. "vacation"). */
+    id: text("id").notNull(),
+    name: text("name").notNull(),
+    color: text("color").notNull(),
+    role: text("role").notNull().default("none"), // none | needs_cover | covers | day_off
+    position: integer("position").notNull().default(0),
+  },
+  (t) => ({ pk: primaryKey({ columns: [t.familyId, t.year, t.id] }) }),
+);
+
+/** A type on a day. The type is one of the day's year (`year` is the day's year), so deleting
+ *  a type deletes its entries. */
+export const calEntries = sqliteTable(
+  "cal_entries",
+  {
+    familyId: text("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    day: text("day").notNull(), // YYYY-MM-DD
+    year: integer("year").notNull(),
+    typeId: text("type_id").notNull(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.familyId, t.day, t.typeId] }),
+    type: foreignKey({
+      columns: [t.familyId, t.year, t.typeId],
+      foreignColumns: [calEntryTypes.familyId, calEntryTypes.year, calEntryTypes.id],
+    }).onDelete("cascade"),
+    calEntriesTypeIdx: index("cal_entries_type_idx").on(t.familyId, t.year, t.typeId),
+    yearOfDay: check("cal_entries_year_of_day", sql`${t.year} = cast(substr(${t.day}, 1, 4) as integer)`),
+  }),
+);
+
+/** An icon and/or comment on a day; independent of entries (no role, no coverage). */
+export const calNotes = sqliteTable(
+  "cal_notes",
+  {
+    familyId: text("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    day: text("day").notNull(),
+    icon: text("icon").notNull().default(""),
+    comment: text("comment").notNull().default(""),
+  },
+  (t) => ({ pk: primaryKey({ columns: [t.familyId, t.day] }) }),
 );

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createInvite, revokeInvite } from "@/lib/families/invites";
+import { resolveLocale } from "@/lib/i18n/server";
 import { createFamily, deleteFamily, renameFamily } from "@/lib/families/manage";
 import { addMember, removeMember, setRole } from "@/lib/families/members";
 import { acceptInvite } from "@/lib/families/invites";
@@ -13,8 +14,9 @@ function refresh() {
 }
 
 export const createFamilyAction = async (input: unknown) =>
-  run(({ db, user, now }) => {
-    const family = createFamily(db, { name: familyNameSchema.parse(input).name, editorId: user.id }, now);
+  run(async ({ db, user, now }) => {
+    const lang = await resolveLocale(); // the calendar's preset types are named in it
+    const family = createFamily(db, { name: familyNameSchema.parse(input).name, editorId: user.id, lang }, now);
     refresh();
     return { id: family.id };
   });
