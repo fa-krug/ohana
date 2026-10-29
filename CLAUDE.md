@@ -54,6 +54,19 @@ npm run import-legacy -- --family-planner dump.sql --cookless cookless.db --cook
   A family always keeps an editor. Pages under `app/(app)/f/[familyId]/` call
   `requireFamily(familyId)` (`page.ts`) themselves; don't rely on the layout's check, Next
   renders layout and page in parallel. Admin pages likewise call `requireAdminPage()`.
+  Members without an account (children, grandparents) are rows of `family_people`
+  (`people.ts`: names unique per family, editors add / edit / remove); adding one may create
+  an invite for them (`invites.person_id`, `createInvite(..., personId)`): accepting it makes
+  the account a member and deletes the person (the membership takes their birthday, a
+  nameless account their name). Birthdays ("YYYY-MM-DD", optional, not in the future) are on
+  `family_people` and per family on `family_members` (`setMemberBirthday`: members set their
+  own, editors anyone's); `birthdays.ts` (browser-safe: `ageOn`, `birthdaysIn` a range, 29 Feb
+  → 28 Feb in other years). `familyNames` (accounts + people, with ids and birthdays) are the
+  "who is it for" chips when booking an appointment, the members the assistant's system
+  prompt names with their ages, and the birthdays of the calendar (GET `/families/{id}`
+  `birthdays` by day via `dayExtras`: `PlannerStore.birthdays`, the grid's `.birthday-mark`
+  🎂, tooltip and selection bar; the feed with `birthdays=1`: one yearly `RRULE` event each)
+  and of the overview (next 30 days, `familyDashboard`).
 - **Server actions** live in `app/actions/*.ts` and wrap their work in `run()`
   (`lib/actions/result.ts`), which signs in the user (and checks admin with `{ admin: true }`)
   and turns `AuthError` / `ZodError` into `{ ok: false, status, message }`.

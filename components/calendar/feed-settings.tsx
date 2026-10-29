@@ -87,6 +87,8 @@ function FeedCard({ appUrl, feedId, rotate }: { appUrl: string; feedId: string; 
   const [notes, setNotes] = useState(true);
   // Booked appointments name doctors: only in the feed when asked for.
   const [events, setEvents] = useState(false);
+  // Birthdays are personal too: only when asked for.
+  const [birthdays, setBirthdays] = useState(false);
 
   const params: Record<string, string> = {};
   const included = types.filter((x) => !excluded.has(x.id));
@@ -94,6 +96,7 @@ function FeedCard({ appUrl, feedId, rotate }: { appUrl: string; feedId: string; 
   if (gaps) params.gaps = "1";
   if (notes) params.notes = "1";
   if (events) params.events = "1";
+  if (birthdays) params.birthdays = "1";
   if (locale !== "en") params.lang = locale;
   const url = calendarUrl(appUrl, feedId, params);
 
@@ -135,6 +138,9 @@ function FeedCard({ appUrl, feedId, rotate }: { appUrl: string; feedId: string; 
           </label>
           <label className="mt-1.5 flex items-center gap-2 text-sm" title={t("calendar.feed.eventsTitle")}>
             <Checkbox checked={events} onCheckedChange={(v) => setEvents(!!v)} /> {t("calendar.feed.events")}
+          </label>
+          <label className="mt-1.5 flex items-center gap-2 text-sm">
+            <Checkbox checked={birthdays} onCheckedChange={(v) => setBirthdays(!!v)} /> {t("calendar.feed.birthdays")}
           </label>
         </fieldset>
         <UrlField value={url} label={t("calendar.feed.url")} />

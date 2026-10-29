@@ -8,7 +8,7 @@ import { isWeekend } from "@/lib/calendar/core";
 import { useT } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils";
 import { useMedia, usePlanner } from "./context";
-import { eventText, fmtDate, noteText } from "./grid";
+import { birthdayText, eventText, fmtDate, noteText } from "./grid";
 import { readFlag, setZoom, useViewPrefs, writeFlag, ZOOM } from "./view-prefs";
 
 const HINTED_KEY = "ohana.calendar.hinted";
@@ -41,7 +41,8 @@ export function SelectionBar({
   }, [has, hinted]);
 
   let info: string;
-  // A single day's timed events (booked appointments); on phones on a line of their own.
+  // A single day's timed events (booked appointments) and birthdays; on phones on a line of
+  // their own.
   let eventLine = "";
   if (fill !== null) {
     info = fill
@@ -65,7 +66,8 @@ export function SelectionBar({
         span,
       }) +
       (note ? " · " + noteText(note) : "");
-    eventLine = events.map((e) => "🕑 " + eventText(e)).join(" · ");
+    const birthdays = days.length === 1 ? (store.birthdays.get(days[0]) ?? []) : [];
+    eventLine = [...events.map((e) => "🕑 " + eventText(e)), ...birthdays.map((b) => birthdayText(t, b))].join(" · ");
     if (eventLine && !compact) {
       info += " · " + eventLine;
       eventLine = "";

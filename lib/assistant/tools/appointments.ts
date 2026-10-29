@@ -431,7 +431,7 @@ export const appointmentTools: Record<string, Tool> = {
           date: { type: "string", description: "YYYY-MM-DD" },
           start: { type: "string", description: "HH:MM" },
           end: { type: "string", description: "HH:MM" },
-          person: { type: "string", description: "Who it is for" },
+          person: { type: "string", description: "Who it is for: a family member's name" },
           note: { type: "string" },
           stopSearch: { type: "boolean" },
         },

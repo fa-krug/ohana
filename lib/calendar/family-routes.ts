@@ -8,6 +8,9 @@ import { HttpError, json, NO_STORE, randomToken, readBody, slug } from "@/lib/ap
 import { renameFamily } from "@/lib/families/manage";
 import { exportFinance, parseFinanceImport } from "@/lib/finance/finance";
 import type { FamilyPatch, FamilyRow } from "./store";
+import type { Db } from "@/lib/db";
+import { type BirthdayDay, birthdaysIn } from "@/lib/families/birthdays";
+import { familyNames } from "@/lib/families/people";
 import { type EventRow, eventsByDay, listEvents } from "./events";
 import {
   groupEntries,
@@ -44,17 +47,38 @@ export function publicFamily({ family, access }: Loaded) {
   };
 }
 
-/** GET /families/{id}: the family and its calendar in the range, with the timed events of the
- *  range by day (`events`, phase 7) when given. */
-export function familyState(loaded: Loaded, range: Range, data: VacationData, events?: EventRow[]) {
+/** What the calendar shows next to the entries: timed events and the members' birthdays. */
+export interface DayExtras {
+  events: EventRow[];
+  birthdays: BirthdayDay[];
+}
+
+/** The range's timed events, and its birthdays when the range has both ends. */
+export function dayExtras(db: Db, familyId: string, range: Range): DayExtras {
+  return {
+    events: listEvents(db, familyId, range),
+    birthdays: range.from && range.to ? birthdaysIn(familyNames(db, familyId), range.from, range.to) : [],
+  };
+}
+
+/** GET /families/{id}: the family and its calendar in the range, with the timed events
+ *  (`events`, phase 7) and the members' birthdays (`birthdays`: day -> [{name, age}]) of the
+ *  range by day when given. */
+export function familyState(loaded: Loaded, range: Range, data: VacationData, extras?: DayExtras) {
   const family = publicFamily(loaded);
   // "session" is the name from before families, kept for scripts that read it.
   return {
     family,
     session: family,
     ...vacationState(range, data),
-    ...(events ? { events: eventsByDay(events) } : {}),
+    ...(extras ? { events: eventsByDay(extras.events), birthdays: birthdaysByDay(extras.birthdays) } : {}),
   };
+}
+
+function birthdaysByDay(rows: BirthdayDay[]): Record<string, { name: string; age: number }[]> {
+  const out: Record<string, { name: string; age: number }[]> = {};
+  for (const b of rows) (out[b.day] ??= []).push({ name: b.name, age: b.age });
+  return out;
 }
 
 /** The whole family as a file: all years, types, entries and notes, and the finances, but
@@ -115,7 +139,7 @@ export function handleFamily(ctx: Ctx): Promise<Response> | null {
 async function read({ db, store, url, loadWith }: Ctx): Promise<Response> {
   const range = rangeFromQuery(url);
   const [loaded, data] = await loadWith("view", (id) => listVacation(store, id, range));
-  return json(familyState(loaded, range, data, listEvents(db, loaded.family.id, range)));
+  return json(familyState(loaded, range, data, dayExtras(db, loaded.family.id, range)));
 }
 
 async function rename({ db, store, req, url, loadWith, now, requireUser }: Ctx): Promise<Response> {
@@ -125,7 +149,7 @@ async function rename({ db, store, req, url, loadWith, now, requireUser }: Ctx):
   if (typeof name !== "string") throw new HttpError(400, "name is required");
   renameFamily(db, { id: requireUser().id }, loaded.family.id, name, now);
   const family = (await store.getFamily(loaded.family.id))!;
-  return json(familyState({ ...loaded, family }, range, data, listEvents(db, family.id, range)));
+  return json(familyState({ ...loaded, family }, range, data, dayExtras(db, family.id, range)));
 }
 
 /** POST /families/{id}/links {"link": "feed" | "legacy"}: a new feed id (the old one stops
@@ -140,7 +164,7 @@ async function rotateLink({ db, store, req, url, loadWith }: Ctx): Promise<Respo
   const patch: FamilyPatch = link === "feed" ? { feed_id: randomToken(20) } : { legacy_id: null };
   await store.updateFamily(loaded.family.id, patch);
   const family = (await store.getFamily(loaded.family.id))!;
-  return json(familyState({ ...loaded, family }, range, data, listEvents(db, family.id, range)));
+  return json(familyState({ ...loaded, family }, range, data, dayExtras(db, family.id, range)));
 }
 
 /** Viewers may export too: they can read all of that anyway. */
@@ -163,6 +187,6 @@ async function importFamily({ db, store, req, url, load }: Ctx): Promise<Respons
   await store.replaceContents(family.id, types, data.entries, data.notes, data.finance);
   const updated = (await store.getFamily(family.id))!;
   return json(
-    familyState({ ...loaded, family: updated }, range, await listVacation(store, family.id, range), listEvents(db, family.id, range)),
+    familyState({ ...loaded, family: updated }, range, await listVacation(store, family.id, range), dayExtras(db, family.id, range)),
   );
 }

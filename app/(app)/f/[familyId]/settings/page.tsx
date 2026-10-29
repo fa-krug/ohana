@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { getAppUrl } from "@/lib/auth/config";
 import { listInvites } from "@/lib/families/invites";
 import { listMembers } from "@/lib/families/members";
+import { listPeople } from "@/lib/families/people";
 import { requireFamily } from "@/lib/families/page";
 import { getI18n } from "@/lib/i18n/server";
 import { PageHeader } from "@/components/page-header";
@@ -32,6 +33,7 @@ export default async function SettingsPage({
   const { user, family, role } = await requireFamily(familyId);
   const now = new Date();
   const { t } = await getI18n();
+  const appUrl = getAppUrl();
   return (
     <>
       <PageHeader title={t("settings.title")} />
@@ -40,19 +42,22 @@ export default async function SettingsPage({
         tab={tab}
         year={year}
         readOnly={role !== "editor"}
-        appUrl={getAppUrl()}
+        appUrl={appUrl}
         general={
           <FamilySettings
             family={{ id: family.id, name: family.name }}
             role={role}
             selfId={user.id}
+            appUrl={appUrl}
             members={listMembers(db, { id: user.id }, familyId)}
+            people={listPeople(db, { id: user.id }, familyId).map((p) => ({ id: p.id, name: p.name, birthday: p.birthday }))}
             invites={
               role === "editor"
                 ? listInvites(db, { id: user.id }, familyId, now).map((i) => ({
                     id: i.id,
-                    url: `${getAppUrl()}/invite/${i.code}`,
+                    url: `${appUrl}/invite/${i.code}`,
                     role: i.role,
+                    personId: i.personId,
                     expiresAt: i.expiresAt,
                   }))
                 : []

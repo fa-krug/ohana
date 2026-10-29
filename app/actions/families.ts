@@ -1,13 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { createInvite, revokeInvite } from "@/lib/families/invites";
 import { resolveLocale } from "@/lib/i18n/server";
 import { createFamily, deleteFamily, renameFamily } from "@/lib/families/manage";
-import { addMember, removeMember, setRole } from "@/lib/families/members";
+import { addMember, removeMember, setMemberBirthday, setRole } from "@/lib/families/members";
+import { addPerson, removePerson, updatePerson } from "@/lib/families/people";
 import { acceptInvite } from "@/lib/families/invites";
 import { run } from "@/lib/actions/result";
-import { addMemberSchema, familyNameSchema, role } from "@/lib/schemas/auth";
+import { addMemberSchema, addPersonSchema, birthdaySchema, familyNameSchema, personSchema, role } from "@/lib/schemas/auth";
 
 function refresh() {
   revalidatePath("/", "layout");
@@ -51,9 +53,36 @@ export const removeMemberAction = async (familyId: string, userId: string) =>
     refresh();
   });
 
-export const createInviteAction = async (familyId: string, inviteRole: unknown) =>
+/** A member without an account (a child, …), optionally with an invite link for them. */
+export const addPersonAction = async (familyId: string, input: unknown) =>
   run(({ db, user, now }) => {
-    const invite = createInvite(db, { id: user.id }, familyId, role.parse(inviteRole), now);
+    const res = addPerson(db, { id: user.id }, familyId, addPersonSchema.parse(input), now);
+    refresh();
+    return { id: res.person.id, invite: res.invite };
+  });
+
+export const updatePersonAction = async (familyId: string, personId: string, input: unknown) =>
+  run(({ db, user, now }) => {
+    updatePerson(db, { id: user.id }, familyId, personId, personSchema.parse(input), now);
+    refresh();
+  });
+
+export const setMemberBirthdayAction = async (familyId: string, userId: string, birthday: unknown) =>
+  run(({ db, user, now }) => {
+    setMemberBirthday(db, { id: user.id }, familyId, userId, birthdaySchema.parse(birthday), now);
+    refresh();
+  });
+
+export const removePersonAction = async (familyId: string, personId: string) =>
+  run(({ db, user }) => {
+    removePerson(db, { id: user.id }, familyId, personId);
+    refresh();
+  });
+
+/** An invite link; with `personId` for that member without an account. */
+export const createInviteAction = async (familyId: string, inviteRole: unknown, personId?: string) =>
+  run(({ db, user, now }) => {
+    const invite = createInvite(db, { id: user.id }, familyId, role.parse(inviteRole), now, personId === undefined ? undefined : z.string().parse(personId));
     refresh();
     return invite;
   });

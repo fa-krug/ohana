@@ -21,6 +21,9 @@ export interface IcsInput {
   /** Timed events (booked appointments, phase 7); each becomes an event at its wall-clock time
    *  ("floating": the subscriber's own time zone). */
   events?: IcsEvent[];
+  /** The members' birthdays ("YYYY-MM-DD"); each becomes an all-day event every year. `id`
+   *  (the person's or the account's) keeps the event's UID when the name changes. */
+  birthdays?: { id: string; name: string; birthday: string }[];
   /** Language of generated texts (gap summaries, descriptions). Default "en". */
   lang?: Lang;
   now?: Date;
@@ -40,14 +43,19 @@ export interface IcsEvent {
   url: string;
 }
 
-const TEXT: Record<Lang, { notCovered: string; span: (days: number, work: number) => string }> = {
+const TEXT: Record<
+  Lang,
+  { notCovered: string; span: (days: number, work: number) => string; birthday: (name: string) => string }
+> = {
   en: {
     notCovered: "⚠ Not covered",
     span: (days, work) => `${days} days (${work} workdays)`,
+    birthday: (name) => `🎂 ${name}'s birthday`,
   },
   de: {
     notCovered: "⚠ Nicht abgedeckt",
     span: (days, work) => `${days} Tage (${work} ${work === 1 ? "Arbeitstag" : "Arbeitstage"})`,
+    birthday: (name) => `🎂 Geburtstag ${name}`,
   },
 };
 
@@ -191,6 +199,21 @@ export function buildIcs(input: IcsInput): string {
       ...(e.location ? ["LOCATION:" + escapeText(e.location)] : []),
       ...(description ? ["DESCRIPTION:" + escapeText(description)] : []),
       ...(/^https?:\/\//i.test(e.url) ? ["URL:" + e.url] : []),
+      "END:VEVENT",
+    );
+  }
+
+  for (const b of input.birthdays ?? []) {
+    lines.push(
+      "BEGIN:VEVENT",
+      `UID:${input.uidPrefix}-birthday-${b.id}@ohana`,
+      `DTSTAMP:${stamp(now)}`,
+      `DTSTART;VALUE=DATE:${compact(b.birthday)}`,
+      `DTEND;VALUE=DATE:${compact(addDays(b.birthday, 1))}`,
+      // Born on 29 February: the last day of February in the other years.
+      b.birthday.endsWith("-02-29") ? "RRULE:FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=-1" : "RRULE:FREQ=YEARLY",
+      "SUMMARY:" + escapeText(text.birthday(b.name)),
+      "TRANSP:TRANSPARENT",
       "END:VEVENT",
     );
   }

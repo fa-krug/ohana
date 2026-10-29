@@ -26,6 +26,14 @@ export interface FamilyState {
   notes?: Record<string, { icon: string; comment: string }>;
   /** Timed events by day, e.g. booked appointments (phase 7). */
   events?: Record<string, CalEvent[]>;
+  /** The members' birthdays by day. */
+  birthdays?: Record<string, Birthday[]>;
+}
+
+/** A member's birthday on a day: who, and the age they turn. */
+export interface Birthday {
+  name: string;
+  age: number;
 }
 
 export interface CalEvent {

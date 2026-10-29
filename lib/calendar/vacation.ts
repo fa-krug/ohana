@@ -5,6 +5,7 @@ import type { Ctx } from "@/lib/api/family-api";
 import { cleanName, cleanYear, CORS, currentYear, HttpError, json, objectOf, readBody, slug } from "@/lib/api/http";
 import { dateRange, isValidDate, isWeekend } from "./dates";
 import { buildIcs, type Lang } from "./ics";
+import { familyNames } from "@/lib/families/people";
 import { listEvents } from "./events";
 import { type CalendarStore as Store, type EntryRow, type NoteRow, type Role, ROLES, type TypeRow } from "./store";
 
@@ -372,6 +373,11 @@ async function calendarFeed({ db, store, url, load }: Ctx): Promise<Response> {
     lang: url.searchParams.get("lang") === "de" ? "de" : "en",
     // Booked appointments and other timed events (phase 7), only when asked for.
     events: url.searchParams.get("events") === "1" ? listEvents(db, family.id) : undefined,
+    // The members' birthdays, only when asked for.
+    birthdays:
+      url.searchParams.get("birthdays") === "1"
+        ? familyNames(db, family.id).flatMap((p) => (p.birthday ? [{ id: p.id, name: p.name, birthday: p.birthday }] : []))
+        : undefined,
   });
   return new Response(ics, {
     headers: {
