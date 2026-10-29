@@ -184,3 +184,122 @@ too, e.g. with a nightly `restic` or `rclone` job on the host that reads the vol
 To restore: stop both containers, replace `/app/data/ohana.db` with a backup (and delete
 `ohana.db-wal` / `ohana.db-shm` next to it), start them again. The backups hold the database
 only: copy `/app/data/media` (recipe photos) off the Pi along with `backups/`.
+
+## Importing the old apps
+
+`scripts/import-legacy.ts` copies family-planner, cookless and findmyappointment into an
+**empty** Ohana database, once, in one transaction (all or nothing). Run it with `--dry-run`
+first: it does the whole import, rolls it back and prints what it would do.
+
+```bash
+npm run import-legacy -- --family-planner family-planner.sql \
+  --cookless cookless.db --cookless-media media --fma findmyappointment.db \
+  --map import-map.json [--dry-run] [--force] [--report report.json]
+```
+
+`--family-planner`: a `pg_dump --data-only` of family-planner's Supabase `public` schema;
+`--cookless` / `--cookless-media`: cookless's SQLite file and its media folder (recipe photos);
+`--fma`: findmyappointment's SQLite file; `--map`: which households are which family. The
+target is `DATABASE_FILE` (migrated), photos go to `MEDIA_ROOT`.
+
+Every source is optional. What moves:
+
+| From              | What                                                                                                                                                                                                                                       |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| all three         | **Accounts**, merged by lowercased email: name from family-planner, admin if admin in family-planner or `is_staff` in cookless / findmyappointment, the password hash of family-planner, else cookless, else findmyappointment (all work in Ohana) |
+| all three         | **Families**: `import-map.json` joins a family-planner family with a cookless and a findmyappointment household; unmapped ones become families of their own. Members are combined, **editor wins** over viewer (OWNER and MEMBER are editors) |
+| family-planner    | family `id`, name, `feed_id`, `legacy_id`; the **calendar** (types per year, entries, notes); **API tokens** as they are (same SHA-256), so scripts keep working                                                                         |
+| cookless          | tags, recipes with steps and **photos** (copied into `MEDIA_ROOT`), meal plans, shopping lists; open invite codes                                                                                                                        |
+| findmyappointment | the **home address**, notification channels (tokens encrypted with Ohana's key), searches with their channels and ignore lists; open invite codes                                                                                        |
+
+Not moved: sessions and setup links (everyone signs in again), **passkeys** (bound to the old
+domains: everyone adds one at the first sign-in), expired or used invites, deactivated cookless
+/ findmyappointment accounts, findmyappointment's run history and results (the first runs in
+Ohana notify about what is available then). Not yet: family-planner's **finances** and
+**assistant** (AI settings, chats) and cookless's Gemini key; the dry run lists them, they come
+with those modules.
+
+- Families that come from family-planner keep their calendar exactly; the others get the
+  preset types, as a new family does. Families without cookless tags get the default meal tags.
+- A password is **not** carried over when it is a temporary one the user never changed
+  (family-planner's `admin` / `admin`, cookless's `CHANGE_PASSWORD` step) or one of the known
+  defaults `admin` / `password` (findmyappointment's Django import gave everyone `password`).
+  Accounts without a password are listed at the end of the report: give each one a setup link
+  (`npm run setup-link -- <email>`). Everyone else signs in with their old password and is
+  offered a passkey.
+- The import refuses a database that has accounts or families, unless `--force` (then an
+  account whose email exists is kept as it is and only gets the memberships). It also refuses
+  when the families it would create exist already, so running it twice fails cleanly, even
+  with `--force`.
+- `import-map.json` (ids from the dry run's family list):
+
+  ```json
+  { "families": [
+      { "familyPlanner": "<family-planner family id>", "cookless": "<household id>", "fma": "<household id>" }
+  ] }
+  ```
+
+### On the Pi
+
+1. **Ohana is deployed** and has started once (so its database is migrated and seeded). Don't
+   create an account at `/setup` (otherwise use `--force`).
+2. **Copy cookless and findmyappointment out of their containers.** Stop them first, so the
+   SQLite files are complete and nothing changes after the copy (for a rehearsal, start them
+   again afterwards):
+
+   ```bash
+   mkdir -p ~/ohana-import && cd ~/ohana-import
+   docker stop cookless findmyappointment
+   docker cp cookless:/app/data/. ./cookless/              # cookless.db (+ -wal/-shm) and media/
+   docker cp findmyappointment:/app/data/. ./fma/          # findmyappointment.db
+   docker start cookless findmyappointment                 # rehearsal only
+   ```
+
+   (The data also lies in their volumes, `cookless_data` and `findmyappointment-data` in their
+   compose files, prefixed with the project name: `docker volume ls`, `docker volume inspect`.)
+3. **Dump family-planner** from Supabase. Take the connection string from the Supabase
+   dashboard (*Connect* → *Session pooler*, which works over IPv4) and use a `pg_dump` at least
+   as new as the server (the `postgres:17` image has one, also for arm64):
+
+   ```bash
+   docker run --rm -v "$PWD:/out" postgres:17 pg_dump \
+     "postgresql://postgres.<project-ref>:<password>@<region>.pooler.supabase.com:5432/postgres" \
+     --data-only --schema=public --no-owner --no-privileges -f /out/family-planner.sql
+   ```
+
+   pg_dump's default COPY format is what the import reads best; `--column-inserts` works too
+   (a plain `--inserts` dump has no column names and is refused).
+4. **Dry run** inside Ohana's image, with Ohana's environment (its `AUTH_SECRET` /
+   `ENCRYPTION_KEY` encrypt the channel tokens). In the Arcane project's folder on the Pi (the
+   one with Ohana's compose file and `.env`, e.g. `/home/pi/docker/ohana`; add `-f <file>` if
+   the compose file has another name):
+
+   ```bash
+   docker compose run --rm --no-deps -v ~/ohana-import:/import web \
+     ./node_modules/.bin/tsx scripts/import-legacy.ts \
+     --family-planner /import/family-planner.sql \
+     --cookless /import/cookless/cookless.db --cookless-media /import/cookless/media \
+     --fma /import/fma/findmyappointment.db --dry-run
+   ```
+
+   Read the family list, write `~/ohana-import/import-map.json`, and run the dry run again with
+   `--map /import/import-map.json` until the report looks right (families, members and roles,
+   accounts without a password, skipped rows, missing photos).
+5. **The real import**, with the old apps stopped for good (copy their data again, step 2
+   without the `docker start`, and dump family-planner again, step 3, once nobody changes it
+   any more) and Ohana stopped:
+
+   ```bash
+   docker compose stop web worker
+   docker compose run --rm --no-deps -v ~/ohana-import:/import web \
+     ./node_modules/.bin/tsx scripts/import-legacy.ts … --map /import/import-map.json --report /import/report.json
+   docker compose up -d
+   ```
+
+6. **Check**: sign in with an old password (Ohana offers a passkey), open each family's
+   calendar, recipes (with photos), plan, shopping list and searches; send a *Test* from
+   Settings → Notifications; make the setup links the report lists
+   (`docker compose exec web ./node_modules/.bin/tsx scripts/setup-link.ts <email>`);
+   re-subscribe calendar feeds from Settings → Calendar feed (the old feed URLs go away with
+   family-planner). If something is wrong: stop Ohana, delete `ohana.db*` and `media/recipes`
+   in the volume, start it (it migrates an empty database), fix the map and import again.

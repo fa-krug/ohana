@@ -1,0 +1,1 @@
+ALTER TABLE `searches` ADD `jameda_video` text DEFAULT 'any' NOT NULL;
