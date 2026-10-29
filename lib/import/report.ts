@@ -51,6 +51,11 @@ export function formatReport(r: ImportReport): string {
   for (const m of r.media.missing.slice(0, 20)) out.push(`  missing: ${m}`);
   if (r.media.missing.length > 20) out.push(`  … ${r.media.missing.length - 20} more`);
 
+  if (r.aiKeys.length > 0) {
+    out.push("", "AI keys to enter again (Settings → AI):");
+    for (const k of r.aiKeys) out.push(`  "${k.family}"  id ${k.familyId}: ${k.keys.join(", ")} (${k.reason})`);
+  }
+
   if (r.notes.length > 0) {
     out.push("", "Notes:");
     for (const n of r.notes) out.push(`  - ${n}`);
