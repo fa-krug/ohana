@@ -23,7 +23,8 @@ there already.
   A family always keeps an editor; the last member deletes it instead of leaving.
 - **Modules:** Calendar, Finance, Meals and Appointments are in the sidebar and on the
   overview; those not built yet are marked *coming soon*. The right sidebar (✨,
-  `Ctrl/⌘+J`; a sheet on phones) is the **assistant** (see below).
+  `Ctrl/⌘+J`; drag its edge to make it wider; a sheet on phones) is the **assistant** (see
+  below); it also has a page of its own, with the chats on the left.
 - **Account:** name, email (confirmed with the password or a passkey), language (English /
   German), passkeys (add one per device, rename, delete), the password (set, change, or
   remove it to use passkeys only), *sign out other devices*, and personal **API tokens** for
@@ -66,8 +67,9 @@ there already.
 The family's year at a glance (family-planner's vacation calendar): vacation, public
 holidays, sick days, day-care closures.
 
-- **Year grid** of 12 months × 31 days (on phones: one calendar per month, Monday to Sunday,
-  with the type buttons in a bar at the bottom). Pick the year at the top; `?y=2027` in the
+- **Year grid** of 12 months × 31 days (on phones, or when the sidebar and the assistant leave
+  it too little room: one calendar per month, Monday to Sunday, with the type buttons in a bar
+  at the bottom). Pick the year at the top; `?y=2027` in the
   address opens that year.
 - **Entry types per year** (new families start with *Holiday*, *Vacation* and *Sick*, named in
   the creator's language). A day can have several types. A year without types offers to copy
