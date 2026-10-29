@@ -31,6 +31,7 @@ import { CategoryOptions } from "./category-options";
 import { useFinance } from "./context";
 import type { Filter } from "./finance-store";
 import { TransferDialog } from "./transfer-dialog";
+import { ShoppingListLink } from "./shopping-links";
 
 /** The category's color, icon and name; its path (with the parents) on hover. */
 export function CategoryLabel({ category }: { category?: Category }) {
@@ -218,7 +219,7 @@ export function TransactionsView({ onEdit }: { onEdit?: (t: Transaction) => void
               key={tx.id}
               className={cn(
                 "grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-1 px-3 py-2.5",
-                onEdit ? "sm:grid-cols-[8rem_1fr_12rem_8rem_8.5rem]" : "sm:grid-cols-[6.5rem_1fr_12rem_8rem_1.25rem]",
+                onEdit ? "sm:grid-cols-[8rem_1fr_12rem_8rem_8.5rem]" : "sm:grid-cols-[6.5rem_1fr_12rem_8rem_2.5rem]",
                 finance.selected.has(tx.id) && "bg-accent/50",
               )}
               // a stripe in the category's color down the row's left edge
@@ -306,6 +307,7 @@ export function TransactionsView({ onEdit }: { onEdit?: (t: Transaction) => void
                 {formatMoney(tx.amountCents, finance.currency, locale, { sign: tx.amountCents > 0 })}
               </div>
               <div className="col-start-3 row-span-2 row-start-2 flex justify-end gap-0.5 sm:col-auto sm:row-auto">
+                <ShoppingListLink tx={tx} />
                 {tx.imported && (
                   <span className="self-center" title={t("finance.importedRow")}>
                     <Download className="size-3.5 text-muted-foreground" aria-label={t("finance.importedRow")} />

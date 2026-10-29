@@ -335,7 +335,7 @@ describe("legacy import: modules", () => {
       expense: { lowCents: 350000, highCents: 350000 },
       categories: [{ categoryId: "food", lowCents: 50000, highCents: 60000 }],
     });
-    expect(await store.getFinanceSettings(FP.oma)).toEqual({ family_id: FP.oma, currency: "CHF", csv_mappings: [], benchmark: null });
+    expect(await store.getFinanceSettings(FP.oma)).toEqual({ family_id: FP.oma, currency: "CHF", csv_mappings: [], benchmark: null, groceries_category_id: null });
 
     // The category tree, three levels, ids kept; no default categories next to it.
     const cats = await store.listCategories(FP.krug);

@@ -8,7 +8,7 @@ import { isWeekend } from "@/lib/calendar/core";
 import { useT } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils";
 import { useMedia, usePlanner } from "./context";
-import { fmtDate, noteText } from "./grid";
+import { eventText, fmtDate, noteText } from "./grid";
 import { readFlag, setZoom, useViewPrefs, writeFlag, ZOOM } from "./view-prefs";
 
 const HINTED_KEY = "ohana.calendar.hinted";
@@ -41,6 +41,8 @@ export function SelectionBar({
   }, [has, hinted]);
 
   let info: string;
+  // A single day's timed events (booked appointments); on phones on a line of their own.
+  let eventLine = "";
   if (fill !== null) {
     info = fill
       ? t("calendar.fill.count", { days: t("calendar.count.days", { count: fill }) })
@@ -55,12 +57,19 @@ export function SelectionBar({
         : `${fmtDate(locale, days[0])} – ${fmtDate(locale, days[days.length - 1])}`;
     // Touch devices have no tooltips, so a single day's note is shown here.
     const note = days.length === 1 && store.notes.get(days[0]);
+    const events = days.length === 1 ? (store.events.get(days[0]) ?? []) : [];
     info =
       t("calendar.sel.info", {
         days: t("calendar.count.days", { count: days.length }),
         weekdays: t("calendar.count.weekdays", { count: work }),
         span,
-      }) + (note ? " · " + noteText(note) : "");
+      }) +
+      (note ? " · " + noteText(note) : "");
+    eventLine = events.map((e) => "🕑 " + eventText(e)).join(" · ");
+    if (eventLine && !compact) {
+      info += " · " + eventLine;
+      eventLine = "";
+    }
   }
 
   if (compact && !has && fill === null && (hinted || readOnly)) return null;
@@ -74,6 +83,7 @@ export function SelectionBar({
       )}
     >
       <span className={cn("min-w-0 flex-1 truncate", has && "font-medium text-foreground")}>{info}</span>
+      {eventLine && <span className="order-2 basis-full truncate text-foreground">{eventLine}</span>}
       {has && !readOnly && (
         <div
           className={cn(

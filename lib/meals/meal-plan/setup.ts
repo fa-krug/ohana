@@ -9,6 +9,7 @@ import {
 import { assignSchedule, type ScheduleRecipe } from "@/lib/meals/domain/meal-plan/schedule";
 import { validateShoppingDays, computeIterationDates } from "@/lib/meals/domain/meal-plan/iteration-dates";
 import { generateShoppingListsForIteration } from "@/lib/meals/shopping/generate";
+import { awayDays } from "./away";
 import {
   mealPlans, mealPlanExcludedTags, planIterations, mealPlanEntries,
   recipes, recipeIngredients, recipeTags,
@@ -97,7 +98,11 @@ export function populateIteration(
   },
 ): void {
   const { plan, iterationId, startDate, endDate, excludeRecipeIds, rng } = args;
-  const days = daysBetween(startDate, endDate);
+  // Days on which the whole family is away (calendar types marked "away") get no meal, and
+  // the number of cooking sessions follows the days at home.
+  const away = new Set(awayDays(db, plan.familyId, startDate, endDate).keys());
+  const totalDays = daysBetween(startDate, endDate);
+  const days = totalDays - away.size;
   const excludedTagIds = db
     .select({ tagId: mealPlanExcludedTags.tagId })
     .from(mealPlanExcludedTags)
@@ -140,10 +145,11 @@ export function populateIteration(
     recipes: scheduleRecipes,
     fallbackRecipes, // A1: other-recipe variety pool, not the selected set
     startDate,
-    days,
+    days: totalDays,
     servings: plan.servings,
     defaultLeftoverDays: plan.defaultLeftoverDays,
     rng,
+    skipDates: away,
   });
 
   // Pre-assign an id per date so leftover sourceDate -> sourceEntryId resolves in one pass.

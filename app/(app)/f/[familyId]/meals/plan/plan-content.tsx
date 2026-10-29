@@ -3,6 +3,7 @@ import type { TVars } from "@/lib/i18n/translate";
 import { db } from "@/lib/db";
 import { getMealPlanView } from "@/lib/meals/queries/meal-plan";
 import { listTags } from "@/lib/meals/queries/recipes";
+import { awayDays } from "@/lib/meals/meal-plan/away";
 import { EmptyState } from "@/components/ui/empty-state";
 import { IterationCard } from "@/components/meals/plan/iteration-card";
 import { GeneratePlanDrawer } from "@/components/meals/plan/generate-plan-drawer";
@@ -49,6 +50,11 @@ export async function PlanContent({ familyId, canEdit, todayIso, t }: PlanConten
     excludedTagIds: plan.excludedTagIds,
   };
 
+  // Days the whole family is away (calendar types marked "away"): shown instead of a meal.
+  const from = plan.iterations.reduce((m, it) => (it.startDate < m ? it.startDate : m), plan.iterations[0].startDate);
+  const to = plan.iterations.reduce((m, it) => (it.endDate > m ? it.endDate : m), plan.iterations[0].endDate);
+  const away = Object.fromEntries(awayDays(db, familyId, from, to));
+
   const active = plan.iterations.find((it) => it.status === "ACTIVE") ?? null;
   const archived = plan.iterations.filter((it) => it.id !== active?.id);
   const ended = active !== null && active.endDate < todayIso;
@@ -80,6 +86,7 @@ export async function PlanContent({ familyId, canEdit, todayIso, t }: PlanConten
           shoppingDays={plan.shoppingDays}
           isArchived={false}
           todayIso={todayIso}
+          away={away}
         />
       )}
 
@@ -102,6 +109,7 @@ export async function PlanContent({ familyId, canEdit, todayIso, t }: PlanConten
               shoppingDays={plan.shoppingDays}
               isArchived
               todayIso={todayIso}
+              away={away}
             />
           ))}
         </section>

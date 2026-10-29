@@ -7,6 +7,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Copy, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -112,7 +113,7 @@ export function CalendarSettings() {
             <summary className="cursor-pointer font-semibold text-primary">{t("calendar.types.rolesSummary")}</summary>
             <ul className="mt-2 list-disc space-y-1 rounded-lg bg-muted py-2.5 pr-3 pl-7 text-muted-foreground [&_b]:text-foreground">
               {/* Our own strings, with <b> markup. */}
-              {["helpNeeds", "helpCovers", "helpDayOff", "helpNone"].map((k) => (
+              {["helpNeeds", "helpCovers", "helpDayOff", "helpNone", "helpAway"].map((k) => (
                 <li key={k} dangerouslySetInnerHTML={{ __html: t(`calendar.types.${k}`) }} />
               ))}
             </ul>
@@ -237,7 +238,7 @@ function TypeRow({
         onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
       />
       <select
-        className="h-10 min-w-0 flex-1 rounded-md border border-input bg-background pr-9 pl-3 text-sm sm:w-44 sm:flex-none"
+        className="h-10 min-w-28 flex-1 rounded-md border border-input bg-background pr-9 pl-3 text-sm sm:w-44 sm:min-w-0 sm:flex-none"
         aria-label={t("calendar.types.role")}
         value={type.role}
         disabled={disabled}
@@ -249,6 +250,18 @@ function TypeRow({
           </option>
         ))}
       </select>
+      <label
+        className="inline-flex h-10 shrink-0 cursor-pointer items-center gap-1.5 px-1.5 text-sm select-none has-disabled:cursor-default"
+        title={t("calendar.types.awayTitle")}
+      >
+        <Checkbox
+          checked={!!type.away}
+          disabled={disabled}
+          aria-label={t("calendar.types.away")}
+          onCheckedChange={(v) => onChange({ away: v === true })}
+        />
+        {t("calendar.types.away")}
+      </label>
       {!disabled && (
         <>
           <Button

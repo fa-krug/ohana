@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { run } from "@/lib/actions/result";
 import { searchInputSchema } from "@/lib/appointments/schema";
+import { type BookingInput, bookSlot, removeBooking } from "@/lib/appointments/booking";
 import {
   createSearch,
   deleteSearch,
@@ -53,4 +54,21 @@ export const unignoreEntryAction = async (familyId: string, entryId: number) =>
   run(({ db, user }) => {
     unignoreEntry(db, { id: user.id }, familyId, entryId);
     refresh(familyId);
+  });
+
+/** Marks a slot as booked: a calendar event (phase 7); optionally stops the search. */
+export const bookSlotAction = async (familyId: string, searchId: string, resultId: number, input: unknown) =>
+  run(({ db, user, now }) => {
+    const event = bookSlot(db, { id: user.id }, familyId, searchId, resultId, input as BookingInput, now);
+    refresh(familyId);
+    revalidatePath(`/f/${familyId}`);
+    return { eventId: event.id };
+  });
+
+/** Removes a booked appointment from the calendar (not from the practice's books). */
+export const removeBookingAction = async (familyId: string, eventId: string) =>
+  run(({ db, user }) => {
+    removeBooking(db, { id: user.id }, familyId, eventId);
+    refresh(familyId);
+    revalidatePath(`/f/${familyId}`);
   });
