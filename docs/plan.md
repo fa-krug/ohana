@@ -182,7 +182,7 @@ empty Ohana database. It has a **dry run** that only reports what it would do.
 | -- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | 0  | Foundation ✅      | Repo, Next.js app, schema for accounts + families, auth (passkeys, passwords, tokens, setup links, invites), admin, layout with sidebars, i18n, CI, deploy, backups |
 | 1  | Calendar ✅        | Store implementation over Drizzle, year grid + mobile months, types per year, coverage, notes, ICS feed                                    |
-| 2  | Finance            | Transactions, accounts, category tree, transfers, splits, CSV import, overview, comparison, benchmark                                      |
+| 2  | Finance ✅         | Transactions, accounts, category tree, transfers, splits, CSV import, overview, comparison, benchmark                                      |
 | 3  | Assistant          | Chats in the worker, calendar + finance tools, web search, analytics, calc, auto-categorize                                                |
 | 4  | Meals ✅           | Recipes, meal plan, shopping list, cook view, offline queue ✅ — recipe generation and assistant tools for meals follow after the assistant (phase 3) |
 | 5  | Appointments ✅    | Doctolib + jameda searches, worker scheduling, slot detail, notification channels; assistant tools for appointments                        |
@@ -235,6 +235,23 @@ empty Ohana database. It has a **dry run** that only reports what it would do.
 Each phase ends deployed and usable. The old apps stay live until phase 6, so nothing is lost
 while Ohana grows.
 
+### Phase 2 notes (deviations)
+
+- The finance part of family-planner's `Store` is `lib/finance/store.ts` over Drizzle; its
+  tests run against the in-memory SQLite database. `fin_settings` keeps the CSV mappings and
+  the statistic average as JSON text (no separate `fin_csv_mappings` / `fin_benchmark`
+  tables). Foreign keys inside a family are composite without an action; the store does what
+  Postgres's `ON DELETE SET NULL (column)` and `delete_finance_category` did.
+- The finance routes, JSON shapes and export files are family-planner's (version 2 with
+  `finance`; an import replaces the finances in the same transaction as the calendar).
+  Not ported: `clone` (Ohana has none; `copyFinance` stays, tested directly), the AI
+  categorize route and its buttons (phase 3), the agent page.
+- Transactions of one request share one `created_at`, and the list orders a day's
+  transactions by `created_at`, then insertion order, so the order is stable (family-planner's
+  Supabase store broke ties by id).
+- The import's review step also lists the rows, with those imported before struck through.
+  The family overview has a finance card (this month in / out, where most went, balance).
+
 ### Phase 1 notes (deviations)
 
 - The calendar part of family-planner's `Store` is `lib/calendar/store.ts` over Drizzle; its
@@ -245,8 +262,8 @@ while Ohana grows.
   `import`, `calendar.ics`. Not ported: `POST /families`, `clone`, `members`, `agent` (Ohana's
   own family management and the assistant replace them), the `/sessions` alias, rate limits on
   writes (Ohana's API needs an account; sign-in is rate limited) and the SPA's offline cache.
-- Export files are `family-planner` version 2 without `finance` until phase 2; an import leaves
-  the finances alone.
+- Export files are `family-planner` version 2; since phase 2 with `finance` again (a file
+  without it leaves the finances alone).
 - Calendar view settings (zoom, always show weekdays, skip weekends) are per device in
   `localStorage`. The settings page got tabs (General, Calendar, Calendar feed).
 

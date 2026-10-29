@@ -1,16 +1,17 @@
 "use client";
 
-import { CalendarDays, Rss, Settings2 } from "lucide-react";
+import { Banknote, CalendarDays, Rss, Settings2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useT } from "@/lib/i18n/provider";
 import { PlannerProvider } from "@/components/calendar/context";
 import { CalendarSettings } from "@/components/calendar/calendar-settings";
 import { FeedSettings } from "@/components/calendar/feed-settings";
+import { FinanceSettings } from "@/components/finance/finance-settings";
 
-export type SettingsTab = "general" | "calendar" | "feed";
+export type SettingsTab = "general" | "calendar" | "feed" | "finance";
 
 /** The family settings in tabs: general (name, members, invites), the calendar's types and
- *  view, and the calendar feed. The tab is kept in the address (?tab=). */
+ *  view, the calendar feed, and the finances. The tab is kept in the address (?tab=). */
 export function SettingsTabs({
   familyId,
   tab,
@@ -45,6 +46,9 @@ export function SettingsTabs({
           <TabsTrigger value="feed">
             <Rss /> {t("settings.tabFeed")}
           </TabsTrigger>
+          <TabsTrigger value="finance">
+            <Banknote /> {t("settings.tabFinance")}
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="general">{general}</TabsContent>
         <TabsContent value="calendar">
@@ -52,6 +56,9 @@ export function SettingsTabs({
         </TabsContent>
         <TabsContent value="feed">
           <FeedSettings appUrl={appUrl} />
+        </TabsContent>
+        <TabsContent value="finance">
+          <FinanceSettings familyId={familyId} readOnly={readOnly} />
         </TabsContent>
       </Tabs>
     </PlannerProvider>

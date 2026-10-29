@@ -12,6 +12,7 @@ import { assertSameOrigin } from "@/lib/auth/origin";
 import { type User, findToken, touchToken } from "@/lib/auth/tokens";
 import { getRole } from "@/lib/families/roles";
 import { type CalendarStore, DrizzleCalendarStore, type FamilyRow } from "@/lib/calendar/store";
+import { DrizzleFinanceStore, type FinanceStore } from "@/lib/finance/store";
 import { CORS, HttpError, json } from "./http";
 
 /**
@@ -31,7 +32,10 @@ export interface Loaded {
 
 export interface Ctx {
   db: Db;
+  /** The calendar part of family-planner's Store (and the family lookups). */
   store: CalendarStore;
+  /** The finance part of family-planner's Store. */
+  finance: FinanceStore;
   req: Request;
   url: URL;
   method: string;
@@ -110,6 +114,7 @@ export function createFamilyApi(routes: FamilyRoute[], options: FamilyApiOptions
     const url = new URL(req.url);
     const now = options.now?.() ?? new Date();
     const store = new DrizzleCalendarStore(db, () => now);
+    const finance = new DrizzleFinanceStore(db);
     const path = url.pathname.replace(/^.*?\/api\/v1(?=\/)/, "").replace(/\/+$/, "");
     const parts = path.split("/").filter(Boolean).map(decodeURIComponent);
     if (parts[0] !== "families" || parts.length < 2) throw new HttpError(404, "Not found");
@@ -166,6 +171,7 @@ export function createFamilyApi(routes: FamilyRoute[], options: FamilyApiOptions
     const ctx: Ctx = {
       db,
       store,
+      finance,
       req,
       url,
       method,

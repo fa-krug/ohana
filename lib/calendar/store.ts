@@ -5,6 +5,7 @@
 import { and, asc, eq, gte, inArray, lte, or } from "drizzle-orm";
 import type { Db } from "@/lib/db";
 import { calEntries, calEntryTypes, calNotes, families } from "@/lib/db/schema";
+import { type FinanceContents, replaceFinance } from "@/lib/finance/store";
 
 export type Role = "none" | "needs_cover" | "covers" | "day_off";
 export const ROLES: Role[] = ["none", "needs_cover", "covers", "day_off"];
@@ -68,8 +69,15 @@ export interface CalendarStore {
   /** Inserts or replaces the note on each row's day. */
   upsertNotes(familyId: string, rows: NoteRow[]): Promise<void>;
   removeNotes(familyId: string, days: string[]): Promise<void>;
-  /** Replaces all types, entries and notes of the family at once: all or nothing. */
-  replaceContents(familyId: string, types: TypeRow[], entries: EntryRow[], notes: NoteRow[]): Promise<void>;
+  /** Replaces all types, entries and notes of the family at once, and the finances too if
+   *  given: all or nothing. */
+  replaceContents(
+    familyId: string,
+    types: TypeRow[],
+    entries: EntryRow[],
+    notes: NoteRow[],
+    finance?: FinanceContents,
+  ): Promise<void>;
 }
 
 const CHUNK = 500;
@@ -266,7 +274,13 @@ export class DrizzleCalendarStore implements CalendarStore {
     });
   }
 
-  async replaceContents(familyId: string, types: TypeRow[], entries: EntryRow[], notes: NoteRow[]) {
+  async replaceContents(
+    familyId: string,
+    types: TypeRow[],
+    entries: EntryRow[],
+    notes: NoteRow[],
+    finance?: FinanceContents,
+  ) {
     // One transaction, so a failed import leaves the family as it was.
     this.db.transaction((tx) => {
       tx.delete(calEntries).where(eq(calEntries.familyId, familyId)).run();
@@ -298,6 +312,7 @@ export class DrizzleCalendarStore implements CalendarStore {
           .values(part.map((n) => ({ familyId, day: n.day, icon: n.icon, comment: n.comment })))
           .run();
       }
+      if (finance) replaceFinance(tx, familyId, finance);
       tx.update(families).set({ updatedAt: this.now() }).where(eq(families.id, familyId)).run();
     });
   }

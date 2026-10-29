@@ -13,7 +13,7 @@ import { listChannels } from "@/lib/notifications/channels";
 
 export const dynamic = "force-dynamic";
 
-const TABS: SettingsTab[] = ["general", "calendar", "feed"];
+const TABS: SettingsTab[] = ["general", "calendar", "feed", "finance"];
 
 export default async function SettingsPage({
   params,
