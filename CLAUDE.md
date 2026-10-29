@@ -6,8 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 AI assistant. It replaces `fa-krug/family-planner`, `fa-krug/cookless` and
 `fa-krug/findmyappointment`; [docs/plan.md](docs/plan.md) has the decisions, what comes from
 which app, and the phases. Phase 0 (accounts, families, admin, shell, worker, deploy) and
-phase 1 (Calendar) and phase 5 (Appointments, notification channels) are done; the other
-modules are placeholders until their phase.
+phase 1 (Calendar), phase 4 (Meals, without AI recipe generation) and phase 5
+(Appointments, notification channels) are done; the other modules are placeholders until
+their phase.
 
 ## Commands
 
@@ -18,7 +19,8 @@ npm test              # Vitest (tests/*.test.ts)
 npm run typecheck     # tsc --noEmit
 npm run build         # production build (standalone output)
 npm run db:generate   # Drizzle migration from lib/db/schema.ts changes
-npm run db:migrate    # apply migrations to DATABASE_FILE (default ./data/ohana.db)
+npm run db:migrate    # apply migrations to DATABASE_FILE (default ./data/ohana.db), then db:seed
+npm run db:seed       # load the shared units + ingredients (idempotent; also run at `web` boot)
 npm run setup-link -- <email>   # print a new setup link for an account
 ```
 
@@ -114,6 +116,25 @@ npm run setup-link -- <email>   # print a new setup link for an account
   module from `lib/db/schema/` (`notifications.ts`, `appointments.ts`).
 - **Family settings:** `FamilySettings` renders its `children` before "Leave or delete": each
   module adds its own section component there (see `settings/page.tsx`).
+- **Meals (`lib/meals/`, ported from cookless):** recipes, meal plan, shopping lists, cook
+  view, tags. Tables in `lib/db/schema/meals.ts` (re-exported by `schema.ts`): `ingredients`
+  and `units` are shared seed data (`lib/meals/seed.ts`, run by `scripts/seed.ts` at every
+  `web` boot and by `npm run db:migrate`; test DBs aren't seeded, tests insert their own),
+  everything else belongs to a family (`meal_plans` → `plan_iterations` → entries and
+  shopping lists). Pure logic in `lib/meals/domain/` (selection, schedule, aggregation, units,
+  scaling), DB work in `recipes/`, `meal-plan/`, `shopping/`, reads in `queries/`; every
+  function takes `familyId` and only touches that family's rows (404 otherwise).
+  `createFamily` seeds the default `meal_tags`. Server actions in `app/actions/meals.ts` (all
+  need an editor); pages `app/(app)/f/[familyId]/meals/{recipes,plan,shopping,cook,tags}`
+  (tabs: `components/meals/meals-tabs.tsx`; `MealsProvider` gives client components
+  `familyId` / `canEdit` / `base`); components in `components/meals/`. REST:
+  `app/api/v1/families/[familyId]/{recipes,recipes/[id],shopping/toggle}` (session or API
+  token, `lib/meals/route-auth.ts`). Photos: `sharp` → WebP under `MEDIA_ROOT`
+  (`recipes/<id>_<ts>.webp`), served by `app/api/images/[...path]` to members of the recipe's
+  family only (`lib/meals/images/serve.ts`). Offline: `lib/offline/` queues shopping ticks in
+  IndexedDB (idempotent `set` ops) and replays them to their family's route;
+  `public/sw.js` caches the meals pages (registered by the meals layout in production,
+  cleared on sign-out). AI recipe/photo generation isn't ported yet (needs phase 3).
 - **i18n:** `lib/i18n/locales/{en,de}.json`, `useT()` on the client, `getI18n()` on the server.
   Tests check that both files have the same keys and that every literal `t("…")` key exists.
 

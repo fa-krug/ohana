@@ -172,9 +172,9 @@ empty Ohana database. It has a **dry run** that only reports what it would do.
   nightly SQLite backup to `/app/data/backups` (14 kept), and a job on the Pi copies it off-site
   (e.g. restic to a cloud bucket); the README documents both and the restore.
 - Environment: `AUTH_SECRET`, `APP_URL`, `DATABASE_FILE`, `WEBAUTHN_RP_ID`, `WEBAUTHN_RP_NAME`,
-  `WEBAUTHN_ORIGIN`, `BACKUP_DIR` / `BACKUP_KEEP` / `BACKUP_HOUR`, `PORT`, optionally
-  `ENCRYPTION_KEY` (channel and AI secrets; derived from `AUTH_SECRET` when unset, phase 5), the
-  worker's `APPT_*` settings (see `.env.example`); later `MEDIA_ROOT` (recipe images, phase 4).
+  `WEBAUTHN_ORIGIN`, `BACKUP_DIR` / `BACKUP_KEEP` / `BACKUP_HOUR`, `PORT`, `MEDIA_ROOT` (recipe
+  images, phase 4), optionally `ENCRYPTION_KEY` (channel and AI secrets; derived from
+  `AUTH_SECRET` when unset, phase 5), the worker's `APPT_*` settings (see `.env.example`).
 
 ## Phases
 
@@ -184,7 +184,7 @@ empty Ohana database. It has a **dry run** that only reports what it would do.
 | 1  | Calendar ✅        | Store implementation over Drizzle, year grid + mobile months, types per year, coverage, notes, ICS feed                                    |
 | 2  | Finance            | Transactions, accounts, category tree, transfers, splits, CSV import, overview, comparison, benchmark                                      |
 | 3  | Assistant          | Chats in the worker, calendar + finance tools, web search, analytics, calc, auto-categorize                                                |
-| 4  | Meals              | Recipes, meal plan, shopping list, cook view, offline queue, recipe generation; assistant tools for meals                                  |
+| 4  | Meals ✅           | Recipes, meal plan, shopping list, cook view, offline queue ✅ — recipe generation and assistant tools for meals follow after the assistant (phase 3) |
 | 5  | Appointments ✅    | Doctolib + jameda searches, worker scheduling, slot detail, notification channels; assistant tools for appointments                        |
 | 6  | Import + cut-over  | `import-legacy.ts` with dry run, a rehearsal on a copy, then the real import; old apps shut down, Supabase set read-only, old repos archived |
 | 7  | Connections        | The cross-module features above                                                                                                           |
@@ -205,6 +205,32 @@ empty Ohana database. It has a **dry run** that only reports what it would do.
   when unset) instead of findmyappointment's text columns.
 - Searches are edited on their own page rather than in a modal (as findmyappointment's code
   does); the list shows the three earliest doctors per search inline.
+
+### Phase 4 notes (deviations from cookless)
+
+- **Recipe generation and AI photos are not ported yet**: they need the family's AI settings
+  (phase 3). The generate buttons are gone; cookless's `bulk-create` (only used by the
+  generator) and `lib/ai` come back with them, behind the family's OpenAI-compatible model.
+- **Family-scoped everywhere:** cookless's "active household" is the `[familyId]` in the URL;
+  viewers see everything (and can cook) but can't change anything (server: `requireRole`).
+- cookless's `tags` table is `meal_tags`; the meals migration gives families that already
+  existed the default tags (new families get them from `createFamily`).
+- **Photos are no longer public:** `/api/images/...` answers only members of the recipe's
+  family (cookless served them to anyone with the URL) and is cached `private`. Uploads go
+  through a server action with a 6 MB body limit (cookless kept Next's 1 MB default, so most
+  phone photos failed).
+- **Shopping ticks are idempotent** (`{ kind: "set", checked }` instead of a toggle): with a
+  toggle, a request that reached the server but whose answer was lost (e.g. a reload right
+  after a tick) was queued offline and replayed, unticking the item again. The queue also
+  drops ops the server refuses for good (4xx other than 401/429) instead of blocking on them
+  forever. The sync route is `POST /api/v1/families/{id}/shopping/toggle` (`toggle` stays
+  accepted).
+- Small fixes found while porting: the ingredient suggestions stayed open after picking one;
+  empty prep/cooking times (and program parameters) were saved as 0; a dnd-kit hydration
+  mismatch in the step editor.
+- The cookless welcome page is the meals entry page while a family has no recipes; the tag
+  settings are a *Tags* tab of the module. The PWA install banner stays out (an Ohana-wide
+  concern, later).
 
 Each phase ends deployed and usable. The old apps stay live until phase 6, so nothing is lost
 while Ohana grows.

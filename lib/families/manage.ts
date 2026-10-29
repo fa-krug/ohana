@@ -5,6 +5,7 @@ import { families, familyMembers, users } from "@/lib/db/schema";
 import { AuthError } from "@/lib/auth/errors";
 import { randomToken } from "@/lib/api/http";
 import { insertPresetTypes } from "@/lib/calendar/presets";
+import { seedDefaultTags } from "@/lib/meals/recipes/tags";
 import { type Actor, type Role, isRole, requireRole } from "./roles";
 
 export type Family = typeof families.$inferSelect;
@@ -38,6 +39,7 @@ export function createFamily(
       .returning()
       .get();
     insertPresetTypes(tx, family.id, args.lang === "de" ? "de" : "en", now.getUTCFullYear());
+    seedDefaultTags(tx as unknown as Db, family.id); // the meal tags every family starts with
     if (args.editorId) {
       tx.insert(familyMembers)
         .values({ familyId: family.id, userId: args.editorId, role: "editor", joinedAt: now })
