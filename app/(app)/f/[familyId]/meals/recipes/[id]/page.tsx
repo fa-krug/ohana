@@ -4,6 +4,7 @@ import { getI18n } from "@/lib/i18n/server";
 import { db } from "@/lib/db";
 import { getRecipe, listIngredients, listUnits } from "@/lib/meals/queries/recipes";
 import { RecipeDetail } from "@/components/meals/recipes/recipe-detail";
+import { mealsAi } from "@/lib/meals/ai/status";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ f
       t={t}
       base={`/f/${familyId}/meals`}
       canEdit={role === "editor"}
+      canGeneratePhoto={role === "editor" && mealsAi(db, familyId).photos}
     />
   );
 }

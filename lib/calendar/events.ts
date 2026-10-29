@@ -7,7 +7,7 @@ import { randomUUID } from "node:crypto";
 import { and, asc, eq, gte, lte } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/lib/db";
-import { calEvents } from "@/lib/db/schema";
+import { apptSearches, calEvents } from "@/lib/db/schema";
 import type { Ctx } from "@/lib/api/family-api";
 import { HttpError, json, readBody } from "@/lib/api/http";
 import { isValidDate } from "./dates";
@@ -179,11 +179,23 @@ async function listRoute({ db, url, load }: Ctx): Promise<Response> {
   return json({ events: listEvents(db, family.id, range).map(publicEvent) });
 }
 
-/** POST /events {date, start?, end?, title, location?, person?, note?, url?} → the event */
+/** POST /events {date, start?, end?, title, location?, person?, note?, url?} → the event.
+ *  With `searchId` and `resultId` (a booked slot put back, e.g. the assistant's undo) it is
+ *  that search's booking again; the search must be the family's. */
 async function createRoute({ db, req, load, now, principal }: Ctx): Promise<Response> {
   const { family } = await load("edit");
   const body = await readBody(req);
-  const row = createEvent(db, family.id, body as EventInput, { createdById: principal?.id }, now);
+  let meta: { source?: EventSource; sourceId?: string; sourceItem?: string } = {};
+  if (typeof body.searchId === "string" && body.resultId !== undefined && body.resultId !== null) {
+    const search = db
+      .select({ id: apptSearches.id })
+      .from(apptSearches)
+      .where(and(eq(apptSearches.familyId, family.id), eq(apptSearches.id, body.searchId)))
+      .get();
+    if (!search) throw new HttpError(404, "Search not found");
+    meta = { source: "appointment", sourceId: search.id, sourceItem: String(body.resultId) };
+  }
+  const row = createEvent(db, family.id, body as EventInput, { ...meta, createdById: principal?.id }, now);
   return json(publicEvent(row), 201);
 }
 

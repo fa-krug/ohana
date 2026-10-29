@@ -226,6 +226,9 @@ type Outcome = { kind: "done" | "handoff" | "stopped" | "lost" } | { kind: "retr
 /** What the worker gives a turn. */
 export interface RunnerEnv extends ChatEnv {
   prepare: Prepare;
+  /** After a turn ended (not when it was lost to another worker): how it went and when it
+   *  started (ms), e.g. to notify the user (notify.ts). Never throws into the turn. */
+  turnEnded?: (chat: ChatRow, info: { startedAt: number; outcome: "answered" | "failed" | "stopped" }) => Promise<void>;
   /** The chat's family; null if it is gone. */
   family: (id: string) => Promise<FamilyRow | null>;
 }
@@ -251,6 +254,8 @@ export class Runner {
   /** Where the step's text goes. */
   private answer: number | null = null;
   private store: AssistantStore;
+  private startedAt = Date.now();
+  private failedTurn = false;
 
   constructor(
     private env: RunnerEnv,
@@ -640,6 +645,7 @@ export class Runner {
   }
 
   private fail(message: string) {
+    this.failedTurn = true;
     this.add({ kind: "error", text: message });
     return this.finish(`(No answer: ${message})`);
   }
@@ -650,13 +656,20 @@ export class Runner {
     if (note) this.close(note);
     this.saveItems();
     this.beating = false;
+    let after: ChatRow | null = null;
     await this.write(async () => {
-      await this.store.updateChat(
+      after = await this.store.updateChat(
         this.id,
         { status: "idle", run_token: null, run_until: null, stop: false, activity: null, retries: 0 },
         this.token,
       );
     });
+    if (after && this.env.turnEnded) {
+      const outcome = note === STOPPED ? "stopped" : this.failedTurn ? "failed" : "answered";
+      await this.env.turnEnded(after, { startedAt: this.startedAt, outcome }).catch((err) =>
+        console.error("[assistant] after the turn:", err)
+      );
+    }
   }
 }
 

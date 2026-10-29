@@ -162,6 +162,54 @@ export function toolDetail(l: Lang, item: ToolItem): string {
         if (a.year) parts.push(String(a.year));
       }
       break;
+    case "list_events":
+      parts.push(span(l, date(a.from), date(a.to)));
+      break;
+    case "add_event":
+      parts.push(span(l, date(a.date), date(a.date)));
+      if (str(a.title)) parts.push(quoted(l, str(a.title)));
+      break;
+    case "get_meal_plan":
+      parts.push(span(l, date(a.from), date(a.to)));
+      break;
+    case "list_recipes":
+      if (str(a.query)) parts.push(quoted(l, str(a.query)));
+      if (str(a.ingredient)) parts.push(str(a.ingredient));
+      if (Array.isArray(a.tags)) parts.push(a.tags.map(named).filter(Boolean).slice(0, 3).join(", "));
+      break;
+    case "get_recipe":
+      if (named(a.recipe)) parts.push(quoted(l, named(a.recipe)));
+      break;
+    case "save_recipe":
+      if (str(a.title) || named(a.recipe)) parts.push(quoted(l, str(a.title) || named(a.recipe)));
+      break;
+    case "plan_meals":
+      if (Array.isArray(a.excludeTags) && a.excludeTags.length) {
+        parts.push(l.t("assistant.detail.without", { tags: a.excludeTags.map(named).filter(Boolean).join(", ") }));
+      }
+      break;
+    case "tick_shopping_items":
+    case "add_shopping_items": {
+      const items = (Array.isArray(a.items) ? a.items : []).map((i) =>
+        typeof i === "string" ? named(i) : str((i as Args)?.name)
+      ).filter(Boolean);
+      parts.push(items.slice(0, 3).join(", ") + (items.length > 3 ? " …" : ""));
+      break;
+    }
+    case "find_doctor_specialities":
+      parts.push(quoted(l, str(a.query)));
+      break;
+    case "create_appointment_search":
+      if (str(a.speciality)) parts.push(str(a.speciality));
+      if (date(a.before)) parts.push(span(l, "", date(a.before)));
+      if (str(a.place)) parts.push(str(a.place));
+      break;
+    case "change_appointment_search":
+    case "run_appointment_search":
+    case "get_appointment_slot":
+    case "book_appointment_slot":
+      if (named(a.search)) parts.push(quoted(l, named(a.search)));
+      break;
     case "manage_categories": {
       const name = named(a.name) || named(a.category);
       if (name) parts.push(quoted(l, name));

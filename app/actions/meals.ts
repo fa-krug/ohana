@@ -13,6 +13,12 @@ import { upsertRecipe, type UpsertRecipeInput } from "@/lib/meals/recipes/upsert
 import { createTag, updateTag, deleteTag, resetTags } from "@/lib/meals/recipes/tags";
 import { setRecipeImage, removeRecipeImage } from "@/lib/meals/recipes/images";
 import { ALLOWED_UPLOAD_TYPES, MAX_UPLOAD_BYTES } from "@/lib/meals/images/config";
+import { bulkCreateRecipes } from "@/lib/meals/recipes/bulk-create";
+import { bulkCreateSchema } from "@/lib/meals/schemas/generate";
+import { defaultAiEnv, familyModel } from "@/lib/assistant/routes";
+import { generateRecipeImage } from "@/lib/meals/ai/recipes";
+import { generateImage } from "@/lib/meals/ai/generate";
+import { HttpError } from "@/lib/api/http";
 
 /** Every meal action changes data: the caller must be an editor of the family. */
 function editor<T>(
@@ -155,6 +161,33 @@ export async function uploadRecipeImageAction(
 export async function removeRecipeImageAction(familyId: string, recipeId: string): Promise<Result<undefined>> {
   const res = await editor(familyId, ({ db }) => {
     removeRecipeImage(db, familyId, recipeId);
+    return undefined;
+  });
+  if (res.ok) refreshRecipes(familyId, recipeId);
+  return res;
+}
+
+/** Saves the generated recipes the user picked (to "Want to try"), with their photos. */
+export async function bulkCreateRecipesAction(familyId: string, input: unknown): Promise<Result<{ createdIds: string[] }>> {
+  const res = await editor(familyId, ({ db, now }) => bulkCreateRecipes(db, familyId, bulkCreateSchema.parse(input), now));
+  if (res.ok) refreshRecipes(familyId);
+  return res;
+}
+
+/** Makes an AI photo for a recipe with the family's image model (Settings → AI). */
+export async function generateRecipeImageAction(familyId: string, recipeId: string): Promise<Result<undefined>> {
+  const res = await editor(familyId, async ({ db, now }) => {
+    const env = defaultAiEnv(db);
+    const model = await familyModel(env, familyId).catch((err) => {
+      throw err instanceof HttpError ? new AuthError(err.status, err.message) : err;
+    });
+    if (!model?.imageModel) throw new AuthError(400, "No image model is set (Settings → AI)");
+    await generateRecipeImage(db, familyId, recipeId, now, (prompt) =>
+      generateImage(model.provider, model.imageModel, prompt, env.modelNet).catch((err) => {
+        // The model's errors (HttpError) reach the page as a message.
+        throw err instanceof HttpError ? new AuthError(err.status, err.message) : err;
+      }),
+    );
     return undefined;
   });
   if (res.ok) refreshRecipes(familyId, recipeId);

@@ -87,7 +87,11 @@
       "spending": "How much did we spend on groceries this year, per month?",
       "uncategorized": "Sort our uncategorized transactions into categories.",
       "types": "Set up this year's entry types: day care closed, each parent's vacation and public holidays.",
-      "categories": "Suggest categories for our finances and add them."
+      "categories": "Suggest categories for our finances and add them.",
+      "planWithout": "Plan next week's meals without fish.",
+      "shopping": "What's still on the shopping list? Add 2 l of milk.",
+      "dermatologist": "Find a dermatologist appointment before June.",
+      "earliest": "Which searches found something, and what is the earliest slot?"
     },
     "elsewhere": "This chat belongs to {{page}}.",
     "moveHere": "Move to {{page}}",
@@ -109,7 +113,25 @@
       "combine_transfers": "Combining transfers and split bookings",
       "ask_user": "Asking a question",
       "web_search": "Searching the web: {{q}}",
-      "fetch_page": "Reading {{host}}"
+      "fetch_page": "Reading {{host}}",
+      "list_events": "Reading calendar events",
+      "add_event": "Adding a calendar event",
+      "remove_event": "Removing a calendar event",
+      "list_recipes": "Looking through the recipes",
+      "get_recipe": "Reading a recipe",
+      "save_recipe": "Saving a recipe",
+      "get_meal_plan": "Reading the meal plan",
+      "plan_meals": "Planning meals",
+      "get_shopping_list": "Reading the shopping list",
+      "tick_shopping_items": "Ticking off the shopping list",
+      "add_shopping_items": "Adding to the shopping list",
+      "list_appointment_searches": "Reading the appointment searches",
+      "find_doctor_specialities": "Looking up specialities",
+      "create_appointment_search": "Creating an appointment search",
+      "change_appointment_search": "Changing an appointment search",
+      "run_appointment_search": "Starting an appointment search",
+      "get_appointment_slot": "Reading a slot",
+      "book_appointment_slot": "Marking a slot as booked"
     },
     "question": {
       "pickOne": "Pick one, or write your own answer",
@@ -138,7 +160,8 @@
       "changes_one": "{{count}} change",
       "changes_other": "{{count}} changes",
       "queries_one": "{{count}} query",
-      "queries_other": "{{count}} queries"
+      "queries_other": "{{count}} queries",
+      "without": "without {{tags}}"
     }
   },
   "modules": {
@@ -361,7 +384,14 @@
       "allChannels": "All channels",
       "noChannels": "Add a channel below first.",
       "saved": "Saved.",
-      "channelsLabel": "Send to"
+      "channelsLabel": "Send to",
+      "assistant_turn_finished": "Assistant finished",
+      "assistant_turn_finishedHint": "When the assistant worked on a request for a while (30 seconds or more) and the chat isn't open anywhere."
+    },
+    "assistant": {
+      "title": "The assistant has answered",
+      "failed": "The assistant couldn't finish",
+      "untitled": "Your chat"
     }
   },
   "homeAddress": {
@@ -1101,7 +1131,10 @@
       "upload": "Upload Photo",
       "remove": "Remove Photo",
       "uploadFailed": "Couldn't upload the photo.",
-      "removed": "Photo removed"
+      "removed": "Photo removed",
+      "generate": "Generate with AI",
+      "generating": "Generating …",
+      "generateFailed": "Couldn't make the photo: {{msg}}"
     },
     "overview": {
       "title": "Meals",
@@ -1119,6 +1152,30 @@
       "setCategory": "Choose the groceries category",
       "none": "No transactions yet.",
       "openFinance": "Open finance"
+    },
+    "generate": {
+      "button": "Generate with AI",
+      "short": "AI",
+      "title": "Generate recipes",
+      "back": "Back to the recipes",
+      "count": "Number of recipes",
+      "tags": "Every recipe should be …",
+      "freeText": "Additional wishes",
+      "freeTextPlaceholder": "e.g. comfort food for cold days, ready in 30 minutes",
+      "generateImages": "Make photos",
+      "generate": "Generate",
+      "stop": "Stop",
+      "generating": "Generating recipes …",
+      "generatingImages": "Making photos …",
+      "selected": "{{count}} selected",
+      "saveCount_one": "Save {{count}} recipe",
+      "saveCount_other": "Save {{count}} recipes",
+      "saved_one": "{{count}} recipe added to Want to try",
+      "saved_other": "{{count}} recipes added to Want to try",
+      "noResults": "No recipes came up. Try other settings.",
+      "failed": "Generating failed: {{msg}}",
+      "photosFailed": "The photos couldn't be made: {{msg}}",
+      "meta": "{{ingredients}} ingredients · {{servings}} servings · {{minutes}} min"
     }
   },
   "finance": {
@@ -1395,9 +1452,13 @@
     "searchKey": "Search API key",
     "permissions": "Permissions",
     "allowWrites": "Allow changes",
-    "allowWritesHelp": "The assistant may change the calendar and the finances for editors (every change can be undone). Off: it only reads. For viewers it always only reads.",
+    "allowWritesHelp": "The assistant may change the calendar, finances, meals and appointment searches for editors (most changes can be undone). Off: it only reads. For viewers it always only reads.",
     "privacy": "Your messages and the data the assistant looks at are sent to the AI API you set up above.",
     "agentHint": "For other AI agents that use Ohana's API with an API token:",
-    "agentLink": "instructions for AI agents"
+    "agentLink": "instructions for AI agents",
+    "photos": "Recipe photos",
+    "photosHelp": "The meals module can make a photo of a recipe with an image model of the same API. Without one, the photo buttons stay hidden.",
+    "imageModel": "Image model",
+    "imageModelHelp": "E.g. gpt-image-1 or dall-e-3 (OpenAI), gemini-2.5-flash-image (Google's Gemini API). Empty: no AI photos."
   }
 }

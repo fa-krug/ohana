@@ -5,7 +5,7 @@ Ohana replaces three apps, `family-planner`, `cookless` and `findmyappointment`,
 their data over. See [the plan](docs/plan.md) for why and how, and its phases for what is
 there already.
 
-## What works today (phases 0 to 5 and most of 7)
+## What works today (phases 0 to 5 and 7)
 
 - **Sign in** with a **passkey** (fingerprint, face or device PIN) or an email and a
   **password**. A fresh install asks for the first account at `/setup`; it becomes the
@@ -47,7 +47,11 @@ there already.
     today's meal and what's left on the shopping list. The REST API (session or API token)
     has `GET /api/v1/families/{id}/recipes`, `GET /api/v1/families/{id}/recipes/{recipeId}`
     and `POST /api/v1/families/{id}/shopping/toggle`.
-  - Not yet: generating recipes and photos with AI (follows after the assistant).
+  - **AI** (editors, once *Settings → AI* is set up): *Generate with AI* on the recipes page
+    makes new recipes with the family's model (how many, tags they must match, extra wishes;
+    they stream in, you pick which to keep and they go to *Want to try*, with photos if
+    wanted). With an **image model** (*Settings → AI → Recipe photos*) a recipe's page also
+    has *Generate with AI* for its photo. Without an image model the photo options are hidden.
 - Password sign-in is **rate limited** (10 failures per name and 15 minutes). Sessions, API
   tokens and setup links are stored only as SHA-256 hashes.
 
@@ -171,8 +175,21 @@ from family-planner. It works with **any OpenAI-compatible API** the family sets
   month, category, payee …, exactly), **calculate** (statistics, trends, loans and savings),
   **search the web** (Tavily or Brave, with the family's key) and **read pages** (never on
   private networks). It **asks** with answers to click when something is unclear, and asks
-  for the OK before bigger changes. Meals and appointments follow.
+  for the OK before bigger changes.
+- **Meals:** search recipes (by title, tags, ingredient), read and write recipes, read the
+  meal plan and plan the next weeks or plan an iteration again, also *without* some tags just
+  this time ("plan next week without fish"), read the shopping list, tick items off and add
+  items.
+- **Appointments:** list the searches with their earliest finds, create one ("find a
+  dermatologist before June": speciality from Doctolib / jameda, around the home address or
+  a place you name, up to the day you say), change, turn on or off, *run now*, read a slot
+  (with the distance from home) and mark it as booked (a calendar event). It can't book with
+  the practice. Plus the calendar's timed events: list, add, remove.
 - **Every change can be undone** from the chat (*Undo*); the assistant hears about it.
+  (Not: *run now*, and a booked slot's removal undoes as an event again.)
+- **Notification** (Settings → Household, off by default): *Assistant finished* tells the
+  family's channels when the assistant worked on something for 30 seconds or more
+  (`ASSISTANT_NOTIFY_AFTER_SECONDS`) and the chat wasn't open anywhere.
 - Attach **images** (screenshots, photos, shrunk in the browser) and **text files** (CSV, JSON …).
 - Long chats are **condensed** for the model before they no longer fit its context window
   (the bar under the box shows how full it is).
@@ -181,8 +198,9 @@ from family-planner. It works with **any OpenAI-compatible API** the family sets
 - **Viewers** can chat too, but the assistant only reads for them. Without settings the panel
   points editors to *Settings → AI* and tells viewers to ask an editor.
 - *Settings → AI* (editors): API URL (with presets), key (stored encrypted, only its last four
-  characters are shown), model (*Load models* asks the API), context window, *Test*, web
-  search provider and key, *Allow changes*. A model on the home network (e.g. Ollama) needs
+  characters are shown), model (*Load models* asks the API), context window, *Test*, the
+  image model for recipe photos (e.g. `gpt-image-1`; with Google's Gemini API
+  `gemini-2.5-flash-image` works too), web search provider and key, *Allow changes*. A model on the home network (e.g. Ollama) needs
   `AI_ALLOW_PRIVATE_ENDPOINT=1` on the server.
 - **Auto-categorize** (*Finance → Transactions*, editors): sorts the period's uncategorized
   transactions like similar earlier ones, the rest with the AI (it may look up unknown payees
@@ -192,7 +210,11 @@ from family-planner. It works with **any OpenAI-compatible API** the family sets
   the chats under `…/ai/chats` (list, start, `GET {chat}`, `GET {chat}/events?since=rev`
   (server-sent events), `messages`, `queue`, `unqueue`, `answer`, `stop`, `undone`, `page`,
   `import`), and `GET /api/v1/families/{id}/agent`: instructions for other AI agents that use
-  the API with your token (Markdown).
+  the API with your token (Markdown). The assistant's undo uses
+  `PATCH|DELETE …/meals/recipes/{id}`, `POST …/meals/shopping/check`,
+  `PATCH|DELETE …/meals/shopping/items/{id}`, `POST …/meals/plan/restore`, `DELETE …/meals/plan`
+  and `PATCH|DELETE …/appointments/searches/{id}` (editors). Recipes are generated with
+  `POST …/recipes/generate` (NDJSON stream; editors).
 
 ## Appointments
 
@@ -245,7 +267,11 @@ Viewers see all of this but can't change anything.
   which channels: *Appointment found* (the channels come from each search), *Day without
   cover* (each morning, weekdays in the next two weeks that need cover and have none; one
   message, and only when a day is new – the same days aren't told again), *Shopping reminder*
-  (off by default; the evening before a shopping day, what is still on the list).
+  (off by default; the evening before a shopping day, what is still on the list), *Assistant
+  finished* (off by default; see Assistant).
+- **The assistant everywhere:** its tools reach the calendar, finances, meals and appointment
+  searches, so one chat can plan next week's meals without fish or set up a search for a
+  dermatologist before June.
 
 ## Family settings
 

@@ -52,6 +52,8 @@ import type { AssistantStore, ChatRow } from "./store";
 
 /** How often followers look for news (the worker saves streaming text every 0.5 s). */
 const POLL_MS = 500;
+/** How often a follower marks the chat as looked at. */
+const SEEN_MS = 15_000;
 /** A follower's stream ends after this; the app asks again. */
 const STREAM_MS = 100_000;
 /** Chats per user and family; the oldest go. */
@@ -123,6 +125,8 @@ export async function follow(
   const store = env.store;
   const until = Date.now() + (env.streamMs ?? STREAM_MS);
   let shown = "";
+  // The user is looking (no "turn finished" notification); written every SEEN_MS at most.
+  let seen = 0;
   const show = (s: Summary) => {
     const text = JSON.stringify(s);
     if (text !== shown) emit("chat", s);
@@ -137,6 +141,10 @@ export async function follow(
       since = chat.rev;
     }
     show(summaryOf(chat));
+    if (Date.now() - seen >= SEEN_MS) {
+      seen = Date.now();
+      await store.markChatSeen?.(id, new Date(seen));
+    }
     if (chat.status !== "running" && !chat.queue.length) return emit("end", {});
     if (Date.now() >= until) return emit("reconnect", {});
     await pause(env.pollMs ?? POLL_MS, gone);

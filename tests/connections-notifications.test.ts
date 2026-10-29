@@ -53,6 +53,7 @@ describe("preferences", () => {
       { event: "appointment_found", enabled: true, channelIds: null },
       { event: "coverage_gap", enabled: true, channelIds: null },
       { event: "shopping_reminder", enabled: false, channelIds: null },
+      { event: "assistant_turn_finished", enabled: false, channelIds: null },
     ]);
     setPref(db, { id: editorId }, familyId, { event: "shopping_reminder", enabled: true, channelIds: [phone] }, NOW);
     expect(getPref(db, familyId, "shopping_reminder")).toEqual({ event: "shopping_reminder", enabled: true, channelIds: [phone] });

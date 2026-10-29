@@ -48,9 +48,23 @@ export interface ToolContext {
   /** For tools of modules without a store interface (meals, appointments). */
   db: Db;
   familyId: string;
+  /** Who the turn is for (the chat's user): changes of meals and appointments are theirs. */
+  userId?: string;
+  /** The user's day (YYYY-MM-DD), for "this week" and "before June". */
+  today?: string;
+  /** The clock (tests set it). */
+  now?: () => Date;
+  /** Look-ups on the outside (Doctolib, jameda, the geocoder); tests pass fakes. */
+  lookups?: Partial<Lookups>;
   net: NetOptions;
   search: { provider: Exclude<SearchProvider, "none">; key: string } | null;
   signal?: AbortSignal;
+}
+
+/** What the appointment tools look up outside Ohana (lib/appointments; each with a timeout). */
+export interface Lookups {
+  doctolibSpecialities(query: string): Promise<{ slug: string; label: string }[]>;
+  places(query: string): Promise<{ label: string; latitude: string; longitude: string }[]>;
 }
 
 export interface Tool {

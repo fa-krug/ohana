@@ -183,19 +183,18 @@ empty Ohana database. It has a **dry run** that only reports what it would do.
 | 0  | Foundation ✅      | Repo, Next.js app, schema for accounts + families, auth (passkeys, passwords, tokens, setup links, invites), admin, layout with sidebars, i18n, CI, deploy, backups |
 | 1  | Calendar ✅        | Store implementation over Drizzle, year grid + mobile months, types per year, coverage, notes, ICS feed                                    |
 | 2  | Finance ✅         | Transactions, accounts, category tree, transfers, splits, CSV import, overview, comparison, benchmark                                      |
-| 3  | Assistant ✅ (part A) | Chats in the worker, calendar + finance tools, web search, analytics, calc, auto-categorize ✅ — part B: tools for meals and appointments, recipe generation and photos, import of the AI data |
-| 4  | Meals ✅           | Recipes, meal plan, shopping list, cook view, offline queue ✅ — recipe generation and assistant tools for meals follow after the assistant (phase 3) |
+| 3  | Assistant ✅       | Chats in the worker, calendar + finance tools, web search, analytics, calc, auto-categorize (part A) ✅; tools for meals, appointments and calendar events, recipe generation and AI photos, "assistant turn finished" notification (part B) ✅ |
+| 4  | Meals ✅           | Recipes, meal plan, shopping list, cook view, offline queue ✅ (recipe generation, AI photos and the assistant's meal tools came with phase 3 part B) |
 | 5  | Appointments ✅    | Doctolib + jameda searches, worker scheduling, slot detail, notification channels; assistant tools for appointments                        |
 | 6  | Import + cut-over  | `import-legacy.ts` with dry run, a rehearsal on a copy, then the real import; old apps shut down, Supabase set read-only, old repos archived |
-| 7  | Connections        | The cross-module features above — built except the assistant's tools everywhere (item 4), which come with the assistant (see the notes) |
+| 7  | Connections ✅     | The cross-module features above, the assistant's tools everywhere (item 4) with phase 3 part B |
 
-### Phase 7 notes (connections; not done yet: the assistant's tools)
+### Phase 7 notes (connections)
 
-Built: items 1, 2, 3 and 5 of [Connections](#connections-between-modules), a new overview
-and a *Household* settings tab. Item 4 (assistant tools for recipes, meal plans and
-appointment searches) and the "assistant turn finished" notification come with the
-assistant (phase 3), so phase 7 stays open until then. One migration, `0005_connections`
-(two tables, two columns; nothing to backfill).
+Built: all items of [Connections](#connections-between-modules), a new overview and a
+*Household* settings tab. Item 4 (assistant tools for recipes, meal plans and appointment
+searches) and the "assistant turn finished" notification came with phase 3 part B (see its
+notes). One migration, `0005_connections` (two tables, two columns; nothing to backfill).
 
 - **Appointments → Calendar: timed events are their own table**, `cal_events`, not entries:
   entries are a type on a day (colors, roles, coverage, all-day runs in the feed), while an
@@ -268,9 +267,8 @@ assistant (phase 3), so phase 7 stays open until then. One migration, `0005_conn
 
 ### Phase 4 notes (deviations from cookless)
 
-- **Recipe generation and AI photos are not ported yet**: they need the family's AI settings
-  (phase 3). The generate buttons are gone; cookless's `bulk-create` (only used by the
-  generator) and `lib/ai` come back with them, behind the family's OpenAI-compatible model.
+- **Recipe generation and AI photos** came later, with phase 3 part B (see its notes): behind
+  the family's AI settings instead of cookless's per-household Gemini key.
 - **Family-scoped everywhere:** cookless's "active household" is the `[familyId]` in the URL;
   viewers see everything (and can cook) but can't change anything (server: `requireRole`).
 - cookless's `tags` table is `meal_tags`; the meals migration gives families that already
@@ -312,6 +310,62 @@ while Ohana grows.
 - The import's review step also lists the rows, with those imported before struck through.
   The family overview has a finance card (this month in / out, where most went, balance).
 
+### Phase 3 notes, part B (tools for every module, recipe generation; deviations)
+
+- **Tools** (`lib/assistant/tools/`): `meals.ts` — `list_recipes` (title, tags, list,
+  ingredient), `get_recipe`, `save_recipe` (add or change in part; unknown ingredients are
+  added to the shared list, units by abbreviation, name or alias), `get_meal_plan` (meals,
+  away days, iterations, settings), `plan_meals` (`next`, `again`, `setup` only while there is
+  no plan), `get_shopping_list`, `tick_shopping_items`, `add_shopping_items` (merges with an
+  open item of the same ingredient and unit); `appointments.ts` — `list_appointment_searches`
+  (earliest finds), `find_doctor_specialities`, `create_appointment_search`,
+  `change_appointment_search`, `run_appointment_search` (queues only), `get_appointment_slot`
+  (distance from home), `book_appointment_slot`; `events.ts` — `list_events`, `add_event`,
+  `remove_event` (phase 7's `cal_events`; the calendar tools didn't cover them). The writing
+  ones are `write: true`, so viewers and `allow_writes: false` don't get them; the lib
+  functions check the chat user's role again (`ToolContext.userId`).
+- **"Without fish"** is an option of one planning (`plan_meals` `excludeTags`), not a change
+  of the plan's excluded tags; those recipes also stay out of the gap-fill that otherwise
+  ignores excluded tags (cookless's A1 rule), so days may stay empty rather than serve fish.
+- **Undo** works like the calendar's and finances': routes of the family API the client
+  replays (`/meals/...`, `/appointments/searches/{id}`, `/events`). A plan change keeps a
+  snapshot of the iteration it replaced (meals, shopping lists with ticks) in the undo step;
+  `POST /meals/plan/restore` puts it back (refusing other families' iterations and recipes).
+  Not undoable: *run now* (harmless), `setup` undoes by deleting the plan. Removing a booked
+  appointment undoes into the same booking (`POST /events` with `searchId` + `resultId`).
+- **Appointment searches from a sentence:** the speciality comes from Doctolib's
+  autocomplete (same label, else the first; unreachable Doctolib → jameda only) and the
+  offline jameda terms (a profession first); the place is the family's home address unless
+  the user names one (Photon); `before` becomes `dayLimit` (days from the user's today, max
+  365). New searches notify all of the family's enabled channels (the form preselects only a
+  single channel). Look-ups have a 15 s timeout on top of the clients' own.
+- **Recipe generation** (cookless's `lib/ai`, `app/api/recipes/generate`, `bulk-create`, the
+  generate page): one chat completion with the family's model instead of Gemini's JSON mode,
+  so the answer is checked with zod (`lib/meals/ai/verify.ts`: JSON found in Markdown or an
+  object, numbers as text accepted, invalid recipes / ingredients / steps dropped).
+  cookless's `verify.ts` (checking a Gemini key) is not ported: Settings → AI has *Test*. The
+  stream runs **inline in the web process** (NDJSON, as in cookless), not in the worker: a
+  user-started, watched call of 10–30 s (plus photos), with timeouts (2 min for the text,
+  90 s per photo) and cancelled with the request; a job + polling would add a table for no
+  gain. Default 5 recipes (cookless 10).
+- **AI photos:** `POST {base}/images/generations` with `ai_settings.image_model` (`b64_json`;
+  asked again without `response_format` for models that refuse it, URLs downloaded). The
+  field is new in *Settings → AI*; without an image model the photo switch and the photo
+  button are hidden. **Gemini:** Gemini's OpenAI-compatible images endpoint serves only Imagen
+  models, so for a Gemini image model (`gemini-*`, e.g. `gemini-2.5-flash-image`, which the
+  legacy import sets for cookless families) on Gemini's base URL
+  (`generativelanguage.googleapis.com`) the photo comes from Gemini's native
+  `models/{model}:generateContent` with `responseModalities: ["Image"]` and the family's key
+  (`x-goog-api-key`), as cookless did.
+- **"Assistant turn finished"** (`notification_prefs` event `assistant_turn_finished`, off by
+  default): after a turn of at least `ASSISTANT_NOTIFY_AFTER_SECONDS` (30) that wasn't
+  stopped, if nobody followed the chat in the last minute (`chats.seen_at`, migration
+  `0007_assistant_tools`, written every 15 s by an open stream). The channels are the
+  family's, so the message names the chat, not its content.
+- The system prompt describes the meals (with the family's tags) and appointments (with the
+  home address); the "tools come later" text is gone, and the chat panel suggests examples
+  for both pages. With ~34 tools the tool list takes ~7,700 tokens of the context window.
+
 ### Phase 3 notes (the assistant, part A; deviations)
 
 - **Code:** `lib/assistant/` — `store.ts` (the AI part of family-planner's `Store` over
@@ -342,8 +396,8 @@ while Ohana grows.
   the tools that read, and the instructions say why. `GET /ai/settings` tells viewers only
   whether the assistant is set up. Settings, models, test and categorize need an editor.
 - **Pages** are Ohana's (`overview`, `calendar`, `finance`, `meals`, `appointments`,
-  `settings`); family-planner's `vacation` is read as `calendar`. For meals and appointments
-  the instructions say that the tools come later.
+  `settings`); family-planner's `vacation` is read as `calendar`. (Until part B the
+  instructions said that meals' and appointments' tools come later.)
 - **Private networks:** the family's AI endpoint may be on one when `AI_ALLOW_PRIVATE_ENDPOINT`
   is set (family-planner allowed that only in development); pages and search never.
 - The keys are sealed with Ohana's `SecretBox` (`ENCRYPTION_KEY`, else derived from
