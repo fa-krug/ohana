@@ -43,6 +43,16 @@ export const emailChangeSchema = z.object({ newEmail: email });
 export const role = z.enum(ROLES);
 export const familyNameSchema = z.object({ name: z.string().trim().min(1).max(100) });
 export const addMemberSchema = z.object({ email: identifier, role });
+const personName = z.string().trim().min(1).max(80);
+// "" from an empty date field: no birthday.
+export const birthdaySchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .or(z.literal("").transform(() => null))
+  .nullable()
+  .default(null);
+export const addPersonSchema = z.object({ name: personName, birthday: birthdaySchema, invite: role.nullable().default(null) });
+export const personSchema = z.object({ name: personName, birthday: birthdaySchema });
 export const profileSchema = z.object({
   name: z.string().trim().max(100).optional(),
   preferredLanguage: z.enum(["en", "de"]).optional(),

@@ -412,6 +412,8 @@
     "modules": "Modules",
     "today": "Today",
     "open": "Open",
+    "birthdays": "Birthdays",
+    "birthdayTurns": "{{name}} turns {{age}}",
     "searches": "Appointment searches",
     "noSearches": "No searches yet: Ohana can watch Doctolib and jameda for you.",
     "searchNothing": "Nothing found yet",
@@ -433,14 +435,14 @@
     "viewerNote": "You are a viewer in this family: you can look at everything but not change it.",
     "members": "Members",
     "addMember": "Add a person",
-    "addMemberHint": "By the email of their Ohana account.",
+    "addMemberHint": "For someone without an account, like a child. You can create an invite link for them now or later.",
     "emailPlaceholder": "Email",
     "memberAdded": "Added.",
     "roleChanged": "Role changed.",
     "memberRemoved": "Removed.",
     "removeConfirm": "Remove {{name}} from the family?",
     "invites": "Invite links",
-    "invitesHint": "For people without an account yet: the link creates one and joins the family. Valid for 7 days, once.",
+    "invitesHint": "The link lets someone join the family, with a new account or their existing one. Valid for 7 days, once.",
     "createInvite": "Create invite link",
     "inviteAs": "Joins as",
     "inviteCreated": "Invite link created.",
@@ -461,7 +463,22 @@
     "tabFeed": "Calendar feed",
     "tabFinance": "Finance",
     "tabHousehold": "Household",
-    "tabAi": "AI"
+    "tabAi": "AI",
+    "namePlaceholder": "Name",
+    "withInvite": "Create an invite link so they can sign in",
+    "addByEmail": "Has an Ohana account already? Add by email",
+    "noAccount": "No account",
+    "inviteOpen": "Invite link open",
+    "invitePerson": "Invite",
+    "personSaved": "Saved.",
+    "birthday": "Birthday",
+    "birthdayOptional": "Birthday (optional)",
+    "setBirthday": "Set birthday",
+    "birthdaySaved": "Birthday saved.",
+    "birthdayAge_one": "{{date}} · {{count}} year",
+    "birthdayAge_other": "{{date}} · {{count}} years",
+    "inviteCopied": "Invite link created and copied.",
+    "inviteFor": "for {{name}}"
   },
   "account": {
     "title": "Account",
@@ -584,7 +601,8 @@
     "passwordLabel": "Password",
     "createAccount": "Create account",
     "registerWithPasskey": "Create with a passkey",
-    "accept": "Accept invite"
+    "accept": "Accept invite",
+    "forPerson": "You were added to the family as {{name}}."
   },
   "onboarding": {
     "credentials": {
@@ -607,6 +625,7 @@
     "de": "Deutsch"
   },
   "calendar": {
+    "birthday": "🎂 {{name}} turns {{age}}",
     "months": [
       "Jan",
       "Feb",
@@ -850,7 +869,8 @@
       "legacyConfirm": "Remove the old calendar link? Calendar subscriptions made with it stop updating.",
       "legacyRemoved": "Old link removed.",
       "events": "Booked appointments (with time)",
-      "eventsTitle": "Timed events such as booked doctor's appointments; they name the doctor and the practice"
+      "eventsTitle": "Timed events such as booked doctor's appointments; they name the doctor and the practice",
+      "birthdays": "Birthdays"
     },
     "overview": {
       "nextGap": "Next uncovered day: {{date}}",

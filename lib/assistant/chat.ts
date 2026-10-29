@@ -17,6 +17,7 @@ import {
   summaryMessage,
   windowFromError,
 } from "./context";
+import { ageOn } from "@/lib/families/birthdays";
 import type { NetOptions } from "./net";
 import {
   type ChatMessage,
@@ -133,6 +134,19 @@ const ROLE_TEXT: Record<string, string> = {
   none: "normal",
 };
 
+function peopleText(people: { name: string; account: boolean; birthday: string | null }[], today: string): string {
+  if (!people.length) return "(unknown)";
+  return people
+    .map((p) => {
+      const about = [
+        p.account ? "" : "no account, e.g. a child",
+        p.birthday ? `born ${p.birthday}, ${ageOn(p.birthday, today)} years old` : "",
+      ].filter(Boolean);
+      return about.length ? `${p.name} (${about.join("; ")})` : p.name;
+    })
+    .join(", ");
+}
+
 export function systemPrompt(input: {
   family: FamilyRow;
   types: TypeRow[];
@@ -149,6 +163,8 @@ export function systemPrompt(input: {
   mealTags?: string;
   /** The family's home address, if set (appointment searches look around it). */
   home?: string | null;
+  /** The family's members by name; `account: false` for those who don't sign in (children …). */
+  people?: { name: string; account: boolean; birthday: string | null }[];
   /** Why the assistant can only read: the settings, or the user is a viewer of the family. */
   readOnly?: "settings" | "viewer";
   search: boolean;
@@ -179,6 +195,8 @@ export function systemPrompt(input: {
 Today is ${today} (${weekday}). This chat belongs to the ${input.page} page; the calendar
 year is ${year}.
 Answer in ${LANGUAGES[input.lang] ?? "the user's language"}, briefly and friendly.
+The family's members: ${peopleText(input.people ?? [], today)}. Use their names as the "person" of
+events and booked appointments ("for Mia"); don't make up others.
 
 ## This chat's page
 This chat belongs to the ${input.page} page, which shows ${PAGE_FOCUS(year)[input.page]}

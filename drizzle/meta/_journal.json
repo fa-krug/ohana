@@ -57,6 +57,13 @@
       "when": 1793242362054,
       "tag": "0007_assistant_tools",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1793265232453,
+      "tag": "0008_family_people",
+      "breakpoints": true
     }
   ]
 }

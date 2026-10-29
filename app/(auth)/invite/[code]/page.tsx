@@ -13,9 +13,10 @@ export default async function InvitePage({ params }: { params: Promise<{ code: s
   const { code } = await params;
   const { t } = await getI18n();
   let familyName: string | null = null;
+  let personName: string | null = null;
   let error = "";
   try {
-    familyName = getInviteSummary(db, code, new Date()).familyName;
+    ({ familyName, personName } = getInviteSummary(db, code, new Date()));
   } catch (e) {
     error = e instanceof AuthError ? e.message : t("invite.invalidInvite");
   }
@@ -36,7 +37,10 @@ export default async function InvitePage({ params }: { params: Promise<{ code: s
     <Card className="w-full max-w-sm">
       <CardHeader>
         <CardTitle className="text-xl">{t("invite.join", { family: familyName })}</CardTitle>
-        <CardDescription>{user ? t("invite.signedInDescription") : t("invite.createAccountDescription")}</CardDescription>
+        <CardDescription>
+          {personName && <>{t("invite.forPerson", { name: personName })} </>}
+          {user ? t("invite.signedInDescription") : t("invite.createAccountDescription")}
+        </CardDescription>
       </CardHeader>
       <CardContent>{user ? <JoinButton code={code} /> : <InviteForm code={code} />}</CardContent>
     </Card>

@@ -17,7 +17,7 @@ import {
   roleMap,
   weekday,
 } from "@/lib/calendar/core";
-import type { CalEvent } from "./api";
+import type { Birthday, CalEvent } from "./api";
 import { type Change, type PlannerStore, todayIso } from "./planner-store";
 import { SHOW_WEEKDAYS, subscribeViewPrefs, viewPrefs } from "./view-prefs";
 
@@ -54,6 +54,11 @@ export function fmtDate(
 
 export function noteText(note: Note) {
   return [note.icon, note.comment].filter(Boolean).join(" ");
+}
+
+/** "🎂 Mia turns 8". */
+export function birthdayText(t: (key: string, vars?: { name: string; age: number }) => string, b: Birthday) {
+  return t("calendar.birthday", { name: b.name, age: b.age });
 }
 
 /** "10:30 Dr. Berg (Mia)": a timed event in one line. */
@@ -199,9 +204,11 @@ export class GridView {
     mark.className = "note-mark";
     const event = document.createElement("span");
     event.className = "event-mark";
+    const birthday = document.createElement("span");
+    birthday.className = "birthday-mark";
     const overlay = document.createElement("div");
     overlay.className = "sel-overlay";
-    cell.append(fills, wd, icon, mark, event, overlay);
+    cell.append(fills, wd, icon, mark, event, birthday, overlay);
     if (isWeekend(date)) cell.classList.add("weekend");
     if (date === this.today) cell.classList.add("today");
     this.cells.set(date, cell);
@@ -291,7 +298,7 @@ export class GridView {
   // ------------------------------------------------------------- rendering
 
   private renderCells() {
-    const { types, entries, notes, events } = this.store;
+    const { types, entries, notes, events, birthdays } = this.store;
     const sig = JSON.stringify(types.map((t) => [t.id, t.name, t.color, t.role]));
     if (sig !== this.cellTypesSig) {
       this.cellSigs = new WeakMap();
@@ -305,7 +312,9 @@ export class GridView {
       const note = notes.get(date);
       const dayEvents = events.get(date) ?? [];
       const evText = dayEvents.map(eventText);
-      const key = ids.join(",") + (note ? "|" + note.icon + "|" + note.comment : "") + "|" + evText.join("|");
+      const bdText = (birthdays.get(date) ?? []).map((b) => birthdayText(this.store.i18n.t, b));
+      const key =
+        ids.join(",") + (note ? "|" + note.icon + "|" + note.comment : "") + "|" + evText.join("|") + "|" + bdText.join("|");
       if (this.cellSigs.get(cell) === key) continue;
       this.cellSigs.set(cell, key);
       const fills = cell.firstChild as HTMLElement;
@@ -323,12 +332,14 @@ export class GridView {
       cell.querySelector(".note-icon")!.textContent = note?.icon ?? "";
       cell.classList.toggle("has-comment", !!note?.comment);
       cell.classList.toggle("has-event", dayEvents.length > 0);
+      cell.classList.toggle("has-birthday", bdText.length > 0);
       const names = ids.map((id) => byId.get(id)!.name).join(", ");
       cell.title =
         fmtDate(this.store.i18n.locale, date, LONG_DATE) +
         (names ? "\n" + names : "") +
         (note ? "\n" + noteText(note) : "") +
-        evText.map((x) => "\n🕑 " + x).join("");
+        evText.map((x) => "\n🕑 " + x).join("") +
+        bdText.map((x) => "\n" + x).join("");
     }
   }
 

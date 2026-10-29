@@ -2,6 +2,7 @@ import { and, asc, eq } from "drizzle-orm";
 import type { Db } from "@/lib/db";
 import { familyMembers, users } from "@/lib/db/schema";
 import { AuthError } from "@/lib/auth/errors";
+import { assertBirthday } from "./people";
 import { type Actor, type Role, isRole, requireRole } from "./roles";
 
 export interface MemberDto {
@@ -9,6 +10,7 @@ export interface MemberDto {
   email: string;
   name: string;
   role: Role;
+  birthday: string | null;
   joinedAt: Date;
 }
 
@@ -20,6 +22,7 @@ export function listMembers(db: Db, actor: Actor, familyId: string): MemberDto[]
       email: users.email,
       name: users.name,
       role: familyMembers.role,
+      birthday: familyMembers.birthday,
       joinedAt: familyMembers.joinedAt,
     })
     .from(familyMembers)
@@ -66,7 +69,27 @@ export function addMember(
   if (!user.lastFamilyId) {
     db.update(users).set({ lastFamilyId: familyId }).where(eq(users.id, user.id)).run();
   }
-  return { userId: user.id, email: user.email, name: user.name, role: args.role, joinedAt: now };
+  return { userId: user.id, email: user.email, name: user.name, role: args.role, birthday: null, joinedAt: now };
+}
+
+/** A member's birthday in this family; members set their own, editors anyone's. */
+export function setMemberBirthday(
+  db: Db,
+  actor: Actor,
+  familyId: string,
+  userId: string,
+  birthday: string | null,
+  now: Date,
+): void {
+  requireRole(db, actor, familyId, userId === actor.id ? "viewer" : "editor");
+  if (!memberRows(db, familyId).some((m) => m.userId === userId)) {
+    throw new AuthError(404, "Member not found.");
+  }
+  assertBirthday(birthday, now);
+  db.update(familyMembers)
+    .set({ birthday })
+    .where(and(eq(familyMembers.familyId, familyId), eq(familyMembers.userId, userId)))
+    .run();
 }
 
 export function setRole(db: Db, actor: Actor, familyId: string, userId: string, role: Role): void {

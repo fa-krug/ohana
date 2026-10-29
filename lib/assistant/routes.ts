@@ -12,6 +12,7 @@ import { HttpError, json, NO_STORE, readBody } from "@/lib/api/http";
 import { isValidDate } from "@/lib/calendar/dates";
 import { DrizzleCalendarStore, type FamilyRow } from "@/lib/calendar/store";
 import type { Db } from "@/lib/db";
+import { familyNames } from "@/lib/families/people";
 import { getRole } from "@/lib/families/roles";
 import { applyTransactionOps, benchmarkOf } from "@/lib/finance/finance";
 import { DrizzleFinanceStore, type TransactionRow } from "@/lib/finance/store";
@@ -327,6 +328,7 @@ export async function prepareTurn(
     search: !!search,
     mealTags: mealTagNames(env.db, family.id, context.lang),
     home: homeAddressOf(env.db, family.id),
+    people: familyNames(env.db, family.id),
   });
   return {
     provider: p,

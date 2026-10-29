@@ -1,7 +1,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { and, eq, gt, isNull, lt } from "drizzle-orm";
 import type { Db } from "@/lib/db";
-import { families, familyMembers, invites, users } from "@/lib/db/schema";
+import { families, familyMembers, familyPeople, invites, users } from "@/lib/db/schema";
 import { AuthError } from "@/lib/auth/errors";
 import { type Actor, type Role, getRole, isRole, requireRole } from "./roles";
 
@@ -9,14 +9,26 @@ export type Invite = typeof invites.$inferSelect;
 
 export const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+/** A new invite link; with `personId` it is for that member without an account (their
+ *  older open link stops working). */
 export function createInvite(
   db: Db,
   actor: Actor,
   familyId: string,
   role: Role,
   now: Date,
+  personId?: string,
 ): { code: string; expiresAt: Date } {
   requireRole(db, actor, familyId, "editor");
+  if (personId) {
+    const person = db
+      .select({ id: familyPeople.id })
+      .from(familyPeople)
+      .where(and(eq(familyPeople.id, personId), eq(familyPeople.familyId, familyId)))
+      .get();
+    if (!person) throw new AuthError(404, "Member not found.");
+    db.delete(invites).where(and(eq(invites.personId, personId), isNull(invites.usedById))).run();
+  }
   const invite = db
     .insert(invites)
     .values({
@@ -25,6 +37,7 @@ export function createInvite(
       createdById: actor.id,
       code: randomBytes(16).toString("base64url"),
       role,
+      personId: personId ?? null,
       createdAt: now,
       expiresAt: new Date(now.getTime() + INVITE_TTL_MS),
     })
@@ -57,25 +70,47 @@ export function validateInvite(db: Db, code: string, now: Date): Invite {
   return inv;
 }
 
-export function getInviteSummary(db: Db, code: string, now: Date): { familyName: string; expiresAt: Date } {
+export function getInviteSummary(
+  db: Db,
+  code: string,
+  now: Date,
+): { familyName: string; personName: string | null; expiresAt: Date } {
   const inv = validateInvite(db, code, now);
   const family = db.select().from(families).where(eq(families.id, inv.familyId)).get();
   if (!family) throw new AuthError(400, "Invalid invite code.");
-  return { familyName: family.name, expiresAt: inv.expiresAt };
+  return { familyName: family.name, personName: personOf(db, inv)?.name ?? null, expiresAt: inv.expiresAt };
 }
 
-/** Makes `userId` a member with the invite's role and uses the invite up. Runs inside the
- *  caller's transaction when it registers a new account. */
+function personOf(db: Db, inv: Invite) {
+  if (!inv.personId) return null;
+  return db.select().from(familyPeople).where(eq(familyPeople.id, inv.personId)).get() ?? null;
+}
+
+/** Makes `userId` a member with the invite's role and uses the invite up; an invite for a
+ *  member without an account replaces that person (the membership takes their birthday, an
+ *  account without a name their name).
+ *  Runs inside the caller's transaction when it registers a new account. */
 export function acceptInvite(db: Db, userId: string, code: string, now: Date): { familyId: string } {
   const inv = validateInvite(db, code, now);
   if (getRole(db, inv.familyId, userId)) {
     throw new AuthError(400, "You are already a member of this family.");
   }
+  const person = personOf(db, inv);
   db.insert(familyMembers)
-    .values({ familyId: inv.familyId, userId, role: isRole(inv.role) ? inv.role : "viewer", joinedAt: now })
+    .values({
+      familyId: inv.familyId,
+      userId,
+      role: isRole(inv.role) ? inv.role : "viewer",
+      birthday: person?.birthday ?? null,
+      joinedAt: now,
+    })
     .run();
-  db.update(invites).set({ usedById: userId }).where(eq(invites.id, inv.id)).run();
+  db.update(invites).set({ usedById: userId, personId: null }).where(eq(invites.id, inv.id)).run();
   db.update(users).set({ lastFamilyId: inv.familyId }).where(eq(users.id, userId)).run();
+  if (person) {
+    db.update(users).set({ name: person.name }).where(and(eq(users.id, userId), eq(users.name, ""))).run();
+    db.delete(familyPeople).where(eq(familyPeople.id, person.id)).run();
+  }
   return { familyId: inv.familyId };
 }
 

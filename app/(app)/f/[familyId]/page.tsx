@@ -104,6 +104,23 @@ export default async function FamilyOverviewPage({ params }: { params: Promise<{
                 <CheckCircle2 className="size-4 shrink-0" /> {t("calendar.overview.allCovered")}
               </p>
             )}
+            {d.birthdays.length > 0 && (
+              <div>
+                <p className="mb-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">{t("home.birthdays")}</p>
+                <ul className="divide-y">
+                  {d.birthdays.map((b) => (
+                    <li key={`${b.name}|${b.day}`} className="flex items-center gap-2 py-1.5">
+                      <span className="min-w-0 flex-1 truncate">
+                        <span aria-hidden>🎂</span> {t("home.birthdayTurns", { name: b.name, age: b.age })}
+                      </span>
+                      <span className={`shrink-0 tabular-nums ${b.day === today ? "font-medium text-primary" : "text-muted-foreground"}`}>
+                        {b.day === today ? t("home.today") : day(b.day)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <div>
               <p className="mb-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 {t("calendar.overview.upcoming")}

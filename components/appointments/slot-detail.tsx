@@ -22,12 +22,15 @@ export function SlotDetail({
   canEdit,
   booking = null,
   searchEnabled = false,
+  people = [],
 }: {
   familyId: string;
   data: SlotDetailData;
   canEdit: boolean;
   booking?: BookingInfo | null;
   searchEnabled?: boolean;
+  /** The family's members by name, offered as "who is it for". */
+  people?: string[];
 }) {
   const { t, locale } = useT();
   const router = useRouter();
@@ -102,7 +105,7 @@ export function SlotDetail({
           ))}
         </dl>
         {booking && (
-          <BookSlot familyId={familyId} searchId={data.searchId} resultId={s.resultId} slot={s.slot} searchEnabled={searchEnabled} booking={booking} canEdit={canEdit} />
+          <BookSlot familyId={familyId} searchId={data.searchId} resultId={s.resultId} slot={s.slot} searchEnabled={searchEnabled} booking={booking} canEdit={canEdit} people={people} />
         )}
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           {bookingUrl && (
@@ -118,7 +121,7 @@ export function SlotDetail({
             </a>
           </Button>
           {!booking && (
-            <BookSlot familyId={familyId} searchId={data.searchId} resultId={s.resultId} slot={s.slot} searchEnabled={searchEnabled} booking={null} canEdit={canEdit} />
+            <BookSlot familyId={familyId} searchId={data.searchId} resultId={s.resultId} slot={s.slot} searchEnabled={searchEnabled} booking={null} canEdit={canEdit} people={people} />
           )}
           {canEdit && (
             <Button variant="ghost" className="w-full sm:w-auto" onClick={onIgnore} disabled={pending} title={t("appointments.slot.ignoreHint")}>
