@@ -5,7 +5,7 @@ Ohana replaces three apps, `family-planner`, `cookless` and `findmyappointment`,
 their data over. See [the plan](docs/plan.md) for why and how, and its phases for what is
 there already.
 
-## What works today (phases 0, 1, 2, 4 and 5)
+## What works today (phases 0 to 5)
 
 - **Sign in** with a **passkey** (fingerprint, face or device PIN) or an email and a
   **password**. A fresh install asks for the first account at `/setup`; it becomes the
@@ -17,7 +17,7 @@ there already.
   A family always keeps an editor; the last member deletes it instead of leaving.
 - **Modules:** Calendar, Finance, Meals and Appointments are in the sidebar and on the
   overview; those not built yet are marked *coming soon*. The right sidebar (✨,
-  `Ctrl/⌘+J`) is where the assistant will live.
+  `Ctrl/⌘+J`; a sheet on phones) is the **assistant** (see below).
 - **Account:** name, email (confirmed with the password or a passkey), language (English /
   German), passkeys (add one per device, rename, delete), the password (set, change, or
   remove it to use passkeys only), *sign out other devices*, and personal **API tokens** for
@@ -154,6 +154,46 @@ categories, bank statement import and overviews. Amounts are in the family's cur
   - `GET …/finance/transfers/suggestions?from=&to=`, `POST …/finance/transfers/auto` `{"from", "to"}`
   - `GET …/finance/summary?from=&to=` – per month and per category
 
+## Assistant
+
+An AI assistant in the right sidebar (✨, `Ctrl/⌘+J`; on phones the ✨ button in the top bar),
+from family-planner. It works with **any OpenAI-compatible API** the family sets up in
+*Settings → AI* (OpenAI, OpenRouter, Mistral, Groq, Gemini's OpenAI endpoint, a local model …).
+
+- **Chats** are kept on the server, per person and family: the history (🕘) lists them, ✚
+  starts a new one. A turn runs in the **background worker**, so it goes on when the app is
+  closed and every device sees the same chat; a worker restart picks the turn up again.
+  Messages written while the assistant answers wait and go next (take them back with ×);
+  *Stop* ends the answer with what it did so far.
+- **What it can do:** read and change the **calendar** (entries, day notes, entry types per
+  year, coverage gaps) and the **finances** (transactions, categories, transfers and split
+  bookings, the statistic average), count calendar days and **analyze** transactions (per
+  month, category, payee …, exactly), **calculate** (statistics, trends, loans and savings),
+  **search the web** (Tavily or Brave, with the family's key) and **read pages** (never on
+  private networks). It **asks** with answers to click when something is unclear, and asks
+  for the OK before bigger changes. Meals and appointments follow.
+- **Every change can be undone** from the chat (*Undo*); the assistant hears about it.
+- Attach **images** (screenshots, photos, shrunk in the browser) and **text files** (CSV, JSON …).
+- Long chats are **condensed** for the model before they no longer fit its context window
+  (the bar under the box shows how full it is).
+- A chat belongs to the page it started on (calendar, finance, settings …) and keeps to that
+  topic; *Move to …* takes it along to another page.
+- **Viewers** can chat too, but the assistant only reads for them. Without settings the panel
+  points editors to *Settings → AI* and tells viewers to ask an editor.
+- *Settings → AI* (editors): API URL (with presets), key (stored encrypted, only its last four
+  characters are shown), model (*Load models* asks the API), context window, *Test*, web
+  search provider and key, *Allow changes*. A model on the home network (e.g. Ollama) needs
+  `AI_ALLOW_PRIVATE_ENDPOINT=1` on the server.
+- **Auto-categorize** (*Finance → Transactions*, editors): sorts the period's uncategorized
+  transactions like similar earlier ones, the rest with the AI (it may look up unknown payees
+  on the web); the CSV import can do the same for the new rows. Undo from the message.
+- **REST API** (session or API token): `GET|PUT /api/v1/families/{id}/ai/settings`,
+  `POST …/ai/models`, `POST …/ai/test`, `POST …/ai/categorize` `{"ids"} | {"from", "to", "skip"}`,
+  the chats under `…/ai/chats` (list, start, `GET {chat}`, `GET {chat}/events?since=rev`
+  (server-sent events), `messages`, `queue`, `unqueue`, `answer`, `stop`, `undone`, `page`,
+  `import`), and `GET /api/v1/families/{id}/agent`: instructions for other AI agents that use
+  the API with your token (Markdown).
+
 ## Appointments
 
 *Appointments* watches **Doctolib** and **jameda** (one or both per search) for a speciality
@@ -193,7 +233,9 @@ Viewers see all of this but can't change anything.
 npm install
 npm run db:migrate   # creates ./data/ohana.db and loads the units + ingredients (db:seed)
 npm run dev          # http://localhost:3000
-npm run worker       # the background worker (appointment searches, cleanup, backups), in a second terminal
+npm run worker       # the background worker (assistant turns, appointment searches, cleanup, backups), in a second terminal
+npm run mock-ai      # a scripted stand-in AI on http://localhost:4011/v1 (model mock-large) to try the
+                     # assistant without a key: run web and worker with AI_ALLOW_PRIVATE_ENDPOINT=1
 npm test             # Vitest
 npm run typecheck
 ```
@@ -211,7 +253,8 @@ One Docker image, two containers ([`docker-compose.production.yml`](docker-compo
 - **web** applies the database migrations and the seed data (units, ingredients) at start,
   then serves Next.js on port 8000
   (Traefik routes `ohana.fa-krug.de` to it, on the external `gitops_default` network).
-- **worker** waits for the migrations, then runs the background jobs: the **appointment
+- **worker** waits for the migrations, then runs the background jobs: the **assistant's
+  chat turns** (looked for every second, at most four at a time), the **appointment
   searches** (due ones are picked up every 15 s, at most two at a time), cleanup of expired
   tokens and invites, and the **daily backup**.
 
@@ -224,7 +267,8 @@ no deploy secret), then wait for `/api/health`. The repository needs the secrets
 
 ### Secrets
 
-Channel tokens and SMTP passwords are encrypted (AES-256-GCM) before they are stored. The
+Channel tokens, SMTP passwords and the AI and search keys are encrypted (AES-256-GCM) before
+they are stored. The
 key is `ENCRYPTION_KEY` (32 random bytes, `openssl rand -base64 32`) if set, else one derived
 from `AUTH_SECRET`, so nothing new has to be configured. Changing it (or `AUTH_SECRET`
 without an `ENCRYPTION_KEY`) makes the stored tokens unreadable, and they have to be entered

@@ -1,12 +1,15 @@
 // The worker process: everything that runs in the background, apart from the web server,
 // so that a slow job never blocks a page. Same image as the web app, started with
 // `docker-entrypoint.sh worker`. Today: cleanup, the nightly backup and the appointment
-// searches (every APPT_TICK_SECONDS); later phases add assistant turns.
+// searches (every APPT_TICK_SECONDS) and the assistant's chat turns (looked for every
+// ASSISTANT_TICK_MS, a cheap indexed query).
 import { setTimeout as sleep } from "node:timers/promises";
 import { db, sqlite } from "../lib/db/client";
 import { backupDatabase, hasBackupFor } from "../lib/maintenance/backup";
 import { cleanup } from "../lib/maintenance/cleanup";
 import { SearchRunner } from "../lib/appointments/runner";
+import { ChatRunner } from "../lib/assistant/runner";
+import { defaultAiEnv } from "../lib/assistant/routes";
 import { migrationsApplied } from "../lib/maintenance/migrations";
 
 const TICK_MS = Number(process.env.WORKER_TICK_SECONDS ?? 60) * 1000;
@@ -16,6 +19,8 @@ const BACKUP_KEEP = Number(process.env.BACKUP_KEEP ?? 14);
 const BACKUP_HOUR = Number(process.env.BACKUP_HOUR ?? 3);
 /** How often due appointment searches are picked up ("Run now" waits at most this long). */
 const APPT_TICK_MS = Math.max(5, Number(process.env.APPT_TICK_SECONDS ?? 15)) * 1000;
+/** How often chats that wait for a turn are looked for (a message waits at most this long). */
+const ASSISTANT_TICK_MS = Math.max(200, Number(process.env.ASSISTANT_TICK_MS ?? 1000));
 
 let stopping = false;
 const wake = new AbortController(); // ends the sleep between ticks on shutdown
@@ -51,10 +56,17 @@ async function main(): Promise<void> {
   // Appointment searches run on their own, faster loop; runs are started, not awaited.
   const searches = new SearchRunner(db);
   searches.start(new Date());
+  // Assistant turns: claimed through the database, run without awaiting.
+  const chats = new ChatRunner(defaultAiEnv(db));
   let lastTick = 0;
+  let lastSearches = 0;
   while (!stopping) {
     const now = new Date();
-    searches.tick(now);
+    chats.tick(now);
+    if (now.getTime() - lastSearches >= APPT_TICK_MS) {
+      lastSearches = now.getTime();
+      searches.tick(now);
+    }
     if (now.getTime() - lastTick >= TICK_MS) {
       lastTick = now.getTime();
       try {
@@ -63,9 +75,9 @@ async function main(): Promise<void> {
         console.error("[worker] tick failed:", e);
       }
     }
-    await sleep(APPT_TICK_MS, undefined, { signal: wake.signal }).catch(() => undefined);
+    await sleep(ASSISTANT_TICK_MS, undefined, { signal: wake.signal }).catch(() => undefined);
   }
-  await searches.stop(5000);
+  await Promise.all([searches.stop(5000), chats.stop(5000)]);
   sqlite.close();
 }
 

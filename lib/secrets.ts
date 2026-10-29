@@ -1,5 +1,5 @@
-// Encrypts secrets before they are stored: notification channel tokens and SMTP passwords
-// now, the assistant's API keys later. Port of family-planner's `_shared/secrets.ts`
+// Encrypts secrets before they are stored: notification channel tokens, SMTP passwords and
+// the assistant's API keys. Port of family-planner's `_shared/secrets.ts`
 // (SecretBox): AES-256-GCM, stored as "v1:<base64 of 12-byte IV + ciphertext + 16-byte tag>"
 // — the same format WebCrypto produces, so family-planner's sealed values open here with
 // its old key (the import re-seals them with Ohana's).

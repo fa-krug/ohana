@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, useSyncExternalStore } from "react";
 import { toast } from "@/components/ui/sonner";
 import { useT } from "@/lib/i18n/provider";
+import { moduleOf, useAssistantChanges } from "@/components/assistant/events";
 import { PlannerStore } from "./planner-store";
 
 const PlannerContext = createContext<PlannerStore | null>(null);
@@ -31,6 +32,10 @@ export function PlannerProvider({
     void store.open();
     return () => store.close();
   }, [store]);
+  // The assistant changed the calendar: it reloads (after the changes of its own are saved).
+  useAssistantChanges(familyId, (kind) => {
+    if (moduleOf(kind) === "calendar") void store.load({ quiet: true });
+  });
   return <PlannerContext.Provider value={store}>{children}</PlannerContext.Provider>;
 }
 

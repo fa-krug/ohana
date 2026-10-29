@@ -191,3 +191,4 @@ export * from "./schema/notifications";
 export * from "./schema/appointments";
 export * from "./schema/meals";
 export * from "./schema/finance";
+export * from "./schema/assistant";
