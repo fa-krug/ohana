@@ -5,6 +5,7 @@ import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { Db } from "@/lib/db";
 import {
+  aiSettings,
   apptIgnored,
   apptRuns,
   apptSearchChannels,
@@ -13,6 +14,9 @@ import {
   calEntries,
   calEntryTypes,
   calNotes,
+  chatItems,
+  chatMessages,
+  chats,
   cookingSteps,
   families,
   familyMembers,
@@ -47,6 +51,11 @@ import { defaultCategories, financeSummary, findTransactions, listAccounts, publ
 import { DrizzleFinanceStore } from "@/lib/finance/store";
 import { DEFAULT_TAGS } from "@/lib/meals/recipes/tag-defaults";
 import { SecretBox, devSecret } from "@/lib/secrets";
+import { Runner } from "@/lib/assistant/chats";
+import { DrizzleAssistantStore } from "@/lib/assistant/store";
+import { GEMINI_BASE_URL } from "@/lib/import/cookless/assistant";
+import Database from "better-sqlite3";
+import { copyFileSync } from "node:fs";
 import { createTestDb } from "@/lib/test/db";
 import { makeUser } from "@/lib/test/factories";
 import { CK, FMA, FP, FP_DUMP, MAP, makeCooklessDb, makeFmaDb } from "@/lib/test/legacy";
@@ -93,7 +102,7 @@ beforeEach(() => {
   sources = allSources();
 });
 
-const run = (opts: { dryRun?: boolean; force?: boolean } = {}, s: ImportSources = sources) =>
+const run = (opts: { dryRun?: boolean; force?: boolean; familyPlannerAiSecret?: string } = {}, s: ImportSources = sources) =>
   runImport(db, s, { map: MAP, now: NOW, secrets, mediaRoot, ...opts });
 
 const user = (email: string) => db.select().from(users).where(eq(users.email, email)).get();
@@ -279,8 +288,6 @@ describe("legacy import: modules", () => {
     const leftover = db.select().from(mealPlanEntries).where(eq(mealPlanEntries.id, CK.leftover)).get()!;
     expect(leftover).toMatchObject({ isLeftover: true, sourceEntryId: CK.entry });
     expect(db.select().from(shoppingListItems).get()).toMatchObject({ id: CK.item, isChecked: true, quantity: "1" });
-
-    expect(report.notes.some((n) => n.includes("Gemini API key") && n.includes(FP.krug))).toBe(true);
   });
 
   it("imports searches, channels (tokens sealed) and ignore lists, but no run history", async () => {
@@ -413,16 +420,21 @@ describe("legacy import: modules", () => {
     expect(report.skipped.filter((r) => r.table === "finance_categories" || r.table === "transactions")).toHaveLength(4);
   });
 
-  it("reports the counts and what family-planner has that isn't imported yet", async () => {
+  it("reports the counts, the AI keys to enter again, and no family-planner table left out", async () => {
     const report = await run({ dryRun: true });
     expect(report.counts).toMatchObject({ users: 5, families: 4, family_members: 6, recipes: 3, appt_searches: 2, cal_notes: 2 });
     expect(report.counts).toMatchObject({ fin_settings: 2, fin_accounts: 2, fin_transactions: 6 });
     // Krug's five categories and the defaults of the three other families.
     expect(report.counts.fin_categories).toBe(5 + 3 * defaultCategories("x", "en").length);
     expect(formatReport(report)).toMatch(/fin_transactions\s+6/);
+    // Krug's and Oma's from family-planner, Carl's from cookless.
+    expect(report.counts).toMatchObject({ ai_settings: 3, chats: 2, chat_items: 5, chat_messages: 5 });
+    const text = formatReport(report);
+    expect(text).toMatch(/chat_messages\s+5/);
+    expect(text).toContain("AI keys to enter again");
+    expect(report.aiKeys.map((k) => k.familyId).sort()).toEqual([FP.krug, FP.oma].sort());
     const notes = report.notes.join("\n");
-    expect(notes).toContain("ai_settings (1)");
-    expect(notes).not.toMatch(/finance_|transactions|family_settings/);
+    expect(notes).not.toContain("tables not imported");
     expect(notes).not.toContain("rate_limits");
   });
 
@@ -431,6 +443,160 @@ describe("legacy import: modules", () => {
     expect(report.counts.families).toBe(2);
     expect(db.select().from(families).all().map((f) => f.id).sort()).toEqual([FMA.erik, FMA.krug].sort());
     expect(report.notes.some((n) => n.includes("no family-planner source was given"))).toBe(true);
+  });
+});
+
+describe("legacy import: the assistant", () => {
+  const settings = (familyId: string) => db.select().from(aiSettings).where(eq(aiSettings.familyId, familyId)).get();
+
+  it("opens family-planner's AI keys with its secret and seals them with Ohana's", async () => {
+    // The fixture's keys are sealed with family-planner's SecretBox under FP.aiSecret.
+    const old = new SecretBox(FP.aiSecret);
+    const report = await run({ familyPlannerAiSecret: FP.aiSecret });
+    const krug = settings(FP.krug)!;
+    expect(krug).toMatchObject({
+      baseUrl: "https://api.openai.com/v1",
+      model: "gpt-4o-mini",
+      searchProvider: "tavily",
+      allowWrites: false,
+      contextWindow: 64000,
+      imageModel: "",
+    });
+    expect(krug.updatedAt.toISOString()).toBe("2026-10-01T07:00:00.000Z");
+    expect(secrets.open(krug.apiKeyEnc)).toBe(FP.krugApiKey);
+    expect(secrets.open(krug.searchKeyEnc)).toBe(FP.krugSearchKey);
+    expect(() => old.open(krug.apiKeyEnc)).toThrow(); // sealed again, with Ohana's key
+    // Oma's key was sealed with another secret: the settings come without it, reported.
+    expect(settings(FP.oma)).toMatchObject({ model: "mistral-small", apiKeyEnc: "", allowWrites: true });
+    expect(report.aiKeys).toEqual([
+      { familyId: FP.oma, family: "Oma & Opa", keys: ["API key"], reason: "didn't open with the given --family-planner-ai-secret" },
+    ]);
+    expect(formatReport(report)).toMatch(/AI keys to enter again[^]*"Oma & Opa".*API key/);
+  });
+
+  it("without the secret, imports the settings without keys and lists the families", async () => {
+    const report = await run();
+    expect(settings(FP.krug)).toMatchObject({ model: "gpt-4o-mini", apiKeyEnc: "", searchKeyEnc: "", searchProvider: "tavily" });
+    expect(report.aiKeys.find((k) => k.familyId === FP.krug)).toMatchObject({
+      keys: ["API key", "search key"],
+      reason: "no --family-planner-ai-secret given",
+    });
+    expect(report.aiKeys.find((k) => k.familyId === FP.oma)).toMatchObject({ keys: ["API key"] });
+  });
+
+  it("refuses a malformed secret, and says when no key opened with it", async () => {
+    await expect(run({ familyPlannerAiSecret: "short" })).rejects.toBeInstanceOf(ImportRefused);
+    const report = await run({ familyPlannerAiSecret: devSecret() });
+    expect(report.aiKeys).toHaveLength(2);
+    expect(report.notes.join("\n")).toContain("None of family-planner's AI keys opened");
+  });
+
+  it("turns cookless's Gemini key into AI settings, unless family-planner has some (they win)", async () => {
+    const report = await run({ familyPlannerAiSecret: FP.aiSecret });
+    const carl = settings(CK.carl)!;
+    expect(carl).toMatchObject({
+      baseUrl: GEMINI_BASE_URL,
+      model: "gemini-2.5-flash",
+      imageModel: "gemini-2.5-flash-image",
+      searchProvider: "none",
+      searchKeyEnc: "",
+      allowWrites: false,
+      contextWindow: 0,
+    });
+    expect(carl.baseUrl).toBe("https://generativelanguage.googleapis.com/v1beta/openai/");
+    expect(secrets.open(carl.apiKeyEnc)).toBe(CK.carlGeminiKey);
+    // Krug has a Gemini key in cookless too, but family-planner's settings win.
+    expect(settings(FP.krug)!.model).toBe("gpt-4o-mini");
+    expect(report.skipped).toContainEqual(expect.objectContaining({
+      source: "cookless",
+      table: "households.gemini_api_key",
+      reason: "the family has family-planner's AI settings (they win)",
+    }));
+    // Without family-planner, Krug gets its Gemini key.
+    db = target();
+    await run({}, { cookless: openCookless(cookless.path, cookless.mediaDir) });
+    expect(secrets.open(settings(CK.krug)!.apiKeyEnc)).toBe("AIzaFakeGeminiKey");
+  });
+
+  it("skips a Gemini key when AI was turned off in cookless", async () => {
+    const copy = join(dir, "cookless-ai-off.db");
+    copyFileSync(cookless.path, copy);
+    const w = new Database(copy);
+    w.prepare("UPDATE households SET ai_enabled = 0").run();
+    w.close();
+    const report = await run({}, { cookless: openCookless(copy, cookless.mediaDir) });
+    expect(db.select().from(aiSettings).all()).toEqual([]);
+    expect(report.skipped.filter((r) => r.table === "households.gemini_api_key")).toHaveLength(2);
+  });
+
+  it("imports the chats with their items and messages", async () => {
+    await run();
+    const idle = db.select().from(chats).where(eq(chats.id, FP.idleChat)).get()!;
+    expect(idle).toMatchObject({
+      familyId: FP.krug,
+      userId: FP.anna,
+      title: "Urlaub planen",
+      status: "idle",
+      runToken: null,
+      stop: false,
+      rev: 3,
+      queue: "[]",
+      activity: null,
+    });
+    expect(idle.createdAt.getTime()).toBe(Date.parse("2026-10-01T07:00:00.123Z")); // milliseconds kept
+    expect(idle.updatedAt.getTime()).toBe(Date.parse("2026-10-01T07:01:30.456Z"));
+    expect(JSON.parse(idle.context)).toEqual({ day: "2026-10-01", lang: "de", page: "calendar", year: 2026 });
+    expect(JSON.parse(idle.notes)).toEqual(["Undid: vacation on 2026-08-03"]);
+    expect(JSON.parse(idle.usage!)).toEqual({ max: 128000, used: 2100 });
+
+    // What the app reads through the assistant's store.
+    const store = new DrizzleAssistantStore(db);
+    expect((await store.listChats(FP.krug, FP.anna)).map((c) => c.id)).toEqual([FP.idleChat]);
+    const items = await store.listChatItems(FP.idleChat);
+    expect(items.map((i) => [i.seq, i.rev, i.item.kind])).toEqual([[0, 1, "user"], [1, 2, "tool"], [2, 3, "assistant"]]);
+    expect(await store.listChatItems(FP.idleChat, 2)).toHaveLength(1);
+    const messages = await store.listChatMessages(FP.idleChat);
+    expect(messages.map((m) => m.message.role)).toEqual(["user", "assistant", "tool", "assistant"]);
+    expect(db.select().from(chatItems).all()).toHaveLength(5);
+    expect(db.select().from(chatMessages).all()).toHaveLength(5);
+  });
+
+  it("ends a turn that was running as stopped, without calling the model, and drops waiting messages", async () => {
+    const report = await run();
+    const running = db.select().from(chats).where(eq(chats.id, FP.runningChat)).get()!;
+    expect(running).toMatchObject({ status: "running", runToken: null, runUntil: null, stop: true, retries: 0, activity: null, queue: "[]" });
+    const notes = report.notes.join("\n");
+    expect(notes).toContain(`${FP.runningChat}) in family Oma & Opa was running`);
+    expect(notes).toContain("1 waiting message(s) dropped");
+
+    // The worker takes it (nobody holds it) and ends it the way a stop does.
+    const store = new DrizzleAssistantStore(db);
+    expect(store.pendingChats(NOW).map((c) => c.id)).toEqual([FP.runningChat]);
+    const never = () => {
+      throw new Error("no model call expected");
+    };
+    expect(store.claimChatNow(FP.runningChat, "tok", new Date(Date.now() + 30_000).toISOString(), "resume")).not.toBeNull();
+    await new Runner({ store, prepare: never, family: never }, FP.runningChat, "tok").drive(false);
+    const after = (await store.getChat(FP.runningChat))!;
+    expect(after).toMatchObject({ status: "idle", run_token: null, stop: false });
+    const items = await store.listChatItems(FP.runningChat);
+    expect(items[1].item).toMatchObject({ kind: "tool", status: "error", interrupted: true });
+    const messages = (await store.listChatMessages(FP.runningChat)).map((m) => m.message);
+    expect(messages.at(-1)).toEqual({ role: "assistant", content: "(stopped)" });
+    expect(store.pendingChats(NOW)).toEqual([]);
+  });
+
+  it("skips chats whose family or user isn't imported", async () => {
+    const s = allSources();
+    s.familyPlanner!.tables.get("ai_chats")!.push({
+      ...s.familyPlanner!.tables.get("ai_chats")![0],
+      id: "fpChatOrphan00000003",
+      user_id: "fpUserGone000000009",
+    });
+    s.familyPlanner!.tables.get("ai_chat_items")!.push({ chat_id: "fpChatOrphan00000003", seq: "0", rev: "1", item: "{}" });
+    const report = await run({}, s);
+    expect(db.select().from(chats).where(eq(chats.id, "fpChatOrphan00000003")).get()).toBeUndefined();
+    expect(report.skipped).toContainEqual(expect.objectContaining({ table: "ai_chats", reason: "its user isn't imported" }));
   });
 });
 

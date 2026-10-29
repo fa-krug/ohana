@@ -25,7 +25,7 @@ npm run db:seed       # load the shared units + ingredients (idempotent; also ru
 npm run setup-link -- <email>   # print a new setup link for an account
 npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (web + worker need AI_ALLOW_PRIVATE_ENDPOINT=1)
 npm run import-legacy -- --family-planner dump.sql --cookless cookless.db --cookless-media media \
-  --fma fma.db --map import-map.json --dry-run   # one-time import of the old apps (README)
+  --fma fma.db --map import-map.json [--family-planner-ai-secret <base64>] --dry-run   # one-time import of the old apps (README)
 ```
 
 ## Architecture
@@ -220,8 +220,13 @@ npm run import-legacy -- --family-planner dump.sql --cookless cookless.db --cook
   files, read-only, schema checked). Stage 1 (`accounts.ts`): users merged by lowercased email,
   families by `import-map.json`, members combined (editor wins); fills `ctx.userIds` /
   `ctx.familyIds` (source id → Ohana id). Stage 2: the `AREAS` list in `index.ts`, one function
-  per source and area (`family-planner/` accounts + tokens, calendar, finance; `cookless/`,
-  `fma/`); the assistant's import is one more entry. Afterwards `addDefaults` gives families
+  per source and area (`family-planner/` accounts + tokens, calendar, finance, assistant;
+  `cookless/` invites, meals, Gemini key; `fma/`). AI keys: family-planner's are opened with
+  its `AI_CONFIG_KEY` (`--family-planner-ai-secret` / `FAMILY_PLANNER_AI_SECRET`,
+  `ctx.familyPlannerSecrets`) and sealed with Ohana's, else dropped and listed in
+  `report.aiKeys`; a running chat comes over as running without a holder with `stop` set (the
+  worker ends it as stopped, no model call), queues are dropped; cookless's Gemini key fills
+  only families without family-planner AI settings. Afterwards `addDefaults` gives families
   what `createFamily` would where the import brought nothing (preset types, finance
   categories, meal tags). All in one SQLite transaction (deferred FKs, checked at the
   end); `--dry-run` rolls back; photos copied into `MEDIA_ROOT` inside it and removed on

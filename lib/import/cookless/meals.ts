@@ -336,19 +336,3 @@ export function importCooklessMeals(ctx: ImportContext): void {
       .run();
   }
 }
-
-/** A household's Gemini key becomes the family's AI settings (base URL
- *  https://generativelanguage.googleapis.com/v1beta/openai/) once Ohana has AI settings;
- *  until then the report only names the households that have one. */
-export function noteCooklessAi(ctx: ImportContext): void {
-  const src = ctx.sources.cookless;
-  if (!src) return;
-  for (const h of all(src.db, "SELECT id, name, ai_enabled, gemini_api_key FROM households")) {
-    if (!str(h.gemini_api_key)) continue;
-    const familyId = ctx.familyIds.cookless.get(str(h.id));
-    ctx.note(
-      `cookless household "${str(h.name)}" (→ family ${familyId ?? "not imported"}) has a Gemini API key` +
-        `${bool(h.ai_enabled) ? "" : " (AI turned off)"}: not imported yet (AI settings come with the assistant)`,
-    );
-  }
-}
