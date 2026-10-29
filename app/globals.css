@@ -1,7 +1,9 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (@media (prefers-color-scheme: dark));
+/* Dark is the `.dark` class on <html>, set before the first paint by the theme script
+   of app/layout.tsx (lib/theme.ts: light / dark / like the system, per device). */
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
   --color-background: var(--background);
@@ -107,59 +109,56 @@
   --tile-r: 5px;
 }
 
-/* Theme follows the OS preference via CSS only — no JS, no class toggling, so
-   the correct colors are applied before first paint (no flash of the wrong theme). */
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --background: oklch(0.141 0.005 285.823);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.21 0.006 285.885);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.21 0.006 285.885);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.6 0.118 184.704);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.274 0.006 286.033);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.274 0.006 286.033);
-    --muted-foreground: oklch(0.705 0.015 286.067);
-    --accent: oklch(0.274 0.006 286.033);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --destructive-foreground: oklch(0.985 0 0);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.6 0.118 184.704);
-    --chart-1: oklch(0.76 0.154 75.553);
-    --chart-2: oklch(0.83 0.104 68.886);
-    --chart-3: oklch(0.62 0.254 65.216);
-    --chart-4: oklch(0.6 0.118 184.704);
-    --chart-5: oklch(0.55 0.304 72.108);
-    --sidebar: oklch(0.21 0.006 285.885);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.6 0.118 184.704);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.274 0.006 286.033);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.6 0.118 184.704);
+/* The dark tokens, under `.dark` on <html> (see the dark variant above). */
+:root.dark {
+  color-scheme: dark;
+  --background: oklch(0.141 0.005 285.823);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.21 0.006 285.885);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.21 0.006 285.885);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.6 0.118 184.704);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.274 0.006 286.033);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.274 0.006 286.033);
+  --muted-foreground: oklch(0.705 0.015 286.067);
+  --accent: oklch(0.274 0.006 286.033);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.6 0.118 184.704);
+  --chart-1: oklch(0.76 0.154 75.553);
+  --chart-2: oklch(0.83 0.104 68.886);
+  --chart-3: oklch(0.62 0.254 65.216);
+  --chart-4: oklch(0.6 0.118 184.704);
+  --chart-5: oklch(0.55 0.304 72.108);
+  --sidebar: oklch(0.21 0.006 285.885);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.6 0.118 184.704);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.274 0.006 286.033);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.6 0.118 184.704);
 
-    --cal-line: oklch(0.26 0.006 286);
-    --cal-cell: oklch(0.235 0.006 286);
-    --cal-weekend: oklch(0.175 0.005 286);
-    --cal-invalid: oklch(0.21 0.006 286);
-    --cal-invalid-hatch: oklch(0.3 0.006 286);
-    --cal-accent: oklch(0.7 0.12 184.7);
-    --cal-accent-soft: color-mix(in oklch, var(--cal-accent) 24%, transparent);
-    --cal-accent-faint: color-mix(in oklch, var(--cal-accent) 10%, transparent);
-    --cal-ok: oklch(0.77 0.13 162);
-    --cal-gap: oklch(0.704 0.191 22.216);
-    --series-1: #3987e5;
-    --series-2: #d95926;
-    --cal-hatch: rgba(255, 255, 255, 0.38);
-    --cal-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 32px -12px rgba(0, 0, 0, 0.6);
-  }
+  --cal-line: oklch(0.26 0.006 286);
+  --cal-cell: oklch(0.235 0.006 286);
+  --cal-weekend: oklch(0.175 0.005 286);
+  --cal-invalid: oklch(0.21 0.006 286);
+  --cal-invalid-hatch: oklch(0.3 0.006 286);
+  --cal-accent: oklch(0.7 0.12 184.7);
+  --cal-accent-soft: color-mix(in oklch, var(--cal-accent) 24%, transparent);
+  --cal-accent-faint: color-mix(in oklch, var(--cal-accent) 10%, transparent);
+  --cal-ok: oklch(0.77 0.13 162);
+  --cal-gap: oklch(0.704 0.191 22.216);
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --cal-hatch: rgba(255, 255, 255, 0.38);
+  --cal-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 32px -12px rgba(0, 0, 0, 0.6);
 }
 
 @keyframes highlight-fade {
@@ -215,10 +214,8 @@
     background-position: right 0.75rem center;
     background-size: 1rem 1rem;
   }
-  @media (prefers-color-scheme: dark) {
-    select {
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-    }
+  .dark select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   }
   button,
   [role="button"] {

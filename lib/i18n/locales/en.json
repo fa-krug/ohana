@@ -44,7 +44,9 @@
     "signOut": "Sign out",
     "openMenu": "Open menu",
     "assistant": "Assistant",
-    "toggleAssistant": "Assistant (Ctrl/⌘+J)"
+    "toggleAssistant": "Assistant (Ctrl/⌘+J)",
+    "collapseSidebar": "Collapse sidebar (Ctrl/⌘+B)",
+    "expandSidebar": "Expand sidebar (Ctrl/⌘+B)"
   },
   "assistant": {
     "title": "Assistant",
@@ -461,7 +463,22 @@
     "tabFeed": "Calendar feed",
     "tabFinance": "Finance",
     "tabHousehold": "Household",
-    "tabAi": "AI"
+    "tabAi": "AI",
+    "tabData": "Data",
+    "data": {
+      "export": "Export",
+      "exportHelp": "The whole family as a JSON file: the calendar of all years (entry types, entries, notes) and the finances (accounts, categories, transactions, settings). Viewers can export too.",
+      "exportFailed": "Couldn't export the family: {{msg}}",
+      "import": "Import",
+      "importHelp": "Replaces the calendar (all years) and the finances of this family with those of an exported file; the name, the members and the links stay. The finance page shows the imported finances the next time it opens. Can't be undone – export first to keep a copy.",
+      "invalid": "This isn't a family export (a .json file from Settings → Data → Export).",
+      "confirmTitle": "Replace the family's data?",
+      "confirm": "Replace the calendar and the finances of “{{name}}” with the contents of “{{file}}”? All years, entry types, entries, notes and finances are overwritten; the name, the members and the links stay. This can't be undone.",
+      "replace": "Replace",
+      "imported": "Imported.",
+      "importFailed": "Couldn't import the file: {{msg}}",
+      "waitSaving": "Changes are still being saved – try again in a moment."
+    }
   },
   "account": {
     "title": "Account",
@@ -476,6 +493,13 @@
     "usePasskeyInstead": "Confirm with a passkey instead",
     "emailUpdated": "Email updated.",
     "language": "Language",
+    "theme": "Appearance",
+    "themeHint": "Applies to this device only.",
+    "themes": {
+      "system": "Like the system",
+      "light": "Light",
+      "dark": "Dark"
+    },
     "security": "Sign-in",
     "passkeys": "Passkeys",
     "passkeysHint": "Sign in with your fingerprint, face or device PIN. Add one per device.",

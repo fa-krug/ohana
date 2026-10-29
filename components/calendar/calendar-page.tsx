@@ -140,7 +140,7 @@ function Planner() {
         e.preventDefault();
         store.select(`${store.year}-01-01`, `${store.year}-12-31`);
       } else if (mod || e.altKey) {
-        return; // copy / cut / paste are handled by the clipboard events; Ctrl/⌘+J by the shell
+        return; // copy / cut / paste are handled by the clipboard events; Ctrl/⌘+J and +B by the shell
       } else if (e.key === "Delete" || e.key === "Backspace") {
         e.preventDefault();
         store.clearSelectedDays();

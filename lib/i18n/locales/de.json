@@ -44,7 +44,9 @@
     "signOut": "Abmelden",
     "openMenu": "Menü öffnen",
     "assistant": "Assistent",
-    "toggleAssistant": "Assistent (Strg/⌘+J)"
+    "toggleAssistant": "Assistent (Strg/⌘+J)",
+    "collapseSidebar": "Seitenleiste einklappen (Strg/⌘+B)",
+    "expandSidebar": "Seitenleiste ausklappen (Strg/⌘+B)"
   },
   "assistant": {
     "title": "Assistent",
@@ -461,7 +463,22 @@
     "tabFeed": "Kalender-Abo",
     "tabFinance": "Finanzen",
     "tabHousehold": "Haushalt",
-    "tabAi": "KI"
+    "tabAi": "KI",
+    "tabData": "Daten",
+    "data": {
+      "export": "Exportieren",
+      "exportHelp": "Die ganze Familie als JSON-Datei: der Kalender aller Jahre (Eintragsarten, Einträge, Notizen) und die Finanzen (Konten, Kategorien, Buchungen, Einstellungen). Auch Betrachter können exportieren.",
+      "exportFailed": "Die Familie konnte nicht exportiert werden: {{msg}}",
+      "import": "Importieren",
+      "importHelp": "Ersetzt den Kalender (alle Jahre) und die Finanzen dieser Familie durch die einer exportierten Datei; Name, Mitglieder und Links bleiben. Die Finanzseite zeigt die importierten Finanzen, sobald sie das nächste Mal geöffnet wird. Lässt sich nicht rückgängig machen – vorher exportieren, um eine Kopie zu behalten.",
+      "invalid": "Das ist kein Familien-Export (eine .json-Datei aus Einstellungen → Daten → Exportieren).",
+      "confirmTitle": "Daten der Familie ersetzen?",
+      "confirm": "Kalender und Finanzen von „{{name}}“ durch den Inhalt von „{{file}}“ ersetzen? Alle Jahre, Eintragsarten, Einträge, Notizen und Finanzen werden überschrieben; Name, Mitglieder und Links bleiben. Das lässt sich nicht rückgängig machen.",
+      "replace": "Ersetzen",
+      "imported": "Importiert.",
+      "importFailed": "Die Datei konnte nicht importiert werden: {{msg}}",
+      "waitSaving": "Änderungen werden noch gespeichert – versuch es gleich noch einmal."
+    }
   },
   "account": {
     "title": "Konto",
@@ -476,6 +493,13 @@
     "usePasskeyInstead": "Stattdessen mit Passkey bestätigen",
     "emailUpdated": "E-Mail geändert.",
     "language": "Sprache",
+    "theme": "Darstellung",
+    "themeHint": "Gilt nur für dieses Gerät.",
+    "themes": {
+      "system": "Wie das System",
+      "light": "Hell",
+      "dark": "Dunkel"
+    },
     "security": "Anmeldung",
     "passkeys": "Passkeys",
     "passkeysHint": "Anmelden mit Fingerabdruck, Gesicht oder Geräte-PIN. Einen pro Gerät hinzufügen.",

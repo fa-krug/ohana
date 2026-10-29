@@ -81,7 +81,9 @@ npm run import-legacy -- --family-planner dump.sql --cookless cookless.db --cook
   language. The page is client-side: `PlannerStore` (`planner-store.ts`: save queue, polling,
   undo/redo, selection) + the imperative `GridView` (`grid.ts`, CSS in `calendar.css`, colors
   `--cal-*` in `globals.css`); per-device prefs in `view-prefs.ts`. Settings has tabs
-  (`components/families/settings-tabs.tsx`: general, household, calendar, feed, finance, ai);
+  (`components/families/settings-tabs.tsx`: general, household, calendar, feed, finance, ai,
+  data: export / import of the family file, `data-settings.tsx`, checks in the browser-safe
+  `lib/calendar/export-file.ts`; family-planner's Clone isn't ported);
   the overview shows `lib/calendar/summary.ts`.
 - **Finance (`lib/finance/`, `components/finance/`):** family-planner's finances. `store.ts`
   is the finance part of its `Store` over Drizzle (`DrizzleFinanceStore`, snake_case rows,
@@ -135,10 +137,14 @@ npm run import-legacy -- --family-planner dump.sql --cookless cookless.db --cook
   `lib/test/assistant.ts` (fake fetch + `lib/test/mock-ai.ts`, a ticking `ChatRunner`);
   `npm run mock-ai` serves the mock for trying it out.
 - **UI:** `components/shell/app-shell.tsx` is the frame (left sidebar with family switcher,
-  modules from `components/shell/modules.ts`, account menu; right assistant panel, `Ctrl/⌘+J`;
-  both are sheets on phones). A module that isn't built yet is served by
+  modules from `components/shell/modules.ts`, account menu; collapsible to an icon rail,
+  `Ctrl/⌘+B`, remembered per device; right assistant panel, `Ctrl/⌘+J`; both are sheets on
+  phones). A module that isn't built yet is served by
   `app/(app)/f/[familyId]/[module]/page.tsx`; a built one gets its own folder, which wins over
-  the dynamic segment; set `ready: true` in `modules.ts` then.
+  the dynamic segment; set `ready: true` in `modules.ts` then. Theme: light / dark / system
+  per device (Account page; `lib/theme.ts`, `theme-client.ts`), applied by a blocking script
+  in the root layout's `<head>` as `.dark` on `<html>` (the `dark:` variant is class-based).
+  The calendar asks before the page is closed while changes are still being saved.
 - **Secrets (`lib/secrets.ts`):** `SecretBox` (port of family-planner's): AES-256-GCM,
   `v1:<base64 iv+ciphertext+tag>`, keyed by `ENCRYPTION_KEY` or else HKDF(`AUTH_SECRET`,
   info "ohana-secrets"). `getSecretBox()` for channel tokens / SMTP passwords and the AI / search keys. Stored secrets never go back to the browser: DTOs say `hasToken`, a blank field on

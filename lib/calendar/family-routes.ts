@@ -9,6 +9,7 @@ import { renameFamily } from "@/lib/families/manage";
 import { exportFinance, parseFinanceImport } from "@/lib/finance/finance";
 import type { FamilyPatch, FamilyRow } from "./store";
 import { type EventRow, eventsByDay, listEvents } from "./events";
+import { EXPORT_FORMAT, EXPORT_VERSION, isExportFormat } from "./export-file";
 import {
   groupEntries,
   listVacation,
@@ -20,13 +21,6 @@ import {
   type VacationData,
   vacationState,
 } from "./vacation";
-
-/** Marks the JSON of GET /families/{id}/export, which POST /families/{id}/import reads back. */
-export const EXPORT_FORMAT = "family-planner";
-/** Files exported before the rename; same content. */
-const OLD_EXPORT_FORMAT = "vacation-planner";
-/** 2 adds the finances; files of version 1 only have the calendar. */
-export const EXPORT_VERSION = 2;
 
 /** Links that rotate: the feed link, and the legacy link (only removed). */
 const LINKS = ["feed", "legacy"] as const;
@@ -79,7 +73,7 @@ export function exportData(
 
 /** Validates an export file. A file without finances (version 1) leaves them as they are. */
 export function parseImport(body: Record<string, unknown>, familyId: string) {
-  if (body.format !== EXPORT_FORMAT && body.format !== OLD_EXPORT_FORMAT) {
+  if (!isExportFormat(body.format)) {
     throw new HttpError(400, "Not a Family Planner export");
   }
   if (body.version !== 1 && body.version !== EXPORT_VERSION) {

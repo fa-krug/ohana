@@ -30,7 +30,15 @@ export function PlannerProvider({
   useEffect(() => store.setI18n({ t, tList, locale }));
   useEffect(() => {
     void store.open();
-    return () => store.close();
+    // Closing or reloading the page while changes are still being saved asks first.
+    const unload = (e: BeforeUnloadEvent) => {
+      if (store.pending) e.preventDefault();
+    };
+    window.addEventListener("beforeunload", unload);
+    return () => {
+      window.removeEventListener("beforeunload", unload);
+      store.close();
+    };
   }, [store]);
   // The assistant changed the calendar: it reloads (after the changes of its own are saved).
   useAssistantChanges(familyId, (kind) => {

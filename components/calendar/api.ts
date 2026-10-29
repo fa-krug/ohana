@@ -56,6 +56,11 @@ export const api = {
     request<EntryType[]>("POST", `${fam(id)}/types/copy`, { from, to }),
   applyOps: (id: string, ops: EntryOp[]) => request<unknown>("POST", `${fam(id)}/entries`, { ops }),
   applyNoteOps: (id: string, ops: NoteOp[]) => request<unknown>("POST", `${fam(id)}/notes`, { ops }),
+  /** The whole family (all years, finances) as an export file. */
+  exportFamily: (id: string) => request<Record<string, unknown>>("GET", `${fam(id)}/export`),
+  /** Replaces the calendar and the finances with an export file's; answers like getFamily. */
+  importFamily: (id: string, year: number, file: unknown) =>
+    request<FamilyState>("POST", `${fam(id)}/import?year=${year}`, file),
 };
 
 /** The public feed URL of a family (its feed id, never the family id). */
