@@ -3,6 +3,7 @@ import {
   index,
   integer,
   primaryKey,
+  real,
   sqliteTable,
   text,
   uniqueIndex,
@@ -76,6 +77,10 @@ export const rateLimits = sqliteTable(
 export const families = sqliteTable("families", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
+  /** Home address (geocoded with Photon): the origin for distances, e.g. to a practice. */
+  homeAddress: text("home_address"),
+  homeLat: real("home_lat"),
+  homeLng: real("home_lng"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });
@@ -114,3 +119,8 @@ export const invites = sqliteTable(
   },
   (t) => ({ invitesCodeIdx: uniqueIndex("invites_code_idx").on(t.code) }),
 );
+
+// ---- modules (one file each) ----
+
+export * from "./schema/notifications";
+export * from "./schema/appointments";

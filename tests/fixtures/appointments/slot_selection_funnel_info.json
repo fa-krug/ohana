@@ -1,0 +1,252 @@
+{
+ "data": {
+  "profile": {
+   "id": 1179748,
+   "name_with_title_and_determiner": "Frau Stephanie Grüner",
+   "name_with_title": "Frau Stephanie Grüner",
+   "subtitle": "Kinder- und Jugendlichenpsychotherapeutin",
+   "picture_url": "u8kxoh4zyyo8eokk9knl",
+   "ineligible_to_mps": false,
+   "speciality": {
+    "id": 3173,
+    "name": "Kinder- und Jugendlichenpsychotherapeut",
+    "created_at": "2018-11-01T16:23:26.456+01:00",
+    "updated_at": "2024-06-06T19:35:21.706+02:00",
+    "position": null,
+    "title_allowed": false,
+    "alternate_name": "Kinder- und Jugendlichenpsychotherapie",
+    "short_name": null,
+    "name_en": null,
+    "alternate_name_en": null,
+    "allow_multiple_booking": true,
+    "deleted_at": null,
+    "short_name_en": null,
+    "ref_motive_search_enabled": false,
+    "labels": {
+     "plural": "Kinder- und Jugendlichenpsychotherapeuten",
+     "singular": "Kinder- und Jugendlichenpsychotherapeut",
+     "plural_female": "Kinder- und Jugendlichenpsychotherapeutinnen",
+     "singular_female": "Kinder- und Jugendlichenpsychotherapeutin"
+    },
+    "seo_top": false,
+    "country": "de",
+    "slug": "kinder-und-jugendlichenpsychotherapeut",
+    "regulation_sectors_search_enabled": true,
+    "kind": "medical",
+    "self_onboarding": false,
+    "searchable_by": "mapping",
+    "salesforce_id": null,
+    "hidden": false,
+    "practitioner_identity_verification_required": true,
+    "prospect_name": null,
+    "salesforce_slug": "PSYCHOTHERAPEUT_DE",
+    "data_sub_group": "psychologists",
+    "recall_friendly": true,
+    "covid_vaccination_eligible": false,
+    "availabilities_first_in_search": false,
+    "features_enabled": [
+     "enroll_in_verification_funnel"
+    ],
+    "translations": {
+     "en": {
+      "name": "Pediatric psychotherapist",
+      "labels": {
+       "plural": "Pediatric psychotherapists",
+       "singular": "Pediatric psychotherapist",
+       "plural_female": "Pediatric psychotherapists",
+       "singular_female": "Pediatric psychotherapist"
+      },
+      "alternate_name": "Pediatric psychotherapy"
+     },
+     "fr": {
+      "name": "Psychothérapeute pour enfants et adolescents",
+      "labels": {
+       "plural": "Psychothérapeutes pour enfants et adolescents",
+       "singular": "Psychothérapeute pour enfants et adolescents",
+       "plural_female": "Psychothérapeutes pour enfants et adolescents",
+       "singular_female": "Psychothérapeute pour enfants et adolescents"
+      },
+      "alternate_name": "Psychothérapie pour enfants et adolescents"
+     },
+     "it": {
+      "name": "Psicoterapeuta pediatrico e adolescenziale",
+      "labels": {
+       "plural": "Psicoterapeuti pediatrici e adolescenziali",
+       "singular": "Psicoterapeuta pediatrico e adolescenziale",
+       "plural_female": "Psicoterapeute pediatriche e adolescenziali",
+       "singular_female": "Psicoterapeuta pediatrica e adolescenziale"
+      },
+      "alternate_name": "Psicoterapia pediatrica e adolescenziale"
+     }
+    }
+   },
+   "organization": false,
+   "organization_status_id": null,
+   "redirect_url": "/kinder-und-jugendlichenpsychotherapeut/muenchen",
+   "place_slug": "muenchen",
+   "privacy_link": null,
+   "bookable_on_request_enabled": false,
+   "country": "de",
+   "self_payer_booking_enabled": true,
+   "ssn_enabled": false,
+   "telehealth_enabled": false
+  },
+  "specialities": [
+   {
+    "id": 3173,
+    "kind": "medical",
+    "slug": "kinder-und-jugendlichenpsychotherapeut",
+    "name": "Kinder- und Jugendlichenpsychotherapeut"
+   }
+  ],
+  "visit_motive_categories": [],
+  "visit_motives": [
+   {
+    "id": 10840028,
+    "visit_motive_category_id": null,
+    "organization_id": 276329,
+    "speciality_id": 3173,
+    "ref_visit_motive_id": null,
+    "position": 4,
+    "telehealth": false,
+    "name": "Folgetermin für STAMMPATIENTEN",
+    "new_patient_restrictions": [
+     {
+      "insurance_sector": "all",
+      "agenda_ids": [
+       1697590
+      ]
+     }
+    ],
+    "age_referral_restrictions": [
+     {
+      "insurance_sector": "all",
+      "agenda_ids": [
+       1697590
+      ],
+      "age": {
+       "operator": "gt",
+       "age": 22,
+       "unit": "years"
+      }
+     }
+    ],
+    "configurations": null
+   },
+   {
+    "id": 10964510,
+    "visit_motive_category_id": null,
+    "organization_id": 276329,
+    "speciality_id": 3173,
+    "ref_visit_motive_id": null,
+    "position": 5,
+    "telehealth": false,
+    "name": "Elterntermin für STAMMPATIENTEN",
+    "new_patient_restrictions": [
+     {
+      "insurance_sector": "all",
+      "agenda_ids": [
+       1697590
+      ]
+     }
+    ],
+    "age_referral_restrictions": [
+     {
+      "insurance_sector": "all",
+      "agenda_ids": [
+       1697590
+      ],
+      "age": {
+       "operator": "gt",
+       "age": 22,
+       "unit": "years"
+      }
+     }
+    ],
+    "configurations": null
+   },
+   {
+    "id": 10840027,
+    "visit_motive_category_id": null,
+    "organization_id": 276329,
+    "speciality_id": 3173,
+    "ref_visit_motive_id": null,
+    "position": 6,
+    "telehealth": false,
+    "name": "NUR LRS und IQ Diagnostik (Leistungstest (IQ), Lese-u. Rechtschreibtestung), Bitte 3 Termine buchen, KEIN Therapieplatz",
+    "new_patient_restrictions": [],
+    "age_referral_restrictions": [
+     {
+      "insurance_sector": "all",
+      "agenda_ids": [
+       1697590
+      ],
+      "age": {
+       "operator": "gt",
+       "age": 22,
+       "unit": "years"
+      }
+     }
+    ],
+    "configurations": null
+   }
+  ],
+  "agendas": [
+   {
+    "id": 1697590,
+    "booking_disabled": false,
+    "booking_temporary_disabled": false,
+    "anonymous": false,
+    "hide_practitioner": false,
+    "organization_id": 276329,
+    "visit_motive_ids_by_practice_id": {
+     "550293": [
+      10840028,
+      10964510,
+      10840027
+     ]
+    },
+    "visit_motive_ids": [
+     10840028,
+     10964510,
+     10840027
+    ],
+    "practice_id": 550293,
+    "speciality_id": 3173,
+    "practitioner_id": 64729827,
+    "patient_base_id": 444330,
+    "insurance_sector_enabled": true,
+    "equipment_agendas_required": false,
+    "landline_number": null
+   }
+  ],
+  "places": [
+   {
+    "id": "practice-550293",
+    "name": "Praxis für Kinder - u. Jugendlichenpsychotherapie",
+    "city": "München",
+    "zipcode": "81375",
+    "latitude": 48.1164982,
+    "longitude": 11.4772101,
+    "address": "Waldwiesenstraße 50",
+    "practice_ids": [
+     550293
+    ],
+    "slug": "muenchen"
+   }
+  ],
+  "practitioners": [
+   {
+    "id": 64729827,
+    "profile_id": 1179748,
+    "name": "Grüner",
+    "name_with_title_and_determiner": "Frau Stephanie Grüner",
+    "name_with_title": "Frau Stephanie Grüner",
+    "speciality": "Kinder- und Jugendlichenpsychotherapeutin",
+    "cloudinary_public_id": "u8kxoh4zyyo8eokk9knl"
+   }
+  ],
+  "user_never_made_patient_request": true,
+  "insurance_step_options": []
+ }
+}

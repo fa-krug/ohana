@@ -6,6 +6,9 @@ import { requireFamily } from "@/lib/families/page";
 import { getI18n } from "@/lib/i18n/server";
 import { PageHeader } from "@/components/page-header";
 import { FamilySettings } from "@/components/families/family-settings";
+import { HomeAddressCard } from "@/components/families/home-address-card";
+import { NotificationsCard } from "@/components/families/notifications-card";
+import { listChannels } from "@/lib/notifications/channels";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +35,14 @@ export default async function SettingsPage({ params }: { params: Promise<{ famil
               }))
             : []
         }
-      />
+      >
+        <HomeAddressCard
+          familyId={family.id}
+          home={{ address: family.homeAddress, lat: family.homeLat, lng: family.homeLng }}
+          editor={role === "editor"}
+        />
+        {role === "editor" && <NotificationsCard familyId={family.id} channels={listChannels(db, { id: user.id }, familyId)} />}
+      </FamilySettings>
     </>
   );
 }

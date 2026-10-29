@@ -1,0 +1,132 @@
+{
+ "total": 43,
+ "healthcareProviders": [
+  {
+   "cloudinaryPublicId": "u8kxoh4zyyo8eokk9knl",
+   "id": "profile-1179748;practice-550293;kinder-jugendpsychiatrie-und-psychotherapie-2",
+   "languages": [
+    "de",
+    "gb"
+   ],
+   "link": "/kinder-und-jugendlichenpsychotherapeut/muenchen/stephanie-gruener?pid=practice-550293",
+   "location": {
+    "address": "Waldwiesenstraße 50",
+    "city": "München",
+    "country": "de",
+    "lat": 48.1164982,
+    "lng": 11.4772101,
+    "zipcode": "81375",
+    "distanceInMeters": 2579.92
+   },
+   "name": "Grüner",
+   "references": {
+    "id": 1179748,
+    "type": "public_profile",
+    "practiceId": 550293
+   },
+   "services": [
+    "profile",
+    "onlineBooking"
+   ],
+   "administrativeArea": [],
+   "exactMatch": false,
+   "firstName": "Stephanie",
+   "gender": "female",
+   "matchedVisitMotive": {
+    "agendaIds": [
+     1697590
+    ],
+    "allowNewPatients": true,
+    "fee": null,
+    "insuranceSector": {
+     "split": false,
+     "type": null
+    },
+    "name": "NUR LRS und IQ Diagnostik (Leistungstest (IQ), Lese-u. Rechtschreibtestung), Bitte 3 Termine buchen, KEIN Therapieplatz",
+    "visitMotiveId": 10840027
+   },
+   "minimumFee": null,
+   "onlineBooking": {
+    "agendaIds": [
+     1697590
+    ],
+    "telehealth": false,
+    "topSpecialities": [],
+    "bookableOrganizationSpecialities": []
+   },
+   "organizationStatus": null,
+   "paymentMeans": [],
+   "regulationSector": "akzeptiert_gesetzlich_versicherte_patient",
+   "speciality": {
+    "name": "Kinder- und Jugendlichenpsychotherapeutin",
+    "slug": "kinder-und-jugendlichenpsychotherapeut"
+   },
+   "title": "",
+   "type": "INDIVIDUAL_PRACTITIONER"
+  },
+  {
+   "cloudinaryPublicId": "default_doctor_avatar_f",
+   "id": "profile-1590264;practice-792413;kinder-jugendpsychiatrie-und-psychotherapie-2",
+   "languages": [],
+   "link": "/psychiatrie-und-psychotherapie/muenchen/anika-zenk?pid=practice-792413",
+   "location": {
+    "address": "Landsberger Straße 480",
+    "city": "München",
+    "country": "de",
+    "lat": 48.14667370000001,
+    "lng": 11.4640452,
+    "zipcode": "81241",
+    "distanceInMeters": 4637.93
+   },
+   "name": "Zenk",
+   "references": {
+    "id": 1590264,
+    "type": "public_profile",
+    "practiceId": 792413
+   },
+   "services": [
+    "profile",
+    "onlineBooking"
+   ],
+   "administrativeArea": [],
+   "exactMatch": false,
+   "firstName": "Anika ",
+   "gender": "female",
+   "matchedVisitMotive": {
+    "agendaIds": [
+     2431123
+    ],
+    "allowNewPatients": true,
+    "fee": null,
+    "insuranceSector": {
+     "split": false,
+     "type": null
+    },
+    "name": "Erstuntersuchung Neupatient:in (Erwachsene)",
+    "visitMotiveId": 15252821
+   },
+   "minimumFee": null,
+   "onlineBooking": {
+    "agendaIds": [
+     2431123
+    ],
+    "telehealth": false,
+    "topSpecialities": [],
+    "bookableOrganizationSpecialities": []
+   },
+   "organizationStatus": null,
+   "paymentMeans": [],
+   "regulationSector": null,
+   "speciality": {
+    "name": "Psychiaterin und Psychotherapeutin",
+    "slug": "psychiatrie-und-psychotherapie"
+   },
+   "title": "",
+   "type": "INDIVIDUAL_PRACTITIONER"
+  }
+ ],
+ "searchedLocation": {
+  "lat": 48.10681601455674,
+  "lng": 11.445630695351348
+ }
+}

@@ -5,8 +5,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Ohana** is one Next.js app for a family: calendar, finance, meals, doctor appointments and an
 AI assistant. It replaces `fa-krug/family-planner`, `fa-krug/cookless` and
 `fa-krug/findmyappointment`; [docs/plan.md](docs/plan.md) has the decisions, what comes from
-which app, and the phases. Phase 0 (accounts, families, admin, shell, worker, deploy) is done;
-the modules are placeholders until their phase.
+which app, and the phases. Phase 0 (accounts, families, admin, shell, worker, deploy) and
+phase 5 (appointments, notification channels) are done; the other modules are placeholders
+until their phase.
 
 ## Commands
 
@@ -27,10 +28,11 @@ npm run setup-link -- <email>   # print a new setup link for an account
   (`components/ui/`), Drizzle ORM over SQLite (`better-sqlite3`, WAL). Schema in
   `lib/db/schema.ts`, migrations in `drizzle/`.
 - **Two processes, one image:** `docker-entrypoint.sh web` migrates then serves;
-  `docker-entrypoint.sh worker` runs `worker/index.ts` (waits for the migrations, then ticks:
-  `lib/maintenance/cleanup.ts`, the nightly `lib/maintenance/backup.ts`). Long-running jobs
-  of later phases (appointment searches, assistant turns, notifications) belong in the worker,
-  never in a request.
+  `docker-entrypoint.sh worker` runs `worker/index.ts` (waits for the migrations, then loops
+  every `APPT_TICK_SECONDS` (15): the appointment `SearchRunner`, and every
+  `WORKER_TICK_SECONDS` (60) `lib/maintenance/cleanup.ts` and the nightly
+  `lib/maintenance/backup.ts`). Long-running jobs (appointment searches, assistant turns,
+  notifications) belong in the worker, never in a request.
 - **Auth (`lib/auth/`):** passkeys (`@simplewebauthn`, ceremony state in a signed cookie) and
   argon2id passwords; family-planner's `pbkdf2-sha256$…` hashes are still verified and replaced
   at the next sign-in. Sessions, API tokens and setup links are rows of `auth_tokens`
@@ -54,13 +56,48 @@ npm run setup-link -- <email>   # print a new setup link for an account
   both are sheets on phones). A module that isn't built yet is served by
   `app/(app)/f/[familyId]/[module]/page.tsx`; a built one gets its own folder, which wins over
   the dynamic segment; set `ready: true` in `modules.ts` then.
+- **Secrets (`lib/secrets.ts`):** `SecretBox` (port of family-planner's): AES-256-GCM,
+  `v1:<base64 iv+ciphertext+tag>`, keyed by `ENCRYPTION_KEY` or else HKDF(`AUTH_SECRET`,
+  info "ohana-secrets"). `getSecretBox()` for channel tokens / SMTP passwords (and the AI keys
+  later). Stored secrets never go back to the browser: DTOs say `hasToken`, a blank field on
+  edit keeps the stored value.
+- **Notifications (`lib/notifications/`), family-wide:** `notification_channels` (Pushbullet,
+  Pushover, Telegram, email/SMTP; `token` sealed). `channels.ts` CRUD (editors),
+  `notifyFamily(db, familyId, message, { channelIds?, send? })` in `index.ts` sends to the
+  enabled channels (`channelIds: []` = none, omitted = all); a failing channel is logged and
+  counted, never thrown. `send.ts` holds the network senders (untested); `locale.ts` picks the
+  family's language (its longest-standing editor's). UI: `components/families/notifications-card.tsx`
+  in Settings (editors only), with "Test".
+- **Appointments (`lib/appointments/`)**, port of findmyappointment: `doctolib/` (JSON client,
+  profile cache), `jameda/` (HTML client, offline term list), `sources/` (fan-out, dedup,
+  ignore keys), `pipeline.ts` (`runPipeline`: never throws once the run exists; per-provider
+  failures are skipped, a failed source fails the run), `notify.ts` (notify only on change,
+  or with `notifyOnlyEarlier` against `earliestSeen`, advanced only after a successful send;
+  deep links to `/f/<id>/appointments/<searchId>[/slots/<resultId>]`), `searches.ts` (CRUD,
+  ignore, `requestRun`), `serialize.ts`, `scheduling.ts` (interval + jitter, cron matcher).
+  Every outbound request has a timeout (`http.ts`). **Scheduling lives in the worker**
+  (`tasks.ts`, `runner.ts`): `dueSearches` + `claimSearch` (a compare-and-swap UPDATE that
+  takes a lease `locked_until`, clears `run_requested_at` and advances `next_run_at`, so no
+  search runs twice), `runClaimed` (pipeline → notify → re-anchor → release), runs are started
+  without awaiting (max `APPT_MAX_CONCURRENT`); stale RUNNING runs are marked interrupted at
+  start, runs older than 30 days pruned daily. "Run now" only sets `run_requested_at`. Tables
+  `appt_*` (`lib/db/schema/appointments.ts`); the family's home address (`families.home_*`,
+  `lib/families/home.ts`, Photon-geocoded) gives the distance on the slot page. Pages under
+  `app/(app)/f/[familyId]/appointments/`, actions in `app/actions/appointments.ts`,
+  autocomplete routes under `app/api/v1/families/[familyId]/` (members; session or API token).
+- **Schema files:** `lib/db/schema.ts` holds accounts + families and re-exports one file per
+  module from `lib/db/schema/` (`notifications.ts`, `appointments.ts`).
+- **Family settings:** `FamilySettings` renders its `children` before "Leave or delete": each
+  module adds its own section component there (see `settings/page.tsx`).
 - **i18n:** `lib/i18n/locales/{en,de}.json`, `useT()` on the client, `getI18n()` on the server.
   Tests check that both files have the same keys and that every literal `t("…")` key exists.
 
 ## Conventions
 
 - Tests use an in-memory database with all migrations (`lib/test/db.ts`), factories in
-  `lib/test/factories.ts`, and a software passkey (`lib/test/authenticator.ts`) so WebAuthn
-  flows run against the real verification.
+  `lib/test/factories.ts` (appointments: `lib/test/appointments.ts`), fixtures in
+  `tests/fixtures/`, and a software passkey (`lib/test/authenticator.ts`) so WebAuthn flows
+  run against the real verification. Nothing in tests touches the network (fake clients,
+  injected `send` / sources).
 - Keep env names clear of Vite/Vitest's: the public URL is `APP_URL` (Vitest sets `BASE_URL`).
 - Deploy: pushing to `main` builds and redeploys (see the `deploy` skill and README).
