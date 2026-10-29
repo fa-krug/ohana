@@ -59,6 +59,9 @@ export const chats = sqliteTable(
     queue: text("queue").notNull().default("[]"),
     /** Counts the changes of the items. */
     rev: integer("rev").notNull().default(0),
+    /** When someone last followed the chat (the app's open stream), for the "assistant turn
+     *  finished" notification: none while the user is looking. */
+    seenAt: integer("seen_at", { mode: "timestamp_ms" }),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
   },

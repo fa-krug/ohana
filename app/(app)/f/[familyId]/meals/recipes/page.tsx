@@ -1,8 +1,10 @@
 import { Suspense } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { requireFamily } from "@/lib/families/page";
 import { getI18n } from "@/lib/i18n/server";
+import { db } from "@/lib/db";
+import { mealsAi } from "@/lib/meals/ai/status";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RecipeListSkeleton } from "@/components/meals/recipes/recipe-list-skeleton";
@@ -30,18 +32,30 @@ export default async function RecipesPage({
   const deletedId = typeof sp.deleted === "string" ? sp.deleted : undefined;
   const highlightId = typeof sp.new === "string" ? sp.new : undefined;
   const canEdit = role === "editor";
+  const ai = canEdit && mealsAi(db, familyId).generate;
 
   return (
     <div className="flex flex-1 flex-col gap-4">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">{t("meals.recipes.title")}</h1>
         {canEdit && (
-          <Button asChild size="sm">
-            <Link href={`${base}/recipes/new?list=${list}`}>
-              <Plus size={16} />
-              {t("meals.recipes.addRecipe")}
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            {ai && (
+              <Button asChild size="sm" variant="outline">
+                <Link href={`${base}/recipes/generate`}>
+                  <Sparkles size={16} />
+                  <span className="hidden sm:inline">{t("meals.generate.button")}</span>
+                  <span className="sm:hidden">{t("meals.generate.short")}</span>
+                </Link>
+              </Button>
+            )}
+            <Button asChild size="sm">
+              <Link href={`${base}/recipes/new?list=${list}`}>
+                <Plus size={16} />
+                {t("meals.recipes.addRecipe")}
+              </Link>
+            </Button>
+          </div>
         )}
       </div>
 

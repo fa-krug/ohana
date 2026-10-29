@@ -10,7 +10,8 @@ const EVENT = "ohana:assistant-change";
 
 export interface ChangeDetail {
   familyId: string;
-  /** What changed: entries | notes | types | categories | transactions | benchmark | … */
+  /** What changed: entries | notes | types | events | categories | transactions | benchmark |
+   *  recipes | plan | shopping | appointments */
   kind: string;
 }
 
@@ -35,8 +36,10 @@ export function useAssistantChanges(familyId: string, fn: (kind: string) => void
 }
 
 /** Which module's data a change touches. */
-export function moduleOf(kind: string): "calendar" | "finance" | "other" {
-  if (kind === "entries" || kind === "notes" || kind === "types") return "calendar";
+export function moduleOf(kind: string): "calendar" | "finance" | "meals" | "appointments" | "other" {
+  if (kind === "entries" || kind === "notes" || kind === "types" || kind === "events") return "calendar";
+  if (kind === "recipes" || kind === "plan" || kind === "shopping") return "meals";
+  if (kind === "appointments") return "appointments";
   if (kind === "categories" || kind === "transactions" || kind === "benchmark") return "finance";
   return "other";
 }

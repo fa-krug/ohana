@@ -20,6 +20,20 @@
 //                                            slowly": half a minute of steps)
 //   "keep looking, then fail"             -> get_calendar, then fails (503)
 //   "calendar, then fail 2 times"         -> get_calendar, fails twice (503), then answers
+//   "recipes" / "rezepte"                 -> list_recipes ("... with <tag>": tags)
+//   "add recipe <title>"                  -> save_recipe (tomatoes, one step)
+//   "meal plan" / "essensplan"            -> get_meal_plan
+//   "set up a meal plan"                  -> plan_meals setup (1 week, shopping on Saturday)
+//   "plan next week [without <tag>]"      -> plan_meals next (excludeTags)
+//   "shopping list" / "einkaufsliste"     -> get_shopping_list
+//   "buy <n> <unit> <name>"               -> add_shopping_items
+//   "tick <name>"                         -> tick_shopping_items
+//   "find a <speciality> before <day>"    -> create_appointment_search
+//   "appointment searches"                -> list_appointment_searches
+//   "book <resultId> of <search>"         -> book_appointment_slot
+//   "events"                              -> list_events for this month
+// Asked for recipes (the meals generator's prompt) it answers with that many recipes as JSON in
+// a Markdown block; POST /images/generations answers with a small PNG (b64_json).
 // Asked to sort transactions into categories (the categorize prompt), it picks the category
 // whose id or name occurs in a row's payee or description, searching the web once for a payee
 // it can't place.
@@ -122,6 +136,35 @@ const failed = new Map<string, number>();
 
 const TINY_WINDOW = 10_000;
 
+/** A 16×16 orange PNG: the mock's "photo". */
+export const MOCK_PNG =
+  "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAGUlEQVR4nGO4U6FBEmIY1VAxGkp3hmvSAAC5KnwQ90HjsgAAAABJRU5ErkJggg==";
+
+/** The recipe generator's prompt: `count` recipes as JSON in a Markdown block (the first
+ *  required tag, if any, on each). */
+function recipes(stream: boolean, prompt: string) {
+  const count = Number(/Generate exactly (\d+) recipes/.exec(prompt)?.[1] ?? 1);
+  const required = /REQUIRED TAGS[^\n]*\n([^\n]+)/.exec(prompt)?.[1]?.split(",")[0]?.trim();
+  const wish = /ADDITIONAL REQUIREMENTS:\n([^\n]+)/.exec(prompt)?.[1]?.trim();
+  const de = /in German\)/.test(prompt);
+  const list = Array.from({ length: count }, (_, i) => ({
+    title: `${de ? "Mock-Rezept" : "Mock Recipe"} ${i + 1}${wish ? ` (${wish})` : ""}`,
+    default_servings: 2,
+    prep_time_minutes: 10,
+    cook_time_minutes: 20 + i,
+    leftover_days: 1,
+    ingredients: [
+      { name_en: "Tomato", name_de: "Tomate", category: "PRODUCE", quantity: 200 + i, unit_abbreviation: "g", order: 0 },
+      { name_en: "Mock Herb", name_de: "Mockkraut", category: "PRODUCE", quantity: "1", unit_abbreviation: "Stk", order: 1 },
+      { name_en: "Bad", quantity: -1, unit_abbreviation: "g" },
+    ],
+    manual_steps: [{ step_number: 1, instruction: "Chop everything." }, { step_number: 2, instruction: "Cook it." }],
+    machine_steps: [],
+    tag_names_en: required ? [required] : [],
+  }));
+  return reply(stream, "Here you go:\n```json\n" + JSON.stringify(list, null, 1) + "\n```");
+}
+
 /** How often the conversation looked at the calendar: in the summary, and after it. */
 function looks(messages: Msg[]) {
   const before = messages.map((m) => /Looked (\d+) times/.exec(textOf(m.content))?.[1])
@@ -138,6 +181,11 @@ export async function mockAi(req: Request): Promise<Response> {
         id: "mock-tiny",
       }],
     });
+  }
+  if (req.method === "POST" && path === "/images/generations") {
+    const body = await req.json();
+    if (!body.model || !body.prompt) return Response.json({ error: { message: "model and prompt are required" } }, { status: 400 });
+    return Response.json({ created: 0, data: [{ b64_json: MOCK_PNG }] });
   }
   if (req.method !== "POST" || path !== "/chat/completions") {
     return Response.json({ error: { message: "Not found" } }, { status: 404 });
@@ -189,6 +237,9 @@ async function respond(req: Request, body: any): Promise<Response> {
     const before = Number(/Looked (\d+) times/.exec(input)?.[1] ?? 0);
     const n = before + (input.match(/^Result of get_calendar/gm)?.length ?? 0);
     return reply(stream, `Looked ${n} times. Condensed: ${input.length} characters.`);
+  }
+  if (textOf(messages[0]?.content).startsWith("You are a professional recipe creator")) {
+    return recipes(stream, textOf(messages[0]?.content));
   }
   if (system.startsWith("You sort bank transactions into categories.")) {
     return categorize(
@@ -252,6 +303,14 @@ async function respond(req: Request, body: any): Promise<Response> {
       ? `${result.groupCount} groups, ${result.total.expenseCents / 100} spent.`
       : result.results
       ? `I found ${result.results.length} results, e.g. ${result.results[0]?.title ?? "nothing"}.`
+      : result.ok === true && result.title
+      ? `Done: “${result.title}”.`
+      : result.ok === true && result.iterationId
+      ? `Planned ${result.meals.length} meals from ${result.from}.`
+      : result.ok === true && result.name
+      ? `Search “${result.name}” is set up.`
+      : result.ok === true
+      ? "Done."
       : result.title !== undefined
       ? `The page is called “${result.title}”.`
       : result.incomeCents !== undefined
@@ -284,6 +343,66 @@ async function respond(req: Request, body: any): Promise<Response> {
         }],
       },
     });
+  }
+  const recipe = /^add recipe (.+)$/i.exec(text);
+  if (recipe && tools.has("save_recipe")) {
+    return reply(stream, "", {
+      name: "save_recipe",
+      args: {
+        title: recipe[1],
+        servings: 2,
+        ingredients: [{ name: "Tomato", quantity: 200, unit: "g" }],
+        steps: ["Cook the tomatoes."],
+      },
+    });
+  }
+  if (/set up a meal plan/i.test(text) && tools.has("plan_meals")) {
+    return reply(stream, "", { name: "plan_meals", args: { action: "setup", weeks: 1, shoppingDays: ["Saturday"] } });
+  }
+  const planNext = /plan next week(?: without (\S+))?/i.exec(text);
+  if (planNext && tools.has("plan_meals")) {
+    return reply(stream, "", {
+      name: "plan_meals",
+      args: { action: "next", ...(planNext[1] ? { excludeTags: [planNext[1]] } : {}) },
+    });
+  }
+  if (/meal plan|essensplan/.test(lower)) return reply(stream, "", { name: "get_meal_plan", args: {} });
+  const buy = /^buy (\d+) (\S+) (.+)$/i.exec(text);
+  if (buy && tools.has("add_shopping_items")) {
+    return reply(stream, "", {
+      name: "add_shopping_items",
+      args: { items: [{ name: buy[3], quantity: Number(buy[1]), unit: buy[2] }] },
+    });
+  }
+  const tick = /^tick (.+)$/i.exec(text);
+  if (tick && tools.has("tick_shopping_items")) {
+    return reply(stream, "", { name: "tick_shopping_items", args: { items: [tick[1]], checked: true } });
+  }
+  if (/shopping list|einkaufsliste/.test(lower)) return reply(stream, "", { name: "get_shopping_list", args: {} });
+  const recipesWith = /^(?:recipes|rezepte)(?: with (.+))?$/i.exec(text);
+  if (recipesWith) {
+    return reply(stream, "", { name: "list_recipes", args: recipesWith[1] ? { tags: [recipesWith[1]] } : {} });
+  }
+  const find = /find an? (.+?) before (\d{4}-\d{2}-\d{2})/i.exec(text);
+  if (find && tools.has("create_appointment_search")) {
+    return reply(stream, "I'll set up a search.", {
+      name: "create_appointment_search",
+      args: { speciality: find[1], before: find[2] },
+    });
+  }
+  const book = /^book (\d+) of (.+)$/i.exec(text);
+  if (book && tools.has("book_appointment_slot")) {
+    return reply(stream, "", {
+      name: "book_appointment_slot",
+      args: { search: book[2], resultId: Number(book[1]), person: "Mia" },
+    });
+  }
+  if (/appointment searches|terminsuchen/.test(lower)) {
+    return reply(stream, "", { name: "list_appointment_searches", args: {} });
+  }
+  if (/^events$/.test(lower)) {
+    const month = today.slice(0, 7);
+    return reply(stream, "", { name: "list_events", args: { from: `${month}-01`, to: `${month}-28` } });
   }
   if (/calendar|kalender/.test(lower)) {
     const month = today.slice(0, 7);

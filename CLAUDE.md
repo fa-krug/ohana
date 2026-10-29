@@ -6,10 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 AI assistant. It replaces `fa-krug/family-planner`, `fa-krug/cookless` and
 `fa-krug/findmyappointment`; [docs/plan.md](docs/plan.md) has the decisions, what comes from
 which app, and the phases. Phase 0 (accounts, families, admin, shell, worker, deploy),
-phase 1 (Calendar), phase 2 (Finance), phase 3 part A (the assistant: chats in the worker,
-calendar + finance tools), phase 4 (Meals, without AI recipe generation), phase 5
-(Appointments, notification channels) and phase 7 (connections between the modules) are
-done; assistant tools for meals and appointments and recipe generation follow (phase 3 part B).
+phase 1 (Calendar), phase 2 (Finance), phase 3 (the assistant: chats in the worker, tools for
+every module, recipe generation and AI photos), phase 4 (Meals), phase 5 (Appointments,
+notification channels) and phase 7 (connections between the modules) are done.
 
 ## Commands
 
@@ -117,10 +116,20 @@ npm run import-legacy -- --family-planner dump.sql --cookless cookless.db --cook
   `claimChatNow`) and runs `chats.ts` `Runner` (the tool loop `chat.ts` `runChat` against
   `provider.ts`, items/messages saved as it goes, lease renewed, stop/delete noticed per
   tick). `prepareTurn` builds the instructions and tools; viewers and `allow_writes: false`
-  get only the tools that read. Tools by module in `tools/` (`calendar.ts`, `finance.ts`,
-  `general.ts`, `web.ts`, registry `index.ts`); every change returns undo steps (requests on
-  the family API the client replays). `net.ts` refuses private addresses (`AiEnv.modelNet`
-  may allow them for the endpoint with `AI_ALLOW_PRIVATE_ENDPOINT`). Client: `ChatStore`
+  get only the tools that read. Tools by module in `tools/` (`calendar.ts`, `events.ts`
+  (cal_events), `finance.ts`, `meals.ts`, `appointments.ts`, `general.ts`, `web.ts`, registry
+  `index.ts`; `runTool` turns `HttpError` / `AuthError` / `ZodError` into the model's
+  `{"error"}`); every change returns undo steps (requests on the family API the client
+  replays; meals' and appointments' undo routes are `lib/meals/family-routes.ts`
+  `handleMeals` (`/meals/recipes/{id}`, `/meals/shopping/check|items/{id}`,
+  `/meals/plan/restore` with `meal-plan/snapshot.ts`, `/meals/plan`) and
+  `lib/appointments/family-routes.ts` (`/appointments/searches/{id}`); POST `/events` with
+  `searchId` + `resultId` puts a booking back). `ToolContext` carries `userId` (the chat's
+  user: the lib functions' `Actor`), `today`, `now` and `lookups` (Doctolib / Photon; tests
+  fake them via `AiEnv.lookups`). The system prompt (`chat.ts`) lists the meal tags and the
+  home address. `notify.ts` is the "assistant turn finished" notification (`RunnerEnv.turnEnded`
+  from the `ChatRunner`; `chats.seen_at`, set every 15 s by a follower, says someone looks).
+  `net.ts` refuses private addresses (`AiEnv.modelNet` may allow them for the endpoint with `AI_ALLOW_PRIVATE_ENDPOINT`). Client: `ChatStore`
   (`chat-store.ts`) in `AssistantProvider` (the shell, per family), `chat-panel.tsx`,
   `ai-settings.tsx` (Settings → AI); changes notify the pages through `events.ts`. Tests use
   `lib/test/assistant.ts` (fake fetch + `lib/test/mock-ai.ts`, a ticking `ChatRunner`);
@@ -173,7 +182,8 @@ npm run import-legacy -- --family-planner dump.sql --cookless cookless.db --cook
     `components/appointments/{book-dialog,booked-list}.tsx`. GET `/families/{id}` adds
     `events` by day (`familyState`'s 4th argument): `PlannerStore.events`, the grid's
     `.event-mark`, title tooltip and the selection bar. The feed adds them with `events=1`
-    (`buildIcs` `events`: floating local times, `DURATION:PT1H` without an end).
+    (`buildIcs` `events`: floating local times, `DURATION:PT1H` without an end). The
+    assistant's tools reach every module (meals, appointments, events; see Assistant).
   - *Calendar → Meals:* `cal_entry_types.away` (optional `away` in the type API, export and
     import; `TypeRow.away?`). `lib/meals/meal-plan/away.ts` `awayDays`; `populateIteration`
     passes them as `assignSchedule({ skipDates })` and counts cooking sessions from the days
@@ -213,7 +223,17 @@ npm run import-legacy -- --family-planner dump.sql --cookless cookless.db --cook
   family only (`lib/meals/images/serve.ts`). Offline: `lib/offline/` queues shopping ticks in
   IndexedDB (idempotent `set` ops) and replays them to their family's route;
   `public/sw.js` caches the meals pages (registered by the meals layout in production,
-  cleared on sign-out). AI recipe/photo generation isn't ported yet (needs phase 3).
+  cleared on sign-out). **AI** (`lib/meals/ai/`, from cookless's `lib/ai`): `prompt.ts`
+  (ported), `recipes.ts` (prompt context, tag/unit ids, `generateRecipeImage`), `generate.ts`
+  (one chat completion through `lib/assistant/provider.ts` with the family's model —
+  `familyModel()` in `lib/assistant/routes.ts` —; photos via `POST {base}/images/generations`
+  with `ai_settings.image_model`, or Gemini's native `generateContent` for a Gemini image model
+  on Gemini's endpoint), `verify.ts` (zod check of the answer), `stream.ts` (the NDJSON stream
+  of `POST /api/v1/families/{id}/recipes/generate`, inline in the web process: one
+  user-started call with timeouts, cancelled with the request), `stream-client.ts`, `status.ts`
+  (`mealsAi`: show the buttons). Saving: `recipes/bulk-create.ts` (`bulkCreateRecipesAction`);
+  photo: `generateRecipeImageAction`. Page `meals/recipes/generate`
+  (`components/meals/recipes/generate-recipes.tsx`).
 - **Legacy import (`lib/import/`, `scripts/import-legacy.ts`):** one-time import of
   family-planner (a `pg_dump --data-only` file, parsed by `pgdump.ts`: COPY or
   `--column-inserts`, `public` schema only), cookless and findmyappointment (their SQLite

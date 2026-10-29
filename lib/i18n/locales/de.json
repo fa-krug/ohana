@@ -87,7 +87,11 @@
       "spending": "Wie viel haben wir dieses Jahr pro Monat für Lebensmittel ausgegeben?",
       "uncategorized": "Ordne unsere Buchungen ohne Kategorie passenden Kategorien zu.",
       "types": "Leg die Arten für dieses Jahr an: Kita geschlossen, Urlaub für jedes Elternteil und Feiertage.",
-      "categories": "Schlag Kategorien für unsere Finanzen vor und leg sie an."
+      "categories": "Schlag Kategorien für unsere Finanzen vor und leg sie an.",
+      "planWithout": "Plane das Essen für nächste Woche ohne Fisch.",
+      "shopping": "Was steht noch auf der Einkaufsliste? Setz 2 l Milch dazu.",
+      "dermatologist": "Such mir einen Hautarzttermin vor Juni.",
+      "earliest": "Welche Suchen haben etwas gefunden, und was ist der früheste Termin?"
     },
     "elsewhere": "Dieser Chat gehört zu {{page}}.",
     "moveHere": "Zu {{page}} verschieben",
@@ -109,7 +113,25 @@
       "combine_transfers": "Fasst Umbuchungen und Splitbuchungen zusammen",
       "ask_user": "Stellt eine Frage",
       "web_search": "Sucht im Web: {{q}}",
-      "fetch_page": "Liest {{host}}"
+      "fetch_page": "Liest {{host}}",
+      "list_events": "Liest Termine im Kalender",
+      "add_event": "Trägt einen Termin ein",
+      "remove_event": "Entfernt einen Termin",
+      "list_recipes": "Sieht die Rezepte durch",
+      "get_recipe": "Liest ein Rezept",
+      "save_recipe": "Speichert ein Rezept",
+      "get_meal_plan": "Liest den Essensplan",
+      "plan_meals": "Plant das Essen",
+      "get_shopping_list": "Liest die Einkaufsliste",
+      "tick_shopping_items": "Hakt die Einkaufsliste ab",
+      "add_shopping_items": "Ergänzt die Einkaufsliste",
+      "list_appointment_searches": "Liest die Terminsuchen",
+      "find_doctor_specialities": "Sucht Fachrichtungen",
+      "create_appointment_search": "Legt eine Terminsuche an",
+      "change_appointment_search": "Ändert eine Terminsuche",
+      "run_appointment_search": "Startet eine Terminsuche",
+      "get_appointment_slot": "Liest einen Termin",
+      "book_appointment_slot": "Trägt einen Termin als gebucht ein"
     },
     "question": {
       "pickOne": "Wähle eine Antwort oder schreib deine eigene",
@@ -138,7 +160,8 @@
       "changes_one": "{{count}} Änderung",
       "changes_other": "{{count}} Änderungen",
       "queries_one": "{{count}} Abfrage",
-      "queries_other": "{{count}} Abfragen"
+      "queries_other": "{{count}} Abfragen",
+      "without": "ohne {{tags}}"
     }
   },
   "modules": {
@@ -361,7 +384,14 @@
       "allChannels": "Alle Kanäle",
       "noChannels": "Lege zuerst unten einen Kanal an.",
       "saved": "Gespeichert.",
-      "channelsLabel": "Senden an"
+      "channelsLabel": "Senden an",
+      "assistant_turn_finished": "Assistent fertig",
+      "assistant_turn_finishedHint": "Wenn der Assistent länger (30 Sekunden oder mehr) an einer Anfrage gearbeitet hat und der Chat nirgends offen ist."
+    },
+    "assistant": {
+      "title": "Der Assistent hat geantwortet",
+      "failed": "Der Assistent konnte nicht fertig werden",
+      "untitled": "Dein Chat"
     }
   },
   "homeAddress": {
@@ -1101,7 +1131,10 @@
       "upload": "Foto hochladen",
       "remove": "Foto entfernen",
       "uploadFailed": "Foto konnte nicht hochgeladen werden.",
-      "removed": "Foto entfernt"
+      "removed": "Foto entfernt",
+      "generate": "Mit KI erstellen",
+      "generating": "Wird erstellt …",
+      "generateFailed": "Das Foto konnte nicht erstellt werden: {{msg}}"
     },
     "overview": {
       "title": "Essen",
@@ -1119,6 +1152,30 @@
       "setCategory": "Lebensmittel-Kategorie wählen",
       "none": "Noch keine Buchungen.",
       "openFinance": "Finanzen öffnen"
+    },
+    "generate": {
+      "button": "Mit KI erstellen",
+      "short": "KI",
+      "title": "Rezepte erstellen",
+      "back": "Zurück zu den Rezepten",
+      "count": "Anzahl Rezepte",
+      "tags": "Jedes Rezept soll … sein",
+      "freeText": "Weitere Wünsche",
+      "freeTextPlaceholder": "z. B. Wohlfühlessen für kalte Tage, in 30 Minuten fertig",
+      "generateImages": "Fotos machen",
+      "generate": "Erstellen",
+      "stop": "Stopp",
+      "generating": "Rezepte werden erstellt …",
+      "generatingImages": "Fotos werden gemacht …",
+      "selected": "{{count}} ausgewählt",
+      "saveCount_one": "{{count}} Rezept speichern",
+      "saveCount_other": "{{count}} Rezepte speichern",
+      "saved_one": "{{count}} Rezept zu „Ausprobieren“ hinzugefügt",
+      "saved_other": "{{count}} Rezepte zu „Ausprobieren“ hinzugefügt",
+      "noResults": "Es kamen keine Rezepte heraus. Probier andere Einstellungen.",
+      "failed": "Erstellen fehlgeschlagen: {{msg}}",
+      "photosFailed": "Die Fotos konnten nicht gemacht werden: {{msg}}",
+      "meta": "{{ingredients}} Zutaten · {{servings}} Portionen · {{minutes}} Min."
     }
   },
   "finance": {
@@ -1395,9 +1452,13 @@
     "searchKey": "API-Schlüssel der Suche",
     "permissions": "Berechtigungen",
     "allowWrites": "Änderungen erlauben",
-    "allowWritesHelp": "Der Assistent darf für Bearbeitende Kalender und Finanzen ändern (jede Änderung lässt sich rückgängig machen). Aus: Er liest nur. Für Lesende liest er immer nur.",
+    "allowWritesHelp": "Der Assistent darf für Bearbeiter Kalender, Finanzen, Essen und Terminsuchen ändern (die meisten Änderungen lassen sich rückgängig machen). Aus: Er liest nur. Für Betrachter liest er immer nur.",
     "privacy": "Deine Nachrichten und die Daten, die der Assistent ansieht, gehen an die oben eingerichtete KI-API.",
     "agentHint": "Für andere KI-Agenten, die Ohanas API mit einem API-Token nutzen:",
-    "agentLink": "Anleitung für KI-Agenten"
+    "agentLink": "Anleitung für KI-Agenten",
+    "photos": "Rezeptfotos",
+    "photosHelp": "Das Essen-Modul kann mit einem Bildmodell derselben API ein Foto zu einem Rezept machen. Ohne Bildmodell bleiben die Foto-Knöpfe ausgeblendet.",
+    "imageModel": "Bildmodell",
+    "imageModelHelp": "Z. B. gpt-image-1 oder dall-e-3 (OpenAI), gemini-2.5-flash-image (Googles Gemini-API). Leer: keine KI-Fotos."
   }
 }

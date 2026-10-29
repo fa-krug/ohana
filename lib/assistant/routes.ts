@@ -16,11 +16,15 @@ import { getRole } from "@/lib/families/roles";
 import { applyTransactionOps, benchmarkOf } from "@/lib/finance/finance";
 import { DrizzleFinanceStore, type TransactionRow } from "@/lib/finance/store";
 import { type SecretBox, getSecretBox } from "@/lib/secrets";
+import { eq } from "drizzle-orm";
+import { families } from "@/lib/db/schema";
 import { buildAgentDoc } from "./agent";
+import { mealTagNames } from "./tools/meals";
+import type { Lookups } from "./tools/common";
 import { matchSimilar, type Search, suggestCategories } from "./categorize";
 import { type ChatContext, systemPrompt } from "./chat";
 import { handleChats } from "./chat-routes";
-import type { ChatEnv, Turn } from "./chats";
+import type { ChatEnv, RunnerEnv, Turn } from "./chats";
 import { DEFAULT_WINDOW } from "./context";
 import { checkUrl, type NetOptions } from "./net";
 import { contextWindow, listModels, type Provider, streamChat } from "./provider";
@@ -35,6 +39,14 @@ export interface AiEnv extends ChatEnv {
   /** Requests to the family's AI endpoint: private addresses only with AI_ALLOW_PRIVATE_ENDPOINT
    *  (e.g. a model on the home network). */
   modelNet: NetOptions;
+  /** The appointment tools' look-ups (Doctolib, places); tests pass fakes. */
+  lookups?: Partial<Lookups>;
+  /** After a turn in the worker (default: the "assistant turn finished" notification). */
+  turnEnded?: RunnerEnv["turnEnded"];
+}
+
+function homeAddressOf(db: Db, familyId: string): string | null {
+  return db.select({ a: families.homeAddress }).from(families).where(eq(families.id, familyId)).get()?.a ?? null;
 }
 
 /** The app's AiEnv: the database, the app's SecretBox, the real network. */
@@ -110,6 +122,7 @@ function publicSettings(env: AiEnv, row: AiSettingsRow, viewer = false) {
     searchKeyHint: hint(safeOpen(env, row.search_key_enc)),
     allowWrites: row.allow_writes,
     contextWindow: row.context_window ?? 0,
+    imageModel: row.image_model ?? "",
     // Ohana always has a key to seal with (ENCRYPTION_KEY, else derived from AUTH_SECRET).
     serverReady: true,
   };
@@ -168,7 +181,8 @@ async function getSettings({ load }: Ctx, env: AiEnv) {
 }
 
 /** PUT /ai/settings {baseUrl, apiKey ("" removes it), model, searchProvider, searchKey,
- *  allowWrites, contextWindow (tokens, 0: from the endpoint)}: only the fields given change. */
+ *  allowWrites, contextWindow (tokens, 0: from the endpoint), imageModel ("" = no recipe
+ *  photos)}: only the fields given change. */
 async function putSettings({ req, load }: Ctx, env: AiEnv) {
   const { family } = await load("edit");
   const body = await readBody(req);
@@ -185,6 +199,12 @@ async function putSettings({ req, load }: Ctx, env: AiEnv) {
     return key ? env.secrets().seal(key) : "";
   };
   if (body.apiKey !== undefined) row.api_key_enc = seal(body.apiKey, "apiKey");
+  if (body.imageModel !== undefined) {
+    if (typeof body.imageModel !== "string" || body.imageModel.length > 200) {
+      throw new HttpError(400, "imageModel must be a string (max. 200)");
+    }
+    row.image_model = body.imageModel.trim();
+  }
   if (body.searchKey !== undefined) row.search_key_enc = seal(body.searchKey, "searchKey");
   if (body.searchProvider !== undefined) {
     if (!SEARCH_PROVIDERS.includes(body.searchProvider as SearchProvider)) {
@@ -213,6 +233,17 @@ async function provider(row: AiSettingsRow, env: AiEnv, override: Record<string,
   if (!baseUrl) throw new HttpError(400, "Enter the URL of an OpenAI-compatible API first");
   const apiKey = override.apiKey ? cleanKey(override.apiKey, "apiKey") : openKey(env, row.api_key_enc);
   return { baseUrl, apiKey, model: row.model };
+}
+
+/** The family's model for one-shot calls outside the chats (the meals' recipe generator and
+ *  photos): null while the assistant isn't set up. */
+export async function familyModel(
+  env: AiEnv,
+  familyId: string,
+): Promise<{ provider: Provider; imageModel: string } | null> {
+  const row = await env.store.getAiSettings(familyId);
+  if (!row?.base_url || !row.model) return null;
+  return { provider: await provider(row, env), imageModel: row.image_model ?? "" };
 }
 
 /** The web search the family set up, with its key; null without. */
@@ -294,11 +325,13 @@ export async function prepareTurn(
     writes,
     readOnly: writes ? undefined : role === "editor" ? "settings" : "viewer",
     search: !!search,
+    mealTags: mealTagNames(env.db, family.id, context.lang),
+    home: homeAddressOf(env.db, family.id),
   });
   return {
     provider: p,
     system,
-    ctx: { ...stores, lang: context.lang, net: env.net, search, signal },
+    ctx: { ...stores, lang: context.lang, net: env.net, search, signal, userId: chat.user_id, today: context.today, lookups: env.lookups },
     modelNet: env.modelNet,
     writes,
     search: !!search,

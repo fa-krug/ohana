@@ -56,6 +56,8 @@ export interface ChatRow {
   queue: Record<string, unknown>[];
   /** Counts the changes of the items. */
   rev: number;
+  /** When someone last followed the chat (ISO), or null. */
+  seen_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -124,6 +126,8 @@ export interface AssistantStore {
   putChatItems(chatId: string, items: Omit<ChatItemRow, "rev">[]): Promise<number | null>;
   listChatMessages(chatId: string): Promise<ChatMessageRow[]>;
   addChatMessages(chatId: string, rows: ChatMessageRow[]): Promise<void>;
+  /** Someone follows the chat right now. */
+  markChatSeen?(chatId: string, at: Date): Promise<void>;
 }
 
 type ChatRecord = typeof chats.$inferSelect;
@@ -158,6 +162,7 @@ export function chatRow(c: ChatRecord): ChatRow {
     usage: parse(c.usage, null),
     queue: parse(c.queue, []),
     rev: c.rev,
+    seen_at: iso(c.seenAt),
     created_at: c.createdAt.toISOString(),
     updated_at: c.updatedAt.toISOString(),
   };
@@ -234,6 +239,10 @@ export class DrizzleAssistantStore implements AssistantStore {
       .orderBy(desc(chats.updatedAt), desc(chats.createdAt))
       .all()
       .map(chatRow);
+  }
+
+  async markChatSeen(id: string, at: Date) {
+    this.db.update(chats).set({ seenAt: at }).where(eq(chats.id, id)).run();
   }
 
   async getChat(id: string) {

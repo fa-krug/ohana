@@ -17,6 +17,8 @@ export interface AiSettings {
   allowWrites: boolean;
   /** The model's context window in tokens; 0: from the API's model list (or 128,000). */
   contextWindow?: number;
+  /** The model for recipe photos; "" = none (no photo buttons). */
+  imageModel?: string;
   serverReady: boolean;
 }
 
@@ -28,6 +30,7 @@ export interface AiSettingsPatch {
   searchKey?: string;
   allowWrites?: boolean;
   contextWindow?: number;
+  imageModel?: string;
 }
 
 /** An op for POST /finance/transactions; the response's `inverse` ops undo a request. */
