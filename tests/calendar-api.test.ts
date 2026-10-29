@@ -238,6 +238,7 @@ describe("calendar API", () => {
       color: "#8b5cf6",
       role: "needs_cover",
       position: 3,
+      away: false,
     });
 
     const renamed = await s.call("PATCH", `/families/${f.id}/types/vacation?year=2026`, { name: "Vacation Dad" });

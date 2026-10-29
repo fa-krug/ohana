@@ -77,6 +77,8 @@ export interface FinanceOverview {
   benchmark: Benchmark | null;
   categories: Category[];
   accounts: Account[];
+  /** The category whose spending the shopping lists show (phase 7); null: the default. */
+  groceriesCategoryId?: string | null;
 }
 
 export interface TransactionList {
@@ -132,7 +134,10 @@ const fin = (id: string) => `${fam(id)}/finance`;
 export const financeApi = {
   overview: (id: string) => request<FinanceOverview>("GET", fin(id)),
   clear: (id: string) => request<FinanceOverview>("DELETE", fin(id)),
-  settings: (id: string, patch: { currency?: string; csvMappings?: unknown[]; benchmark?: Benchmark | null }) =>
+  settings: (
+    id: string,
+    patch: { currency?: string; csvMappings?: unknown[]; benchmark?: Benchmark | null; groceriesCategoryId?: string | null },
+  ) =>
     request<FinanceOverview>("PATCH", `${fin(id)}/settings`, patch),
   addCategory: (id: string, c: Omit<Category, "id" | "position" | "parentId"> & { parentId?: string | null }) =>
     request<Category>("POST", `${fin(id)}/categories`, c),

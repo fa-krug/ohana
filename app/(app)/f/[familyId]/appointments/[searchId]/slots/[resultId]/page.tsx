@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { requireFamily } from "@/lib/families/page";
 import { getI18n } from "@/lib/i18n/server";
 import { getSlotDetail } from "@/lib/appointments/serialize";
+import { findBooking } from "@/lib/calendar/events";
+import { assertSearch } from "@/lib/appointments/searches";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { SlotDetail } from "@/components/appointments/slot-detail";
 
@@ -19,6 +21,9 @@ export default async function SlotPage({
   const data = Number.isInteger(id) ? getSlotDetail(db, familyId, searchId, id) : null;
   if (!data) notFound();
   const { t } = await getI18n();
+  const booked = findBooking(db, familyId, searchId, id);
+  const booking = booked ? { eventId: booked.id, date: booked.day, start: booked.start, person: booked.person } : null;
+  const searchEnabled = assertSearch(db, familyId, searchId).enabled;
   const base = `/f/${familyId}/appointments`;
   return (
     <div className="mx-auto max-w-2xl">
@@ -29,7 +34,7 @@ export default async function SlotPage({
           { label: data.slot.doctorName },
         ]}
       />
-      <SlotDetail familyId={familyId} data={data} canEdit={role === "editor"} />
+      <SlotDetail familyId={familyId} data={data} canEdit={role === "editor"} booking={booking} searchEnabled={searchEnabled} />
     </div>
   );
 }

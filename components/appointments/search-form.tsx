@@ -276,7 +276,7 @@ export function SearchForm({ familyId, search, channels }: { familyId: string; s
         {channels.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             {t("appointments.form.noChannels")}{" "}
-            <Link href={`/f/${familyId}/settings#notifications`} className="text-primary hover:underline">{t("appointments.form.addChannel")}</Link>
+            <Link href={`/f/${familyId}/settings?tab=household#notifications`} className="text-primary hover:underline">{t("appointments.form.addChannel")}</Link>
           </p>
         ) : (
           <>

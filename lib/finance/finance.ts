@@ -1143,6 +1143,11 @@ async function overviewData(store: Store, familyId: string) {
     currency: s.currency,
     csvMappings: s.csv_mappings,
     benchmark: benchmarkOf(s, categories),
+    // Phase 7: the category whose spending the shopping lists show (null: the default).
+    groceriesCategoryId:
+      s.groceries_category_id && categories.some((c) => c.id === s.groceries_category_id)
+        ? s.groceries_category_id
+        : null,
     categories: categories.map(publicCategory),
     accounts,
   };
@@ -1162,8 +1167,9 @@ async function clearRoute({ finance: store, load }: Ctx): Promise<Response> {
   return json(await overviewData(store, family.id));
 }
 
-/** PATCH /finance/settings {"currency": "EUR", "csvMappings": [...], "benchmark": {...}}
- *  (benchmark: see cleanBenchmark; null clears it) */
+/** PATCH /finance/settings {"currency": "EUR", "csvMappings": [...], "benchmark": {...},
+ *  "groceriesCategoryId": "groceries"} (benchmark: see cleanBenchmark; null clears it;
+ *  groceriesCategoryId: a category by id or name, null for the default) */
 async function updateSettings({ finance: store, req, load }: Ctx): Promise<Response> {
   const { family } = await load("edit");
   const body = await readBody(req);
@@ -1180,6 +1186,11 @@ async function updateSettings({ finance: store, req, load }: Ctx): Promise<Respo
   }
   if (body.benchmark !== undefined) {
     row.benchmark = cleanBenchmark(body.benchmark, await store.listCategories(family.id));
+  }
+  if (body.groceriesCategoryId !== undefined) {
+    row.groceries_category_id = body.groceriesCategoryId === null || body.groceriesCategoryId === ""
+      ? null
+      : findCategory(await store.listCategories(family.id), body.groceriesCategoryId).id;
   }
   await store.saveFinanceSettings(row);
   return json(await overviewData(store, family.id));

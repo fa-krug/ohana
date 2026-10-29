@@ -7,7 +7,8 @@ AI assistant. It replaces `fa-krug/family-planner`, `fa-krug/cookless` and
 `fa-krug/findmyappointment`; [docs/plan.md](docs/plan.md) has the decisions, what comes from
 which app, and the phases. Phase 0 (accounts, families, admin, shell, worker, deploy),
 phase 1 (Calendar), phase 2 (Finance), phase 4 (Meals, without AI recipe generation) and
-phase 5 (Appointments, notification channels) are done; the assistant follows in phase 3.
+phase 5 (Appointments, notification channels) are done, and phase 7 (connections between
+the modules) except the assistant's tools; the assistant follows in phase 3.
 
 ## Commands
 
@@ -33,8 +34,8 @@ npm run import-legacy -- --family-planner dump.sql --cookless cookless.db --cook
 - **Two processes, one image:** `docker-entrypoint.sh web` migrates then serves;
   `docker-entrypoint.sh worker` runs `worker/index.ts` (waits for the migrations, then loops
   every `APPT_TICK_SECONDS` (15): the appointment `SearchRunner`, and every
-  `WORKER_TICK_SECONDS` (60) `lib/maintenance/cleanup.ts` and the nightly
-  `lib/maintenance/backup.ts`). Long-running jobs (appointment searches, assistant turns,
+  `WORKER_TICK_SECONDS` (60) `lib/maintenance/cleanup.ts`, the nightly
+  `lib/maintenance/backup.ts` and `lib/notifications/daily.ts`). Long-running jobs (appointment searches, assistant turns,
   notifications) belong in the worker, never in a request.
 - **Auth (`lib/auth/`):** passkeys (`@simplewebauthn`, ceremony state in a signed cookie) and
   argon2id passwords; family-planner's `pbkdf2-sha256$…` hashes are still verified and replaced
@@ -78,8 +79,8 @@ npm run import-legacy -- --family-planner dump.sql --cookless cookless.db --cook
   language. The page is client-side: `PlannerStore` (`planner-store.ts`: save queue, polling,
   undo/redo, selection) + the imperative `GridView` (`grid.ts`, CSS in `calendar.css`, colors
   `--cal-*` in `globals.css`); per-device prefs in `view-prefs.ts`. Settings has tabs
-  (`components/families/settings-tabs.tsx`: general, calendar, feed, finance); the overview shows
-  `lib/calendar/summary.ts`.
+  (`components/families/settings-tabs.tsx`: general, household, calendar, feed, finance); the
+  overview shows `lib/calendar/summary.ts`.
 - **Finance (`lib/finance/`, `components/finance/`):** family-planner's finances. `store.ts`
   is the finance part of its `Store` over Drizzle (`DrizzleFinanceStore`, snake_case rows,
   promise API; `replaceFinance` runs inside the calendar store's `replaceContents`, so an
@@ -116,7 +117,7 @@ npm run import-legacy -- --family-planner dump.sql --cookless cookless.db --cook
   enabled channels (`channelIds: []` = none, omitted = all); a failing channel is logged and
   counted, never thrown. `send.ts` holds the network senders (untested); `locale.ts` picks the
   family's language (its longest-standing editor's). UI: `components/families/notifications-card.tsx`
-  in Settings (editors only), with "Test".
+  in Settings → Household (editors only), with "Test".
 - **Appointments (`lib/appointments/`)**, port of findmyappointment: `doctolib/` (JSON client,
   profile cache), `jameda/` (HTML client, offline term list), `sources/` (fan-out, dedup,
   ignore keys), `pipeline.ts` (`runPipeline`: never throws once the run exists; per-provider
@@ -135,9 +136,41 @@ npm run import-legacy -- --family-planner dump.sql --cookless cookless.db --cook
   `app/(app)/f/[familyId]/appointments/`, actions in `app/actions/appointments.ts`,
   autocomplete routes under `app/api/v1/families/[familyId]/` (members; session or API token).
 - **Schema files:** `lib/db/schema.ts` holds accounts + families and re-exports one file per
-  module from `lib/db/schema/` (`notifications.ts`, `appointments.ts`, `finance.ts`).
-- **Family settings:** `FamilySettings` renders its `children` before "Leave or delete": each
-  module adds its own section component there (see `settings/page.tsx`).
+  module from `lib/db/schema/` (`notifications.ts`, `appointments.ts`, `finance.ts`,
+  `meals.ts`, `connections.ts`).
+- **Connections between modules (phase 7):**
+  - *Appointments → Calendar:* `cal_events` (`lib/db/schema/connections.ts`): timed events
+    (`day`, wall-clock `start`/`end` "HH:MM" or null = all day, title, location, person,
+    note, url, `source` manual | appointment with `source_id` = search, `source_item` =
+    result; the slot's data is copied, results are pruned). `lib/calendar/events.ts` (CRUD,
+    zod `eventInputSchema`, REST `handleEvents`: GET/POST `/events`, DELETE `/events/{id}`),
+    `lib/appointments/booking.ts` (`bookSlot` once per slot, optional stop = search disabled;
+    `removeBooking`), actions `bookSlotAction` / `removeBookingAction`, UI
+    `components/appointments/{book-dialog,booked-list}.tsx`. GET `/families/{id}` adds
+    `events` by day (`familyState`'s 4th argument): `PlannerStore.events`, the grid's
+    `.event-mark`, title tooltip and the selection bar. The feed adds them with `events=1`
+    (`buildIcs` `events`: floating local times, `DURATION:PT1H` without an end).
+  - *Calendar → Meals:* `cal_entry_types.away` (optional `away` in the type API, export and
+    import; `TypeRow.away?`). `lib/meals/meal-plan/away.ts` `awayDays`; `populateIteration`
+    passes them as `assignSchedule({ skipDates })` and counts cooking sessions from the days
+    at home; the plan page shows "Away · Type".
+  - *Meals → Finance:* `fin_settings.groceries_category_id` (null: the category named
+    Groceries / Lebensmittel; PATCH `/finance/settings` `groceriesCategoryId`, GET
+    `/finance` returns it). `lib/finance/groceries.ts` (`shoppingSpend`: `findTransactions`
+    in the category's subtree on the shopping day ± 1, net totals; `shoppingLinks` for the
+    finance page) and the browser-safe `groceries-links.ts` (`listForTransaction`). UI:
+    `components/meals/shopping/spent-card.tsx`, `components/finance/shopping-links.tsx`.
+  - *Notifications:* `notification_prefs` (family + event: enabled, `channel_ids` JSON or
+    null = all, `state` JSON memory). `lib/notifications/prefs.ts` (`getPrefs`, `setPref`,
+    `notifyEvent`; events and defaults in `prefs-shared.ts`), `daily.ts` (`checkCoverage`
+    from `NOTIFY_HOUR`: once a day, only when a gap day wasn't told before;
+    `remindShopping` from `SHOPPING_REMINDER_HOUR`: once per shopping day; server-local
+    days). `notifyRun` skips when `appointment_found` is off. UI
+    `components/families/notification-events-card.tsx` (Settings → Household).
+  - *Overview:* `lib/families/dashboard.ts` (`familyDashboard`) + `app/(app)/f/[familyId]/page.tsx`.
+- **Family settings:** `FamilySettings` (General tab) renders its `children` before "Leave or
+  delete"; the home address and the notifications are on the Household tab
+  (`HouseholdSettings` in `settings/page.tsx`).
 - **Meals (`lib/meals/`, ported from cookless):** recipes, meal plan, shopping lists, cook
   view, tags. Tables in `lib/db/schema/meals.ts` (re-exported by `schema.ts`): `ingredients`
   and `units` are shared seed data (`lib/meals/seed.ts`, run by `scripts/seed.ts` at every

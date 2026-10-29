@@ -187,7 +187,67 @@ empty Ohana database. It has a **dry run** that only reports what it would do.
 | 4  | Meals ✅           | Recipes, meal plan, shopping list, cook view, offline queue ✅ — recipe generation and assistant tools for meals follow after the assistant (phase 3) |
 | 5  | Appointments ✅    | Doctolib + jameda searches, worker scheduling, slot detail, notification channels; assistant tools for appointments                        |
 | 6  | Import + cut-over  | `import-legacy.ts` with dry run, a rehearsal on a copy, then the real import; old apps shut down, Supabase set read-only, old repos archived |
-| 7  | Connections        | The cross-module features above                                                                                                           |
+| 7  | Connections        | The cross-module features above — built except the assistant's tools everywhere (item 4), which come with the assistant (see the notes) |
+
+### Phase 7 notes (connections; not done yet: the assistant's tools)
+
+Built: items 1, 2, 3 and 5 of [Connections](#connections-between-modules), a new overview
+and a *Household* settings tab. Item 4 (assistant tools for recipes, meal plans and
+appointment searches) and the "assistant turn finished" notification come with the
+assistant (phase 3), so phase 7 stays open until then. One migration, `0005_connections`
+(two tables, two columns; nothing to backfill).
+
+- **Appointments → Calendar: timed events are their own table**, `cal_events`, not entries:
+  entries are a type on a day (colors, roles, coverage, all-day runs in the feed), while an
+  appointment has a time, a place, a person and a link and must not change coverage. Times
+  are wall-clock `"HH:MM"` (no time zone in the data, like the rest of the calendar); the feed
+  writes them as floating times, so a subscribed phone shows them at that local time. The
+  slot's details are **copied** into the event (results are pruned after 30 days; deleting
+  the search keeps the event); `source_id` / `source_item` (search / result) only tie it
+  back, e.g. to show "Booked for …" on the slot page and to book a slot once. "Mark as
+  booked" asks for date and time (prefilled with the slot's, in the browser's time zone),
+  for whom, a note, and optionally *Stop watching this search* (turns it off; on by default
+  while the search runs). Removing a booking only removes it from Ohana. Events reach the
+  calendar page through `GET /families/{id}` (`events` by day, additive), so polling and
+  undo stay as they were; the grid shows a dot (tooltip on desktop, a line in the selection
+  bar on phones), events are read-only there (managed from the appointments page or the
+  REST API `/events`). The feed shows them only with `events=1` (off by default in the
+  feed settings: they name doctors and practices in a URL that works without signing in).
+- **Calendar → Meals: an `away` flag per type**, independent of the role (a "Trip" may cover
+  day care or not). The plan's earlier idea "covers / day off for everyone" can't be told
+  from the data (roles are about day care, not about the whole family), so the family says
+  it explicitly. Away days get no lunch at all: no cooking, no leftovers, no fallback; the
+  number of cooking sessions follows the days at home; leftover spacing still counts
+  calendar days (so leftovers may land right after a trip). Only generating / refreshing
+  applies it: marking a trip later changes an existing plan after *Refresh*; a day that
+  already has a meal keeps showing it. family-planner's files and API calls without `away`
+  keep working (false).
+- **Meals → Finance: read-only links.** The groceries category is a finance setting
+  (`fin_settings.groceries_category_id`, Settings → Finance; default: the category named
+  Groceries / Lebensmittel, so most families need nothing). A shopping list shows the
+  transactions of that category and its subcategories on its shopping day ± 1 day with the
+  finance module's net total (refunds count back, split bookings by their parts); a
+  transaction in that window gets a 🛒 link to the list. **No estimated cost**: ingredients
+  have no prices, so the plan's "estimated cost" isn't possible without a price list.
+- **Notifications everywhere:** `notification_prefs` per family and event (on/off,
+  channels; a missing row = the defaults: appointments and coverage on, shopping reminder
+  off). Appointment searches keep choosing their channels; the family switch only turns them
+  off. The **coverage alert** runs in the worker from `NOTIFY_HOUR` (7, server time): weekdays
+  in the next 14 days with a needs-cover entry and no cover; one message listing them all,
+  sent only when at least one day wasn't told before (new ones marked), at most once a day.
+  The days told about are remembered and dropped once covered, so a day that loses its cover
+  is told again; a failed or impossible send (no channel) retries the next day. The
+  **shopping reminder** (from `SHOPPING_REMINDER_HOUR`, 18) sends tomorrow's list (what is
+  still unticked) once per shopping day. Days are the server's local days (the container's
+  `TZ`, Europe/Berlin in production).
+- **Overview:** one dashboard instead of a card per module (the module descriptions are gone,
+  a row of module links stays): today (meal or "away", the day's appointments), the next
+  uncovered day, coming up (calendar runs and booked appointments together, 30 days), the
+  shopping list, this month's finances, the searches' earliest finds.
+- **Settings:** the General tab keeps name, members, invites and leave/delete; the home
+  address and notifications (events + channels) moved to a new *Household* tab
+  (`?tab=household`; links from the slot page and the search form go there). On phones the
+  tabs wrap onto two rows.
 
 ### Notes on phase 5
 

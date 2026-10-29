@@ -60,7 +60,7 @@ export async function sendTestNotification(
   const msg: Message = {
     title: t("notifications.test.title"),
     body: t("notifications.test.body", { channel: row.name }),
-    url: `${getAppUrl()}/f/${familyId}/settings`,
+    url: `${getAppUrl()}/f/${familyId}/settings?tab=household`,
   };
   try {
     await (opts.send ?? deliver)(channel, msg);

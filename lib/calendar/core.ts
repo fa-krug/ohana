@@ -14,6 +14,8 @@ export interface EntryType {
   role: Role;
   year?: number;
   position?: number;
+  /** The whole family is away from home on its days: the meal plan skips them. */
+  away?: boolean;
 }
 
 export interface Note {

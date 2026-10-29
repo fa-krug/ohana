@@ -144,6 +144,8 @@ export const calEntryTypes = sqliteTable(
     color: text("color").notNull(),
     role: text("role").notNull().default("none"), // none | needs_cover | covers | day_off
     position: integer("position").notNull().default(0),
+    /** The whole family is away from home on its days: the meal plan leaves them out. */
+    away: integer("away", { mode: "boolean" }).notNull().default(false),
   },
   (t) => ({ pk: primaryKey({ columns: [t.familyId, t.year, t.id] }) }),
 );
@@ -191,3 +193,4 @@ export * from "./schema/notifications";
 export * from "./schema/appointments";
 export * from "./schema/meals";
 export * from "./schema/finance";
+export * from "./schema/connections";

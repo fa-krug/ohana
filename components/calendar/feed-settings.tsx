@@ -85,12 +85,15 @@ function FeedCard({ appUrl, feedId, rotate }: { appUrl: string; feedId: string; 
   const [gapsChoice, setGaps] = useState<boolean | null>(null);
   const gaps = gapsChoice ?? types.some((x) => x.role === "needs_cover");
   const [notes, setNotes] = useState(true);
+  // Booked appointments name doctors: only in the feed when asked for.
+  const [events, setEvents] = useState(false);
 
   const params: Record<string, string> = {};
   const included = types.filter((x) => !excluded.has(x.id));
   if (included.length !== types.length) params.types = included.map((x) => x.id).join(",");
   if (gaps) params.gaps = "1";
   if (notes) params.notes = "1";
+  if (events) params.events = "1";
   if (locale !== "en") params.lang = locale;
   const url = calendarUrl(appUrl, feedId, params);
 
@@ -129,6 +132,9 @@ function FeedCard({ appUrl, feedId, rotate }: { appUrl: string; feedId: string; 
           </label>
           <label className="mt-1.5 flex items-center gap-2 text-sm">
             <Checkbox checked={notes} onCheckedChange={(v) => setNotes(!!v)} /> {t("calendar.feed.notes")}
+          </label>
+          <label className="mt-1.5 flex items-center gap-2 text-sm" title={t("calendar.feed.eventsTitle")}>
+            <Checkbox checked={events} onCheckedChange={(v) => setEvents(!!v)} /> {t("calendar.feed.events")}
           </label>
         </fieldset>
         <UrlField value={url} label={t("calendar.feed.url")} />

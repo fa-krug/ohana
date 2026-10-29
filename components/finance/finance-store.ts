@@ -693,6 +693,11 @@ export class FinanceStore {
     if (out) this.toast(this.t("finance.cleared"));
   }
 
+  /** The category the shopping lists read their spending from (phase 7); null: the default. */
+  setGroceriesCategory(groceriesCategoryId: string | null) {
+    return this.withOverview(() => api.settings(this.familyId, { groceriesCategoryId }));
+  }
+
   /** Sets the statistic average the overview compares with; null removes it. */
   setBenchmark(benchmark: Benchmark | null) {
     return this.withOverview(() => api.settings(this.familyId, { benchmark }));

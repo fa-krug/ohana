@@ -5,6 +5,7 @@ import type { Ctx } from "@/lib/api/family-api";
 import { cleanName, cleanYear, CORS, currentYear, HttpError, json, objectOf, readBody, slug } from "@/lib/api/http";
 import { dateRange, isValidDate, isWeekend } from "./dates";
 import { buildIcs, type Lang } from "./ics";
+import { listEvents } from "./events";
 import { type CalendarStore as Store, type EntryRow, type NoteRow, type Role, ROLES, type TypeRow } from "./store";
 
 export const PRESET_TYPES: { id: string; name: string; color: string; role: Role }[] = [
@@ -66,7 +67,7 @@ export function newFamilyTypes(raw: unknown, lang: Lang) {
     const name = cleanName(t?.name);
     const id = uniqueId(slug(name), taken);
     taken.add(id);
-    return { id, name, color: cleanColor(t.color), role: cleanRole(t.role) };
+    return { id, name, color: cleanColor(t.color), role: cleanRole(t.role), away: cleanAway(t.away) };
   });
 }
 
@@ -107,7 +108,15 @@ export function publicType(t: TypeRow) {
     color: t.color,
     role: t.role,
     position: t.position,
+    away: t.away ?? false,
   };
+}
+
+/** The optional "away" flag of a type (Ohana's addition; family-planner's files have none). */
+export function cleanAway(v: unknown): boolean {
+  if (v === undefined || v === null) return false;
+  if (typeof v !== "boolean") throw new HttpError(400, "away must be true or false");
+  return v;
 }
 
 export type VacationData = [TypeRow[], EntryRow[], NoteRow[]];
@@ -181,6 +190,7 @@ export function parseVacationImport(body: Record<string, unknown>) {
       color: cleanColor(t.color),
       role: cleanRole(t.role),
       position: Number.isInteger(t.position) ? (t.position as number) : i,
+      away: cleanAway(t.away),
     });
   }
   if (perYear.size > MAX_IMPORT_YEARS) throw new HttpError(400, "Too many years");
@@ -328,7 +338,7 @@ export function handleCalendar(ctx: Ctx): Promise<Response> | null {
   return null;
 }
 
-async function calendarFeed({ store, url, load }: Ctx): Promise<Response> {
+async function calendarFeed({ db, store, url, load }: Ctx): Promise<Response> {
   const { family } = await load("feed");
   const withNotes = url.searchParams.get("notes") === "1";
   const [types, rows, notes] = await Promise.all([
@@ -360,6 +370,8 @@ async function calendarFeed({ store, url, load }: Ctx): Promise<Response> {
     gaps: url.searchParams.get("gaps") === "1",
     notes: notes && new Map(notes.map((n) => [n.day, n])),
     lang: url.searchParams.get("lang") === "de" ? "de" : "en",
+    // Booked appointments and other timed events (phase 7), only when asked for.
+    events: url.searchParams.get("events") === "1" ? listEvents(db, family.id) : undefined,
   });
   return new Response(ics, {
     headers: {
@@ -408,6 +420,7 @@ async function types({ store, req, url, method, rest, loadWith, now }: Ctx): Pro
       color: cleanColor(body.color),
       role: cleanRole(body.role),
       position: types.reduce((m, t) => Math.max(m, t.position + 1), 0),
+      away: cleanAway(body.away),
     };
     await store.upsertTypes([type]);
     return json(publicType(type), 201);
@@ -420,6 +433,7 @@ async function types({ store, req, url, method, rest, loadWith, now }: Ctx): Pro
       if (body.name !== undefined) next.name = cleanName(body.name);
       if (body.color !== undefined) next.color = cleanColor(body.color);
       if (body.role !== undefined) next.role = cleanRole(body.role);
+      if (body.away !== undefined) next.away = cleanAway(body.away);
       if (body.position !== undefined) {
         if (!Number.isInteger(body.position)) {
           throw new HttpError(400, "position must be an integer");

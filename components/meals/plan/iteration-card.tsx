@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ShoppingCart } from "lucide-react";
+import { ChevronDown, Luggage, ShoppingCart } from "lucide-react";
 import Link from "next/link";
 import { useT } from "@/lib/i18n/provider";
 import { addDays, weekday } from "@/lib/meals/domain/dates";
@@ -15,6 +15,8 @@ interface IterationCardProps {
   shoppingDays: number[];
   isArchived: boolean;
   todayIso: string;
+  /** day -> the calendar types that make the family away that day (no meal is planned). */
+  away?: Record<string, string[]>;
 }
 
 function formatDate(date: string, locale: string): string {
@@ -40,6 +42,7 @@ export function IterationCard({
   shoppingDays,
   isArchived,
   todayIso,
+  away = {},
 }: IterationCardProps) {
   const { locale, t } = useT();
   const { base, canEdit } = useMeals();
@@ -170,7 +173,18 @@ export function IterationCard({
                     </Link>
                   )}
 
+                  {/* Away (calendar): no meals that day, unless one was planned before. */}
+                  {away[date] && !entry && (
+                    <div className="flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground">
+                      <Luggage size={14} className="shrink-0" />
+                      <span className="min-w-0 truncate">
+                        {t("meals.plan.away", { types: away[date].join(", ") })}
+                      </span>
+                    </div>
+                  )}
+
                   {/* Lunch entry */}
+                  {!(away[date] && !entry) && (<>
                   <button
                     type="button"
                     className={`flex w-full items-center gap-2 px-4 py-3 text-left ${
@@ -215,6 +229,7 @@ export function IterationCard({
                       {t("meals.plan.coldDish")}
                     </span>
                   </div>
+                  </>)}
                 </div>
               </div>
             );

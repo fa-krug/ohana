@@ -177,6 +177,30 @@
       "ignore": "Ignore",
       "ignoreHint": "Skip this doctor with this reason for the visit in this search from now on",
       "ignored": "Ignored."
+    },
+    "booking": {
+      "mark": "Mark as booked",
+      "title": "Booked this appointment?",
+      "hint": "Book it on the practice's page first. Ohana then shows it in the calendar (and in the calendar feed, if you subscribed with booked appointments).",
+      "date": "Date",
+      "start": "Time",
+      "end": "Until (optional)",
+      "person": "For whom",
+      "personPlaceholder": "e.g. Mia",
+      "note": "Note",
+      "stop": "Stop watching this search",
+      "stopHint": "Turns the search off; you can turn it on again when editing it.",
+      "save": "Add to calendar",
+      "saved": "Added to the calendar.",
+      "bookedFor": "Booked for {{when}}",
+      "inCalendar": "Calendar",
+      "remove": "Remove",
+      "removeConfirm": "Remove this appointment from Ohana? This doesn't cancel it with the practice.",
+      "removed": "Appointment removed."
+    },
+    "booked": {
+      "title": "Booked appointments",
+      "hint": "Slots you marked as booked; they show in the calendar."
     }
   },
   "notifications": {
@@ -223,6 +247,30 @@
       "viewAllResults": "View all results",
       "nextAvailable": "next available",
       "openInApp": "Open in Ohana"
+    },
+    "coverage": {
+      "title_one": "{{count}} day without cover in the next two weeks",
+      "title_other": "{{count}} days without cover in the next two weeks",
+      "new": "new"
+    },
+    "shopping": {
+      "title_one": "Shopping tomorrow: {{count}} item",
+      "title_other": "Shopping tomorrow: {{count}} items",
+      "more": "… and {{count}} more"
+    },
+    "events": {
+      "title": "What Ohana tells you",
+      "hint": "Which news go to the channels below. Each message is sent once; nothing repeats every day.",
+      "appointment_found": "Appointment found",
+      "appointment_foundHint": "When a search finds a new or earlier appointment. Each search chooses its channels.",
+      "coverage_gap": "Day without cover",
+      "coverage_gapHint": "In the morning, when a weekday in the next two weeks needs cover (e.g. a day-care closure) and nobody covers it yet.",
+      "shopping_reminder": "Shopping reminder",
+      "shopping_reminderHint": "In the evening before a shopping day: what is still on its list.",
+      "allChannels": "All channels",
+      "noChannels": "Add a channel below first.",
+      "saved": "Saved.",
+      "channelsLabel": "Send to"
     }
   },
   "homeAddress": {
@@ -239,7 +287,15 @@
     "intro": "Everything your family plans, in one place.",
     "noFamilyTitle": "No family yet",
     "noFamilyText": "Create a family, or ask someone to add you to theirs (with the email of your account) or to send you an invite link.",
-    "createFamily": "Create a family"
+    "createFamily": "Create a family",
+    "modules": "Modules",
+    "today": "Today",
+    "open": "Open",
+    "searches": "Appointment searches",
+    "noSearches": "No searches yet: Ohana can watch Doctolib and jameda for you.",
+    "searchNothing": "Nothing found yet",
+    "searchFirst_one": "{{doctor}} and 1 more doctor",
+    "searchFirst_other": "{{doctor}} and {{count}} more doctors"
   },
   "families": {
     "nameLabel": "Name",
@@ -282,7 +338,8 @@
     "tabGeneral": "General",
     "tabCalendar": "Calendar",
     "tabFeed": "Calendar feed",
-    "tabFinance": "Finance"
+    "tabFinance": "Finance",
+    "tabHousehold": "Household"
   },
   "account": {
     "title": "Account",
@@ -582,7 +639,10 @@
       "newName": "New type {{n}}",
       "confirmDelete": "Delete “{{name}}”?",
       "confirmDeleteUsed": "Delete “{{name}}”? It is used on {{days}} in {{year}}. This can't be undone.",
-      "readonly": "Only editors of the family can change entry types."
+      "readonly": "Only editors of the family can change entry types.",
+      "away": "Away",
+      "awayTitle": "The whole family is away from home on these days: the meal plan plans no meals for them",
+      "helpAway": "<b>Away</b> (checkbox, any role) – the whole family is away from home: the meal plan leaves these days out."
     },
     "note": {
       "title": "Icon & note",
@@ -666,7 +726,9 @@
       "legacyHelp": "The feed address of this family in family-planner. Its event ids live on, so subscriptions moved over keep their events.",
       "legacyRemove": "Remove",
       "legacyConfirm": "Remove the old calendar link? Calendar subscriptions made with it stop updating.",
-      "legacyRemoved": "Old link removed."
+      "legacyRemoved": "Old link removed.",
+      "events": "Booked appointments (with time)",
+      "eventsTitle": "Timed events such as booked doctor's appointments; they name the doctor and the practice"
     },
     "overview": {
       "nextGap": "Next uncovered day: {{date}}",
@@ -794,7 +856,8 @@
         "Fri",
         "Sat",
         "Sun"
-      ]
+      ],
+      "away": "Away · {{types}}"
     },
     "shopping": {
       "title": "Shopping List",
@@ -956,6 +1019,14 @@
       "noList": "No shopping list yet",
       "allBought": "Everything bought",
       "toBuy": "{{open}} of {{total}} items left to buy"
+    },
+    "spent": {
+      "title": "Spent",
+      "hint": "{{category}} in your finances, {{from}} – {{to}}",
+      "noCategory": "Ohana shows here what this shopping trip cost, from the finances' groceries category.",
+      "setCategory": "Choose the groceries category",
+      "none": "No transactions yet.",
+      "openFinance": "Open finance"
     }
   },
   "finance": {
@@ -1182,6 +1253,13 @@
       "top": "Most went to {{name}}",
       "balance": "On the accounts: {{amount}}",
       "nothing": "No transactions this month yet."
+    },
+    "shoppingList": "Shopping list of this day",
+    "groceries": {
+      "title": "Groceries",
+      "help": "The category of your grocery shopping (with its subcategories): a shopping list shows what was spent in it on its shopping day (± 1 day), and those transactions link to the list.",
+      "auto": "Automatic: {{name}}",
+      "autoNone": "Automatic (a category named Groceries)"
     }
   }
 }

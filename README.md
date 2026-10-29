@@ -5,7 +5,7 @@ Ohana replaces three apps, `family-planner`, `cookless` and `findmyappointment`,
 their data over. See [the plan](docs/plan.md) for why and how, and its phases for what is
 there already.
 
-## What works today (phases 0, 1, 2, 4 and 5)
+## What works today (phases 0, 1, 2, 4, 5 and most of 7)
 
 - **Sign in** with a **passkey** (fingerprint, face or device PIN) or an email and a
   **password**. A fresh install asks for the first account at `/setup`; it becomes the
@@ -179,13 +179,45 @@ findmyappointment).
 
 Viewers see all of this but can't change anything.
 
+## How the modules work together
+
+- **Overview:** one dashboard: *today* (the day's meal, or "away"; booked appointments of
+  the day), the next uncovered day, what's *coming up* in the next 30 days (calendar entries
+  and booked appointments together), the shopping list, this month's finances and the latest
+  finds of the appointment searches; a row of links to the modules on top.
+- **Appointments → Calendar:** on an appointment's page, editors *Mark as booked* after
+  booking it with the practice: date and time (the slot's, changeable), for whom, a note, and
+  optionally *Stop watching this search*. It shows in the calendar as a dot on its day (the
+  time and doctor in the tooltip, on phones below the selected day), on the overview, under
+  *Booked appointments* on the appointments page (with *Remove*), and, if the feed is
+  subscribed with *Booked appointments (with time)* (`events=1`), as a timed event in the
+  calendar feed. REST: `GET/POST /api/v1/families/{id}/events`,
+  `DELETE /api/v1/families/{id}/events/{eventId}` (`{"date", "start": "HH:MM", "end",
+  "title", "location", "person", "note", "url"}`).
+- **Calendar → Meals:** tick *Away* next to a calendar type (Settings → Calendar), e.g. a
+  "Trip" type: on its days the whole family is away, the meal plan plans no meals for them
+  (when generated or refreshed) and shows them as *Away · Trip*.
+- **Meals → Finance:** a shopping list shows what was *spent*: the transactions of the
+  groceries category (with its subcategories) on its shopping day ± 1 day. In Finance, such a
+  transaction gets a 🛒 link to that list. The category is *Settings → Finance → Groceries*
+  (automatic: the category named Groceries / Lebensmittel).
+- **Notifications** (Settings → Household → *What Ohana tells you*): per event on/off and
+  which channels: *Appointment found* (the channels come from each search), *Day without
+  cover* (each morning, weekdays in the next two weeks that need cover and have none; one
+  message, and only when a day is new – the same days aren't told again), *Shopping reminder*
+  (off by default; the evening before a shopping day, what is still on the list).
+
 ## Family settings
 
-- **Home address** (editors set it, looked up with Photon): the origin for distances.
-- **Notifications** (editors): the family's channels, used by every part of Ohana:
-  **Pushbullet**, **Pushover**, **Telegram** or **email** over SMTP, each with a *Test*
-  button. Tokens and passwords are stored encrypted and never shown again (leave the field
-  empty when editing to keep them).
+Tabs, kept in the address (`?tab=`): *General* (name, members, invite links), *Household*,
+*Calendar*, *Calendar feed*, *Finance*.
+
+- **Household → Home address** (editors set it, looked up with Photon): the origin for
+  distances.
+- **Household → Notifications** (editors): which events are sent (see above) and the
+  family's channels, used by every part of Ohana: **Pushbullet**, **Pushover**, **Telegram**
+  or **email** over SMTP, each with a *Test* button. Tokens and passwords are stored
+  encrypted and never shown again (leave the field empty when editing to keep them).
 
 ## Development
 
@@ -193,7 +225,7 @@ Viewers see all of this but can't change anything.
 npm install
 npm run db:migrate   # creates ./data/ohana.db and loads the units + ingredients (db:seed)
 npm run dev          # http://localhost:3000
-npm run worker       # the background worker (appointment searches, cleanup, backups), in a second terminal
+npm run worker       # the background worker (appointment searches, daily notifications, cleanup, backups), in a second terminal
 npm test             # Vitest
 npm run typecheck
 ```

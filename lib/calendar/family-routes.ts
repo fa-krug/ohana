@@ -8,6 +8,7 @@ import { HttpError, json, NO_STORE, randomToken, readBody, slug } from "@/lib/ap
 import { renameFamily } from "@/lib/families/manage";
 import { exportFinance, parseFinanceImport } from "@/lib/finance/finance";
 import type { FamilyPatch, FamilyRow } from "./store";
+import { type EventRow, eventsByDay, listEvents } from "./events";
 import {
   groupEntries,
   listVacation,
@@ -43,11 +44,17 @@ export function publicFamily({ family, access }: Loaded) {
   };
 }
 
-/** GET /families/{id}: the family and its calendar in the range. */
-export function familyState(loaded: Loaded, range: Range, data: VacationData) {
+/** GET /families/{id}: the family and its calendar in the range, with the timed events of the
+ *  range by day (`events`, phase 7) when given. */
+export function familyState(loaded: Loaded, range: Range, data: VacationData, events?: EventRow[]) {
   const family = publicFamily(loaded);
   // "session" is the name from before families, kept for scripts that read it.
-  return { family, session: family, ...vacationState(range, data) };
+  return {
+    family,
+    session: family,
+    ...vacationState(range, data),
+    ...(events ? { events: eventsByDay(events) } : {}),
+  };
 }
 
 /** The whole family as a file: all years, types, entries and notes, and the finances, but
@@ -105,10 +112,10 @@ export function handleFamily(ctx: Ctx): Promise<Response> | null {
   return fn ? fn(ctx) : Promise.reject(new HttpError(405, "Method not allowed"));
 }
 
-async function read({ store, url, loadWith }: Ctx): Promise<Response> {
+async function read({ db, store, url, loadWith }: Ctx): Promise<Response> {
   const range = rangeFromQuery(url);
   const [loaded, data] = await loadWith("view", (id) => listVacation(store, id, range));
-  return json(familyState(loaded, range, data));
+  return json(familyState(loaded, range, data, listEvents(db, loaded.family.id, range)));
 }
 
 async function rename({ db, store, req, url, loadWith, now, requireUser }: Ctx): Promise<Response> {
@@ -118,12 +125,12 @@ async function rename({ db, store, req, url, loadWith, now, requireUser }: Ctx):
   if (typeof name !== "string") throw new HttpError(400, "name is required");
   renameFamily(db, { id: requireUser().id }, loaded.family.id, name, now);
   const family = (await store.getFamily(loaded.family.id))!;
-  return json(familyState({ ...loaded, family }, range, data));
+  return json(familyState({ ...loaded, family }, range, data, listEvents(db, family.id, range)));
 }
 
 /** POST /families/{id}/links {"link": "feed" | "legacy"}: a new feed id (the old one stops
  *  working), or removes the legacy link. Answers like GET. */
-async function rotateLink({ store, req, url, loadWith }: Ctx): Promise<Response> {
+async function rotateLink({ db, store, req, url, loadWith }: Ctx): Promise<Response> {
   const range = rangeFromQuery(url);
   const [loaded, data] = await loadWith("edit", (id) => listVacation(store, id, range));
   const link = (await readBody(req)).link;
@@ -133,7 +140,7 @@ async function rotateLink({ store, req, url, loadWith }: Ctx): Promise<Response>
   const patch: FamilyPatch = link === "feed" ? { feed_id: randomToken(20) } : { legacy_id: null };
   await store.updateFamily(loaded.family.id, patch);
   const family = (await store.getFamily(loaded.family.id))!;
-  return json(familyState({ ...loaded, family }, range, data));
+  return json(familyState({ ...loaded, family }, range, data, listEvents(db, family.id, range)));
 }
 
 /** Viewers may export too: they can read all of that anyway. */
@@ -147,7 +154,7 @@ async function exportFamily({ store, finance, loadWith, now }: Ctx): Promise<Res
 
 /** Replaces all years, types, entries and notes, and the finances if the file has them, with
  *  those of an export file; the name and the links stay. Answers like GET /families/{id} (with ?year= etc.). */
-async function importFamily({ store, req, url, load }: Ctx): Promise<Response> {
+async function importFamily({ db, store, req, url, load }: Ctx): Promise<Response> {
   const range = rangeFromQuery(url);
   const loaded = await load("edit");
   const { family } = loaded;
@@ -155,5 +162,7 @@ async function importFamily({ store, req, url, load }: Ctx): Promise<Response> {
   const types = data.types.map((t) => ({ ...t, family_id: family.id }));
   await store.replaceContents(family.id, types, data.entries, data.notes, data.finance);
   const updated = (await store.getFamily(family.id))!;
-  return json(familyState({ ...loaded, family: updated }, range, await listVacation(store, family.id, range)));
+  return json(
+    familyState({ ...loaded, family: updated }, range, await listVacation(store, family.id, range), listEvents(db, family.id, range)),
+  );
 }

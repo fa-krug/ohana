@@ -26,9 +26,12 @@ export function assignSchedule(opts: {
   servings: number;
   defaultLeftoverDays: number;
   rng: Rng;
+  /** Days that get no meal at all (the family is away, phase 7): no cooking, no leftovers,
+   *  no fallback. Leftover spacing still counts calendar days. */
+  skipDates?: ReadonlySet<string>;
 }): PlannedEntry[] {
-  const { startDate, days, servings, defaultLeftoverDays, rng } = opts;
-  const dates = Array.from({ length: days }, (_, i) => addDays(startDate, i));
+  const { startDate, days, servings, defaultLeftoverDays, rng, skipDates } = opts;
+  const dates = Array.from({ length: days }, (_, i) => addDays(startDate, i)).filter((d) => !skipDates?.has(d));
   const assigned = new Set<string>();
   const entries: PlannedEntry[] = [];
 
