@@ -1,0 +1,12 @@
+{"data": {
+  "profile": {"id": 111, "name_with_title": "Dr Alpha", "speciality": {"name": "Psychotherapeut"}},
+  "visit_motives": [
+    {"id": 10, "name": "Erstgespräch Psychotherapie"},
+    {"id": 11, "name": "Massage"}
+  ],
+  "agendas": [
+    {"id": 900, "visit_motive_ids": [10], "practice_id": 500, "booking_disabled": false},
+    {"id": 901, "visit_motive_ids": [11], "practice_id": 500, "booking_disabled": true}
+  ],
+  "places": [{"name": "Praxis Mitte", "practice_ids": [500]}]
+}}

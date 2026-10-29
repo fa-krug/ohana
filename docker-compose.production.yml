@@ -3,6 +3,8 @@
 x-env: &env
   NODE_ENV: production
   AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET}
+  # Optional: a separate key for secrets at rest (else derived from AUTH_SECRET).
+  ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
   APP_URL: https://${OHANA_DOMAIN:-ohana.fa-krug.de}
   WEBAUTHN_RP_ID: ${OHANA_DOMAIN:-ohana.fa-krug.de}
   WEBAUTHN_RP_NAME: Ohana
