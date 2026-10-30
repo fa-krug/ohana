@@ -5593,6 +5593,16 @@
         }
       }
     },
+    "Hide the demo notice": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demo-Hinweis ausblenden"
+          }
+        }
+      }
+    },
     "Hide video consultations": {
       "localizations": {
         "de": {
