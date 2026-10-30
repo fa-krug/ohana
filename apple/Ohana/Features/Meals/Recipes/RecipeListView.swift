@@ -1,0 +1,361 @@
+import SwiftUI
+
+/// The family's recipes (web: meals/recipes): Favourites or Want to try, search, tag filter and
+/// sort, a page of 20 at a time as an adaptive grid of glass cards.
+struct RecipeListView: View {
+    @Environment(FamilyContext.self) private var family
+    @AppStorage("meals.recipes.list") private var list: RecipeListType = .known
+    @AppStorage("meals.recipes.sort") private var sort: RecipeSort = .nameAsc
+    @State private var query = ""
+    @State private var tagFilter: Set<String> = []
+    @State private var model = RecipeListModel()
+    @State private var tags: [RecipeTag] = []
+    @State private var ai = MealsAIStatus.none
+    @State private var showFilter = false
+    @State private var creating = false
+    @State private var generating = false
+    @State private var deletes = RecipePendingDeletes.shared
+    @State private var confirmDelete: RecipeSummary?
+
+    private var key: RecipeListModel.Query {
+        .init(list: list, query: query.trimmingCharacters(in: .whitespaces), sort: sort, tags: tagFilter)
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                controls
+                content
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 24)
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .searchable(text: $query, prompt: Text("Search recipes"))
+        .refreshable { await model.reload(family.api, key) }
+        .task(id: RecipeListModel.Load(query: key, revision: family.revision(.recipes))) {
+            // Typing waits a moment before asking the server.
+            if model.loadedQuery != nil, model.loadedQuery?.query != key.query {
+                try? await Task.sleep(for: .milliseconds(300))
+                if Task.isCancelled { return }
+            }
+            await model.reload(family.api, key)
+        }
+        .task(id: family.revision(.recipes)) {
+            tags = (try? await family.api.get("/meals/tags", as: RecipeTagsResponse.self).tags) ?? tags
+            ai = (try? await family.api.get("/meals/status", as: MealsAIStatus.self)) ?? ai
+        }
+        .toolbar { toolbar }
+        .sheet(isPresented: $showFilter) {
+            RecipeFilterSheet(tags: tags, selection: $tagFilter)
+        }
+        .sheet(isPresented: $creating) {
+            RecipeEditorSheet(mode: .create(list))
+        }
+        .sheet(isPresented: $generating) {
+            RecipeGenerateView { list = .toTry }
+        }
+        .confirmationDialog("Delete recipe?", isPresented: Binding(get: { confirmDelete != nil }, set: { if !$0 { confirmDelete = nil } }),
+                            titleVisibility: .visible, presenting: confirmDelete) { recipe in
+            Button("Delete", role: .destructive) {
+                withAnimation { deletes.schedule(recipe.id, title: recipe.title, family: family) }
+            }
+        } message: { _ in
+            Text("Delete this recipe? You’ll have a few seconds to undo.")
+        }
+    }
+
+    // MARK: Pieces
+
+    private var controls: some View {
+        HStack(spacing: 10) {
+            Picker("List", selection: $list) {
+                ForEach(RecipeListType.allCases) { Text($0.title).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .frame(maxWidth: 320)
+            Spacer(minLength: 0)
+            if !tagFilter.isEmpty {
+                Button {
+                    tagFilter = []
+                } label: {
+                    Label("Clear filters", systemImage: "xmark")
+                }
+                .buttonStyle(.glass)
+                .controlSize(.small)
+            }
+        }
+        .padding(.top, 4)
+    }
+
+    @ViewBuilder private var content: some View {
+        let visible = model.items.filter { !deletes.isHidden($0.id) }
+        if let error = model.error, model.items.isEmpty {
+            ContentUnavailableView {
+                Label("Couldn’t load", systemImage: "exclamationmark.triangle")
+            } description: {
+                Text(error)
+            } actions: {
+                Button("Try again") { Task { await model.reload(family.api, key) } }
+                    .buttonStyle(.glassProminent)
+            }
+            .padding(.top, 40)
+        } else if model.loadedQuery == nil {
+            ProgressView().controlSize(.large).frame(maxWidth: .infinity).padding(.top, 80)
+        } else if visible.isEmpty {
+            if !key.query.isEmpty {
+                ContentUnavailableView.search(text: key.query).padding(.top, 40)
+            } else if !tagFilter.isEmpty {
+                ContentUnavailableView("No matches", systemImage: "line.3.horizontal.decrease.circle",
+                                       description: Text("No recipe has these tags."))
+                    .padding(.top, 40)
+            } else {
+                ContentUnavailableView {
+                    Label("No recipes yet", systemImage: "book")
+                } description: {
+                    Text("Start building your collection")
+                } actions: {
+                    if family.canEdit {
+                        Button("Add your first recipe", systemImage: "plus") { creating = true }
+                            .buttonStyle(.glassProminent)
+                        if ai.generate {
+                            Button("Generate with AI", systemImage: "sparkles") { generating = true }
+                                .buttonStyle(.glass)
+                        }
+                    }
+                }
+                .padding(.top, 40)
+            }
+        } else {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 250, maximum: 420), spacing: 16)], spacing: 16) {
+                ForEach(visible) { recipe in
+                    NavigationLink {
+                        MealsRecipeDetailView(recipeID: recipe.id)
+                    } label: {
+                        RecipeCard(recipe: recipe)
+                    }
+                    .buttonStyle(.plain)
+                    .contextMenu { menu(for: recipe) }
+                    .onAppear {
+                        if recipe.id == model.items.last?.id { Task { await model.loadMore(family.api) } }
+                    }
+                }
+            }
+            if model.hasMore {
+                ProgressView().frame(maxWidth: .infinity).padding()
+                    .onAppear { Task { await model.loadMore(family.api) } }
+            }
+            Text("\(model.totalCount) recipes")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity)
+        }
+    }
+
+    @ViewBuilder private func menu(for recipe: RecipeSummary) -> some View {
+        NavigationLink {
+            MealsCookView(recipeID: recipe.id)
+        } label: {
+            Label("Let’s cook!", systemImage: "frying.pan")
+        }
+        if family.canEdit {
+            Button {
+                perform {
+                    let _: RecipeMoveResponse = try await family.api.send(.post, "/meals/recipes/\(recipe.id)/move")
+                    family.didChange(.recipes, .meals)
+                }
+            } label: {
+                if list == .known {
+                    Label("Move to Want to try", systemImage: "arrow.right.arrow.left")
+                } else {
+                    Label("Move to Favourites", systemImage: "arrow.right.arrow.left")
+                }
+            }
+            Divider()
+            Button("Delete", systemImage: "trash", role: .destructive) { confirmDelete = recipe }
+        }
+    }
+
+    @ToolbarContentBuilder private var toolbar: some ToolbarContent {
+        ToolbarItemGroup(placement: .primaryAction) {
+            Menu {
+                Picker("Sort", selection: $sort) {
+                    ForEach(RecipeSort.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.inline)
+            } label: {
+                Label("Sort", systemImage: "arrow.up.arrow.down")
+            }
+            if !tags.isEmpty {
+                Button {
+                    showFilter = true
+                } label: {
+                    Label("Filter", systemImage: tagFilter.isEmpty
+                          ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
+                }
+            }
+        }
+        if family.canEdit {
+            #if os(iOS)
+            ToolbarSpacer(.fixed, placement: .primaryAction)
+            #endif
+            ToolbarItemGroup(placement: .primaryAction) {
+                if ai.generate {
+                    Button {
+                        generating = true
+                    } label: {
+                        Label("Generate with AI", systemImage: "sparkles")
+                    }
+                    .keyboardShortcut("g", modifiers: [.command, .shift])
+                }
+                Button {
+                    creating = true
+                } label: {
+                    Label("Add Recipe", systemImage: "plus")
+                }
+                .keyboardShortcut("n", modifiers: .command)
+            }
+        }
+    }
+}
+
+/// One recipe in the grid: its photo, title, times and tags on glass.
+struct RecipeCard: View {
+    let recipe: RecipeSummary
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            RemoteImage(path: recipe.imagePath) { RecipePhotoPlaceholder() }
+                .frame(height: 150)
+                .frame(maxWidth: .infinity)
+                .clipped()
+            VStack(alignment: .leading, spacing: 6) {
+                Text(recipe.title)
+                    .font(.headline)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                RecipeMetaRow(prep: recipe.prepTimeMinutes, cook: recipe.cookTimeMinutes, servings: recipe.defaultServings)
+                if !recipe.tags.isEmpty {
+                    HStack(spacing: 4) {
+                        ForEach(recipe.tags.prefix(3)) { RecipeTagChip(tag: $0) }
+                        if recipe.tags.count > 3 {
+                            Text(verbatim: "+\(recipe.tags.count - 3)").font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .clipShape(.rect(cornerRadius: 22))
+        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 22))
+        .contentShape(.rect(cornerRadius: 22))
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// The tag filter (the web's filter dialog): recipes must have one of the picked tags.
+struct RecipeFilterSheet: View {
+    let tags: [RecipeTag]
+    @Binding var selection: Set<String>
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                RecipeTagPicker(tags: tags, selection: $selection)
+                    .padding()
+            }
+            .navigationTitle("Filter")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Clear filters", role: .destructive) { selection = [] }
+                        .disabled(selection.isEmpty)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done", role: .confirm) { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .recipeSheetFrame(minWidth: 420, minHeight: 420)
+    }
+}
+
+/// The list's data: the pages loaded so far for one query.
+@Observable
+final class RecipeListModel {
+    struct Query: Hashable {
+        var list: RecipeListType
+        var query: String
+        var sort: RecipeSort
+        var tags: Set<String>
+    }
+
+    struct Load: Hashable {
+        var query: Query
+        var revision: Int
+    }
+
+    static let pageSize = 20
+
+    private(set) var items: [RecipeSummary] = []
+    private(set) var totalCount = 0
+    private(set) var loadedQuery: Query?
+    private(set) var error: String?
+    private var loadingMore = false
+
+    var hasMore: Bool { items.count < totalCount }
+
+    static func parameters(_ q: Query, offset: Int, limit: Int = pageSize) -> [String: String?] {
+        [
+            "list": q.list.rawValue,
+            "q": q.query.isEmpty ? nil : q.query,
+            "sort": q.sort.rawValue,
+            "locale": RecipeLocale.code,
+            "tags": q.tags.isEmpty ? nil : q.tags.sorted().joined(separator: ","),
+            "offset": String(offset),
+            "limit": String(limit),
+        ]
+    }
+
+    /// The first page again (keeping as many rows as were loaded, so a reload doesn't jump).
+    func reload(_ api: FamilyAPI, _ q: Query) async {
+        let limit = q == loadedQuery ? min(100, max(Self.pageSize, items.count)) : Self.pageSize
+        do {
+            let page: RecipeListPage = try await api.get("/meals/recipes", query: Self.parameters(q, offset: 0, limit: limit))
+            items = page.items
+            totalCount = page.totalCount
+            loadedQuery = q
+            error = nil
+        } catch is CancellationError {
+        } catch {
+            if items.isEmpty || loadedQuery != q {
+                self.error = error.localizedDescription
+                items = []
+                loadedQuery = q
+            } else {
+                ErrorBanner.shared.show(error)
+            }
+        }
+    }
+
+    func loadMore(_ api: FamilyAPI) async {
+        guard let q = loadedQuery, hasMore, !loadingMore else { return }
+        loadingMore = true
+        defer { loadingMore = false }
+        do {
+            let page: RecipeListPage = try await api.get("/meals/recipes", query: Self.parameters(q, offset: items.count))
+            guard q == loadedQuery else { return }
+            let known = Set(items.map(\.id))
+            items += page.items.filter { !known.contains($0.id) }
+            totalCount = page.totalCount
+        } catch {
+            ErrorBanner.shared.show(error)
+        }
+    }
+}
