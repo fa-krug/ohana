@@ -28,11 +28,11 @@ const LONG_DATE: Intl.DateTimeFormatOptions = {
   month: "long",
   year: "numeric",
 };
-let narrow: MediaQueryList | null = null;
-/** Phones (the month view); a function, since there is no matchMedia on the server. */
-export function narrowScreen(): MediaQueryList {
-  return (narrow ??= matchMedia("(max-width: 640px)"));
-}
+/** Narrower than this, the calendar shows one calendar per month instead of the year grid
+ *  (31 days stop fitting there). It's the calendar's own width, not the screen's: the sidebar
+ *  and the assistant panel take their share. */
+const MONTH_VIEW_BELOW = 880;
+let months = false;
 
 const formatters = new Map<string, Intl.DateTimeFormat>(); // slow to create; reuse per language
 
@@ -66,9 +66,26 @@ export function eventText(e: CalEvent) {
   return [e.start, e.person ? `${e.title} (${e.person})` : e.title].filter(Boolean).join(" ");
 }
 
-/** Phones show one calendar per month (7 columns) instead of the 12 × 31 year grid. */
+/** Narrow calendars (phones, or a squeezed page) show one calendar per month (7 columns)
+ *  instead of the 12 × 31 year grid. */
 export function monthView() {
-  return narrowScreen().matches;
+  return months;
+}
+
+/** Follows the width of the calendar (the planner element): `onChange` on the first
+ *  measurement and on every switch between the year grid and the month view. */
+export function watchMonthView(el: HTMLElement, onChange: (months: boolean) => void): () => void {
+  const measure = () => {
+    const now = el.clientWidth < MONTH_VIEW_BELOW;
+    if (now === months) return;
+    months = now;
+    onChange(now);
+  };
+  months = el.clientWidth < MONTH_VIEW_BELOW;
+  onChange(months);
+  const ro = new ResizeObserver(measure);
+  ro.observe(el);
+  return () => ro.disconnect();
 }
 
 type Drag =
@@ -129,16 +146,16 @@ export class GridView {
     const fit = new ResizeObserver(() => this.fitWindow());
     fit.observe(planner);
     this.cleanup.push(() => fit.disconnect());
-    const layout = () => {
-      this.applyZoom({ keepView: false });
-      this.render();
-      this.centerOn(store.focus ?? this.today);
-    };
-    narrowScreen().addEventListener("change", layout);
-    this.cleanup.push(() => narrowScreen().removeEventListener("change", layout));
     this.bindPointer();
     this.applyZoom({ keepView: false });
     this.render();
+  }
+
+  /** After a switch between the year grid and the month view. */
+  relayout() {
+    this.applyZoom({ keepView: false });
+    this.render();
+    this.centerOn(this.store.focus ?? this.today);
   }
 
   destroy() {
@@ -183,6 +200,7 @@ export class GridView {
     const months = monthView();
     this.grid.classList.toggle("yv", !months);
     this.grid.classList.toggle("mv", months);
+    this.wrap.classList.toggle("mv", months);
     this.grid.append(months ? this.buildMonths() : this.buildYear());
     this.builtFor = key;
   }

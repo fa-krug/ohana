@@ -366,118 +366,119 @@
   color: var(--foreground);
 }
 
-/* ---------- phones: one calendar per month, scrolling with the page ---------- */
-@media (max-width: 640px) {
-  .grid-wrap {
-    overflow: visible;
-    max-height: none;
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
-    background: transparent;
-  }
-  .grid.mv {
-    display: block;
-    padding: 0 8px 12px;
-    touch-action: pan-y;
-  }
-  .mv-month + .mv-month {
-    margin-top: 6px;
-  }
-  .mv-title {
-    position: sticky;
-    top: var(--mv-top, 0px);
-    z-index: 6;
-    margin: 0 -8px;
-    padding: 10px 14px 6px;
-    font-size: 17px;
-    font-weight: 650;
-    letter-spacing: -0.01em;
-    background: color-mix(in srgb, var(--background) 92%, transparent);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-  }
-  .mv-month.is-today .mv-title {
-    color: var(--cal-accent);
-  }
-  .mv-days {
-    display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 3px;
-  }
-  .mv-wd {
-    padding: 0 0 4px;
-    text-align: center;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--cal-muted);
-  }
-  .grid.mv .cell {
-    height: auto;
-    aspect-ratio: 1 / 0.8;
-    border: 0;
-    border-radius: 9px;
-    scroll-margin: 104px 0 170px;
-  }
-  .grid.mv .cell .wd {
-    top: 6px;
-    left: 7px;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--cal-text);
-    opacity: 1;
-  }
-  .grid.mv .cell.weekend {
-    background: color-mix(in srgb, var(--cal-cell) 40%, transparent);
-  }
-  .grid.mv .cell.weekend .wd {
-    color: var(--cal-muted);
-  }
-  .grid.mv .cell.has-fill .wd {
-    color: inherit;
-  }
-  .grid.mv .cell .fills {
-    inset: 0;
-    border-radius: 9px;
-  }
-  .grid.mv .cell .note-icon {
-    font-size: 20px;
-    transform: translate(-50%, -30%);
-  }
-  .grid.mv .cell.today::before {
-    inset: 0;
-    border-radius: 9px;
-  }
-  .grid.mv .cell.sel .sel-overlay,
-  .grid.mv .cell.focus .sel-overlay,
-  .grid.mv .cell.fill-preview .sel-overlay {
-    inset: 0;
-    border-radius: 9px;
-  }
-  .grid.mv .cell.has-event .event-mark {
-    left: 6px;
-    bottom: 6px;
-    width: 8px;
-    height: 8px;
-  }
-  .grid.mv .cell.has-birthday .birthday-mark {
-    right: 5px;
-    bottom: 4px;
-    font-size: 12px;
-  }
-  .grid.mv .cell.has-comment .note-mark {
-    top: 0;
-    right: 0;
-    border-top-right-radius: 9px;
-  }
-  .grid.mv,
-  .grid.mv .cell {
-    -webkit-touch-callout: none;
-  }
-  .chip {
-    font-size: 15px;
-  }
-  .chip .count {
-    font-size: 12px;
-  }
+/* ---------- month view (phones, narrow pages): one calendar per month, scrolling with the
+   page; grid.ts sets .mv ---------- */
+.grid-wrap.mv {
+  overflow: visible;
+  max-height: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.grid.mv {
+  display: block;
+  max-width: 720px; /* a narrow page on a big screen: keep the days from growing huge */
+  margin-inline: auto;
+  padding: 0 8px 12px;
+  touch-action: pan-y;
+}
+.mv-month + .mv-month {
+  margin-top: 6px;
+}
+.mv-title {
+  position: sticky;
+  top: var(--mv-top, 0px);
+  z-index: 6;
+  margin: 0 -8px;
+  padding: 10px 14px 6px;
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  background: color-mix(in srgb, var(--background) 92%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.mv-month.is-today .mv-title {
+  color: var(--cal-accent);
+}
+.mv-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+}
+.mv-wd {
+  padding: 0 0 4px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cal-muted);
+}
+.grid.mv .cell {
+  height: auto;
+  aspect-ratio: 1 / 0.8;
+  border: 0;
+  border-radius: 9px;
+  scroll-margin: 104px 0 170px;
+}
+.grid.mv .cell .wd {
+  top: 6px;
+  left: 7px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cal-text);
+  opacity: 1;
+}
+.grid.mv .cell.weekend {
+  background: color-mix(in srgb, var(--cal-cell) 40%, transparent);
+}
+.grid.mv .cell.weekend .wd {
+  color: var(--cal-muted);
+}
+.grid.mv .cell.has-fill .wd {
+  color: inherit;
+}
+.grid.mv .cell .fills {
+  inset: 0;
+  border-radius: 9px;
+}
+.grid.mv .cell .note-icon {
+  font-size: 20px;
+  transform: translate(-50%, -30%);
+}
+.grid.mv .cell.today::before {
+  inset: 0;
+  border-radius: 9px;
+}
+.grid.mv .cell.sel .sel-overlay,
+.grid.mv .cell.focus .sel-overlay,
+.grid.mv .cell.fill-preview .sel-overlay {
+  inset: 0;
+  border-radius: 9px;
+}
+.grid.mv .cell.has-event .event-mark {
+  left: 6px;
+  bottom: 6px;
+  width: 8px;
+  height: 8px;
+}
+.grid.mv .cell.has-birthday .birthday-mark {
+  right: 5px;
+  bottom: 4px;
+  font-size: 12px;
+}
+.grid.mv .cell.has-comment .note-mark {
+  top: 0;
+  right: 0;
+  border-top-right-radius: 9px;
+}
+.grid.mv,
+.grid.mv .cell {
+  -webkit-touch-callout: none;
+}
+.cal-dock .chip {
+  font-size: 15px;
+}
+.cal-dock .chip .count {
+  font-size: 12px;
 }

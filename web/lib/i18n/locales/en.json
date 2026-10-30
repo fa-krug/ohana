@@ -55,6 +55,8 @@
     "history": "Chats",
     "noHistory": "No chats yet",
     "new": "New chat",
+    "openPage": "Open as a page",
+    "resize": "Drag to resize the assistant",
     "delete": "Delete chat",
     "stop": "Stop",
     "send": "Send",

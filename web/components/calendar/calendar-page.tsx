@@ -1,9 +1,9 @@
 "use client";
 
-// The calendar page: year grid (month view on phones), type chips, coverage, selection bar,
+// The calendar page: year grid (month view when narrow), type chips, coverage, selection bar,
 // notes, keyboard shortcuts and clipboard. Ported from family-planner's VacationPage.tsx.
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, CircleHelp, Redo2, Rss, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,9 +11,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/sonner";
 import { useT } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils";
-import { PlannerProvider, useMedia, useMounted, usePlanner } from "./context";
+import { PlannerProvider, useMounted, usePlanner } from "./context";
 import { Coverage } from "./coverage";
-import { type GridView, monthView } from "./grid";
+import { type GridView, monthView, watchMonthView } from "./grid";
 import { HelpDialog } from "./help-dialog";
 import { NoteDialog } from "./note-dialog";
 import { todayIso } from "./planner-store";
@@ -62,10 +62,20 @@ export function CalendarPage({ familyId, year, readOnly }: { familyId: string; y
 function Planner() {
   const { t } = useT();
   const store = usePlanner();
-  const narrow = useMedia("(max-width: 640px)");
+  const [narrow, setNarrow] = useState(monthView);
   const plannerRef = useRef<HTMLDivElement>(null);
   const dockRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<GridView | null>(null);
+
+  // Before the grid is drawn (it's created in an effect), so it starts in the right layout.
+  useLayoutEffect(
+    () =>
+      watchMonthView(plannerRef.current!, (months) => {
+        setNarrow(months);
+        gridRef.current?.relayout();
+      }),
+    [],
+  );
   const [fill, setFill] = useState<number | null>(null);
   const [noteDays, setNoteDays] = useState<string[] | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -251,12 +261,12 @@ function Planner() {
       </div>
       <div
         ref={plannerRef}
-        className="planner flex min-w-0 flex-col max-sm:-mx-4"
-        style={{ "--mv-top": "calc(3.5rem + 1px)" } as React.CSSProperties}
+        // --mv-top: below the phones' top bar, which the month titles stick to.
+        className="planner flex min-w-0 flex-col [--mv-top:calc(3.5rem+1px)] max-sm:-mx-4 md:[--mv-top:0px]"
       >
         {!narrow && (
-          <div className="mb-3 flex items-start gap-3">
-            <TypeChips className="flex-1 flex-wrap" />
+          <div className="mb-3 flex flex-wrap items-start gap-3">
+            <TypeChips className="min-w-64 flex-1 flex-wrap" />
             <Coverage onJump={jumpToGap} />
           </div>
         )}
@@ -276,7 +286,7 @@ function Planner() {
       {narrow && (
         <div
           ref={dockRef}
-          className="sticky bottom-0 z-10 -mx-4 -mb-6 border-t bg-card/90 pt-2 pb-[max(8px,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(0,0,0,0.1)] backdrop-blur-lg"
+          className="cal-dock sticky bottom-0 z-10 -mx-4 -mb-6 border-t bg-card/90 pt-2 pb-[max(8px,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(0,0,0,0.1)] backdrop-blur-lg sm:-mx-6"
         >
           <div className="mb-2">
             <SelectionBar fill={fill} onNote={openNote} compact />
