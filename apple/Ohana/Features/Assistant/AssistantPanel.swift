@@ -75,6 +75,7 @@ struct AssistantPanelContent: View {
     var body: some View {
         NavigationStack {
             content
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .navigationTitle(Text(verbatim: store.current?.title ?? String(localized: "Assistant")))
                 #if os(iOS)
                 .navigationBarTitleDisplayMode(.inline)

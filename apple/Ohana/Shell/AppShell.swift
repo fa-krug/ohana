@@ -29,9 +29,12 @@ struct AppShell: View {
             .tabBarMinimizeBehavior(.onScrollDown)
             #endif
             .inspector(isPresented: $showAssistant) {
-                AssistantPanel()
-                    .errorBannerWhenCompact()
-                    .inspectorColumnWidth(min: 320, ideal: 400, max: 560)
+                // Only while shown: a hidden inspector's toolbar items would stay in the window's.
+                if showAssistant {
+                    AssistantPanel()
+                        .errorBannerWhenCompact()
+                        .inspectorColumnWidth(min: 320, ideal: 400, max: 560)
+                }
             }
             .environment(context)
             .id(family.id)
@@ -39,6 +42,19 @@ struct AppShell: View {
             .onReceive(NotificationCenter.default.publisher(for: .openModule)) { note in
                 if let target = note.object as? Module { module = target }
             }
+            #if DEBUG
+            // Development: `-OHANA_DEV_MODULE calendar` / `-OHANA_DEV_ASSISTANT YES` open a module or
+            // the assistant at launch (screenshots, UI checks).
+            .onAppear {
+                let defaults = UserDefaults.standard
+                if let name = defaults.string(forKey: "OHANA_DEV_MODULE"), let target = Module(rawValue: name) {
+                    module = target
+                }
+                if defaults.object(forKey: "OHANA_DEV_ASSISTANT") != nil {
+                    showAssistant = defaults.bool(forKey: "OHANA_DEV_ASSISTANT")
+                }
+            }
+            #endif
         } else {
             NoFamilyView()
         }
