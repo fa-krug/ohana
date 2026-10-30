@@ -49,7 +49,7 @@ struct CalendarRepeatSheet: View {
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    CancelButton(hasChanges: false)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Repeat") {
@@ -58,10 +58,11 @@ struct CalendarRepeatSheet: View {
                         dismiss()
                     }
                     .disabled(store.fill?.targets.isEmpty ?? true)
-                    .keyboardShortcut(.return, modifiers: .command)
+                    .keyboardShortcut(.defaultAction)
                 }
             }
         }
+        .errorBanner()
         .presentationDetents([.medium])
         #if os(macOS)
         .frame(minWidth: 400, minHeight: 280)

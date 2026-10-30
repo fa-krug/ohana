@@ -10,8 +10,8 @@ let calendarTouchInput: Bool = {
     #endif
 }()
 
-/// The selection's actions: note, clear, event, repeat, copy and paste, skip weekends and
-/// (touch) the range and multi-select modes.
+/// The selection's actions: note, clear, event, repeat, skip weekends and (touch) the range and
+/// multi-select modes.
 struct CalendarSelectionActions: View {
     @Bindable var store: CalendarStore
     let actions: CalendarActions
@@ -54,70 +54,105 @@ struct CalendarSelectionActions: View {
     }
 }
 
-/// The list of months (phones, narrow windows): the floating glass bar at the bottom: the
-/// selection and its actions, the type chips.
+/// The glass bar floating at the bottom of the calendar, on every size, so the selection's
+/// actions are always next to the days: the selection (or how to select), its actions, the
+/// type chips that apply a type, and (year grid) the zoom. `showDetails`: the details open in
+/// a sheet (the list of months has no room for them under the grid).
 struct CalendarSelectionBar: View {
     let store: CalendarStore
     let actions: CalendarActions
-    /// Phones show the "how to select" hint only until the first selection (like the web).
-    @AppStorage("ohana.calendar.hinted") private var hinted = false
+    var showDetails = true
+    var showZoom = false
+    /// The "how to select" hint shows until the first few selections (like the web); the help
+    /// button next to it stays.
+    @AppStorage("ohana.calendar.selections") private var selections = 0
+    @ScaledMetric(relativeTo: .body) private var closeSize: CGFloat = 30
+
+    static let hintedSelections = 3
 
     var body: some View {
         let days = store.selectedDays
-        GlassEffectContainer(spacing: 10) {
-            VStack(alignment: .leading, spacing: 8) {
-                if let fill = store.fill {
-                    Text(CalendarText.fill(fill))
-                        .font(.subheadline.weight(.semibold))
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .center, spacing: 8) {
+                status(days)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if showZoom { CalendarZoomSlider() }
+                if days.isEmpty && store.fill == nil {
+                    Button {
+                        actions.showHelp()
+                    } label: {
+                        Label("Help & shortcuts", systemImage: "questionmark.circle")
+                            .labelStyle(.iconOnly)
+                            .font(.title3)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(.rect)
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Help & shortcuts (?)")
                 } else if !days.isEmpty {
-                    HStack(alignment: .top, spacing: 8) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(CalendarText.selection(days))
-                                .font(.subheadline.weight(.semibold))
-                                .lineLimit(2)
-                            if let line = singleDayLine(days) {
-                                Text(line).font(.caption).foregroundStyle(.secondary).lineLimit(2)
-                            }
-                        }
-                        Spacer(minLength: 0)
-                        Button {
-                            store.deselect()
-                        } label: {
-                            Image(systemName: "xmark")
-                                .frame(width: 22, height: 22)
-                        }
-                        .buttonStyle(.glass)
-                        .buttonBorderShape(.circle)
-                        .accessibilityLabel("Clear the selection")
-                        .help("Clear the selection (Esc)")
+                    Button {
+                        store.deselect()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.body.weight(.semibold))
+                            .frame(width: closeSize, height: closeSize)
+                            .background(Color.primary.opacity(0.08), in: .circle)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(.rect)
                     }
-                    ScrollView(.horizontal) {
-                        HStack(spacing: 8) {
-                            CalendarSelectionActions(store: store, actions: actions, touch: calendarTouchInput, showDetails: true)
-                        }
-                        .buttonStyle(.glass)
-                        .controlSize(.small)
-                        .padding(.vertical, 2)
-                    }
-                    .scrollIndicators(.hidden)
-                } else if store.readOnly {
-                    Text("View only").font(.caption).foregroundStyle(.secondary)
-                } else if !hinted {
-                    Text(calendarTouchInput ? LocalizedStringKey("Tap a day to select it – long-press and drag for a range.")
-                                            : LocalizedStringKey("Click or drag over days to select them. Shift-click extends, ⌘-click adds days."))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Clear the selection")
+                    .help("Clear the selection (Esc)")
                 }
-                CalendarTypeChips(store: store, showEditLink: false)
             }
-            .padding(12)
-            .glassEffect(.regular, in: .rect(cornerRadius: 26))
+            if !days.isEmpty && store.fill == nil {
+                ScrollView(.horizontal) {
+                    HStack(spacing: 8) {
+                        CalendarSelectionActions(store: store, actions: actions, touch: calendarTouchInput,
+                                                 showDetails: showDetails)
+                    }
+                    .buttonStyle(.bordered)
+                    .buttonBorderShape(.capsule)
+                    .padding(.vertical, 2)
+                }
+                .scrollIndicators(.hidden)
+                .scrollClipDisabled()
+            }
+            CalendarTypeChips(store: store)
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .glassEffect(.regular, in: .rect(cornerRadius: 26))
+        .frame(maxWidth: 760)
         .padding(.horizontal, 10)
         .padding(.bottom, 6)
         .animation(.snappy, value: days.isEmpty)
         .onChange(of: days.isEmpty) { _, empty in
-            if !empty && !hinted { hinted = true }
+            if !empty && selections < Self.hintedSelections { selections += 1 }
+        }
+    }
+
+    @ViewBuilder
+    private func status(_ days: [Day]) -> some View {
+        if let fill = store.fill {
+            Text(CalendarText.fill(fill))
+                .font(.subheadline.weight(.semibold))
+        } else if !days.isEmpty {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(CalendarText.selection(days))
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(2)
+                if let line = singleDayLine(days) {
+                    Text(line).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                }
+            }
+        } else if store.readOnly {
+            Text("View only").font(.caption).foregroundStyle(.secondary)
+        } else if selections < Self.hintedSelections {
+            Text(calendarTouchInput ? LocalizedStringKey("Tap a day to select it – long-press and drag for a range.")
+                                    : LocalizedStringKey("Click or drag over days to select them. Shift-click extends, ⌘-click adds days."))
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -132,52 +167,16 @@ struct CalendarSelectionBar: View {
     }
 }
 
-/// iPad and Mac: the selection under the grid, with its actions and details, and the zoom.
-struct CalendarSelectionPanel: View {
+/// iPad and Mac: the selected days' details under the grid (their actions are in the bar).
+struct CalendarSelectionDetailsCard: View {
     let store: CalendarStore
     let actions: CalendarActions
-    var showZoom = true
 
     var body: some View {
-        let days = store.selectedDays
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 10) {
-                if let fill = store.fill {
-                    Text(CalendarText.fill(fill)).font(.headline)
-                } else if days.isEmpty {
-                    Text(store.readOnly ? LocalizedStringKey("View only")
-                         : calendarTouchInput ? LocalizedStringKey("Tap a day to select it – long-press and drag for a range.")
-                         : LocalizedStringKey("Click or drag over days to select them. Press ? for all shortcuts."))
-                        .foregroundStyle(.secondary)
-                } else {
-                    Text(CalendarText.selection(days)).font(.headline)
-                }
-                Spacer(minLength: 0)
-                if !days.isEmpty {
-                    Button {
-                        store.deselect()
-                    } label: {
-                        Label("Clear the selection", systemImage: "xmark")
-                    }
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.glass)
-                    .buttonBorderShape(.circle)
-                    .help("Clear the selection (Esc)")
-                }
-                if showZoom { CalendarZoomSlider() }
-            }
-            if !days.isEmpty {
-                GlassEffectContainer(spacing: 8) {
-                    HStack(spacing: 8) {
-                        CalendarSelectionActions(store: store, actions: actions, touch: calendarTouchInput, showDetails: false)
-                    }
-                    .buttonStyle(.glass)
-                    .controlSize(.regular)
-                }
-                CalendarSelectionDetails(store: store, actions: actions)
-            }
+        if !store.selection.isEmpty {
+            CalendarSelectionDetails(store: store, actions: actions)
+                .contentCard(cornerRadius: 22, padding: 14)
         }
-        .contentCard(cornerRadius: 22, padding: 14)
     }
 }
 
@@ -190,6 +189,7 @@ struct CalendarZoomSlider: View {
             Image(systemName: "magnifyingglass")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
             Slider(value: Binding(get: { CalendarZoom.sliderValue(zoom) },
                                   set: { zoom = CalendarZoom.zoom(sliderValue: $0) }),
                    in: Double(CalendarZoom.min)...Double(CalendarZoom.max), step: 1) {
@@ -197,10 +197,12 @@ struct CalendarZoomSlider: View {
             }
             .labelsHidden()
             .frame(width: 110)
+            .accessibilityValue(CalendarText.days(CalendarZoom.clamp(zoom)))
             Text(CalendarText.days(CalendarZoom.clamp(zoom)))
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(.secondary)
-                .frame(minWidth: 52, alignment: .leading)
+                .fixedSize()
+                .accessibilityHidden(true)
         }
         .help("Zoom: how many days fit in the calendar (⌘+ / ⌘− / ⌘0)")
     }

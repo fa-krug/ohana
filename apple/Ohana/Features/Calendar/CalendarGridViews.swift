@@ -67,7 +67,8 @@ struct CalendarPointerSelection: ViewModifier {
 }
 
 /// Touch selection inside a scroll view: tap selects, long-press and drag selects a range (in
-/// the list of months across months: `hit` and `space` cover all of them).
+/// the list of months across months: `hit` and `space` cover all of them). With an iPad's
+/// keyboard, Shift-tap extends the selection and ⌘-tap adds or removes a day, as on the Mac.
 struct CalendarTouchSelection: ViewModifier {
     let store: CalendarStore
     let space: String
@@ -84,7 +85,8 @@ struct CalendarTouchSelection: ViewModifier {
             .onTapGesture(coordinateSpace: .named(space)) { location in
                 if let day = hit(location, false) {
                     onBegin()
-                    store.tap(day)
+                    let modifiers = CalendarModifiers.current
+                    store.tap(day, extend: modifiers.contains(.shift), toggle: modifiers.contains(.command))
                 }
             }
             .gesture(
@@ -95,7 +97,7 @@ struct CalendarTouchSelection: ViewModifier {
                         if start == nil {
                             guard let day = hit(drag.startLocation, false) else { return }
                             start = day
-                            base = store.multiSelect ? store.selection : []
+                            base = store.multiSelect || CalendarModifiers.current.contains(.command) ? store.selection : []
                             pressed += 1
                         }
                         guard let start, let current = hit(drag.location, true) else { return }
@@ -127,7 +129,8 @@ struct CalendarSelectionStyle: ViewModifier {
 }
 
 /// The ▪ at the corner of a selection of consecutive days (the web grid's fill handle):
-/// dragging it repeats the selected days forwards or backwards over the days it passes.
+/// dragging it repeats the selected days forwards or backwards over the days it passes. Its
+/// touch target is 44 points while it looks small; a tap on it (no drag) reaches the day under it.
 struct CalendarFillHandle: View {
     let store: CalendarStore
     let space: String
@@ -142,7 +145,7 @@ struct CalendarFillHandle: View {
             .overlay(RoundedRectangle(cornerRadius: 2).strokeBorder(.white, lineWidth: 1.5))
             .frame(width: size, height: size)
             .shadow(color: .black.opacity(0.25), radius: 1)
-            .frame(width: touch ? 32 : 16, height: touch ? 32 : 16)
+            .frame(width: touch ? 44 : 16, height: touch ? 44 : 16)
             .contentShape(.rect)
             .highPriorityGesture(
                 DragGesture(minimumDistance: 0, coordinateSpace: .named(space))
@@ -153,10 +156,17 @@ struct CalendarFillHandle: View {
                         }
                         if let day = hit(value.location, true) { store.dragFill(to: day) }
                     }
-                    .onEnded { _ in
+                    .onEnded { value in
                         guard dragging else { return }
                         dragging = false
-                        store.endFill()
+                        let moved = hypot(value.translation.width, value.translation.height) > 4
+                        if !moved, store.fill?.targets.isEmpty ?? true, let day = hit(value.location, false) {
+                            store.cancelFill()
+                            let modifiers = CalendarModifiers.current
+                            store.tap(day, extend: modifiers.contains(.shift), toggle: modifiers.contains(.command))
+                        } else {
+                            store.endFill()
+                        }
                     }
             )
             .sensoryFeedback(.selection, trigger: dragging)
@@ -195,25 +205,34 @@ struct CalendarYearGrid: View {
     @State private var position = ScrollPosition(edge: .leading)
     @State private var offset: CGFloat = 0
     @State private var pinchStart: Int?
+    /// The month names, the day numbers and the rows grow with Dynamic Type.
+    @ScaledMetric(relativeTo: .caption) private var labelWidth: CGFloat = 40
+    @ScaledMetric(relativeTo: .caption2) private var headerHeight: CGFloat = 22
+    @ScaledMetric(relativeTo: .caption2) private var minRow: CGFloat = 22
 
-    static let labelWidth: CGFloat = 40
     static let space = "calendar-year"
 
     /// The vertical scroll view's id of a month's row.
     static func rowID(_ month: Int) -> String { "calendar-year-month-\(month)" }
 
     /// Cell width and row height for the available width: all 31 days fill it at zoom 31,
-    /// fewer days make the cells grow in both directions.
-    static func metrics(width: CGFloat, zoom: Int) -> (cellWidth: CGFloat, rowHeight: CGFloat) {
+    /// fewer days make the cells grow in both directions. Rows are at least `minRow` high (more
+    /// with larger text).
+    static func metrics(width: CGFloat, zoom: Int, labelWidth: CGFloat = 40,
+                        minRow: CGFloat = 22) -> (cellWidth: CGFloat, rowHeight: CGFloat) {
         let available = max(31, width - labelWidth)
         let days = CGFloat(CalendarZoom.clamp(zoom))
-        let row = min(max(available / 31 * 0.95, 22), 40)
+        let row = max(min(max(available / 31 * 0.95, 22), 40), minRow)
         return (available / days, row * 31 / days)
     }
 
+    private var metrics: (cellWidth: CGFloat, rowHeight: CGFloat) {
+        Self.metrics(width: width, zoom: zoom, labelWidth: labelWidth, minRow: minRow)
+    }
+
     var body: some View {
-        let metrics = Self.metrics(width: width, zoom: zoom)
-        let layout = CalendarGridLayout.Year(width: metrics.cellWidth * 31, labelWidth: 0, headerHeight: 22,
+        let metrics = metrics
+        let layout = CalendarGridLayout.Year(width: metrics.cellWidth * 31, labelWidth: 0, headerHeight: headerHeight,
                                              rowHeight: metrics.rowHeight)
         HStack(alignment: .top, spacing: 0) {
             labels(layout)
@@ -226,6 +245,7 @@ struct CalendarYearGrid: View {
             .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.x } action: { _, x in offset = x }
         }
         .frame(height: layout.height)
+        .accessibilityElement(children: .contain)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
         .simultaneousGesture(
             MagnifyGesture()
@@ -246,12 +266,16 @@ struct CalendarYearGrid: View {
         let year = store.year
         let today = Day.today
         return VStack(spacing: 0) {
-            Color.clear.frame(width: Self.labelWidth, height: layout.headerHeight)
+            Color.clear.frame(width: labelWidth, height: layout.headerHeight)
             ForEach(1...12, id: \.self) { month in
                 Text(CalendarText.shortMonth(month))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(month == today.month && year == today.year ? Color.accentColor : .secondary)
-                    .frame(width: Self.labelWidth, height: layout.rowHeight, alignment: .leading)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .frame(width: labelWidth, height: layout.rowHeight, alignment: .leading)
+                    .accessibilityLabel(CalendarText.month(year: year, month: month))
+                    .accessibilityAddTraits(.isHeader)
                     .id(Self.rowID(month))
             }
         }
@@ -272,10 +296,13 @@ struct CalendarYearGrid: View {
                     Text(verbatim: String(d))
                         .font(.caption2.monospacedDigit().weight(isToday ? .bold : .regular))
                         .foregroundStyle(isToday ? Color.accentColor : .secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
                         .frame(width: cellWidth)
                 }
             }
             .frame(height: layout.headerHeight)
+            .accessibilityHidden(true)
             ForEach(1...12, id: \.self) { month in
                 HStack(spacing: 0) {
                     ForEach(1...31, id: \.self) { d in
@@ -301,12 +328,12 @@ struct CalendarYearGrid: View {
         .coordinateSpace(.named(Self.space))
     }
 
-    private var viewport: CGFloat { max(0, width - Self.labelWidth) }
+    private var viewport: CGFloat { max(0, width - labelWidth) }
 
     /// After a zoom: the focused day (else the day in the middle) stays in the middle.
     private func keepCenter(from old: Int, to new: Int) {
-        let oldCell = Self.metrics(width: width, zoom: old).cellWidth
-        let newCell = Self.metrics(width: width, zoom: new).cellWidth
+        let oldCell = Self.metrics(width: width, zoom: old, labelWidth: labelWidth, minRow: minRow).cellWidth
+        let newCell = Self.metrics(width: width, zoom: new, labelWidth: labelWidth, minRow: minRow).cellWidth
         let center: CGFloat
         if let focus = store.focus, focus.year == store.year {
             center = (CGFloat(focus.day) - 0.5) * newCell
@@ -319,7 +346,7 @@ struct CalendarYearGrid: View {
     /// Scrolls sideways so the day shows: in the middle, or just enough to see it.
     private func scroll(to reveal: CalendarReveal) {
         guard reveal.day.year == store.year else { return }
-        let cell = Self.metrics(width: width, zoom: zoom).cellWidth
+        let cell = metrics.cellWidth
         let minX = CGFloat(reveal.day.day - 1) * cell
         if reveal.center {
             scrollTo(x: minX + cell / 2 - viewport / 2, cellWidth: cell)
@@ -336,47 +363,53 @@ struct CalendarYearGrid: View {
     }
 }
 
-/// One month as weeks of seven days; `style` picks the cell (compact on phones, detailed in
-/// the month view), `touch` the selection gestures (inside a scroll view). In the list of
-/// months, `list` finds days across all of them, so a range can go over several months.
+/// One month as weeks of seven days; `style` picks the cell (`.month`: the web's month view on
+/// phones and in narrow windows, `.detail`: the month in detail), `touch` the selection
+/// gestures (inside a scroll view). In the list of months, `list` finds days across all of
+/// them, so a range can go over several months.
 struct CalendarMonthGrid: View {
     let store: CalendarStore
     let year: Int
     let month: Int
-    var style: CalendarDayCell.Style = .compact
-    var rowHeight: CGFloat = 52
+    var style: CalendarDayCell.Style = .month
+    /// A fixed row height (the month in detail); nil: cells of 1 : 0.8 like the web's month view.
+    var rowHeight: CGFloat?
+    var spacing: CGFloat = 0
     var touch = true
     var list: CalendarMonthList?
     var onBegin: () -> Void = {}
     var onDoubleTap: (Day) -> Void = { _ in }
     @State private var width: CGFloat = 350
+    /// How high a month view's row is at least: its day number and note icon, with Dynamic Type.
+    @ScaledMetric(relativeTo: .subheadline) private var minRow: CGFloat = 30
 
     var body: some View {
+        let row = rowHeight ?? CalendarGridLayout.Month.rowHeight(width: width, spacing: spacing, minimum: minRow)
         let layout = CalendarGridLayout.Month(year: year, month: month, firstWeekday: Calendar.current.firstWeekday,
-                                              width: width, rowHeight: rowHeight)
+                                              width: width, rowHeight: row, spacing: spacing)
         let own = "calendar-month-\(year)-\(month)"
         let space = list?.space ?? own
         let hit: (CGPoint, Bool) -> Day? = list?.hit ?? { layout.day(at: $0, clamp: $1) }
         let last = store.canRepeat ? store.selectedDays.last : nil
         let handle = last.flatMap { $0.year == year && $0.month == month ? layout.frame(of: $0) : nil }
-        VStack(spacing: 0) {
-            ForEach(0..<layout.rows, id: \.self) { row in
-                HStack(spacing: 0) {
+        VStack(spacing: spacing) {
+            ForEach(Array(layout.weeks.enumerated()), id: \.offset) { _, week in
+                HStack(spacing: spacing) {
                     ForEach(0..<7, id: \.self) { col in
-                        let n = row * 7 + col - layout.blanks + 1
-                        if n >= 1 && n <= layout.dayCount {
+                        if let n = week[col] {
                             CalendarDayCell(store: store, day: Day(year: year, month: month, day: n), style: style)
-                                .padding(style == .detail ? 2 : 1.5)
-                                .frame(width: layout.cellWidth, height: rowHeight)
+                                .padding(style == .detail ? 2 : 0)
+                                .frame(width: layout.cellWidth, height: row)
                                 .modifier(CalendarCellMenu(store: store, day: Day(year: year, month: month, day: n)))
                         } else {
-                            Color.clear.frame(width: layout.cellWidth, height: rowHeight)
+                            Color.clear.frame(width: layout.cellWidth, height: row)
                         }
                     }
                 }
             }
         }
         .frame(maxWidth: .infinity, minHeight: layout.height, maxHeight: layout.height, alignment: .topLeading)
+        .accessibilityElement(children: .contain)
         .modifier(CalendarSelectionStyle(touch: touch, store: store, space: space, hit: hit, onBegin: onBegin,
                                          onDoubleTap: onDoubleTap))
         .calendarFillHandle(handle, store: store, space: space, touch: touch, hit: hit)
@@ -393,54 +426,64 @@ struct CalendarMonthList {
     let hit: (CGPoint, Bool) -> Day?
 }
 
-/// Weekday letters above a month.
+/// The weekdays above a month, in the order of the locale's week: short names like the web's
+/// month view ("Mon"), letters where those don't fit.
 struct CalendarWeekdayHeader: View {
+    var spacing: CGFloat = 0
+
     var body: some View {
-        HStack(spacing: 0) {
-            ForEach(Array(CalendarText.weekdayLetters.enumerated()), id: \.offset) { _, letter in
-                Text(letter)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity)
+        HStack(spacing: spacing) {
+            ForEach(Array(zip(CalendarText.weekdayNames, CalendarText.weekdayLetters).enumerated()), id: \.offset) { _, names in
+                ViewThatFits(in: .horizontal) {
+                    Text(names.0)
+                    Text(names.1)
+                }
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity)
             }
         }
+        .padding(.bottom, 4)
+        .accessibilityHidden(true)
     }
 }
 
-/// Right-click on a day (Mac): its actions. Phones use the selection bar instead (a long press
-/// selects a range there).
+/// A day's actions on a secondary click (Mac, an iPad's pointer) or a long press held still
+/// (iPad). iPhones use the selection bar instead (a long press selects a range there).
 struct CalendarCellMenu: ViewModifier {
     let store: CalendarStore
     let day: Day
     @Environment(CalendarActions.self) private var actions: CalendarActions?
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     func body(content: Content) -> some View {
-        #if os(macOS)
-        content.contextMenu {
-            if let actions {
-                Button("Details…", systemImage: "info.circle") {
-                    if !store.selection.contains(day) { store.select(day) }
-                    actions.showDetails()
-                }
-                if !store.readOnly {
-                    Button("Icon & note…", systemImage: "face.smiling") {
+        if sizeClass == .compact {
+            content
+        } else {
+            content.contextMenu {
+                if let actions {
+                    Button("Details…", systemImage: "info.circle") {
                         if !store.selection.contains(day) { store.select(day) }
-                        actions.editNote()
+                        actions.showDetails()
                     }
-                    Button("Add event…", systemImage: "calendar.badge.plus") { actions.addEvent(on: day) }
-                    if store.canRepeat && store.selection.contains(day) {
-                        Button("Repeat…", systemImage: "repeat") { actions.repeatSelection() }
-                    }
-                    Divider()
-                    Button("Clear", systemImage: "eraser") {
-                        if !store.selection.contains(day) { store.select(day) }
-                        store.clearSelectedDays()
+                    if !store.readOnly {
+                        Button("Icon & note…", systemImage: "face.smiling") {
+                            if !store.selection.contains(day) { store.select(day) }
+                            actions.editNote()
+                        }
+                        Button("Add event…", systemImage: "calendar.badge.plus") { actions.addEvent(on: day) }
+                        if store.canRepeat && store.selection.contains(day) {
+                            Button("Repeat…", systemImage: "repeat") { actions.repeatSelection() }
+                        }
+                        Divider()
+                        Button("Clear", systemImage: "eraser") {
+                            if !store.selection.contains(day) { store.select(day) }
+                            store.clearSelectedDays()
+                        }
                     }
                 }
             }
         }
-        #else
-        content
-        #endif
     }
 }

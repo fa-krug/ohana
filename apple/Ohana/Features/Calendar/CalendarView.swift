@@ -2,9 +2,10 @@ import SwiftUI
 
 /// The calendar (the web app's components/calendar/calendar-page.tsx): entry types per year,
 /// day entries, notes, timed events and birthdays. A narrow calendar (phones, or a window or
-/// split view under 880 points, like the web) scrolls through the year's months with a glass
-/// selection bar at the bottom; a wide one shows the year grid (12 months × 31 days, zoomable)
-/// or one month in detail, with the selection's panel underneath.
+/// split view under 880 points, like the web) scrolls through the year's months like the web's
+/// month view; a wide one shows the year grid (12 months × 31 days, zoomable) or one month in
+/// detail, with the selected days' details underneath. On every size the selection's actions
+/// and the type chips float in a glass bar at the bottom.
 struct CalendarView: View {
     @Environment(FamilyContext.self) private var family
     @State private var store: CalendarStore?
@@ -42,6 +43,10 @@ struct CalendarPlannerView: View {
     @State private var width: CGFloat?
     @State private var monthFrames: [Int: CGRect] = [:]
     @FocusState private var focused: Bool
+    @ScaledMetric(relativeTo: .caption2) private var detailRowHeight: CGFloat = 104
+
+    /// The web month view's gap between the days.
+    static let monthSpacing: CGFloat = 3
 
     init(store: CalendarStore) {
         self.store = store
@@ -82,15 +87,21 @@ struct CalendarPlannerView: View {
             }
         }
         .environment(actions)
-        .modifier(CalendarToast(text: store.toast))
+        .environment(\.calendarGridFocused, focused)
         .overlay(alignment: .topTrailing) { syncBadge }
         .background { zoomShortcuts }
+        .focusedSceneValue(\.newItem, store.readOnly ? nil : NewItemAction(title: "New Event") {
+            actions.addEvent(on: store.selection.isEmpty ? nil : store.focus)
+        })
+        .focusedSceneValue(\.moduleMenu, moduleMenu)
         .task(id: reloadKey) { await store.load(quiet: store.isLoaded) }
         .task { await store.poll() }
         .onAppear {
             let family = family
             store.notify = { area in family.didChange(area) }
             store.undoManager = undoManager
+            // With a keyboard the arrows work right away, without a click into the grid first.
+            if !compact { focused = true }
         }
         .onChange(of: undoManager) { _, manager in store.undoManager = manager }
         .onChange(of: family.pendingRoute, initial: true) {
@@ -132,54 +143,88 @@ struct CalendarPlannerView: View {
         return store.year == Day.today.year ? Day.today : nil
     }
 
+    /// Back to today: its year, and its month in view.
+    private func showToday() {
+        store.setYear(Day.today.year)
+        month = Day.today.month
+        reveal = CalendarReveal(Day.today)
+    }
+
+    /// The floating bar with the toast above it, at the bottom of the calendar.
+    private func bottomBar(showDetails: Bool, showZoom: Bool) -> some View {
+        VStack(spacing: 0) {
+            CalendarToast(store: store)
+            CalendarSelectionBar(store: store, actions: actions, showDetails: showDetails, showZoom: showZoom)
+        }
+    }
+
     // MARK: List of months (phones, narrow windows)
 
+    /// The web's month view: one calendar per month for the whole year, the month's title
+    /// sticking to the top while its days scroll by.
     private var listLayout: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 12) {
                     if store.readOnly { readOnlyNote }
                     CalendarCoveragePill(store: store, onJump: { reveal = CalendarReveal($0) })
-                    let list = monthListHit
-                    LazyVStack(alignment: .leading, spacing: 18) {
-                        ForEach(1...12, id: \.self) { m in
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text(CalendarText.month(year: store.year, month: m))
-                                    .font(.title3.bold())
-                                    .foregroundStyle(m == Day.today.month && store.year == Day.today.year ? Color.accentColor : .primary)
-                                CalendarWeekdayHeader()
-                                CalendarMonthGrid(store: store, year: store.year, month: m, style: .compact, rowHeight: Self.listRowHeight,
-                                                  touch: calendarTouchInput, list: list, onBegin: { focused = true },
-                                                  onDoubleTap: { _ in actions.editNote() })
+                }
+                .padding(.horizontal)
+                .padding(.top, 8)
+                let list = monthListHit
+                LazyVStack(alignment: .leading, spacing: 6, pinnedViews: .sectionHeaders) {
+                    ForEach(1...12, id: \.self) { m in
+                        Section {
+                            VStack(spacing: 0) {
+                                CalendarWeekdayHeader(spacing: Self.monthSpacing)
+                                CalendarMonthGrid(store: store, year: store.year, month: m, style: .month,
+                                                  spacing: Self.monthSpacing, touch: calendarTouchInput, list: list,
+                                                  onBegin: { focused = true }, onDoubleTap: { _ in actions.editNote() })
                                     .onGeometryChange(for: CGRect.self) {
                                         $0.frame(in: .named(CalendarMonthList.space))
                                     } action: { monthFrames[m] = $0 }
                             }
-                            .id(m)
+                            .padding(.horizontal, 8)
+                            .padding(.bottom, 6)
+                        } header: {
+                            monthTitle(m)
                         }
                     }
-                    .coordinateSpace(.named(CalendarMonthList.space))
-                    .modifier(keyboard(enabled: !compact))
                 }
-                .padding(.horizontal)
-                .padding(.vertical, 8)
+                .frame(maxWidth: 736)
+                .frame(maxWidth: .infinity)
+                .coordinateSpace(.named(CalendarMonthList.space))
+                .modifier(keyboard(enabled: !compact))
             }
             .refreshable { await store.load() }
-            .safeAreaInset(edge: .bottom) {
-                CalendarSelectionBar(store: store, actions: actions)
-            }
+            .safeAreaInset(edge: .bottom) { bottomBar(showDetails: true, showZoom: false) }
             .task(id: store.year) {
                 try? await Task.sleep(for: .milliseconds(80))
-                proxy.scrollTo(startDay?.month ?? 1, anchor: .top)
+                proxy.scrollTo(Self.monthID(startDay?.month ?? 1), anchor: .top)
             }
             .onChange(of: reveal) { _, reveal in
                 guard let reveal, reveal.day.year == store.year else { return }
-                withAnimation { proxy.scrollTo(reveal.day.month, anchor: reveal.center ? .top : nil) }
+                withAnimation { proxy.scrollTo(Self.monthID(reveal.day.month), anchor: reveal.center ? .top : nil) }
             }
         }
     }
 
-    private static let listRowHeight: CGFloat = 54
+    private static func monthID(_ month: Int) -> String { "calendar-month-\(month)" }
+
+    /// A month's sticking title (the web's `.mv-title`): in the accent color for this month.
+    private func monthTitle(_ m: Int) -> some View {
+        let current = m == Day.today.month && store.year == Day.today.year
+        return Text(CalendarText.month(year: store.year, month: m))
+            .font(.headline)
+            .foregroundStyle(current ? Color.accentColor : .primary)
+            .padding(.horizontal, 14)
+            .padding(.top, 10)
+            .padding(.bottom, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.bar)
+            .accessibilityAddTraits(.isHeader)
+            .id(Self.monthID(m))
+    }
 
     /// Finds days across the months on screen, so a drag can select a range over several.
     private var monthListHit: CalendarMonthList {
@@ -188,7 +233,7 @@ struct CalendarPlannerView: View {
         let firstWeekday = Calendar.current.firstWeekday
         return CalendarMonthList(hit: { point, clamp in
             CalendarGridLayout.day(at: point, inMonths: frames, year: year, firstWeekday: firstWeekday,
-                                   rowHeight: Self.listRowHeight, clamp: clamp)
+                                   spacing: Self.monthSpacing, clamp: clamp)
         })
     }
 
@@ -198,12 +243,11 @@ struct CalendarPlannerView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    HStack(alignment: .top, spacing: 12) {
-                        CalendarTypeChips(store: store, wrap: true)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                    HStack {
+                        if store.readOnly { readOnlyNote }
+                        Spacer(minLength: 0)
                         CalendarCoveragePill(store: store, onJump: { reveal = CalendarReveal($0) })
                     }
-                    if store.readOnly { readOnlyNote }
                     Group {
                         if mode == .year {
                             CalendarYearGrid(store: store, reveal: reveal, onBegin: { focused = true },
@@ -214,11 +258,12 @@ struct CalendarPlannerView: View {
                     }
                     .contentCard(cornerRadius: 22, padding: 12)
                     .modifier(keyboard(enabled: true))
-                    CalendarSelectionPanel(store: store, actions: actions, showZoom: mode == .year)
+                    CalendarSelectionDetailsCard(store: store, actions: actions)
                 }
                 .padding()
             }
             .refreshable { await store.load() }
+            .safeAreaInset(edge: .bottom) { bottomBar(showDetails: false, showZoom: mode == .year) }
             .task(id: store.year) {
                 try? await Task.sleep(for: .milliseconds(80))
                 if let day = startDay { reveal = CalendarReveal(day) }
@@ -237,17 +282,16 @@ struct CalendarPlannerView: View {
     private var monthDetail: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text(CalendarText.month(year: store.year, month: month)).font(.title2.bold())
+                Text(CalendarText.month(year: store.year, month: month))
+                    .font(.title2.bold())
+                    .accessibilityAddTraits(.isHeader)
                 Spacer()
                 Button {
                     stepMonth(-1)
                 } label: {
                     Label("Previous month", systemImage: "chevron.left")
                 }
-                Button("Today") {
-                    store.setYear(Day.today.year)
-                    month = Day.today.month
-                }
+                Button("Today") { showToday() }
                 Button {
                     stepMonth(1)
                 } label: {
@@ -255,9 +299,9 @@ struct CalendarPlannerView: View {
                 }
             }
             .labelStyle(.iconOnly)
-            .buttonStyle(.glass)
+            .buttonStyle(.bordered)
             CalendarWeekdayHeader()
-            CalendarMonthGrid(store: store, year: store.year, month: month, style: .detail, rowHeight: 104,
+            CalendarMonthGrid(store: store, year: store.year, month: month, style: .detail, rowHeight: detailRowHeight,
                               touch: calendarTouchInput,
                               onBegin: { focused = true }, onDoubleTap: { _ in actions.editNote() })
         }
@@ -404,25 +448,70 @@ struct CalendarPlannerView: View {
         }
     }
 
-    /// ⌘+ / ⌘= / ⌘− / ⌘0 zoom the year grid wherever the focus is (like the web); hidden
-    /// buttons carry the shortcuts.
+    private var canZoom: Bool { !monthList && mode == .year }
+
+    /// The Calendar menu (Mac menu bar, iPad ⌘-hold list): its commands with ⌘ shortcuts. The
+    /// grid's own keys without ⌘ (N, E, G, 1–9…) only work while it has the focus.
+    private var moduleMenu: ModuleMenu {
+        ModuleMenu(title: "Calendar") {
+            Button("Today") { showToday() }
+                .keyboardShortcut("t", modifiers: .command)
+            Button("Previous Year") { store.setYear(store.year - 1) }
+                .keyboardShortcut("[", modifiers: .command)
+            Button("Next Year") { store.setYear(store.year + 1) }
+                .keyboardShortcut("]", modifiers: .command)
+            Button("Next Gap") { jumpToGap() }
+                .disabled(store.needsCoverTypes.isEmpty)
+            Divider()
+            Button("Details") { actions.showDetails() }
+                .keyboardShortcut("i", modifiers: .command)
+                .disabled(store.selection.isEmpty)
+            if !store.readOnly {
+                Button("Icon & Note…") { actions.editNote() }
+                    .disabled(store.selection.isEmpty)
+                Button("Repeat…") { actions.repeatSelection() }
+                    .disabled(!store.canRepeat)
+                Button("Clear Days") { store.clearSelectedDays() }
+                    .disabled(store.selection.isEmpty)
+            }
+            Button("Clear Selection") { store.deselect() }
+                .keyboardShortcut("a", modifiers: [.command, .shift])
+                .disabled(store.selection.isEmpty)
+            if !store.readOnly && !store.types.isEmpty {
+                Divider()
+                ForEach(Array(store.types.enumerated()), id: \.element.id) { index, type in
+                    Toggle(type.name, isOn: Binding(get: { store.selectionHas(type.id) },
+                                                    set: { _ in store.toggleOnSelection(type.id) }))
+                        .keyboardShortcut(index < 9 ? KeyboardShortcut(KeyEquivalent(Character(String(index + 1))),
+                                                                       modifiers: [.command, .option]) : nil)
+                        .disabled(store.selection.isEmpty)
+                }
+            }
+            Divider()
+            Button("Zoom In") { zoom = CalendarZoom.step(zoom, 1) }
+                .keyboardShortcut("+", modifiers: .command)
+                .disabled(!canZoom || CalendarZoom.clamp(zoom) <= CalendarZoom.min)
+            Button("Zoom Out") { zoom = CalendarZoom.step(zoom, -1) }
+                .keyboardShortcut("-", modifiers: .command)
+                .disabled(!canZoom || CalendarZoom.clamp(zoom) >= CalendarZoom.max)
+            Button("Actual Size") { zoom = CalendarZoom.step(zoom, 0) }
+                .keyboardShortcut("0", modifiers: .command)
+                .disabled(!canZoom)
+            Divider()
+            Button("Calendar Help") { actions.showHelp() }
+        }
+    }
+
+    /// ⌘= zooms in too (the + key without Shift, like the web); a hidden button carries it.
     @ViewBuilder
     private var zoomShortcuts: some View {
-        if !monthList && mode == .year {
-            Group {
-                Button("Zoom in") { zoom = CalendarZoom.step(zoom, 1) }
-                    .keyboardShortcut("+", modifiers: .command)
-                Button("Zoom in") { zoom = CalendarZoom.step(zoom, 1) }
-                    .keyboardShortcut("=", modifiers: .command)
-                Button("Zoom out") { zoom = CalendarZoom.step(zoom, -1) }
-                    .keyboardShortcut("-", modifiers: .command)
-                Button("Actual size") { zoom = CalendarZoom.step(zoom, 0) }
-                    .keyboardShortcut("0", modifiers: .command)
-            }
-            .opacity(0)
-            .frame(width: 0, height: 0)
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
+        if canZoom {
+            Button("Zoom In") { zoom = CalendarZoom.step(zoom, 1) }
+                .keyboardShortcut("=", modifiers: .command)
+                .opacity(0)
+                .frame(width: 0, height: 0)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
         }
     }
 
@@ -435,7 +524,7 @@ struct CalendarPlannerView: View {
                              if text != nil { store.clearSelectedDays() }
                              return text
                          },
-                         paste: { store.paste(text: $0) })
+                         paste: { store.paste(text: $0) }, delete: { store.clearSelectedDays() })
     }
 
     private func copy() {
@@ -495,8 +584,8 @@ struct CalendarPlannerView: View {
     }
 }
 
-/// The calendar's keys (arrows, 1–9, N, G, ?, …) and, on the Mac, the Edit menu's copy, cut and
-/// paste, while the grid has the focus.
+/// The calendar's keys (arrows, 1–9, N, G, ?, …) and, on the Mac, the Edit menu's copy, cut,
+/// paste and delete, while the grid has the focus (which it has from the start).
 struct CalendarKeyboard: ViewModifier {
     let enabled: Bool
     let focused: FocusState<Bool>.Binding
@@ -504,18 +593,22 @@ struct CalendarKeyboard: ViewModifier {
     let copy: () -> String?
     let cut: () -> String?
     let paste: (String?) -> Void
+    let delete: () -> Void
 
     func body(content: Content) -> some View {
         if enabled {
+            // The focused day draws its own outline (`calendarGridFocused`), like the web's.
             content
                 .focusable()
                 .focused(focused)
+                .defaultFocus(focused, true)
                 .focusEffectDisabled()
                 .onKeyPress(phases: .down) { handle($0) }
                 #if os(macOS)
                 .onCopyCommand { items(copy()) }
                 .onCutCommand { items(cut()) }
                 .onPasteCommand(of: [.plainText]) { _ in paste(CalendarPasteboard.string) }
+                .onDeleteCommand { delete() }
                 #endif
         } else {
             content
