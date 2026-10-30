@@ -83,12 +83,32 @@
         }
       }
     },
+    "%@ selected (%@): %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ausgewählt (%@): %@"
+          }
+        }
+      }
+    },
     "%@ turns %lld": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ wird %lld"
+          }
+        }
+      }
+    },
+    "%@ with “%@” not covered yet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ mit „%@“ noch nicht abgedeckt"
           }
         }
       }
@@ -115,12 +135,12 @@
         }
       }
     },
-    "%@ – %@: %lld days in %@, %lld workdays": {
+    "%@ – %@: %@ in %@, %@": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ – %@: %lld Tage in %@, %lld Arbeitstage"
+            "value": "%@ – %@: %@ in %@, %@"
           }
         }
       }
@@ -171,36 +191,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld schon importiert – übersprungen"
-          }
-        }
-      }
-    },
-    "%lld days": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld Tage"
-          }
-        }
-      }
-    },
-    "%lld days selected (%lld weekdays): %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld Tage ausgewählt (%lld Wochentage): %@"
-          }
-        }
-      }
-    },
-    "%lld days · %lld workdays": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld Tage · %lld Arbeitstage"
           }
         }
       }
@@ -519,26 +509,6 @@
         }
       }
     },
-    "%lld uncovered weekdays": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld Wochentage nicht abgedeckt"
-          }
-        }
-      }
-    },
-    "%lld weekdays with “%@” not covered yet": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld Wochentage mit „%@“ noch nicht abgedeckt"
-          }
-        }
-      }
-    },
     "%lld °C": {
       "localizations": {
         "de": {
@@ -657,6 +627,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "1 Passkey"
+          }
+        }
+      }
+    },
+    "1 – 9": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 – 9"
+          }
+        }
+      }
+    },
+    "?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "?"
           }
         }
       }
@@ -911,6 +901,16 @@
         }
       }
     },
+    "Actual size": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Originalgröße"
+          }
+        }
+      }
+    },
     "Add": {
       "localizations": {
         "de": {
@@ -991,6 +991,16 @@
         }
       }
     },
+    "Add a timed event": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einen Termin mit Uhrzeit hinzufügen"
+          }
+        }
+      }
+    },
     "Add a timed event on the first selected day": {
       "localizations": {
         "de": {
@@ -1007,6 +1017,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Konto hinzufügen"
+          }
+        }
+      }
+    },
+    "Add an icon or comment to the day": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dem Tag ein Symbol oder einen Kommentar geben"
+          }
+        }
+      }
+    },
+    "Add an icon or comment to the selected days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Den ausgewählten Tagen ein Symbol oder einen Kommentar geben"
           }
         }
       }
@@ -1117,6 +1147,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Leg einen in den Einstellungen an."
+          }
+        }
+      }
+    },
+    "Add single days to the selection": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einzelne Tage zur Auswahl hinzufügen"
           }
         }
       }
@@ -1631,6 +1671,16 @@
         }
       }
     },
+    "Arrow keys": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pfeiltasten"
+          }
+        }
+      }
+    },
     "As table": {
       "localizations": {
         "de": {
@@ -1873,6 +1923,16 @@
         }
       }
     },
+    "Back to": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zurück bis"
+          }
+        }
+      }
+    },
     "Back to meal plan": {
       "localizations": {
         "de": {
@@ -1889,6 +1949,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zurück zu Portionen und Zubereitung"
+          }
+        }
+      }
+    },
+    "Backwards": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rückwärts"
           }
         }
       }
@@ -2119,6 +2189,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kalender"
+          }
+        }
+      }
+    },
+    "Calendar change": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalenderänderung"
           }
         }
       }
@@ -2533,6 +2613,16 @@
         }
       }
     },
+    "Clear the selected days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die ausgewählten Tage leeren"
+          }
+        }
+      }
+    },
     "Clear the selection": {
       "localizations": {
         "de": {
@@ -2559,6 +2649,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Klicken (oder %lld drücken), um sie auf den ausgewählten Tagen umzuschalten"
+          }
+        }
+      }
+    },
+    "Click / drag": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klicken / ziehen"
+          }
+        }
+      }
+    },
+    "Click or drag over days to select them. Press ? for all shortcuts.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tage anklicken oder darüber ziehen, um sie auszuwählen. ? zeigt alle Tastenkürzel."
           }
         }
       }
@@ -2863,12 +2973,12 @@
         }
       }
     },
-    "Copied %lld days": {
+    "Copied %@": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld Tage kopiert"
+            "value": "%@ kopiert"
           }
         }
       }
@@ -2899,6 +3009,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kopieren"
+          }
+        }
+      }
+    },
+    "Copy / cut / paste. Pasting onto a larger selection repeats the copied days to fill it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopieren / Ausschneiden / Einsetzen. Auf eine größere Auswahl eingesetzt, werden die kopierten Tage wiederholt, bis sie gefüllt ist."
           }
         }
       }
@@ -3863,6 +3983,56 @@
         }
       }
     },
+    "Double-click": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Doppelklick"
+          }
+        }
+      }
+    },
+    "Drag past the selection to repeat it": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Über die Auswahl hinaus ziehen, um sie zu wiederholen"
+          }
+        }
+      }
+    },
+    "Drag the ▪ handle": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Den ▪-Anfasser ziehen"
+          }
+        }
+      }
+    },
+    "Drag the ▪ handle, or “Repeat…”": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Den ▪-Anfasser ziehen oder „Wiederholen …“"
+          }
+        }
+      }
+    },
+    "Drag to repeat the selected days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ziehen, um die ausgewählten Tage zu wiederholen"
+          }
+        }
+      }
+    },
     "Drop files to attach": {
       "localizations": {
         "de": {
@@ -3879,6 +4049,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dauer (Sek.)"
+          }
+        }
+      }
+    },
+    "E": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "E"
           }
         }
       }
@@ -4173,6 +4353,16 @@
         }
       }
     },
+    "Esc": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esc"
+          }
+        }
+      }
+    },
     "Event": {
       "localizations": {
         "de": {
@@ -4353,6 +4543,16 @@
         }
       }
     },
+    "Extend the selection": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Auswahl erweitern"
+          }
+        }
+      }
+    },
     "Families": {
       "localizations": {
         "de": {
@@ -4469,6 +4669,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Datei"
+          }
+        }
+      }
+    },
+    "Fill %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ füllen"
           }
         }
       }
@@ -4613,6 +4823,16 @@
         }
       }
     },
+    "Forwards": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorwärts"
+          }
+        }
+      }
+    },
     "Free text": {
       "localizations": {
         "de": {
@@ -4679,6 +4899,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Obst & Gemüse"
+          }
+        }
+      }
+    },
+    "G": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "G"
           }
         }
       }
@@ -4893,6 +5123,26 @@
         }
       }
     },
+    "Help & shortcuts": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hilfe & Tastenkürzel"
+          }
+        }
+      }
+    },
+    "Help & shortcuts (?)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hilfe & Tastenkürzel (?)"
+          }
+        }
+      }
+    },
     "Hide video consultations": {
       "localizations": {
         "de": {
@@ -5013,6 +5263,16 @@
         }
       }
     },
+    "How the calendar works": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "So funktioniert der Kalender"
+          }
+        }
+      }
+    },
     "How the columns of a bank’s CSV files map, recognized by the header row. Remove one to set it up anew at the next import.": {
       "localizations": {
         "de": {
@@ -5029,6 +5289,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "So fügst du es zu iCloud hinzu"
+          }
+        }
+      }
+    },
+    "I / Return": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I / Zeilenschalter"
           }
         }
       }
@@ -5455,12 +5725,24 @@
         }
       }
     },
-    "It is used on %lld days in %@. This can’t be undone.": {
+    "It is used on ^[%lld day](inflect: true) in %@. This can’t be undone.": {
       "localizations": {
         "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die Art wird an %lld Tagen in %@ verwendet. Das kann nicht rückgängig gemacht werden."
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Sie ist an %lld Tag in %@ eingetragen. Das lässt sich nicht rückgängig machen."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Sie ist an %lld Tagen in %@ eingetragen. Das lässt sich nicht rückgängig machen."
+                }
+              }
+            }
           }
         }
       }
@@ -5535,6 +5817,16 @@
         }
       }
     },
+    "Jump to the next day that still needs cover": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zum nächsten Tag springen, der noch abgedeckt werden muss"
+          }
+        }
+      }
+    },
     "Jump to the next uncovered day (G)": {
       "localizations": {
         "de": {
@@ -5561,6 +5853,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Einen Moment, der Chat startet gerade."
+          }
+        }
+      }
+    },
+    "Keyboard": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tastatur"
           }
         }
       }
@@ -5841,6 +6143,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ort"
+          }
+        }
+      }
+    },
+    "Long-press + drag": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lange drücken + ziehen"
           }
         }
       }
@@ -6145,6 +6457,26 @@
         }
       }
     },
+    "Mouse and trackpad": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maus und Trackpad"
+          }
+        }
+      }
+    },
+    "Move (with Shift: extend the selection)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bewegen (mit Umschalt: Auswahl erweitern)"
+          }
+        }
+      }
+    },
     "Move down": {
       "localizations": {
         "de": {
@@ -6211,6 +6543,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mehrfachauswahl"
+          }
+        }
+      }
+    },
+    "N": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "N"
           }
         }
       }
@@ -7527,6 +7869,16 @@
         }
       }
     },
+    "Open the appointment search": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terminsuche öffnen"
+          }
+        }
+      }
+    },
     "Open the cook view": {
       "localizations": {
         "de": {
@@ -7683,6 +8035,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "PDF"
+          }
+        }
+      }
+    },
+    "Page Up / Page Down": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bild auf / Bild ab"
           }
         }
       }
@@ -8027,6 +8389,16 @@
         }
       }
     },
+    "Pinch": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zwei Finger zusammenziehen"
+          }
+        }
+      }
+    },
     "Plan": {
       "localizations": {
         "de": {
@@ -8223,6 +8595,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zurück (⌥⌘←)"
+          }
+        }
+      }
+    },
+    "Previous / next year": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorheriges / nächstes Jahr"
           }
         }
       }
@@ -8847,12 +9229,62 @@
         }
       }
     },
+    "Repeat": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wiederholen"
+          }
+        }
+      }
+    },
+    "Repeat days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tage wiederholen"
+          }
+        }
+      }
+    },
     "Repeat the new password": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Neues Passwort wiederholen"
+          }
+        }
+      }
+    },
+    "Repeat the selected days forwards or backwards": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die ausgewählten Tage vorwärts oder rückwärts wiederholen"
+          }
+        }
+      }
+    },
+    "Repeat the selected days forwards or backwards (or drag the ▪ handle)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die ausgewählten Tage vorwärts oder rückwärts wiederholen (oder den ▪-Anfasser ziehen)"
+          }
+        }
+      }
+    },
+    "Repeat…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wiederholen …"
           }
         }
       }
@@ -8983,6 +9415,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rechts"
+          }
+        }
+      }
+    },
+    "Right-click": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechtsklick"
           }
         }
       }
@@ -9447,12 +9889,52 @@
         }
       }
     },
+    "Select a day / a range of days (across months)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einen Tag / einen Zeitraum auswählen (über Monate hinweg)"
+          }
+        }
+      }
+    },
+    "Select a day; tap another day to move the selection": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einen Tag auswählen; ein anderer Tag verschiebt die Auswahl"
+          }
+        }
+      }
+    },
+    "Select a range of days (across months)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einen Zeitraum auswählen (über Monate hinweg)"
+          }
+        }
+      }
+    },
     "Select all": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Alles auswählen"
+          }
+        }
+      }
+    },
+    "Select days that follow each other first": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle zuerst aufeinanderfolgende Tage aus"
           }
         }
       }
@@ -9473,6 +9955,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wähle zuerst Tage aus"
+          }
+        }
+      }
+    },
+    "Select the whole year": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das ganze Jahr auswählen"
           }
         }
       }
@@ -9767,6 +10259,16 @@
         }
       }
     },
+    "Shift + click": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umschalt + Klick"
+          }
+        }
+      }
+    },
     "Shopping": {
       "localizations": {
         "de": {
@@ -9903,6 +10405,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Assistent in der Menüleiste zeigen"
+          }
+        }
+      }
+    },
+    "Show the selected days’ details": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Details der ausgewählten Tage zeigen"
+          }
+        }
+      }
+    },
+    "Show this help": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Hilfe zeigen"
           }
         }
       }
@@ -10311,6 +10833,16 @@
         }
       }
     },
+    "Start %@ with the types of %@; you can change them afterwards": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ mit den Arten von %@ beginnen; du kannst sie danach ändern"
+          }
+        }
+      }
+    },
     "Start building your collection": {
       "localizations": {
         "de": {
@@ -10437,6 +10969,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Diktieren beenden"
+          }
+        }
+      }
+    },
+    "Stop dragging the handle, or clear the selection": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Ziehen des Anfassers abbrechen oder die Auswahl aufheben"
           }
         }
       }
@@ -10611,6 +11153,16 @@
         }
       }
     },
+    "Tap": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tippen"
+          }
+        }
+      }
+    },
     "Tap a day to select it – long-press and drag for a range.": {
       "localizations": {
         "de": {
@@ -10627,6 +11179,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Starttag antippen, dies aktivieren, dann den Endtag antippen"
+          }
+        }
+      }
+    },
+    "Tap a start day, then “Range”, then the end day": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einen ersten Tag antippen, dann „Bereich“, dann den letzten Tag"
           }
         }
       }
@@ -10757,6 +11319,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Der Cron-Ausdruck ist zu lang (max. 100)."
+          }
+        }
+      }
+    },
+    "The day’s actions: details, note, event, repeat, clear": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Aktionen des Tages: Details, Notiz, Termin, Wiederholen, Leeren"
           }
         }
       }
@@ -10947,6 +11519,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Die ausgewählten Tage haben unterschiedliche Notizen – beim Speichern werden sie ersetzt."
+          }
+        }
+      }
+    },
+    "The selection ends on the last day of the year.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Auswahl endet am letzten Tag des Jahres."
+          }
+        }
+      }
+    },
+    "The selection starts on the first day of the year.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Auswahl beginnt am ersten Tag des Jahres."
           }
         }
       }
@@ -11261,6 +11853,26 @@
         }
       }
     },
+    "Toggle that entry on the selected days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diesen Eintrag auf den ausgewählten Tagen umschalten"
+          }
+        }
+      }
+    },
+    "Toggle that entry on the selected days (a day can have several)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diesen Eintrag auf den ausgewählten Tagen umschalten (ein Tag kann mehrere haben)"
+          }
+        }
+      }
+    },
     "Token": {
       "localizations": {
         "de": {
@@ -11317,6 +11929,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Summen"
+          }
+        }
+      }
+    },
+    "Touch": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Berühren"
           }
         }
       }
@@ -11421,12 +12043,32 @@
         }
       }
     },
+    "Turn it on, then tap days to add or remove them; long-press + drag adds a range": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einschalten, dann Tage antippen, um sie hinzuzufügen oder zu entfernen; lange drücken + ziehen fügt einen Zeitraum hinzu"
+          }
+        }
+      }
+    },
     "Turns the search off; you can turn it on again when editing it.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Schaltet die Suche aus; beim Bearbeiten kannst du sie wieder einschalten."
+          }
+        }
+      }
+    },
+    "Type button": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Art-Schaltfläche"
           }
         }
       }
@@ -11471,6 +12113,16 @@
         }
       }
     },
+    "Undo / redo": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Widerrufen / Wiederholen"
+          }
+        }
+      }
+    },
     "Undo split": {
       "localizations": {
         "de": {
@@ -11507,6 +12159,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Unbekannt"
+          }
+        }
+      }
+    },
+    "Unknown type: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unbekannte Art: %@"
           }
         }
       }
@@ -11757,6 +12419,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Websuche"
+          }
+        }
+      }
+    },
+    "Weekends are left out (Skip weekends).": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wochenenden werden ausgelassen (Wochenenden auslassen)."
           }
         }
       }
@@ -12331,6 +13003,76 @@
         }
       }
     },
+    "Zoom": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zoom"
+          }
+        }
+      }
+    },
+    "Zoom in": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vergrößern"
+          }
+        }
+      }
+    },
+    "Zoom out": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verkleinern"
+          }
+        }
+      }
+    },
+    "Zoom the year view in / out (fewer or more days at once) / reset": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Jahresansicht vergrößern / verkleinern (weniger oder mehr Tage auf einmal) / zurücksetzen"
+          }
+        }
+      }
+    },
+    "Zoom the year view in or out": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Jahresansicht vergrößern oder verkleinern"
+          }
+        }
+      }
+    },
+    "Zoom the year view in or out (iPad)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Jahresansicht vergrößern oder verkleinern (iPad)"
+          }
+        }
+      }
+    },
+    "Zoom: how many days fit in the calendar (⌘+ / ⌘− / ⌘0)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zoom: wie viele Tage in den Kalender passen (⌘+ / ⌘− / ⌘0)"
+          }
+        }
+      }
+    },
     "^[%lld appointment](inflect: true)": {
       "localizations": {
         "de": {
@@ -12368,6 +13110,28 @@
                 "stringUnit": {
                   "state": "translated",
                   "value": "%lld Änderungen"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "^[%lld day](inflect: true)": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Tag"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Tage"
                 }
               }
             }
@@ -12632,6 +13396,72 @@
                 "stringUnit": {
                   "state": "translated",
                   "value": "%lld Umbuchungen werden zusammengefasst"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "^[%lld uncovered weekday](inflect: true)": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Wochentag nicht abgedeckt"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Wochentage nicht abgedeckt"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "^[%lld weekday](inflect: true)": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Wochentag"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Wochentage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "^[%lld workday](inflect: true)": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Arbeitstag"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Arbeitstage"
                 }
               }
             }
@@ -13245,6 +14075,66 @@
           "stringUnit": {
             "state": "translated",
             "value": "„⚠ Nicht abgedeckt“-Warnungen"
+          }
+        }
+      }
+    },
+    "↶ / ↷, shake, or swipe with three fingers": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "↶ / ↷, Schütteln oder mit drei Fingern streichen"
+          }
+        }
+      }
+    },
+    "⌘ + click": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘ + Klick"
+          }
+        }
+      }
+    },
+    "⌘+ / ⌘− / ⌘0": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘+ / ⌘− / ⌘0"
+          }
+        }
+      }
+    },
+    "⌘A": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘A"
+          }
+        }
+      }
+    },
+    "⌘C / ⌘X / ⌘V": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘C / ⌘X / ⌘V"
+          }
+        }
+      }
+    },
+    "⌘Z / ⇧⌘Z": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘Z / ⇧⌘Z"
           }
         }
       }
