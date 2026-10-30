@@ -68,6 +68,33 @@ token from the web account page) signs in without pairing, and `-OHANA_DEV_MODUL
 opens a link (Xcode: scheme → Run →
 Arguments). The test schemes run in English, since the tests compare English strings.
 
+## Releasing
+
+Both apps ship through App Store Connect under one bundle id, `de.fa-krug.Ohana` (one app record
+with an iOS and a macOS platform), to TestFlight and from there to the App Store. Once, in App
+Store Connect: create that app record, and for TestFlight add the testers (internal testers are
+users of the team; external ones need a beta review, which needs a demo server and account,
+since the app does nothing without a server).
+
+`MARKETING_VERSION` in `project.yml` is the version people see; raise it for a new release. The
+build number (`CURRENT_PROJECT_VERSION`) doesn't need editing: the upload gives every build the
+next free one. Xcode must be signed in to the team (Settings → Accounts). Per platform:
+
+```bash
+xcodegen generate
+xcodebuild archive -scheme Ohana -destination 'generic/platform=iOS' \
+  -archivePath build/Ohana-iOS.xcarchive -allowProvisioningUpdates
+xcodebuild -exportArchive -archivePath build/Ohana-iOS.xcarchive \
+  -exportOptionsPlist ExportOptions.plist -exportPath build/export-ios -allowProvisioningUpdates
+```
+
+and the same with `-scheme Ohana-macOS -destination 'generic/platform=macOS'` and
+`Ohana-macOS`/`export-mac` paths. `ExportOptions.plist` uploads; in Xcode, Product ▸ Archive and
+Distribute App ▸ App Store Connect does the same. The app declares no encryption beyond HTTPS
+(`ITSAppUsesNonExemptEncryption`) and its use of `UserDefaults` in
+`Ohana/Resources/PrivacyInfo.xcprivacy`; the iOS icon (`icon-1024.png`) must stay without an
+alpha channel.
+
 ## Translations
 
 German strings live per module in `Localization/<module>.de.json` (String Catalog key → German;
