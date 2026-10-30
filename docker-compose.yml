@@ -1,7 +1,7 @@
-# docker-compose.yml: local build of the app (web + worker from the same image).
+# docker-compose.yml: local build of the web app in web/ (web + worker from the same image).
 services:
   web:
-    build: .
+    build: ./web
     ports:
       - "3000:8000"
     environment: &env
@@ -15,7 +15,7 @@ services:
     restart: unless-stopped
 
   worker:
-    build: .
+    build: ./web
     command: ["worker"]
     environment: *env
     volumes:
