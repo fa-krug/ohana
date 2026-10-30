@@ -145,20 +145,28 @@ struct CalendarFills: View {
     }
 }
 
+/// A shape rather than a `Canvas`: a year can have hundreds of striped days, and every canvas
+/// is a drawing of its own.
 struct CalendarStripes: View {
     var body: some View {
-        Canvas { ctx, size in
+        Lines()
+            .stroke(.white, lineWidth: 1.5)
+            .clipped()
+            .allowsHitTesting(false)
+    }
+
+    private nonisolated struct Lines: Shape {
+        func path(in rect: CGRect) -> Path {
             var path = Path()
             let step: CGFloat = 6
-            var x: CGFloat = -size.height
-            while x < size.width {
-                path.move(to: CGPoint(x: x, y: size.height))
-                path.addLine(to: CGPoint(x: x + size.height, y: 0))
+            var x = rect.minX - rect.height
+            while x < rect.maxX {
+                path.move(to: CGPoint(x: x, y: rect.maxY))
+                path.addLine(to: CGPoint(x: x + rect.height, y: rect.minY))
                 x += step
             }
-            ctx.stroke(path, with: .color(.white), lineWidth: 1.5)
+            return path
         }
-        .allowsHitTesting(false)
     }
 }
 
