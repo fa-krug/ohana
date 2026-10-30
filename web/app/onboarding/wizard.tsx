@@ -10,7 +10,7 @@ import { addPasskey } from "@/lib/auth-client/webauthn";
 import { useT } from "@/lib/i18n/provider";
 import { setPasswordAction, skipPasskeyAction } from "@/app/actions/auth";
 
-export function OnboardingWizard({ step }: { step: string }) {
+export function OnboardingWizard({ step, next = null }: { step: string; next?: string | null }) {
   const { t } = useT();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -22,7 +22,7 @@ export function OnboardingWizard({ step }: { step: string }) {
     setError("");
     try {
       await addPasskey();
-      window.location.href = "/";
+      window.location.href = next ?? "/";
     } catch (err) {
       if ((err as Error).name !== "NotAllowedError") setError((err as Error).message);
       setBusy(false);
@@ -32,7 +32,7 @@ export function OnboardingWizard({ step }: { step: string }) {
   async function onSkip() {
     setBusy(true);
     await skipPasskeyAction();
-    window.location.href = "/";
+    window.location.href = next ?? "/";
   }
 
   async function onPassword(e: React.FormEvent) {

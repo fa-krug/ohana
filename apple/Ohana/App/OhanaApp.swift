@@ -40,7 +40,7 @@ struct OhanaApp: App {
             AccountView()
                 .environment(app)
                 .tint(.ohana)
-                .frame(width: 480, height: 520)
+                .frame(minWidth: 520, idealWidth: 620, minHeight: 560, idealHeight: 720)
         }
         #endif
     }

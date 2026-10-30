@@ -19,9 +19,8 @@ export function LoginForm({ next = null }: { next?: string | null }) {
   const [busy, setBusy] = useState(false);
   const [usePassword, setUsePassword] = useState(false);
 
-  // After signing in: `next` (a path of this site), unless the account still needs onboarding.
-  const target = (user: { onboardingStep: string }) =>
-    user.onboardingStep === "COMPLETED" && next ? next : homeFor(user);
+  // After signing in: `next` (a path of this site), after the onboarding if it still needs one.
+  const target = (user: { onboardingStep: string }) => homeFor(user, next);
 
   async function onPassword() {
     setBusy(true);

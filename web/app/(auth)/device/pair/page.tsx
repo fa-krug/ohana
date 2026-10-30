@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
+import { homeFor } from "@/lib/auth/redirect";
 import { deviceTokenName, validPairState } from "@/lib/auth/device-pairing";
 import { getI18n } from "@/lib/i18n/server";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,11 +14,9 @@ export default async function DevicePairPage({
 }) {
   const { state, deviceName } = await searchParams;
   const user = await getSession();
-  if (!user) {
-    const here = `/device/pair?${new URLSearchParams({ state: state ?? "", deviceName: deviceName ?? "" })}`;
-    redirect(`/login?${new URLSearchParams({ next: here })}`);
-  }
-  if (user.onboardingStep !== "COMPLETED") redirect("/onboarding");
+  const here = `/device/pair?${new URLSearchParams({ state: state ?? "", deviceName: deviceName ?? "" })}`;
+  if (!user) redirect(`/login?${new URLSearchParams({ next: here })}`);
+  if (user.onboardingStep !== "COMPLETED") redirect(homeFor(user, here));
   const { t } = await getI18n();
   const valid = validPairState(state);
   return (
