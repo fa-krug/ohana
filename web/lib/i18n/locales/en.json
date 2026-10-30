@@ -612,6 +612,12 @@
       "loginFailed": "Sign-in failed.",
       "setupFailed": "Setup failed.",
       "registrationFailed": "Registration failed."
+    },
+    "devicePair": {
+      "title": "Connect the Ohana app",
+      "description": "Sign in “{{device}}” as {{name}}? The app gets its own API token; you can remove it on your account page.",
+      "connect": "Connect",
+      "invalid": "This pairing link is not valid. Start again in the app."
     }
   },
   "invite": {

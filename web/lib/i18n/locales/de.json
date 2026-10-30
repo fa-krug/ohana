@@ -612,6 +612,12 @@
       "loginFailed": "Anmeldung fehlgeschlagen.",
       "setupFailed": "Einrichtung fehlgeschlagen.",
       "registrationFailed": "Registrierung fehlgeschlagen."
+    },
+    "devicePair": {
+      "title": "Ohana-App verbinden",
+      "description": "„{{device}}“ als {{name}} anmelden? Die App bekommt einen eigenen API-Token; du kannst ihn auf deiner Kontoseite entfernen.",
+      "connect": "Verbinden",
+      "invalid": "Dieser Kopplungslink ist ungültig. Starte erneut in der App."
     }
   },
   "invite": {

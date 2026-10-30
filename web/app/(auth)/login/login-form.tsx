@@ -11,7 +11,7 @@ import { homeFor } from "@/lib/auth/redirect";
 import { useT } from "@/lib/i18n/provider";
 import { loginPasswordAction } from "@/app/actions/auth";
 
-export function LoginForm() {
+export function LoginForm({ next = null }: { next?: string | null }) {
   const { t } = useT();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,12 +19,16 @@ export function LoginForm() {
   const [busy, setBusy] = useState(false);
   const [usePassword, setUsePassword] = useState(false);
 
+  // After signing in: `next` (a path of this site), unless the account still needs onboarding.
+  const target = (user: { onboardingStep: string }) =>
+    user.onboardingStep === "COMPLETED" && next ? next : homeFor(user);
+
   async function onPassword() {
     setBusy(true);
     setError("");
     const res = await loginPasswordAction({ email, password });
     setBusy(false);
-    if (res.ok) window.location.href = homeFor(res.data);
+    if (res.ok) window.location.href = target(res.data);
     else setError(res.message || t("auth.errors.loginFailed"));
   }
 
@@ -33,7 +37,7 @@ export function LoginForm() {
     setError("");
     try {
       const user = await passkeyLogin<{ onboardingStep: string }>(email.trim() || undefined);
-      window.location.href = homeFor(user);
+      window.location.href = target(user);
     } catch (err) {
       if ((err as Error).name !== "NotAllowedError") setError((err as Error).message);
     } finally {

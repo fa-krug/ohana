@@ -7,6 +7,9 @@ import { handleFinance } from "@/lib/finance/finance";
 import { defaultAiEnv, handleAi } from "@/lib/assistant/routes";
 import { handleMeals } from "@/lib/meals/family-routes";
 import { handleAppointments } from "@/lib/appointments/family-routes";
+import { handleFamilyApp } from "@/lib/families/app-routes";
+import { handleMealsApp } from "@/lib/meals/app-routes";
+import { handleAppointmentsApp } from "@/lib/appointments/app-routes";
 
 export const dynamic = "force-dynamic";
 
@@ -14,14 +17,19 @@ export const dynamic = "force-dynamic";
 // entries, notes, export / import, the public calendar.ics feed (by feed id), and the finances
 // (/finance/...), the timed events (/events, phase 7), the assistant (/ai/..., /agent) and the
 // meals' and appointments' routes the assistant's undo uses (/meals/..., /appointments/searches/...).
-// Later modules add their route functions to this list.
+// Later modules add their route functions to this list. The `*App` routes are what the native
+// app (apple/) reads and changes where the web pages use server actions; they come before the
+// module's own routes, which answer 404 for any other path under their prefix.
 const handler = createFamilyApi(
   [
+    handleFamilyApp,
     handleFamily,
     handleCalendar,
     handleEvents,
     handleFinance,
+    handleMealsApp,
     handleMeals,
+    handleAppointmentsApp,
     handleAppointments,
     handleAi(defaultAiEnv(db)),
   ],
