@@ -347,7 +347,7 @@ struct AssistantChatView: View {
         } action: { old, new in
             following = AssistantScrollFollow.follows(following, from: old, to: new)
             // The answer grew (or the keyboard came up): keep its end in view.
-            if AssistantScrollFollow.shouldPin(following: following, metrics: new, scrolling: scrollPhase.isScrolling) {
+            if AssistantScrollFollow.shouldPin(following: following, metrics: new, scrolling: AssistantScrollFollow.userScrolls(scrollPhase)) {
                 scroll.scrollTo(edge: .bottom)
             }
         }
@@ -885,8 +885,13 @@ enum AssistantScrollFollow {
         return following
     }
 
-    /// Whether to scroll to the end now: following, not there, and nobody (neither the user nor
-    /// an animation) is scrolling.
+    /// The user's own scrolling, not an animation: on macOS an animated scroll to where the chat
+    /// already is stays `.animating` and would hold the chat off its end for good.
+    static func userScrolls(_ phase: ScrollPhase) -> Bool {
+        phase.isScrolling && phase != .animating
+    }
+
+    /// Whether to scroll to the end now: following, not there, and the user isn't scrolling.
     static func shouldPin(following: Bool, metrics: Metrics, scrolling: Bool) -> Bool {
         following && !scrolling && metrics.distanceFromBottom > 0.5
     }
@@ -895,6 +900,11 @@ enum AssistantScrollFollow {
 extension AssistantScrollFollow.Metrics {
     init(_ geometry: ScrollGeometry) {
         offset = geometry.contentOffset.y
+        #if os(macOS)
+        // The container leaves out the bars (toolbar, composer); the offset starts at -top.
+        maxOffset = geometry.contentSize.height - geometry.containerSize.height - geometry.contentInsets.top
+        #else
         maxOffset = geometry.contentSize.height + geometry.contentInsets.bottom - geometry.containerSize.height
+        #endif
     }
 }

@@ -58,8 +58,12 @@ struct AssistantComposerTests {
         #expect(!grown.isAtBottom)
         #expect(AssistantScrollFollow.follows(true, from: atEnd, to: grown))
         #expect(AssistantScrollFollow.shouldPin(following: true, metrics: grown, scrolling: false))
-        // Not while the user (or an animation) scrolls.
+        // Not while the user scrolls; an animation doesn't count (on macOS it may never end).
         #expect(!AssistantScrollFollow.shouldPin(following: true, metrics: grown, scrolling: true))
+        #expect(AssistantScrollFollow.userScrolls(.interacting))
+        #expect(AssistantScrollFollow.userScrolls(.decelerating))
+        #expect(!AssistantScrollFollow.userScrolls(.animating))
+        #expect(!AssistantScrollFollow.userScrolls(.idle))
         // The user scrolled up: no longer following, even while the answer grows on.
         let up = Metrics(offset: 300, maxOffset: 620)
         #expect(!AssistantScrollFollow.follows(true, from: grown, to: up))
@@ -84,6 +88,28 @@ struct AssistantComposerTests {
         #expect(Metrics(offset: 0, maxOffset: -200).isAtBottom)
         #expect(!AssistantScrollFollow.shouldPin(following: true, metrics: Metrics(offset: 0, maxOffset: -200), scrolling: false))
     }
+
+    #if os(macOS)
+    @Test func macOSContainerLeavesOutTheBars() {
+        // As measured in the menu bar's panel: toolbar 52, composer 118, already outside the
+        // container. At the top the offset is -52; at the end, content - container - 52.
+        let insets = EdgeInsets(top: 52, leading: 0, bottom: 118, trailing: 0)
+        let size = CGSize(width: 420, height: 390)
+        let content = CGSize(width: 420, height: 800)
+        let top = Metrics(ScrollGeometry(contentOffset: CGPoint(x: 0, y: -52), contentSize: content,
+                                         contentInsets: insets, containerSize: size))
+        #expect(!top.isAtBottom)
+        let end = Metrics(ScrollGeometry(contentOffset: CGPoint(x: 0, y: 358), contentSize: content,
+                                         contentInsets: insets, containerSize: size))
+        #expect(end.isAtBottom)
+        #expect(!AssistantScrollFollow.shouldPin(following: true, metrics: end, scrolling: false))
+        // A short chat with the toolbar's inset just applied: still at its end, so still following.
+        let short = Metrics(ScrollGeometry(contentOffset: CGPoint(x: 0, y: -52), contentSize: CGSize(width: 420, height: 330),
+                                           contentInsets: insets, containerSize: size))
+        #expect(short.isAtBottom)
+        #expect(AssistantScrollFollow.follows(true, from: Metrics(offset: 0, maxOffset: -4), to: short))
+    }
+    #endif
 
     @Test func sizesThePagesChatList() {
         typealias Layout = AssistantChatColumnLayout
