@@ -30,6 +30,18 @@ extension View {
     }
 }
 
+extension View {
+    /// An icon button's label or a chip in a row: at least 44×44 pt to hit on iPhone and iPad;
+    /// the Mac keeps its compact rows. Goes on the button's label, where it widens what's hit.
+    func rowHitTarget() -> some View {
+        #if os(iOS)
+        frame(minWidth: 44, minHeight: 44).contentShape(.rect)
+        #else
+        self
+        #endif
+    }
+}
+
 extension Color {
     /// A card on the page's background: the grouped list's cell color.
     static var cardBackground: Color {

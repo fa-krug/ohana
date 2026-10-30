@@ -21,6 +21,16 @@
         }
       }
     },
+    "%@ (you)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (du)"
+          }
+        }
+      }
+    },
     "%@ and ^[%lld more doctor](inflect: true)": {
       "localizations": {
         "de": {
@@ -591,16 +601,6 @@
         }
       }
     },
-    "(you)": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "(du)"
-          }
-        }
-      }
-    },
     ", %lld couldn’t be read": {
       "localizations": {
         "de": {
@@ -631,12 +631,12 @@
         }
       }
     },
-    "1 – 9": {
+    "1 – 9 (⌥⌘1 – 9)": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "1 – 9"
+            "value": "1 – 9 (⌥⌘1 – 9)"
           }
         }
       }
@@ -681,12 +681,32 @@
         }
       }
     },
+    "A family needs a name.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Familie braucht einen Namen."
+          }
+        }
+      }
+    },
     "A key ending in %@ is saved. Type a new one to replace it.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Ein Schlüssel mit der Endung %@ ist gespeichert. Gib einen neuen ein, um ihn zu ersetzen."
+          }
+        }
+      }
+    },
+    "A name you’ll recognize, like the program that uses it. A token can do everything you can.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Name, den du wiedererkennst, etwa das Programm, das es nutzt. Ein Token kann alles, was du kannst."
           }
         }
       }
@@ -767,6 +787,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ein Token ist gespeichert; lass das Feld leer, um ihn zu behalten."
+          }
+        }
+      }
+    },
+    "A token lets one of your own programs, like a script or a home automation system, use Ohana as you. It can do everything you can: only create one for programs you trust, and delete it when you stop using them.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit einem Token kann eines deiner eigenen Programme, etwa ein Skript oder eine Hausautomation, Ohana in deinem Namen nutzen. Es kann alles, was du kannst: Erstelle eines nur für Programme, denen du vertraust, und lösche es, wenn du sie nicht mehr nutzt."
           }
         }
       }
@@ -901,7 +931,7 @@
         }
       }
     },
-    "Actual size": {
+    "Actual Size": {
       "localizations": {
         "de": {
           "stringUnit": {
@@ -917,6 +947,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hinzufügen"
+          }
+        }
+      }
+    },
+    "Add %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ hinzufügen"
+          }
+        }
+      }
+    },
+    "Add Machine Steps": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maschinenschritte hinzufügen"
           }
         }
       }
@@ -1191,22 +1241,12 @@
         }
       }
     },
-    "Add transaction": {
+    "Add to selection": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Buchung hinzufügen"
-          }
-        }
-      }
-    },
-    "Add transaction (⌘N)": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buchung hinzufügen (⌘N)"
+            "value": "Zur Auswahl hinzufügen"
           }
         }
       }
@@ -1357,6 +1397,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nur für Administratoren"
+          }
+        }
+      }
+    },
+    "Advanced": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erweitert"
           }
         }
       }
@@ -1561,12 +1611,32 @@
         }
       }
     },
+    "An address has no spaces, like ohana.example.com.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Adresse hat keine Leerzeichen, z. B. ohana.example.com."
+          }
+        }
+      }
+    },
     "Analyzing transactions": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Wertet Buchungen aus"
+          }
+        }
+      }
+    },
+    "Another interval": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anderer Abstand"
           }
         }
       }
@@ -1581,6 +1651,16 @@
         }
       }
     },
+    "Answers with it": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antwortet damit"
+          }
+        }
+      }
+    },
     "Any": {
       "localizations": {
         "de": {
@@ -1591,12 +1671,12 @@
         }
       }
     },
-    "Any API that speaks OpenAI’s chat format with tool calls. Everyone in the family uses this setup.": {
+    "Any API that speaks OpenAI’s chat format with tool calls.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Jede API, die OpenAIs Chat-Format mit Tool-Aufrufen spricht. Die ganze Familie nutzt diese Einrichtung."
+            "value": "Jede API, die OpenAIs Chat-Format mit Tool-Aufrufen spricht."
           }
         }
       }
@@ -1657,16 +1737,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Arzttermine"
-          }
-        }
-      }
-    },
-    "Apps like this one sign in with a token, and so can scripts and AI agents (\"Authorization: Bearer <token>\"). A token can do everything you can.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apps wie diese melden sich mit einem Token an, ebenso Skripte und KI-Agenten (\"Authorization: Bearer <Token>\"). Ein Token darf alles, was du darfst."
           }
         }
       }
@@ -1817,6 +1887,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Einstellungen des Assistenten"
+          }
+        }
+      }
+    },
+    "Assistant settings…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einstellungen des Assistenten …"
           }
         }
       }
@@ -2153,6 +2233,26 @@
         }
       }
     },
+    "Browsers signed in on the web": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Im Web angemeldete Browser"
+          }
+        }
+      }
+    },
+    "Browsers signed out.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Browser abgemeldet."
+          }
+        }
+      }
+    },
     "By Hand": {
       "localizations": {
         "de": {
@@ -2189,6 +2289,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kalender"
+          }
+        }
+      }
+    },
+    "Calendar Help": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalender-Hilfe"
           }
         }
       }
@@ -2283,6 +2393,16 @@
         }
       }
     },
+    "Can’t reach the server — changes will sync once it answers again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Server ist nicht erreichbar – Änderungen werden synchronisiert, sobald er wieder antwortet."
+          }
+        }
+      }
+    },
     "Can’t reach your server": {
       "localizations": {
         "de": {
@@ -2349,6 +2469,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "E-Mail ändern …"
+          }
+        }
+      }
+    },
+    "Change mapping": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zuordnung ändern"
           }
         }
       }
@@ -2503,6 +2633,16 @@
         }
       }
     },
+    "Chat list width": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Breite der Chatliste"
+          }
+        }
+      }
+    },
     "Chats": {
       "localizations": {
         "de": {
@@ -2519,6 +2659,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Prüfen"
+          }
+        }
+      }
+    },
+    "Check automatically": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatisch suchen"
           }
         }
       }
@@ -2573,6 +2723,16 @@
         }
       }
     },
+    "Choose…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auswählen …"
+          }
+        }
+      }
+    },
     "Chopping": {
       "localizations": {
         "de": {
@@ -2589,6 +2749,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Leeren"
+          }
+        }
+      }
+    },
+    "Clear Days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tage leeren"
+          }
+        }
+      }
+    },
+    "Clear Selection": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auswahl aufheben"
           }
         }
       }
@@ -2663,16 +2843,6 @@
         }
       }
     },
-    "Click or drag over days to select them. Press ? for all shortcuts.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tage anklicken oder darüber ziehen, um sie auszuwählen. ? zeigt alle Tastenkürzel."
-          }
-        }
-      }
-    },
     "Click or drag over days to select them. Shift-click extends, ⌘-click adds days.": {
       "localizations": {
         "de": {
@@ -2733,12 +2903,32 @@
         }
       }
     },
+    "Combine": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zusammenfassen"
+          }
+        }
+      }
+    },
     "Combine %lld": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "%lld zusammenfassen"
+          }
+        }
+      }
+    },
+    "Combine Automatically": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatisch zusammenfassen"
           }
         }
       }
@@ -3113,6 +3303,16 @@
         }
       }
     },
+    "Couldn’t reach %@. Check the address: it’s the one you use for Ohana in the browser.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ist nicht erreichbar. Prüfe die Adresse: Es ist die, unter der du Ohana im Browser öffnest."
+          }
+        }
+      }
+    },
     "Couldn’t read “%@”.": {
       "localizations": {
         "de": {
@@ -3333,16 +3533,6 @@
         }
       }
     },
-    "Cron (m h dom mon dow)": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cron (m h dom mon dow)"
-          }
-        }
-      }
-    },
     "Cron expression": {
       "localizations": {
         "de": {
@@ -3403,22 +3593,22 @@
         }
       }
     },
+    "Custom schedule (Advanced)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eigener Zeitplan (Erweitert)"
+          }
+        }
+      }
+    },
     "Cut days": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Tage ausschneiden"
-          }
-        }
-      }
-    },
-    "Daily": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Täglich"
           }
         }
       }
@@ -3563,12 +3753,52 @@
         }
       }
     },
+    "Delete Chat": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chat löschen"
+          }
+        }
+      }
+    },
+    "Delete Item": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Artikel löschen"
+          }
+        }
+      }
+    },
     "Delete Recipe": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Rezept löschen"
+          }
+        }
+      }
+    },
+    "Delete Search": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche löschen"
+          }
+        }
+      }
+    },
+    "Delete Search…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche löschen …"
           }
         }
       }
@@ -3589,16 +3819,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Alle Finanzdaten löschen?"
-          }
-        }
-      }
-    },
-    "Delete and sign out": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Löschen und abmelden"
           }
         }
       }
@@ -3723,16 +3943,6 @@
         }
       }
     },
-    "Delete the search?": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Suche löschen?"
-          }
-        }
-      }
-    },
     "Delete the token %@?": {
       "localizations": {
         "de": {
@@ -3743,12 +3953,32 @@
         }
       }
     },
-    "Delete this device’s token?": {
+    "Delete this bank format": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Das Token dieses Geräts löschen?"
+            "value": "Dieses Bankformat löschen"
+          }
+        }
+      }
+    },
+    "Delete this bank format?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Bankformat löschen?"
+          }
+        }
+      }
+    },
+    "Delete this chat?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diesen Chat löschen?"
           }
         }
       }
@@ -3823,6 +4053,16 @@
         }
       }
     },
+    "Deleted “%@”": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ gelöscht"
+          }
+        }
+      }
+    },
     "Deletes all transactions, accounts, categories and saved bank formats of this family and resets the currency. The calendar stays as it is.": {
       "localizations": {
         "de": {
@@ -3849,6 +4089,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Beschreibung"
+          }
+        }
+      }
+    },
+    "Deselect All": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle abwählen"
           }
         }
       }
@@ -3993,16 +4243,6 @@
         }
       }
     },
-    "Done selecting": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Auswahl beenden"
-          }
-        }
-      }
-    },
     "Double-click": {
       "localizations": {
         "de": {
@@ -4053,6 +4293,16 @@
         }
       }
     },
+    "Drop a bank statement (CSV) to import it": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kontoauszug (CSV) hier ablegen, um ihn zu importieren"
+          }
+        }
+      }
+    },
     "Drop files to attach": {
       "localizations": {
         "de": {
@@ -4079,6 +4329,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "E"
+          }
+        }
+      }
+    },
+    "E / ⌘N": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "E / ⌘N"
           }
         }
       }
@@ -4183,6 +4443,16 @@
         }
       }
     },
+    "Edit Search…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche bearbeiten …"
+          }
+        }
+      }
+    },
     "Edit Tag": {
       "localizations": {
         "de": {
@@ -4209,6 +4479,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Termin bearbeiten"
+          }
+        }
+      }
+    },
+    "Edit note": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notiz bearbeiten"
           }
         }
       }
@@ -4373,12 +4653,12 @@
         }
       }
     },
-    "Esc": {
+    "Esc / ⇧⌘A": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Esc"
+            "value": "Esc / ⇧⌘A"
           }
         }
       }
@@ -4403,22 +4683,62 @@
         }
       }
     },
-    "Every N minutes": {
+    "Every (minutes)": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Alle N Minuten"
+            "value": "Alle (Minuten)"
           }
         }
       }
     },
-    "Every browser signed in to your account is signed out. This device and other apps stay signed in: delete their tokens above.": {
+    "Every 15 minutes": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Jeder Browser, der bei deinem Konto angemeldet ist, wird abgemeldet. Dieses Gerät und andere Apps bleiben angemeldet: Lösche dafür oben ihre Tokens."
+            "value": "Alle 15 Minuten"
+          }
+        }
+      }
+    },
+    "Every 30 minutes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle 30 Minuten"
+          }
+        }
+      }
+    },
+    "Every 5 minutes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle 5 Minuten"
+          }
+        }
+      }
+    },
+    "Every browser signed in to your account is signed out. The apps listed above stay signed in.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jeder Browser, der bei deinem Konto angemeldet ist, wird abgemeldet. Die oben aufgeführten Apps bleiben angemeldet."
+          }
+        }
+      }
+    },
+    "Every hour": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jede Stunde"
           }
         }
       }
@@ -4563,12 +4883,32 @@
         }
       }
     },
+    "Extend selection to here": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auswahl bis hier erweitern"
+          }
+        }
+      }
+    },
     "Extend the selection": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Die Auswahl erweitern"
+          }
+        }
+      }
+    },
+    "Failed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fehlgeschlagen"
           }
         }
       }
@@ -4723,12 +5063,32 @@
         }
       }
     },
+    "Finance Settings": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finanzeinstellungen"
+          }
+        }
+      }
+    },
     "Finance settings": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Finanz-Einstellungen"
+          }
+        }
+      }
+    },
+    "Find Transfers…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umbuchungen finden …"
           }
         }
       }
@@ -4773,6 +5133,16 @@
         }
       }
     },
+    "Five fields: minute, hour, day of the month, month, weekday. “*/15 7-20 * * 1-5” runs every 15 minutes from 7:00 to 20:59 on weekdays.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fünf Felder: Minute, Stunde, Tag im Monat, Monat, Wochentag. „*/15 7-20 * * 1-5“ sucht werktags von 7:00 bis 20:59 alle 15 Minuten."
+          }
+        }
+      }
+    },
     "For a new ingredient; one Ohana knows keeps its own aisle.": {
       "localizations": {
         "de": {
@@ -4789,16 +5159,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Für andere KI-Agenten, die Ohanas API mit einem API-Token nutzen:"
-          }
-        }
-      }
-    },
-    "For scripts and AI agents: send as \"Authorization: Bearer <token>\". A token can do everything you can.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Für Skripte und KI-Agenten: als \"Authorization: Bearer <Token>\" senden. Ein Token darf alles, was du darfst."
           }
         }
       }
@@ -4833,6 +5193,16 @@
         }
       }
     },
+    "For your own programs and scripts. You don’t need this to use Ohana.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für deine eigenen Programme und Skripte. Um Ohana zu nutzen, brauchst du das nicht."
+          }
+        }
+      }
+    },
     "Format": {
       "localizations": {
         "de": {
@@ -4859,16 +5229,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Freitext"
-          }
-        }
-      }
-    },
-    "Frequency": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rhythmus"
           }
         }
       }
@@ -5009,6 +5369,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Los geht’s"
+          }
+        }
+      }
+    },
+    "Give it a name.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib ihr einen Namen."
           }
         }
       }
@@ -5223,22 +5593,22 @@
         }
       }
     },
-    "Hourly": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Stündlich"
-          }
-        }
-      }
-    },
     "Household": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Haushalt"
+          }
+        }
+      }
+    },
+    "How many pages of results each run reads per source. More pages find more doctors but take longer.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie viele Ergebnisseiten jede Suche pro Quelle liest. Mehr Seiten finden mehr Praxen, dauern aber länger."
           }
         }
       }
@@ -5283,6 +5653,16 @@
         }
       }
     },
+    "How often": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie oft"
+          }
+        }
+      }
+    },
     "How the calendar works": {
       "localizations": {
         "de": {
@@ -5313,12 +5693,22 @@
         }
       }
     },
-    "I / Return": {
+    "How to use": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "I / Zeilenschalter"
+            "value": "So geht’s"
+          }
+        }
+      }
+    },
+    "I / Return / ⌘I": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I / Zeilenschalter / ⌘I"
           }
         }
       }
@@ -5329,6 +5719,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Symbol"
+          }
+        }
+      }
+    },
+    "Icon & Note…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Symbol & Notiz …"
           }
         }
       }
@@ -5379,6 +5779,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ignorieren"
+          }
+        }
+      }
+    },
+    "Ignore This Doctor": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Praxis ignorieren"
           }
         }
       }
@@ -5449,6 +5859,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "CSV importieren"
+          }
+        }
+      }
+    },
+    "Import CSV…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CSV importieren …"
           }
         }
       }
@@ -5665,16 +6085,6 @@
         }
       }
     },
-    "Interval (minutes)": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Intervall (Minuten)"
-          }
-        }
-      }
-    },
     "Invite": {
       "localizations": {
         "de": {
@@ -5777,6 +6187,16 @@
         }
       }
     },
+    "Item deleted.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Artikel gelöscht."
+          }
+        }
+      }
+    },
     "Its transactions and subcategories move to “%@”.": {
       "localizations": {
         "de": {
@@ -5833,6 +6253,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tritt bei als"
+          }
+        }
+      }
+    },
+    "Jump to latest": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zum Neuesten springen"
           }
         }
       }
@@ -6317,6 +6747,16 @@
         }
       }
     },
+    "Mark as Booked…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Als gebucht eintragen …"
+          }
+        }
+      }
+    },
     "Mark as booked": {
       "localizations": {
         "de": {
@@ -6687,12 +7127,82 @@
         }
       }
     },
+    "New Chat": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neuer Chat"
+          }
+        }
+      }
+    },
+    "New Event": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neuer Termin"
+          }
+        }
+      }
+    },
+    "New Item": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neuer Artikel"
+          }
+        }
+      }
+    },
     "New Recipe": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Neues Rezept"
+          }
+        }
+      }
+    },
+    "New Search": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Suche"
+          }
+        }
+      }
+    },
+    "New Tag": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neuer Tag"
+          }
+        }
+      }
+    },
+    "New Transaction": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Buchung"
+          }
+        }
+      }
+    },
+    "New Transaction (⌘N)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Buchung (⌘N)"
           }
         }
       }
@@ -6837,12 +7347,12 @@
         }
       }
     },
-    "New search (⇧⌘N)": {
+    "New search (⌘N)": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Neue Suche (⇧⌘N)"
+            "value": "Neue Suche (⌘N)"
           }
         }
       }
@@ -6863,6 +7373,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Neuer Tag"
+          }
+        }
+      }
+    },
+    "New to Ohana? Create your account": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neu bei Ohana? Erstelle dein Konto"
           }
         }
       }
@@ -6917,12 +7437,32 @@
         }
       }
     },
-    "Next (⌥⌘→)": {
+    "Next Gap": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Weiter (⌥⌘→)"
+            "value": "Nächste Lücke"
+          }
+        }
+      }
+    },
+    "Next Period": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nächster Zeitraum"
+          }
+        }
+      }
+    },
+    "Next Year": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nächstes Jahr"
           }
         }
       }
@@ -6973,6 +7513,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nächster Monat"
+          }
+        }
+      }
+    },
+    "Next period": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nächster Zeitraum"
+          }
+        }
+      }
+    },
+    "Next period (⌘])": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nächster Zeitraum (⌘])"
           }
         }
       }
@@ -7073,6 +7633,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noch keine Chats"
+          }
+        }
+      }
+    },
+    "No days selected": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Tage ausgewählt"
           }
         }
       }
@@ -7699,6 +8269,26 @@
         }
       }
     },
+    "Ohana checks on its own and tells you when an appointment frees up. Within (days): how far ahead an appointment may be.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohana sucht von selbst und sagt dir Bescheid, wenn ein Termin frei wird. Innerhalb von (Tagen): wie weit im Voraus ein Termin liegen darf."
+          }
+        }
+      }
+    },
+    "Ohana checks only when you tap Run now. Within (days): how far ahead an appointment may be.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohana sucht nur, wenn du auf „Jetzt suchen“ tippst. Innerhalb von (Tagen): wie weit im Voraus ein Termin liegen darf."
+          }
+        }
+      }
+    },
     "Ohana may not use the microphone or speech recognition. You can allow it in the Settings app.": {
       "localizations": {
         "de": {
@@ -7709,12 +8299,12 @@
         }
       }
     },
-    "Ohana on this device signs in with it: you are signed out right away and pair the app again to come back.": {
+    "Ohana on %@ is signed out right away. It can be connected again.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ohana meldet sich auf diesem Gerät damit an: Du wirst sofort abgemeldet und verbindest die App danach neu."
+            "value": "Ohana auf %@ wird sofort abgemeldet. Es lässt sich wieder verbinden."
           }
         }
       }
@@ -7769,12 +8359,32 @@
         }
       }
     },
+    "Once a day": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einmal am Tag"
+          }
+        }
+      }
+    },
     "One column (+/−)": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Eine Spalte (+/−)"
+          }
+        }
+      }
+    },
+    "One name is enough: it’s used for both languages.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Name genügt: Er gilt dann für beide Sprachen."
           }
         }
       }
@@ -7849,12 +8459,32 @@
         }
       }
     },
+    "Open Administration…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verwaltung öffnen …"
+          }
+        }
+      }
+    },
     "Open as a page": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Als Seite öffnen"
+          }
+        }
+      }
+    },
+    "Open event %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termin %@ öffnen"
           }
         }
       }
@@ -7999,6 +8629,56 @@
         }
       }
     },
+    "Opens the assistant with this question, ready to send": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffnet den Assistenten mit dieser Frage, bereit zum Senden"
+          }
+        }
+      }
+    },
+    "Opens the invite in the browser, where you create your account. Then come back and sign in.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffnet die Einladung im Browser, wo du dein Konto erstellst. Komm danach zurück und melde dich an."
+          }
+        }
+      }
+    },
+    "Opens the recipe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffnet das Rezept"
+          }
+        }
+      }
+    },
+    "Opens the search": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffnet die Suche"
+          }
+        }
+      }
+    },
+    "Opens the shopping list": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffnet die Einkaufsliste"
+          }
+        }
+      }
+    },
     "Or any other emoji": {
       "localizations": {
         "de": {
@@ -8029,32 +8709,22 @@
         }
       }
     },
+    "Other (OpenAI-compatible)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anderer (OpenAI-kompatibel)"
+          }
+        }
+      }
+    },
     "Other color": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Andere Farbe"
-          }
-        }
-      }
-    },
-    "Other devices": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Andere Geräte"
-          }
-        }
-      }
-    },
-    "Other devices signed out.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Andere Geräte abgemeldet."
           }
         }
       }
@@ -8089,12 +8759,12 @@
         }
       }
     },
-    "Page Up / Page Down": {
+    "Page Up / Page Down, ⌘[ / ⌘]": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bild auf / Bild ab"
+            "value": "Bild auf / Bild ab, ⌘[ / ⌘]"
           }
         }
       }
@@ -8279,6 +8949,16 @@
         }
       }
     },
+    "Pause Search": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche pausieren"
+          }
+        }
+      }
+    },
     "Payee": {
       "localizations": {
         "de": {
@@ -8435,6 +9115,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wähle eine Antwort oder schreib deine eigene"
+          }
+        }
+      }
+    },
+    "Pick the AI service you have an account with and paste its key. Everyone in the family uses this setup.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle den KI-Dienst, bei dem du ein Konto hast, und füge seinen Schlüssel ein. Die ganze Familie nutzt diese Einrichtung."
           }
         }
       }
@@ -8629,26 +9319,6 @@
         }
       }
     },
-    "Previous": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zurück"
-          }
-        }
-      }
-    },
-    "Previous (⌥⌘←)": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zurück (⌥⌘←)"
-          }
-        }
-      }
-    },
     "Previous / next year": {
       "localizations": {
         "de": {
@@ -8659,12 +9329,52 @@
         }
       }
     },
+    "Previous Period": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorheriger Zeitraum"
+          }
+        }
+      }
+    },
+    "Previous Year": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorheriges Jahr"
+          }
+        }
+      }
+    },
     "Previous month": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Vorheriger Monat"
+          }
+        }
+      }
+    },
+    "Previous period": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorheriger Zeitraum"
+          }
+        }
+      }
+    },
+    "Previous period (⌘[)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorheriger Zeitraum (⌘[)"
           }
         }
       }
@@ -8729,12 +9439,32 @@
         }
       }
     },
+    "Progress": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fortschritt"
+          }
+        }
+      }
+    },
     "Protein": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Protein"
+          }
+        }
+      }
+    },
+    "Provider": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anbieter"
           }
         }
       }
@@ -8755,6 +9485,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pushbullet, Pushover, Telegram oder E-Mail über SMTP."
+          }
+        }
+      }
+    },
+    "Puts it in the message field": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Setzt es ins Nachrichtenfeld"
           }
         }
       }
@@ -8825,6 +9565,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bereich"
+          }
+        }
+      }
+    },
+    "Read with the format saved for this bank.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit dem für diese Bank gespeicherten Format gelesen."
           }
         }
       }
@@ -9129,6 +9879,16 @@
         }
       }
     },
+    "Remove Key": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schlüssel entfernen"
+          }
+        }
+      }
+    },
     "Remove Photo": {
       "localizations": {
         "de": {
@@ -9145,6 +9905,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Alle Einträge der ausgewählten Tage entfernen (Entf)"
+          }
+        }
+      }
+    },
+    "Remove from selection": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus der Auswahl entfernen"
           }
         }
       }
@@ -9179,12 +9949,22 @@
         }
       }
     },
-    "Remove the appointment?": {
+    "Remove the API key?": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Termin entfernen?"
+            "value": "API-Schlüssel entfernen?"
+          }
+        }
+      }
+    },
+    "Remove the appointment with %@?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termin bei %@ entfernen?"
           }
         }
       }
@@ -9209,12 +9989,32 @@
         }
       }
     },
+    "Remove the statistic average?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Statistischen Durchschnitt entfernen?"
+          }
+        }
+      }
+    },
     "Remove this appointment from Ohana? This doesn’t cancel it with the practice.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Diesen Termin aus Ohana entfernen? Bei der Praxis wird er dadurch nicht abgesagt."
+          }
+        }
+      }
+    },
+    "Remove “%@”?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ entfernen?"
           }
         }
       }
@@ -9275,6 +10075,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Passkey umbenennen"
+          }
+        }
+      }
+    },
+    "Renames the tag": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benennt den Tag um"
           }
         }
       }
@@ -9349,12 +10159,32 @@
         }
       }
     },
+    "Replace Plan": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plan ersetzen"
+          }
+        }
+      }
+    },
     "Replace the calendar and the finances of “%@” with the contents of “%@”? All years, entry types, entries, notes and finances are overwritten; the name, the members and the links stay. This can’t be undone.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Kalender und Finanzen von „%@“ durch den Inhalt von „%@“ ersetzen? Alle Jahre, Eintragsarten, Einträge, Notizen und Finanzen werden überschrieben; Name, Mitglieder und Links bleiben. Das lässt sich nicht rückgängig machen."
+          }
+        }
+      }
+    },
+    "Replace the current plan?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktuellen Plan ersetzen?"
           }
         }
       }
@@ -9375,6 +10205,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ersetzt den Kalender (alle Jahre) und die Finanzen dieser Familie durch die einer exportierten Datei; Name, Mitglieder und Links bleiben. Lässt sich nicht rückgängig machen – vorher exportieren, um eine Kopie zu behalten."
+          }
+        }
+      }
+    },
+    "Required": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pflichtfeld"
           }
         }
       }
@@ -9429,22 +10269,22 @@
         }
       }
     },
-    "Return sends, Option-Return starts a new line. Paste (⌘V) or drop screenshots and files.": {
+    "Resume Search": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Return sendet, Wahl-Return beginnt eine neue Zeile. Screenshots und Dateien einfügen (⌘V) oder hier ablegen."
+            "value": "Suche fortsetzen"
           }
         }
       }
     },
-    "Return sends. Attach, paste or drop screenshots and files.": {
+    "Return sends, Shift-Return starts a new line. Paste (⌘V) or drop screenshots and files.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Return sendet. Screenshots und Dateien anhängen, einfügen oder hier ablegen."
+            "value": "Return sendet, Umschalt-Return beginnt eine neue Zeile. Screenshots und Dateien einfügen (⌘V) oder hier ablegen."
           }
         }
       }
@@ -9455,6 +10295,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Widerrufen"
+          }
+        }
+      }
+    },
+    "Revoke the invite link for %@?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einladungslink für %@ widerrufen?"
+          }
+        }
+      }
+    },
+    "Revoke this invite link?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diesen Einladungslink widerrufen?"
           }
         }
       }
@@ -9499,6 +10359,16 @@
         }
       }
     },
+    "Role of %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rolle von %@"
+          }
+        }
+      }
+    },
     "Rows": {
       "localizations": {
         "de": {
@@ -9515,6 +10385,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zeilen vor der Tabelle"
+          }
+        }
+      }
+    },
+    "Run Now": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jetzt suchen"
           }
         }
       }
@@ -9539,12 +10419,12 @@
         }
       }
     },
-    "Run on the schedule": {
+    "Running": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nach Zeitplan ausführen"
+            "value": "Läuft"
           }
         }
       }
@@ -9889,6 +10769,26 @@
         }
       }
     },
+    "Searches around this place.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sucht rund um diesen Ort."
+          }
+        }
+      }
+    },
+    "Searches around your home address.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sucht rund um eure Wohnadresse."
+          }
+        }
+      }
+    },
     "Searches stop sending to it.": {
       "localizations": {
         "de": {
@@ -9919,6 +10819,16 @@
         }
       }
     },
+    "Secondary click, or touch and hold": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sekundärklick oder berühren und halten"
+          }
+        }
+      }
+    },
     "Section": {
       "localizations": {
         "de": {
@@ -9935,6 +10845,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Auswählen"
+          }
+        }
+      }
+    },
+    "Select All": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle auswählen"
           }
         }
       }
@@ -10029,6 +10949,16 @@
         }
       }
     },
+    "Selected place": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gewählter Ort"
+          }
+        }
+      }
+    },
     "Self-payer": {
       "localizations": {
         "de": {
@@ -10049,12 +10979,32 @@
         }
       }
     },
+    "Send a test message to %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Testnachricht an %@ senden"
+          }
+        }
+      }
+    },
     "Send after this answer": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Nach dieser Antwort senden"
+          }
+        }
+      }
+    },
+    "Send the token with every request, in this header:": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schicke das Token bei jeder Anfrage in diesem Header mit:"
           }
         }
       }
@@ -10125,6 +11075,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Portionen"
+          }
+        }
+      }
+    },
+    "Servings: %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Portionen: %lld"
           }
         }
       }
@@ -10479,6 +11439,16 @@
         }
       }
     },
+    "Show today": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heute zeigen"
+          }
+        }
+      }
+    },
     "Showing the list as it was last loaded.": {
       "localizations": {
         "de": {
@@ -10539,6 +11509,46 @@
         }
       }
     },
+    "Sign out %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ abmelden"
+          }
+        }
+      }
+    },
+    "Sign out %@?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ abmelden?"
+          }
+        }
+      }
+    },
+    "Sign out all browsers": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Browser abmelden"
+          }
+        }
+      }
+    },
+    "Sign out all browsers?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Browser abmelden?"
+          }
+        }
+      }
+    },
     "Sign out of Ohana on this device?": {
       "localizations": {
         "de": {
@@ -10549,32 +11559,42 @@
         }
       }
     },
-    "Sign out other devices": {
+    "Sign out this device?": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Andere Geräte abmelden"
+            "value": "Dieses Gerät abmelden?"
           }
         }
       }
     },
-    "Sign out the other devices?": {
+    "Sign-In & Security": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Die anderen Geräte abmelden?"
+            "value": "Anmeldung & Sicherheit"
           }
         }
       }
     },
-    "Signed-in browsers": {
+    "Signed out.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Angemeldete Browser"
+            "value": "Abgemeldet."
+          }
+        }
+      }
+    },
+    "Signed-in devices": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Angemeldete Geräte"
           }
         }
       }
@@ -10665,6 +11685,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sortieren"
+          }
+        }
+      }
+    },
+    "Sort into Categories": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatisch einsortieren"
           }
         }
       }
@@ -10953,6 +11983,16 @@
         }
       }
     },
+    "Status: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status: %@"
+          }
+        }
+      }
+    },
     "Steaming": {
       "localizations": {
         "de": {
@@ -10999,6 +12039,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Schritte"
+          }
+        }
+      }
+    },
+    "Steps for a kitchen machine, with its programs and settings.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schritte für eine Küchenmaschine, mit ihren Programmen und Einstellungen."
           }
         }
       }
@@ -11059,6 +12109,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Straße, PLZ Ort"
+          }
+        }
+      }
+    },
+    "Subcategory of %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unterkategorie von %@"
           }
         }
       }
@@ -11313,6 +12373,16 @@
         }
       }
     },
+    "That isn’t a web address. It looks like ohana.example.com.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das ist keine Webadresse. Sie sieht so aus: ohana.example.com."
+          }
+        }
+      }
+    },
     "That isn’t an invite link.": {
       "localizations": {
         "de": {
@@ -11343,12 +12413,32 @@
         }
       }
     },
+    "The address you use for Ohana in the browser, like ohana.example.com. A link from Ohana works too, such as an invite.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Adresse, unter der du Ohana im Browser öffnest, z. B. ohana.example.com. Ein Link aus Ohana geht auch, etwa eine Einladung."
+          }
+        }
+      }
+    },
     "The assistant may change the calendar, finances, meals and appointment searches for editors (most changes can be undone). Off: it only reads. For viewers it always only reads.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Der Assistent darf für Bearbeiter Kalender, Finanzen, Essen und Terminsuchen ändern (die meisten Änderungen lassen sich rückgängig machen). Aus: Er liest nur. Für Betrachter liest er immer nur."
+          }
+        }
+      }
+    },
+    "The assistant stops working for everyone in the family until a new key is saved.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Assistent funktioniert dann für die ganze Familie nicht mehr, bis ein neuer Schlüssel gespeichert ist."
           }
         }
       }
@@ -11379,6 +12469,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Die Aktionen des Tages: Details, Notiz, Termin, Wiederholen, Leeren"
+          }
+        }
+      }
+    },
+    "The end is before the start.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Ende liegt vor dem Beginn."
           }
         }
       }
@@ -11473,6 +12573,16 @@
         }
       }
     },
+    "The meals and shopping lists of every iteration, ticks included, are deleted and planned anew from today. This can’t be undone.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Mahlzeiten und Einkaufslisten aller Iterationen, samt Häkchen, werden gelöscht und ab heute neu geplant. Das lässt sich nicht rückgängig machen."
+          }
+        }
+      }
+    },
     "The meals and shopping lists of these days are planned anew.": {
       "localizations": {
         "de": {
@@ -11503,6 +12613,16 @@
         }
       }
     },
+    "The name is too long (max. 100).": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Name ist zu lang (max. 100)."
+          }
+        }
+      }
+    },
     "The name is too long (max. 200).": {
       "localizations": {
         "de": {
@@ -11513,12 +12633,42 @@
         }
       }
     },
+    "The name is too long (max. 80).": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Name ist zu lang (max. 80)."
+          }
+        }
+      }
+    },
     "The new account comes with a one-time setup link (7 days): it signs the person in and asks for a passkey or a password.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Das neue Konto bekommt einen einmaligen Einrichtungslink (7 Tage): Er meldet die Person an und fragt nach einem Passkey oder Passwort."
+          }
+        }
+      }
+    },
+    "The next import of this bank’s files asks again how their columns map.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beim nächsten Import der Dateien dieser Bank wird wieder nach der Zuordnung der Spalten gefragt."
+          }
+        }
+      }
+    },
+    "The overview stops comparing with it; its figures are gone.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Übersicht vergleicht nicht mehr damit; die Werte sind dann gelöscht."
           }
         }
       }
@@ -11549,6 +12699,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Die Menge muss eine Zahl über 0 sein."
+          }
+        }
+      }
+    },
+    "The requests go to %@.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Anfragen gehen an %@."
           }
         }
       }
@@ -11819,6 +12979,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hakt die Einkaufsliste ab"
+          }
+        }
+      }
+    },
+    "Ticks or unticks it": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wählt es an oder ab"
           }
         }
       }
@@ -12183,6 +13353,16 @@
         }
       }
     },
+    "Undo: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rückgängig: %@"
+          }
+        }
+      }
+    },
     "Undone": {
       "localizations": {
         "de": {
@@ -12309,6 +13489,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Foto hochladen"
+          }
+        }
+      }
+    },
+    "Use a cron schedule": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cron-Zeitplan verwenden"
           }
         }
       }
@@ -12723,6 +13913,16 @@
         }
       }
     },
+    "Where your account is signed in. Sign out a device you don’t use anymore or don’t recognize.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wo dein Konto angemeldet ist. Melde ein Gerät ab, das du nicht mehr nutzt oder nicht kennst."
+          }
+        }
+      }
+    },
     "Which days this year still need cover, and who could take them?": {
       "localizations": {
         "de": {
@@ -12759,6 +13959,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Für wen"
+          }
+        }
+      }
+    },
+    "Whoever has it can’t join with it anymore.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wer ihn hat, kann damit nicht mehr beitreten."
+          }
+        }
+      }
+    },
+    "With a keyboard, Return sends and Shift-Return starts a new line. Attach, paste or drop screenshots and files.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit Tastatur sendet Return, Umschalt-Return beginnt eine neue Zeile. Screenshots und Dateien anhängen, einfügen oder hier ablegen."
           }
         }
       }
@@ -12863,12 +14083,32 @@
         }
       }
     },
+    "You are signed out right away and connect the app again to come back.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du wirst sofort abgemeldet und verbindest die App erneut, um zurückzukommen."
+          }
+        }
+      }
+    },
     "You can look at the finances; only editors can change them.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Du kannst die Finanzen ansehen, ändern können sie nur Bearbeiter."
+          }
+        }
+      }
+    },
+    "You can undo this.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das lässt sich rückgängig machen."
           }
         }
       }
@@ -12943,12 +14183,12 @@
         }
       }
     },
-    "Your Ohana server": {
+    "Your Ohana address": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dein Ohana-Server"
+            "value": "Deine Ohana-Adresse"
           }
         }
       }
@@ -13053,12 +14293,42 @@
         }
       }
     },
+    "You’ve been invited to a family. Sign in to your Ohana to join it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du wurdest in eine Familie eingeladen. Melde dich bei deinem Ohana an, um beizutreten."
+          }
+        }
+      }
+    },
     "Zoom": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Zoom"
+          }
+        }
+      }
+    },
+    "Zoom In": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vergrößern"
+          }
+        }
+      }
+    },
+    "Zoom Out": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verkleinern"
           }
         }
       }
@@ -13182,6 +14452,50 @@
                 "stringUnit": {
                   "state": "translated",
                   "value": "%lld Tage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "^[%lld day](inflect: true) selected": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Tag ausgewählt"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Tage ausgewählt"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "^[%lld filter](inflect: true) on": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Filter aktiv"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Filter aktiv"
                 }
               }
             }
@@ -13559,6 +14873,16 @@
         }
       }
     },
+    "better": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "besser"
+          }
+        }
+      }
+    },
     "can change everything and add people": {
       "localizations": {
         "de": {
@@ -13889,6 +15213,16 @@
         }
       }
     },
+    "no value": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kein Wert"
+          }
+        }
+      }
+    },
     "not scheduled": {
       "localizations": {
         "de": {
@@ -13925,16 +15259,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "benachrichtigt"
-          }
-        }
-      }
-    },
-    "ohana.example.com": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ohana.example.com"
           }
         }
       }
@@ -14069,6 +15393,16 @@
         }
       }
     },
+    "worse": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "schlechter"
+          }
+        }
+      }
+    },
     "· Away": {
       "localizations": {
         "de": {
@@ -14095,6 +15429,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "—"
+          }
+        }
+      }
+    },
+    "“%@” and its messages are deleted. What the assistant changed stays as it is.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ wird mit seinen Nachrichten gelöscht. Was der Assistent geändert hat, bleibt, wie es ist."
           }
         }
       }
@@ -14175,6 +15519,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "⌘C / ⌘X / ⌘V"
+          }
+        }
+      }
+    },
+    "⌘T": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘T"
           }
         }
       }

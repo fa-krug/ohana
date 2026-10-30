@@ -73,7 +73,8 @@ struct AppointmentSearchDetailView: View {
             .keyboardShortcut("r", modifiers: .command)
             .disabled(search.isBusy)
             Button("Edit Search…") { editing = true }
-                .keyboardShortcut("e", modifiers: .command)
+                // ⌘E is the system's "Use Selection for Find".
+                .keyboardShortcut("e", modifiers: [.command, .option])
             Button(search.enabled ? "Pause Search" : "Resume Search") {
                 perform { try await AppointmentActions.setEnabled(family, search.id, !search.enabled) }
             }

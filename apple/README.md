@@ -28,7 +28,9 @@ committed: run `xcodegen generate` again after adding or removing files.
 
 ## Signing in
 
-Enter the server's address; the app opens the server's `/device/pair` page in the system browser
+Enter the server's address — or paste any link of the server, an invite link too
+(`ServerLink` in `Core/Auth/DevicePairing.swift`: the server and the invite code are taken from
+it); an https link of the server opened while signed out starts this by itself. The app opens the server's `/device/pair` page in the system browser
 sheet, where you sign in as on the web (passkeys work) and confirm. The page hands the app an API
 token (`ohana://auth-callback`), kept in the Keychain. It shows on the web account page as
 "<device> (app)" and can be removed there; "Sign out" in the app deletes it too. For a local
