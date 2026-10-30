@@ -217,6 +217,24 @@ final class FamilyContext {
         pendingRoute = route
     }
 
+    // MARK: Asking the assistant
+
+    /// What the assistant should do when it shows next (`ask`): the panel or the assistant's page
+    /// takes it with `takeAssistantRequest()`.
+    private(set) var assistantRequest: AssistantRequest?
+
+    /// Opens the assistant with the composer focused, from anywhere: optionally on a new chat,
+    /// with `prompt` typed in, and sent right away with `send`. The shell shows the panel (or the
+    /// assistant's page when it's on screen).
+    func ask(_ prompt: String? = nil, send: Bool = false, newChat: Bool = false) {
+        assistantRequest = AssistantRequest(prompt: prompt, send: send, newChat: newChat)
+    }
+
+    func takeAssistantRequest() -> AssistantRequest? {
+        defer { assistantRequest = nil }
+        return assistantRequest
+    }
+
     /// The pending route if `module` shows it; it's taken (cleared) then. Module roots call this
     /// in `.onChange(of: family.pendingRoute, initial: true)`.
     func takeRoute(for module: Module) -> AppRoute? {
@@ -224,6 +242,14 @@ final class FamilyContext {
         pendingRoute = nil
         return route
     }
+}
+
+/// See `FamilyContext.ask`.
+struct AssistantRequest: Equatable, Identifiable {
+    let id = UUID()
+    var prompt: String?
+    var send: Bool
+    var newChat: Bool
 }
 
 /// What a change can touch, for `FamilyContext.didChange`.
