@@ -59,11 +59,14 @@ struct LoadStateView<Value, Content: View>: View {
     }
 }
 
-/// Errors of actions (saving, deleting) shown as a glass banner at the top of the window.
+/// Errors of actions (saving, deleting) shown as a glass banner at the top of the window, and
+/// short confirmations ("Saved.") with `success(_:)`. Sheets show it too when their content
+/// has `.errorBanner()`.
 @Observable
 final class ErrorBanner {
     static let shared = ErrorBanner()
     private(set) var message: String?
+    private(set) var isSuccess = false
     private var hideTask: Task<Void, Never>?
 
     func show(_ error: any Error) {
@@ -72,7 +75,17 @@ final class ErrorBanner {
     }
 
     func show(_ text: String) {
+        present(text, success: false)
+    }
+
+    /// A confirmation, e.g. `ErrorBanner.shared.success(String(localized: "Test message sent."))`.
+    func success(_ text: String) {
+        present(text, success: true)
+    }
+
+    private func present(_ text: String, success: Bool) {
         message = text
+        isSuccess = success
         hideTask?.cancel()
         hideTask = Task {
             try? await Task.sleep(for: .seconds(5))
@@ -97,7 +110,8 @@ struct ErrorBannerOverlay: ViewModifier {
         content.overlay(alignment: .top) {
             if let message = banner.message {
                 HStack(spacing: 10) {
-                    Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.red)
+                    Image(systemName: banner.isSuccess ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                        .foregroundStyle(banner.isSuccess ? .green : .red)
                     Text(message).font(.callout)
                     Button { banner.dismiss() } label: { Image(systemName: "xmark") }
                         .buttonStyle(.plain)
@@ -105,7 +119,7 @@ struct ErrorBannerOverlay: ViewModifier {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
-                .glassEffect(.regular.tint(.red.opacity(0.15)), in: .capsule)
+                .glassEffect(.regular.tint((banner.isSuccess ? Color.green : .red).opacity(0.15)), in: .capsule)
                 .padding(.top, 8)
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
