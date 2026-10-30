@@ -62,13 +62,16 @@ xcodebuild -scheme Ohana-macOS -destination 'platform=macOS' test
 
 In Debug builds, `-OHANA_DEV_SERVER http://localhost:3000 -OHANA_DEV_TOKEN ohana_…` (an API
 token from the web account page) signs in without pairing, and `-OHANA_DEV_MODULE calendar` /
-`-OHANA_DEV_ASSISTANT YES` open a module or the assistant at launch (Xcode: scheme → Run →
+`-OHANA_DEV_ASSISTANT YES` open a module or the assistant at launch, `-OHANA_DEV_URL ohana://f/…`
+opens a link (Xcode: scheme → Run →
 Arguments). The test schemes run in English, since the tests compare English strings.
 
 ## Translations
 
 German strings live per module in `Localization/<module>.de.json` (String Catalog key → German;
-interpolations as `%@`, `%lld`, `%lf`). After adding strings, build once and merge:
+interpolations as `%@`, `%lld`, `%lf`; a plural is `{"one": "…", "other": "…"}`, or per language
+`{"en": {…}, "de": {…}}`). `Localizable.xcstrings` is generated from them: after a merge conflict
+in it, re-run the script instead of resolving it by hand. After adding strings, build once and merge:
 
 ```bash
 xcodebuild -scheme Ohana -destination 'generic/platform=iOS' -derivedDataPath build/dd CODE_SIGNING_ALLOWED=NO build

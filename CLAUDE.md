@@ -296,14 +296,21 @@ npm run import-legacy -- --family-planner dump.sql --cookless cookless.db --cook
   Bearer token; where the web pages use server actions, each module has app routes in
   `lib/<module>/app-routes.ts` (`handle<Module>App`, plus `lib/meals/app-routes-plan.ts`),
   registered in the family API's route list before the module's own routes (which answer 404
-  for other paths under their prefix); `POST /api/v1/families` creates a family. In the app:
+  for other paths under their prefix); `POST /api/v1/families` creates a family; the account
+  (`/api/v1/me/...`, `lib/auth/app-routes.ts`), the administration (`/api/v1/admin/...`,
+  `lib/admin/app-routes.ts`) and invites (`/api/v1/invites/{code}`, `lib/families/invite-routes.ts`)
+  share `lib/api/app-router.ts`. `/setup`, onboarding and login keep a `next` (`homeFor(user, next)`)
+  so first-run pairing ends back on the pairing page. In the app:
   `App/AppModel.swift` (server, token in the Keychain, `/api/v1/me`, selected family,
   `FamilyContext`: `FamilyAPI` + `didChange`/`revision` signals between modules),
   `Core/API/APIClient.swift` (errors `{error}` / `{message}` → `APIError`, 401 signs out),
   `Shell/` (sidebar-adaptable `TabView`, family switcher, assistant `.inspector` ⌘J and its own
   page, `AppRoute`: `family.open(.recipe(id:))` etc. switches to the module, whose root takes it
   with `family.takeRoute(for:)`; web paths `/f/{id}/…` and `ohana://f/{id}/…` map onto routes),
-  `DesignSystem/` (Liquid Glass helpers), `Features/<Module>/`. German strings: per-module
+  `DesignSystem/` (Liquid Glass helpers), `Features/<Module>/` (plus `Account/`, `Admin/`).
+  The assistant: `family.ask(prompt, send:, newChat:)` opens it ready to type from anywhere (the
+  iPhone's tab-bar accessory, ⇧⌘J, the overview's field, the Mac's `MenuBarExtra`, the
+  `AskOhanaIntent` App Shortcut). German strings: per-module
   `apple/Localization/*.de.json`, merged into `Resources/Localizable.xcstrings` by
   `apple/scripts/merge-localizations.py` (`--check` in CI). Build/test: `apple/README.md`; CI:
   `.github/workflows/apple.yml` (macOS unit tests, iOS build, strings; only on `apple/**` changes).
