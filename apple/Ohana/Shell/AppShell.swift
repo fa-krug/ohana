@@ -28,6 +28,8 @@ struct AppShell: View {
             .tabViewSidebarHeader { FamilySwitcher() }
             #if os(iOS)
             .tabBarMinimizeBehavior(.onScrollDown)
+            // "Ask Ohana" floats above the iPhone's tab bar on every page.
+            .tabViewBottomAccessory { ShellQuickAsk(context: context) }
             #endif
             .inspector(isPresented: $showAssistant) {
                 // Only while shown: a hidden inspector's toolbar items would stay in the window's.
@@ -39,7 +41,20 @@ struct AppShell: View {
             }
             .environment(context)
             .id(family.id)
-            .focusedSceneValue(\.shell, ShellFocus(module: $module, assistant: $showAssistant))
+            .focusedSceneValue(\.shell, ShellFocus(module: $module, assistant: $showAssistant) {
+                context.ask(newChat: true)
+            })
+            .onChange(of: context.assistantRequest?.id) {
+                guard context.assistantRequest != nil else { return }
+                // The assistant's page takes the request itself when it's on screen.
+                if module == .assistant, sizeClass != .compact { return }
+                showAssistant = true
+            }
+            .onChange(of: AssistantInbox.shared.pending?.id, initial: true) {
+                // "Ask Ohana" from Siri, Shortcuts or Spotlight.
+                guard let pending = AssistantInbox.shared.take() else { return }
+                context.ask(pending.prompt, send: pending.prompt != nil, newChat: true)
+            }
             .onReceive(NotificationCenter.default.publisher(for: .openModule)) { note in
                 if let target = note.object as? Module { module = target }
             }
@@ -122,6 +137,33 @@ extension View {
         modifier(ShellToolbar(showAssistant: showAssistant))
     }
 }
+
+/// The "Ask Ohana" bar above the iPhone's tab bar: one tap to a new chat, ready to type.
+#if os(iOS)
+struct ShellQuickAsk: View {
+    let context: FamilyContext
+    @Environment(\.tabViewBottomAccessoryPlacement) private var placement
+
+    var body: some View {
+        Button {
+            context.ask(newChat: true)
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "sparkles")
+                    .foregroundStyle(ModuleTint.assistant)
+                Text(placement == .inline ? "Ask" : "Ask Ohana…")
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 16)
+            .frame(maxHeight: .infinity)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Ask the assistant")
+    }
+}
+#endif
 
 /// Shown when the account has no family yet.
 struct NoFamilyView: View {

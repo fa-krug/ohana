@@ -1,0 +1,26 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "Ask ${applicationName}": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frag ${applicationName}"
+          }
+        }
+      }
+    },
+    "Open the ${applicationName} assistant": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffne den ${applicationName}-Assistenten"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}
