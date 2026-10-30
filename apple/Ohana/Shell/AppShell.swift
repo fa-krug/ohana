@@ -30,6 +30,7 @@ struct AppShell: View {
             #endif
             .inspector(isPresented: $showAssistant) {
                 AssistantPanel()
+                    .errorBanner()
                     .inspectorColumnWidth(min: 320, ideal: 400, max: 560)
             }
             .environment(context)
@@ -112,8 +113,8 @@ struct NoFamilyView: View {
                     Button("Account", systemImage: "person.crop.circle") { showAccount = true }
                 }
             }
-            .sheet(isPresented: $creating) { CreateFamilySheet() }
-            .sheet(isPresented: $showAccount) { NavigationStack { AccountView() } }
+            .sheet(isPresented: $creating) { CreateFamilySheet().errorBanner() }
+            .sheet(isPresented: $showAccount) { NavigationStack { AccountView() }.errorBanner() }
         }
     }
 }

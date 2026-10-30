@@ -63,8 +63,8 @@ struct FamilyMenu<MenuLabel: View>: View {
         } label: {
             label
         }
-        .sheet(isPresented: $creating) { CreateFamilySheet() }
-        .sheet(isPresented: $showAccount) { NavigationStack { AccountView() } }
+        .sheet(isPresented: $creating) { CreateFamilySheet().errorBanner() }
+        .sheet(isPresented: $showAccount) { NavigationStack { AccountView() }.errorBanner() }
     }
 }
 
