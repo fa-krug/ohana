@@ -342,6 +342,7 @@ struct RecipeExportSheet: View {
         }
         .task { await loadPhoto() }
         .task(id: Options(format: format, portions: portions, sections: sections, hasPhoto: photo != nil)) { build() }
+        .errorBanner()
         .presentationDetents([.large])
         .recipeSheetFrame(minWidth: 520, minHeight: 600)
     }

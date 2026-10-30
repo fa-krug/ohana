@@ -2,24 +2,28 @@ import SwiftUI
 
 /// The plan's settings (the web's "Generate meal plan" form): weeks per iteration, servings, the
 /// share of known recipes, leftover days, 1–2 shopping days and tags to leave out. Saving plans
-/// anew from today.
+/// anew from today; replacing a plan asks first, since it can't be undone.
 struct MealPlanSetupSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var input: MealPlanSetupInput
+    private let original: MealPlanSetupInput
     let tags: [MealPlanTag]
     let replacesPlan: Bool
     var save: (MealPlanSetupInput) async throws -> Void
     @State private var saving = false
+    @State private var confirmReplace = false
 
     init(initial: MealPlanSetupInput, tags: [MealPlanTag], replacesPlan: Bool,
          save: @escaping (MealPlanSetupInput) async throws -> Void) {
         _input = State(initialValue: initial)
+        original = initial
         self.tags = tags
         self.replacesPlan = replacesPlan
         self.save = save
     }
 
     private var daysValid: Bool { MealPlanWeekday.validShoppingDays(input.shoppingDays) }
+    private var hasChanges: Bool { input != original }
 
     var body: some View {
         NavigationStack {
@@ -48,7 +52,8 @@ struct MealPlanSetupSheet: View {
                 Section {
                     MealPlanFlowLayout(spacing: 8) {
                         ForEach(0..<7, id: \.self) { day in
-                            chip(MealPlanWeekday.shortNames[day], on: input.shoppingDays.contains(day), tint: ModuleTint.meals) {
+                            MealsChipButton(title: MealPlanWeekday.shortNames[day], isOn: input.shoppingDays.contains(day),
+                                            tint: ModuleTint.meals) {
                                 toggle(day, in: &input.shoppingDays)
                             }
                         }
@@ -65,7 +70,7 @@ struct MealPlanSetupSheet: View {
                     Section {
                         MealPlanFlowLayout(spacing: 8) {
                             ForEach(tags) { tag in
-                                chip(tag.name, on: input.excludedTagIds.contains(tag.id), tint: .red) {
+                                MealsChipButton(title: tag.name, isOn: input.excludedTagIds.contains(tag.id), tint: .red) {
                                     toggle(tag.id, in: &input.excludedTagIds)
                                 }
                             }
@@ -94,30 +99,25 @@ struct MealPlanSetupSheet: View {
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", role: .cancel) { dismiss() }
+                    CancelButton(hasChanges: hasChanges)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Generate", systemImage: "sparkles", role: .confirm) { submit() }
-                        .disabled(!daysValid || saving)
+                    Button("Generate", systemImage: "sparkles", role: .confirm) {
+                        if replacesPlan { confirmReplace = true } else { submit() }
+                    }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(!daysValid || saving)
                 }
             }
+            .confirmationDialog("Replace the current plan?", isPresented: $confirmReplace, titleVisibility: .visible) {
+                Button("Replace Plan", role: .destructive) { submit() }
+            } message: {
+                Text("The meals and shopping lists of every iteration, ticks included, are deleted and planned anew from today. This can’t be undone.")
+            }
         }
+        .errorBanner()
+        .discardGuard(hasChanges: hasChanges || saving)
         .presentationDetents([.large])
-        .interactiveDismissDisabled(saving)
-    }
-
-    private func chip(_ title: String, on: Bool, tint: Color, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(verbatim: title)
-                .font(.subheadline.weight(on ? .semibold : .regular))
-                .foregroundStyle(on ? Color.white : Color.primary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 7)
-                .contentShape(.capsule)
-        }
-        .buttonStyle(.plain)
-        .glassEffect(on ? .regular.tint(tint.opacity(0.8)).interactive() : .regular.interactive(), in: .capsule)
-        .accessibilityAddTraits(on ? .isSelected : [])
     }
 
     private func toggle<T: Equatable>(_ value: T, in list: inout [T]) {

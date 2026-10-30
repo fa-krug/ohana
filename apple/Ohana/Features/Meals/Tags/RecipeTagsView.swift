@@ -1,9 +1,10 @@
 import SwiftUI
 
 /// The family's recipe tags by category (web: meals/tags): editors add, rename and delete them
-/// or start over with the defaults; viewers see them.
+/// or start over with the defaults (File ▸ New Tag, ⌘N, adds one); viewers see them.
 struct RecipeTagsView: View {
     @Environment(FamilyContext.self) private var family
+    @Environment(\.mealsOnScreen) private var onScreen
     @State private var state: LoadState<[RecipeTag]> = .idle
     @State private var adding = false
     @State private var renaming: RecipeTag?
@@ -24,10 +25,10 @@ struct RecipeTagsView: View {
                     } label: {
                         Label("Add Tag", systemImage: "plus")
                     }
-                    .keyboardShortcut("n", modifiers: .command)
                 }
             }
         }
+        .focusedSceneValue(\.newItem, onScreen && family.canEdit ? NewItemAction(title: "New Tag") { adding = true } : nil)
         .sheet(isPresented: $adding) {
             RecipeTagSheet(tag: nil) { await load() }
         }
@@ -73,6 +74,7 @@ struct RecipeTagsView: View {
                 } header: {
                     Label { Text(category.title) } icon: {
                         Circle().fill(category.color).frame(width: 8, height: 8)
+                            .accessibilityHidden(true)
                     }
                 }
             }
@@ -101,9 +103,9 @@ struct RecipeTagsView: View {
                 .foregroundStyle(.secondary)
         }
         if family.canEdit {
-            content
-                .contentShape(.rect)
-                .onTapGesture { renaming = tag }
+            Button { renaming = tag } label: { content.contentShape(.rect) }
+                .tint(.primary)
+                .accessibilityHint(Text("Renames the tag"))
                 .swipeActions {
                     Button("Delete", systemImage: "trash", role: .destructive) { deleting = tag }
                     Button("Rename", systemImage: "pencil") { renaming = tag }
@@ -132,20 +134,37 @@ struct RecipeTagsView: View {
     }
 }
 
-/// Adding a tag (category and both names) or renaming one.
+/// Adding a tag (category and a name in one language or both) or renaming one.
 private struct RecipeTagSheet: View {
     let tag: RecipeTag?
     let saved: () async -> Void
 
     @Environment(FamilyContext.self) private var family
     @Environment(\.dismiss) private var dismiss
-    @State private var input = RecipeNewTag()
+    @State private var input: RecipeNewTag
+    private let original: RecipeNewTag
     @State private var saving = false
+
+    init(tag: RecipeTag?, saved: @escaping () async -> Void) {
+        self.tag = tag
+        self.saved = saved
+        let start = tag.map {
+            RecipeNewTag(category: RecipeTagCategory(rawValue: $0.category) ?? .cuisine, nameEn: $0.nameEn, nameDe: $0.nameDe)
+        } ?? RecipeNewTag()
+        original = start
+        _input = State(initialValue: start)
+    }
+
+    private var hasChanges: Bool { input != original }
 
     var body: some View {
         NavigationStack {
             Form {
-                RecipeNewTagFields(tag: $input, showsCategory: tag == nil)
+                Section {
+                    RecipeNewTagFields(tag: $input, showsCategory: tag == nil)
+                } footer: {
+                    Text(RecipeNewTag.oneNameHint)
+                }
             }
             .formStyle(.grouped)
             .navigationTitle(tag == nil ? LocalizedStringKey("Add Tag") : LocalizedStringKey("Edit Tag"))
@@ -154,20 +173,17 @@ private struct RecipeTagSheet: View {
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", role: .cancel) { dismiss() }
+                    CancelButton(hasChanges: hasChanges)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save", role: .confirm) { save() }
-                        .disabled(!input.isValid || saving)
+                        .keyboardShortcut(.defaultAction)
+                        .disabled(!input.isValid || !hasChanges || saving)
                 }
             }
         }
-        .onAppear {
-            if let tag {
-                input = RecipeNewTag(category: RecipeTagCategory(rawValue: tag.category) ?? .cuisine,
-                                     nameEn: tag.nameEn, nameDe: tag.nameDe)
-            }
-        }
+        .errorBanner()
+        .discardGuard(hasChanges: hasChanges || saving)
         .presentationDetents([.medium])
         .recipeSheetFrame(minWidth: 420, minHeight: 280)
     }

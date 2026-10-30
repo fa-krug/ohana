@@ -25,16 +25,22 @@ enum MealsSegment: String, CaseIterable, Identifiable {
     }
 }
 
-/// A screen Meals pushes for a route (and the plan for its meals): a recipe, or cooking it, at
-/// the given servings (nil: the recipe's own).
-enum MealsDestination: Hashable, Identifiable {
+/// A screen a route of Meals opens: a recipe (pushed), or cooking it (over everything, see
+/// `cookPresentation`), at the given servings (nil: the recipe's own).
+enum MealsDestination: Hashable {
     case recipe(id: String, servings: Int? = nil)
     case cook(recipeID: String, servings: Int? = nil)
+}
+
+/// A recipe at some servings (nil: the recipe's own): the one pushed, or the one being cooked.
+struct MealsRecipeRef: Hashable, Identifiable {
+    let recipeID: String
+    var servings: Int?
 
     var id: Self { self }
 }
 
-/// What Meals does with an `AppRoute` of its module: the part to show, a screen to push, the new
+/// What Meals does with an `AppRoute` of its module: the part to show, a screen to open, the new
 /// recipe editor to open, the shopping list to pick.
 struct MealsRouting: Equatable {
     var segment: MealsSegment?
@@ -70,14 +76,19 @@ struct MealsRouting: Equatable {
 }
 
 /// Meals (web: f/[familyId]/meals): recipes, meal plan, shopping lists and tags behind a
-/// Liquid Glass switcher; the part shown last is remembered per device. Lives inside the
-/// shell's NavigationStack and takes the module's routes (`family.open(.recipe(id:))`, …).
+/// segmented picker (in the toolbar on iPad and Mac, under the navigation bar on iPhone); the
+/// part shown last is remembered per device. Lives inside the shell's NavigationStack and takes
+/// the module's routes (`family.open(.recipe(id:))`, …). Its menu (the Mac's menu bar, the
+/// iPad's ⌘-hold list) switches between the parts with ⌥⌘1…4.
 struct MealsView: View {
     @Environment(FamilyContext.self) private var family
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @AppStorage("meals.segment") private var segment: MealsSegment = .recipes
-    @State private var destination: MealsDestination?
+    @State private var shownRecipe: MealsRecipeRef?
+    @State private var cooking: MealsRecipeRef?
     @State private var creatingRecipe = false
     @State private var shoppingListID: String?
+    @State private var onScreen = false
 
     var body: some View {
         Group {
@@ -96,15 +107,32 @@ struct MealsView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .ohanaBackground(ModuleTint.meals)
-        .safeAreaInset(edge: .top, spacing: 0) {
-            MealsSegmentSwitcher(selection: $segment)
-                .padding(.horizontal)
-                .padding(.vertical, 8)
+        .toolbar {
+            if sizeClass != .compact {
+                ToolbarItem(placement: .principal) {
+                    MealsSegmentPicker(selection: $segment)
+                }
+            }
         }
-        .overlay(alignment: .bottom) { RecipeUndoBanner() }
-        .animation(.spring(duration: 0.35), value: RecipePendingDeletes.shared.latest)
-        .background { MealsSegmentShortcuts(selection: $segment) }
-        .navigationDestination(item: $destination) { MealsDestinationView(destination: $0) }
+        #if os(iOS)
+        .safeAreaBar(edge: .top) {
+            if sizeClass == .compact {
+                MealsSegmentPicker(selection: $segment)
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+            }
+        }
+        #endif
+        .overlay(alignment: .bottom) { MealsUndoBanner() }
+        .animation(.spring(duration: 0.35), value: MealsPendingDeletes.shared.latest)
+        .environment(\.mealsOnScreen, onScreen)
+        .onAppear { onScreen = true }
+        .onDisappear { onScreen = false }
+        .focusedSceneValue(\.moduleMenu, onScreen ? ModuleMenu(title: "Meals") { sectionCommands } : nil)
+        .navigationDestination(item: $shownRecipe) {
+            MealsRecipeDetailView(recipeID: $0.recipeID, initialServings: $0.servings)
+        }
+        .cookPresentation($cooking)
         .sheet(isPresented: $creatingRecipe) {
             RecipeEditorSheet(mode: .create(.known)) { id in
                 ErrorBanner.shared.success(String(localized: "Recipe created"))
@@ -116,71 +144,84 @@ struct MealsView: View {
             if let target = routing.segment { segment = target }
             if routing.segment == .shopping { shoppingListID = routing.shoppingListID }
             if routing.createsRecipe { creatingRecipe = true }
-            if let target = routing.destination { destination = target }
+            switch routing.destination {
+            case let .recipe(id, servings)?: shownRecipe = MealsRecipeRef(recipeID: id, servings: servings)
+            case let .cook(id, servings)?: cooking = MealsRecipeRef(recipeID: id, servings: servings)
+            case nil: break
+            }
+        }
+    }
+
+    /// The parts in the module's menu, ⌥⌘1…4.
+    @ViewBuilder private var sectionCommands: some View {
+        ForEach(Array(MealsSegment.allCases.enumerated()), id: \.element) { index, item in
+            Button {
+                segment = item
+            } label: {
+                Label { Text(item.title) } icon: { Image(systemName: item.systemImage) }
+            }
+            .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: [.command, .option])
         }
     }
 }
 
-/// The screen of a `MealsDestination`.
-struct MealsDestinationView: View {
-    let destination: MealsDestination
-
-    var body: some View {
-        switch destination {
-        case let .recipe(id, servings): MealsRecipeDetailView(recipeID: id, initialServings: servings)
-        case let .cook(id, servings): MealsCookView(recipeID: id, servings: servings)
-        }
-    }
+extension EnvironmentValues {
+    /// Meals is the screen shown (not a hidden tab, nor covered by a pushed recipe): only then do
+    /// its parts offer File ▸ New ….
+    @Entry var mealsOnScreen = false
 }
 
-/// The switcher: one glass capsule per part, the chosen one tinted; the glass morphs between
-/// them.
-struct MealsSegmentSwitcher: View {
+/// The parts of Meals as a segmented control with their full names; where four segments can't
+/// hold them (accessibility text sizes, a narrow window), a menu.
+struct MealsSegmentPicker: View {
     @Binding var selection: MealsSegment
-    @Namespace private var glass
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
-        GlassEffectContainer(spacing: 6) {
-            HStack(spacing: 6) {
-                ForEach(MealsSegment.allCases) { item in
-                    let selected = item == selection
-                    Button {
-                        withAnimation(.spring(duration: 0.3)) { selection = item }
-                    } label: {
-                        Label { Text(item.title) } icon: { Image(systemName: item.systemImage) }
-                            .font(.subheadline.weight(selected ? .semibold : .regular))
-                            .lineLimit(1)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .frame(maxWidth: .infinity)
-                            .foregroundStyle(selected ? Color.primary : .secondary)
-                            .contentShape(.capsule)
+        if typeSize.isAccessibilitySize {
+            menu
+        } else {
+            ViewThatFits(in: .horizontal) {
+                Picker("Section", selection: $selection) {
+                    ForEach(MealsSegment.allCases) { item in
+                        Text(item.title).tag(item)
                     }
-                    .buttonStyle(.plain)
-                    .glassEffect(selected ? .regular.tint(ModuleTint.meals.opacity(0.45)).interactive() : .regular.interactive(),
-                                 in: .capsule)
-                    .glassEffectID(item.id, in: glass)
-                    .accessibilityAddTraits(selected ? .isSelected : [])
                 }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                menu
             }
         }
-        .frame(maxWidth: 560)
-        .frame(maxWidth: .infinity)
+    }
+
+    private var menu: some View {
+        Picker(selection: $selection) {
+            ForEach(MealsSegment.allCases) { item in
+                Label { Text(item.title) } icon: { Image(systemName: item.systemImage) }
+                    .tag(item)
+            }
+        } label: {
+            Text("Section")
+        }
+        .pickerStyle(.menu)
     }
 }
 
-/// ⌥⌘1…4 switch between the parts (Mac and iPad keyboards).
-private struct MealsSegmentShortcuts: View {
-    @Binding var selection: MealsSegment
-
-    var body: some View {
-        ZStack {
-            ForEach(Array(MealsSegment.allCases.enumerated()), id: \.element) { index, item in
-                Button(String(localized: item.title)) { selection = item }
-                    .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: [.command, .option])
-            }
+extension View {
+    /// Cooking a recipe, wherever it starts: full screen on iPhone and iPad (the screen stays
+    /// awake meanwhile), a large sheet on the Mac. The cook view's Close ends it.
+    func cookPresentation(_ recipe: Binding<MealsRecipeRef?>) -> some View {
+        #if os(iOS)
+        fullScreenCover(item: recipe) { ref in
+            NavigationStack { MealsCookView(recipeID: ref.recipeID, servings: ref.servings) }
+                .errorBanner()
         }
-        .opacity(0)
-        .accessibilityHidden(true)
+        #else
+        sheet(item: recipe) { ref in
+            NavigationStack { MealsCookView(recipeID: ref.recipeID, servings: ref.servings) }
+                .frame(minWidth: 640, idealWidth: 900, minHeight: 560, idealHeight: 760)
+                .errorBanner()
+        }
+        #endif
     }
 }

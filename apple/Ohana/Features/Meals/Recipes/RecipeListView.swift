@@ -1,10 +1,12 @@
 import SwiftUI
 
 /// The family's recipes (web: meals/recipes): Favourites or Want to try, search, tag filter and
-/// sort, a page of 20 at a time as an adaptive grid of glass cards.
+/// sort, a page of 20 at a time as an adaptive grid of cards. File ▸ New Recipe (⌘N) adds one.
 struct RecipeListView: View {
     @Environment(FamilyContext.self) private var family
     @Environment(\.undoManager) private var undoManager
+    @Environment(\.mealsOnScreen) private var onScreen
+    @ScaledMetric(relativeTo: .body) private var cardWidth: CGFloat = 250
     @AppStorage("meals.recipes.list") private var list: RecipeListType = .known
     @AppStorage("meals.recipes.sort") private var sort: RecipeSort = .nameAsc
     @State private var query = ""
@@ -15,8 +17,9 @@ struct RecipeListView: View {
     @State private var showFilter = false
     @State private var creating = false
     @State private var generating = false
-    @State private var deletes = RecipePendingDeletes.shared
+    @State private var deletes = MealsPendingDeletes.shared
     @State private var confirmDelete: RecipeSummary?
+    @State private var cooking: MealsRecipeRef?
 
     private var key: RecipeListModel.Query {
         .init(list: list, query: query.trimmingCharacters(in: .whitespaces), sort: sort, tags: tagFilter)
@@ -47,6 +50,9 @@ struct RecipeListView: View {
             ai = (try? await family.api.get("/meals/status", as: MealsAIStatus.self)) ?? ai
         }
         .toolbar { toolbar }
+        .focusedSceneValue(\.newItem, onScreen && family.canEdit
+                           ? NewItemAction(title: "New Recipe") { creating = true } : nil)
+        .cookPresentation($cooking)
         .sheet(isPresented: $showFilter) {
             RecipeFilterSheet(tags: tags, selection: $tagFilter)
         }
@@ -63,7 +69,8 @@ struct RecipeListView: View {
                             titleVisibility: .visible, presenting: confirmDelete) { recipe in
             Button("Delete", role: .destructive) {
                 withAnimation {
-                    deletes.schedule(recipe.id, title: recipe.title, family: family, undoManager: undoManager)
+                    deletes.schedule(recipe.id, kind: .recipe, title: recipe.title, family: family,
+                                     undoManager: undoManager)
                 }
             }
         } message: { _ in
@@ -88,7 +95,7 @@ struct RecipeListView: View {
                 } label: {
                     Label("Clear filters", systemImage: "xmark")
                 }
-                .buttonStyle(.glass)
+                .buttonStyle(.bordered)
                 .controlSize(.small)
             }
         }
@@ -130,14 +137,16 @@ struct RecipeListView: View {
                             .buttonStyle(.glassProminent)
                         if ai.generate {
                             Button("Generate with AI", systemImage: "sparkles") { generating = true }
-                                .buttonStyle(.glass)
+                                .buttonStyle(.bordered)
                         }
                     }
                 }
                 .padding(.top, 40)
             }
         } else {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 250, maximum: 420), spacing: 16)], spacing: 16) {
+            // Cards grow with the text size, up to one column on a phone.
+            let width = min(cardWidth, 320)
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: width, maximum: width * 1.7), spacing: 16)], spacing: 16) {
                 ForEach(visible) { recipe in
                     NavigationLink {
                         MealsRecipeDetailView(recipeID: recipe.id)
@@ -163,8 +172,8 @@ struct RecipeListView: View {
     }
 
     @ViewBuilder private func menu(for recipe: RecipeSummary) -> some View {
-        NavigationLink {
-            MealsCookView(recipeID: recipe.id)
+        Button {
+            cooking = MealsRecipeRef(recipeID: recipe.id)
         } label: {
             Label("Let’s cook!", systemImage: "frying.pan")
         }
@@ -216,20 +225,18 @@ struct RecipeListView: View {
                     } label: {
                         Label("Generate with AI", systemImage: "sparkles")
                     }
-                    .keyboardShortcut("g", modifiers: [.command, .shift])
                 }
                 Button {
                     creating = true
                 } label: {
                     Label("Add Recipe", systemImage: "plus")
                 }
-                .keyboardShortcut("n", modifiers: .command)
             }
         }
     }
 }
 
-/// One recipe in the grid: its photo, title, times and tags on glass.
+/// One recipe in the grid: its photo, title, times and tags on a card.
 struct RecipeCard: View {
     let recipe: RecipeSummary
 
@@ -239,14 +246,15 @@ struct RecipeCard: View {
                 .frame(height: 150)
                 .frame(maxWidth: .infinity)
                 .clipped()
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 6) {
                 Text(recipe.title)
                     .font(.headline)
-                    .lineLimit(2)
+                    .lineLimit(3)
                     .multilineTextAlignment(.leading)
                 RecipeMetaRow(prep: recipe.prepTimeMinutes, cook: recipe.cookTimeMinutes, servings: recipe.defaultServings)
                 if !recipe.tags.isEmpty {
-                    HStack(spacing: 4) {
+                    RecipeFlowLayout(spacing: 4) {
                         ForEach(recipe.tags.prefix(3)) { RecipeTagChip(tag: $0) }
                         if recipe.tags.count > 3 {
                             Text(verbatim: "+\(recipe.tags.count - 3)").font(.caption).foregroundStyle(.secondary)
@@ -257,9 +265,12 @@ struct RecipeCard: View {
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .contentCard(cornerRadius: 22, padding: 0)
         .clipShape(.rect(cornerRadius: 22))
-        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 22))
         .contentShape(.rect(cornerRadius: 22))
+        #if os(iOS)
+        .hoverEffect(.highlight)
+        #endif
         .accessibilityElement(children: .combine)
     }
 }
@@ -290,6 +301,7 @@ struct RecipeFilterSheet: View {
                 }
             }
         }
+        .errorBanner()
         .presentationDetents([.medium, .large])
         .recipeSheetFrame(minWidth: 420, minHeight: 420)
     }

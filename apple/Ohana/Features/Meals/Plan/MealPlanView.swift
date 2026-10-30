@@ -22,7 +22,8 @@ struct MealPlanView: View {
     @Environment(\.undoManager) private var undoManager
     @State private var state: LoadState<MealPlanResponse> = .idle
     @State private var showSetup = false
-    @State private var route: MealsDestination?
+    @State private var shownRecipe: MealsRecipeRef?
+    @State private var cooking: MealsRecipeRef?
     @State private var swapping: MealPlanEntry?
     @State private var confirmRenew: MealPlanIteration?
     @State private var undo: MealPlanUndo?
@@ -62,7 +63,10 @@ struct MealPlanView: View {
         } message: { _ in
             Text("The meals and shopping lists of these days are planned anew.")
         }
-        .navigationDestination(item: $route) { MealsDestinationView(destination: $0) }
+        .navigationDestination(item: $shownRecipe) {
+            MealsRecipeDetailView(recipeID: $0.recipeID, initialServings: $0.servings)
+        }
+        .cookPresentation($cooking)
         .overlay(alignment: .bottom) {
             if let undo {
                 MealPlanUndoBar(undo: undo) { take(undo) } dismiss: { expire(undo) }
@@ -141,8 +145,8 @@ struct MealPlanView: View {
             onRenew: { confirmRenew = iteration },
             onAction: { action in
                 switch action {
-                case let .open(entry): route = .recipe(id: entry.recipeId, servings: entry.servings)
-                case let .cook(entry): route = .cook(recipeID: entry.recipeId, servings: entry.servings)
+                case let .open(entry): shownRecipe = MealsRecipeRef(recipeID: entry.recipeId, servings: entry.servings)
+                case let .cook(entry): cooking = MealsRecipeRef(recipeID: entry.recipeId, servings: entry.servings)
                 case let .swap(entry): swapping = entry
                 case let .remove(entry): remove(entry)
                 case let .shoppingList(id): family.open(.shoppingList(id: id))
@@ -152,21 +156,34 @@ struct MealPlanView: View {
     }
 
     private var endedBanner: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "flag.checkered")
-                .font(.title3)
-                .foregroundStyle(ModuleTint.meals)
-            Text("This plan has wrapped up!")
-                .font(.subheadline.weight(.medium))
-            Spacer(minLength: 8)
-            nextButton
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) {
+                endedLabel
+                Spacer(minLength: 8)
+                nextButton
+            }
+            VStack(alignment: .leading, spacing: 12) {
+                endedLabel
+                nextButton
+            }
         }
         .contentCard(tint: ModuleTint.meals)
     }
 
+    private var endedLabel: some View {
+        Label {
+            Text("This plan has wrapped up!")
+                .font(.subheadline.weight(.medium))
+        } icon: {
+            Image(systemName: "flag.checkered")
+                .font(.title3)
+                .foregroundStyle(ModuleTint.meals)
+        }
+    }
+
     private var nextButton: some View {
         Button("Start next iteration", systemImage: "forward.end") { next() }
-            .buttonStyle(.glassProminent)
+            .buttonStyle(.borderedProminent)
             .tint(ModuleTint.meals)
             .disabled(working)
     }
@@ -179,6 +196,8 @@ struct MealPlanView: View {
 
     private func setUp(_ input: MealPlanSetupInput) async throws {
         let _: MealPlanChangeResult = try await family.api.send(.post, "/meals/plan/setup", body: input)
+        // Setting up deletes every iteration (the sheet asked first), so an earlier change can't
+        // be restored any more, and the server keeps nothing to restore this one from.
         if let undo { expire(undo) }
         family.didChange(.mealPlan, .shopping)
         ErrorBanner.shared.success(String(localized: "Meal plan generated."))
@@ -299,7 +318,11 @@ struct MealPlanIterationCard: View {
                         .font(.caption.weight(.semibold))
                         .rotationEffect(.degrees(isExpanded ? 0 : -90))
                         .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
                 }
+                #if os(iOS)
+                .frame(minHeight: 44)
+                #endif
                 .contentShape(.rect)
             }
             .buttonStyle(.plain)
@@ -307,7 +330,7 @@ struct MealPlanIterationCard: View {
             Spacer()
             if !archived && canEdit {
                 Button("Refresh", systemImage: "arrow.triangle.2.circlepath", action: onRenew)
-                    .buttonStyle(.glass)
+                    .buttonStyle(.bordered)
                     .disabled(working)
                     .help("Plan these days again")
             }
@@ -316,11 +339,14 @@ struct MealPlanIterationCard: View {
 }
 
 /// A day of the plan: its date, the shopping list on shopping days, lunch (or away) and dinner.
+/// "Lunch" and "Dinner" sit in a column as wide as the longer of them; at accessibility text
+/// sizes above their meal.
 struct MealPlanDayRowView: View {
     let row: MealPlanDayRow
     let isToday: Bool
     let canEdit: Bool
     var onAction: (MealPlanEntryAction) -> Void
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -347,19 +373,30 @@ struct MealPlanDayRowView: View {
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.blue)
                         .chip(tint: .blue)
+                        #if os(iOS)
+                        .frame(minHeight: 44)
+                        #endif
+                        .contentShape(.rect)
                 }
                 .buttonStyle(.plain)
+                .accessibilityHint(Text("Opens the shopping list"))
             }
             if row.isAway {
                 Label("Away · \(row.awayTypes?.joined(separator: ", ") ?? "")", systemImage: "suitcase")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            } else {
-                lunch
-                meal(Text("Dinner")) {
-                    Text("Something light").foregroundStyle(.secondary)
+            } else if typeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 2) { label(Text("Lunch")); lunch }
+                    VStack(alignment: .leading, spacing: 2) { label(Text("Dinner")); dinner }
                 }
+                .font(.subheadline)
+            } else {
+                Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 8, verticalSpacing: 8) {
+                    GridRow { label(Text("Lunch")); lunch }
+                    GridRow { label(Text("Dinner")); dinner }
+                }
+                .font(.subheadline)
             }
         }
         .padding(.vertical, 10)
@@ -374,14 +411,14 @@ struct MealPlanDayRowView: View {
     @ViewBuilder
     private var lunch: some View {
         if let entry = row.entry {
-            meal(Text("Lunch")) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Button { onAction(.open(entry)) } label: {
                     HStack(spacing: 6) {
                         Text(verbatim: entry.recipeTitle)
                             .fontWeight(entry.isLeftover ? .regular : .medium)
                             .italic(entry.isLeftover)
                             .foregroundStyle(entry.isLeftover ? .secondary : .primary)
-                            .lineLimit(2)
+                            .lineLimit(3)
                             .multilineTextAlignment(.leading)
                         if entry.isLeftover {
                             Text("(Leftover)")
@@ -393,11 +430,12 @@ struct MealPlanDayRowView: View {
                     .contentShape(.rect)
                 }
                 .buttonStyle(.plain)
+                .accessibilityHint(Text("Opens the recipe"))
                 Menu {
                     actions(entry)
                 } label: {
                     Image(systemName: "ellipsis")
-                        .frame(width: 28, height: 28)
+                        .frame(minWidth: 44, minHeight: 44)
                         .contentShape(.rect)
                 }
                 .menuStyle(.button)
@@ -406,12 +444,15 @@ struct MealPlanDayRowView: View {
                 .fixedSize()
                 .accessibilityLabel("Actions")
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .contextMenu { actions(entry) }
         } else {
-            meal(Text("Lunch")) {
-                Text(verbatim: "—").foregroundStyle(.secondary)
-            }
+            Text(verbatim: "—").foregroundStyle(.secondary)
         }
+    }
+
+    private var dinner: some View {
+        Text("Something light").foregroundStyle(.secondary)
     }
 
     @ViewBuilder
@@ -425,16 +466,12 @@ struct MealPlanDayRowView: View {
         }
     }
 
-    private func meal<Content: View>(_ title: Text, @ViewBuilder content: () -> Content) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            title
-                .font(.caption.weight(.medium))
-                .textCase(.uppercase)
-                .foregroundStyle(.secondary)
-                .frame(width: 64, alignment: .leading)
-            content()
-        }
-        .font(.subheadline)
+    private func label(_ title: Text) -> some View {
+        title
+            .font(.caption.weight(.medium))
+            .textCase(.uppercase)
+            .foregroundStyle(.secondary)
+            .fixedSize()
     }
 }
 

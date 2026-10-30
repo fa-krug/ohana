@@ -42,7 +42,8 @@ final class ShoppingTickQueue {
         pending = store?.loadTicks() ?? [:]
     }
 
-    /// Ticks are waiting for the connection.
+    /// Ticks wait for a retry: no connection, or the server didn't answer (`ShoppingSyncStatus`
+    /// tells which by the device's connection).
     var isWaiting: Bool { failures > 0 && !pending.isEmpty }
 
     /// What an item shows: the latest tick, else the server's state.
