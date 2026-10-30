@@ -1,0 +1,606 @@
+{
+ "ingredients": [
+  {
+   "id": 1,
+   "nameEn": "onion",
+   "nameDe": "Zwiebel",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 2,
+   "nameEn": "garlic",
+   "nameDe": "Knoblauch",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 3,
+   "nameEn": "tomato",
+   "nameDe": "Tomate",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 4,
+   "nameEn": "potato",
+   "nameDe": "Kartoffel",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 5,
+   "nameEn": "carrot",
+   "nameDe": "Karotte",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 6,
+   "nameEn": "bell pepper",
+   "nameDe": "Paprika",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 7,
+   "nameEn": "zucchini",
+   "nameDe": "Zucchini",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 8,
+   "nameEn": "broccoli",
+   "nameDe": "Brokkoli",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 9,
+   "nameEn": "spinach",
+   "nameDe": "Spinat",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 10,
+   "nameEn": "mushroom",
+   "nameDe": "Champignon",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 11,
+   "nameEn": "lemon",
+   "nameDe": "Zitrone",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 12,
+   "nameEn": "ginger",
+   "nameDe": "Ingwer",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 13,
+   "nameEn": "cucumber",
+   "nameDe": "Gurke",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 14,
+   "nameEn": "lettuce",
+   "nameDe": "Salat",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 15,
+   "nameEn": "avocado",
+   "nameDe": "Avocado",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 16,
+   "nameEn": "sweet potato",
+   "nameDe": "Süßkartoffel",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 17,
+   "nameEn": "celery",
+   "nameDe": "Sellerie",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 18,
+   "nameEn": "leek",
+   "nameDe": "Lauch",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 19,
+   "nameEn": "cauliflower",
+   "nameDe": "Blumenkohl",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 20,
+   "nameEn": "eggplant",
+   "nameDe": "Aubergine",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 21,
+   "nameEn": "fresh basil",
+   "nameDe": "Frisches Basilikum",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 22,
+   "nameEn": "fresh parsley",
+   "nameDe": "Frische Petersilie",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 23,
+   "nameEn": "cherry tomato",
+   "nameDe": "Kirschtomate",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 24,
+   "nameEn": "green beans",
+   "nameDe": "Grüne Bohnen",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 25,
+   "nameEn": "corn",
+   "nameDe": "Mais",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 26,
+   "nameEn": "butter",
+   "nameDe": "Butter",
+   "category": "DAIRY"
+  },
+  {
+   "id": 27,
+   "nameEn": "cream",
+   "nameDe": "Sahne",
+   "category": "DAIRY"
+  },
+  {
+   "id": 28,
+   "nameEn": "milk",
+   "nameDe": "Milch",
+   "category": "DAIRY"
+  },
+  {
+   "id": 29,
+   "nameEn": "parmesan",
+   "nameDe": "Parmesan",
+   "category": "DAIRY"
+  },
+  {
+   "id": 30,
+   "nameEn": "mozzarella",
+   "nameDe": "Mozzarella",
+   "category": "DAIRY"
+  },
+  {
+   "id": 31,
+   "nameEn": "cream cheese",
+   "nameDe": "Frischkäse",
+   "category": "DAIRY"
+  },
+  {
+   "id": 32,
+   "nameEn": "yogurt",
+   "nameDe": "Joghurt",
+   "category": "DAIRY"
+  },
+  {
+   "id": 33,
+   "nameEn": "egg",
+   "nameDe": "Ei",
+   "category": "DAIRY"
+  },
+  {
+   "id": 34,
+   "nameEn": "cheddar",
+   "nameDe": "Cheddar",
+   "category": "DAIRY"
+  },
+  {
+   "id": 35,
+   "nameEn": "feta",
+   "nameDe": "Feta",
+   "category": "DAIRY"
+  },
+  {
+   "id": 36,
+   "nameEn": "gouda",
+   "nameDe": "Gouda",
+   "category": "DAIRY"
+  },
+  {
+   "id": 37,
+   "nameEn": "chicken breast",
+   "nameDe": "Hähnchenbrust",
+   "category": "MEAT"
+  },
+  {
+   "id": 38,
+   "nameEn": "ground beef",
+   "nameDe": "Rinderhackfleisch",
+   "category": "MEAT"
+  },
+  {
+   "id": 39,
+   "nameEn": "salmon fillet",
+   "nameDe": "Lachsfilet",
+   "category": "MEAT"
+  },
+  {
+   "id": 40,
+   "nameEn": "bacon",
+   "nameDe": "Speck",
+   "category": "MEAT"
+  },
+  {
+   "id": 41,
+   "nameEn": "sausage",
+   "nameDe": "Wurst",
+   "category": "MEAT"
+  },
+  {
+   "id": 42,
+   "nameEn": "pork tenderloin",
+   "nameDe": "Schweinefilet",
+   "category": "MEAT"
+  },
+  {
+   "id": 43,
+   "nameEn": "shrimp",
+   "nameDe": "Garnelen",
+   "category": "MEAT"
+  },
+  {
+   "id": 44,
+   "nameEn": "turkey breast",
+   "nameDe": "Putenbrust",
+   "category": "MEAT"
+  },
+  {
+   "id": 45,
+   "nameEn": "tuna",
+   "nameDe": "Thunfisch",
+   "category": "MEAT"
+  },
+  {
+   "id": 46,
+   "nameEn": "olive oil",
+   "nameDe": "Olivenöl",
+   "category": "PANTRY"
+  },
+  {
+   "id": 47,
+   "nameEn": "salt",
+   "nameDe": "Salz",
+   "category": "PANTRY"
+  },
+  {
+   "id": 48,
+   "nameEn": "black pepper",
+   "nameDe": "Schwarzer Pfeffer",
+   "category": "PANTRY"
+  },
+  {
+   "id": 49,
+   "nameEn": "spaghetti",
+   "nameDe": "Spaghetti",
+   "category": "PANTRY"
+  },
+  {
+   "id": 50,
+   "nameEn": "rice",
+   "nameDe": "Reis",
+   "category": "PANTRY"
+  },
+  {
+   "id": 51,
+   "nameEn": "flour",
+   "nameDe": "Mehl",
+   "category": "PANTRY"
+  },
+  {
+   "id": 52,
+   "nameEn": "sugar",
+   "nameDe": "Zucker",
+   "category": "PANTRY"
+  },
+  {
+   "id": 53,
+   "nameEn": "soy sauce",
+   "nameDe": "Sojasauce",
+   "category": "PANTRY"
+  },
+  {
+   "id": 54,
+   "nameEn": "tomato paste",
+   "nameDe": "Tomatenmark",
+   "category": "PANTRY"
+  },
+  {
+   "id": 55,
+   "nameEn": "canned tomatoes",
+   "nameDe": "Dosentomaten",
+   "category": "PANTRY"
+  },
+  {
+   "id": 56,
+   "nameEn": "vegetable broth",
+   "nameDe": "Gemüsebrühe",
+   "category": "PANTRY"
+  },
+  {
+   "id": 57,
+   "nameEn": "paprika powder",
+   "nameDe": "Paprikapulver",
+   "category": "PANTRY"
+  },
+  {
+   "id": 58,
+   "nameEn": "cumin",
+   "nameDe": "Kreuzkümmel",
+   "category": "PANTRY"
+  },
+  {
+   "id": 59,
+   "nameEn": "oregano",
+   "nameDe": "Oregano",
+   "category": "PANTRY"
+  },
+  {
+   "id": 60,
+   "nameEn": "chili flakes",
+   "nameDe": "Chiliflocken",
+   "category": "PANTRY"
+  },
+  {
+   "id": 61,
+   "nameEn": "honey",
+   "nameDe": "Honig",
+   "category": "PANTRY"
+  },
+  {
+   "id": 62,
+   "nameEn": "vinegar",
+   "nameDe": "Essig",
+   "category": "PANTRY"
+  },
+  {
+   "id": 63,
+   "nameEn": "penne",
+   "nameDe": "Penne",
+   "category": "PANTRY"
+  },
+  {
+   "id": 64,
+   "nameEn": "coconut milk",
+   "nameDe": "Kokosmilch",
+   "category": "PANTRY"
+  },
+  {
+   "id": 65,
+   "nameEn": "curry powder",
+   "nameDe": "Currypulver",
+   "category": "PANTRY"
+  },
+  {
+   "id": 66,
+   "nameEn": "mustard",
+   "nameDe": "Senf",
+   "category": "PANTRY"
+  },
+  {
+   "id": 67,
+   "nameEn": "balsamic vinegar",
+   "nameDe": "Balsamico-Essig",
+   "category": "PANTRY"
+  },
+  {
+   "id": 68,
+   "nameEn": "tortilla wraps",
+   "nameDe": "Tortilla-Wraps",
+   "category": "PANTRY"
+  },
+  {
+   "id": 69,
+   "nameEn": "peanut butter",
+   "nameDe": "Erdnussbutter",
+   "category": "PANTRY"
+  },
+  {
+   "id": 70,
+   "nameEn": "sesame oil",
+   "nameDe": "Sesamöl",
+   "category": "PANTRY"
+  },
+  {
+   "id": 71,
+   "nameEn": "bread crumbs",
+   "nameDe": "Semmelbrösel",
+   "category": "PANTRY"
+  },
+  {
+   "id": 72,
+   "nameEn": "red lentils",
+   "nameDe": "Rote Linsen",
+   "category": "PANTRY"
+  },
+  {
+   "id": 73,
+   "nameEn": "chickpeas",
+   "nameDe": "Kichererbsen",
+   "category": "PANTRY"
+  },
+  {
+   "id": 74,
+   "nameEn": "kidney beans",
+   "nameDe": "Kidneybohnen",
+   "category": "PANTRY"
+  },
+  {
+   "id": 75,
+   "nameEn": "noodles",
+   "nameDe": "Nudeln",
+   "category": "PANTRY"
+  },
+  {
+   "id": 76,
+   "nameEn": "pesto",
+   "nameDe": "Pesto",
+   "category": "PANTRY"
+  },
+  {
+   "id": 77,
+   "nameEn": "white wine",
+   "nameDe": "Weißwein",
+   "category": "PANTRY"
+  },
+  {
+   "id": 78,
+   "nameEn": "pine nuts",
+   "nameDe": "Pinienkerne",
+   "category": "PANTRY"
+  },
+  {
+   "id": 79,
+   "nameEn": "walnuts",
+   "nameDe": "Walnüsse",
+   "category": "PANTRY"
+  },
+  {
+   "id": 80,
+   "nameEn": "frozen peas",
+   "nameDe": "Tiefkühlerbsen",
+   "category": "FROZEN"
+  },
+  {
+   "id": 81,
+   "nameEn": "frozen pizza dough",
+   "nameDe": "Tiefkühl-Pizzateig",
+   "category": "FROZEN"
+  },
+  {
+   "id": 82,
+   "nameEn": "lasagne sheets",
+   "nameDe": "Lasagneplatten",
+   "category": "PANTRY"
+  },
+  {
+   "id": 83,
+   "nameEn": "ricotta",
+   "nameDe": "Ricotta",
+   "category": "DAIRY"
+  },
+  {
+   "id": 84,
+   "nameEn": "baking powder",
+   "nameDe": "Backpulver",
+   "category": "PANTRY"
+  },
+  {
+   "id": 85,
+   "nameEn": "maple syrup",
+   "nameDe": "Ahornsirup",
+   "category": "PANTRY"
+  },
+  {
+   "id": 86,
+   "nameEn": "arborio rice",
+   "nameDe": "Risottoreis",
+   "category": "PANTRY"
+  },
+  {
+   "id": 87,
+   "nameEn": "cod fillet",
+   "nameDe": "Kabeljaufilet",
+   "category": "MEAT"
+  },
+  {
+   "id": 88,
+   "nameEn": "red cabbage",
+   "nameDe": "Rotkohl",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 89,
+   "nameEn": "lime",
+   "nameDe": "Limette",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 90,
+   "nameEn": "sour cream",
+   "nameDe": "Schmand",
+   "category": "DAIRY"
+  },
+  {
+   "id": 91,
+   "nameEn": "red onion",
+   "nameDe": "Rote Zwiebel",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 92,
+   "nameEn": "kalamata olives",
+   "nameDe": "Kalamata-Oliven",
+   "category": "PANTRY"
+  }
+ ],
+ "units": [
+  {
+   "id": 1,
+   "nameEn": "gram",
+   "nameDe": "Gramm",
+   "abbreviation": "g"
+  },
+  {
+   "id": 2,
+   "nameEn": "kilogram",
+   "nameDe": "Kilogramm",
+   "abbreviation": "kg"
+  },
+  {
+   "id": 3,
+   "nameEn": "milliliter",
+   "nameDe": "Milliliter",
+   "abbreviation": "ml"
+  },
+  {
+   "id": 4,
+   "nameEn": "liter",
+   "nameDe": "Liter",
+   "abbreviation": "l"
+  },
+  {
+   "id": 5,
+   "nameEn": "piece",
+   "nameDe": "Stück",
+   "abbreviation": "Stk"
+  },
+  {
+   "id": 6,
+   "nameEn": "tablespoon",
+   "nameDe": "Esslöffel",
+   "abbreviation": "EL"
+  },
+  {
+   "id": 7,
+   "nameEn": "teaspoon",
+   "nameDe": "Teelöffel",
+   "abbreviation": "TL"
+  },
+  {
+   "id": 8,
+   "nameEn": "pinch",
+   "nameDe": "Prise",
+   "abbreviation": "Prise"
+  }
+ ]
+}

@@ -1,0 +1,21 @@
+{
+ "currency": "EUR",
+ "category": {
+  "id": "groceries",
+  "name": "Groceries",
+  "icon": "🛒",
+  "color": "#f97316"
+ },
+ "from": "{{day:-4}}",
+ "to": "{{day:-2}}",
+ "transactions": [
+  {
+   "id": "tx-groceries-1",
+   "date": "{{day:-2}}",
+   "payee": "REWE",
+   "description": "Wocheneinkauf",
+   "amountCents": -14230
+  }
+ ],
+ "totalCents": 14230
+}

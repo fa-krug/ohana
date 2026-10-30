@@ -1,0 +1,36 @@
+{
+  "currency": "EUR",
+  "csvMappings": [],
+  "benchmark": {
+    "label": "Destatis: couples with children",
+    "income": { "lowCents": 520000, "highCents": 640000 },
+    "expense": { "lowCents": 360000, "highCents": 440000 },
+    "categories": [
+      { "categoryId": "groceries", "lowCents": 65000, "highCents": 85000 },
+      { "categoryId": "rent", "lowCents": 120000, "highCents": 160000 },
+      { "categoryId": "transport", "lowCents": 35000, "highCents": 55000 },
+      { "categoryId": "leisure", "lowCents": 30000, "highCents": 45000 }
+    ]
+  },
+  "groceriesCategoryId": "groceries",
+  "categories": [
+    { "id": "salary", "name": "Salary", "color": "#22c55e", "icon": "💼", "kind": "income", "position": 0, "parentId": null },
+    { "id": "child-benefit", "name": "Child benefit", "color": "#14b8a6", "icon": "👶", "kind": "income", "position": 1, "parentId": null },
+    { "id": "groceries", "name": "Groceries", "color": "#f97316", "icon": "🛒", "kind": "expense", "position": 2, "parentId": null },
+    { "id": "rent", "name": "Rent", "color": "#8b5cf6", "icon": "🏠", "kind": "expense", "position": 3, "parentId": null },
+    { "id": "utilities", "name": "Utilities", "color": "#eab308", "icon": "💡", "kind": "expense", "position": 4, "parentId": null },
+    { "id": "transport", "name": "Transport", "color": "#3b82f6", "icon": "🚗", "kind": "expense", "position": 5, "parentId": null },
+    { "id": "insurance", "name": "Insurance", "color": "#64748b", "icon": "🛡️", "kind": "expense", "position": 6, "parentId": null },
+    { "id": "health", "name": "Health", "color": "#ef4444", "icon": "🩺", "kind": "expense", "position": 7, "parentId": null },
+    { "id": "kids", "name": "Kids", "color": "#ec4899", "icon": "🧸", "kind": "expense", "position": 8, "parentId": null },
+    { "id": "kids-daycare", "name": "Daycare", "color": "#ec4899", "icon": "🎒", "kind": "expense", "position": 0, "parentId": "kids" },
+    { "id": "kids-activities", "name": "Activities", "color": "#ec4899", "icon": "🏊", "kind": "expense", "position": 1, "parentId": "kids" },
+    { "id": "kids-school", "name": "School", "color": "#ec4899", "icon": "✏️", "kind": "expense", "position": 2, "parentId": "kids" },
+    { "id": "leisure", "name": "Leisure", "color": "#a855f7", "icon": "🎉", "kind": "expense", "position": 9, "parentId": null },
+    { "id": "other", "name": "Other", "color": "#94a3b8", "icon": "📦", "kind": "both", "position": 10, "parentId": null }
+  ],
+  "accounts": [
+    { "id": "acc-checking", "name": "Checking", "color": "#3b82f6", "icon": "🏦", "openingCents": 234017, "position": 0, "balanceCents": 0 },
+    { "id": "acc-savings", "name": "Savings", "color": "#22c55e", "icon": "🐷", "openingCents": 850000, "position": 1, "balanceCents": 0 }
+  ]
+}

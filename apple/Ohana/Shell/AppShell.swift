@@ -10,6 +10,7 @@ struct AppShell: View {
     @SceneStorage("assistant") private var showAssistant = false
 
     var body: some View {
+        @Bindable var app = app
         if let family = app.selectedFamily, let context = app.context(for: family) {
             TabView(selection: $module) {
                 ForEach(Module.allCases) { item in
@@ -17,6 +18,7 @@ struct AppShell: View {
                         NavigationStack {
                             item.root
                                 .shellToolbar(showAssistant: $showAssistant, assistantButton: item != .assistant)
+                                .demoBanner()
                         }
                     }
                     // The assistant (a sheet from the toolbar) and the settings (the family menu)
@@ -55,6 +57,7 @@ struct AppShell: View {
                 guard let pending = AssistantInbox.shared.take() else { return }
                 context.ask(pending.prompt, send: pending.prompt != nil, newChat: true)
             }
+            .sheet(isPresented: $app.showsConnect) { ConnectServerView().errorBanner() }
             .onReceive(NotificationCenter.default.publisher(for: .openModule)) { note in
                 if let target = note.object as? Module { module = target }
             }

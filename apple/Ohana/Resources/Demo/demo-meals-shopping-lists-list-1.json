@@ -1,0 +1,117 @@
+{
+ "list": {
+  "id": "list-1",
+  "shoppingDate": "{{day:1}}",
+  "createdAt": "{{time:-600}}",
+  "items": [
+   {
+    "id": "list-1-item-1",
+    "ingredientName": "Avocado",
+    "ingredientNameDe": "Avocado",
+    "category": "PRODUCE",
+    "quantity": "2",
+    "unitAbbreviation": "Stk",
+    "isChecked": false
+   },
+   {
+    "id": "list-1-item-2",
+    "ingredientName": "Canned tomatoes",
+    "ingredientNameDe": "Dosentomaten",
+    "category": "PANTRY",
+    "quantity": "400",
+    "unitAbbreviation": "g",
+    "isChecked": true
+   },
+   {
+    "id": "list-1-item-3",
+    "ingredientName": "Cherry tomato",
+    "ingredientNameDe": "Kirschtomate",
+    "category": "PRODUCE",
+    "quantity": "200",
+    "unitAbbreviation": "g",
+    "isChecked": false
+   },
+   {
+    "id": "list-1-item-4",
+    "ingredientName": "Chickpeas",
+    "ingredientNameDe": "Kichererbsen",
+    "category": "PANTRY",
+    "quantity": "800",
+    "unitAbbreviation": "g",
+    "isChecked": true
+   },
+   {
+    "id": "list-1-item-5",
+    "ingredientName": "Coconut milk",
+    "ingredientNameDe": "Kokosmilch",
+    "category": "PANTRY",
+    "quantity": "400",
+    "unitAbbreviation": "ml",
+    "isChecked": true
+   },
+   {
+    "id": "list-1-item-6",
+    "ingredientName": "Cod fillet",
+    "ingredientNameDe": "Kabeljaufilet",
+    "category": "MEAT",
+    "quantity": "500",
+    "unitAbbreviation": "g",
+    "isChecked": false
+   },
+   {
+    "id": "list-1-item-7",
+    "ingredientName": "Ginger",
+    "ingredientNameDe": "Ingwer",
+    "category": "PRODUCE",
+    "quantity": "20",
+    "unitAbbreviation": "g",
+    "isChecked": false
+   },
+   {
+    "id": "list-1-item-8",
+    "ingredientName": "Lime",
+    "ingredientNameDe": "Limette",
+    "category": "PRODUCE",
+    "quantity": "2",
+    "unitAbbreviation": "Stk",
+    "isChecked": false
+   },
+   {
+    "id": "list-1-item-9",
+    "ingredientName": "Red cabbage",
+    "ingredientNameDe": "Rotkohl",
+    "category": "PRODUCE",
+    "quantity": "250",
+    "unitAbbreviation": "g",
+    "isChecked": false
+   },
+   {
+    "id": "list-1-item-10",
+    "ingredientName": "Sour cream",
+    "ingredientNameDe": "Schmand",
+    "category": "DAIRY",
+    "quantity": "150",
+    "unitAbbreviation": "g",
+    "isChecked": false
+   },
+   {
+    "id": "list-1-item-11",
+    "ingredientName": "Spinach",
+    "ingredientNameDe": "Spinat",
+    "category": "PRODUCE",
+    "quantity": "150",
+    "unitAbbreviation": "g",
+    "isChecked": false
+   },
+   {
+    "id": "list-1-item-12",
+    "ingredientName": "Tortilla wraps",
+    "ingredientNameDe": "Tortilla-Wraps",
+    "category": "PANTRY",
+    "quantity": "8",
+    "unitAbbreviation": "Stk",
+    "isChecked": true
+   }
+  ]
+ }
+}

@@ -8,7 +8,9 @@ struct MenuBarAssistant: View {
 
     var body: some View {
         Group {
-            if let family = app.selectedFamily, let context = app.context(for: family) {
+            if app.switching != nil {
+                ProgressView()
+            } else if let family = app.selectedFamily, let context = app.context(for: family) {
                 AssistantPanel()
                     .environment(context)
                     .id(family.id)

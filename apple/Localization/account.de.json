@@ -149,5 +149,7 @@
   "https://…/invite/…": "https://…/invite/…",
   "last used %@": "zuletzt benutzt %@",
   "never used": "nie benutzt",
-  "password": "Passwort"
+  "password": "Passwort",
+  "No server connected": "Kein Server verbunden",
+  "Until you connect your server, Ohana shows a demo family. It can’t be changed.": "Bis du deinen Server verbindest, zeigt Ohana eine Demo-Familie. Sie lässt sich nicht ändern."
 }

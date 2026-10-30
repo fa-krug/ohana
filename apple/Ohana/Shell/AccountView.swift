@@ -4,7 +4,8 @@ import SwiftUI
 /// passkeys, the signed-in devices and browsers, appearance, administration for admins, signing
 /// out, and (under Advanced) API tokens for scripts. On the Mac it's the Settings window (⌘,)
 /// with toolbar tabs; on iPhone and iPad one grouped form in a sheet, the API tokens a page of
-/// it. Adding a passkey stays on the web: a passkey belongs to the server's own domain.
+/// it. Adding a passkey stays on the web: a passkey belongs to the server's own domain. In the
+/// demo it offers to connect a server instead.
 struct AccountView: View {
     @AppStorage("appearance") private var appearance = Appearance.system
 
@@ -12,7 +13,9 @@ struct AccountView: View {
 
     var body: some View {
         Group {
-            if app.client == nil {
+            if app.switching != nil {
+                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if app.client == nil {
                 ContentUnavailableView("Not signed in", systemImage: "person.crop.circle.badge.questionmark",
                                        description: Text("Connect Ohana to your server first."))
             } else {
@@ -20,8 +23,10 @@ struct AccountView: View {
                 TabView {
                     Tab("General", systemImage: "gearshape") { AccountForm(page: .general) }
                     Tab("Account", systemImage: "person.crop.circle") { AccountForm(page: .account) }
-                    Tab("Sign-In & Security", systemImage: "lock") { AccountForm(page: .security) }
-                    Tab("Advanced", systemImage: "gearshape.2") { AccountForm(page: .developer) }
+                    if !app.isDemo {
+                        Tab("Sign-In & Security", systemImage: "lock") { AccountForm(page: .security) }
+                        Tab("Advanced", systemImage: "gearshape.2") { AccountForm(page: .developer) }
+                    }
                 }
                 #else
                 NavigationStack { AccountForm(page: .all) }
@@ -87,15 +92,18 @@ private struct AccountForm: View {
     @State private var sheet: AccountSheet?
     @State private var confirmation: AccountConfirmation?
     @State private var confirmSignOut = false
+    @State private var connecting = false
     @FocusState private var nameFocused: Bool
 
     private var user: UserAccount? { state.value?.user ?? app.me }
-    /// The general tab shows nothing of the server's.
-    private var needsOverview: Bool { page != .general }
+    /// The general tab shows nothing of the server's, the demo has no account to show.
+    private var needsOverview: Bool { page != .general && !app.isDemo }
 
     var body: some View {
         Form {
-            if page.shows(.account) { header }
+            if page.shows(.account) {
+                if app.isDemo { demoSection } else { header }
+            }
 
             if needsOverview {
                 if let overview = state.value {
@@ -121,7 +129,7 @@ private struct AccountForm: View {
             }
 
             if page.shows(.general) { appearanceSection }
-            if page.shows(.account) {
+            if page.shows(.account), !app.isDemo {
                 adminSection
                 if page == .all { advancedSection }
                 signOutSection
@@ -146,6 +154,7 @@ private struct AccountForm: View {
         #if os(macOS)
         .sheet(isPresented: $showAdmin) { AdminSheet() }
         #endif
+        .sheet(isPresented: $connecting) { ConnectServerView().errorBanner() }
         .accountConfirmation($confirmation)
         .confirmationDialog("Sign out of Ohana on this device?", isPresented: $confirmSignOut, titleVisibility: .visible) {
             Button("Sign out", role: .destructive) {
@@ -158,6 +167,23 @@ private struct AccountForm: View {
     }
 
     // MARK: Account
+
+    /// In the demo: what this is, and connecting a server.
+    private var demoSection: some View {
+        Section {
+            HStack(spacing: 14) {
+                TintedIcon(systemImage: "sparkles.rectangle.stack", tint: .ohana, size: 44)
+                VStack(alignment: .leading) {
+                    Text("Demo data").font(.headline)
+                    Text("No server connected").font(.subheadline).foregroundStyle(.secondary)
+                }
+            }
+            .accessibilityElement(children: .combine)
+            Button("Connect your Ohana…", systemImage: "server.rack") { connecting = true }
+        } footer: {
+            Text("Until you connect your server, Ohana shows a demo family. It can’t be changed.")
+        }
+    }
 
     private var header: some View {
         Section {

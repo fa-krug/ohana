@@ -49,8 +49,8 @@ struct FamilySwitcher: View {
     }
 }
 
-/// The family and account menu: switch family, create or join one, open the family's settings,
-/// the account or (for administrators) the administration. The sidebar header uses it with its
+/// The family and account menu: switch family, create or join one (in the demo: connect a
+/// server), open the family's settings, the account or (for administrators) the administration. The sidebar header uses it with its
 /// own label; the iPhone toolbar with an icon. The visible one shows invite links the app was
 /// opened with (`InviteInbox`).
 struct FamilyMenu<MenuLabel: View>: View {
@@ -74,8 +74,12 @@ struct FamilyMenu<MenuLabel: View>: View {
                 }
             }
             .pickerStyle(.inline)
-            Button("New family…", systemImage: "plus") { creating = true }
-            Button("Join a family…", systemImage: "person.badge.plus") { joining = InviteRequest() }
+            if app.isDemo {
+                Button("Connect your Ohana…", systemImage: "server.rack") { app.showsConnect = true }
+            } else {
+                Button("New family…", systemImage: "plus") { creating = true }
+                Button("Join a family…", systemImage: "person.badge.plus") { joining = InviteRequest() }
+            }
             Divider()
             Button("Family settings", systemImage: "gearshape") { Module.settings.open() }
             #if os(macOS)
@@ -92,7 +96,8 @@ struct FamilyMenu<MenuLabel: View>: View {
         .sheet(isPresented: $creating) { CreateFamilySheet().errorBanner() }
         .sheet(isPresented: $showAccount) { AccountView() }
         .sheet(isPresented: $showAdmin) { AdminSheet() }
-        .inviteJoinSheet($joining)
+        // In the demo an invite waits for the server (the connect sheet shows it).
+        .inviteJoinSheet($joining, claimsLinks: !app.isDemo)
     }
 }
 

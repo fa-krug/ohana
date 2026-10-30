@@ -1,0 +1,352 @@
+{
+ "plan": {
+  "id": "plan-1",
+  "iterationWeeks": 1,
+  "shoppingDays": [],
+  "servings": 4,
+  "knownRatio": "0.7",
+  "defaultLeftoverDays": 1,
+  "excludedTagIds": [],
+  "iterations": [
+   {
+    "id": "iteration-2",
+    "startDate": "{{day:0}}",
+    "endDate": "{{day:6}}",
+    "status": "ACTIVE",
+    "entries": [
+     {
+      "id": "entry-2-1",
+      "date": "{{day:0}}",
+      "mealType": "LUNCH",
+      "recipeId": "recipe-lasagne",
+      "recipeTitle": "Vegetable lasagne",
+      "servings": 4,
+      "isLeftover": false,
+      "sourceEntryId": null,
+      "isLocked": false
+     },
+     {
+      "id": "entry-2-2",
+      "date": "{{day:1}}",
+      "mealType": "LUNCH",
+      "recipeId": "recipe-tacos",
+      "recipeTitle": "Fish tacos",
+      "servings": 4,
+      "isLeftover": false,
+      "sourceEntryId": null,
+      "isLocked": false
+     },
+     {
+      "id": "entry-2-3",
+      "date": "{{day:2}}",
+      "mealType": "LUNCH",
+      "recipeId": "recipe-curry",
+      "recipeTitle": "Chickpea curry",
+      "servings": 4,
+      "isLeftover": false,
+      "sourceEntryId": null,
+      "isLocked": false
+     },
+     {
+      "id": "entry-2-4",
+      "date": "{{day:3}}",
+      "mealType": "LUNCH",
+      "recipeId": "recipe-soup",
+      "recipeTitle": "Tomato soup",
+      "servings": 4,
+      "isLeftover": false,
+      "sourceEntryId": null,
+      "isLocked": false
+     },
+     {
+      "id": "entry-2-5",
+      "date": "{{day:4}}",
+      "mealType": "LUNCH",
+      "recipeId": "recipe-salmon",
+      "recipeTitle": "Lemon salmon with potatoes",
+      "servings": 4,
+      "isLeftover": false,
+      "sourceEntryId": null,
+      "isLocked": false
+     },
+     {
+      "id": "entry-2-6",
+      "date": "{{day:5}}",
+      "mealType": "LUNCH",
+      "recipeId": "recipe-risotto",
+      "recipeTitle": "Mushroom risotto",
+      "servings": 4,
+      "isLeftover": false,
+      "sourceEntryId": null,
+      "isLocked": false
+     },
+     {
+      "id": "entry-2-7",
+      "date": "{{day:6}}",
+      "mealType": "LUNCH",
+      "recipeId": "recipe-salad",
+      "recipeTitle": "Greek salad",
+      "servings": 4,
+      "isLeftover": false,
+      "sourceEntryId": null,
+      "isLocked": false
+     }
+    ],
+    "shoppingLists": [
+     {
+      "id": "list-2",
+      "shoppingDate": "{{day:4}}",
+      "itemCount": 19
+     },
+     {
+      "id": "list-1",
+      "shoppingDate": "{{day:1}}",
+      "itemCount": 12
+     }
+    ],
+    "createdAt": "{{time:-600}}"
+   },
+   {
+    "id": "iteration-1",
+    "startDate": "{{day:-7}}",
+    "endDate": "{{day:-1}}",
+    "status": "ARCHIVED",
+    "entries": [
+     {
+      "id": "entry-1-1",
+      "date": "{{day:-7}}",
+      "mealType": "LUNCH",
+      "recipeId": "recipe-curry",
+      "recipeTitle": "Chickpea curry",
+      "servings": 4,
+      "isLeftover": false,
+      "sourceEntryId": null,
+      "isLocked": false
+     },
+     {
+      "id": "entry-1-2",
+      "date": "{{day:-6}}",
+      "mealType": "LUNCH",
+      "recipeId": "recipe-curry",
+      "recipeTitle": "Chickpea curry",
+      "servings": 4,
+      "isLeftover": true,
+      "sourceEntryId": "entry-1-1",
+      "isLocked": false
+     },
+     {
+      "id": "entry-1-3",
+      "date": "{{day:-5}}",
+      "mealType": "LUNCH",
+      "recipeId": "recipe-pancakes",
+      "recipeTitle": "Pancakes",
+      "servings": 4,
+      "isLeftover": false,
+      "sourceEntryId": null,
+      "isLocked": false
+     },
+     {
+      "id": "entry-1-4",
+      "date": "{{day:-4}}",
+      "mealType": "LUNCH",
+      "recipeId": "recipe-soup",
+      "recipeTitle": "Tomato soup",
+      "servings": 4,
+      "isLeftover": false,
+      "sourceEntryId": null,
+      "isLocked": false
+     },
+     {
+      "id": "entry-1-5",
+      "date": "{{day:-3}}",
+      "mealType": "LUNCH",
+      "recipeId": "recipe-soup",
+      "recipeTitle": "Tomato soup",
+      "servings": 4,
+      "isLeftover": true,
+      "sourceEntryId": "entry-1-4",
+      "isLocked": false
+     },
+     {
+      "id": "entry-1-6",
+      "date": "{{day:-2}}",
+      "mealType": "LUNCH",
+      "recipeId": "recipe-salmon",
+      "recipeTitle": "Lemon salmon with potatoes",
+      "servings": 4,
+      "isLeftover": false,
+      "sourceEntryId": null,
+      "isLocked": false
+     },
+     {
+      "id": "entry-1-7",
+      "date": "{{day:-1}}",
+      "mealType": "LUNCH",
+      "recipeId": "recipe-salad",
+      "recipeTitle": "Greek salad",
+      "servings": 4,
+      "isLeftover": false,
+      "sourceEntryId": null,
+      "isLocked": false
+     }
+    ],
+    "shoppingLists": [
+     {
+      "id": "list-0",
+      "shoppingDate": "{{day:-3}}",
+      "itemCount": 19
+     }
+    ],
+    "createdAt": "{{time:-10680}}"
+   }
+  ],
+  "createdAt": "{{time:-50400}}"
+ },
+ "away": {},
+ "tags": [
+  {
+   "id": "tag-vegan",
+   "category": "DIETARY",
+   "nameEn": "Vegan",
+   "nameDe": "Vegan"
+  },
+  {
+   "id": "tag-vegetarian",
+   "category": "DIETARY",
+   "nameEn": "Vegetarian",
+   "nameDe": "Vegetarisch"
+  },
+  {
+   "id": "tag-gluten-free",
+   "category": "DIETARY",
+   "nameEn": "Gluten-Free",
+   "nameDe": "Glutenfrei"
+  },
+  {
+   "id": "tag-dairy-free",
+   "category": "DIETARY",
+   "nameEn": "Dairy-Free",
+   "nameDe": "Laktosefrei"
+  },
+  {
+   "id": "tag-low-carb",
+   "category": "DIETARY",
+   "nameEn": "Low-Carb",
+   "nameDe": "Low-Carb"
+  },
+  {
+   "id": "tag-nut-free",
+   "category": "DIETARY",
+   "nameEn": "Nut-Free",
+   "nameDe": "Nussfrei"
+  },
+  {
+   "id": "tag-beef",
+   "category": "PROTEIN",
+   "nameEn": "Beef",
+   "nameDe": "Rind"
+  },
+  {
+   "id": "tag-chicken",
+   "category": "PROTEIN",
+   "nameEn": "Chicken",
+   "nameDe": "Hähnchen"
+  },
+  {
+   "id": "tag-fish",
+   "category": "PROTEIN",
+   "nameEn": "Fish",
+   "nameDe": "Fisch"
+  },
+  {
+   "id": "tag-egg",
+   "category": "PROTEIN",
+   "nameEn": "Egg",
+   "nameDe": "Ei"
+  },
+  {
+   "id": "tag-tofu",
+   "category": "PROTEIN",
+   "nameEn": "Tofu",
+   "nameDe": "Tofu"
+  },
+  {
+   "id": "tag-italian",
+   "category": "CUISINE",
+   "nameEn": "Italian",
+   "nameDe": "Italienisch"
+  },
+  {
+   "id": "tag-asian",
+   "category": "CUISINE",
+   "nameEn": "Asian",
+   "nameDe": "Asiatisch"
+  },
+  {
+   "id": "tag-mexican",
+   "category": "CUISINE",
+   "nameEn": "Mexican",
+   "nameDe": "Mexikanisch"
+  },
+  {
+   "id": "tag-indian",
+   "category": "CUISINE",
+   "nameEn": "Indian",
+   "nameDe": "Indisch"
+  },
+  {
+   "id": "tag-mediterranean",
+   "category": "CUISINE",
+   "nameEn": "Mediterranean",
+   "nameDe": "Mediterran"
+  },
+  {
+   "id": "tag-german",
+   "category": "CUISINE",
+   "nameEn": "German",
+   "nameDe": "Deutsch"
+  },
+  {
+   "id": "tag-american",
+   "category": "CUISINE",
+   "nameEn": "American",
+   "nameDe": "Amerikanisch"
+  },
+  {
+   "id": "tag-quick-weeknight",
+   "category": "MEAL_TYPE",
+   "nameEn": "Quick Weeknight",
+   "nameDe": "Schnelles Abendessen"
+  },
+  {
+   "id": "tag-one-pot",
+   "category": "MEAL_TYPE",
+   "nameEn": "One-Pot",
+   "nameDe": "Eintopf"
+  },
+  {
+   "id": "tag-comfort-food",
+   "category": "MEAL_TYPE",
+   "nameEn": "Comfort Food",
+   "nameDe": "Comfort Food"
+  },
+  {
+   "id": "tag-simple",
+   "category": "MEAL_TYPE",
+   "nameEn": "Simple",
+   "nameDe": "Einfach"
+  },
+  {
+   "id": "tag-elaborate",
+   "category": "MEAL_TYPE",
+   "nameEn": "Elaborate",
+   "nameDe": "Aufwändig"
+  },
+  {
+   "id": "tag-salad",
+   "category": "MEAL_TYPE",
+   "nameEn": "Salad",
+   "nameDe": "Salat"
+  }
+ ]
+}

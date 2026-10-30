@@ -1,0 +1,151 @@
+{
+  "runs": [
+    {
+      "run": {
+        "id": "run-ped-4",
+        "status": "OK",
+        "startedAt": "{{time:-12}}",
+        "finishedAt": "{{time:-11}}",
+        "errorMessage": "",
+        "doctorsFound": 12,
+        "doctorsMatched": 3,
+        "slotsFound": 9,
+        "notified": true,
+        "triggeredBy": "SCHEDULE"
+      },
+      "doctors": [
+        {
+          "resultId": 101,
+          "doctorName": "Dr. med. Katharina Weber",
+          "doctorSubtitle": "Fachärztin für Kinder- und Jugendmedizin",
+          "speciality": "Kinderarzt",
+          "practiceName": "Kinderarztpraxis Dr. Weber",
+          "motiveLabel": "Vorsorgeuntersuchung U10",
+          "bookingUrl": "https://www.doctolib.de/kinderarzt/berlin/katharina-weber",
+          "slot": "{{at:3:08:30}}",
+          "isNextSlot": false,
+          "practiceAddress": "Invalidenstraße 98",
+          "practiceCity": "Berlin",
+          "practiceZipcode": "10115",
+          "practiceLatitude": "52.5309",
+          "practiceLongitude": "13.3790",
+          "source": "doctolib"
+        },
+        {
+          "resultId": 102,
+          "doctorName": "Dr. med. Jonas Brandt",
+          "doctorSubtitle": "Facharzt für Kinder- und Jugendmedizin",
+          "speciality": "Kinderarzt",
+          "practiceName": "Kinder- und Jugendarztpraxis Prenzlauer Berg",
+          "motiveLabel": "Vorsorgeuntersuchung U10",
+          "bookingUrl": "https://www.doctolib.de/kinderarzt/berlin/jonas-brandt",
+          "slot": "{{slot:5:14:15}}",
+          "isNextSlot": false,
+          "practiceAddress": "Kastanienallee 41",
+          "practiceCity": "Berlin",
+          "practiceZipcode": "10435",
+          "practiceLatitude": "52.5391",
+          "practiceLongitude": "13.4097",
+          "source": "doctolib"
+        },
+        {
+          "resultId": 103,
+          "doctorName": "Dr. med. Leyla Aydın",
+          "doctorSubtitle": "Fachärztin für Kinder- und Jugendmedizin",
+          "speciality": "Kinderarzt",
+          "practiceName": "Kinderärzte am Gesundbrunnen",
+          "motiveLabel": "Vorsorgeuntersuchung U10",
+          "bookingUrl": "https://www.doctolib.de/kinderarzt/berlin/leyla-aydin",
+          "slot": "{{slot:9:10:00}}",
+          "isNextSlot": false,
+          "practiceAddress": "Badstraße 22",
+          "practiceCity": "Berlin",
+          "practiceZipcode": "13357",
+          "practiceLatitude": "52.5503",
+          "practiceLongitude": "13.3836",
+          "source": "doctolib"
+        }
+      ]
+    },
+    {
+      "run": {
+        "id": "run-ped-3",
+        "status": "OK",
+        "startedAt": "{{time:-42}}",
+        "finishedAt": "{{time:-41}}",
+        "errorMessage": "",
+        "doctorsFound": 12,
+        "doctorsMatched": 2,
+        "slotsFound": 5,
+        "notified": true,
+        "triggeredBy": "SCHEDULE"
+      },
+      "doctors": [
+        {
+          "resultId": 92,
+          "doctorName": "Dr. med. Jonas Brandt",
+          "doctorSubtitle": "Facharzt für Kinder- und Jugendmedizin",
+          "speciality": "Kinderarzt",
+          "practiceName": "Kinder- und Jugendarztpraxis Prenzlauer Berg",
+          "motiveLabel": "Vorsorgeuntersuchung U10",
+          "bookingUrl": "https://www.doctolib.de/kinderarzt/berlin/jonas-brandt",
+          "slot": "{{slot:5:14:15}}",
+          "isNextSlot": false,
+          "practiceAddress": "Kastanienallee 41",
+          "practiceCity": "Berlin",
+          "practiceZipcode": "10435",
+          "practiceLatitude": "52.5391",
+          "practiceLongitude": "13.4097",
+          "source": "doctolib"
+        },
+        {
+          "resultId": 93,
+          "doctorName": "Dr. med. Leyla Aydın",
+          "doctorSubtitle": "Fachärztin für Kinder- und Jugendmedizin",
+          "speciality": "Kinderarzt",
+          "practiceName": "Kinderärzte am Gesundbrunnen",
+          "motiveLabel": "Vorsorgeuntersuchung U10",
+          "bookingUrl": "https://www.doctolib.de/kinderarzt/berlin/leyla-aydin",
+          "slot": "{{slot:12:09:40}}",
+          "isNextSlot": false,
+          "practiceAddress": "Badstraße 22",
+          "practiceCity": "Berlin",
+          "practiceZipcode": "13357",
+          "practiceLatitude": "52.5503",
+          "practiceLongitude": "13.3836",
+          "source": "doctolib"
+        }
+      ]
+    },
+    {
+      "run": {
+        "id": "run-ped-2",
+        "status": "NO_AVAILABILITY",
+        "startedAt": "{{time:-72}}",
+        "finishedAt": "{{time:-71}}",
+        "errorMessage": "",
+        "doctorsFound": 11,
+        "doctorsMatched": 0,
+        "slotsFound": 0,
+        "notified": false,
+        "triggeredBy": "SCHEDULE"
+      },
+      "doctors": []
+    },
+    {
+      "run": {
+        "id": "run-ped-1",
+        "status": "ERROR",
+        "startedAt": "{{time:-1450}}",
+        "finishedAt": "{{time:-1449}}",
+        "errorMessage": "Doctolib did not answer in time.",
+        "doctorsFound": 0,
+        "doctorsMatched": 0,
+        "slotsFound": 0,
+        "notified": false,
+        "triggeredBy": "MANUAL"
+      },
+      "doctors": []
+    }
+  ]
+}

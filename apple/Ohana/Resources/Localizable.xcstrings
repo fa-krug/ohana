@@ -3073,6 +3073,16 @@
         }
       }
     },
+    "Connect": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbinden"
+          }
+        }
+      }
+    },
     "Connect Ohana to your server first.": {
       "localizations": {
         "de": {
@@ -3089,6 +3099,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "Verbinde eine beliebige OpenAI-kompatible KI (OpenAI, OpenRouter, Mistral, Gemini, ein lokales Modell …) in den Einstellungen. Dann kann sie im Web recherchieren und in Kalender und Finanzen planen."
+          }
+        }
+      }
+    },
+    "Connect your Ohana": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbinde dein Ohana"
+          }
+        }
+      }
+    },
+    "Connect your Ohana server": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deinen Ohana-Server verbinden"
+          }
+        }
+      }
+    },
+    "Connect your Ohana server to see your own family.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbinde deinen Ohana-Server, um deine eigene Familie zu sehen."
+          }
+        }
+      }
+    },
+    "Connect your Ohana…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Ohana verbinden …"
           }
         }
       }
@@ -4079,6 +4129,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Trennzeichen"
+          }
+        }
+      }
+    },
+    "Demo data": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demodaten"
           }
         }
       }
@@ -6587,6 +6647,16 @@
         }
       }
     },
+    "Loading the demo…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Demo wird geladen …"
+          }
+        }
+      }
+    },
     "Loading your families…": {
       "localizations": {
         "de": {
@@ -7843,6 +7913,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noch keine Suchen: Ohana kann Doctolib und jameda für euch beobachten."
+          }
+        }
+      }
+    },
+    "No server connected": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Server verbunden"
           }
         }
       }
@@ -11549,6 +11629,16 @@
         }
       }
     },
+    "Sign out and show the demo": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abmelden und Demo zeigen"
+          }
+        }
+      }
+    },
     "Sign out of Ohana on this device?": {
       "localizations": {
         "de": {
@@ -12199,6 +12289,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wische nach links oder rechts zum Blättern"
+          }
+        }
+      }
+    },
+    "Syncing with %@…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abgleich mit %@ …"
           }
         }
       }
@@ -12893,6 +12993,26 @@
         }
       }
     },
+    "This device is no longer connected to a server. Until you connect one, Ohana shows a demo family.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Gerät ist mit keinem Server mehr verbunden. Bis du einen verbindest, zeigt Ohana eine Demo-Familie."
+          }
+        }
+      }
+    },
+    "This is demo data. Connect your Ohana server to make changes.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das sind Demodaten. Verbinde deinen Ohana-Server, um etwas zu ändern."
+          }
+        }
+      }
+    },
     "This isn’t a family export (a .json file from Settings → Data → Export).": {
       "localizations": {
         "de": {
@@ -13469,6 +13589,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bis (optional)"
+          }
+        }
+      }
+    },
+    "Until then the app shows a demo family. Sign in to your server to see your own calendar, finances, meals and appointments.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bis dahin zeigt die App eine Demo-Familie. Melde dich bei deinem Server an, um deinen eigenen Kalender, deine Finanzen, Essen und Arzttermine zu sehen."
+          }
+        }
+      }
+    },
+    "Until you connect your server, Ohana shows a demo family. It can’t be changed.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bis du deinen Server verbindest, zeigt Ohana eine Demo-Familie. Sie lässt sich nicht ändern."
           }
         }
       }
@@ -14219,6 +14359,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Eure Bankkonten, Bargeld oder Karten. Eine Buchung kann zu einem gehören; der Kontostand ist der Anfangsstand plus alle seine Buchungen."
+          }
+        }
+      }
+    },
+    "Your families and their data are on the way.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Familien und ihre Daten werden geladen."
           }
         }
       }

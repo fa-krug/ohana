@@ -1,0 +1,275 @@
+{
+ "recipe": {
+  "id": "recipe-pancakes",
+  "title": "Pancakes",
+  "description": "Fluffy American-style pancakes for a slow Sunday, with maple syrup.",
+  "listType": "KNOWN",
+  "defaultServings": 4,
+  "prepTimeMinutes": 10,
+  "cookTimeMinutes": 20,
+  "leftoverDays": null,
+  "image": "",
+  "createdAt": "{{time:-432000}}",
+  "updatedAt": "{{time:-144000}}",
+  "tags": [
+   {
+    "id": "tag-vegetarian",
+    "category": "DIETARY",
+    "nameEn": "Vegetarian",
+    "nameDe": "Vegetarisch"
+   },
+   {
+    "id": "tag-american",
+    "category": "CUISINE",
+    "nameEn": "American",
+    "nameDe": "Amerikanisch"
+   },
+   {
+    "id": "tag-simple",
+    "category": "MEAL_TYPE",
+    "nameEn": "Simple",
+    "nameDe": "Einfach"
+   }
+  ],
+  "ingredients": [
+   {
+    "id": 300,
+    "ingredientId": 51,
+    "quantity": "250",
+    "unitId": 1,
+    "order": 0
+   },
+   {
+    "id": 301,
+    "ingredientId": 84,
+    "quantity": "2",
+    "unitId": 7,
+    "order": 1
+   },
+   {
+    "id": 302,
+    "ingredientId": 52,
+    "quantity": "2",
+    "unitId": 6,
+    "order": 2
+   },
+   {
+    "id": 303,
+    "ingredientId": 47,
+    "quantity": "1",
+    "unitId": 8,
+    "order": 3
+   },
+   {
+    "id": 304,
+    "ingredientId": 28,
+    "quantity": "300",
+    "unitId": 3,
+    "order": 4
+   },
+   {
+    "id": 305,
+    "ingredientId": 33,
+    "quantity": "2",
+    "unitId": 5,
+    "order": 5
+   },
+   {
+    "id": 306,
+    "ingredientId": 26,
+    "quantity": "30",
+    "unitId": 1,
+    "order": 6
+   },
+   {
+    "id": 307,
+    "ingredientId": 85,
+    "quantity": "4",
+    "unitId": 6,
+    "order": 7
+   }
+  ],
+  "manualSteps": [
+   {
+    "id": 351,
+    "method": "MANUAL",
+    "stepNumber": 1,
+    "instruction": "Whisk flour, baking powder, sugar and salt in a bowl.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 300,
+      "quantity": "250"
+     },
+     {
+      "recipeIngredientId": 301,
+      "quantity": "2"
+     },
+     {
+      "recipeIngredientId": 302,
+      "quantity": "2"
+     },
+     {
+      "recipeIngredientId": 303,
+      "quantity": "1"
+     }
+    ]
+   },
+   {
+    "id": 352,
+    "method": "MANUAL",
+    "stepNumber": 2,
+    "instruction": "Melt the butter. Whisk milk, eggs and butter, then stir into the flour until just combined.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 304,
+      "quantity": "300"
+     },
+     {
+      "recipeIngredientId": 305,
+      "quantity": "2"
+     },
+     {
+      "recipeIngredientId": 306,
+      "quantity": "30"
+     }
+    ]
+   },
+   {
+    "id": 353,
+    "method": "MANUAL",
+    "stepNumber": 3,
+    "instruction": "Fry ladlefuls in a hot pan for about 2 minutes per side until golden.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": []
+   },
+   {
+    "id": 354,
+    "method": "MANUAL",
+    "stepNumber": 4,
+    "instruction": "Serve warm with maple syrup.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 307,
+      "quantity": "4"
+     }
+    ]
+   }
+  ],
+  "machineSteps": []
+ },
+ "ingredients": [
+  {
+   "id": 26,
+   "nameEn": "butter",
+   "nameDe": "Butter",
+   "category": "DAIRY"
+  },
+  {
+   "id": 28,
+   "nameEn": "milk",
+   "nameDe": "Milch",
+   "category": "DAIRY"
+  },
+  {
+   "id": 33,
+   "nameEn": "egg",
+   "nameDe": "Ei",
+   "category": "DAIRY"
+  },
+  {
+   "id": 47,
+   "nameEn": "salt",
+   "nameDe": "Salz",
+   "category": "PANTRY"
+  },
+  {
+   "id": 51,
+   "nameEn": "flour",
+   "nameDe": "Mehl",
+   "category": "PANTRY"
+  },
+  {
+   "id": 52,
+   "nameEn": "sugar",
+   "nameDe": "Zucker",
+   "category": "PANTRY"
+  },
+  {
+   "id": 84,
+   "nameEn": "baking powder",
+   "nameDe": "Backpulver",
+   "category": "PANTRY"
+  },
+  {
+   "id": 85,
+   "nameEn": "maple syrup",
+   "nameDe": "Ahornsirup",
+   "category": "PANTRY"
+  }
+ ],
+ "units": [
+  {
+   "id": 1,
+   "nameEn": "gram",
+   "nameDe": "Gramm",
+   "abbreviation": "g"
+  },
+  {
+   "id": 3,
+   "nameEn": "milliliter",
+   "nameDe": "Milliliter",
+   "abbreviation": "ml"
+  },
+  {
+   "id": 5,
+   "nameEn": "piece",
+   "nameDe": "Stück",
+   "abbreviation": "Stk"
+  },
+  {
+   "id": 6,
+   "nameEn": "tablespoon",
+   "nameDe": "Esslöffel",
+   "abbreviation": "EL"
+  },
+  {
+   "id": 7,
+   "nameEn": "teaspoon",
+   "nameDe": "Teelöffel",
+   "abbreviation": "TL"
+  },
+  {
+   "id": 8,
+   "nameEn": "pinch",
+   "nameDe": "Prise",
+   "abbreviation": "Prise"
+  }
+ ]
+}

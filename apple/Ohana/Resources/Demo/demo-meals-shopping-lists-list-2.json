@@ -1,0 +1,180 @@
+{
+ "list": {
+  "id": "list-2",
+  "shoppingDate": "{{day:4}}",
+  "createdAt": "{{time:-600}}",
+  "items": [
+   {
+    "id": "list-2-item-1",
+    "ingredientName": "Arborio rice",
+    "ingredientNameDe": "Risottoreis",
+    "category": "PANTRY",
+    "quantity": "320",
+    "unitAbbreviation": "g",
+    "isChecked": false
+   },
+   {
+    "id": "list-2-item-2",
+    "ingredientName": "Bell pepper",
+    "ingredientNameDe": "Paprika",
+    "category": "PRODUCE",
+    "quantity": "1",
+    "unitAbbreviation": "Stk",
+    "isChecked": false
+   },
+   {
+    "id": "list-2-item-3",
+    "ingredientName": "Canned tomatoes",
+    "ingredientNameDe": "Dosentomaten",
+    "category": "PANTRY",
+    "quantity": "800",
+    "unitAbbreviation": "g",
+    "isChecked": false
+   },
+   {
+    "id": "list-2-item-4",
+    "ingredientName": "Carrot",
+    "ingredientNameDe": "Karotte",
+    "category": "PRODUCE",
+    "quantity": "1",
+    "unitAbbreviation": "Stk",
+    "isChecked": false
+   },
+   {
+    "id": "list-2-item-5",
+    "ingredientName": "Cucumber",
+    "ingredientNameDe": "Gurke",
+    "category": "PRODUCE",
+    "quantity": "1",
+    "unitAbbreviation": "Stk",
+    "isChecked": false
+   },
+   {
+    "id": "list-2-item-6",
+    "ingredientName": "Feta",
+    "ingredientNameDe": "Feta",
+    "category": "DAIRY",
+    "quantity": "200",
+    "unitAbbreviation": "g",
+    "isChecked": false
+   },
+   {
+    "id": "list-2-item-7",
+    "ingredientName": "Fresh basil",
+    "ingredientNameDe": "Frisches Basilikum",
+    "category": "PRODUCE",
+    "quantity": "10",
+    "unitAbbreviation": "g",
+    "isChecked": false
+   },
+   {
+    "id": "list-2-item-8",
+    "ingredientName": "Fresh parsley",
+    "ingredientNameDe": "Frische Petersilie",
+    "category": "PRODUCE",
+    "quantity": "20",
+    "unitAbbreviation": "g",
+    "isChecked": false
+   },
+   {
+    "id": "list-2-item-9",
+    "ingredientName": "Green beans",
+    "ingredientNameDe": "Grüne Bohnen",
+    "category": "PRODUCE",
+    "quantity": "400",
+    "unitAbbreviation": "g",
+    "isChecked": false
+   },
+   {
+    "id": "list-2-item-10",
+    "ingredientName": "Kalamata olives",
+    "ingredientNameDe": "Kalamata-Oliven",
+    "category": "PANTRY",
+    "quantity": "100",
+    "unitAbbreviation": "g",
+    "isChecked": false
+   },
+   {
+    "id": "list-2-item-11",
+    "ingredientName": "Lemon",
+    "ingredientNameDe": "Zitrone",
+    "category": "PRODUCE",
+    "quantity": "2",
+    "unitAbbreviation": "Stk",
+    "isChecked": false
+   },
+   {
+    "id": "list-2-item-12",
+    "ingredientName": "Mushroom",
+    "ingredientNameDe": "Champignon",
+    "category": "PRODUCE",
+    "quantity": "400",
+    "unitAbbreviation": "g",
+    "isChecked": false
+   },
+   {
+    "id": "list-2-item-13",
+    "ingredientName": "Parmesan",
+    "ingredientNameDe": "Parmesan",
+    "category": "DAIRY",
+    "quantity": "60",
+    "unitAbbreviation": "g",
+    "isChecked": false
+   },
+   {
+    "id": "list-2-item-14",
+    "ingredientName": "Potato",
+    "ingredientNameDe": "Kartoffel",
+    "category": "PRODUCE",
+    "quantity": "1",
+    "unitAbbreviation": "kg",
+    "isChecked": false
+   },
+   {
+    "id": "list-2-item-15",
+    "ingredientName": "Red onion",
+    "ingredientNameDe": "Rote Zwiebel",
+    "category": "PRODUCE",
+    "quantity": "1",
+    "unitAbbreviation": "Stk",
+    "isChecked": false
+   },
+   {
+    "id": "list-2-item-16",
+    "ingredientName": "Salmon fillet",
+    "ingredientNameDe": "Lachsfilet",
+    "category": "MEAT",
+    "quantity": "600",
+    "unitAbbreviation": "g",
+    "isChecked": false
+   },
+   {
+    "id": "list-2-item-17",
+    "ingredientName": "Tomato",
+    "ingredientNameDe": "Tomate",
+    "category": "PRODUCE",
+    "quantity": "4",
+    "unitAbbreviation": "Stk",
+    "isChecked": false
+   },
+   {
+    "id": "list-2-item-18",
+    "ingredientName": "Vegetable broth",
+    "ingredientNameDe": "Gemüsebrühe",
+    "category": "PANTRY",
+    "quantity": "1.7",
+    "unitAbbreviation": "l",
+    "isChecked": false
+   },
+   {
+    "id": "list-2-item-19",
+    "ingredientName": "White wine",
+    "ingredientNameDe": "Weißwein",
+    "category": "PANTRY",
+    "quantity": "100",
+    "unitAbbreviation": "ml",
+    "isChecked": false
+   }
+  ]
+ }
+}

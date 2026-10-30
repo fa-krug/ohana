@@ -299,7 +299,12 @@ npm run import-legacy -- --family-planner dump.sql --cookless cookless.db --cook
   for other paths under their prefix); `POST /api/v1/families` creates a family; the account
   (`/api/v1/me/...`, `lib/auth/app-routes.ts`), the administration (`/api/v1/admin/...`,
   `lib/admin/app-routes.ts`) and invites (`/api/v1/invites/{code}`, `lib/families/invite-routes.ts`)
-  share `lib/api/app-router.ts`. `/setup`, onboarding and login keep a `next` (`homeFor(user, next)`)
+  share `lib/api/app-router.ts`. Without a server the app shows a read-only demo family:
+  `Core/Demo/DemoServer.swift` behind `APIClient(demo:)` answers GETs from the templates
+  `Resources/Demo/demo-<path>.json` (`{{day:N}}` etc., handlers in `Demo+<Module>.swift`), the
+  account is a viewer, changes get 403; `AppModel.switching` puts `LoadingScreen` over the app
+  while it moves between the demo and a server (`ConnectServerView` pairs, `DemoBanner` above
+  every module). `/setup`, onboarding and login keep a `next` (`homeFor(user, next)`)
   so first-run pairing ends back on the pairing page. In the app:
   `App/AppModel.swift` (server, token in the Keychain, `/api/v1/me`, selected family,
   `FamilyContext`: `FamilyAPI` + `didChange`/`revision` signals between modules),

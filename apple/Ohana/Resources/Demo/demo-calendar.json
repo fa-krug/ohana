@@ -1,0 +1,72 @@
+{
+  "family": {
+    "id": "demo",
+    "feedId": "demoParkerFeed",
+    "name": "Parker family",
+    "access": "view",
+    "readOnly": true,
+    "updatedAt": "{{time:-185}}"
+  },
+  "types": [
+    { "id": "vacation", "name": "Vacation", "color": "#22c55e", "role": "covers", "position": 0, "away": true },
+    { "id": "school-holidays", "name": "School holidays", "color": "#3b82f6", "role": "needs_cover", "position": 1, "away": false },
+    { "id": "grandma", "name": "Grandma visits", "color": "#f97316", "role": "covers", "position": 2, "away": false },
+    { "id": "anna-off", "name": "Anna off work", "color": "#a855f7", "role": "covers", "position": 3, "away": false }
+  ],
+  "spans": [
+    { "type": "vacation", "from": "{{day:-78}}", "to": "{{day:-65}}" },
+    { "type": "school-holidays", "from": "{{day:-85}}", "to": "{{day:-43}}" },
+    { "type": "grandma", "from": "{{day:-84}}", "to": "{{day:-79}}" },
+    { "type": "anna-off", "from": "{{day:-64}}", "to": "{{day:-50}}" },
+    { "type": "grandma", "from": "{{day:-49}}", "to": "{{day:-43}}" },
+    { "type": "school-holidays", "from": "{{day:-16}}", "to": "{{day:-5}}" },
+    { "type": "anna-off", "from": "{{day:-16}}", "to": "{{day:-10}}" },
+    { "type": "grandma", "from": "{{day:-9}}", "to": "{{day:-5}}" },
+    { "type": "anna-off", "from": "{{day:5}}", "to": "{{day:5}}" },
+    { "type": "vacation", "from": "{{day:12}}", "to": "{{day:19}}" },
+    { "type": "school-holidays", "from": "{{day:12}}", "to": "{{day:19}}" },
+    { "type": "grandma", "from": "{{day:24}}", "to": "{{day:26}}" },
+    { "type": "school-holidays", "from": "{{day:54}}", "to": "{{day:67}}" },
+    { "type": "anna-off", "from": "{{day:54}}", "to": "{{day:60}}" },
+    { "type": "grandma", "from": "{{day:61}}", "to": "{{day:67}}" }
+  ],
+  "notes": {
+    "{{day:-78}}": { "icon": "🏖️", "comment": "Summer trip to the Baltic Sea" },
+    "{{day:-84}}": { "icon": "🚆", "comment": "Grandma arrives 11:40, Hauptbahnhof" },
+    "{{day:-42}}": { "icon": "🎒", "comment": "First day of school" },
+    "{{day:-2}}": { "icon": "🎃", "comment": "Pumpkin carving with the neighbours" },
+    "{{day:2}}": { "icon": "📚", "comment": "Library books due" },
+    "{{day:9}}": { "icon": "🎈", "comment": "Mia at Emma's birthday party, 15:00" },
+    "{{day:12}}": { "icon": "✈️", "comment": "Flight to Lisbon 07:15 BER" },
+    "{{day:19}}": { "icon": "🏠", "comment": "Back home in the evening" },
+    "{{day:24}}": { "icon": "🚆", "comment": "Grandma Rose arrives 14:30" },
+    "{{day:33}}": { "icon": "🚗", "comment": "Car inspection" },
+    "{{day:47}}": { "icon": "🎄", "comment": "School concert" }
+  },
+  "events": [
+    {
+      "id": "event-dentist", "date": "{{day:0}}", "start": "10:00", "end": "10:30", "title": "Dentist",
+      "location": "", "person": "Ben", "note": "", "url": "", "source": "manual", "searchId": null
+    },
+    {
+      "id": "event-swim", "date": "{{day:1}}", "start": "16:00", "end": "17:00", "title": "Swimming lesson",
+      "location": "Stadtbad Mitte", "person": "Leo", "note": "", "url": "", "source": "manual", "searchId": null
+    },
+    {
+      "id": "event-pediatrician", "date": "{{day:3}}", "start": "08:30", "end": "09:00", "title": "Pediatrician check-up",
+      "location": "Kinderarztpraxis Dr. Weber", "person": "Mia", "note": "Bring the vaccination record", "url": "",
+      "source": "appointment", "searchId": "search-pediatrician"
+    },
+    {
+      "id": "event-parents-evening", "date": "{{day:6}}", "start": "19:00", "end": null, "title": "Parents' evening",
+      "location": "Grundschule am Park", "person": "", "note": "", "url": "", "source": "manual", "searchId": null
+    }
+  ],
+  "people": [
+    { "name": "Anna Parker", "birthday": "1989-05-20" },
+    { "name": "Ben Parker", "birthday": "1987-09-03" },
+    { "name": "Grandma Rose", "birthday": "{{anniversary:10:1952}}" },
+    { "name": "Leo", "birthday": "2021-07-02" },
+    { "name": "Mia", "birthday": "2018-03-14" }
+  ]
+}

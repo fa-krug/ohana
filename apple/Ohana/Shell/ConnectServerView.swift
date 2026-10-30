@@ -1,15 +1,18 @@
 import AuthenticationServices
 import SwiftUI
 
-/// First launch: the server's address, then signing in on the server's own page (passkeys and
-/// passwords both work there), which hands the app its token (`DevicePairing`). The field takes
-/// what people have at hand: the address from the browser, any link of the server or an invite
-/// link (`ServerLink`). A link the app was opened with signs in right away
-/// (`AppModel.pendingServer`); an invite waits in `InviteInbox` and is joined once signed in.
-struct WelcomeView: View {
+/// Connecting a server, over the demo (a sheet): the server's address, then signing in on the
+/// server's own page (passkeys and passwords both work there), which hands the app its token
+/// (`DevicePairing`). The field takes what people have at hand: the address from the browser,
+/// any link of the server or an invite link (`ServerLink`). A link the app was opened with signs
+/// in right away (`AppModel.pendingServer`); an invite waits in `InviteInbox` and is joined once
+/// signed in. Once paired the sheet closes and the loading screen covers the app until the
+/// server's data is there.
+struct ConnectServerView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.webAuthenticationSession) private var webAuthenticationSession
     @Environment(\.openURL) private var openURL
+    @Environment(\.dismiss) private var dismiss
     @AppStorage("serverURL") private var savedServer = ""
     @State private var server = ""
     @State private var inbox = InviteInbox.shared
@@ -20,14 +23,27 @@ struct WelcomeView: View {
     private var link: ServerLink? { ServerLink(server) }
 
     var body: some View {
+        NavigationStack {
+            content
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) { CancelButton(hasChanges: false) }
+                }
+        }
+        #if os(macOS)
+        .frame(minWidth: 480, idealWidth: 540, minHeight: 560, idealHeight: 640)
+        #endif
+    }
+
+    private var content: some View {
         ScrollView {
             VStack(spacing: 28) {
-                Spacer(minLength: 24)
-                logo
+                Spacer(minLength: 8)
+                OhanaLogo(size: logoSize)
                 VStack(spacing: 8) {
-                    Text("Ohana")
+                    Text("Connect your Ohana")
                         .font(.largeTitle.bold())
-                    Text("Calendar, finances, meals and appointments for your family.")
+                        .multilineTextAlignment(.center)
+                    Text("Until then the app shows a demo family. Sign in to your server to see your own calendar, finances, meals and appointments.")
                         .font(.title3)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -63,15 +79,6 @@ struct WelcomeView: View {
             server = url.absoluteString
             signIn()
         }
-    }
-
-    private var logo: some View {
-        Image(systemName: "house.fill")
-            .font(.system(size: logoSize * 0.46, weight: .semibold))
-            .foregroundStyle(.white)
-            .frame(width: logoSize, height: logoSize)
-            .background(Color.ohana.gradient, in: .rect(cornerRadius: logoSize * 0.27))
-            .accessibilityHidden(true)
     }
 
     private var inviteNote: some View {
@@ -186,6 +193,8 @@ struct WelcomeView: View {
                 )
                 switch DevicePairing.outcome(of: callback, attempt: attempt) {
                 case let .paired(token):
+                    // The loading screen takes over from here.
+                    dismiss()
                     await app.didPair(server: url, token: token)
                 case .cancelled:
                     break

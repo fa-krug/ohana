@@ -1,0 +1,281 @@
+{
+ "items": [
+  {
+   "id": "recipe-curry",
+   "title": "Chickpea curry",
+   "description": "A mild coconut curry with chickpeas and spinach, served with rice. The kids' favourite.",
+   "listType": "KNOWN",
+   "defaultServings": 4,
+   "prepTimeMinutes": 10,
+   "cookTimeMinutes": 25,
+   "leftoverDays": 1,
+   "image": "",
+   "createdAt": "{{time:-288000}}",
+   "updatedAt": "{{time:-96000}}",
+   "tags": [
+    {
+     "id": "tag-vegan",
+     "category": "DIETARY",
+     "nameEn": "Vegan",
+     "nameDe": "Vegan"
+    },
+    {
+     "id": "tag-indian",
+     "category": "CUISINE",
+     "nameEn": "Indian",
+     "nameDe": "Indisch"
+    },
+    {
+     "id": "tag-one-pot",
+     "category": "MEAL_TYPE",
+     "nameEn": "One-Pot",
+     "nameDe": "Eintopf"
+    },
+    {
+     "id": "tag-quick-weeknight",
+     "category": "MEAL_TYPE",
+     "nameEn": "Quick Weeknight",
+     "nameDe": "Schnelles Abendessen"
+    }
+   ]
+  },
+  {
+   "id": "recipe-tacos",
+   "title": "Fish tacos",
+   "description": "Crispy spiced fish in warm tortillas with crunchy cabbage, avocado and lime crema.",
+   "listType": "TO_TRY",
+   "defaultServings": 4,
+   "prepTimeMinutes": 20,
+   "cookTimeMinutes": 10,
+   "leftoverDays": null,
+   "image": "",
+   "createdAt": "{{time:-10080}}",
+   "updatedAt": "{{time:-3360}}",
+   "tags": [
+    {
+     "id": "tag-fish",
+     "category": "PROTEIN",
+     "nameEn": "Fish",
+     "nameDe": "Fisch"
+    },
+    {
+     "id": "tag-mexican",
+     "category": "CUISINE",
+     "nameEn": "Mexican",
+     "nameDe": "Mexikanisch"
+    },
+    {
+     "id": "tag-quick-weeknight",
+     "category": "MEAL_TYPE",
+     "nameEn": "Quick Weeknight",
+     "nameDe": "Schnelles Abendessen"
+    }
+   ]
+  },
+  {
+   "id": "recipe-salad",
+   "title": "Greek salad",
+   "description": "Tomatoes, cucumber, peppers, olives and a block of feta. Summer on a plate.",
+   "listType": "KNOWN",
+   "defaultServings": 4,
+   "prepTimeMinutes": 15,
+   "cookTimeMinutes": null,
+   "leftoverDays": null,
+   "image": "",
+   "createdAt": "{{time:-43200}}",
+   "updatedAt": "{{time:-14400}}",
+   "tags": [
+    {
+     "id": "tag-vegetarian",
+     "category": "DIETARY",
+     "nameEn": "Vegetarian",
+     "nameDe": "Vegetarisch"
+    },
+    {
+     "id": "tag-mediterranean",
+     "category": "CUISINE",
+     "nameEn": "Mediterranean",
+     "nameDe": "Mediterran"
+    },
+    {
+     "id": "tag-salad",
+     "category": "MEAL_TYPE",
+     "nameEn": "Salad",
+     "nameDe": "Salat"
+    },
+    {
+     "id": "tag-simple",
+     "category": "MEAL_TYPE",
+     "nameEn": "Simple",
+     "nameDe": "Einfach"
+    }
+   ]
+  },
+  {
+   "id": "recipe-salmon",
+   "title": "Lemon salmon with potatoes",
+   "description": "Oven-baked salmon with lemon and herbs, new potatoes and green beans.",
+   "listType": "KNOWN",
+   "defaultServings": 4,
+   "prepTimeMinutes": 15,
+   "cookTimeMinutes": 30,
+   "leftoverDays": null,
+   "image": "",
+   "createdAt": "{{time:-86400}}",
+   "updatedAt": "{{time:-28800}}",
+   "tags": [
+    {
+     "id": "tag-fish",
+     "category": "PROTEIN",
+     "nameEn": "Fish",
+     "nameDe": "Fisch"
+    },
+    {
+     "id": "tag-mediterranean",
+     "category": "CUISINE",
+     "nameEn": "Mediterranean",
+     "nameDe": "Mediterran"
+    },
+    {
+     "id": "tag-quick-weeknight",
+     "category": "MEAL_TYPE",
+     "nameEn": "Quick Weeknight",
+     "nameDe": "Schnelles Abendessen"
+    }
+   ]
+  },
+  {
+   "id": "recipe-risotto",
+   "title": "Mushroom risotto",
+   "description": "Creamy risotto with browned mushrooms, white wine and parmesan.",
+   "listType": "TO_TRY",
+   "defaultServings": 4,
+   "prepTimeMinutes": 15,
+   "cookTimeMinutes": 35,
+   "leftoverDays": null,
+   "image": "",
+   "createdAt": "{{time:-20160}}",
+   "updatedAt": "{{time:-6720}}",
+   "tags": [
+    {
+     "id": "tag-vegetarian",
+     "category": "DIETARY",
+     "nameEn": "Vegetarian",
+     "nameDe": "Vegetarisch"
+    },
+    {
+     "id": "tag-italian",
+     "category": "CUISINE",
+     "nameEn": "Italian",
+     "nameDe": "Italienisch"
+    },
+    {
+     "id": "tag-elaborate",
+     "category": "MEAL_TYPE",
+     "nameEn": "Elaborate",
+     "nameDe": "Aufwändig"
+    }
+   ]
+  },
+  {
+   "id": "recipe-pancakes",
+   "title": "Pancakes",
+   "description": "Fluffy American-style pancakes for a slow Sunday, with maple syrup.",
+   "listType": "KNOWN",
+   "defaultServings": 4,
+   "prepTimeMinutes": 10,
+   "cookTimeMinutes": 20,
+   "leftoverDays": null,
+   "image": "",
+   "createdAt": "{{time:-432000}}",
+   "updatedAt": "{{time:-144000}}",
+   "tags": [
+    {
+     "id": "tag-vegetarian",
+     "category": "DIETARY",
+     "nameEn": "Vegetarian",
+     "nameDe": "Vegetarisch"
+    },
+    {
+     "id": "tag-american",
+     "category": "CUISINE",
+     "nameEn": "American",
+     "nameDe": "Amerikanisch"
+    },
+    {
+     "id": "tag-simple",
+     "category": "MEAL_TYPE",
+     "nameEn": "Simple",
+     "nameDe": "Einfach"
+    }
+   ]
+  },
+  {
+   "id": "recipe-soup",
+   "title": "Tomato soup",
+   "description": "Smooth tomato soup with basil. Quick, cheap and even better the next day.",
+   "listType": "KNOWN",
+   "defaultServings": 4,
+   "prepTimeMinutes": 10,
+   "cookTimeMinutes": 30,
+   "leftoverDays": 2,
+   "image": "",
+   "createdAt": "{{time:-129600}}",
+   "updatedAt": "{{time:-43200}}",
+   "tags": [
+    {
+     "id": "tag-vegan",
+     "category": "DIETARY",
+     "nameEn": "Vegan",
+     "nameDe": "Vegan"
+    },
+    {
+     "id": "tag-simple",
+     "category": "MEAL_TYPE",
+     "nameEn": "Simple",
+     "nameDe": "Einfach"
+    },
+    {
+     "id": "tag-one-pot",
+     "category": "MEAL_TYPE",
+     "nameEn": "One-Pot",
+     "nameDe": "Eintopf"
+    }
+   ]
+  },
+  {
+   "id": "recipe-lasagne",
+   "title": "Vegetable lasagne",
+   "description": "Layers of tomato vegetable sauce, creamy ricotta and melted mozzarella. Makes enough for a second lunch.",
+   "listType": "KNOWN",
+   "defaultServings": 4,
+   "prepTimeMinutes": 30,
+   "cookTimeMinutes": 45,
+   "leftoverDays": 1,
+   "image": "",
+   "createdAt": "{{time:-172800}}",
+   "updatedAt": "{{time:-57600}}",
+   "tags": [
+    {
+     "id": "tag-vegetarian",
+     "category": "DIETARY",
+     "nameEn": "Vegetarian",
+     "nameDe": "Vegetarisch"
+    },
+    {
+     "id": "tag-italian",
+     "category": "CUISINE",
+     "nameEn": "Italian",
+     "nameDe": "Italienisch"
+    },
+    {
+     "id": "tag-comfort-food",
+     "category": "MEAL_TYPE",
+     "nameEn": "Comfort Food",
+     "nameDe": "Comfort Food"
+    }
+   ]
+  }
+ ],
+ "totalCount": 8
+}

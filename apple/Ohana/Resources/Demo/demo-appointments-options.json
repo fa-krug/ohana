@@ -1,0 +1,7 @@
+{
+  "channels": [
+    { "id": "channel-telegram", "name": "Family group", "provider": "TELEGRAM", "enabled": true }
+  ],
+  "people": ["Ben Parker", "Anna Parker", "Mia", "Leo", "Grandma Rose"],
+  "home": { "address": "Lindenstraße 12, 10115 Berlin", "lat": 52.5326, "lng": 13.3878 }
+}

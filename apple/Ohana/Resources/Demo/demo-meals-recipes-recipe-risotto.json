@@ -1,0 +1,322 @@
+{
+ "recipe": {
+  "id": "recipe-risotto",
+  "title": "Mushroom risotto",
+  "description": "Creamy risotto with browned mushrooms, white wine and parmesan.",
+  "listType": "TO_TRY",
+  "defaultServings": 4,
+  "prepTimeMinutes": 15,
+  "cookTimeMinutes": 35,
+  "leftoverDays": null,
+  "image": "",
+  "createdAt": "{{time:-20160}}",
+  "updatedAt": "{{time:-6720}}",
+  "tags": [
+   {
+    "id": "tag-vegetarian",
+    "category": "DIETARY",
+    "nameEn": "Vegetarian",
+    "nameDe": "Vegetarisch"
+   },
+   {
+    "id": "tag-italian",
+    "category": "CUISINE",
+    "nameEn": "Italian",
+    "nameDe": "Italienisch"
+   },
+   {
+    "id": "tag-elaborate",
+    "category": "MEAL_TYPE",
+    "nameEn": "Elaborate",
+    "nameDe": "Aufwändig"
+   }
+  ],
+  "ingredients": [
+   {
+    "id": 600,
+    "ingredientId": 86,
+    "quantity": "320",
+    "unitId": 1,
+    "order": 0
+   },
+   {
+    "id": 601,
+    "ingredientId": 10,
+    "quantity": "400",
+    "unitId": 1,
+    "order": 1
+   },
+   {
+    "id": 602,
+    "ingredientId": 1,
+    "quantity": "1",
+    "unitId": 5,
+    "order": 2
+   },
+   {
+    "id": 603,
+    "ingredientId": 2,
+    "quantity": "2",
+    "unitId": 5,
+    "order": 3
+   },
+   {
+    "id": 604,
+    "ingredientId": 77,
+    "quantity": "100",
+    "unitId": 3,
+    "order": 4
+   },
+   {
+    "id": 605,
+    "ingredientId": 56,
+    "quantity": "1.2",
+    "unitId": 4,
+    "order": 5
+   },
+   {
+    "id": 606,
+    "ingredientId": 29,
+    "quantity": "60",
+    "unitId": 1,
+    "order": 6
+   },
+   {
+    "id": 607,
+    "ingredientId": 26,
+    "quantity": "40",
+    "unitId": 1,
+    "order": 7
+   },
+   {
+    "id": 608,
+    "ingredientId": 46,
+    "quantity": "2",
+    "unitId": 6,
+    "order": 8
+   },
+   {
+    "id": 609,
+    "ingredientId": 22,
+    "quantity": "10",
+    "unitId": 1,
+    "order": 9
+   }
+  ],
+  "manualSteps": [
+   {
+    "id": 651,
+    "method": "MANUAL",
+    "stepNumber": 1,
+    "instruction": "Slice the mushrooms and brown them in half of the butter; set aside.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 601,
+      "quantity": "400"
+     },
+     {
+      "recipeIngredientId": 607,
+      "quantity": "20"
+     }
+    ]
+   },
+   {
+    "id": 652,
+    "method": "MANUAL",
+    "stepNumber": 2,
+    "instruction": "Heat the broth. Soften the chopped onion and garlic in the oil, add the rice and toast for 2 minutes.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 605,
+      "quantity": "1.2"
+     },
+     {
+      "recipeIngredientId": 602,
+      "quantity": "1"
+     },
+     {
+      "recipeIngredientId": 603,
+      "quantity": "2"
+     },
+     {
+      "recipeIngredientId": 608,
+      "quantity": "2"
+     },
+     {
+      "recipeIngredientId": 600,
+      "quantity": "320"
+     }
+    ]
+   },
+   {
+    "id": 653,
+    "method": "MANUAL",
+    "stepNumber": 3,
+    "instruction": "Pour in the wine and let it bubble away.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 604,
+      "quantity": "100"
+     }
+    ]
+   },
+   {
+    "id": 654,
+    "method": "MANUAL",
+    "stepNumber": 4,
+    "instruction": "Add the broth a ladle at a time, stirring, for about 20 minutes until the rice is creamy.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": []
+   },
+   {
+    "id": 655,
+    "method": "MANUAL",
+    "stepNumber": 5,
+    "instruction": "Stir in the mushrooms, the rest of the butter, the parmesan and parsley. Rest for 2 minutes.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 607,
+      "quantity": "20"
+     },
+     {
+      "recipeIngredientId": 606,
+      "quantity": "60"
+     },
+     {
+      "recipeIngredientId": 609,
+      "quantity": "10"
+     }
+    ]
+   }
+  ],
+  "machineSteps": []
+ },
+ "ingredients": [
+  {
+   "id": 1,
+   "nameEn": "onion",
+   "nameDe": "Zwiebel",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 2,
+   "nameEn": "garlic",
+   "nameDe": "Knoblauch",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 10,
+   "nameEn": "mushroom",
+   "nameDe": "Champignon",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 22,
+   "nameEn": "fresh parsley",
+   "nameDe": "Frische Petersilie",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 26,
+   "nameEn": "butter",
+   "nameDe": "Butter",
+   "category": "DAIRY"
+  },
+  {
+   "id": 29,
+   "nameEn": "parmesan",
+   "nameDe": "Parmesan",
+   "category": "DAIRY"
+  },
+  {
+   "id": 46,
+   "nameEn": "olive oil",
+   "nameDe": "Olivenöl",
+   "category": "PANTRY"
+  },
+  {
+   "id": 56,
+   "nameEn": "vegetable broth",
+   "nameDe": "Gemüsebrühe",
+   "category": "PANTRY"
+  },
+  {
+   "id": 77,
+   "nameEn": "white wine",
+   "nameDe": "Weißwein",
+   "category": "PANTRY"
+  },
+  {
+   "id": 86,
+   "nameEn": "arborio rice",
+   "nameDe": "Risottoreis",
+   "category": "PANTRY"
+  }
+ ],
+ "units": [
+  {
+   "id": 1,
+   "nameEn": "gram",
+   "nameDe": "Gramm",
+   "abbreviation": "g"
+  },
+  {
+   "id": 3,
+   "nameEn": "milliliter",
+   "nameDe": "Milliliter",
+   "abbreviation": "ml"
+  },
+  {
+   "id": 4,
+   "nameEn": "liter",
+   "nameDe": "Liter",
+   "abbreviation": "l"
+  },
+  {
+   "id": 5,
+   "nameEn": "piece",
+   "nameDe": "Stück",
+   "abbreviation": "Stk"
+  },
+  {
+   "id": 6,
+   "nameEn": "tablespoon",
+   "nameDe": "Esslöffel",
+   "abbreviation": "EL"
+  }
+ ]
+}

@@ -1,0 +1,310 @@
+{
+ "recipe": {
+  "id": "recipe-soup",
+  "title": "Tomato soup",
+  "description": "Smooth tomato soup with basil. Quick, cheap and even better the next day.",
+  "listType": "KNOWN",
+  "defaultServings": 4,
+  "prepTimeMinutes": 10,
+  "cookTimeMinutes": 30,
+  "leftoverDays": 2,
+  "image": "",
+  "createdAt": "{{time:-129600}}",
+  "updatedAt": "{{time:-43200}}",
+  "tags": [
+   {
+    "id": "tag-vegan",
+    "category": "DIETARY",
+    "nameEn": "Vegan",
+    "nameDe": "Vegan"
+   },
+   {
+    "id": "tag-simple",
+    "category": "MEAL_TYPE",
+    "nameEn": "Simple",
+    "nameDe": "Einfach"
+   },
+   {
+    "id": "tag-one-pot",
+    "category": "MEAL_TYPE",
+    "nameEn": "One-Pot",
+    "nameDe": "Eintopf"
+   }
+  ],
+  "ingredients": [
+   {
+    "id": 400,
+    "ingredientId": 46,
+    "quantity": "2",
+    "unitId": 6,
+    "order": 0
+   },
+   {
+    "id": 401,
+    "ingredientId": 1,
+    "quantity": "1",
+    "unitId": 5,
+    "order": 1
+   },
+   {
+    "id": 402,
+    "ingredientId": 2,
+    "quantity": "2",
+    "unitId": 5,
+    "order": 2
+   },
+   {
+    "id": 403,
+    "ingredientId": 5,
+    "quantity": "1",
+    "unitId": 5,
+    "order": 3
+   },
+   {
+    "id": 404,
+    "ingredientId": 55,
+    "quantity": "800",
+    "unitId": 1,
+    "order": 4
+   },
+   {
+    "id": 405,
+    "ingredientId": 56,
+    "quantity": "0.5",
+    "unitId": 4,
+    "order": 5
+   },
+   {
+    "id": 406,
+    "ingredientId": 21,
+    "quantity": "10",
+    "unitId": 1,
+    "order": 6
+   },
+   {
+    "id": 407,
+    "ingredientId": 52,
+    "quantity": "1",
+    "unitId": 7,
+    "order": 7
+   },
+   {
+    "id": 408,
+    "ingredientId": 47,
+    "quantity": "1",
+    "unitId": 7,
+    "order": 8
+   },
+   {
+    "id": 409,
+    "ingredientId": 48,
+    "quantity": "1",
+    "unitId": 8,
+    "order": 9
+   }
+  ],
+  "manualSteps": [
+   {
+    "id": 451,
+    "method": "MANUAL",
+    "stepNumber": 1,
+    "instruction": "Chop the onion, garlic and carrot.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 401,
+      "quantity": "1"
+     },
+     {
+      "recipeIngredientId": 402,
+      "quantity": "2"
+     },
+     {
+      "recipeIngredientId": 403,
+      "quantity": "1"
+     }
+    ]
+   },
+   {
+    "id": 452,
+    "method": "MANUAL",
+    "stepNumber": 2,
+    "instruction": "Soften them in the oil for 8 minutes.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 400,
+      "quantity": "2"
+     }
+    ]
+   },
+   {
+    "id": 453,
+    "method": "MANUAL",
+    "stepNumber": 3,
+    "instruction": "Add tomatoes, broth and sugar and simmer for 20 minutes.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 404,
+      "quantity": "800"
+     },
+     {
+      "recipeIngredientId": 405,
+      "quantity": "0.5"
+     },
+     {
+      "recipeIngredientId": 407,
+      "quantity": "1"
+     }
+    ]
+   },
+   {
+    "id": 454,
+    "method": "MANUAL",
+    "stepNumber": 4,
+    "instruction": "Add the basil, blend until smooth and season with salt and pepper.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 406,
+      "quantity": "10"
+     },
+     {
+      "recipeIngredientId": 408,
+      "quantity": "1"
+     },
+     {
+      "recipeIngredientId": 409,
+      "quantity": "1"
+     }
+    ]
+   }
+  ],
+  "machineSteps": []
+ },
+ "ingredients": [
+  {
+   "id": 1,
+   "nameEn": "onion",
+   "nameDe": "Zwiebel",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 2,
+   "nameEn": "garlic",
+   "nameDe": "Knoblauch",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 5,
+   "nameEn": "carrot",
+   "nameDe": "Karotte",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 21,
+   "nameEn": "fresh basil",
+   "nameDe": "Frisches Basilikum",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 46,
+   "nameEn": "olive oil",
+   "nameDe": "Olivenöl",
+   "category": "PANTRY"
+  },
+  {
+   "id": 47,
+   "nameEn": "salt",
+   "nameDe": "Salz",
+   "category": "PANTRY"
+  },
+  {
+   "id": 48,
+   "nameEn": "black pepper",
+   "nameDe": "Schwarzer Pfeffer",
+   "category": "PANTRY"
+  },
+  {
+   "id": 52,
+   "nameEn": "sugar",
+   "nameDe": "Zucker",
+   "category": "PANTRY"
+  },
+  {
+   "id": 55,
+   "nameEn": "canned tomatoes",
+   "nameDe": "Dosentomaten",
+   "category": "PANTRY"
+  },
+  {
+   "id": 56,
+   "nameEn": "vegetable broth",
+   "nameDe": "Gemüsebrühe",
+   "category": "PANTRY"
+  }
+ ],
+ "units": [
+  {
+   "id": 1,
+   "nameEn": "gram",
+   "nameDe": "Gramm",
+   "abbreviation": "g"
+  },
+  {
+   "id": 4,
+   "nameEn": "liter",
+   "nameDe": "Liter",
+   "abbreviation": "l"
+  },
+  {
+   "id": 5,
+   "nameEn": "piece",
+   "nameDe": "Stück",
+   "abbreviation": "Stk"
+  },
+  {
+   "id": 6,
+   "nameEn": "tablespoon",
+   "nameDe": "Esslöffel",
+   "abbreviation": "EL"
+  },
+  {
+   "id": 7,
+   "nameEn": "teaspoon",
+   "nameDe": "Teelöffel",
+   "abbreviation": "TL"
+  },
+  {
+   "id": 8,
+   "nameEn": "pinch",
+   "nameDe": "Prise",
+   "abbreviation": "Prise"
+  }
+ ]
+}

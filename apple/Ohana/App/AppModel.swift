@@ -5,32 +5,48 @@ import UIKit
 #endif
 
 /// The app's session: which server, the device's API token, the account and its families, and
-/// the family on screen. One per app; views read it from the environment.
+/// the family on screen. One per app; views read it from the environment. Without a server the
+/// app shows the demo (`DemoServer`, read-only) until one is connected.
 @Observable
 final class AppModel {
     enum Phase: Equatable {
-        /// No server or token yet: the welcome screen.
-        case signedOut
-        /// Signed in, loading the account.
+        /// Loading the account (of the server or the demo).
         case loading
         case ready
         /// Signed in, but the account couldn't be loaded (offline, server down).
         case failed(String)
     }
 
-    private(set) var phase: Phase = .signedOut
+    /// What the loading screen covers the whole app for, while it switches between the demo
+    /// and a server (`RootView`).
+    enum Switch: Equatable {
+        /// A server was connected: until its account and families are loaded.
+        case server(host: String)
+        /// The server was removed (signed out): until the demo is loaded.
+        case demo
+    }
+
+    private(set) var phase: Phase = .loading
+    private(set) var switching: Switch?
+    /// The connected server; nil in the demo.
     private(set) var serverURL: URL?
     private(set) var me: UserAccount?
     private(set) var families: [FamilySummary] = []
     private(set) var client: APIClient?
 
-    /// The server of a link opened while signed out (an invite link, a page of the server): the
-    /// welcome screen takes it (`takePendingServer`) and starts signing in.
+    /// The server of a link opened in the demo (an invite link, a page of the server): the
+    /// connect sheet takes it (`takePendingServer`) and starts signing in.
     private(set) var pendingServer: URL?
 
-    /// The family on screen; remembered per device.
+    /// The sheet that connects a server (`ConnectServerView`), shown over the demo.
+    var showsConnect = false
+
+    /// No server connected: the screens show the demo's data.
+    var isDemo: Bool { client?.isDemo ?? true }
+
+    /// The family on screen; remembered per device (the demo's isn't).
     var selectedFamilyID: String? {
-        didSet { UserDefaults.standard.set(selectedFamilyID, forKey: Keys.family) }
+        didSet { if !isDemo { UserDefaults.standard.set(selectedFamilyID, forKey: Keys.family) } }
     }
 
     var selectedFamily: FamilySummary? {
@@ -61,8 +77,10 @@ final class AppModel {
         if let text = UserDefaults.standard.string(forKey: Keys.server), let url = URL(string: text),
            let token = Keychain.load(Keys.token) {
             connect(server: url, token: token)
-            Task { await refresh() }
+        } else {
+            connectDemo()
         }
+        Task { await refresh() }
     }
 
     /// For previews and tests: a model with fixed data, not touching the Keychain.
@@ -75,8 +93,10 @@ final class AppModel {
         phase = .ready
     }
 
-    /// For previews and tests: signed out (the welcome screen), not touching the Keychain.
-    init(signedOutPreview: Void) {}
+    /// For previews and tests: the demo before it's loaded, not touching the Keychain.
+    init(signedOutPreview: Void) {
+        connectDemo()
+    }
 
     func context(for family: FamilySummary) -> FamilyContext? {
         guard let client else { return nil }
@@ -89,24 +109,55 @@ final class AppModel {
 
     // MARK: Signing in and out
 
-    /// Stores the paired server and token and loads the account.
+    /// Stores the paired server and token and loads the account, behind the loading screen
+    /// (the demo's data must not show as the server's).
     func didPair(server: URL, token: String) async {
-        UserDefaults.standard.set(server.absoluteString, forKey: Keys.server)
-        Keychain.save(token, for: Keys.token)
-        connect(server: server, token: token)
-        await refresh()
+        await whileSwitching(.server(host: server.host() ?? server.absoluteString)) {
+            UserDefaults.standard.set(server.absoluteString, forKey: Keys.server)
+            Keychain.save(token, for: Keys.token)
+            connect(server: server, token: token)
+            await refresh()
+        }
     }
 
     private func connect(server: URL, token: String) {
         serverURL = server
         let client = APIClient(baseURL: server, token: token)
         client.onUnauthorized = { [weak self] in
-            Task { @MainActor in self?.forget() }
+            Task { @MainActor in await self?.useDemo(signingOut: false) }
         }
         self.client = client
+        // The demo's family isn't remembered: back to the server's.
+        selectedFamilyID = UserDefaults.standard.string(forKey: Keys.family)
+        reset()
+    }
+
+    private func connectDemo() {
+        serverURL = nil
+        client = APIClient(demo: DemoServer())
+        reset()
+    }
+
+    /// Forgets the previous connection's account, families and caches.
+    private func reset() {
+        me = nil
+        families = []
         contexts = [:]
         phase = .loading
     }
+
+    /// Covers the app with the loading screen for `work`, and a little longer when it's quick, so
+    /// the switch reads as one and never flickers.
+    private func whileSwitching(_ kind: Switch, _ work: () async -> Void) async {
+        switching = kind
+        let start = ContinuousClock.now
+        await work()
+        let rest = Self.minimumSwitch - (ContinuousClock.now - start)
+        if rest > .zero { try? await Task.sleep(for: rest) }
+        switching = nil
+    }
+
+    static var minimumSwitch = Duration.milliseconds(900)
 
     /// Reloads the account and its families (after creating or leaving a family, too).
     func refresh() async {
@@ -122,30 +173,33 @@ final class AppModel {
             phase = .ready
         } catch is CancellationError {
         } catch APIError.unauthorized {
-            forget()
+            await useDemo(signingOut: false)
         } catch {
             if me == nil { phase = .failed(error.localizedDescription) }
         }
     }
 
-    /// Signs the device out: the server forgets its token, the app forgets the server.
+    /// Signs the device out: the server forgets its token, the app forgets the server and shows
+    /// the demo again.
     func signOut() async {
-        if let client {
-            _ = try? await client.send(.delete, "/api/v1/me", as: JSONValue.self)
+        await useDemo(signingOut: true)
+    }
+
+    /// Back to the demo, behind the loading screen; `signingOut` deletes the token on the server
+    /// first (not after a 401: the server doesn't know it anymore).
+    private func useDemo(signingOut: Bool) async {
+        guard let client, !client.isDemo else { return }
+        await whileSwitching(.demo) {
+            Keychain.delete(Keys.token)
+            connectDemo()
+            if signingOut {
+                _ = try? await client.send(.delete, "/api/v1/me", as: JSONValue.self)
+            }
+            await refresh()
         }
-        forget()
     }
 
-    private func forget() {
-        Keychain.delete(Keys.token)
-        client = nil
-        me = nil
-        families = []
-        contexts = [:]
-        phase = .signedOut
-    }
-
-    /// The server a link brought while signed out, once.
+    /// The server a link brought in the demo, once.
     func takePendingServer() -> URL? {
         defer { pendingServer = nil }
         return pendingServer
@@ -175,7 +229,7 @@ final class AppModel {
     /// (`openSignedOut`). False for links it can't open.
     @discardableResult
     func open(_ url: URL) -> Bool {
-        if phase == .signedOut { return openSignedOut(url) }
+        if isDemo { return openSignedOut(url) }
         var path = url.path(percentEncoded: false)
         if url.scheme == DevicePairing.callbackScheme {
             // ohana://f/{id}/…: "f" is the host.
@@ -195,18 +249,20 @@ final class AppModel {
         return true
     }
 
-    /// Signed out: a server's link names the server, so the welcome screen signs in there right
+    /// In the demo: a server's link names the server, so the connect sheet signs in there right
     /// away (`pendingServer`); an invite's code waits in `InviteInbox` to be joined once signed
-    /// in. `ohana://invite/{code}` carries no server: the welcome screen asks for it.
+    /// in. `ohana://invite/{code}` carries no server: the connect sheet asks for it.
     private func openSignedOut(_ url: URL) -> Bool {
         if url.scheme == DevicePairing.callbackScheme {
             guard let code = InviteCode.code(in: url) else { return false }
             InviteInbox.shared.receive(code)
+            showsConnect = true
             return true
         }
         guard let link = ServerLink(url: url) else { return false }
         if let code = link.inviteCode { InviteInbox.shared.receive(code) }
         pendingServer = link.server
+        showsConnect = true
         return true
     }
 }
