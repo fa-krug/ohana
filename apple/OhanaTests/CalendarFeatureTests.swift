@@ -141,8 +141,7 @@ struct CalendarMonthListTests {
         let frames: [Int: CGRect] = [1: CGRect(x: 0, y: 0, width: 350, height: 250),
                                      2: CGRect(x: 0, y: 300, width: 350, height: 250)]
         func day(_ x: CGFloat, _ y: CGFloat, clamp: Bool = false) -> Day? {
-            CalendarGridLayout.day(at: CGPoint(x: x, y: y), inMonths: frames, year: 2026, firstWeekday: 2,
-                                   rowHeight: 50, clamp: clamp)
+            CalendarGridLayout.day(at: CGPoint(x: x, y: y), inMonths: frames, year: 2026, firstWeekday: 2, clamp: clamp)
         }
         #expect(day(160, 10) == d("2026-01-01"))
         // 1 February 2026 is a Sunday: the last column of the first week.
@@ -153,9 +152,144 @@ struct CalendarMonthListTests {
         #expect(day(10, 290, clamp: true) == d("2026-02-01"))
         #expect(day(10, 2000, clamp: true) == d("2026-02-23"))
         #expect(day(340, 2000, clamp: true) == d("2026-02-28"))
-        #expect(CalendarGridLayout.day(at: .zero, inMonths: [:], year: 2026, firstWeekday: 2, rowHeight: 50, clamp: true) == nil)
+        #expect(CalendarGridLayout.day(at: .zero, inMonths: [:], year: 2026, firstWeekday: 2, clamp: true) == nil)
+    }
+
+    @Test func findsDaysBetweenTheGapsOfTheMonthView() {
+        // March 2026 in weeks from Sunday: 5 rows of 40 points with 3 points between them.
+        let frames: [Int: CGRect] = [3: CGRect(x: 10, y: 100, width: 7 * 50 + 6 * 3, height: 5 * 40 + 4 * 3)]
+        func day(_ x: CGFloat, _ y: CGFloat) -> Day? {
+            CalendarGridLayout.day(at: CGPoint(x: x, y: y), inMonths: frames, year: 2026, firstWeekday: 1, spacing: 3)
+        }
+        // 1 March 2026 is a Sunday: the first cell.
+        #expect(day(15, 105) == d("2026-03-01"))
+        // The second row starts after the first one and its gap.
+        #expect(day(15, 100 + 43 + 1) == d("2026-03-08"))
+        // A point in the gap belongs to the day before it.
+        #expect(day(10 + 51, 105) == d("2026-03-01"))
+        #expect(day(10 + 54, 105) == d("2026-03-02"))
     }
 }
+
+struct CalendarMonthViewTests {
+    @Test func laysOutTheWeeksFromTheLocalesFirstDay() {
+        // February 2026 starts on a Sunday: no blank from Sunday, six from Monday.
+        let sunday = CalendarGridLayout.Month(year: 2026, month: 2, firstWeekday: 1, width: 350, rowHeight: 40)
+        #expect(sunday.weeks.count == 4)
+        #expect(sunday.weeks[0] == [1, 2, 3, 4, 5, 6, 7])
+        let monday = CalendarGridLayout.Month(year: 2026, month: 2, firstWeekday: 2, width: 350, rowHeight: 40)
+        #expect(monday.weeks.count == 5)
+        #expect(monday.weeks[0] == [nil, nil, nil, nil, nil, nil, 1])
+        #expect(monday.weeks[4] == [23, 24, 25, 26, 27, 28, nil])
+    }
+
+    @Test func keepsTheWebsCellsWithGaps() {
+        let layout = CalendarGridLayout.Month(year: 2026, month: 1, firstWeekday: 2, width: 7 * 50 + 6 * 3,
+                                              rowHeight: 40, spacing: 3)
+        #expect(layout.cellWidth == 50)
+        #expect(layout.height == CGFloat(5 * 40 + 4 * 3))
+        #expect(layout.frame(of: d("2026-01-05")) == CGRect(x: 0, y: 43, width: 50, height: 40))
+        // Cells of 1 : 0.8, taller when the text needs it (Dynamic Type).
+        #expect(CalendarGridLayout.Month.rowHeight(width: 7 * 50 + 6 * 3, spacing: 3, minimum: 30) == 40)
+        #expect(CalendarGridLayout.Month.rowHeight(width: 7 * 50 + 6 * 3, spacing: 3, minimum: 84) == 84)
+    }
+
+    @Test func namesTheWeekdaysInTheLocalesOrder() {
+        let symbols = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+        #expect(CalendarText.inWeekOrder(symbols, firstWeekday: 1) == symbols)
+        #expect(CalendarText.inWeekOrder(symbols, firstWeekday: 2) == ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])
+        #expect(CalendarText.inWeekOrder(symbols, firstWeekday: 7).first == "Sat")
+        #expect(CalendarText.weekdayNames.count == 7)
+    }
+}
+
+struct CalendarAccessibilityTests {
+    @Test func readsTheWholeDay() {
+        let type = CalendarEntryType(id: "t1", year: 2026, name: "Vacation", color: "#3b82f6", role: .covers)
+        let event = CalendarEvent(id: "e1", date: d("2026-03-10"), start: "09:30", end: nil, title: "Dentist")
+        let text = CalendarDayCell.accessibilityText(day: d("2026-03-10"), types: [type],
+                                                     note: CalendarNote(icon: "🎈", comment: "Party"), events: [event],
+                                                     birthdays: [CalendarBirthday(name: "Mia", age: 7)], gap: true)
+        #expect(text == CalendarText.longDay(d("2026-03-10")) + ", Vacation, 🎈 Party, 09:30 Dentist, 🎂 Mia turns 7, Not covered")
+        #expect(CalendarDayCell.accessibilityText(day: d("2026-03-10"), types: [], note: nil, events: [], birthdays: [],
+                                                  gap: false) == CalendarText.longDay(d("2026-03-10")))
+    }
+
+    @Test func announcesTheSelection() {
+        #expect(CalendarText.selectionAnnouncement(0) == "No days selected")
+        #expect(CalendarText.selectionAnnouncement(1) == "1 day selected")
+        #expect(CalendarText.selectionAnnouncement(5) == "5 days selected")
+    }
+}
+
+/// Answers the calendar's requests like the server would (a deleted event, one made again)
+/// and records them; nothing leaves the test.
+nonisolated final class CalendarStubProtocol: URLProtocol {
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var log: [String] = []
+
+    static var requests: [String] { lock.withLock { log } }
+    static func reset() { lock.withLock { log = [] } }
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override func startLoading() {
+        let method = request.httpMethod ?? "GET"
+        let path = request.url?.path ?? ""
+        Self.lock.withLock { Self.log.append("\(method) \(path)") }
+        var status = 200
+        var body = Data("{}".utf8)
+        if method == "POST" && path.hasSuffix("/events") {
+            body = Data(#"{"id":"e2","date":"2026-03-10","start":"09:30","end":null,"title":"Dentist"}"#.utf8)
+        } else if method == "GET" {
+            status = 503
+        }
+        let response = HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil,
+                                       headerFields: ["Content-Type": "application/json"])!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: body)
+        client?.urlProtocolDidFinishLoading(self)
+    }
+    override func stopLoading() {}
+}
+
+@Suite(.serialized)
+struct CalendarEventUndoTests {
+    private func store() -> CalendarStore {
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [CalendarStubProtocol.self]
+        let client = APIClient(baseURL: URL(string: "https://x.example")!, token: nil, session: URLSession(configuration: config))
+        return CalendarStore(api: FamilyAPI(client: client, familyID: "f1"), year: 2026, readOnly: false)
+    }
+
+    private func waitFor(_ request: String, times: Int = 1) async -> Bool {
+        for _ in 0..<200 {
+            if CalendarStubProtocol.requests.filter({ $0 == request }).count >= times { return true }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        return false
+    }
+
+    @Test func undoBringsADeletedEventBackAndRedoDeletesItAgain() async throws {
+        CalendarStubProtocol.reset()
+        let store = store()
+        let event = CalendarEvent(id: "e1", date: d("2026-03-10"), start: "09:30", end: nil, title: "Dentist")
+        try await store.deleteEvent(event)
+        #expect(CalendarStubProtocol.requests.contains("DELETE /api/v1/families/f1/events/e1"))
+        #expect(store.canUndo)
+        #expect(store.toast == "Deleted “Dentist”")
+        #expect(store.toastOffersUndo)
+
+        store.undo()
+        #expect(await waitFor("POST /api/v1/families/f1/events"))
+        #expect(store.canRedo)
+        // Made again with a new id (then reloaded), which redo deletes.
+        #expect(await waitFor("GET /api/v1/families/f1", times: 2))
+        store.redo()
+        #expect(await waitFor("DELETE /api/v1/families/f1/events/e2"))
+    }
+}
+
 
 struct CalendarRouteTests {
     @Test func showsADayOfTheYear() {
@@ -170,7 +304,10 @@ struct CalendarRouteTests {
     @Test func helpFitsTheDevice() {
         #expect(CalendarHelpSheet.sections(mac: true, compact: false) == [.pointer, .keyboard])
         #expect(CalendarHelpSheet.sections(mac: false, compact: true) == [.touch])
-        #expect(CalendarHelpSheet.sections(mac: false, compact: false) == [.touch, .keyboard])
+        #expect(CalendarHelpSheet.sections(mac: false, compact: false) == [.touch, .pointer, .keyboard])
+        // An iPad's pointer: modifier clicks and the context menu, no click-and-drag (it scrolls).
+        #expect(CalendarHelpSheet.rows(.pointer, mac: false).count == 3)
+        #expect(CalendarHelpSheet.rows(.pointer, mac: true).count == 8)
     }
 }
 

@@ -107,18 +107,31 @@ enum CalendarText {
 
     /// Weekday letters in the order of the device's week (`firstWeekday`).
     static var weekdayLetters: [String] {
-        let cal = Calendar.current
-        let symbols = cal.veryShortStandaloneWeekdaySymbols
-        return (0..<7).map { symbols[(cal.firstWeekday - 1 + $0) % 7] }
+        inWeekOrder(Calendar.current.veryShortStandaloneWeekdaySymbols, firstWeekday: Calendar.current.firstWeekday)
+    }
+
+    /// Short weekday names ("Mon") in the order of the device's week (the web's month view).
+    static var weekdayNames: [String] {
+        inWeekOrder(Calendar.current.shortStandaloneWeekdaySymbols, firstWeekday: Calendar.current.firstWeekday)
+    }
+
+    /// Sunday-first weekday symbols reordered for a week starting on `firstWeekday` (1 = Sunday).
+    static func inWeekOrder(_ symbols: [String], firstWeekday: Int) -> [String] {
+        (0..<7).map { symbols[(firstWeekday - 1 + $0) % 7] }
+    }
+
+    /// What VoiceOver says after the selection changed: "3 days selected", "No days selected".
+    static func selectionAnnouncement(_ count: Int) -> String {
+        count == 0 ? String(localized: "No days selected") : plural("^[\(count) day](inflect: true) selected")
     }
 }
 
-/// The colors of a day's entry types as side-by-side bands (the web grid's fills).
+/// The colors of a day's entry types as bands one above the other (the web grid's fills).
 struct CalendarFills: View {
     let types: [CalendarEntryType]
 
     var body: some View {
-        HStack(spacing: 0) {
+        VStack(spacing: 1) {
             ForEach(types) { type in
                 Color(calendarHex: type.color)
                     .overlay {
@@ -166,32 +179,24 @@ struct CalendarSwatch: View {
     }
 }
 
-/// The year's types as toggle chips with their workday counts; on the selection they add or
-/// remove the type. `wrap`: in rows (iPad and Mac), else one row that scrolls (the dock). A
+/// The year's types as toggle chips with their workday counts, in one row that scrolls (in the
+/// selection bar), and the way to edit them; on the selection they add or remove the type. A
 /// year without types offers to copy them from another year.
 struct CalendarTypeChips: View {
     @Environment(FamilyContext.self) private var family
     @Bindable var store: CalendarStore
-    var showEditLink = true
-    var wrap = false
 
     var body: some View {
         if store.types.isEmpty {
             if store.typeYears != nil { CalendarEmptyTypes(store: store) }
-        } else if wrap {
-            GlassEffectContainer(spacing: 8) {
-                CalendarFlowLayout(spacing: 8) { chips }
-                    .padding(.vertical, 2)
-            }
         } else {
             ScrollView(.horizontal) {
-                GlassEffectContainer(spacing: 8) {
-                    HStack(spacing: 8) { chips }
-                        .padding(.horizontal, 2)
-                        .padding(.vertical, 4)
-                }
+                HStack(spacing: 8) { chips }
+                    .padding(.horizontal, 2)
+                    .padding(.vertical, 4)
             }
             .scrollIndicators(.hidden)
+            .scrollClipDisabled()
         }
     }
 
@@ -201,20 +206,20 @@ struct CalendarTypeChips: View {
         ForEach(Array(store.types.enumerated()), id: \.element.id) { index, type in
             chip(type, index: index, stats: stats[type.id] ?? CalendarTypeStats())
         }
-        if showEditLink && !store.readOnly {
+        if !store.readOnly {
             Button {
                 family.open(.settings(.calendar))
             } label: {
-                Image(systemName: "pencil")
-                    .frame(width: 30, height: 30)
+                Label("Edit types", systemImage: "pencil")
             }
-            .buttonStyle(.glass)
+            .labelStyle(.iconOnly)
+            .buttonStyle(.bordered)
             .buttonBorderShape(.circle)
             .help("Edit types")
-            .accessibilityLabel("Edit types")
         }
     }
 
+    /// A chip like the web's: the type's color around it and tinted while every selected day has it.
     private func chip(_ type: CalendarEntryType, index: Int, stats: CalendarTypeStats) -> some View {
         let active = store.selectionHas(type.id)
         let color = Color(calendarHex: type.color)
@@ -231,11 +236,16 @@ struct CalendarTypeChips: View {
             .font(.subheadline.weight(active ? .semibold : .regular))
             .padding(.horizontal, 12)
             .padding(.vertical, 7)
+            .frame(minHeight: 36)
+            .background(active ? color.opacity(0.28) : Color.primary.opacity(0.06), in: .capsule)
+            .overlay(Capsule().strokeBorder(active ? color : Color.primary.opacity(0.12), lineWidth: active ? 1.5 : 1))
+            .contentShape(.capsule)
         }
         .buttonStyle(.plain)
-        .glassEffect(.regular.tint(active ? color.opacity(0.45) : .clear).interactive(), in: .capsule)
         .disabled(store.readOnly)
         .help(chipHelp(type, index: index, stats: stats))
+        .accessibilityLabel(type.name)
+        .accessibilityValue(CalendarText.workdays(stats.workdays))
         .accessibilityAddTraits(active ? .isSelected : [])
     }
 
@@ -245,53 +255,6 @@ struct CalendarTypeChips: View {
             text += "\n" + String(localized: "Click (or press \(index + 1)) to toggle it on the selected days")
         }
         return text
-    }
-}
-
-/// Lays its views out in rows, wrapping when the width is used up (the type chips).
-struct CalendarFlowLayout: Layout {
-    var spacing: CGFloat = 8
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let rows = arrange(width: proposal.width ?? .infinity, subviews: subviews)
-        let width = rows.map(\.width).max() ?? 0
-        let height = rows.map(\.height).reduce(0, +) + spacing * CGFloat(max(0, rows.count - 1))
-        return CGSize(width: proposal.width ?? width, height: height)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        var y = bounds.minY
-        for row in arrange(width: bounds.width, subviews: subviews) {
-            var x = bounds.minX
-            for index in row.indices {
-                let size = subviews[index].sizeThatFits(.unspecified)
-                subviews[index].place(at: CGPoint(x: x, y: y + (row.height - size.height) / 2), proposal: ProposedViewSize(size))
-                x += size.width + spacing
-            }
-            y += row.height + spacing
-        }
-    }
-
-    private struct Row {
-        var indices: [Int] = []
-        var width: CGFloat = 0
-        var height: CGFloat = 0
-    }
-
-    private func arrange(width: CGFloat, subviews: Subviews) -> [Row] {
-        var rows = [Row()]
-        for index in subviews.indices {
-            let size = subviews[index].sizeThatFits(.unspecified)
-            let last = rows.count - 1
-            if !rows[last].indices.isEmpty && rows[last].width + spacing + size.width > width {
-                rows.append(Row())
-            }
-            let i = rows.count - 1
-            rows[i].width += (rows[i].indices.isEmpty ? 0 : spacing) + size.width
-            rows[i].height = max(rows[i].height, size.height)
-            rows[i].indices.append(index)
-        }
-        return rows.filter { !$0.indices.isEmpty }
     }
 }
 
@@ -310,11 +273,11 @@ struct CalendarEmptyTypes: View {
                     Button("Copy types from \(String(source))") {
                         perform { try await store.copyTypes(from: source) }
                     }
-                    .buttonStyle(.glassProminent)
+                    .buttonStyle(.borderedProminent)
                     .help("Start \(String(store.year)) with the types of \(String(source)); you can change them afterwards")
                 } else {
                     Button("Add types") { family.open(.settings(.calendar)) }
-                        .buttonStyle(.glassProminent)
+                        .buttonStyle(.borderedProminent)
                 }
             }
         }
@@ -345,7 +308,7 @@ struct CalendarCoveragePill: View {
                         Label("Next gap", systemImage: "arrow.right")
                             .labelStyle(.titleAndIcon)
                     }
-                    .buttonStyle(.glass)
+                    .buttonStyle(.bordered)
                     .controlSize(.small)
                     .help("Jump to the next uncovered day (G)")
                 }
@@ -355,7 +318,7 @@ struct CalendarCoveragePill: View {
             .padding(.leading, 12)
             .padding(.trailing, gaps.isEmpty ? 12 : 4)
             .padding(.vertical, 4)
-            .glassEffect(.regular.tint((gaps.isEmpty ? Color.green : Color.red).opacity(0.12)), in: .capsule)
+            .background((gaps.isEmpty ? Color.green : Color.red).opacity(0.12), in: .capsule)
             .help(gaps.isEmpty
                   ? String(localized: "All “\(names)” days in \(String(store.year)) are covered")
                   : String(localized: "\(CalendarText.weekdays(gaps.count)) with “\(names)” not covered yet"))
@@ -399,22 +362,30 @@ struct CalendarYearSwitcher: View {
     }
 }
 
-/// A short message floating at the bottom (copied, nothing to undo…).
-struct CalendarToast: ViewModifier {
-    let text: String?
+/// A short message floating at the bottom (copied, nothing to undo…), with Undo after a
+/// change that can be undone (a deleted event).
+struct CalendarToast: View {
+    let store: CalendarStore
 
-    func body(content: Content) -> some View {
-        content.overlay(alignment: .top) {
-            if let text {
-                Text(text)
-                    .font(.callout)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .glassEffect(.regular, in: .capsule)
-                    .padding(.top, 8)
-                    .transition(.move(edge: .top).combined(with: .opacity))
+    var body: some View {
+        Group {
+            if let text = store.toast {
+                HStack(spacing: 12) {
+                    Text(text).font(.callout)
+                    if store.toastOffersUndo && store.canUndo {
+                        Button("Undo") { store.performUndo() }
+                            .font(.callout.weight(.semibold))
+                            .buttonStyle(.borderless)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .frame(minHeight: 44)
+                .glassEffect(.regular, in: .capsule)
+                .padding(.bottom, 8)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        .animation(.spring(duration: 0.3), value: text)
+        .animation(.spring(duration: 0.3), value: store.toast)
     }
 }

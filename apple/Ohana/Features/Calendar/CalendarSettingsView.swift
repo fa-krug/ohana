@@ -50,7 +50,8 @@ private struct CalendarSettingsContent: View {
             let family = family
             store.notify = { area in family.didChange(area) }
         }
-        .sheet(item: $editing) { type in
+        // A type just added opens in its editor.
+        .navigationDestination(item: $editing) { type in
             CalendarTypeEditor(store: store, type: type)
         }
         .confirmationDialog(deleteTitle, isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
@@ -77,7 +78,7 @@ private struct CalendarSettingsContent: View {
                  ? LocalizedStringKey("Calendar subscriptions made with the old link stop updating.")
                  : LocalizedStringKey("Calendar subscriptions with the current address stop updating and need to be added again."))
         }
-        .modifier(CalendarToast(text: store.toast))
+        .overlay(alignment: .bottom) { CalendarToast(store: store) }
     }
 
     private var loadState: LoadState<Bool> {
@@ -175,31 +176,17 @@ private struct CalendarSettingsContent: View {
     }
 
     private func typeRow(_ type: CalendarEntryType, index: Int, stats: CalendarTypeStats) -> some View {
-        Button {
-            if !store.readOnly { editing = type }
-        } label: {
-            HStack(spacing: 12) {
-                CalendarSwatch(type: type, size: 22)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(type.name).foregroundStyle(.primary)
-                    HStack(spacing: 6) {
-                        Text(type.role.title)
-                        if type.isAway { Text("· Away") }
-                    }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Text(verbatim: "\(CalendarText.days(stats.days)) · \(CalendarText.workdays(stats.workdays))")
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
-                if !store.readOnly {
-                    Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
+        Group {
+            if store.readOnly {
+                typeLabel(type, stats: stats)
+            } else {
+                NavigationLink {
+                    CalendarTypeEditor(store: store, type: type)
+                } label: {
+                    typeLabel(type, stats: stats)
                 }
             }
-            .contentShape(.rect)
         }
-        .buttonStyle(.plain)
         .contextMenu {
             if !store.readOnly {
                 Button("Edit", systemImage: "pencil") { editing = type }
@@ -222,6 +209,25 @@ private struct CalendarSettingsContent: View {
             }
         }
         #endif
+    }
+
+    private func typeLabel(_ type: CalendarEntryType, stats: CalendarTypeStats) -> some View {
+        HStack(spacing: 12) {
+            CalendarSwatch(type: type, size: 22)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(type.name).foregroundStyle(.primary)
+                HStack(spacing: 6) {
+                    Text(type.role.title)
+                    if type.isAway { Text("· Away") }
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Text(verbatim: "\(CalendarText.days(stats.days)) · \(CalendarText.workdays(stats.workdays))")
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(.secondary)
+        }
     }
 
     private var rolesSection: some View {
@@ -372,7 +378,8 @@ struct CalendarFeedSection: View {
     }
 }
 
-/// Edits one type: name, color, role, away; deletes it.
+/// Edits one type: name, color, role, away; deletes it. A page pushed from the list of types,
+/// with Cancel and Done instead of the back button.
 struct CalendarTypeEditor: View {
     let store: CalendarStore
     let type: CalendarEntryType
@@ -382,89 +389,102 @@ struct CalendarTypeEditor: View {
     @State private var role = CalendarRole.none
     @State private var away = false
     @State private var confirmDelete = false
+    /// The fields hold the type's values (only once: the color picker's sheet would reset them).
+    @State private var loaded = false
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    TextField("Name", text: $name)
-                } header: {
-                    Text("Name")
+        Form {
+            Section {
+                TextField("Name", text: $name)
+            } header: {
+                Text("Name")
+            } footer: {
+                if name.trimmingCharacters(in: .whitespaces).isEmpty {
+                    Text("Give it a name.").foregroundStyle(.red)
                 }
-                Section {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) {
-                        ForEach(CalendarMath.palette, id: \.self) { hex in
-                            Button {
-                                color = hex
-                            } label: {
-                                Circle()
-                                    .fill(Color(calendarHex: hex))
-                                    .frame(width: 32, height: 32)
-                                    .overlay {
-                                        if color.lowercased() == hex {
-                                            Image(systemName: "checkmark").font(.caption.bold()).foregroundStyle(.white)
-                                        }
+            }
+            Section {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) {
+                    ForEach(CalendarMath.palette, id: \.self) { hex in
+                        Button {
+                            color = hex
+                        } label: {
+                            Circle()
+                                .fill(Color(calendarHex: hex))
+                                .frame(width: 32, height: 32)
+                                .overlay {
+                                    if color.lowercased() == hex {
+                                        Image(systemName: "checkmark").font(.caption.bold()).foregroundStyle(.white)
                                     }
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel(hex)
+                                }
+                                .frame(maxWidth: .infinity, minHeight: 44)
+                                .contentShape(.rect)
                         }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(hex)
                     }
-                    .padding(.vertical, 4)
-                    ColorPicker("Other color", selection: Binding(
-                        get: { Color(calendarHex: color) },
-                        set: { color = $0.calendarHex() }
-                    ), supportsOpacity: false)
-                } header: {
-                    Text("Color")
                 }
-                Section {
-                    Picker("Role", selection: $role) {
-                        ForEach(CalendarRole.allCases) { Text($0.title).tag($0) }
-                    }
-                    Toggle("Away", isOn: $away)
-                } footer: {
-                    Text(role.help + "\n" + String(localized: "Away: the whole family is away from home on these days, the meal plan plans no meals for them."))
-                }
-                Section {
-                    Button("Delete type", role: .destructive) { confirmDelete = true }
-                }
+                .padding(.vertical, 4)
+                ColorPicker("Other color", selection: Binding(
+                    get: { Color(calendarHex: color) },
+                    set: { color = $0.calendarHex() }
+                ), supportsOpacity: false)
+            } header: {
+                Text("Color")
             }
-            .formStyle(.grouped)
-            .navigationTitle(type.name)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+            Section {
+                Picker("Role", selection: $role) {
+                    ForEach(CalendarRole.allCases) { Text($0.title).tag($0) }
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { save() }
-                        .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
-                }
+                Toggle("Away", isOn: $away)
+            } footer: {
+                Text(role.help + "\n" + String(localized: "Away: the whole family is away from home on these days, the meal plan plans no meals for them."))
             }
-            .confirmationDialog("Delete “\(type.name)”?", isPresented: $confirmDelete, titleVisibility: .visible) {
-                Button("Delete", role: .destructive) {
-                    perform {
-                        try await store.deleteType(type.id)
-                        dismiss()
-                    }
-                }
-            } message: {
-                let used = store.daysWith(type.id)
-                if used > 0 {
-                    Text(CalendarText.usedOn(used, year: store.year))
-                }
+            Section {
+                Button("Delete type", role: .destructive) { confirmDelete = true }
             }
         }
-        .presentationDetents([.large])
-        #if os(macOS)
-        .frame(minWidth: 420, minHeight: 520)
-        #endif
+        .formStyle(.grouped)
+        .navigationTitle(type.name)
+        .navigationBarBackButtonHidden()
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                CancelButton(hasChanges: hasChanges)
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Done") { save() }
+                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .keyboardShortcut(.defaultAction)
+            }
+        }
+        .confirmationDialog("Delete “\(type.name)”?", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) {
+                perform {
+                    try await store.deleteType(type.id)
+                    dismiss()
+                }
+            }
+        } message: {
+            let used = store.daysWith(type.id)
+            if used > 0 {
+                Text(CalendarText.usedOn(used, year: store.year))
+            }
+        }
+        .discardGuard(hasChanges: hasChanges)
+        .errorBanner()
         .onAppear {
+            guard !loaded else { return }
+            loaded = true
             name = type.name
             color = type.color
             role = type.role
             away = type.isAway
         }
+    }
+
+    private var hasChanges: Bool {
+        loaded && (name.trimmingCharacters(in: .whitespaces) != type.name || color.lowercased() != type.color.lowercased()
+            || role != type.role || away != type.isAway)
     }
 
     private func save() {

@@ -15,10 +15,11 @@ final class CalendarStore {
         case idle, saving, retrying
     }
 
-    /// An undoable change: the days' values before and after.
+    /// An undoable change: the days' values before and after, or a deleted event.
     enum Step {
         case entries(before: CalendarEntries, after: CalendarEntries)
         case notes(before: [Day: CalendarNote?], after: [Day: CalendarNote?])
+        case deletedEvent(CalendarDeletedEvent)
     }
 
     private enum Batch {
@@ -66,6 +67,8 @@ final class CalendarStore {
     private(set) var sync: Sync = .idle
     /// A short message (copied, nothing to undo…), shown for a moment.
     private(set) var toast: String?
+    /// The toast follows a change that can be undone: it offers Undo.
+    private(set) var toastOffersUndo = false
 
     var skipWeekends: Bool {
         didSet { UserDefaults.standard.set(skipWeekends, forKey: Self.skipWeekendsKey) }
@@ -121,11 +124,12 @@ final class CalendarStore {
     var gapDays: [Day] { CalendarMath.gapDays(entries, types: types, year: year) }
     var needsCoverTypes: [CalendarEntryType] { types.filter { $0.role == .needsCover } }
 
-    func showToast(_ text: String) {
+    func showToast(_ text: String, undo: Bool = false) {
         toast = text
+        toastOffersUndo = undo
         toastTask?.cancel()
         toastTask = Task {
-            try? await Task.sleep(for: .seconds(2.5))
+            try? await Task.sleep(for: .seconds(undo ? 5 : 2.5))
             if !Task.isCancelled { toast = nil }
         }
     }
@@ -320,6 +324,10 @@ final class CalendarStore {
         switch step {
         case let .entries(b, a): commit(before ? b : a, record: false)
         case let .notes(b, a): commitNotes(before ? b : a, record: false)
+        case let .deletedEvent(deleted):
+            perform { [self] in
+                if before { try await restoreEvent(deleted) } else { try await removeEvent(deleted.event) }
+            }
         }
     }
 
@@ -696,11 +704,42 @@ final class CalendarStore {
         await load(quiet: true)
     }
 
+    /// Deletes an event; undo (⌘Z, the toast) adds it again.
     func deleteEvent(_ event: CalendarEvent) async throws {
+        try await removeEvent(event)
+        guard event.date.year == year else { return }
+        recordStep(.deletedEvent(CalendarDeletedEvent(event)))
+        showToast(String(localized: "Deleted “\(event.title)”"), undo: true)
+    }
+
+    private func removeEvent(_ event: CalendarEvent) async throws {
         try await api.perform(.delete, "/events/\(event.id)")
         events[event.date]?.removeAll { $0.id == event.id }
         notify?(.events)
         await load(quiet: true)
+    }
+
+    /// Undoing a deletion: the event again with what it had (POST /events). It gets a new id,
+    /// which a redo deletes; an appointment's booking comes back as an event of its own.
+    private func restoreEvent(_ deleted: CalendarDeletedEvent) async throws {
+        let restored: CalendarEvent = try await api.send(.post, "/events", body: CalendarEventInput(deleted.event))
+        deleted.event = restored
+        notify?(.events)
+        await load(quiet: true)
+    }
+}
+
+/// A deleted event in the undo history: the event as it was, then as undo made it again.
+final class CalendarDeletedEvent {
+    var event: CalendarEvent
+    init(_ event: CalendarEvent) { self.event = event }
+}
+
+extension CalendarEventInput {
+    /// What the event has, to save it again.
+    init(_ event: CalendarEvent) {
+        self.init(date: event.date, start: event.start, end: event.end, title: event.title,
+                  location: event.location, person: event.person, note: event.note, url: event.url)
     }
 }
 

@@ -26,6 +26,8 @@ struct CalendarEventDraft: Equatable {
     var isAppointment = false
     /// The appointment search it was booked from.
     var searchID: String?
+    /// The event being edited, as it is saved.
+    var original: CalendarEvent?
 
     static func new(on day: Day) -> CalendarEventDraft {
         CalendarEventDraft(input: CalendarEventInput(date: day, start: nil, end: nil, title: ""))
@@ -39,10 +41,10 @@ struct CalendarEventDraft: Equatable {
 
     init(_ event: CalendarEvent) {
         eventID = event.id
-        input = CalendarEventInput(date: event.date, start: event.start, end: event.end, title: event.title,
-                                   location: event.location, person: event.person, note: event.note, url: event.url)
+        input = CalendarEventInput(event)
         isAppointment = event.isAppointment
         searchID = event.searchId
+        original = event
     }
 
     /// What's wrong with it (the server's checks), nil when it can be saved.
@@ -104,6 +106,8 @@ struct CalendarNoteSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var icon = ""
     @State private var comment = ""
+    /// What the days had when the sheet opened, for Cancel.
+    @State private var initial = CalendarNote(icon: "", comment: "")
     @State private var same = true
     /// With a keyboard (Mac) the comment has the focus; on touch screens the keyboard would
     /// cover the icons.
@@ -169,14 +173,16 @@ struct CalendarNoteSheet: View {
                                       : "\(CalendarText.days(days.count)): \(CalendarText.span(days))")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    CancelButton(hasChanges: hasChanges)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { save() }
-                        .keyboardShortcut(.return, modifiers: .command)
+                        .keyboardShortcut(.defaultAction)
                 }
             }
         }
+        .discardGuard(hasChanges: hasChanges)
+        .errorBanner()
         .presentationDetents([.medium, .large])
         #if os(macOS)
         .frame(minWidth: 420, minHeight: 460)
@@ -187,11 +193,17 @@ struct CalendarNoteSheet: View {
             if same, let first = CalendarMath.noteOrNil(notes.first ?? nil) {
                 icon = first.icon
                 comment = first.comment
+                initial = first
             }
             #if os(macOS)
             commentFocused = true
             #endif
         }
+    }
+
+    private var hasChanges: Bool {
+        icon.trimmingCharacters(in: .whitespacesAndNewlines) != initial.icon
+            || comment.trimmingCharacters(in: .whitespacesAndNewlines) != initial.comment
     }
 
     private func save() {
@@ -223,13 +235,22 @@ struct CalendarEventSheet: View {
     @State var draft: CalendarEventDraft
     @Environment(\.dismiss) private var dismiss
     @State private var saving = false
-    @State private var confirmDelete = false
+    @State private var deleting: CalendarEvent?
+    /// The draft as it opened, for Cancel.
+    private let initial: CalendarEventDraft
+
+    init(store: CalendarStore, draft: CalendarEventDraft) {
+        self.store = store
+        _draft = State(initialValue: draft)
+        initial = draft
+    }
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
                     TextField("Title", text: $draft.input.title)
+                        .accessibilityHint(Text("Required"))
                     DatePicker("Date", selection: dateBinding, displayedComponents: .date)
                     Toggle("All day", isOn: allDayBinding)
                     if draft.input.start != nil {
@@ -238,6 +259,10 @@ struct CalendarEventSheet: View {
                         if draft.input.end != nil {
                             DatePicker("Ends", selection: timeBinding(\.end, fallback: "10:00"), displayedComponents: .hourAndMinute)
                         }
+                    }
+                } footer: {
+                    if let problem = timeProblem {
+                        Text(problem).foregroundStyle(.red)
                     }
                 }
                 Section {
@@ -252,8 +277,11 @@ struct CalendarEventSheet: View {
                     TextField("Note", text: $draft.input.note, axis: .vertical)
                         .lineLimit(2...5)
                 } footer: {
-                    if draft.isAppointment {
-                        VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        if let problem = linkProblem {
+                            Text(problem).foregroundStyle(.red)
+                        }
+                        if draft.isAppointment {
                             Text("Booked from an appointment search.")
                             if let searchID = draft.searchID {
                                 Button("Open the appointment search") {
@@ -265,14 +293,9 @@ struct CalendarEventSheet: View {
                         }
                     }
                 }
-                if let problem = draft.problem, !draft.input.title.isEmpty {
+                if let original = draft.original {
                     Section {
-                        Label(problem, systemImage: "exclamationmark.triangle").foregroundStyle(.red)
-                    }
-                }
-                if draft.eventID != nil {
-                    Section {
-                        Button("Delete event", role: .destructive) { confirmDelete = true }
+                        Button("Delete event", role: .destructive) { deleting = original }
                     }
                 }
             }
@@ -280,22 +303,36 @@ struct CalendarEventSheet: View {
             .navigationTitle(draft.eventID == nil ? LocalizedStringKey("New event") : LocalizedStringKey("Edit event"))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    CancelButton(hasChanges: draft != initial)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { save() }
                         .disabled(draft.problem != nil || saving)
-                        .keyboardShortcut(.return, modifiers: .command)
+                        .keyboardShortcut(.defaultAction)
                 }
             }
-            .confirmationDialog("Delete “\(draft.input.title)”?", isPresented: $confirmDelete, titleVisibility: .visible) {
-                Button("Delete", role: .destructive) { delete() }
-            }
+            .calendarDeleteEventDialog($deleting, store: store) { dismiss() }
         }
+        .discardGuard(hasChanges: draft != initial)
+        .errorBanner()
         .presentationDetents([.large])
         #if os(macOS)
         .frame(minWidth: 440, minHeight: 520)
         #endif
+    }
+
+    /// The checks shown at their fields (a missing title only disables Save).
+    private var timeProblem: String? {
+        if let start = draft.input.start, let end = draft.input.end, end < start {
+            return String(localized: "The end must be after the start.")
+        }
+        return nil
+    }
+
+    private var linkProblem: String? {
+        let url = draft.input.url.trimmingCharacters(in: .whitespaces).lowercased()
+        return !url.isEmpty && !(url.hasPrefix("http://") || url.hasPrefix("https://"))
+            ? String(localized: "The link must start with http:// or https://.") : nil
     }
 
     private var dateBinding: Binding<Date> {
@@ -351,12 +388,24 @@ struct CalendarEventSheet: View {
         }
     }
 
-    private func delete() {
-        guard let id = draft.eventID else { return }
-        let event = CalendarEvent(id: id, date: draft.input.date, start: nil, end: nil, title: draft.input.title)
-        perform {
-            try await store.deleteEvent(event)
-            dismiss()
+}
+
+extension View {
+    /// "Delete “Title”?" before an event is deleted, the same from every place that deletes one
+    /// (the editor, a row's menu, its context menu); `onDeleted` runs after it is gone.
+    func calendarDeleteEventDialog(_ event: Binding<CalendarEvent?>, store: CalendarStore,
+                                   onDeleted: @escaping () -> Void = {}) -> some View {
+        confirmationDialog(String(localized: "Delete “\(event.wrappedValue?.title ?? "")”?"),
+                           isPresented: Binding(get: { event.wrappedValue != nil }, set: { if !$0 { event.wrappedValue = nil } }),
+                           titleVisibility: .visible, presenting: event.wrappedValue) { e in
+            Button("Delete", role: .destructive) {
+                perform {
+                    try await store.deleteEvent(e)
+                    onDeleted()
+                }
+            }
+        } message: { _ in
+            Text("You can undo this.")
         }
     }
 }
@@ -368,6 +417,7 @@ struct CalendarSelectionDetails: View {
     @Environment(FamilyContext.self) private var family
     let store: CalendarStore
     let actions: CalendarActions
+    @State private var deleting: CalendarEvent?
     /// Days shown at most (a long selection lists the days that have something).
     static let maxDays = 62
 
@@ -391,6 +441,7 @@ struct CalendarSelectionDetails: View {
                     .foregroundStyle(.secondary)
             }
         }
+        .calendarDeleteEventDialog($deleting, store: store)
     }
 
     private func hasContent(_ day: Day) -> Bool {
@@ -419,6 +470,8 @@ struct CalendarSelectionDetails: View {
                     }
                     .labelStyle(.iconOnly)
                     .buttonStyle(.borderless)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(.rect)
                     .help("Add event")
                 }
             }
@@ -500,11 +553,11 @@ struct CalendarSelectionDetails: View {
             if !store.readOnly {
                 Menu {
                     Button("Edit", systemImage: "pencil") { actions.editEvent(event) }
-                    Button("Delete", systemImage: "trash", role: .destructive) {
-                        perform { try await store.deleteEvent(event) }
-                    }
+                    Button("Delete", systemImage: "trash", role: .destructive) { deleting = event }
                 } label: {
                     Image(systemName: "ellipsis.circle")
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(.rect)
                 }
                 .menuIndicator(.hidden)
                 .buttonStyle(.borderless)
@@ -519,9 +572,7 @@ struct CalendarSelectionDetails: View {
             }
             if !store.readOnly {
                 Button("Edit", systemImage: "pencil") { actions.editEvent(event) }
-                Button("Delete", systemImage: "trash", role: .destructive) {
-                    perform { try await store.deleteEvent(event) }
-                }
+                Button("Delete", systemImage: "trash", role: .destructive) { deleting = event }
             }
         }
     }
@@ -546,9 +597,11 @@ struct CalendarDetailsSheet: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
+                        .keyboardShortcut(.defaultAction)
                 }
             }
         }
+        .errorBanner()
         .presentationDetents([.medium, .large])
         #if os(macOS)
         .frame(minWidth: 420, minHeight: 480)
