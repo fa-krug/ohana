@@ -166,7 +166,8 @@ final class AppModel {
         } else if let server = serverURL, url.host() != server.host() {
             return false
         }
-        guard let (familyID, route) = AppRoute.parse(webPath: path),
+        let tab = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "tab" }?.value
+        guard let (familyID, route) = AppRoute.parse(webPath: path, tab: tab),
               let family = families.first(where: { $0.id == familyID }) else { return false }
         selectedFamilyID = family.id
         context(for: family)?.open(route)

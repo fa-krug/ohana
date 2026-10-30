@@ -53,12 +53,26 @@ enum SettingsPage: String, Hashable, CaseIterable {
 extension AppRoute {
     /// The route of a web app path inside a family: `/f/{familyId}/meals/recipes/{id}` → `.recipe`.
     /// Returns the family's id too. Nil for paths outside a family.
-    static func parse(webPath path: String) -> (familyID: String, route: AppRoute)? {
+    /// `tab`: the settings page's `?tab=` (the web's settings tabs).
+    static func parse(webPath path: String, tab: String? = nil) -> (familyID: String, route: AppRoute)? {
         let parts = path.split(separator: "/").map(String.init)
         guard parts.count >= 2, parts[0] == "f" else { return nil }
         let familyID = parts[1]
         let rest = Array(parts.dropFirst(2))
+        if rest.first == "settings", let page = settingsPage(tab: tab) { return (familyID, .settings(page)) }
         return (familyID, route(rest))
+    }
+
+    /// The web's settings tabs (components/families/settings-tabs.tsx) as the app's pages.
+    private static func settingsPage(tab: String?) -> SettingsPage? {
+        switch tab {
+        case "household": .members
+        case "calendar", "feed": .calendar
+        case "finance": .finance
+        case "ai": .assistant
+        case "data": .data
+        default: nil
+        }
     }
 
     private static func route(_ rest: [String]) -> AppRoute {

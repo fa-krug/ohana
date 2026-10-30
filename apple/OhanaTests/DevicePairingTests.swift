@@ -69,5 +69,7 @@ struct AppRouteTests {
         #expect(AppRoute.parse(webPath: "/f/fam1/assistant")?.familyID == "fam1")
         #expect(AppRoute.parse(webPath: "/account") == nil)
         #expect(AppRoute.recipe(id: "x").module == .meals)
+        #expect(AppRoute.parse(webPath: "/f/fam1/settings", tab: "ai")?.route == .settings(.assistant))
+        #expect(AppRoute.parse(webPath: "/f/fam1/settings", tab: "general")?.route == .module(.settings))
     }
 }
