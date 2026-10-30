@@ -314,6 +314,10 @@ npm run import-legacy -- --family-planner dump.sql --cookless cookless.db --cook
   `apple/Localization/*.de.json`, merged into `Resources/Localizable.xcstrings` by
   `apple/scripts/merge-localizations.py` (`--check` in CI). Build/test: `apple/README.md`; CI:
   `.github/workflows/apple.yml` (macOS unit tests, iOS build, strings; only on `apple/**` changes).
+  Release: App Store Connect / TestFlight, one bundle id `de.fa-krug.Ohana` for both platforms;
+  version from `MARKETING_VERSION` (the plists say `$(MARKETING_VERSION)`), build numbers set by
+  the upload (`apple/ExportOptions.plist`); `Resources/PrivacyInfo.xcprivacy` declares the
+  `UserDefaults` use. Steps in `apple/README.md` → Releasing.
 
 ## Conventions
 

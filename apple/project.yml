@@ -22,6 +22,8 @@ settings:
     SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
     SWIFT_APPROACHABLE_CONCURRENCY: YES
     SWIFT_STRICT_CONCURRENCY: complete
+    # The version people see; the build number must grow with every upload to App Store
+    # Connect (README: Releasing). Both reach the apps' Info.plists as $(…).
     MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: 1
     CODE_SIGN_STYLE: Automatic
@@ -30,11 +32,8 @@ settings:
     SWIFT_EMIT_LOC_STRINGS: YES
     LOCALIZATION_PREFERS_STRING_CATALOGS: YES
     ENABLE_USER_SCRIPT_SANDBOXING: YES
+    # Only the test bundles; the apps have their own Info.plists (`info:` below).
     GENERATE_INFOPLIST_FILE: true
-    INFOPLIST_KEY_CFBundleDisplayName: Ohana
-    INFOPLIST_KEY_NSHumanReadableCopyright: "Copyright © 2026 Sascha Krug. All rights reserved."
-    INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: false
-    INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.lifestyle
   configs:
     Release:
       ENABLE_TESTABILITY: false
@@ -53,6 +52,10 @@ targets:
       path: Ohana/Info-iOS.plist
       properties:
         CFBundleDisplayName: Ohana
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        # Only HTTPS and the Keychain: no export compliance question on every upload.
+        ITSAppUsesNonExemptEncryption: false
         UILaunchScreen: {}
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: true
@@ -95,6 +98,10 @@ targets:
       path: Ohana/Info-macOS.plist
       properties:
         CFBundleDisplayName: Ohana
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        ITSAppUsesNonExemptEncryption: false
+        NSHumanReadableCopyright: "Copyright © 2026 Sascha Krug. All rights reserved."
         LSApplicationCategoryType: public.app-category.lifestyle
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
