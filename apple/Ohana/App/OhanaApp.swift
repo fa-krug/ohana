@@ -3,6 +3,9 @@ import SwiftUI
 @main
 struct OhanaApp: App {
     @State private var app = AppModel()
+    #if os(macOS)
+    @AppStorage("menuBarAssistant") private var menuBarAssistant = true
+    #endif
 
     var body: some Scene {
         WindowGroup {
@@ -22,6 +25,17 @@ struct OhanaApp: App {
         .commands { ShellCommands() }
 
         #if os(macOS)
+        // The assistant in the menu bar: a click away while the window is hidden or another app
+        // is in front.
+        MenuBarExtra(isInserted: $menuBarAssistant) {
+            MenuBarAssistant()
+                .environment(app)
+                .tint(.ohana)
+        } label: {
+            Label("Ask Ohana", systemImage: "sparkles")
+        }
+        .menuBarExtraStyle(.window)
+
         Settings {
             AccountView()
                 .environment(app)

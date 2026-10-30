@@ -8111,12 +8111,32 @@
         }
       }
     },
+    "Show the assistant in the menu bar": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Assistent in der Menüleiste zeigen"
+          }
+        }
+      }
+    },
     "Sign in": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Anmelden"
+          }
+        }
+      }
+    },
+    "Sign in to Ohana first": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Melde dich zuerst bei Ohana an"
           }
         }
       }
