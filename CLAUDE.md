@@ -300,10 +300,13 @@ npm run import-legacy -- --family-planner dump.sql --cookless cookless.db --cook
   `App/AppModel.swift` (server, token in the Keychain, `/api/v1/me`, selected family,
   `FamilyContext`: `FamilyAPI` + `didChange`/`revision` signals between modules),
   `Core/API/APIClient.swift` (errors `{error}` / `{message}` → `APIError`, 401 signs out),
-  `Shell/` (sidebar-adaptable `TabView`, family switcher, assistant `.inspector` ⌘J),
+  `Shell/` (sidebar-adaptable `TabView`, family switcher, assistant `.inspector` ⌘J and its own
+  page, `AppRoute`: `family.open(.recipe(id:))` etc. switches to the module, whose root takes it
+  with `family.takeRoute(for:)`; web paths `/f/{id}/…` and `ohana://f/{id}/…` map onto routes),
   `DesignSystem/` (Liquid Glass helpers), `Features/<Module>/`. German strings: per-module
   `apple/Localization/*.de.json`, merged into `Resources/Localizable.xcstrings` by
-  `apple/scripts/merge-localizations.py`. Build/test: `apple/README.md`.
+  `apple/scripts/merge-localizations.py` (`--check` in CI). Build/test: `apple/README.md`; CI:
+  `.github/workflows/apple.yml` (macOS unit tests, iOS build, strings; only on `apple/**` changes).
 
 ## Conventions
 

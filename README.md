@@ -305,7 +305,10 @@ opens the server's sign-in page in the system browser (passkeys work), you confi
 the Ohana app", and the app gets its own API token. It is listed on the web account page as
 "<device> (app)" and can be removed there; *Sign out* in the app removes it as well. What the
 app leaves to the web (passkeys, password, API tokens, administration) opens in the browser
-from the app's account screen. Building it: see [apple/README.md](apple/README.md).
+from the app's account screen. Links to a family's pages (`https://<server>/f/…`, e.g. from a
+notification, or `ohana://f/…`) open the same place in the app. Building it: see
+[apple/README.md](apple/README.md); `.github/workflows/apple.yml` tests and builds it on every
+change under `apple/`.
 
 ## Development
 
