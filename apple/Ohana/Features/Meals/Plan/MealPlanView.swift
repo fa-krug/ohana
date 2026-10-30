@@ -1,19 +1,16 @@
 import SwiftUI
 
-/// Where the plan page goes: a recipe, cooking it, a shopping list.
-enum MealPlanRoute: Hashable, Identifiable {
-    case recipe(String)
-    case cook(String)
-    case shoppingList(String)
-
-    var id: Self { self }
-}
-
-/// A change to the plan that can be taken back (POST /meals/plan/restore with `body`).
-struct MealPlanUndo: Identifiable {
+/// A change to the plan that can be taken back (POST /meals/plan/restore with `body`) for a few
+/// seconds: with the bar's "Undo" or the window's undo manager (Edit → Undo, ⌘Z).
+final class MealPlanUndo: Identifiable {
     let id = UUID()
     let message: String
     let body: JSONValue
+
+    init(message: String, body: JSONValue) {
+        self.message = message
+        self.body = body
+    }
 }
 
 /// Meals → Plan: the family's meal plan (port of the web's plan page). The active iteration day
@@ -22,9 +19,10 @@ struct MealPlanUndo: Identifiable {
 /// next one, swapping or removing a meal (each undoable for a few seconds).
 struct MealPlanView: View {
     @Environment(FamilyContext.self) private var family
+    @Environment(\.undoManager) private var undoManager
     @State private var state: LoadState<MealPlanResponse> = .idle
     @State private var showSetup = false
-    @State private var route: MealPlanRoute?
+    @State private var route: MealsDestination?
     @State private var swapping: MealPlanEntry?
     @State private var confirmRenew: MealPlanIteration?
     @State private var undo: MealPlanUndo?
@@ -64,16 +62,10 @@ struct MealPlanView: View {
         } message: { _ in
             Text("The meals and shopping lists of these days are planned anew.")
         }
-        .navigationDestination(item: $route) { route in
-            switch route {
-            case let .recipe(id): MealsRecipeDetailView(recipeID: id)
-            case let .cook(id): MealsCookView(recipeID: id)
-            case let .shoppingList(id): ShoppingListDetailView(listID: id)
-            }
-        }
+        .navigationDestination(item: $route) { MealsDestinationView(destination: $0) }
         .overlay(alignment: .bottom) {
             if let undo {
-                MealPlanUndoBar(undo: undo) { take(undo) } dismiss: { self.undo = nil }
+                MealPlanUndoBar(undo: undo) { take(undo) } dismiss: { expire(undo) }
                     .padding(.bottom, 12)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
@@ -149,11 +141,11 @@ struct MealPlanView: View {
             onRenew: { confirmRenew = iteration },
             onAction: { action in
                 switch action {
-                case let .open(entry): route = .recipe(entry.recipeId)
-                case let .cook(entry): route = .cook(entry.recipeId)
+                case let .open(entry): route = .recipe(id: entry.recipeId, servings: entry.servings)
+                case let .cook(entry): route = .cook(recipeID: entry.recipeId, servings: entry.servings)
                 case let .swap(entry): swapping = entry
                 case let .remove(entry): remove(entry)
-                case let .shoppingList(id): route = .shoppingList(id)
+                case let .shoppingList(id): family.open(.shoppingList(id: id))
                 }
             }
         )
@@ -187,8 +179,9 @@ struct MealPlanView: View {
 
     private func setUp(_ input: MealPlanSetupInput) async throws {
         let _: MealPlanChangeResult = try await family.api.send(.post, "/meals/plan/setup", body: input)
-        undo = nil
+        if let undo { expire(undo) }
         family.didChange(.mealPlan, .shopping)
+        ErrorBanner.shared.success(String(localized: "Meal plan generated."))
     }
 
     private func change(_ message: String, _ call: @escaping () async throws -> MealPlanChangeResult) {
@@ -196,7 +189,7 @@ struct MealPlanView: View {
         perform {
             defer { working = false }
             let result = try await call()
-            if let body = result.undo { undo = MealPlanUndo(message: message, body: body) }
+            if let body = result.undo { offer(MealPlanUndo(message: message, body: body)) }
             family.didChange(.mealPlan, .shopping)
         }
     }
@@ -225,8 +218,25 @@ struct MealPlanView: View {
         }
     }
 
-    private func take(_ undo: MealPlanUndo) {
-        self.undo = nil
+    /// Shows the bar and registers the undo with the window's undo manager.
+    private func offer(_ new: MealPlanUndo) {
+        if let undo { expire(undo) }
+        undo = new
+        undoManager?.registerUndo(withTarget: new) { [self] target in
+            take(target, fromManager: true)
+        }
+        undoManager?.setActionName(new.message)
+    }
+
+    /// The change can't be taken back any more.
+    private func expire(_ old: MealPlanUndo) {
+        undoManager?.removeAllActions(withTarget: old)
+        if undo === old { undo = nil }
+    }
+
+    private func take(_ undo: MealPlanUndo, fromManager: Bool = false) {
+        if !fromManager { undoManager?.removeAllActions(withTarget: undo) }
+        if self.undo === undo { self.undo = nil }
         perform {
             try await family.api.perform(.post, "/meals/plan/restore", body: undo.body)
             family.didChange(.mealPlan, .shopping)
@@ -442,7 +452,6 @@ struct MealPlanUndoBar: View {
             Button("Undo", action: action)
                 .buttonStyle(.glassProminent)
                 .tint(ModuleTint.meals)
-                .keyboardShortcut("z", modifiers: .command)
         }
         .padding(.leading, 18)
         .padding(.trailing, 8)

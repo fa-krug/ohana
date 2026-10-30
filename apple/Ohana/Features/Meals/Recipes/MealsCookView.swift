@@ -74,6 +74,14 @@ private struct RecipeCookSession: View {
             }
             if started {
                 ToolbarItem(placement: .primaryAction) { servingsStepper(compact: true) }
+                if hasBoth {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button("Change method", systemImage: "arrow.left.arrow.right") {
+                            withAnimation { started = false }
+                        }
+                        .help("Back to servings and method")
+                    }
+                }
             }
         }
         .onChange(of: stepIndex) { _, index in

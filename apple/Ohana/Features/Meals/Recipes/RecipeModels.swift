@@ -173,12 +173,17 @@ struct RecipeDetailResponse: Codable {
     let units: [RecipeUnit]
 }
 
-/// GET /meals/status: whether the family's AI is set up (lib/meals/ai/status.ts).
+/// GET /meals/status: whether the family's AI is set up (lib/meals/ai/status.ts) and how many
+/// recipes the family has (nil from older servers).
 struct MealsAIStatus: Codable, Equatable {
     let generate: Bool
     let photos: Bool
+    var recipeCount: Int?
 
     static let none = MealsAIStatus(generate: false, photos: false)
+
+    /// An editor of a family without any recipe sees the welcome (the web's meals/page.tsx).
+    func showsWelcome(canEdit: Bool) -> Bool { canEdit && recipeCount == 0 }
 }
 
 struct RecipeIDResponse: Codable { let id: String }

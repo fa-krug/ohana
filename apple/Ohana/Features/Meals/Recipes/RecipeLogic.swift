@@ -261,54 +261,99 @@ struct RecipeResolved {
         (method == .machine ? detail.machineSteps : detail.manualSteps).sorted { $0.stepNumber < $1.stepNumber }
     }
 
-    /// The recipe as Markdown text for `portions` (generateMarkdown, all sections).
-    func markdown(portions: Int, german: Bool = RecipeLocale.isGerman) -> String {
+    /// The export's fixed words, in the language of the recipe's names (export.ts metaLabels,
+    /// sectionLabels).
+    struct ExportLabels {
+        let servings, prep, cook, ingredients, steps, machine: String
+
+        init(german: Bool) {
+            if german {
+                (servings, prep, cook, ingredients, steps, machine) =
+                    ("Portionen", "Vorbereitung", "Kochen", "Zutaten", "Zubereitung", "Maschinenschritte")
+            } else {
+                (servings, prep, cook, ingredients, steps, machine) =
+                    ("Servings", "Prep", "Cook", "Ingredients", "Steps", "Machine Steps")
+            }
+        }
+    }
+
+    /// One step of the export: its text and its ingredient lines.
+    struct ExportStep: Equatable {
+        let instruction: String
+        let ingredients: [String]
+    }
+
+    /// "4 Servings · Prep: 10 min · Cook: 20 min"
+    func exportMeta(portions: Int, german: Bool) -> String {
+        let labels = ExportLabels(german: german)
+        var meta = ["\(portions) \(labels.servings)"]
+        if let prep = detail.prepTimeMinutes { meta.append("\(labels.prep): \(prep) min") }
+        if let cook = detail.cookTimeMinutes { meta.append("\(labels.cook): \(cook) min") }
+        return meta.joined(separator: " · ")
+    }
+
+    /// "400 g Tomato" scaled to `portions`, behind `prefix` (export.ts ingredientLine).
+    func exportLine(_ prefix: String, _ ri: RecipeIngredient, quantity: String? = nil, portions: Int, german: Bool) -> String {
         let scale = detail.defaultServings > 0 ? Decimal(portions) / Decimal(detail.defaultServings) : 1
-        let labels = german
-            ? (servings: "Portionen", prep: "Vorbereitung", cook: "Kochen", ingredients: "Zutaten", steps: "Zubereitung", machine: "Maschinenschritte")
-            : (servings: "Servings", prep: "Prep", cook: "Cook", ingredients: "Ingredients", steps: "Steps", machine: "Machine Steps")
-        func name(_ ri: RecipeIngredient) -> String {
-            guard let i = ingredientsByID[ri.ingredientId] else { return "?" }
-            return german ? i.nameDe : i.nameEn
+        let q = RecipeQuantity.plain((RecipeQuantity.parse(quantity ?? ri.quantity) ?? 0) * scale)
+        let unit = unitsByID[ri.unitId]?.abbreviation ?? ""
+        let name = ingredientsByID[ri.ingredientId].map { german ? $0.nameDe : $0.nameEn } ?? "?"
+        return "\(prefix)\(q) \(unit) \(name)"
+            .replacingOccurrences(of: #" {2,}"#, with: " ", options: .regularExpression)
+            .replacingOccurrences(of: #"\s+$"#, with: "", options: .regularExpression)
+    }
+
+    /// The recipe's ingredient lines (those Ohana knows) for the export.
+    func exportIngredients(_ prefix: String, portions: Int, german: Bool) -> [String] {
+        sortedIngredients.filter { ingredientsByID[$0.ingredientId] != nil }
+            .map { exportLine(prefix, $0, portions: portions, german: german) }
+    }
+
+    /// The steps of one method for the export, in order, with their ingredient lines.
+    func exportSteps(_ method: RecipeCookMethod, prefix: String, portions: Int, german: Bool) -> [ExportStep] {
+        steps(method).map { step in
+            ExportStep(instruction: step.instruction, ingredients: step.ingredients.compactMap { si in
+                guard let ri = detail.ingredients.first(where: { $0.id == si.recipeIngredientId }),
+                      ingredientsByID[ri.ingredientId] != nil else { return nil }
+                return exportLine(prefix, ri, quantity: si.quantity, portions: portions, german: german)
+            })
         }
-        func ingredientLine(_ prefix: String, _ ri: RecipeIngredient, _ quantity: String) -> String {
-            let q = RecipeQuantity.plain((RecipeQuantity.parse(quantity) ?? 0) * scale)
-            let unit = unitsByID[ri.unitId]?.abbreviation ?? ""
-            return "\(prefix)\(q) \(unit) \(name(ri))"
-                .replacingOccurrences(of: #" {2,}"#, with: " ", options: .regularExpression)
-                .replacingOccurrences(of: #"\s+$"#, with: "", options: .regularExpression)
-        }
-        func steps(_ list: [RecipeStep]) -> String {
-            list.sorted { $0.stepNumber < $1.stepNumber }.enumerated().map { i, step in
-                var line = "\(i + 1). \(step.instruction)"
-                let ings = step.ingredients.compactMap { si -> String? in
-                    guard let ri = detail.ingredients.first(where: { $0.id == si.recipeIngredientId }),
-                          ingredientsByID[ri.ingredientId] != nil else { return nil }
-                    return ingredientLine("   - ", ri, si.quantity)
-                }
-                if !ings.isEmpty { line += "\n" + ings.joined(separator: "\n") }
-                return line
+    }
+
+    /// The recipe as Markdown text for `portions` (generateMarkdown).
+    func markdown(portions: Int, sections: RecipeExportSections = .all, german: Bool = RecipeLocale.isGerman) -> String {
+        let labels = ExportLabels(german: german)
+        func steps(_ method: RecipeCookMethod) -> String {
+            exportSteps(method, prefix: "   - ", portions: portions, german: german).enumerated().map { i, step in
+                ([("\(i + 1). \(step.instruction)")] + step.ingredients).joined(separator: "\n")
             }.joined(separator: "\n")
         }
 
         var lines = ["# \(detail.title)", ""]
-        if !detail.description.isEmpty { lines += [detail.description, ""] }
-        var meta = ["\(portions) \(labels.servings)"]
-        if let prep = detail.prepTimeMinutes { meta.append("\(labels.prep): \(prep) min") }
-        if let cook = detail.cookTimeMinutes { meta.append("\(labels.cook): \(cook) min") }
-        lines += [meta.joined(separator: " · "), ""]
-        let known = sortedIngredients.filter { ingredientsByID[$0.ingredientId] != nil }
-        if !known.isEmpty {
-            lines += ["## \(labels.ingredients)", ""]
-            lines += known.map { ingredientLine("- ", $0, $0.quantity) }
-            lines.append("")
+        if sections.description, !detail.description.isEmpty { lines += [detail.description, ""] }
+        lines += [exportMeta(portions: portions, german: german), ""]
+        let ingredients = exportIngredients("- ", portions: portions, german: german)
+        if sections.ingredients, !ingredients.isEmpty {
+            lines += ["## \(labels.ingredients)", ""] + ingredients + [""]
         }
-        if !detail.manualSteps.isEmpty { lines += ["## \(labels.steps)", "", steps(detail.manualSteps), ""] }
-        if !detail.machineSteps.isEmpty { lines += ["## \(labels.machine)", "", steps(detail.machineSteps), ""] }
+        if sections.steps {
+            if !detail.manualSteps.isEmpty { lines += ["## \(labels.steps)", "", steps(.manual), ""] }
+            if !detail.machineSteps.isEmpty { lines += ["## \(labels.machine)", "", steps(.machine), ""] }
+        }
         var text = lines.joined(separator: "\n")
         while text.last?.isWhitespace == true { text.removeLast() }
         return text + "\n"
     }
+}
+
+/// What a recipe export includes (the web's export dialog).
+struct RecipeExportSections: Hashable {
+    var image = true
+    var description = true
+    var ingredients = true
+    var steps = true
+
+    static let all = RecipeExportSections()
 }
 
 /// How a recipe is cooked: by hand or with the machine.

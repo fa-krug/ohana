@@ -1,7 +1,16 @@
 {
   "%@ in your finances, %@ – %@": "%@ in euren Finanzen, %@ – %@",
   "%@ is planned instead": "Stattdessen gibt es %@",
-  "%lld items to grab": "%lld Sachen",
+  "%lld items to grab": {
+    "en": {
+      "one": "%lld item to grab",
+      "other": "%lld items to grab"
+    },
+    "de": {
+      "one": "%lld Sache",
+      "other": "%lld Sachen"
+    }
+  },
   "%lld of %lld": "%lld von %lld",
   "(Leftover)": "(Reste)",
   "Actions": "Aktionen",
@@ -10,9 +19,10 @@
   "Aisle": "Abteilung",
   "All done!": "Alles erledigt!",
   "Away · %@": "Unterwegs · %@",
+  "Back to meal plan": "Zurück zum Essensplan",
   "Cancel": "Abbrechen",
   "Change quantity": "Menge ändern",
-  "Choose the groceries category in Settings → Finance.": "Wähle die Lebensmittel-Kategorie unter Einstellungen → Finanzen.",
+  "Choose the groceries category": "Lebensmittel-Kategorie wählen",
   "Collapsed": "Eingeklappt",
   "Cook": "Kochen",
   "Create a meal plan and we’ll sort it out for you!": "Erstelle einen Essensplan und wir kümmern uns drum!",
@@ -29,12 +39,14 @@
   "Fruit & Veg": "Obst & Gemüse",
   "Generate": "Generieren",
   "Generate meal plan": "Speiseplan generieren",
+  "Go to meal plan": "Zum Essensplan",
   "Known-recipe ratio": "Anteil bekannter Rezepte",
   "Leftover days": "Resteverwertung (Tage)",
   "Let’s go!": "Los geht's!",
   "Lists": "Listen",
   "Lunch": "Mittag",
   "Meal plan": "Essensplan",
+  "Meal plan generated.": "Speiseplan erstellt.",
   "Meal removed": "Mahlzeit entfernt",
   "Meat & Fish": "Fleisch & Fisch",
   "Name": "Name",
@@ -44,6 +56,7 @@
   "No transactions yet.": "Noch keine Buchungen.",
   "Nothing to shop for": "Nichts einzukaufen",
   "Ohana shows here what this shopping trip cost, from the finances’ groceries category.": "Hier zeigt Ohana, was dieser Einkauf gekostet hat – aus der Lebensmittel-Kategorie der Finanzen.",
+  "Open finance": "Finanzen öffnen",
   "Open recipe": "Rezept öffnen",
   "Other": "Sonstiges",
   "Pantry": "Vorratskammer",
@@ -68,18 +81,19 @@
   "Shopping days": "Einkaufstage",
   "Shopping for %@": "Einkauf für %@",
   "Shopping list": "Einkaufsliste",
+  "Showing the list as it was last loaded.": "Die Liste, wie sie zuletzt geladen wurde.",
   "Something light": "Was Leichtes",
   "Spent": "Ausgegeben",
   "Start next iteration": "Nächste Iteration starten",
   "Surprise me": "Überrasch mich",
   "Swap %@": "%@ tauschen",
   "Swap…": "Tauschen …",
+  "Syncing your changes…": "Änderungen werden synchronisiert …",
   "The meals and shopping lists of these days are planned anew.": "Die Mahlzeiten und Einkaufslisten dieser Tage werden neu geplant.",
   "The quantity must be a number above 0.": "Die Menge muss eine Zahl über 0 sein.",
   "The share of meals from your favourites; the rest are recipes you want to try.": "Der Anteil der Mahlzeiten aus deinen Favoriten; der Rest sind Rezepte, die du ausprobieren willst.",
   "This plan has wrapped up!": "Dieser Plan ist durch!",
   "Tick": "Abhaken",
-  "Ticks are sent when the connection is back.": "Abgehaktes wird gesendet, sobald die Verbindung wieder da ist.",
   "Time to plan your next round!": "Zeit für die nächste Runde!",
   "Today": "Heute",
   "Undo": "Rückgängig",
@@ -89,5 +103,6 @@
   "Untick every item?": "Alle Haken entfernen?",
   "Update plan": "Plan anpassen",
   "Want to try": "Ausprobieren",
-  "Weeks per iteration": "Wochen pro Iteration"
+  "Weeks per iteration": "Wochen pro Iteration",
+  "You’re offline — changes will sync when you reconnect.": "Du bist offline – Änderungen werden synchronisiert, sobald du wieder online bist."
 }

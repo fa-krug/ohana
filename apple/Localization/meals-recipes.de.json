@@ -1,10 +1,47 @@
 {
   "%lld g": "%lld g",
-  "%lld ingredients · %lld servings · %lld min": "%lld Zutaten · %lld Portionen · %lld Min.",
+  "%lld ingredients": {
+    "en": {
+      "one": "%lld ingredient",
+      "other": "%lld ingredients"
+    },
+    "de": {
+      "one": "%lld Zutat",
+      "other": "%lld Zutaten"
+    }
+  },
   "%lld min": "%lld Min.",
-  "%lld recipes": "%lld Rezepte",
+  "%lld recipes": {
+    "en": {
+      "one": "%lld recipe",
+      "other": "%lld recipes"
+    },
+    "de": {
+      "one": "%lld Rezept",
+      "other": "%lld Rezepte"
+    }
+  },
+  "%lld recipes added to “Want to try”": {
+    "en": {
+      "one": "%lld recipe added to “Want to try”",
+      "other": "%lld recipes added to “Want to try”"
+    },
+    "de": {
+      "one": "%lld Rezept zu „Ausprobieren“ hinzugefügt",
+      "other": "%lld Rezepte zu „Ausprobieren“ hinzugefügt"
+    }
+  },
   "%lld selected": "%lld ausgewählt",
-  "%lld servings": "%lld Portionen",
+  "%lld servings": {
+    "en": {
+      "one": "%lld serving",
+      "other": "%lld servings"
+    },
+    "de": {
+      "one": "%lld Portion",
+      "other": "%lld Portionen"
+    }
+  },
   "%lld °C": "%lld °C",
   "A new ingredient": "Eine neue Zutat",
   "A tag with that name already exists in this category.": "Ein Tag mit diesem Namen existiert bereits in dieser Kategorie.",
@@ -18,19 +55,26 @@
   "Additional wishes": "Weitere Wünsche",
   "All done!": "Fertig!",
   "Back": "Zurück",
+  "Back to servings and method": "Zurück zu Portionen und Zubereitung",
   "Blending": "Mixen",
   "By Hand": "Von Hand",
   "Cancel": "Abbrechen",
   "Category": "Kategorie",
+  "Change method": "Zubereitung wechseln",
   "Choose File": "Datei auswählen",
   "Chopping": "Zerkleinern",
   "Clear filters": "Filter zurücksetzen",
+  "Cook together": "Zusammen kochen",
   "Cooking %lld min": "Kochen %lld Min.",
   "Cooking (min)": "Kochen (Min.)",
+  "Copied to clipboard.": "In Zwischenablage kopiert.",
   "Couldn’t load": "Konnte nicht geladen werden",
+  "Couldn’t share the recipe. Try again?": "Konnte das Rezept nicht teilen. Nochmal versuchen?",
+  "Create a meal plan": "Essensplan erstellen",
   "Cuisine": "Küche",
   "Custom": "Eigenes",
   "Delete": "Löschen",
+  "Delete Recipe": "Rezept löschen",
   "Delete recipe?": "Rezept löschen?",
   "Delete tag?": "Tag löschen?",
   "Delete this recipe? You’ll have a few seconds to undo.": "Dieses Rezept löschen? Du hast ein paar Sekunden, um es rückgängig zu machen.",
@@ -51,6 +95,7 @@
   "Fermentation": "Fermentieren",
   "Fewer servings": "Weniger Portionen",
   "Filter": "Filter",
+  "Format": "Format",
   "Free text": "Freitext",
   "From the ingredient list": "Aus der Zutatenliste",
   "Generate": "Erstellen",
@@ -58,11 +103,14 @@
   "Generate with AI": "Mit KI erstellen",
   "Generating failed: %@": "Erstellen fehlgeschlagen: %@",
   "Generating recipes …": "Rezepte werden erstellt …",
+  "Get started": "Los geht’s",
   "Ingredient": "Zutat",
   "Ingredients": "Zutaten",
   "Instruction": "Anleitung",
+  "Invite a family member": "Familienmitglied einladen",
   "Kneading": "Kneten",
   "Left": "Links",
+  "Let the assistant suggest recipes to try": "Lass dir vom Assistenten Rezepte zum Ausprobieren vorschlagen",
   "Let’s cook!": "Los geht’s!",
   "List": "Liste",
   "Machine": "Maschine",
@@ -93,19 +141,26 @@
   "No recipes yet": "Noch keine Rezepte",
   "Number of recipes": "Anzahl Rezepte",
   "Organize your recipes with tags.": "Organisiere deine Rezepte mit Tags.",
+  "PDF": "PDF",
   "Photo": "Foto",
+  "Photo removed": "Foto entfernt",
   "Plan": "Planung",
+  "Plan your meals for the week": "Plane deine Mahlzeiten für die Woche",
+  "Portions": "Portionen",
   "Pre-Cleaning": "Vorreinigen",
   "Prep %lld min": "Vorbereitung %lld Min.",
   "Prep (min)": "Vorbereitung (Min.)",
+  "Preview": "Vorschau",
   "Program": "Programm",
   "Protein": "Protein",
   "Qty": "Menge",
   "Quantities must be numbers": "Mengen müssen Zahlen sein",
   "Recently updated": "Zuletzt bearbeitet",
   "Recipe": "Rezept",
+  "Recipe created": "Rezept erstellt",
   "Recipe deleted.": "Rezept gelöscht.",
   "Recipe name": "Rezeptname",
+  "Recipe saved": "Rezept gespeichert",
   "Recipes": "Rezepte",
   "Remove": "Entfernen",
   "Remove Photo": "Foto entfernen",
@@ -114,13 +169,25 @@
   "Reset to Defaults": "Auf Standard zurücksetzen",
   "Right": "Rechts",
   "Save": "Speichern",
-  "Save %lld recipes": "%lld Rezepte speichern",
+  "Save %lld recipes": {
+    "en": {
+      "one": "Save %lld recipe",
+      "other": "Save %lld recipes"
+    },
+    "de": {
+      "one": "%lld Rezept speichern",
+      "other": "%lld Rezepte speichern"
+    }
+  },
   "Save 1 recipe": "1 Rezept speichern",
+  "Save…": "Sichern …",
   "Search ingredient…": "Zutat suchen…",
   "Search recipes": "Rezepte suchen",
   "Searing": "Anbraten",
   "Servings": "Portionen",
   "Share": "Teilen",
+  "Share Recipe": "Rezept teilen",
+  "Share as text or PDF": "Als Text oder PDF teilen",
   "Shopping": "Einkaufen",
   "Slow Cooking": "Schmoren",
   "Sort": "Sortieren",
@@ -132,10 +199,12 @@
   "Step %lld": "Schritt %lld",
   "Step %lld of %lld": "Schritt %lld von %lld",
   "Step ingredients exceed recipe quantities": "Schrittmengen überschreiten Rezeptmengen",
+  "Steps": "Schritte",
   "Stop": "Stopp",
   "Swipe left or right to switch steps": "Wische nach links oder rechts zum Blättern",
   "Tags": "Tags",
   "Temperature (°C)": "Temperatur (°C)",
+  "Text": "Text",
   "That file isn’t a picture.": "Diese Datei ist kein Bild.",
   "The photos couldn’t be made: %@": "Die Fotos konnten nicht gemacht werden: %@",
   "This recipe has no steps yet.": "Dieses Rezept hat noch keine Schritte.",
@@ -150,8 +219,11 @@
   "Want to try": "Ausprobieren",
   "Weighing": "Waage",
   "Weight (g)": "Gewicht (g)",
+  "Welcome to Meals!": "Willkommen bei Essen!",
   "What to do in this step…": "Was in diesem Schritt zu tun ist…",
+  "What to include": "Was soll dabei sein",
   "What’s it called?": "Wie heißt das Rezept?",
+  "Your family has no recipes yet. Here’s how to start:": "Deine Familie hat noch keine Rezepte. So legst du los:",
   "e.g. comfort food for cold days, ready in 30 minutes": "z. B. Wohlfühlessen für kalte Tage, in 30 Minuten fertig",
   "—": "—"
 }

@@ -10,7 +10,9 @@ translation. --check writes nothing and fails when a key has no German or the ca
 up to date (CI).
 
 A value is a string, or for plurals an object of plural categories, e.g.
-{"one": "%lld day", "other": "%lld days"}.
+{"one": "%lld day", "other": "%lld days"}. When the English text needs plural forms too, the
+value is an object by language: {"en": {"one": "%lld day", "other": "%lld days"},
+"de": {"one": "%lld Tag", "other": "%lld Tage"}} ("de" a string or plural object as above).
 """
 import glob
 import json
@@ -46,16 +48,27 @@ else:
     keys = set(translations)
 
 # Translated keys stay even when this build didn't extract them (iOS-only strings in a Mac build).
+LANGUAGES = ("en", "de")
+
+
+def localization(value):
+    """A string or an object of plural categories as one language's catalog entry."""
+    if isinstance(value, dict):
+        plural = {k: {"stringUnit": {"state": "translated", "value": v}} for k, v in value.items()}
+        return {"variations": {"plural": plural}}
+    return {"stringUnit": {"state": "translated", "value": value}}
+
+
 strings = {}
 for key in sorted(keys | set(translations)):
     entry = {}
     if key in translations:
         value = translations[key]
-        if isinstance(value, dict):
-            plural = {k: {"stringUnit": {"state": "translated", "value": v}} for k, v in value.items()}
-            entry["localizations"] = {"de": {"variations": {"plural": plural}}}
+        if isinstance(value, dict) and any(lang in value for lang in LANGUAGES):
+            # By language: {"en": …, "de": …}.
+            entry["localizations"] = {lang: localization(value[lang]) for lang in LANGUAGES if lang in value}
         else:
-            entry["localizations"] = {"de": {"stringUnit": {"state": "translated", "value": value}}}
+            entry["localizations"] = {"de": localization(value)}
     strings[key] = entry
 
 text = json.dumps({"sourceLanguage": "en", "strings": strings, "version": "1.0"}, ensure_ascii=False, indent=2, sort_keys=True) + "\n"

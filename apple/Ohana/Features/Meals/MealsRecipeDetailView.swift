@@ -4,17 +4,24 @@ import UniformTypeIdentifiers
 
 /// A recipe's page (web: meals/recipes/[id]): photo, times, tags, the ingredients scaled to the
 /// servings chosen here, the steps by hand and with the machine, and the actions: cook, edit,
-/// share, move between the lists, photo (upload, AI, remove), delete. Pushed from the recipes
-/// and from the meal plan.
+/// share (text or PDF), move between the lists, photo (upload, AI, remove), delete. Pushed from
+/// the recipes, from the meal plan (at the plan's servings) and by `AppRoute.recipe`.
 struct MealsRecipeDetailView: View {
     let recipeID: String
 
+    init(recipeID: String, initialServings: Int? = nil) {
+        self.recipeID = recipeID
+        _servings = State(initialValue: initialServings)
+    }
+
     @Environment(FamilyContext.self) private var family
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.undoManager) private var undoManager
     @State private var state: LoadState<RecipeResolved> = .idle
     @State private var ai = MealsAIStatus.none
     @State private var servings: Int?
     @State private var editing = false
+    @State private var sharing = false
     @State private var cooking = false
     @State private var confirmDelete = false
     @State private var photoItem: PhotosPickerItem?
@@ -35,7 +42,16 @@ struct MealsRecipeDetailView: View {
         .task { ai = (try? await family.api.get("/meals/status", as: MealsAIStatus.self)) ?? ai }
         .toolbar { if let recipe = state.value { toolbar(recipe) } }
         .sheet(isPresented: $editing) {
-            if let recipe = state.value { RecipeEditorSheet(mode: .edit(recipe)) }
+            if let recipe = state.value {
+                RecipeEditorSheet(mode: .edit(recipe)) { _ in
+                    ErrorBanner.shared.success(String(localized: "Recipe saved"))
+                }
+            }
+        }
+        .sheet(isPresented: $sharing) {
+            if let recipe = state.value {
+                RecipeExportSheet(recipe: recipe, portions: servings ?? recipe.detail.defaultServings)
+            }
         }
         #if os(iOS)
         .fullScreenCover(isPresented: $cooking) {
@@ -63,7 +79,8 @@ struct MealsRecipeDetailView: View {
         .confirmationDialog("Delete recipe?", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
                 if let recipe = state.value?.detail {
-                    RecipePendingDeletes.shared.schedule(recipe.id, title: recipe.title, family: family)
+                    RecipePendingDeletes.shared.schedule(recipe.id, title: recipe.title, family: family,
+                                                         undoManager: undoManager)
                     dismiss()
                 }
             }
@@ -150,12 +167,15 @@ struct MealsRecipeDetailView: View {
                 .buttonStyle(.glassProminent)
                 .controlSize(.large)
                 .disabled(recipe.detail.manualSteps.isEmpty && recipe.detail.machineSteps.isEmpty)
-                ShareLink(item: recipe.markdown(portions: servings ?? recipe.detail.defaultServings),
-                          subject: Text(recipe.detail.title)) {
+                Button {
+                    sharing = true
+                } label: {
                     Label("Share", systemImage: "square.and.arrow.up")
                 }
                 .buttonStyle(.glass)
                 .controlSize(.large)
+                .keyboardShortcut("s", modifiers: [.command, .shift])
+                .help("Share as text or PDF")
             }
         }
         .tint(ModuleTint.meals)
@@ -321,6 +341,7 @@ struct MealsRecipeDetailView: View {
         perform {
             try await family.api.perform(.delete, "/meals/recipes/\(recipeID)/image")
             family.didChange(.recipes, .meals)
+            ErrorBanner.shared.success(String(localized: "Photo removed"))
         }
     }
 }

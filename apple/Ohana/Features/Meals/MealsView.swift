@@ -25,12 +25,59 @@ enum MealsSegment: String, CaseIterable, Identifiable {
     }
 }
 
+/// A screen Meals pushes for a route (and the plan for its meals): a recipe, or cooking it, at
+/// the given servings (nil: the recipe's own).
+enum MealsDestination: Hashable, Identifiable {
+    case recipe(id: String, servings: Int? = nil)
+    case cook(recipeID: String, servings: Int? = nil)
+
+    var id: Self { self }
+}
+
+/// What Meals does with an `AppRoute` of its module: the part to show, a screen to push, the new
+/// recipe editor to open, the shopping list to pick.
+struct MealsRouting: Equatable {
+    var segment: MealsSegment?
+    var destination: MealsDestination?
+    var createsRecipe = false
+    /// With `segment == .shopping`: the list (nil: the latest).
+    var shoppingListID: String?
+
+    /// Nil for routes of other modules.
+    init?(_ route: AppRoute) {
+        switch route {
+        case .module(.meals):
+            break
+        case let .recipe(id):
+            segment = .recipes
+            destination = .recipe(id: id)
+        case let .cook(recipeID):
+            destination = .cook(recipeID: recipeID)
+        case .newRecipe:
+            segment = .recipes
+            createsRecipe = true
+        case .mealPlan:
+            segment = .plan
+        case let .shoppingList(id):
+            segment = .shopping
+            shoppingListID = id
+        case .mealTags:
+            segment = .tags
+        default:
+            return nil
+        }
+    }
+}
+
 /// Meals (web: f/[familyId]/meals): recipes, meal plan, shopping lists and tags behind a
 /// Liquid Glass switcher; the part shown last is remembered per device. Lives inside the
-/// shell's NavigationStack.
+/// shell's NavigationStack and takes the module's routes (`family.open(.recipe(id:))`, …).
 struct MealsView: View {
     @Environment(FamilyContext.self) private var family
     @AppStorage("meals.segment") private var segment: MealsSegment = .recipes
+    @State private var destination: MealsDestination?
+    @State private var creatingRecipe = false
+    @State private var shoppingListID: String?
 
     var body: some View {
         Group {
@@ -41,7 +88,7 @@ struct MealsView: View {
             case .plan:
                 MealPlanView()
             case .shopping:
-                ShoppingListsView()
+                ShoppingListsView(selection: $shoppingListID)
             case .tags:
                 RecipeTagsView()
                     .navigationTitle("Tags")
@@ -57,6 +104,32 @@ struct MealsView: View {
         .overlay(alignment: .bottom) { RecipeUndoBanner() }
         .animation(.spring(duration: 0.35), value: RecipePendingDeletes.shared.latest)
         .background { MealsSegmentShortcuts(selection: $segment) }
+        .navigationDestination(item: $destination) { MealsDestinationView(destination: $0) }
+        .sheet(isPresented: $creatingRecipe) {
+            RecipeEditorSheet(mode: .create(.known)) { id in
+                ErrorBanner.shared.success(String(localized: "Recipe created"))
+                family.open(.recipe(id: id))
+            }
+        }
+        .onChange(of: family.pendingRoute, initial: true) {
+            guard let route = family.takeRoute(for: .meals), let routing = MealsRouting(route) else { return }
+            if let target = routing.segment { segment = target }
+            if routing.segment == .shopping { shoppingListID = routing.shoppingListID }
+            if routing.createsRecipe { creatingRecipe = true }
+            if let target = routing.destination { destination = target }
+        }
+    }
+}
+
+/// The screen of a `MealsDestination`.
+struct MealsDestinationView: View {
+    let destination: MealsDestination
+
+    var body: some View {
+        switch destination {
+        case let .recipe(id, servings): MealsRecipeDetailView(recipeID: id, initialServings: servings)
+        case let .cook(id, servings): MealsCookView(recipeID: id, servings: servings)
+        }
     }
 }
 

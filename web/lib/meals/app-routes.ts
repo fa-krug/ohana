@@ -4,7 +4,8 @@
 // routes; null for paths that aren't its own (the meal plan's and shopping lists' routes, and
 // family-routes.ts's PATCH / DELETE /meals/recipes/{id}, which the app uses to save and delete).
 //
-//   GET    /meals/status                      {generate, photos}: the family's AI (lib/meals/ai/status.ts)
+//   GET    /meals/status                      {generate, photos, recipeCount}: the family's AI (lib/meals/ai/status.ts)
+//                                              and how many recipes it has (the app's welcome while none)
 //   GET    /meals/catalog                     {ingredients, units}: the shared lists
 //   GET    /meals/tags                        {tags}
 //   POST   /meals/tags                        {category, nameEn, nameDe} → {id}
@@ -32,7 +33,7 @@ import { generateImage } from "./ai/generate";
 import { generateRecipeImage } from "./ai/recipes";
 import { mealsAi } from "./ai/status";
 import { ALLOWED_UPLOAD_TYPES, MAX_UPLOAD_BYTES } from "./images/config";
-import { getRecipe, listIngredients, listRecipes, listTags, listUnits } from "./queries/recipes";
+import { countRecipes, getRecipe, listIngredients, listRecipes, listTags, listUnits } from "./queries/recipes";
 import { bulkCreateRecipes } from "./recipes/bulk-create";
 import { removeRecipeImage, setRecipeImage } from "./recipes/images";
 import { upsertRecipeInputSchema } from "./recipes/input";
@@ -59,7 +60,7 @@ export function createMealsApp(options: MealsAppOptions = {}) {
     const m = ctx.method;
 
     if (area === "status" && rest.length === 0 && m === "GET") {
-      return read(ctx, (familyId) => mealsAi(ctx.db, familyId));
+      return read(ctx, (familyId) => ({ ...mealsAi(ctx.db, familyId), recipeCount: countRecipes(ctx.db, familyId) }));
     }
     if (area === "catalog" && rest.length === 0 && m === "GET") {
       return read(ctx, () => ({ ingredients: listIngredients(ctx.db), units: listUnits(ctx.db) }));
