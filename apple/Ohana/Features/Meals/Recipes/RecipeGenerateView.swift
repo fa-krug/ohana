@@ -118,7 +118,7 @@ struct RecipeGenerateView: View {
                         Button(role: .confirm) {
                             save()
                         } label: {
-                            if selectedCount == 1 { Text("Save 1 recipe") } else { Text("Save \(selectedCount) recipes") }
+                            Text("Save \(selectedCount) recipes")
                         }
                         .disabled(selectedCount == 0 || generating)
                         .keyboardShortcut("s", modifiers: .command)
@@ -198,8 +198,10 @@ struct RecipeGenerateView: View {
             var req = client.request(.post, family.api.path("/meals/recipes/bulk"),
                                      body: try APIClient.encoder.encode(RecipeBulkInput(recipes: chosen)))
             req.timeoutInterval = 120
-            _ = try await client.data(for: req)
+            let (data, _) = try await client.data(for: req)
+            let created = (try? APIClient.decoder.decode(RecipeBulkResponse.self, from: data).createdIds.count) ?? chosen.count
             family.didChange(.recipes, .meals)
+            ErrorBanner.shared.success(String(localized: "\(created) recipes added to “Want to try”"))
             onSaved()
             dismiss()
         }
@@ -232,7 +234,11 @@ private struct RecipeGeneratedRow: View {
                 photo
                 VStack(alignment: .leading, spacing: 4) {
                     Text(d.title).font(.headline)
-                    Text("\(ingredients.count) ingredients · \(d.default_servings ?? 2) servings · \((d.prep_time_minutes ?? 0) + (d.cook_time_minutes ?? 0)) min")
+                    Text(verbatim: [
+                        String(localized: "\(ingredients.count) ingredients"),
+                        String(localized: "\(d.default_servings ?? 2) servings"),
+                        String(localized: "\((d.prep_time_minutes ?? 0) + (d.cook_time_minutes ?? 0)) min"),
+                    ].joined(separator: " · "))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

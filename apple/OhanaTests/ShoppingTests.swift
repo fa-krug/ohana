@@ -150,3 +150,71 @@ struct ShoppingTickQueueTests {
         #expect(!ShoppingTickQueue.isRetryable(APIError.decoding("x")))
     }
 }
+
+/// The ticks and lists kept on the device (`ShoppingOfflineStore`): they survive a restart.
+@MainActor
+struct ShoppingOfflineTests {
+    static func store() -> ShoppingOfflineStore {
+        ShoppingOfflineStore(directory: FileManager.default.temporaryDirectory
+            .appending(path: "ohana-shopping-tests-\(UUID().uuidString)", directoryHint: .isDirectory))
+    }
+
+    @Test func keepsUnsentTicksAcrossARestart() async {
+        let store = Self.store()
+        defer { try? FileManager.default.removeItem(at: store.directory) }
+        let offline = ShoppingFakeServer()
+        offline.failures = [APIError.transport("offline"), APIError.transport("offline")]
+        let first = ShoppingTickQueue(store: store) { id, checked in try await offline.send(id, checked) }
+        first.retryDelay = { _ in .seconds(3600) }
+        first.set("a", checked: true)
+        first.set("b", checked: false)
+        await first.flush()
+        #expect(store.loadTicks() == ["a": true, "b": false])
+
+        // The app starts again: the queue picks the ticks up and sends them.
+        let online = ShoppingFakeServer()
+        let second = ShoppingTickQueue(store: store) { id, checked in try await online.send(id, checked) }
+        #expect(second.pending == ["a": true, "b": false])
+        #expect(second.isChecked(ShoppingTickQueueTests.item))
+        await second.flush()
+        #expect(Set(online.sent.map(\.0)) == ["a", "b"])
+        #expect(second.pending.isEmpty)
+        #expect(store.loadTicks().isEmpty)
+    }
+
+    @Test func forgetsATickTheServerRefused() async {
+        let store = Self.store()
+        defer { try? FileManager.default.removeItem(at: store.directory) }
+        let server = ShoppingFakeServer()
+        server.failures = [APIError.http(status: 404, message: "gone")]
+        let queue = ShoppingTickQueue(store: store) { id, checked in try await server.send(id, checked) }
+        queue.set("a", checked: true)
+        await queue.flush()
+        #expect(store.loadTicks().isEmpty)
+    }
+
+    @Test func keepsTheListsForOffline() throws {
+        let store = Self.store()
+        defer { try? FileManager.default.removeItem(at: store.directory) }
+        #expect(store.loadOverview() == nil)
+        let overview = try JSONDecoder().decode(ShoppingOverview.self, from: Data(ShoppingTests.overviewJSON.utf8))
+        store.saveOverview(overview)
+        let saved = try #require(store.loadOverview())
+        #expect(saved.lists.map(\.id) == ["l2", "l1"])
+        #expect(saved.latest?.items.count == 4)
+        // The latest list is kept on its own too.
+        #expect(store.loadList("l1")?.shoppingDate == Day("2026-11-02"))
+        #expect(store.loadList("l2") == nil)
+
+        store.saveList(ShoppingList(id: "l2", shoppingDate: Day("2026-11-05"), createdAt: nil, items: []))
+        #expect(store.loadList("l2")?.items.isEmpty == true)
+        store.prune(keeping: ["l2"])
+        #expect(store.loadList("l1") == nil)
+        #expect(store.loadList("l2") != nil)
+        #expect(store.loadOverview() != nil)
+    }
+
+    @Test func namesTheFolderSafely() {
+        #expect(ShoppingOfflineStore.safe("ohana.example.com_ab/c d") == "ohana.example.com_ab-c-d")
+    }
+}

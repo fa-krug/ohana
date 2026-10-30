@@ -4,6 +4,7 @@ import SwiftUI
 /// sort, a page of 20 at a time as an adaptive grid of glass cards.
 struct RecipeListView: View {
     @Environment(FamilyContext.self) private var family
+    @Environment(\.undoManager) private var undoManager
     @AppStorage("meals.recipes.list") private var list: RecipeListType = .known
     @AppStorage("meals.recipes.sort") private var sort: RecipeSort = .nameAsc
     @State private var query = ""
@@ -50,7 +51,10 @@ struct RecipeListView: View {
             RecipeFilterSheet(tags: tags, selection: $tagFilter)
         }
         .sheet(isPresented: $creating) {
-            RecipeEditorSheet(mode: .create(list))
+            RecipeEditorSheet(mode: .create(list)) { id in
+                ErrorBanner.shared.success(String(localized: "Recipe created"))
+                family.open(.recipe(id: id))
+            }
         }
         .sheet(isPresented: $generating) {
             RecipeGenerateView { list = .toTry }
@@ -58,7 +62,9 @@ struct RecipeListView: View {
         .confirmationDialog("Delete recipe?", isPresented: Binding(get: { confirmDelete != nil }, set: { if !$0 { confirmDelete = nil } }),
                             titleVisibility: .visible, presenting: confirmDelete) { recipe in
             Button("Delete", role: .destructive) {
-                withAnimation { deletes.schedule(recipe.id, title: recipe.title, family: family) }
+                withAnimation {
+                    deletes.schedule(recipe.id, title: recipe.title, family: family, undoManager: undoManager)
+                }
             }
         } message: { _ in
             Text("Delete this recipe? You’ll have a few seconds to undo.")
@@ -110,6 +116,9 @@ struct RecipeListView: View {
                 ContentUnavailableView("No matches", systemImage: "line.3.horizontal.decrease.circle",
                                        description: Text("No recipe has these tags."))
                     .padding(.top, 40)
+            } else if ai.showsWelcome(canEdit: family.canEdit) {
+                MealsWelcomeView(ai: ai, addRecipe: { creating = true }, generate: { generating = true })
+                    .padding(.top, 24)
             } else {
                 ContentUnavailableView {
                     Label("No recipes yet", systemImage: "book")

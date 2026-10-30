@@ -235,12 +235,42 @@
         }
       }
     },
-    "%lld ingredients · %lld servings · %lld min": {
+    "%lld ingredients": {
       "localizations": {
         "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld Zutaten · %lld Portionen · %lld Min."
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Zutat"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Zutaten"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld ingredient"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld ingredients"
+                }
+              }
+            }
           }
         }
       }
@@ -248,9 +278,39 @@
     "%lld items to grab": {
       "localizations": {
         "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld Sachen"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Sache"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Sachen"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld item to grab"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld items to grab"
+                }
+              }
+            }
           }
         }
       }
@@ -298,9 +358,79 @@
     "%lld recipes": {
       "localizations": {
         "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld Rezepte"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Rezept"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Rezepte"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld recipe"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld recipes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld recipes added to “Want to try”": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Rezept zu „Ausprobieren“ hinzugefügt"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Rezepte zu „Ausprobieren“ hinzugefügt"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld recipe added to “Want to try”"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld recipes added to “Want to try”"
+                }
+              }
+            }
           }
         }
       }
@@ -328,9 +458,39 @@
     "%lld servings": {
       "localizations": {
         "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld Portionen"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Portion"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Portionen"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld serving"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld servings"
+                }
+              }
+            }
           }
         }
       }
@@ -1547,6 +1707,26 @@
         }
       }
     },
+    "Back to meal plan": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zurück zum Essensplan"
+          }
+        }
+      }
+    },
+    "Back to servings and method": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zurück zu Portionen und Zubereitung"
+          }
+        }
+      }
+    },
     "Balance": {
       "localizations": {
         "de": {
@@ -1887,6 +2067,16 @@
         }
       }
     },
+    "Change method": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zubereitung wechseln"
+          }
+        }
+      }
+    },
     "Change quantity": {
       "localizations": {
         "de": {
@@ -2057,12 +2247,12 @@
         }
       }
     },
-    "Choose the groceries category in Settings → Finance.": {
+    "Choose the groceries category": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wähle die Lebensmittel-Kategorie unter Einstellungen → Finanzen."
+            "value": "Lebensmittel-Kategorie wählen"
           }
         }
       }
@@ -2377,6 +2567,16 @@
         }
       }
     },
+    "Cook together": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zusammen kochen"
+          }
+        }
+      }
+    },
     "Cooking %lld min": {
       "localizations": {
         "de": {
@@ -2413,6 +2613,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld Tage kopiert"
+          }
+        }
+      }
+    },
+    "Copied to clipboard.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Zwischenablage kopiert."
           }
         }
       }
@@ -2537,6 +2747,16 @@
         }
       }
     },
+    "Couldn’t share the recipe. Try again?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konnte das Rezept nicht teilen. Nochmal versuchen?"
+          }
+        }
+      }
+    },
     "Couldn’t undo: %@": {
       "localizations": {
         "de": {
@@ -2613,6 +2833,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lege eine Familie an oder lass dich in eine einladen."
+          }
+        }
+      }
+    },
+    "Create a meal plan": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Essensplan erstellen"
           }
         }
       }
@@ -2863,6 +3093,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ löschen?"
+          }
+        }
+      }
+    },
+    "Delete Recipe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rezept löschen"
           }
         }
       }
@@ -3857,6 +4097,16 @@
         }
       }
     },
+    "Format": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Format"
+          }
+        }
+      }
+    },
     "Free text": {
       "localizations": {
         "de": {
@@ -3997,6 +4247,16 @@
         }
       }
     },
+    "Get started": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los geht’s"
+          }
+        }
+      }
+    },
     "Give it a title.": {
       "localizations": {
         "de": {
@@ -4023,6 +4283,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Gehe zu"
+          }
+        }
+      }
+    },
+    "Go to meal plan": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zum Essensplan"
           }
         }
       }
@@ -4609,6 +4879,16 @@
         }
       }
     },
+    "Invite a family member": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Familienmitglied einladen"
+          }
+        }
+      }
+    },
     "Invite link created": {
       "localizations": {
         "de": {
@@ -4835,6 +5115,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Reste"
+          }
+        }
+      }
+    },
+    "Let the assistant suggest recipes to try": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lass dir vom Assistenten Rezepte zum Ausprobieren vorschlagen"
           }
         }
       }
@@ -5135,6 +5425,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Essensplan"
+          }
+        }
+      }
+    },
+    "Meal plan generated.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speiseplan erstellt."
           }
         }
       }
@@ -6401,6 +6701,16 @@
         }
       }
     },
+    "Open finance": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finanzen öffnen"
+          }
+        }
+      }
+    },
     "Open in Maps": {
       "localizations": {
         "de": {
@@ -6567,6 +6877,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Übersicht"
+          }
+        }
+      }
+    },
+    "PDF": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PDF"
           }
         }
       }
@@ -6741,6 +7061,16 @@
         }
       }
     },
+    "Photo removed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto entfernt"
+          }
+        }
+      }
+    },
     "Pick 1–2 shopping days, at least 3 days apart.": {
       "localizations": {
         "de": {
@@ -6871,6 +7201,16 @@
         }
       }
     },
+    "Plan your meals for the week": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plane deine Mahlzeiten für die Woche"
+          }
+        }
+      }
+    },
     "Planned already": {
       "localizations": {
         "de": {
@@ -6897,6 +7237,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Port"
+          }
+        }
+      }
+    },
+    "Portions": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Portionen"
           }
         }
       }
@@ -6937,6 +7287,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vorbereitung (Min.)"
+          }
+        }
+      }
+    },
+    "Preview": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorschau"
           }
         }
       }
@@ -7261,6 +7621,16 @@
         }
       }
     },
+    "Recipe created": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rezept erstellt"
+          }
+        }
+      }
+    },
     "Recipe deleted.": {
       "localizations": {
         "de": {
@@ -7287,6 +7657,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rezeptfotos"
+          }
+        }
+      }
+    },
+    "Recipe saved": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rezept gespeichert"
           }
         }
       }
@@ -7754,9 +8134,39 @@
     "Save %lld recipes": {
       "localizations": {
         "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld Rezepte speichern"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Rezept speichern"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Rezepte speichern"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Save %lld recipe"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Save %lld recipes"
+                }
+              }
+            }
           }
         }
       }
@@ -7807,6 +8217,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Gespeichert."
+          }
+        }
+      }
+    },
+    "Save…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sichern …"
           }
         }
       }
@@ -8281,6 +8701,26 @@
         }
       }
     },
+    "Share Recipe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rezept teilen"
+          }
+        }
+      }
+    },
+    "Share as text or PDF": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Als Text oder PDF teilen"
+          }
+        }
+      }
+    },
     "Share invite link": {
       "localizations": {
         "de": {
@@ -8417,6 +8857,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Assistent in der Menüleiste zeigen"
+          }
+        }
+      }
+    },
+    "Showing the list as it was last loaded.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Liste, wie sie zuletzt geladen wurde."
           }
         }
       }
@@ -8845,6 +9295,16 @@
         }
       }
     },
+    "Steps": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schritte"
+          }
+        }
+      }
+    },
     "Stop": {
       "localizations": {
         "de": {
@@ -8965,6 +9425,16 @@
         }
       }
     },
+    "Syncing your changes…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Änderungen werden synchronisiert …"
+          }
+        }
+      }
+    },
     "System": {
       "localizations": {
         "de": {
@@ -9071,6 +9541,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Testnachricht verschickt."
+          }
+        }
+      }
+    },
+    "Text": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text"
           }
         }
       }
@@ -9481,16 +9961,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hakt die Einkaufsliste ab"
-          }
-        }
-      }
-    },
-    "Ticks are sent when the connection is back.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abgehaktes wird gesendet, sobald die Verbindung wieder da ist."
           }
         }
       }
@@ -10035,6 +10505,16 @@
         }
       }
     },
+    "Welcome to Meals!": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Willkommen bei Essen!"
+          }
+        }
+      }
+    },
     "What Ohana tells you": {
       "localizations": {
         "de": {
@@ -10071,6 +10551,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Was in diesem Schritt zu tun ist…"
+          }
+        }
+      }
+    },
+    "What to include": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was soll dabei sein"
           }
         }
       }
@@ -10375,6 +10865,16 @@
         }
       }
     },
+    "Your family has no recipes yet. Here’s how to start:": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Familie hat noch keine Rezepte. So legst du los:"
+          }
+        }
+      }
+    },
     "Your messages and the data the assistant looks at are sent to the AI API you set up above.": {
       "localizations": {
         "de": {
@@ -10401,6 +10901,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Deine Sitzung ist abgelaufen, melde dich erneut an."
+          }
+        }
+      }
+    },
+    "You’re offline — changes will sync when you reconnect.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du bist offline – Änderungen werden synchronisiert, sobald du wieder online bist."
           }
         }
       }

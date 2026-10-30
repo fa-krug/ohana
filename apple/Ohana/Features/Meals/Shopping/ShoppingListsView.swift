@@ -1,16 +1,19 @@
 import SwiftUI
 
 /// Meals → Shopping: the latest shopping list (as on the web's shopping page), with a switcher
-/// to the family's other lists (one per shopping day of each plan iteration).
+/// to the family's other lists (one per shopping day of each plan iteration). `selection` picks
+/// one (nil: the latest), e.g. a shopping day of the plan (`AppRoute.shoppingList`). The lists
+/// are kept on the device and shown from there while offline.
 struct ShoppingListsView: View {
     @Environment(FamilyContext.self) private var family
+    @Binding var selection: String?
     @State private var state: LoadState<ShoppingOverview> = .idle
-    @State private var selectedID: String?
+    @State private var savedCopy = false
 
     var body: some View {
         LoadStateView(state: state, retry: load) { overview in
-            if let id = selectedID ?? overview.latest?.id {
-                ShoppingListPage(listID: id, lists: overview.lists, latestID: overview.latest?.id) { selectedID = $0 }
+            if let id = selection ?? overview.latest?.id {
+                ShoppingListPage(listID: id, lists: overview.lists, latestID: overview.latest?.id) { selection = $0 }
             } else {
                 ShoppingEmptyView()
             }
@@ -20,33 +23,46 @@ struct ShoppingListsView: View {
     }
 
     private func load() async {
-        await LoadState.run($state) {
-            try await family.api.get("/meals/shopping", query: ["lang": MealPlanLanguage.current])
+        let store = ShoppingOfflineStore(api: family.api)
+        if state.value == nil { state = .loading }
+        do {
+            let overview: ShoppingOverview = try await family.api.get("/meals/shopping", query: ["lang": MealPlanLanguage.current])
+            state = .loaded(overview)
+            savedCopy = false
+            store.saveOverview(overview)
+            store.prune(keeping: Set(overview.lists.map(\.id)))
+        } catch is CancellationError {
+            return
+        } catch {
+            if ShoppingTickQueue.isRetryable(error), state.value == nil, let saved = store.loadOverview() {
+                state = .loaded(saved)
+                savedCopy = true
+            } else if state.value == nil {
+                state = .failed(error.localizedDescription)
+            } else if !savedCopy {
+                ErrorBanner.shared.show(error)
+            }
         }
         // A list made new by the plan is gone: back to the latest.
-        if let id = selectedID, let lists = state.value?.lists, !lists.contains(where: { $0.id == id }) {
-            selectedID = nil
+        if let id = selection, let lists = state.value?.lists, !lists.contains(where: { $0.id == id }),
+           !savedCopy || store.loadList(id) == nil {
+            selection = nil
         }
-    }
-}
-
-/// A shopping list pushed from elsewhere (the meal plan's shopping days).
-struct ShoppingListDetailView: View {
-    let listID: String
-
-    var body: some View {
-        ShoppingListPage(listID: listID)
-            .navigationTitle("Shopping list")
     }
 }
 
 /// No list yet: lists come with the meal plan.
 struct ShoppingEmptyView: View {
+    @Environment(FamilyContext.self) private var family
+
     var body: some View {
         ContentUnavailableView {
             Label("Nothing to shop for", systemImage: "cart")
         } description: {
             Text("Create a meal plan and we’ll sort it out for you!")
+        } actions: {
+            Button("Go to meal plan", systemImage: "calendar") { family.open(.mealPlan) }
+                .buttonStyle(.glass)
         }
     }
 }
@@ -62,12 +78,15 @@ struct ShoppingListPage: View {
     var onSelect: ((String?) -> Void)?
 
     @State private var state: LoadState<ShoppingList> = .idle
+    /// The list shown is the copy kept on the device (no connection): ticks still work.
+    @State private var savedCopy = false
     @State private var collapsed: Set<ShoppingCategory> = []
     @State private var editing: ShoppingItem?
     @State private var quantityText = ""
     @State private var showAdd = false
     @State private var confirmReset = false
     @State private var ticks = 0
+    @State private var connectivity = ShoppingConnectivity.shared
 
     private var queue: ShoppingTickQueue { .for(family.api) }
 
@@ -97,15 +116,36 @@ struct ShoppingListPage: View {
             ShoppingAddItemSheet(listID: listID) { family.didChange(.shopping) }
         }
         .sensoryFeedback(.selection, trigger: ticks)
+        .onChange(of: connectivity.isOnline) { _, online in
+            // Back online: fresh lists instead of the saved copy (the queue sends the ticks).
+            if online, savedCopy { family.didChange(.shopping) }
+        }
     }
 
+    /// Editing beyond ticking needs the server.
+    private var canChange: Bool { family.canEdit && !savedCopy }
+
     private func load() async {
-        await LoadState.run($state) {
+        let store = ShoppingOfflineStore(api: family.api)
+        if state.value?.id != listID { state = .loading }
+        do {
             let response: ShoppingListResponse = try await family.api.get(
                 "/meals/shopping/lists/\(listID)", query: ["lang": MealPlanLanguage.current])
-            return response.list
+            state = .loaded(response.list)
+            savedCopy = false
+            store.saveList(response.list)
+            queue.reconcile()
+        } catch is CancellationError {
+        } catch {
+            if ShoppingTickQueue.isRetryable(error), let saved = store.loadList(listID) {
+                state = .loaded(saved)
+                savedCopy = true
+            } else if state.value == nil {
+                state = .failed(error.localizedDescription)
+            } else {
+                ErrorBanner.shared.show(error)
+            }
         }
-        queue.reconcile()
     }
 
     // MARK: Content
@@ -119,10 +159,12 @@ struct ShoppingListPage: View {
             } description: {
                 Text("Create a meal plan and we’ll sort it out for you!")
             } actions: {
-                if family.canEdit {
+                if canChange {
                     Button("Add item", systemImage: "plus") { showAdd = true }
                         .buttonStyle(.glassProminent)
                 }
+                Button("Go to meal plan", systemImage: "calendar") { family.open(.mealPlan) }
+                    .buttonStyle(.glass)
             }
         } else {
             List {
@@ -130,7 +172,7 @@ struct ShoppingListPage: View {
                 ForEach(ShoppingGrouping.groups(items)) { group in
                     categorySection(group)
                 }
-                if list.shoppingDate != nil {
+                if list.shoppingDate != nil, !savedCopy {
                     ShoppingSpentSection(listID: list.id)
                 }
             }
@@ -139,6 +181,11 @@ struct ShoppingListPage: View {
                 await load()
             }
             .animation(.snappy, value: items)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                ShoppingOfflineBanner(queue: queue, showsSavedCopy: savedCopy)
+                    .padding(.horizontal)
+                    .padding(.bottom, 4)
+            }
         }
     }
 
@@ -174,13 +221,12 @@ struct ShoppingListPage: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
+                    Spacer(minLength: 8)
+                    Button("Back to meal plan") { family.open(.mealPlan) }
+                        .buttonStyle(.glass)
+                        .font(.subheadline)
                 }
                 .padding(.vertical, 4)
-            }
-            if queue.isWaiting {
-                Label("Ticks are sent when the connection is back.", systemImage: "wifi.slash")
-                    .font(.footnote)
-                    .foregroundStyle(.orange)
             }
         }
     }
@@ -233,9 +279,11 @@ struct ShoppingListPage: View {
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(item.isChecked ? .isSelected : [])
                 .swipeActions(edge: .trailing) {
-                    Button("Delete", systemImage: "trash", role: .destructive) { delete(item) }
-                    Button("Quantity", systemImage: "number") { startEditing(item) }
-                        .tint(.orange)
+                    if canChange {
+                        Button("Delete", systemImage: "trash", role: .destructive) { delete(item) }
+                        Button("Quantity", systemImage: "number") { startEditing(item) }
+                            .tint(.orange)
+                    }
                 }
                 .swipeActions(edge: .leading) {
                     Button(item.isChecked ? "Untick" : "Tick", systemImage: item.isChecked ? "circle" : "checkmark") {
@@ -247,9 +295,11 @@ struct ShoppingListPage: View {
                     Button(item.isChecked ? "Untick" : "Tick", systemImage: item.isChecked ? "circle" : "checkmark") {
                         tick(item)
                     }
-                    Button("Change quantity", systemImage: "number") { startEditing(item) }
-                    Divider()
-                    Button("Delete", systemImage: "trash", role: .destructive) { delete(item) }
+                    if canChange {
+                        Button("Change quantity", systemImage: "number") { startEditing(item) }
+                        Divider()
+                        Button("Delete", systemImage: "trash", role: .destructive) { delete(item) }
+                    }
                 }
         } else {
             label
@@ -292,6 +342,7 @@ struct ShoppingListPage: View {
                 ToolbarItemGroup(placement: .primaryAction) {
                     Button("Add item", systemImage: "plus") { showAdd = true }
                         .keyboardShortcut("n", modifiers: [.command, .shift])
+                        .disabled(savedCopy)
                     Button("Reset", systemImage: "arrow.uturn.backward") { confirmReset = true }
                         .disabled(!queue.apply(to: list.items).contains(where: \.isChecked))
                         .help("Untick every item")
@@ -366,9 +417,9 @@ struct ShoppingSpentSection: View {
                 if spend.category == nil {
                     Text("Ohana shows here what this shopping trip cost, from the finances’ groceries category.")
                         .foregroundStyle(.secondary)
-                    Text("Choose the groceries category in Settings → Finance.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                    Button("Choose the groceries category", systemImage: "gearshape") {
+                        family.open(.settings(.finance))
+                    }
                 } else if spend.transactions.isEmpty {
                     Text("No transactions yet.")
                         .foregroundStyle(.secondary)
@@ -408,7 +459,12 @@ struct ShoppingSpentSection: View {
         } footer: {
             if let spend, let category = spend.category {
                 let name = category.icon.isEmpty ? category.name : "\(category.icon) \(category.name)"
-                Text("\(name) in your finances, \(spend.from.formatted()) – \(spend.to.formatted())")
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("\(name) in your finances, \(spend.from.formatted()) – \(spend.to.formatted())")
+                    Button("Open finance") { family.open(.financeTransactions(categoryID: category.id)) }
+                        .buttonStyle(.borderless)
+                        .font(.footnote.weight(.medium))
+                }
             }
         }
     }

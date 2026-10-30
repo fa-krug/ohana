@@ -105,9 +105,16 @@ const png = () => sharp({ create: { width: 64, height: 64, channels: 3, backgrou
 describe("app meals: status, catalog, tags", () => {
   it("tells whether the family has AI", async () => {
     const { t, call, view } = setup();
-    expect((await call("GET", "/meals/status")).data).toEqual({ generate: false, photos: false });
+    expect((await call("GET", "/meals/status")).data).toEqual({ generate: false, photos: false, recipeCount: 0 });
     await configure(t, { imageModel: "mock-image" });
-    expect((await view("GET", "/meals/status")).data).toEqual({ generate: true, photos: true });
+    expect((await view("GET", "/meals/status")).data).toEqual({ generate: true, photos: true, recipeCount: 0 });
+  });
+
+  it("counts the family's recipes of both lists (the app's welcome)", async () => {
+    const { call, view } = setup();
+    expect((await call("POST", "/meals/recipes", soup())).status).toBe(200);
+    expect((await call("POST", "/meals/recipes", soup({ title: "Pasta", listType: "TO_TRY" }))).status).toBe(200);
+    expect((await view("GET", "/meals/status")).data.recipeCount).toBe(2);
   });
 
   it("lists the shared ingredients and units", async () => {

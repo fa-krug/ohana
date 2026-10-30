@@ -3,8 +3,9 @@ import Observation
 
 /// Ticks of shopping items, shown at once and sent in the background: the app's version of the
 /// web's offline queue (web/lib/offline). A tick that can't reach the server (offline, a server
-/// error) stays queued in memory and is retried with growing pauses; one the server refuses (the
-/// item is gone, no right to edit) is dropped and reported. Every tick is an idempotent "set"
+/// error) stays queued — on disk too (`ShoppingOfflineStore`), so it survives quitting the app —
+/// and is retried with growing pauses and when the connection comes back; one the server refuses
+/// (the item is gone, no right to edit) is dropped and reported. Every tick is an idempotent "set"
 /// (POST /shopping/toggle `{kind: "set", itemId, checked}`), so replaying one is harmless, and
 /// only the latest wish per item is kept.
 ///
@@ -13,12 +14,16 @@ import Observation
 final class ShoppingTickQueue {
     typealias Sender = (_ itemID: String, _ checked: Bool) async throws -> Void
 
-    /// Ticks not confirmed by the server yet: item id → checked.
-    private(set) var pending: [String: Bool] = [:]
+    /// Ticks not confirmed by the server yet: item id → checked. Saved to the store.
+    private(set) var pending: [String: Bool] = [:] {
+        didSet { if pending != oldValue { store?.saveTicks(pending) } }
+    }
     /// Ticks the server confirmed since the list was last loaded: item id → checked.
     private(set) var confirmed: [String: Bool] = [:]
     /// Failed attempts in a row; > 0 while waiting to retry.
     private(set) var failures = 0
+    /// A tick is on its way.
+    private(set) var isSending = false
 
     /// Called when the server refused a tick (the item shows its old state again).
     @ObservationIgnored var onRejected: ((_ itemID: String, _ error: any Error) -> Void)?
@@ -26,11 +31,15 @@ final class ShoppingTickQueue {
     @ObservationIgnored var retryDelay: (Int) -> Duration = { n in .seconds(min(30, 1 << min(n, 5))) }
 
     @ObservationIgnored private let send: Sender
+    @ObservationIgnored private let store: ShoppingOfflineStore?
     @ObservationIgnored private var flushing = false
     @ObservationIgnored private var retryTask: Task<Void, Never>?
 
-    init(send: @escaping Sender) {
+    /// With a `store`, the ticks it kept from last time are queued again.
+    init(store: ShoppingOfflineStore? = nil, send: @escaping Sender) {
         self.send = send
+        self.store = store
+        pending = store?.loadTicks() ?? [:]
     }
 
     /// Ticks are waiting for the connection.
@@ -72,9 +81,10 @@ final class ShoppingTickQueue {
     func flush() async {
         guard !flushing else { return }
         flushing = true
-        defer { flushing = false }
+        defer { flushing = false; isSending = false }
         while let next = pending.first {
             let id = next.key, wanted = next.value
+            isSending = true
             do {
                 try await send(id, wanted)
                 confirmed[id] = wanted
@@ -120,11 +130,16 @@ final class ShoppingTickQueue {
     static func `for`(_ api: FamilyAPI) -> ShoppingTickQueue {
         let key = "\(ObjectIdentifier(api.client).hashValue)|\(api.familyID)"
         if let queue = queues[key] { return queue }
-        let queue = ShoppingTickQueue { itemID, checked in
+        let queue = ShoppingTickQueue(store: ShoppingOfflineStore(api: api)) { itemID, checked in
             try await api.perform(.post, "/shopping/toggle", body: ShoppingSetInput(itemId: itemID, checked: checked))
         }
         queue.onRejected = { _, error in ErrorBanner.shared.show(error) }
         queues[key] = queue
+        let connectivity = ShoppingConnectivity.shared
+        connectivity.start()
+        connectivity.whenReconnected { [weak queue] in queue?.retryNow() }
+        // Ticks kept from last time go out now.
+        if !queue.pending.isEmpty { queue.retryNow() }
         return queue
     }
 }
