@@ -1,0 +1,304 @@
+import SwiftUI
+
+/// One search (search-detail.tsx): its criteria, schedule and last run, "run now" (polling until
+/// the worker is done), the earliest slot per doctor by day with the distance from home, the
+/// ignore list; editors edit, pause, delete.
+struct AppointmentSearchDetailView: View {
+    @Environment(FamilyContext.self) private var family
+    @Environment(\.dismiss) private var dismiss
+    let searchID: String
+    @State private var state: LoadState<AppointmentSearchDetail> = .idle
+    @State private var editing = false
+    @State private var confirmDelete = false
+    @State private var width: CGFloat = 0
+    /// Deleted here: no more reloads (they'd answer 404) while the page goes away.
+    @State private var deleted = false
+
+    var body: some View {
+        LoadStateView(state: state, retry: load) { detail in
+            content(detail)
+        }
+        .ohanaBackground(ModuleTint.appointments)
+        .navigationTitle(state.value?.search.name ?? "")
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
+        .toolbar { toolbar }
+        .task(id: family.revision(.appointments)) { await load() }
+        .appointmentPolling(busy: state.value?.search.isBusy ?? false) { await load() }
+        .sheet(isPresented: $editing) {
+            if let search = state.value?.search {
+                AppointmentSearchEditor(search: search) { _ in }
+            }
+        }
+        .confirmationDialog("Delete the search?", isPresented: $confirmDelete) {
+            Button("Delete", role: .destructive) {
+                perform {
+                    deleted = true
+                    do {
+                        try await AppointmentActions.delete(family, searchID)
+                    } catch {
+                        deleted = false
+                        throw error
+                    }
+                    dismiss()
+                }
+            }
+        } message: {
+            Text("Delete the search “\(state.value?.search.name ?? "")” with its history?")
+        }
+    }
+
+    private func load() async {
+        guard !deleted else { return }
+        await LoadState.run($state) { try await family.api.get("/appointments/searches/\(searchID)") }
+    }
+
+    @ToolbarContentBuilder private var toolbar: some ToolbarContent {
+        if let search = state.value?.search {
+            ToolbarItem(placement: .primaryAction) {
+                NavigationLink(value: AppointmentRoute.history(search.id)) {
+                    Label("History", systemImage: "clock.arrow.circlepath")
+                }
+                .help("History")
+            }
+            if family.canEdit {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Edit", systemImage: "pencil") { editing = true }
+                        .keyboardShortcut("e", modifiers: .command)
+                        .help("Edit (⌘E)")
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    Menu("More", systemImage: "ellipsis") {
+                        Toggle(isOn: Binding(get: { search.enabled }, set: { value in
+                            perform { try await AppointmentActions.setEnabled(family, search.id, value) }
+                        })) {
+                            Label("Run on the schedule", systemImage: "clock")
+                        }
+                        Divider()
+                        Button("Delete", systemImage: "trash", role: .destructive) { confirmDelete = true }
+                            .keyboardShortcut(.delete, modifiers: .command)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private func content(_ detail: AppointmentSearchDetail) -> some View {
+        let search = detail.search
+        ScrollView {
+            Group {
+                if width >= 820 {
+                    HStack(alignment: .top, spacing: 20) {
+                        VStack(spacing: 20) { results(detail) }
+                            .frame(maxWidth: .infinity)
+                        VStack(spacing: 20) {
+                            summary(search)
+                            ignored(search)
+                        }
+                        .frame(width: 360)
+                    }
+                } else {
+                    VStack(spacing: 20) {
+                        summary(search)
+                        results(detail)
+                        ignored(search)
+                    }
+                }
+            }
+            .padding()
+            .frame(maxWidth: 1200)
+            .frame(maxWidth: .infinity)
+        }
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+        .refreshable { await load() }
+    }
+
+    // MARK: Header card
+
+    private func summary(_ search: AppointmentSearch) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                if let status = search.badgeStatus { AppointmentStatusBadge(status: status) }
+                if !search.enabled { AppointmentPausedBadge() }
+                Spacer(minLength: 0)
+            }
+            Text(search.name)
+                .font(.title2.weight(.semibold))
+            Text(AppointmentLogic.criteriaSummary(search))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(AppointmentLogic.scheduleSummary(search))
+                if let next = AppointmentActions.nextRunText(search) { Text(next) }
+                Text(AppointmentActions.lastRunText(search))
+                if let run = search.latestRun, run.status != "RUNNING" {
+                    AppointmentRunCounts(run: run)
+                }
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            if let run = search.latestRun, run.status != "RUNNING" {
+                AppointmentRunMessage(run: run)
+            }
+            if family.canEdit {
+                AppointmentRunNowButton(search: search, reload: load, prominent: true)
+                    .keyboardShortcut("r", modifiers: .command)
+                    .help("Run now (⌘R)")
+            }
+        }
+        .glassCard()
+    }
+
+    // MARK: Results by day
+
+    @ViewBuilder private func results(_ detail: AppointmentSearchDetail) -> some View {
+        let search = detail.search
+        GlassSection("Earliest appointment per doctor", systemImage: "calendar.badge.clock", tint: ModuleTint.appointments) {
+            if search.doctors.isEmpty {
+                Text(search.latestRun == nil ? "Not run yet: results appear after the first run." : "No bookable appointments in the latest run.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            } else {
+                let groups = AppointmentLogic.groupedByDay(search.doctors)
+                ForEach(Array(groups.enumerated()), id: \.offset) { index, group in
+                    if index > 0 { Divider() }
+                    Text(group.day?.formatted(.dateTime.weekday(.wide).day().month(.wide)) ?? "—")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    ForEach(group.slots) { doctor in
+                        NavigationLink(value: AppointmentRoute.slot(searchID: search.id, resultID: doctor.resultId)) {
+                            AppointmentDoctorRow(
+                                doctor: doctor,
+                                distance: AppointmentLogic.distance(of: doctor, homeLat: detail.home?.lat, homeLng: detail.home?.lng),
+                                showDate: false
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .contextMenu { slotMenu(doctor) }
+                    }
+                }
+            }
+        }
+    }
+
+    @Environment(\.openURL) private var openURL
+
+    @ViewBuilder private func slotMenu(_ doctor: AppointmentDoctorSlot) -> some View {
+        if let url = doctor.bookingURL {
+            Button("Book on \(doctor.sourceName)", systemImage: "arrow.up.right.square") { openURL(url) }
+        }
+        if family.canEdit {
+            Button("Ignore", systemImage: "eye.slash") {
+                perform { try await AppointmentActions.ignore(family, resultID: doctor.resultId) }
+            }
+        }
+    }
+
+    // MARK: Ignore list
+
+    private func ignored(_ search: AppointmentSearch) -> some View {
+        GlassSection("Ignore list", systemImage: "eye.slash") {
+            Text("Doctors (with their reason for the visit) this search skips. Ignore one from its appointment page.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            if search.ignored.isEmpty {
+                Text("Nothing ignored.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(search.ignored) { entry in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(entry.doctorName.isEmpty ? entry.providerSlug : entry.doctorName)
+                            if !entry.motiveLabel.isEmpty {
+                                Text(entry.motiveLabel).font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                        Spacer()
+                        if family.canEdit {
+                            Button("Show again", systemImage: "eye") {
+                                perform { try await AppointmentActions.unignore(family, entryID: entry.id) }
+                            }
+                            .buttonStyle(.glass)
+                            .controlSize(.small)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Every run of a search with what it found (history-list.tsx).
+struct AppointmentHistoryView: View {
+    @Environment(FamilyContext.self) private var family
+    let searchID: String
+    @State private var state: LoadState<[AppointmentRunWithResults]> = .idle
+
+    var body: some View {
+        LoadStateView(state: state, retry: load) { runs in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 16) {
+                    Text("Every run of this search with what it found. Runs older than 30 days are deleted.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 4)
+                    if runs.isEmpty {
+                        ContentUnavailableView("No runs yet.", systemImage: "clock")
+                    }
+                    ForEach(runs) { item in
+                        runCard(item)
+                    }
+                }
+                .padding()
+                .frame(maxWidth: 900)
+                .frame(maxWidth: .infinity)
+            }
+            .refreshable { await load() }
+        }
+        .ohanaBackground(ModuleTint.appointments)
+        .navigationTitle("History")
+        .task(id: family.revision(.appointments)) { await load() }
+        .appointmentPolling(busy: state.value?.contains { $0.run.status == "RUNNING" } ?? false) { await load() }
+    }
+
+    private func load() async {
+        await LoadState.run($state) {
+            let response: AppointmentRunsResponse = try await family.api.get("/appointments/searches/\(searchID)/runs")
+            return response.runs
+        }
+    }
+
+    private func runCard(_ item: AppointmentRunWithResults) -> some View {
+        let run = item.run
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                AppointmentStatusBadge(status: run.status)
+                Text(AppointmentLogic.formatSlot(run.startedAt))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            HStack(spacing: 4) {
+                Text(run.triggeredBy == "MANUAL" ? "started by hand" : "scheduled")
+                Text(verbatim: "·")
+                AppointmentRunCounts(run: run)
+                if run.notified {
+                    Text(verbatim: "·")
+                    Text("notified")
+                }
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            AppointmentRunMessage(run: run)
+            ForEach(item.doctors) { doctor in
+                NavigationLink(value: AppointmentRoute.slot(searchID: searchID, resultID: doctor.resultId)) {
+                    AppointmentDoctorRow(doctor: doctor)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .glassCard()
+    }
+}
