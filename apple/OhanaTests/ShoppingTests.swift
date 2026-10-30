@@ -63,6 +63,16 @@ struct ShoppingTests {
         #expect(text.components(separatedBy: "\n").count == 10) // title, 3 × (blank, aisle, item)
     }
 
+    @Test func tellsOfflineFromAServerThatDoesntAnswer() {
+        typealias S = ShoppingSyncStatus
+        #expect(S.current(isOnline: false, waiting: true, savedCopy: false, sending: false) == .offline)
+        #expect(S.current(isOnline: false, waiting: false, savedCopy: true, sending: false) == .offline)
+        #expect(S.current(isOnline: true, waiting: true, savedCopy: false, sending: false) == .serverUnreachable)
+        #expect(S.current(isOnline: true, waiting: false, savedCopy: true, sending: true) == .serverUnreachable)
+        #expect(S.current(isOnline: true, waiting: false, savedCopy: false, sending: true) == .syncing)
+        #expect(S.current(isOnline: true, waiting: false, savedCopy: false, sending: false) == nil)
+    }
+
     @Test func encodesTheTick() throws {
         let body = try JSONSerialization.jsonObject(with: JSONEncoder().encode(ShoppingSetInput(itemId: "a", checked: true))) as? [String: Any]
         #expect(body?["kind"] as? String == "set")

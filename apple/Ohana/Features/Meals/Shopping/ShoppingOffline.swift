@@ -130,34 +130,50 @@ final class ShoppingConnectivity {
     }
 }
 
-/// The bar above a shopping list while offline or sending what was ticked offline (the web's
-/// offline-indicator.tsx).
+/// What the bar above a shopping list says.
+enum ShoppingSyncStatus: Equatable {
+    /// The device has no connection.
+    case offline
+    /// The device is connected, but the server doesn't answer (down, a server error, a timeout).
+    case serverUnreachable
+    /// Sending what was ticked meanwhile.
+    case syncing
+
+    /// Nil: all is sent, nothing to say. `waiting`: ticks wait for a retry; `savedCopy`: the list
+    /// shown is the copy kept on the device, as the server couldn't be reached.
+    static func current(isOnline: Bool, waiting: Bool, savedCopy: Bool, sending: Bool) -> ShoppingSyncStatus? {
+        if !isOnline { return .offline }
+        if waiting || savedCopy { return .serverUnreachable }
+        return sending ? .syncing : nil
+    }
+}
+
+/// The bar above a shopping list while offline, while the server can't be reached, or while
+/// sending what was ticked meanwhile (the web's offline-indicator.tsx).
 struct ShoppingOfflineBanner: View {
     let queue: ShoppingTickQueue
     /// The list shown is the copy kept on the device.
     var showsSavedCopy = false
     @State private var connectivity = ShoppingConnectivity.shared
 
-    private var offline: Bool { !connectivity.isOnline || queue.isWaiting || showsSavedCopy }
+    private var status: ShoppingSyncStatus? {
+        .current(isOnline: connectivity.isOnline, waiting: queue.isWaiting, savedCopy: showsSavedCopy,
+                 sending: queue.isSending)
+    }
 
     var body: some View {
         Group {
-            if offline {
+            switch status {
+            case .offline:
                 bar(tint: .orange) {
-                    Label {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("You’re offline — changes will sync when you reconnect.")
-                            if showsSavedCopy {
-                                Text("Showing the list as it was last loaded.")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    } icon: {
-                        Image(systemName: "wifi.slash")
-                    }
+                    problem(Text("You’re offline — changes will sync when you reconnect."), systemImage: "wifi.slash")
                 }
-            } else if queue.isSending {
+            case .serverUnreachable:
+                bar(tint: .orange) {
+                    problem(Text("Can’t reach the server — changes will sync once it answers again."),
+                            systemImage: "exclamationmark.icloud")
+                }
+            case .syncing:
                 bar(tint: ModuleTint.meals) {
                     Label {
                         Text("Syncing your changes…")
@@ -165,10 +181,26 @@ struct ShoppingOfflineBanner: View {
                         ProgressView().controlSize(.small)
                     }
                 }
+            case nil:
+                EmptyView()
             }
         }
-        .animation(.snappy, value: offline)
-        .animation(.snappy, value: queue.isSending)
+        .animation(.snappy, value: status)
+    }
+
+    private func problem(_ text: Text, systemImage: String) -> some View {
+        Label {
+            VStack(alignment: .leading, spacing: 2) {
+                text
+                if showsSavedCopy {
+                    Text("Showing the list as it was last loaded.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        } icon: {
+            Image(systemName: systemImage)
+        }
     }
 
     private func bar(tint: Color, @ViewBuilder content: () -> some View) -> some View {
