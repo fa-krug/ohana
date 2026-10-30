@@ -1,7 +1,7 @@
 name: Apple app
 
 # The native app in apple/: unit tests on macOS, a build for iOS, and the German strings.
-# Only the web app deploys (ci.yml); the app ships through Xcode / App Store Connect.
+# Only the web app deploys (ci.yml); the app is released by Xcode Cloud (apple/README.md, Releasing).
 on:
   push:
     branches: [main]

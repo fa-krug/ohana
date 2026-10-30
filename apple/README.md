@@ -76,21 +76,11 @@ Store Connect: create that app record, and for TestFlight add the testers (inter
 users of the team; external ones need a beta review, which needs a demo server and account,
 since the app does nothing without a server).
 
-`MARKETING_VERSION` in `project.yml` is the version people see; raise it for a new release. The
-build number (`CURRENT_PROJECT_VERSION`) doesn't need editing: the upload gives every build the
-next free one. Xcode must be signed in to the team (Settings → Accounts). Per platform:
-
-```bash
-xcodegen generate
-xcodebuild archive -scheme Ohana -destination 'generic/platform=iOS' \
-  -archivePath build/Ohana-iOS.xcarchive -allowProvisioningUpdates
-xcodebuild -exportArchive -archivePath build/Ohana-iOS.xcarchive \
-  -exportOptionsPlist ExportOptions.plist -exportPath build/export-ios -allowProvisioningUpdates
-```
-
-and the same with `-scheme Ohana-macOS -destination 'generic/platform=macOS'` and
-`Ohana-macOS`/`export-mac` paths. `ExportOptions.plist` uploads; in Xcode, Product ▸ Archive and
-Distribute App ▸ App Store Connect does the same. The app declares no encryption beyond HTTPS
+Xcode Cloud builds, signs and uploads the releases (the workflow is set up in Xcode / App Store
+Connect). `ci_scripts/ci_post_clone.sh` generates the project with XcodeGen there, since
+`Ohana.xcodeproj` isn't committed. `MARKETING_VERSION` in `project.yml` is the version people see;
+raise it for a new release. The build number (`CURRENT_PROJECT_VERSION`) doesn't need editing:
+Xcode Cloud gives every build its own. The app declares no encryption beyond HTTPS
 (`ITSAppUsesNonExemptEncryption`) and its use of `UserDefaults` in
 `Ohana/Resources/PrivacyInfo.xcprivacy`; the iOS icon (`icon-1024.png`) must stay without an
 alpha channel.
