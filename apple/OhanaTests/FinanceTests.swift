@@ -336,3 +336,112 @@ struct FinanceSelectionTests {
         #expect(!FinanceStore.canLink([tx("a", 1)]))
     }
 }
+
+/// Counted phrases in English (the tests run in English).
+struct FinanceTextTests {
+    @Test func countsInTheRightNumber() {
+        #expect(FinanceText.inflected("^[\(1) transaction](inflect: true) deleted") == "1 transaction deleted")
+        #expect(FinanceText.inflected("^[\(3) transaction](inflect: true) deleted") == "3 transactions deleted")
+        #expect(FinanceStore.combinedText(transfers: 1, splits: 0) == "1 transfer combined")
+        #expect(FinanceStore.combinedText(transfers: 2, splits: 1) == "2 transfers, 1 split booking combined")
+    }
+
+    @Test func namesTheMonthsOfAnAverage() {
+        func column(first: String) -> FinanceComparison {
+            let summary = FinanceSummary(currency: "EUR", incomeCents: 0, expenseCents: 100, count: 1,
+                                         months: [FinanceSummaryMonth(month: first, incomeCents: 0, expenseCents: 100)],
+                                         categories: [])
+            return FinanceComparison.from(summary, range: FinanceComparisonRange(key: .year, average: true,
+                                                                                 from: "2026-01-01", to: "2026-09-30"))
+        }
+        #expect(column(first: "2026-09").detail?.hasSuffix(" · 1 month") == true)
+        #expect(column(first: "2026-07").detail?.hasSuffix(" · 3 months") == true)
+    }
+}
+
+struct FinanceMonthlyTests {
+    @Test func aYearHasAllItsMonths() {
+        let summary = FinanceSummary(currency: "EUR", incomeCents: 500, expenseCents: 200, count: 2,
+                                     months: [FinanceSummaryMonth(month: "2026-03", incomeCents: 500, expenseCents: 200)],
+                                     categories: [])
+        let year = FinanceMonthlyChart.months(summary, period: FinancePeriod(mode: .year, year: 2026, month: 0))
+        #expect(year.count == 12)
+        #expect(year.first?.month == "2026-01" && year.last?.month == "2026-12")
+        #expect(year[2].incomeCents == 500 && year[3].incomeCents == 0)
+        // All time: only the months with transactions.
+        #expect(FinanceMonthlyChart.months(summary, period: FinancePeriod(mode: .all, year: 2026, month: 0)).map(\.month) == ["2026-03"])
+    }
+}
+
+/// Edit → Undo / Redo: each change's inverse ops in the undo manager, undo and redo chained.
+@MainActor
+struct FinanceUndoTests {
+    private final class Log {
+        var calls: [(ops: [JSONValue], redoing: Bool)] = []
+        var used = 0
+    }
+
+    private func registry(_ manager: UndoManager, log: Log) -> FinanceUndoRegistry {
+        let registry = FinanceUndoRegistry()
+        registry.attach(manager)
+        registry.apply = { ops, redoing in
+            log.calls.append((ops, redoing))
+            // What reverts it: the ops marked once more.
+            return ops.map { .string("not " + ($0.stringValue ?? "")) }
+        }
+        registry.used = { _ in log.used += 1 }
+        return registry
+    }
+
+    private func manager() -> UndoManager {
+        let manager = UndoManager()
+        manager.groupsByEvent = false
+        return manager
+    }
+
+    private func register(_ registry: FinanceUndoRegistry, _ manager: UndoManager, _ ops: [JSONValue]) -> FinanceUndoToken? {
+        manager.beginUndoGrouping()
+        defer { manager.endUndoGrouping() }
+        return registry.register(ops)
+    }
+
+    @Test func undoesAndRedoes() async {
+        let manager = manager(), log = Log()
+        let registry = registry(manager, log: log)
+        #expect(register(registry, manager, [.string("delete a")]) != nil)
+        #expect(manager.canUndo && !manager.canRedo)
+
+        manager.undo()
+        _ = await registry.running?.value
+        #expect(log.calls.count == 1 && log.calls[0].ops == [.string("delete a")] && !log.calls[0].redoing)
+        #expect(log.used == 1)
+        #expect(manager.canRedo && !manager.canUndo)
+
+        manager.redo()
+        _ = await registry.running?.value
+        #expect(log.calls.count == 2 && log.calls[1].ops == [.string("not delete a")] && log.calls[1].redoing)
+        #expect(manager.canUndo && !manager.canRedo)
+
+        manager.undo()
+        _ = await registry.running?.value
+        #expect(log.calls.last?.ops == [.string("not not delete a")])
+    }
+
+    @Test func theToastTakesItsEntryOut() {
+        let manager = manager(), log = Log()
+        let registry = registry(manager, log: log)
+        let first = register(registry, manager, [.string("a")])
+        let second = register(registry, manager, [.string("b")])
+        #expect(first != nil && second != nil)
+        registry.forget(second!)
+        #expect(manager.canUndo) // the first one is still there
+        registry.forgetAll()
+        #expect(!manager.canUndo)
+        #expect(log.calls.isEmpty)
+    }
+
+    @Test func nothingWithoutAnUndoManager() {
+        let registry = FinanceUndoRegistry()
+        #expect(registry.register([.string("a")]) == nil)
+    }
+}

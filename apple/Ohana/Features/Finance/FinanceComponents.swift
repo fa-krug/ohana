@@ -421,10 +421,10 @@ struct FinanceToastView: View {
                 .font(.callout)
                 .lineLimit(2)
             if toast.undo != nil {
+                // ⌘Z is Edit → Undo, which undoes the same change (the store registers it).
                 Button("Undo") { Task { await store.undoToast() } }
                     .buttonStyle(.glassProminent)
                     .tint(ModuleTint.finance)
-                    .keyboardShortcut("z", modifiers: .command)
             }
             Button {
                 store.dismissToast()

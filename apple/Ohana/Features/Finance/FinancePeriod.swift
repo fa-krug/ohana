@@ -201,7 +201,7 @@ struct FinanceComparison: Hashable {
             let span = first == last
                 ? FinanceDates.monthDate(first).formatted(format)
                 : "\(FinanceDates.monthDate(first).formatted(format)) – \(FinanceDates.monthDate(last).formatted(format))"
-            return "Ø \(span) · " + String(localized: "\(months) months")
+            return "Ø \(span) · " + FinanceText.inflected("^[\(months) month](inflect: true)")
         }
         return FinanceDates.monthDate(first).formatted(.dateTime.month(.wide).year())
     }

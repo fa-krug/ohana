@@ -41,6 +41,16 @@
         }
       }
     },
+    "%@ combined": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ zusammengefasst"
+          }
+        }
+      }
+    },
     "%@ in your finances, %@ – %@": {
       "localizations": {
         "de": {
@@ -131,6 +141,16 @@
         }
       }
     },
+    "%lld already imported – skipped": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld schon importiert – übersprungen"
+          }
+        }
+      }
+    },
     "%lld changes": {
       "localizations": {
         "de": {
@@ -217,16 +237,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld Min."
-          }
-        }
-      }
-    },
-    "%lld months": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld Monate"
           }
         }
       }
@@ -341,22 +351,34 @@
         }
       }
     },
+    "(%lld already there)": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "(%lld war schon da)"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "(%lld waren schon da)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "(%lld like similar ones)": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "(%lld wie ähnliche)"
-          }
-        }
-      }
-    },
-    "(%lld were there already)": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "(%lld waren schon da)"
           }
         }
       }
@@ -397,6 +419,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "(du)"
+          }
+        }
+      }
+    },
+    ", %lld couldn’t be read": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ", %lld nicht lesbar"
           }
         }
       }
@@ -1241,6 +1273,16 @@
         }
       }
     },
+    "As table": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Als Tabelle"
+          }
+        }
+      }
+    },
     "Ask me anything about your family’s plans, for example:": {
       "localizations": {
         "de": {
@@ -2071,16 +2113,6 @@
         }
       }
     },
-    "Combined %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zusammengefasst – %@"
-          }
-        }
-      }
-    },
     "Combined into a split booking": {
       "localizations": {
         "de": {
@@ -2127,6 +2159,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kommentar"
+          }
+        }
+      }
+    },
+    "Compare with a statistic average…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit einem statistischen Durchschnitt vergleichen…"
           }
         }
       }
@@ -3561,6 +3603,16 @@
         }
       }
     },
+    "Finance settings": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finanz-Einstellungen"
+          }
+        }
+      }
+    },
     "Find a dermatologist appointment before June.": {
       "localizations": {
         "de": {
@@ -4161,22 +4213,34 @@
         }
       }
     },
+    "Imported ^[%lld transaction](inflect: true)": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Buchung importiert"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Buchungen importiert"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Imported before": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Schon importiert"
-          }
-        }
-      }
-    },
-    "Imported before, skipped: %lld": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Schon importiert, übersprungen: %lld"
           }
         }
       }
@@ -4197,16 +4261,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Importiert."
-          }
-        }
-      }
-    },
-    "Imported: %lld": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importiert: %lld"
           }
         }
       }
@@ -5281,16 +5335,6 @@
         }
       }
     },
-    "New transactions: %lld": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Neue Buchungen: %lld"
-          }
-        }
-      }
-    },
     "New type %lld": {
       "localizations": {
         "de": {
@@ -5871,12 +5915,24 @@
         }
       }
     },
-    "Nothing new: all %lld were there already": {
+    "Nothing new: ^[%lld transaction](inflect: true) already there": {
       "localizations": {
         "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nichts Neues: alle %lld waren schon da"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Nichts Neues: %lld Buchung war schon da"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Nichts Neues: alle %lld waren schon da"
+                }
+              }
+            }
           }
         }
       }
@@ -7051,6 +7107,16 @@
         }
       }
     },
+    "Redone": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wiederhergestellt"
+          }
+        }
+      }
+    },
     "Refresh": {
       "localizations": {
         "de": {
@@ -7337,36 +7403,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zeilen vor der Tabelle"
-          }
-        }
-      }
-    },
-    "Rows read: %lld": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zeilen gelesen: %lld"
-          }
-        }
-      }
-    },
-    "Rows read: %lld, unreadable: %lld": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zeilen gelesen: %lld, nicht lesbar: %lld"
-          }
-        }
-      }
-    },
-    "Rows without a date or amount, skipped: %lld": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zeilen ohne Datum oder Betrag, übersprungen: %lld"
           }
         }
       }
@@ -7821,6 +7857,16 @@
         }
       }
     },
+    "Set household figures from the statistics office in the finance settings": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haushaltszahlen vom Statistikamt in den Finanz-Einstellungen festlegen"
+          }
+        }
+      }
+    },
     "Set it": {
       "localizations": {
         "de": {
@@ -7857,6 +7903,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Richte den Assistenten zuerst in den Einstellungen ein"
+          }
+        }
+      }
+    },
+    "Set up the assistant to sort the rest too": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Assistenten einrichten, um auch den Rest einzusortieren"
           }
         }
       }
@@ -8191,12 +8247,24 @@
         }
       }
     },
-    "Sorted into categories: %lld": {
+    "Sorted ^[%lld transaction](inflect: true) into categories": {
       "localizations": {
         "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In Kategorien einsortiert: %lld"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Buchung in eine Kategorie einsortiert"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Buchungen in Kategorien einsortiert"
+                }
+              }
+            }
           }
         }
       }
@@ -8321,22 +8389,24 @@
         }
       }
     },
-    "Split bookings to combine: %lld": {
+    "Split into ^[%lld part](inflect: true)": {
       "localizations": {
         "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aufteilungen zum Zusammenfassen: %lld"
-          }
-        }
-      }
-    },
-    "Split into parts: %lld": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aufgeteilt in Teile: %lld"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Aufgeteilt in %lld Teil"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Aufgeteilt in %lld Teile"
+                }
+              }
+            }
           }
         }
       }
@@ -9251,16 +9321,6 @@
         }
       }
     },
-    "Transactions deleted: %lld": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buchungen gelöscht: %lld"
-          }
-        }
-      }
-    },
     "Transfer": {
       "localizations": {
         "de": {
@@ -9287,26 +9347,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Umbuchungen"
-          }
-        }
-      }
-    },
-    "Transfers combined: %lld": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Umbuchungen zusammengefasst: %lld"
-          }
-        }
-      }
-    },
-    "Transfers to combine: %lld": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Umbuchungen zum Zusammenfassen: %lld"
           }
         }
       }
@@ -10001,6 +10041,226 @@
         }
       }
     },
+    "^[%lld month](inflect: true)": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Monat"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Monate"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "^[%lld new transaction](inflect: true)": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld neue Buchung"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld neue Buchungen"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "^[%lld row](inflect: true) read": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Zeile gelesen"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Zeilen gelesen"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "^[%lld row](inflect: true) without a date or amount – skipped": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Zeile ohne Datum oder Betrag – übersprungen"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Zeilen ohne Datum oder Betrag – übersprungen"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "^[%lld split booking](inflect: true)": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Aufteilung"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Aufteilungen"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "^[%lld split booking](inflect: true) will be combined": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Aufteilung wird zusammengefasst"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Aufteilungen werden zusammengefasst"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "^[%lld transaction](inflect: true) deleted": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Buchung gelöscht"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Buchungen gelöscht"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "^[%lld transfer](inflect: true)": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Umbuchung"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Umbuchungen"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "^[%lld transfer](inflect: true) combined": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Umbuchung zusammengefasst"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Umbuchungen zusammengefasst"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "^[%lld transfer](inflect: true) will be combined": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Umbuchung wird zusammengefasst"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Umbuchungen werden zusammengefasst"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "above": {
       "localizations": {
         "de": {
@@ -10391,16 +10651,6 @@
         }
       }
     },
-    "split bookings: %lld": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aufteilungen: %lld"
-          }
-        }
-      }
-    },
     "started by hand": {
       "localizations": {
         "de": {
@@ -10427,16 +10677,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "bis"
-          }
-        }
-      }
-    },
-    "transfers: %lld": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Umbuchungen: %lld"
           }
         }
       }

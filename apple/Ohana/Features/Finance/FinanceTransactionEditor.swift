@@ -18,6 +18,7 @@ struct FinanceTransactionEditor: View {
     @Bindable var store: FinanceStore
     let target: FinanceEditTarget
     @Environment(\.dismiss) private var dismiss
+    @Environment(FamilyContext.self) private var family
 
     @State private var income = false
     @State private var amount = ""
@@ -164,6 +165,15 @@ struct FinanceTransactionEditor: View {
             }
         } else if t.imported {
             Section { Label("Imported from a bank statement", systemImage: "square.and.arrow.down").foregroundStyle(.secondary) }
+        }
+        // A groceries transaction near a shopping day links to that day's list.
+        if let trip = store.shoppingLinks.list(for: t.date, categoryId: t.categoryId) {
+            Section {
+                Button("Shopping list of this day", systemImage: "cart") {
+                    dismiss()
+                    family.open(.shoppingList(id: trip.id))
+                }
+            }
         }
     }
 

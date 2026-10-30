@@ -8,6 +8,7 @@ import UniformTypeIdentifiers
 struct FinanceImportSheet: View {
     @Bindable var store: FinanceStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(FamilyContext.self) private var family
 
     private enum Step { case file, map, review }
 
@@ -161,9 +162,8 @@ struct FinanceImportSheet: View {
             } header: {
                 Text("First rows")
             } footer: {
-                Text(parsed.errors > 0
-                     ? String(localized: "Rows read: \(parsed.ok.count), unreadable: \(parsed.errors)")
-                     : String(localized: "Rows read: \(parsed.ok.count)"))
+                Text(verbatim: FinanceText.inflected("^[\(parsed.ok.count) row](inflect: true) read")
+                     + (parsed.errors > 0 ? String(localized: ", \(parsed.errors) couldn’t be read") : ""))
             }
         }
     }
@@ -171,21 +171,22 @@ struct FinanceImportSheet: View {
     @ViewBuilder
     private var reviewStep: some View {
         Section {
-            Label("New transactions: \(parsed.ok.count - duplicates.count)", systemImage: "plus.circle")
+            Label("^[\(parsed.ok.count - duplicates.count) new transaction](inflect: true)", systemImage: "plus.circle")
                 .font(.headline)
             if !duplicates.isEmpty {
-                Label("Imported before, skipped: \(duplicates.count)", systemImage: "arrow.uturn.left.circle")
+                Label("\(duplicates.count) already imported – skipped", systemImage: "arrow.uturn.left.circle")
                     .foregroundStyle(.secondary)
             }
             if parsed.errors > 0 {
-                Label("Rows without a date or amount, skipped: \(parsed.errors)", systemImage: "exclamationmark.circle")
+                Label("^[\(parsed.errors) row](inflect: true) without a date or amount – skipped", systemImage: "exclamationmark.circle")
                     .foregroundStyle(.secondary)
             }
             if transfers > 0 {
-                Label("Transfers to combine: \(transfers)", systemImage: "link").foregroundStyle(.secondary)
+                Label("^[\(transfers) transfer](inflect: true) will be combined", systemImage: "link").foregroundStyle(.secondary)
             }
             if splits > 0 {
-                Label("Split bookings to combine: \(splits)", systemImage: "rectangle.split.3x1").foregroundStyle(.secondary)
+                Label("^[\(splits) split booking](inflect: true) will be combined", systemImage: "rectangle.split.3x1")
+                    .foregroundStyle(.secondary)
             }
         }
         Section {
@@ -212,6 +213,14 @@ struct FinanceImportSheet: View {
                        ? String(localized: "Sort the new transactions into categories (like similar ones, the rest with AI)")
                        : String(localized: "Sort the new transactions into categories like similar earlier ones"),
                        isOn: $categorize)
+                if !store.aiConfigured {
+                    // Settings → AI (closes the import without importing).
+                    Button("Set up the assistant to sort the rest too", systemImage: "gearshape.2") {
+                        dismiss()
+                        family.open(.settings(.assistant))
+                    }
+                    .font(.callout)
+                }
             }
         }
         Section("Rows") {

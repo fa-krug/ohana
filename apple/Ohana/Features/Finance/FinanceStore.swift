@@ -38,6 +38,84 @@ struct FinanceToast: Identifiable, Equatable {
     let id = UUID()
     var message: String
     var undo: [JSONValue]?
+    /// Its entry in the window's undo manager (Edit → Undo), removed when the toast undoes it.
+    var undoToken: FinanceUndoToken?
+}
+
+/// The target of one change's entry in the undo manager, so the toast can remove just that one.
+final class FinanceUndoToken: Equatable {
+    static func == (a: FinanceUndoToken, b: FinanceUndoToken) -> Bool { a === b }
+}
+
+/// The finance page's entries in the window's undo manager (Edit → Undo / Redo, ⌘Z / ⇧⌘Z):
+/// each change's inverse ops. Undoing one registers the ops that revert the undo as its redo,
+/// and redoing that registers the next undo.
+final class FinanceUndoRegistry {
+    private(set) weak var manager: UndoManager?
+    /// Applies ops (`redoing`: from Redo); returns the ops that revert them, nil on failure.
+    var apply: (_ ops: [JSONValue], _ redoing: Bool) async -> [JSONValue]? = { _, _ in nil }
+    /// An entry was undone or redone from the menu (its toast goes away).
+    var used: (FinanceUndoToken) -> Void = { _ in }
+    /// The undo or redo the menu started last (tests wait for it).
+    private(set) var running: Task<[JSONValue]?, Never>?
+    private var tokens: [FinanceUndoToken] = []
+
+    /// Uses the window's undo manager; the entries of another one are taken out of it.
+    func attach(_ manager: UndoManager?) {
+        guard manager !== self.manager else { return }
+        forgetAll()
+        self.manager = manager
+    }
+
+    /// Registers the ops that undo a change; nil without an undo manager.
+    func register(_ ops: [JSONValue]) -> FinanceUndoToken? {
+        register(Task { ops })
+    }
+
+    private func register(_ ops: Task<[JSONValue]?, Never>) -> FinanceUndoToken? {
+        guard let manager, manager.isUndoRegistrationEnabled else { return nil }
+        let token = FinanceUndoToken()
+        tokens.append(token)
+        manager.registerUndo(withTarget: token) { [weak self, weak manager, token] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                let redoing = manager?.isRedoing ?? false
+                self.tokens.removeAll { $0 === token }
+                self.used(token)
+                let apply = self.apply
+                let next = Task { @MainActor () -> [JSONValue]? in
+                    guard let ops = await ops.value else { return nil }
+                    return await apply(ops, redoing)
+                }
+                self.running = next
+                // Registered while undoing, this is the redo (and while redoing, the undo).
+                _ = self.register(next)
+            }
+        }
+        return token
+    }
+
+    /// Takes one entry out (its toast undid it).
+    func forget(_ token: FinanceUndoToken) {
+        manager?.removeAllActions(withTarget: token)
+        tokens.removeAll { $0 === token }
+    }
+
+    /// Takes all of the page's entries out: when it closes, the Edit menu shouldn't change
+    /// finances that aren't shown.
+    func forgetAll() {
+        for token in tokens { manager?.removeAllActions(withTarget: token) }
+        tokens = []
+    }
+}
+
+/// Counted phrases: `^[\(n) transaction](inflect: true)` becomes "1 transaction" or "3
+/// transactions" in English; German has plural variants in the catalog
+/// (Localization/finance.de.json).
+enum FinanceText {
+    static func inflected(_ value: String.LocalizationValue) -> String {
+        String(AttributedString(localized: value).characters)
+    }
 }
 
 struct FinanceProgress: Equatable {
@@ -84,6 +162,9 @@ final class FinanceStore {
     var selected: Set<String> = []
     var categorizing: FinanceProgress?
     var toast: FinanceToast?
+    /// Changes register their undo in the window's undo manager too (Edit → Undo, ⌘Z); the
+    /// page attaches it.
+    @ObservationIgnored let undoRegistry = FinanceUndoRegistry()
 
     private var knownRevision = -1
     /// The page is open (not only the settings): what it shows reloads after changes.
@@ -97,6 +178,12 @@ final class FinanceStore {
 
     init(family: FamilyContext) {
         self.family = family
+        undoRegistry.apply = { [weak self] ops, redoing in
+            await self?.apply(ops, message: redoing ? String(localized: "Redone") : String(localized: "Undone"))
+        }
+        undoRegistry.used = { [weak self] token in
+            if self?.toast?.undoToken === token { self?.toast = nil }
+        }
     }
 
     var currency: String { overview?.currency ?? "EUR" }
@@ -277,6 +364,12 @@ final class FinanceStore {
         await loadList()
     }
 
+    /// The period's transactions of one category (with its subcategories) or all of them,
+    /// without the other filters (`AppRoute.financeTransactions`).
+    func showTransactions(category: String?) async {
+        await setFilter { $0 = FinanceFilter(category: category ?? "") }
+    }
+
     func showMore() async {
         limit += Self.page
         await loadList()
@@ -289,7 +382,8 @@ final class FinanceStore {
     // MARK: Toasts and undo
 
     func show(_ message: String, undo: [JSONValue]? = nil) {
-        let toast = FinanceToast(message: message, undo: undo)
+        var toast = FinanceToast(message: message, undo: undo)
+        if let undo, !undo.isEmpty { toast.undoToken = undoRegistry.register(undo) }
         self.toast = toast
         toastTask?.cancel()
         toastTask = Task { [weak self] in
@@ -300,26 +394,34 @@ final class FinanceStore {
 
     func dismissToast() { toast = nil }
 
-    /// Runs the toast's undo ops.
+    /// Runs the toast's undo ops; its entry leaves the undo manager.
     func undoToast() async {
-        guard let inverse = toast?.undo else { return }
-        toast = nil
-        await undo(inverse)
+        guard let toast, let inverse = toast.undo else { return }
+        self.toast = nil
+        if let token = toast.undoToken { undoRegistry.forget(token) }
+        await apply(inverse, message: String(localized: "Undone"))
     }
 
-    private func undo(_ inverse: [JSONValue]) async {
+    /// Applies undo (or redo) ops in chunks the API takes; returns the ops that revert them
+    /// (the last chunk's first), nil on failure.
+    @discardableResult
+    private func apply(_ ops: [JSONValue], message: String) async -> [JSONValue]? {
         do {
+            var inverse: [JSONValue] = []
             var start = 0
-            while start < inverse.count {
-                let chunk = Array(inverse[start..<min(start + Self.maxOps, inverse.count)])
-                let _: FinanceChangeResult = try await api.send(.post, "/finance/transactions",
-                                                                body: JSONValue.object(["ops": .array(chunk)]))
+            while start < ops.count {
+                let chunk = Array(ops[start..<min(start + Self.maxOps, ops.count)])
+                let res: FinanceChangeResult = try await api.send(.post, "/finance/transactions",
+                                                                  body: JSONValue.object(["ops": .array(chunk)]))
+                inverse = res.inverse + inverse
                 start += Self.maxOps
             }
             await changed()
-            show(String(localized: "Undone"))
+            show(message)
+            return inverse
         } catch {
             ErrorBanner.shared.show(error)
+            return nil
         }
     }
 
@@ -349,7 +451,7 @@ final class FinanceStore {
     func delete(_ ids: [String]) async {
         guard !ids.isEmpty else { return }
         let message = ids.count == 1 ? String(localized: "Transaction deleted")
-            : String(localized: "Transactions deleted: \(ids.count)")
+            : FinanceText.inflected("^[\(ids.count) transaction](inflect: true) deleted")
         if await change([FinanceOp.delete(ids)], message: message) != nil { selected = [] }
     }
 
@@ -364,7 +466,7 @@ final class FinanceStore {
     @discardableResult
     func linkPairs(_ pairs: [FinanceTransferPair]) async -> Bool {
         await change(pairs.map { FinanceOp.link([$0.out.id, $0.incoming.id]) },
-                     message: String(localized: "Transfers combined: \(pairs.count)")) != nil
+                     message: FinanceText.inflected("^[\(pairs.count) transfer](inflect: true) combined")) != nil
     }
 
     func unlink(_ id: String) async {
@@ -423,12 +525,12 @@ final class FinanceStore {
         }
     }
 
-    /// "Combined: 2 transfers, 1 split booking".
+    /// "2 transfers, 1 split booking combined".
     static func combinedText(transfers: Int, splits: Int) -> String {
         var parts: [String] = []
-        if transfers > 0 { parts.append(String(localized: "transfers: \(transfers)")) }
-        if splits > 0 { parts.append(String(localized: "split bookings: \(splits)")) }
-        return String(localized: "Combined \(parts.joined(separator: ", "))")
+        if transfers > 0 { parts.append(FinanceText.inflected("^[\(transfers) transfer](inflect: true)")) }
+        if splits > 0 { parts.append(FinanceText.inflected("^[\(splits) split booking](inflect: true)")) }
+        return String(localized: "\(parts.joined(separator: ", ")) combined")
     }
 
     /// Transactions of the period that look like transfers between two accounts.
@@ -456,13 +558,13 @@ final class FinanceStore {
         await changed()
         let skipped = res.duplicates.count
         if !res.ids.isEmpty {
-            var message = String(localized: "Imported: \(res.added)")
-            if skipped > 0 { message += " " + String(localized: "(\(skipped) were there already)") }
+            var message = FinanceText.inflected("Imported ^[\(res.added) transaction](inflect: true)")
+            if skipped > 0 { message += " " + String(localized: "(\(skipped) already there)") }
             let transfers = res.transfers ?? 0, splits = res.splits ?? 0
             if transfers > 0 || splits > 0 { message += " · " + Self.combinedText(transfers: transfers, splits: splits) }
             show(message, undo: [FinanceOp.delete(res.ids)])
         } else {
-            show(String(localized: "Nothing new: all \(skipped) were there already"))
+            show(FinanceText.inflected("Nothing new: ^[\(skipped) transaction](inflect: true) already there"))
         }
         return res
     }
@@ -543,7 +645,7 @@ final class FinanceStore {
             categorizing = nil
             if changedCount > 0 {
                 await changed()
-                var text = String(localized: "Sorted into categories: \(changedCount)")
+                var text = FinanceText.inflected("Sorted ^[\(changedCount) transaction](inflect: true) into categories")
                 if matched > 0 { text += " " + String(localized: "(\(matched) like similar ones)") }
                 // The last call's inverse first.
                 show(text, undo: inverses.reversed().flatMap { $0 })

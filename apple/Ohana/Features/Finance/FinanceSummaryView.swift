@@ -209,6 +209,7 @@ struct FinanceComparisonCard: View {
 /// period's value per month on it. Hidden while none is set.
 struct FinanceBenchmarkCard: View {
     @Bindable var store: FinanceStore
+    @Environment(FamilyContext.self) private var family
 
     private struct Row: Identifiable {
         var id: String
@@ -242,6 +243,18 @@ struct FinanceBenchmarkCard: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             }
+        } else if store.canEdit, let overview = store.overview, overview.benchmark == nil {
+            // None set yet: it's set in Settings → Finance.
+            Button {
+                family.open(.settings(.finance))
+            } label: {
+                Label("Compare with a statistic average…", systemImage: "chart.bar.xaxis")
+                    .font(.callout)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.borderless)
+            .padding(.horizontal, 4)
+            .help("Set household figures from the statistics office in the finance settings")
         }
     }
 
@@ -340,20 +353,68 @@ struct FinanceMonthlyChart: View {
     @Bindable var store: FinanceStore
     let summary: FinanceSummary
     @State private var selected: Date?
+    /// The same numbers as a table (screen readers, exact amounts); remembered per device.
+    @AppStorage("finance.monthlyTable") private var asTable = false
 
-    private var months: [FinanceSummaryMonth] {
-        guard store.period.mode == .year else { return summary.months }
+    /// Every month of the range: a whole year (months without transactions as 0), or all time's
+    /// months with transactions (summary-view.tsx monthsOf).
+    static func months(_ summary: FinanceSummary, period: FinancePeriod) -> [FinanceSummaryMonth] {
+        guard period.mode == .year else { return summary.months }
         let byMonth = Dictionary(summary.months.map { ($0.month, $0) }) { a, _ in a }
         return (1...12).map { m in
-            let key = String(format: "%04d-%02d", store.period.year, m)
+            let key = String(format: "%04d-%02d", period.year, m)
             return byMonth[key] ?? FinanceSummaryMonth(month: key, incomeCents: 0, expenseCents: 0)
         }
     }
 
     var body: some View {
-        let income = String(localized: "Income"), expenses = String(localized: "Expenses")
-        let months = months
+        let months = Self.months(summary, period: store.period)
         GlassSection("Per month", systemImage: "chart.bar", tint: ModuleTint.finance) {
+            chart(months)
+            DisclosureGroup("As table", isExpanded: $asTable) {
+                // Phones: scrolls sideways when the amounts don't fit.
+                ViewThatFits(in: .horizontal) {
+                    table(months)
+                    ScrollView(.horizontal) { table(months) }.scrollIndicators(.hidden)
+                }
+            }
+            .font(.callout)
+        }
+    }
+
+    /// Month, income, expenses and net per row (summary-view.tsx's "as table").
+    private func table(_ months: [FinanceSummaryMonth]) -> some View {
+        Grid(alignment: .trailing, horizontalSpacing: 16, verticalSpacing: 6) {
+            GridRow {
+                Text("Month").gridColumnAlignment(.leading)
+                Text("Income")
+                Text("Expenses")
+                Text("Net")
+            }
+            .font(.caption.weight(.medium))
+            .foregroundStyle(.secondary)
+            .accessibilityAddTraits(.isHeader)
+            ForEach(months) { m in
+                Divider().gridCellUnsizedAxes(.horizontal)
+                let net = m.incomeCents - m.expenseCents
+                GridRow {
+                    Text(FinanceDates.monthDate(m.month).formatted(.dateTime.month(.abbreviated).year()))
+                        .lineLimit(1)
+                    Text(store.money(m.incomeCents))
+                    Text(store.money(m.expenseCents))
+                    Text(store.money(net, sign: true)).foregroundStyle(net < 0 ? .red : .primary)
+                }
+                .font(.subheadline.monospacedDigit())
+                .lineLimit(1)
+                .accessibilityElement(children: .combine)
+            }
+        }
+        .padding(.top, 8)
+    }
+
+    private func chart(_ months: [FinanceSummaryMonth]) -> some View {
+        let income = String(localized: "Income"), expenses = String(localized: "Expenses")
+        return Group {
             Chart {
                 ForEach(months) { m in
                     BarMark(x: .value("Month", FinanceDates.monthDate(m.month), unit: .month),
