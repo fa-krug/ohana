@@ -147,9 +147,30 @@ final class AppModel {
         #endif
     }
 
-    /// A page of the web app (for what the app leaves to it: administration, passkeys).
+    /// A page of the web app (for what the app leaves to it: passkeys).
     func webURL(_ path: String) -> URL? {
         client?.url(path)
+    }
+
+    // MARK: Links
+
+    /// Opens a link into a family: `ohana://f/{familyId}/meals/recipes/{id}` or the same path on
+    /// the server (`https://ohana.example/f/{id}/…`, e.g. from a notification). Switches to the
+    /// family when it is one of the account's. False for links it can't open.
+    @discardableResult
+    func open(_ url: URL) -> Bool {
+        var path = url.path(percentEncoded: false)
+        if url.scheme == DevicePairing.callbackScheme {
+            // ohana://f/{id}/…: "f" is the host.
+            path = "/" + (url.host() ?? "") + path
+        } else if let server = serverURL, url.host() != server.host() {
+            return false
+        }
+        guard let (familyID, route) = AppRoute.parse(webPath: path),
+              let family = families.first(where: { $0.id == familyID }) else { return false }
+        selectedFamilyID = family.id
+        context(for: family)?.open(route)
+        return true
     }
 }
 
@@ -183,6 +204,25 @@ final class FamilyContext {
 
     fileprivate func adoptRevisions(from other: FamilyContext) {
         revisions = other.revisions
+    }
+
+    // MARK: Routes
+
+    /// Where the user is being sent (`open`); the shell switches to its module, whose root takes
+    /// it (`takeRoute`).
+    private(set) var pendingRoute: AppRoute?
+
+    /// Sends the user to `route`: from a card, a link in another module, a web link.
+    func open(_ route: AppRoute) {
+        pendingRoute = route
+    }
+
+    /// The pending route if `module` shows it; it's taken (cleared) then. Module roots call this
+    /// in `.onChange(of: family.pendingRoute, initial: true)`.
+    func takeRoute(for module: Module) -> AppRoute? {
+        guard let route = pendingRoute, route.module == module else { return nil }
+        pendingRoute = nil
+        return route
     }
 }
 

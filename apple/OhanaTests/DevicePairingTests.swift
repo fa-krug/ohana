@@ -55,3 +55,19 @@ struct APIClientTests {
         #expect(Day("2026-01-05")! < Day("2026-01-06")!)
     }
 }
+
+struct AppRouteTests {
+    @Test func mapsWebPaths() {
+        #expect(AppRoute.parse(webPath: "/f/fam1")?.route == .module(.overview))
+        #expect(AppRoute.parse(webPath: "/f/fam1/meals/recipes/r1")?.route == .recipe(id: "r1"))
+        #expect(AppRoute.parse(webPath: "/f/fam1/meals/recipes/new")?.route == .newRecipe)
+        #expect(AppRoute.parse(webPath: "/f/fam1/meals/cook/r1")?.route == .cook(recipeID: "r1"))
+        #expect(AppRoute.parse(webPath: "/f/fam1/meals/shopping")?.route == .shoppingList(id: nil))
+        #expect(AppRoute.parse(webPath: "/f/fam1/appointments/s1/slots/x9")?.route == .appointmentSlot(searchID: "s1", resultID: "x9"))
+        #expect(AppRoute.parse(webPath: "/f/fam1/appointments/s1/edit")?.route == .appointmentSearch(id: "s1"))
+        #expect(AppRoute.parse(webPath: "/f/fam1/assistant")?.route == .assistantChat(id: nil))
+        #expect(AppRoute.parse(webPath: "/f/fam1/assistant")?.familyID == "fam1")
+        #expect(AppRoute.parse(webPath: "/account") == nil)
+        #expect(AppRoute.recipe(id: "x").module == .meals)
+    }
+}

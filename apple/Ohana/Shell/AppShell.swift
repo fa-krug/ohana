@@ -5,6 +5,7 @@ import SwiftUI
 /// the assistant as an inspector on the right (a sheet on iPhone), ⌘J.
 struct AppShell: View {
     @Environment(AppModel.self) private var app
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @SceneStorage("module") private var module: Module = .overview
     @SceneStorage("assistant") private var showAssistant = false
 
@@ -18,9 +19,9 @@ struct AppShell: View {
                                 .shellToolbar(showAssistant: $showAssistant)
                         }
                     }
-                    // Settings live in the sidebar and the family menu; the iPhone's tab bar
-                    // keeps the five modules.
-                    .defaultVisibility(item == .settings ? .hidden : .automatic, for: .tabBar)
+                    // The assistant (a sheet from the toolbar) and the settings (the family menu)
+                    // live in the sidebar; the iPhone's tab bar keeps the five modules.
+                    .defaultVisibility(item == .settings || item == .assistant ? .hidden : .automatic, for: .tabBar)
                 }
             }
             .tabViewStyle(.sidebarAdaptable)
@@ -41,6 +42,22 @@ struct AppShell: View {
             .focusedSceneValue(\.shell, ShellFocus(module: $module, assistant: $showAssistant))
             .onReceive(NotificationCenter.default.publisher(for: .openModule)) { note in
                 if let target = note.object as? Module { module = target }
+            }
+            .onChange(of: context.pendingRoute, initial: true) {
+                guard let route = context.pendingRoute else { return }
+                #if os(iOS)
+                // The iPhone has no assistant tab: its page opens as the panel.
+                if route.module == .assistant, sizeClass == .compact {
+                    _ = context.takeRoute(for: .assistant)
+                    showAssistant = true
+                    return
+                }
+                #endif
+                module = route.module
+                if case let .module(target) = route, context.pendingRoute == route {
+                    // A bare module needs nothing pushed.
+                    _ = context.takeRoute(for: target)
+                }
             }
             #if DEBUG
             // Development: `-OHANA_DEV_MODULE calendar` / `-OHANA_DEV_ASSISTANT YES` open a module or
@@ -67,7 +84,8 @@ extension Notification.Name {
 }
 
 extension Module {
-    /// Shows this module in the shell.
+    /// Shows this module in the shell. Inside a family prefer `family.open(.module(…))` or a
+    /// more specific `AppRoute`.
     func open() { NotificationCenter.default.post(name: .openModule, object: self) }
 }
 

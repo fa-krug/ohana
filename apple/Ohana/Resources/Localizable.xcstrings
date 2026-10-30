@@ -1301,6 +1301,16 @@
         }
       }
     },
+    "Assistant panel": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Assistent-Seitenleiste"
+          }
+        }
+      }
+    },
     "Assistant settings": {
       "localizations": {
         "de": {

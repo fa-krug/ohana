@@ -1,9 +1,9 @@
 import SwiftUI
 
 /// The sections of a family, in sidebar order (the web app's components/shell/modules.ts plus
-/// the overview and the family's settings).
+/// the overview, the assistant's own page and the family's settings).
 enum Module: String, CaseIterable, Identifiable, Hashable {
-    case overview, calendar, finance, meals, appointments, settings
+    case overview, calendar, finance, meals, appointments, assistant, settings
 
     var id: String { rawValue }
 
@@ -14,6 +14,7 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
         case .finance: "Finance"
         case .meals: "Meals"
         case .appointments: "Appointments"
+        case .assistant: "Assistant"
         case .settings: "Settings"
         }
     }
@@ -25,6 +26,7 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
         case .finance: "banknote"
         case .meals: "fork.knife"
         case .appointments: "stethoscope"
+        case .assistant: "sparkles"
         case .settings: "gearshape"
         }
     }
@@ -36,11 +38,12 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
         case .finance: ModuleTint.finance
         case .meals: ModuleTint.meals
         case .appointments: ModuleTint.appointments
+        case .assistant: ModuleTint.assistant
         case .settings: ModuleTint.settings
         }
     }
 
-    /// ⌘1 … ⌘6
+    /// ⌘1 … ⌘7
     var shortcut: KeyEquivalent { KeyEquivalent(Character("\(Module.allCases.firstIndex(of: self)! + 1)")) }
 
     @ViewBuilder var root: some View {
@@ -50,6 +53,7 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
         case .finance: FinanceView()
         case .meals: MealsView()
         case .appointments: AppointmentsView()
+        case .assistant: AssistantPage()
         case .settings: FamilySettingsView()
         }
     }
@@ -75,7 +79,7 @@ struct ShellCommands: Commands {
                     .keyboardShortcut(module.shortcut, modifiers: .command)
             }
             Divider()
-            Button("Assistant") { shell?.assistant.wrappedValue.toggle() }
+            Button("Assistant panel") { shell?.assistant.wrappedValue.toggle() }
                 .keyboardShortcut("j", modifiers: .command)
         }
     }
