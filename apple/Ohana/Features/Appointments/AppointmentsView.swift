@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// Appointments (the web app's app/(app)/f/[familyId]/appointments): the booked appointments and
-/// the family's searches as glass cards with their status and earliest slots; editors add,
-/// run, pause and delete searches. Inside the shell's navigation stack.
+/// the family's searches as cards with their status and earliest slots; editors add (File ▸ New
+/// Search, ⌘N), run, pause and delete searches. Inside the shell's navigation stack.
 struct AppointmentsView: View {
     @Environment(FamilyContext.self) private var family
     @State private var state: LoadState<AppointmentsOverview> = .idle
@@ -25,11 +25,11 @@ struct AppointmentsView: View {
             if family.canEdit {
                 ToolbarItem(placement: .primaryAction) {
                     Button("New search", systemImage: "plus") { creating = true }
-                        .keyboardShortcut("n", modifiers: [.command, .shift])
-                        .help("New search (⇧⌘N)")
+                        .help("New search (⌘N)")
                 }
             }
         }
+        .focusedSceneValue(\.newItem, family.canEdit ? NewItemAction(title: "New Search") { creating = true } : nil)
         .task(id: [family.revision(.appointments), family.revision(.events)]) { await load() }
         .appointmentPolling(busy: state.value?.searches.contains(where: \.isBusy) ?? false) { await load() }
         .navigationDestination(for: AppointmentRoute.self) { AppointmentRouteView(route: $0) }
@@ -50,10 +50,10 @@ struct AppointmentsView: View {
             AppointmentSearchEditor(search: search) { _ in }
         }
         .confirmationDialog(
-            "Delete the search?", isPresented: .init(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
-            presenting: deleting
+            Text("Delete “\(deleting?.name ?? "")”?"), isPresented: .init(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
+            titleVisibility: .visible, presenting: deleting
         ) { search in
-            Button("Delete", role: .destructive) {
+            Button("Delete Search", role: .destructive) {
                 perform {
                     try await AppointmentActions.delete(family, search.id)
                 }
@@ -62,8 +62,8 @@ struct AppointmentsView: View {
             Text("Delete the search “\(search.name)” with its history?")
         }
         .confirmationDialog(
-            "Remove the appointment?", isPresented: .init(get: { removing != nil }, set: { if !$0 { removing = nil } }),
-            presenting: removing
+            Text("Remove “\(removing?.title ?? "")”?"), isPresented: .init(get: { removing != nil }, set: { if !$0 { removing = nil } }),
+            titleVisibility: .visible, presenting: removing
         ) { event in
             Button("Remove", role: .destructive) {
                 perform { try await AppointmentActions.removeBooking(family, event.id) }
@@ -160,7 +160,7 @@ struct AppointmentsView: View {
         CardSection("Booked appointments", systemImage: "calendar.badge.checkmark", tint: ModuleTint.appointments) {
             Button("Calendar", systemImage: "calendar") { family.open(.module(.calendar)) }
                 .font(.subheadline)
-                .buttonStyle(.glass)
+                .buttonStyle(.bordered)
         } content: {
             Text("Slots you marked as booked; they show in the calendar.")
                 .font(.caption)
@@ -201,21 +201,23 @@ struct AppointmentBookedRow: View {
                     Label(event.location, systemImage: "mappin")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                        .lineLimit(2)
                 }
             }
             Spacer(minLength: 0)
             if let url = AppointmentLogic.safeURL(event.url) {
-                Button("Book", systemImage: "arrow.up.right.square") { openURL(url) }
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.borderless)
-                    .help("Open the provider’s page")
+                Button { openURL(url) } label: {
+                    Label("Book", systemImage: "arrow.up.right.square").labelStyle(.iconOnly).rowHitTarget()
+                }
+                .buttonStyle(.borderless)
+                .help("Open the provider’s page")
             }
             if canEdit {
-                Button("Remove", systemImage: "trash", role: .destructive, action: remove)
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.borderless)
-                    .help("Remove")
+                Button(role: .destructive, action: remove) {
+                    Label("Remove", systemImage: "trash").labelStyle(.iconOnly).rowHitTarget()
+                }
+                .buttonStyle(.borderless)
+                .help("Remove")
             }
         }
         .contextMenu {
@@ -243,14 +245,15 @@ struct AppointmentBookedRow: View {
                 Text(verbatim: "· \(event.person)").foregroundStyle(.secondary)
             }
         }
-        .lineLimit(1)
+        .lineLimit(2)
     }
 }
 
-/// A search as a glass card (search-list.tsx `SearchCard`): name, criteria, status, schedule,
-/// last run, the first three doctors, "run now".
+/// A search as a card (search-list.tsx `SearchCard`): name, criteria, status, schedule, last
+/// run, the first three doctors, "run now".
 struct AppointmentSearchCard: View {
     @Environment(FamilyContext.self) private var family
+    @Environment(\.dynamicTypeSize) private var typeSize
     let search: AppointmentSearch
     let reload: () async -> Void
 
@@ -305,26 +308,28 @@ struct AppointmentSearchCard: View {
                 }
                 Text(search.name)
                     .font(.title3.weight(.semibold))
-                    .lineLimit(1)
+                    .lineLimit(2)
                 Spacer(minLength: 0)
-                Image(systemName: "chevron.right")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.tertiary)
             }
             Text(AppointmentLogic.criteriaSummary(search))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            HStack(spacing: 6) {
+            // Badges beside the schedule; stacked at accessibility text sizes.
+            let layout = typeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6)) : AnyLayout(HStackLayout(spacing: 6))
+            layout {
                 if let status = search.badgeStatus { AppointmentStatusBadge(status: status) }
                 if !search.enabled { AppointmentPausedBadge() }
                 Text(verbatim: "\(AppointmentLogic.scheduleSummary(search)) · \(AppointmentActions.lastRunText(search))")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .contentShape(.rect)
+        .accessibilityElement(children: .combine)
+        .accessibilityHint("Opens the search")
     }
 }
 
@@ -360,15 +365,15 @@ struct AppointmentRunNowButton: View {
     }
 }
 
-/// `.glassProminent` or `.glass`.
+/// `.borderedProminent` or `.bordered`: buttons in the content, not floating above it.
 struct AppointmentButtonStyle: ViewModifier {
     let prominent: Bool
 
     func body(content: Content) -> some View {
         if prominent {
-            content.buttonStyle(.glassProminent)
+            content.buttonStyle(.borderedProminent)
         } else {
-            content.buttonStyle(.glass)
+            content.buttonStyle(.bordered)
         }
     }
 }

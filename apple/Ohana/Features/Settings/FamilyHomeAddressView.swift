@@ -35,9 +35,6 @@ struct FamilyHomeAddressView: View {
                             .frame(height: 180)
                             .clipShape(.rect(cornerRadius: 16))
                             .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
-                        Text(verbatim: String(format: "%.5f, %.5f", lat, lng))
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(.secondary)
                     }
                 } else {
                     Text("Not set.").foregroundStyle(.secondary)

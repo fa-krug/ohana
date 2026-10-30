@@ -1,8 +1,10 @@
 import SwiftUI
 
-/// New / edit search (search-form.tsx): name and switches, the place (Photon suggestions or the
-/// family's home), the sources with their speciality autocompletes and filters, the schedule,
-/// the notification channels. Checked like the server's `searchInputSchema` before saving.
+/// New / edit search (search-form.tsx): name, the place (the family's home by default, Photon
+/// suggestions otherwise), the sources with their speciality autocompletes and filters, how often
+/// it runs in plain words (cron and result pages under "Advanced"), the notification channels.
+/// Checked like the server's `searchInputSchema`: each problem shows at its field (muted until
+/// the field was touched) and Save waits until there are none.
 struct AppointmentSearchEditor: View {
     @Environment(FamilyContext.self) private var family
     @Environment(\.dismiss) private var dismiss
@@ -12,40 +14,59 @@ struct AppointmentSearchEditor: View {
     let saved: (String) -> Void
 
     @State private var input: AppointmentSearchInput
+    /// What Cancel compares with: the search, or a new one with its defaults (home, channel).
+    @State private var original: AppointmentSearchInput
     @State private var options: AppointmentOptions?
     @State private var locationText: String
     @State private var specialityText: String
     @State private var jamedaText: String
-    @State private var problems: [String] = []
+    /// The fields' texts Cancel compares with (typing without picking changes only these).
+    @State private var originalTexts: [String]
+    @State private var schedule: AppointmentSchedule
+    /// The plain choice to go back to when cron is switched off again.
+    @State private var lastPlainSchedule: AppointmentSchedule
+    @State private var showAdvanced: Bool
+    /// Fields edited since the sheet opened: their problems show in red, the others muted.
+    @State private var touched: Set<AppointmentSearchField> = []
     @State private var saving = false
+    @State private var confirmLeave = false
 
     init(search: AppointmentSearch?, saved: @escaping (String) -> Void) {
         self.search = search
         self.saved = saved
         let input = search.map(AppointmentSearchInput.init) ?? AppointmentSearchInput()
         _input = State(initialValue: input)
-        _locationText = State(initialValue: input.locationLabel.isEmpty && !input.latitude.isEmpty
-            ? "\(input.latitude), \(input.longitude)" : input.locationLabel)
-        _specialityText = State(initialValue: input.specialityLabel.isEmpty ? input.specialitySlug : input.specialityLabel)
-        _jamedaText = State(initialValue: input.jamedaSpecialityLabel.isEmpty ? input.jamedaSpecialitySlug : input.jamedaSpecialityLabel)
+        _original = State(initialValue: input)
+        // A place without a name is never shown as raw coordinates.
+        let location = input.locationLabel.isEmpty && !input.latitude.isEmpty
+            ? String(localized: "Selected place") : input.locationLabel
+        let speciality = input.specialityLabel.isEmpty ? input.specialitySlug : input.specialityLabel
+        let jameda = input.jamedaSpecialityLabel.isEmpty ? input.jamedaSpecialitySlug : input.jamedaSpecialityLabel
+        _locationText = State(initialValue: location)
+        _specialityText = State(initialValue: speciality)
+        _jamedaText = State(initialValue: jameda)
+        _originalTexts = State(initialValue: [location, speciality, jameda])
+        let schedule = AppointmentLogic.schedule(of: input)
+        _schedule = State(initialValue: schedule)
+        _lastPlainSchedule = State(initialValue: schedule == .cron ? .every30Minutes : schedule)
+        _showAdvanced = State(initialValue: schedule == .cron || input.maxPages != AppointmentSearchInput().maxPages)
+    }
+
+    private var issues: [(field: AppointmentSearchField, message: String)] { AppointmentLogic.issues(input) }
+
+    private var hasChanges: Bool {
+        input != original || [locationText, specialityText, jamedaText] != originalTexts
     }
 
     var body: some View {
         NavigationStack {
             Form {
-                if !problems.isEmpty {
-                    Section {
-                        ForEach(problems, id: \.self) { problem in
-                            Label(problem, systemImage: "exclamationmark.circle.fill")
-                                .foregroundStyle(.red)
-                        }
-                    }
-                }
                 general
                 location
                 sources
-                schedule
+                scheduleSection
                 notifications
+                advanced
             }
             .formStyle(.grouped)
             .navigationTitle(search == nil ? "New search" : "Edit search")
@@ -54,15 +75,34 @@ struct AppointmentSearchEditor: View {
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    CancelButton(hasChanges: hasChanges)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(search == nil ? "Create search" : "Save") { save() }
-                        .disabled(saving || input.name.trimmingCharacters(in: .whitespaces).isEmpty)
+                    if saving {
+                        ProgressView()
+                    } else {
+                        Button(search == nil ? "Create search" : "Save") { save() }
+                            .keyboardShortcut(.defaultAction)
+                            .disabled(!issues.isEmpty)
+                    }
                 }
             }
             .task { await loadOptions() }
+            .onChange(of: input.name) { touched.insert(.name) }
+            .onChange(of: locationText) { touched.insert(.location) }
+            .onChange(of: specialityText) { touched.insert(.doctolibSpeciality) }
+            .onChange(of: jamedaText) { touched.insert(.jamedaSpeciality) }
+            .onChange(of: input.dayLimit) { touched.insert(.dayLimit) }
+            .onChange(of: input.maxPages) { touched.insert(.maxPages) }
+            .onChange(of: input.scheduleMinutes) { touched.insert(.interval) }
+            .onChange(of: input.cron) { touched.insert(.cron) }
+            .confirmationDialog("Discard your changes?", isPresented: $confirmLeave, titleVisibility: .visible) {
+                Button("Discard Changes", role: .destructive, action: openChannelSettings)
+                Button("Keep Editing", role: .cancel) {}
+            }
         }
+        .discardGuard(hasChanges: hasChanges)
+        .errorBanner()
         .presentationDetents([.large])
         #if os(macOS)
         .frame(minWidth: 560, minHeight: 640)
@@ -74,25 +114,61 @@ struct AppointmentSearchEditor: View {
         do {
             let loaded: AppointmentOptions = try await family.api.get("/appointments/options")
             options = loaded
-            // A new search notifies the family's only channel, as the web form does.
-            if search == nil, input.channelIds.isEmpty, loaded.channels.count == 1 {
-                input.channelIds = [loaded.channels[0].id]
+            guard search == nil else { return }
+            // A new search starts at home and notifies the family's only channel (as the web form
+            // does): defaults, not changes, so Cancel doesn't ask about them.
+            if let home = loaded.home {
+                original.latitude = String(home.lat)
+                original.longitude = String(home.lng)
+                original.locationLabel = home.address
+                originalTexts[0] = home.address
+                if input.latitude.isEmpty, locationText.isEmpty {
+                    input.latitude = original.latitude
+                    input.longitude = original.longitude
+                    input.locationLabel = home.address
+                    locationText = home.address
+                }
+            }
+            if loaded.channels.count == 1 {
+                original.channelIds = [loaded.channels[0].id]
+                if input.channelIds.isEmpty { input.channelIds = original.channelIds }
             }
         } catch {
-            problems = [error.localizedDescription]
+            ErrorBanner.shared.show(error)
         }
+    }
+
+    // MARK: Inline problems
+
+    /// The field's problem: red once the field was touched (or the search exists), muted before.
+    @ViewBuilder private func problem(_ field: AppointmentSearchField) -> some View {
+        if let message = issues.first(where: { $0.field == field })?.message {
+            if search != nil || touched.contains(field) {
+                Label(message, systemImage: "exclamationmark.circle.fill")
+                    .foregroundStyle(.red)
+            } else {
+                Text(message)
+            }
+        }
+    }
+
+    private func hasProblem(_ field: AppointmentSearchField) -> Bool {
+        issues.contains { $0.field == field }
     }
 
     // MARK: Sections
 
     private var general: some View {
-        Section("General") {
+        Section {
             TextField("Name", text: $input.name, prompt: Text("e.g. Dermatologist Munich"))
                 .onChange(of: input.name) { _, value in
                     if value.count > 200 { input.name = String(value.prefix(200)) }
                 }
-            Toggle("Run on the schedule", isOn: $input.enabled)
             Toggle("Only notify when an appointment is earlier than the earliest seen so far", isOn: $input.notifyOnlyEarlier)
+        } header: {
+            Text("General")
+        } footer: {
+            problem(.name)
         }
     }
 
@@ -108,7 +184,7 @@ struct AppointmentSearchEditor: View {
                 input.longitude = place.longitude
                 input.locationLabel = place.label
             }
-            if let home = options?.home {
+            if let home = options?.home, input.locationLabel != home.address {
                 Button("Use the home address", systemImage: "house") {
                     input.latitude = String(home.lat)
                     input.longitude = String(home.lng)
@@ -119,14 +195,18 @@ struct AppointmentSearchEditor: View {
         } header: {
             Text("Location")
         } footer: {
-            if !input.latitude.isEmpty {
-                Text(verbatim: "\(input.latitude), \(input.longitude)")
+            if hasProblem(.location) {
+                problem(.location)
+            } else if let home = options?.home, input.locationLabel == home.address {
+                Text("Searches around your home address.")
+            } else {
+                Text("Searches around this place.")
             }
         }
     }
 
     @ViewBuilder private var sources: some View {
-        Section("Where to search") {
+        Section {
             Toggle(isOn: $input.doctolibOn) { Text(verbatim: "Doctolib").fontWeight(.semibold) }
             if input.doctolibOn {
                 AppointmentAutocomplete(
@@ -148,6 +228,10 @@ struct AppointmentSearchEditor: View {
                     Button("Preview on Doctolib", systemImage: "arrow.up.right.square") { openURL(url) }
                 }
             }
+        } header: {
+            Text("Where to search")
+        } footer: {
+            problem(.doctolibSpeciality)
         }
         Section {
             Toggle(isOn: $input.jamedaOn) { Text(verbatim: "jameda").fontWeight(.semibold) }
@@ -183,38 +267,45 @@ struct AppointmentSearchEditor: View {
                     Button("Preview on jameda", systemImage: "arrow.up.right.square") { openURL(url) }
                 }
             }
+        } footer: {
+            problem(.jamedaSpeciality)
         }
     }
 
-    private var schedule: some View {
-        Section("Schedule") {
-            Picker("Frequency", selection: $input.scheduleType) {
-                Text("Every N minutes").tag("MINUTES")
-                Text("Hourly").tag("HOURLY")
-                Text("Daily").tag("DAILY")
-                Text("Cron expression").tag("CRON")
-            }
-            if input.scheduleType == "MINUTES" {
-                AppointmentNumberField(
-                    label: "Interval (minutes)",
-                    value: Binding(get: { input.scheduleMinutes ?? 30 }, set: { input.scheduleMinutes = $0 }),
-                    range: 1...1440
-                )
-            }
-            if input.scheduleType == "CRON" {
-                LabeledContent("Cron (m h dom mon dow)") {
-                    TextField("Cron (m h dom mon dow)", text: $input.cron, prompt: Text(verbatim: "*/15 * * * *"))
-                        .labelsHidden()
-                        .multilineTextAlignment(.trailing)
-                        .autocorrectionDisabled()
-                        .font(.body.monospaced())
-                        #if os(iOS)
-                        .textInputAutocapitalization(.never)
-                        #endif
+    private var scheduleSection: some View {
+        Section {
+            Toggle("Check automatically", isOn: $input.enabled)
+            if input.enabled {
+                Picker("How often", selection: Binding(get: { schedule }, set: choose)) {
+                    ForEach(AppointmentSchedule.presets) { choice in
+                        Text(choice.title).tag(choice)
+                    }
+                    if schedule == .cron {
+                        Text(AppointmentSchedule.cron.title).tag(AppointmentSchedule.cron)
+                    }
+                }
+                if schedule == .customInterval {
+                    AppointmentNumberField(
+                        label: "Every (minutes)",
+                        value: Binding(get: { input.scheduleMinutes ?? 60 }, set: { input.scheduleMinutes = $0 }),
+                        range: 1...1440
+                    )
                 }
             }
             AppointmentNumberField(label: "Within (days)", value: $input.dayLimit, range: 1...365)
-            AppointmentNumberField(label: "Result pages", value: $input.maxPages, range: 1...20)
+        } header: {
+            Text("Schedule")
+        } footer: {
+            if hasProblem(.interval) || hasProblem(.dayLimit) {
+                VStack(alignment: .leading, spacing: 4) {
+                    problem(.interval)
+                    problem(.dayLimit)
+                }
+            } else if input.enabled {
+                Text("Ohana checks on its own and tells you when an appointment frees up. Within (days): how far ahead an appointment may be.")
+            } else {
+                Text("Ohana checks only when you tap Run now. Within (days): how far ahead an appointment may be.")
+            }
         }
     }
 
@@ -225,8 +316,7 @@ struct AppointmentSearchEditor: View {
                     Text("Your family has no notification channels yet.")
                         .foregroundStyle(.secondary)
                     Button("Add one in the settings.") {
-                        dismiss()
-                        family.open(.settings(.notifications))
+                        if hasChanges { confirmLeave = true } else { openChannelSettings() }
                     }
                 } else {
                     ForEach(options.channels) { channel in
@@ -264,11 +354,54 @@ struct AppointmentSearchEditor: View {
         }
     }
 
-    // MARK: Saving
+    /// Cron and result pages: for those who know them, folded away.
+    private var advanced: some View {
+        Section {
+            DisclosureGroup("Advanced", isExpanded: $showAdvanced) {
+                Toggle("Use a cron schedule", isOn: Binding(get: { schedule == .cron }, set: { on in
+                    choose(on ? .cron : lastPlainSchedule)
+                    if on { input.enabled = true }
+                }))
+                if schedule == .cron {
+                    TextField("Cron expression", text: $input.cron, prompt: Text(verbatim: "*/15 7-20 * * 1-5"))
+                        .autocorrectionDisabled()
+                        .font(.body.monospaced())
+                        #if os(iOS)
+                        .textInputAutocapitalization(.never)
+                        #endif
+                    VStack(alignment: .leading, spacing: 4) {
+                        problem(.cron)
+                        Text("Five fields: minute, hour, day of the month, month, weekday. “*/15 7-20 * * 1-5” runs every 15 minutes from 7:00 to 20:59 on weekdays.")
+                            .foregroundStyle(.secondary)
+                    }
+                    .font(.footnote)
+                }
+                AppointmentNumberField(label: "Result pages", value: $input.maxPages, range: 1...20)
+                VStack(alignment: .leading, spacing: 4) {
+                    problem(.maxPages)
+                    Text("How many pages of results each run reads per source. More pages find more doctors but take longer.")
+                        .foregroundStyle(.secondary)
+                }
+                .font(.footnote)
+            }
+        }
+    }
+
+    // MARK: Changes
+
+    private func choose(_ choice: AppointmentSchedule) {
+        schedule = choice
+        if choice != .cron { lastPlainSchedule = choice }
+        AppointmentLogic.apply(choice, to: &input)
+    }
+
+    private func openChannelSettings() {
+        dismiss()
+        family.open(.settings(.notifications))
+    }
 
     private func save() {
-        problems = AppointmentLogic.problems(input)
-        guard problems.isEmpty else { return }
+        guard issues.isEmpty, !saving else { return }
         saving = true
         let body = input
         Task {
@@ -288,8 +421,23 @@ struct AppointmentSearchEditor: View {
                 saved(id)
             } catch is CancellationError {
             } catch {
-                problems = [error.localizedDescription]
+                ErrorBanner.shared.show(error)
             }
+        }
+    }
+}
+
+
+extension AppointmentSchedule {
+    var title: LocalizedStringKey {
+        switch self {
+        case .every5Minutes: "Every 5 minutes"
+        case .every15Minutes: "Every 15 minutes"
+        case .every30Minutes: "Every 30 minutes"
+        case .hourly: "Every hour"
+        case .daily: "Once a day"
+        case .customInterval: "Another interval"
+        case .cron: "Custom schedule (Advanced)"
         }
     }
 }
@@ -330,7 +478,7 @@ struct AppointmentAutocomplete<Item: Identifiable & Hashable>: View {
                 Text(label).font(.caption).foregroundStyle(.secondary)
             }
             HStack {
-                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                Image(systemName: "magnifyingglass").foregroundStyle(.secondary).accessibilityHidden(true)
                 TextField(prompt, text: $text, prompt: Text(prompt))
                     .labelsHidden()
                     .autocorrectionDisabled()
@@ -385,6 +533,8 @@ struct AppointmentNumberField: View {
     let label: LocalizedStringKey
     @Binding var value: Int
     let range: ClosedRange<Int>
+    /// Wide enough for four digits at any text size.
+    @ScaledMetric private var fieldWidth: CGFloat = 64
 
     var body: some View {
         LabeledContent(label) {
@@ -392,7 +542,7 @@ struct AppointmentNumberField: View {
                 TextField(label, value: $value, format: .number)
                     .labelsHidden()
                     .multilineTextAlignment(.trailing)
-                    .frame(maxWidth: 80)
+                    .frame(maxWidth: fieldWidth)
                     #if os(iOS)
                     .keyboardType(.numberPad)
                     #endif

@@ -127,7 +127,7 @@ private struct FamilySettingsForm: View {
                 }
             }
 
-            Section("General") {
+            Section {
                 if household.canEdit {
                     HStack {
                         TextField("Family name", text: $name)
@@ -135,12 +135,18 @@ private struct FamilySettingsForm: View {
                             .submitLabel(.done)
                         if trimmedName != household.name {
                             Button("Save", action: rename)
-                                .buttonStyle(.glassProminent)
+                                .buttonStyle(.borderedProminent)
                                 .disabled(trimmedName.isEmpty)
                         }
                     }
                 } else {
                     LabeledContent("Family name", value: household.name)
+                }
+            } header: {
+                Text("General")
+            } footer: {
+                if household.canEdit && trimmedName.isEmpty {
+                    Text("A family needs a name.").foregroundStyle(.red)
                 }
             }
 

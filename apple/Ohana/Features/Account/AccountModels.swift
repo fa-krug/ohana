@@ -128,6 +128,33 @@ enum AccountRules {
         tokens.filter(\.current) + tokens.filter { !$0.current }
     }
 
+    /// The suffix pairing gives a device's token (web/lib/auth/device-pairing.ts): "<device> (app)",
+    /// or "Ohana app" without a device name.
+    private static let deviceSuffix = " (app)"
+    private static let unnamedDevice = "Ohana app"
+
+    /// A token an Ohana app signed in with (this device's, or one paired like it), not one made for
+    /// a script.
+    static func isDevice(_ token: AccountToken) -> Bool {
+        token.current || token.name.hasSuffix(deviceSuffix) || token.name == unnamedDevice
+    }
+
+    /// The signed-in devices: this one first.
+    static func deviceTokens(_ tokens: [AccountToken]) -> [AccountToken] {
+        sortedTokens(tokens).filter(isDevice)
+    }
+
+    /// The tokens made for scripts and programs (Advanced ▸ API tokens).
+    static func scriptTokens(_ tokens: [AccountToken]) -> [AccountToken] {
+        tokens.filter { !isDevice($0) }
+    }
+
+    /// A device token's device: "iPhone" of "iPhone (app)".
+    static func deviceName(_ token: AccountToken) -> String {
+        let name = token.name.hasSuffix(deviceSuffix) ? String(token.name.dropLast(deviceSuffix.count)) : token.name
+        return name.trimmingCharacters(in: .whitespaces).isEmpty ? unnamedDevice : name
+    }
+
     /// Trimmed text, nil when blank.
     static func trimmed(_ text: String) -> String? {
         let t = text.trimmingCharacters(in: .whitespacesAndNewlines)

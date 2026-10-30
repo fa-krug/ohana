@@ -84,13 +84,13 @@ struct FamilyNotificationsView: View {
             TintedIcon(systemImage: channel.kind?.systemImage ?? "bell", tint: channel.enabled ? .red : .gray, size: 30)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
-                    Text(channel.name).fontWeight(.medium).lineLimit(1)
+                    Text(channel.name).fontWeight(.medium).lineLimit(2)
                     if !channel.enabled { Text("(off)").foregroundStyle(.secondary) }
                 }
                 Text([channel.kind?.title ?? channel.provider, channel.target].filter { !$0.isEmpty }.joined(separator: " · "))
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .lineLimit(2)
             }
             Spacer(minLength: 8)
             if canEdit {
@@ -98,13 +98,15 @@ struct FamilyNotificationsView: View {
                     ProgressView().controlSize(.small)
                 } else {
                     Button("Test") { test(channel) }
-                        .buttonStyle(.glass)
+                        .buttonStyle(.bordered)
                         .controlSize(.small)
+                        .accessibilityLabel(Text("Send a test message to \(channel.name)"))
                 }
                 Menu {
                     channelActions(channel)
                 } label: {
                     Image(systemName: "ellipsis.circle")
+                        .rowHitTarget()
                         .accessibilityLabel(Text("Actions for \(channel.name)"))
                 }
                 .menuStyle(.button)

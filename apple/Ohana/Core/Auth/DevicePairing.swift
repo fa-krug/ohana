@@ -20,19 +20,10 @@ enum DevicePairing {
         case malformed
     }
 
-    /// Normalizes what the user typed: adds https:// when there's no scheme, drops a trailing
-    /// slash, query and fragment. Nil for something that can't be a server.
+    /// Normalizes what the user typed or pasted (see `ServerLink`). Nil for something that can't
+    /// be a server.
     static func serverURL(from input: String) -> URL? {
-        var text = input.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty, !text.contains(" ") else { return nil }
-        if !text.contains("://") { text = "https://" + text }
-        guard var components = URLComponents(string: text),
-              let scheme = components.scheme?.lowercased(), scheme == "https" || scheme == "http",
-              let host = components.host, !host.isEmpty else { return nil }
-        components.query = nil
-        components.fragment = nil
-        while components.path.hasSuffix("/") { components.path.removeLast() }
-        return components.url
+        ServerLink(input)?.server
     }
 
     static func pairingURL(server: URL, attempt: Attempt, deviceName: String) -> URL {
@@ -56,5 +47,52 @@ enum DevicePairing {
         if value("error") != nil { return .cancelled }
         guard let token = value("token"), !token.isEmpty else { return .malformed }
         return .paired(token: token)
+    }
+}
+
+/// What someone types or pastes as their server: a bare host (`ohana.example.com`), the address
+/// from the browser, any page of it (`https://ohana.example/f/abc/calendar`) or an invite link
+/// (`https://ohana.example/invite/{code}`). The server is everything before the web app's own
+/// paths (so a server under a sub-path keeps it); an invite link brings its code along.
+struct ServerLink: Equatable {
+    let server: URL
+    let inviteCode: String?
+
+    /// The first path segments of the web app's pages (web/app): where the server's own path ends.
+    private static let appSegments: Set<String> = [
+        "f", "account", "admin", "families", "invite", "login", "setup", "setup-link", "device",
+        "onboarding", "set-language", "api",
+    ]
+
+    /// Adds https:// when there's no scheme; drops the page, query and fragment. Nil for
+    /// something that can't be a server (spaces, another scheme, no host).
+    init?(_ input: String) {
+        var text = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty, !text.contains(where: \.isWhitespace) else { return nil }
+        if !text.contains("://") { text = "https://" + text }
+        guard let url = URL(string: text) else { return nil }
+        self.init(url: url)
+    }
+
+    /// A link the app was opened with: only http(s) links carry their server.
+    init?(url: URL) {
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              let scheme = components.scheme?.lowercased(), scheme == "https" || scheme == "http",
+              let host = components.host, !host.isEmpty else { return nil }
+        let segments = components.path.split(separator: "/").map(String.init)
+        let appStart = segments.firstIndex { Self.appSegments.contains($0) } ?? segments.count
+        let page = segments[appStart...]
+        if page.count == 2, page.first == "invite", let code = page.last, InviteCode.isCode(code) {
+            inviteCode = code
+        } else {
+            inviteCode = nil
+        }
+        components.path = segments[..<appStart].map { "/" + $0 }.joined()
+        components.query = nil
+        components.fragment = nil
+        components.user = nil
+        components.password = nil
+        guard let server = components.url else { return nil }
+        self.server = server
     }
 }

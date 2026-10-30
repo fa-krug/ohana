@@ -127,28 +127,25 @@ struct FamilyMembersView: View {
         return HStack(spacing: 12) {
             FamilyAvatar(name: member.label, tint: .ohana)
             VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 4) {
-                    Text(member.label).fontWeight(.medium).lineLimit(1)
-                    if isSelf { Text("(you)").foregroundStyle(.secondary) }
-                }
-                let details = [member.name.isEmpty ? nil : member.email,
+                Text(isSelf ? String(localized: "\(member.label) (you)") : member.label)
+                    .fontWeight(.medium)
+                    .lineLimit(2)
+                // The role in words beside the email: it wraps with the rest at large text sizes.
+                let role = member.role == .editor ? String(localized: "Editor") : String(localized: "Viewer")
+                let details = [role, member.name.isEmpty ? nil : member.email,
                                member.birthday.map { FamilyBirthdays.text($0) }].compactMap { $0 }
-                if !details.isEmpty {
-                    Text(details.joined(separator: " · "))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
+                Text(details.joined(separator: " · "))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
             }
             Spacer(minLength: 8)
-            Text(member.role.title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
             if canBirthday {
                 Menu {
                     memberActions(member, canManage: canManage)
                 } label: {
                     Image(systemName: "ellipsis.circle")
+                        .rowHitTarget()
                         .accessibilityLabel(Text("Actions for \(member.label)"))
                 }
                 .menuStyle(.button)
@@ -193,17 +190,18 @@ struct FamilyMembersView: View {
         return HStack(spacing: 12) {
             FamilyAvatar(name: person.name, tint: .secondary)
             VStack(alignment: .leading, spacing: 2) {
-                Text(person.name).fontWeight(.medium).lineLimit(1)
+                Text(person.name).fontWeight(.medium).lineLimit(2)
                 let status = invite == nil ? String(localized: "No account") : String(localized: "Invite link open")
                 Text(([status] + [person.birthday.map { FamilyBirthdays.text($0) }].compactMap { $0 }).joined(separator: " · "))
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .lineLimit(2)
             }
             Spacer(minLength: 8)
             if let link = invite?.link {
                 ShareLink(item: link) {
                     Image(systemName: "square.and.arrow.up")
+                        .rowHitTarget()
                         .accessibilityLabel(Text("Share invite link"))
                 }
                 .buttonStyle(.borderless)
@@ -213,6 +211,7 @@ struct FamilyMembersView: View {
                     personActions(person)
                 } label: {
                     Image(systemName: "ellipsis.circle")
+                        .rowHitTarget()
                         .accessibilityLabel(Text("Actions for \(person.name)"))
                 }
                 .menuStyle(.button)
@@ -270,13 +269,24 @@ struct FamilyMembersView: View {
             if let link = invite.link {
                 ShareLink(item: link) {
                     Image(systemName: "square.and.arrow.up")
+                        .rowHitTarget()
                         .accessibilityLabel(Text("Share invite link"))
                 }
                 .buttonStyle(.borderless)
             }
-            Button("Revoke", role: .destructive) {
-                remove("/household/invites/\(invite.id)", refreshApp: false,
-                       success: String(localized: "Invite link revoked."))
+            Button(role: .destructive) {
+                let person = household.person(invite.personId)
+                confirmation = FamilyConfirmation(
+                    title: person.map { String(localized: "Revoke the invite link for \($0.name)?") }
+                        ?? String(localized: "Revoke this invite link?"),
+                    button: String(localized: "Revoke"),
+                    message: String(localized: "Whoever has it can’t join with it anymore.")
+                ) {
+                    remove("/household/invites/\(invite.id)", refreshApp: false,
+                           success: String(localized: "Invite link revoked."))
+                }
+            } label: {
+                Text("Revoke").rowHitTarget()
             }
             .buttonStyle(.borderless)
         }
@@ -355,10 +365,11 @@ struct FamilySharedLink: Identifiable {
     var id: String { url.absoluteString }
 }
 
-/// The initials of a name in a round glass badge.
+/// The initials of a name in a round badge; grows with Dynamic Type.
 struct FamilyAvatar: View {
     let name: String
     var tint: Color = .ohana
+    @ScaledMetric(relativeTo: .caption) private var size: CGFloat = 32
 
     private var initials: String {
         let parts = name.split(whereSeparator: { $0 == " " || $0 == "@" || $0 == "." }).prefix(2)
@@ -369,7 +380,7 @@ struct FamilyAvatar: View {
         Text(initials.isEmpty ? "?" : initials)
             .font(.caption.weight(.semibold))
             .foregroundStyle(.white)
-            .frame(width: 32, height: 32)
+            .frame(width: size, height: size)
             .background(tint.gradient, in: .circle)
             .accessibilityHidden(true)
     }

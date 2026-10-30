@@ -12,6 +12,38 @@ struct DevicePairingTests {
         #expect(DevicePairing.serverURL(from: "not a server") == nil)
     }
 
+    @Test func takesTheServerFromAPastedLink() {
+        // The address from the browser, any page of the server, an invite link.
+        #expect(ServerLink("https://ohana.example/f/abc/calendar?tab=x")?.server.absoluteString == "https://ohana.example")
+        #expect(ServerLink("ohana.example/account")?.server.absoluteString == "https://ohana.example")
+        #expect(ServerLink("http://localhost:3000/login?next=/f/a")?.server.absoluteString == "http://localhost:3000")
+        let invite = ServerLink(" https://ohana.example/invite/-D3Q5LCqfCN6SYk4HPpRxg\n")
+        #expect(invite?.server.absoluteString == "https://ohana.example")
+        #expect(invite?.inviteCode == "-D3Q5LCqfCN6SYk4HPpRxg")
+        // A server under a sub-path keeps it, up to the web app's own pages.
+        let sub = ServerLink("https://x.example/ohana/invite/abc")
+        #expect(sub?.server.absoluteString == "https://x.example/ohana")
+        #expect(sub?.inviteCode == "abc")
+        #expect(ServerLink("https://x.example/ohana")?.server.absoluteString == "https://x.example/ohana")
+        // Not an invite: no code.
+        #expect(ServerLink("https://ohana.example/invite/")?.inviteCode == nil)
+        #expect(ServerLink("https://ohana.example/f/abc")?.inviteCode == nil)
+        // No credentials carried over from a pasted link.
+        #expect(ServerLink("https://me:secret@ohana.example/f/a")?.server.absoluteString == "https://ohana.example")
+        // Not a server.
+        #expect(ServerLink("ohana://invite/abc") == nil)
+        #expect(ServerLink("ftp://ohana.example") == nil)
+        #expect(ServerLink("two words") == nil)
+    }
+
+    @Test func saysWhatIsWrongWithTheAddress() {
+        #expect(WelcomeView.problem("") == nil)
+        #expect(WelcomeView.problem("ohana.example.com") == nil)
+        #expect(WelcomeView.problem("https://ohana.example/invite/abc") == nil)
+        #expect(WelcomeView.problem("ohana example") == "An address has no spaces, like ohana.example.com.")
+        #expect(WelcomeView.problem("ftp://ohana.example") == "That isn’t a web address. It looks like ohana.example.com.")
+    }
+
     @Test func buildsThePairingURL() throws {
         let attempt = DevicePairing.Attempt(state: "abc-123-def")
         let url = DevicePairing.pairingURL(server: URL(string: "https://x.example/sub")!, attempt: attempt, deviceName: "Mac mini")

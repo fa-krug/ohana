@@ -47,4 +47,25 @@ struct InviteTests {
         #expect(!app.open(URL(string: "https://evil.example/invite/xyz")!))
         #expect(InviteInbox.shared.code == nil)
     }
+
+    @Test func signedOutAnInviteLinkSignsInToItsServer() {
+        let app = AppModel(signedOutPreview: ())
+        _ = InviteInbox.shared.take()
+
+        #expect(app.open(URL(string: "https://ohana.example/invite/abc")!))
+        #expect(InviteInbox.shared.take() == "abc")
+        #expect(app.takePendingServer()?.absoluteString == "https://ohana.example")
+        #expect(app.takePendingServer() == nil)
+
+        // Any page of a server names it too.
+        #expect(app.open(URL(string: "https://ohana.example/f/fam1/calendar")!))
+        #expect(app.takePendingServer()?.absoluteString == "https://ohana.example")
+        #expect(InviteInbox.shared.code == nil)
+
+        // The app's own invite link has no server: the code waits, the welcome screen asks.
+        #expect(app.open(URL(string: "ohana://invite/xyz")!))
+        #expect(InviteInbox.shared.take() == "xyz")
+        #expect(app.takePendingServer() == nil)
+        #expect(!app.open(URL(string: "ohana://f/fam1")!))
+    }
 }

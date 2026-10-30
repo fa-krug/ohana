@@ -19,32 +19,77 @@ enum AppointmentLogic {
 
     /// What keeps the input from saving, in the server's words; empty when it's fine.
     static func problems(_ i: AppointmentSearchInput) -> [String] {
-        var out: [String] = []
+        issues(i).map(\.message)
+    }
+
+    /// The problems by the field they belong to, so the editor shows each at its field.
+    static func issues(_ i: AppointmentSearchInput) -> [(field: AppointmentSearchField, message: String)] {
+        var out: [(field: AppointmentSearchField, message: String)] = []
         let name = i.name.trimmingCharacters(in: .whitespacesAndNewlines)
-        if name.isEmpty { out.append(String(localized: "Give the search a name.")) }
-        if name.count > 200 { out.append(String(localized: "The name is too long (max. 200).")) }
+        if name.isEmpty { out.append((.name, String(localized: "Give the search a name."))) }
+        if name.count > 200 { out.append((.name, String(localized: "The name is too long (max. 200)."))) }
         if i.latitude.trimmingCharacters(in: .whitespaces).isEmpty || i.longitude.trimmingCharacters(in: .whitespaces).isEmpty {
-            out.append(String(localized: "Pick a location from the suggestions."))
+            out.append((.location, String(localized: "Pick a location from the suggestions.")))
         }
         if i.doctolibOn && i.specialitySlug.trimmingCharacters(in: .whitespaces).isEmpty {
-            out.append(String(localized: "Pick a Doctolib speciality."))
+            out.append((.doctolibSpeciality, String(localized: "Pick a Doctolib speciality.")))
         }
         if i.jamedaOn && i.jamedaSpecialitySlug.trimmingCharacters(in: .whitespaces).isEmpty {
-            out.append(String(localized: "Pick a jameda speciality."))
+            out.append((.jamedaSpeciality, String(localized: "Pick a jameda speciality.")))
         }
-        if !(1...365).contains(i.dayLimit) { out.append(String(localized: "Within (days) must be between 1 and 365.")) }
-        if !(1...20).contains(i.maxPages) { out.append(String(localized: "Result pages must be between 1 and 20.")) }
+        if !(1...365).contains(i.dayLimit) {
+            out.append((.dayLimit, String(localized: "Within (days) must be between 1 and 365.")))
+        }
+        if !(1...20).contains(i.maxPages) {
+            out.append((.maxPages, String(localized: "Result pages must be between 1 and 20.")))
+        }
         if i.scheduleType == "MINUTES", !(1...1440).contains(i.scheduleMinutes ?? 0) {
-            out.append(String(localized: "The interval must be between 1 and 1440 minutes."))
+            out.append((.interval, String(localized: "The interval must be between 1 and 1440 minutes.")))
         }
         if i.scheduleType == "CRON" {
             let fields = i.cron.split(whereSeparator: \.isWhitespace)
-            if fields.count != 5 { out.append(String(localized: "A cron expression has five fields (m h dom mon dow).")) }
+            if fields.count != 5 {
+                out.append((.cron, String(localized: "A cron expression has five fields (m h dom mon dow).")))
+            }
         }
         if i.cron.trimmingCharacters(in: .whitespaces).count > 100 {
-            out.append(String(localized: "The cron expression is too long (max. 100)."))
+            out.append((.cron, String(localized: "The cron expression is too long (max. 100).")))
         }
         return out
+    }
+
+    // MARK: Schedule in plain words
+
+    /// The editor's "How often" choice of a stored schedule (`scheduleType`, `scheduleMinutes`).
+    static func schedule(of i: AppointmentSearchInput) -> AppointmentSchedule {
+        switch i.scheduleType {
+        case "MINUTES":
+            switch i.scheduleMinutes {
+            case 5: .every5Minutes
+            case 15: .every15Minutes
+            case 30: .every30Minutes
+            default: .customInterval
+            }
+        case "HOURLY": .hourly
+        case "CRON": .cron
+        default: .daily
+        }
+    }
+
+    /// Stores a "How often" choice. A custom interval keeps the minutes there are (else an hour);
+    /// a cron schedule keeps its expression (it's typed under Advanced).
+    static func apply(_ schedule: AppointmentSchedule, to i: inout AppointmentSearchInput) {
+        switch schedule {
+        case .every5Minutes: i.scheduleType = "MINUTES"; i.scheduleMinutes = 5
+        case .every15Minutes: i.scheduleType = "MINUTES"; i.scheduleMinutes = 15
+        case .every30Minutes: i.scheduleType = "MINUTES"; i.scheduleMinutes = 30
+        case .hourly: i.scheduleType = "HOURLY"
+        case .daily: i.scheduleType = "DAILY"
+        case .customInterval:
+            if i.scheduleType != "MINUTES" { i.scheduleMinutes = i.scheduleMinutes ?? 60 }
+            i.scheduleType = "MINUTES"
+        case .cron: i.scheduleType = "CRON"
+        }
     }
 
     // MARK: Summaries (lib/appointments/summary.ts)

@@ -114,30 +114,28 @@ struct AdminUsersView: View {
         return HStack(spacing: 12) {
             AdminInitials(name: user.displayName, tint: user.isAdmin ? .ohana : .secondary)
             VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(user.displayName).fontWeight(.medium).lineLimit(1)
-                    if isSelf { Text("(you)").foregroundStyle(.secondary) }
-                    if user.isAdmin {
-                        Text("Admin")
-                            .font(.caption2.weight(.semibold))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color.ohana.opacity(0.18), in: .capsule)
-                    }
+                Text(isSelf ? String(localized: "\(user.displayName) (you)") : user.displayName)
+                    .fontWeight(.medium)
+                    .lineLimit(2)
+                if user.isAdmin {
+                    Text("Admin")
+                        .font(.caption2.weight(.semibold))
+                        .chip(tint: .ohana)
                 }
                 if !user.name.isEmpty {
-                    Text(user.email).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    Text(user.email).font(.caption).foregroundStyle(.secondary).lineLimit(2)
                 }
                 Text(AdminText.details(user))
                     .font(.caption)
                     .foregroundStyle(user.isPending ? .orange : .secondary)
-                    .lineLimit(1)
+                    .lineLimit(2)
             }
             Spacer(minLength: 8)
             Menu {
                 actions(user, isSelf: isSelf)
             } label: {
                 Image(systemName: "ellipsis.circle")
+                    .rowHitTarget()
                     .accessibilityLabel(Text("Actions for \(user.displayName)"))
             }
             .menuStyle(.button)
@@ -146,6 +144,7 @@ struct AdminUsersView: View {
         }
         .contentShape(.rect)
         .onTapGesture { editing = AdminUserEdit(user: user) }
+        .accessibilityAction(named: Text("Edit")) { editing = AdminUserEdit(user: user) }
         .contextMenu { actions(user, isSelf: isSelf) }
     }
 
@@ -246,13 +245,13 @@ struct AdminUserSheet: View {
     }
 
     private var changed: Bool {
-        guard let user else { return true }
-        return input.email != user.email || input.name != user.name || input.isAdmin != user.isAdmin
+        input.email != (user?.email ?? "") || input.name != (user?.name ?? "") || input.isAdmin != (user?.isAdmin ?? false)
     }
 
     var body: some View {
         AccountSheetForm(title: user == nil ? "New user" : "Edit user", confirmTitle: user == nil ? "Create" : "Save",
                          canSave: !input.email.isEmpty && input.name.count <= 100 && changed,
+                         hasChanges: changed,
                          save: { try await save(input) }) {
             Section {
                 TextField("Email", text: $email)
@@ -281,10 +280,11 @@ struct AdminUserSheet: View {
     }
 }
 
-/// The initials of a name in a round badge.
+/// The initials of a name in a round badge; grows with Dynamic Type.
 struct AdminInitials: View {
     let name: String
     var tint: Color = .ohana
+    @ScaledMetric(relativeTo: .caption) private var size: CGFloat = 32
 
     private var initials: String {
         let parts = name.split(whereSeparator: { $0 == " " || $0 == "@" || $0 == "." }).prefix(2)
@@ -295,7 +295,7 @@ struct AdminInitials: View {
         Text(initials.isEmpty ? "?" : initials)
             .font(.caption.weight(.semibold))
             .foregroundStyle(.white)
-            .frame(width: 32, height: 32)
+            .frame(width: size, height: size)
             .background(tint.gradient, in: .circle)
             .accessibilityHidden(true)
     }

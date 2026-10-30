@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// The frame of the account's and the administration's small editors: a grouped form in a
-/// sheet with Cancel and a confirm button; the save runs here and a failure shows in the form.
+/// sheet with Cancel (asking before it throws `hasChanges` away; the sheet can't be swiped away
+/// with them either) and a confirm button; the save runs here and a failure shows in the form.
 struct AccountSheetForm<Content: View>: View {
     let title: LocalizedStringKey
     var confirmTitle: LocalizedStringKey = "Save"
@@ -9,6 +10,7 @@ struct AccountSheetForm<Content: View>: View {
     /// False when the sheet shows something else after saving (a new token).
     var dismissOnSave = true
     let canSave: Bool
+    let hasChanges: Bool
     let save: () async throws -> Void
     @ViewBuilder var content: Content
 
@@ -34,7 +36,7 @@ struct AccountSheetForm<Content: View>: View {
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", role: .cancel) { dismiss() }
+                    CancelButton(hasChanges: hasChanges)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     if busy {
@@ -48,6 +50,8 @@ struct AccountSheetForm<Content: View>: View {
                 }
             }
         }
+        .discardGuard(hasChanges: hasChanges)
+        .errorBanner()
         #if os(iOS)
         .presentationDetents([.medium, .large])
         #else
@@ -84,6 +88,7 @@ struct AccountEmailSheet: View {
     var body: some View {
         AccountSheetForm(title: "Change email",
                          canSave: newEmail != nil && newEmail?.lowercased() != current.lowercased() && !password.isEmpty,
+                         hasChanges: !email.isEmpty || !password.isEmpty,
                          save: { try await save(AccountEmailInput(newEmail: newEmail ?? "", currentPassword: password)) }) {
             Section {
                 LabeledContent("Current email", value: current)
@@ -118,6 +123,7 @@ struct AccountPasswordSheet: View {
     var body: some View {
         AccountSheetForm(title: hasPassword ? "Change password" : "Set a password",
                          canSave: !new.isEmpty && new == repeated && (!hasPassword || !current.isEmpty),
+                         hasChanges: !current.isEmpty || !new.isEmpty || !repeated.isEmpty,
                          save: {
                              try await save(AccountPasswordInput(currentPassword: hasPassword ? current : nil, newPassword: new))
                          }) {
@@ -150,7 +156,7 @@ struct AccountRemovePasswordSheet: View {
 
     var body: some View {
         AccountSheetForm(title: "Remove password", confirmTitle: "Remove", confirmRole: .destructive,
-                         canSave: !password.isEmpty, save: { try await save(password) }) {
+                         canSave: !password.isEmpty, hasChanges: !password.isEmpty, save: { try await save(password) }) {
             Section {
                 SecureField("Current password", text: $password)
                     .textContentType(.password)
@@ -176,9 +182,14 @@ struct AccountPasskeyRenameSheet: View {
     var body: some View {
         AccountSheetForm(title: "Rename passkey",
                          canSave: name.trimmingCharacters(in: .whitespaces) != passkey.deviceName && name.count <= 100,
+                         hasChanges: name != passkey.deviceName,
                          save: { try await save(name) }) {
             Section {
                 TextField("Name", text: $name, prompt: Text("e.g. iPhone"))
+            } footer: {
+                if name.count > 100 {
+                    Text("The name is too long (max. 100).").foregroundStyle(.red)
+                }
             }
         }
     }
@@ -198,13 +209,18 @@ struct AccountCreateTokenSheet: View {
         } else {
             AccountSheetForm(title: "New API token", confirmTitle: "Create token", dismissOnSave: false,
                              canSave: AccountRules.trimmed(name) != nil && name.count <= 100,
+                             hasChanges: !name.isEmpty,
                              save: {
                                  created = try await create(AccountRules.trimmed(name) ?? "")
                              }) {
                 Section {
                     TextField("What it’s for", text: $name, prompt: Text("e.g. Home Assistant"))
                 } footer: {
-                    Text("For scripts and AI agents: send as \"Authorization: Bearer <token>\". A token can do everything you can.")
+                    if name.count > 100 {
+                        Text("The name is too long (max. 100).").foregroundStyle(.red)
+                    } else {
+                        Text("A name you’ll recognize, like the program that uses it. A token can do everything you can.")
+                    }
                 }
             }
         }
@@ -241,23 +257,11 @@ struct AccountSecretSheet: View {
                         .font(.callout)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
-                    GlassEffectContainer(spacing: 12) {
-                        HStack(spacing: 12) {
-                            Button {
-                                AccountPasteboard.copy(secret)
-                                copied = true
-                            } label: {
-                                Label(copied ? "Copied." : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc")
-                            }
-                            .buttonStyle(.glassProminent)
-                            if let url = URL(string: secret), url.scheme?.hasPrefix("http") == true {
-                                ShareLink(item: url) {
-                                    Label("Share", systemImage: "square.and.arrow.up")
-                                }
-                                .buttonStyle(.glass)
-                            }
-                        }
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 12) { secretButtons }
+                        VStack(spacing: 12) { secretButtons }
                     }
+                    .controlSize(.large)
                 }
                 .padding(24)
                 .frame(maxWidth: 520)
@@ -269,11 +273,28 @@ struct AccountSecretSheet: View {
                 }
             }
         }
+        .errorBanner()
         #if os(iOS)
         .presentationDetents([.medium, .large])
         #else
         .frame(minWidth: 440, minHeight: 380)
         #endif
+    }
+
+    @ViewBuilder private var secretButtons: some View {
+        Button {
+            AccountPasteboard.copy(secret)
+            copied = true
+        } label: {
+            Label(copied ? "Copied." : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc")
+        }
+        .buttonStyle(.borderedProminent)
+        if let url = URL(string: secret), url.scheme?.hasPrefix("http") == true {
+            ShareLink(item: url) {
+                Label("Share", systemImage: "square.and.arrow.up")
+            }
+            .buttonStyle(.bordered)
+        }
     }
 }
 

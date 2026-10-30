@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// A run's status (or "queued") as a small glass capsule (status-badge.tsx).
+/// A run's status (or "queued") as a small chip (status-badge.tsx); the word says it, the color
+/// only repeats it.
 struct AppointmentStatusBadge: View {
     let status: String
 
@@ -8,9 +9,8 @@ struct AppointmentStatusBadge: View {
         Text(AppointmentLogic.statusLabel(status))
             .font(.caption.weight(.medium))
             .foregroundStyle(color)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .glassEffect(.regular.tint(color.opacity(0.2)), in: .capsule)
+            .chip(tint: color == .secondary ? nil : color)
+            .accessibilityLabel(Text("Status: \(AppointmentLogic.statusLabel(status))"))
     }
 
     private var color: Color {
@@ -29,9 +29,7 @@ struct AppointmentPausedBadge: View {
         Text("paused")
             .font(.caption.weight(.medium))
             .foregroundStyle(.secondary)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .glassEffect(.regular, in: .capsule)
+            .chip()
     }
 }
 
@@ -41,6 +39,7 @@ struct AppointmentDoctorRow: View {
     let doctor: AppointmentDoctorSlot
     var distance: String?
     var showDate = true
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
@@ -48,15 +47,18 @@ struct AppointmentDoctorRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(doctor.doctorName)
                     .font(.body.weight(.medium))
-                    .lineLimit(1)
+                    .lineLimit(2)
                 let description = [doctor.practiceName, doctor.motiveLabel].filter { !$0.isEmpty }.joined(separator: " · ")
                 if !description.isEmpty {
                     Text(description)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                        .lineLimit(2)
                 }
-                HStack(spacing: 6) {
+                // The time and its details in a line; stacked at accessibility text sizes.
+                let layout = typeSize.isAccessibilitySize
+                    ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2)) : AnyLayout(HStackLayout(spacing: 6))
+                layout {
                     Text(slotText)
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(ModuleTint.appointments)
@@ -74,14 +76,12 @@ struct AppointmentDoctorRow: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .lineLimit(1)
+                .lineLimit(typeSize.isAccessibilitySize ? nil : 1)
             }
             Spacer(minLength: 0)
-            Image(systemName: "chevron.right")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.tertiary)
         }
         .contentShape(.rect)
+        .accessibilityElement(children: .combine)
     }
 
     private var slotText: String {

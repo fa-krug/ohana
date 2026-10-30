@@ -376,6 +376,25 @@ struct AppointmentSearchInput: Codable, Hashable {
     }
 }
 
+/// A field of the search editor a problem belongs to (`AppointmentLogic.issues`).
+enum AppointmentSearchField: Hashable {
+    case name, location, doctolibSpeciality, jamedaSpeciality, dayLimit, maxPages, interval, cron
+}
+
+/// How often a search runs, as the editor offers it: presets first, an interval of its own, and
+/// a cron expression for those who open "Advanced" (`AppointmentLogic.schedule(of:)` / `apply`).
+enum AppointmentSchedule: Hashable, CaseIterable, Identifiable {
+    case every5Minutes, every15Minutes, every30Minutes, hourly, daily
+    /// Every N minutes, N chosen in a field.
+    case customInterval
+    case cron
+
+    var id: Self { self }
+
+    /// The choices of the "How often" picker (cron is switched on under Advanced).
+    static let presets: [AppointmentSchedule] = [.every5Minutes, .every15Minutes, .every30Minutes, .hourly, .daily, .customInterval]
+}
+
 /// Where the app's screens go inside the shell's navigation stack.
 enum AppointmentRoute: Hashable {
     case search(String)

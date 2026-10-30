@@ -149,6 +149,60 @@ struct AppointmentInputTests {
         input.scheduleMinutes = 0
         #expect(AppointmentLogic.problems(input).count == 1)
     }
+
+    @Test func pinsEachProblemToItsField() {
+        var input = AppointmentSearchInput()
+        #expect(AppointmentLogic.issues(input).map(\.field) == [.name, .location, .doctolibSpeciality])
+        input.name = "Hautarzt"
+        input.latitude = "48.1"
+        input.longitude = "11.5"
+        input.specialitySlug = "dermatologe"
+        input.scheduleType = "CRON"
+        input.cron = "* *"
+        input.maxPages = 0
+        #expect(AppointmentLogic.issues(input).map(\.field) == [.maxPages, .cron])
+    }
+
+    @Test func mapsTheScheduleChoicesToWhatIsStored() throws {
+        var input = AppointmentSearchInput()
+        // A new search runs every 30 minutes.
+        #expect(AppointmentLogic.schedule(of: input) == .every30Minutes)
+
+        let stored: [(AppointmentSchedule, String, Int?)] = [
+            (.every5Minutes, "MINUTES", 5), (.every15Minutes, "MINUTES", 15), (.every30Minutes, "MINUTES", 30),
+            (.hourly, "HOURLY", nil), (.daily, "DAILY", nil),
+        ]
+        for (choice, type, minutes) in stored {
+            AppointmentLogic.apply(choice, to: &input)
+            #expect(input.scheduleType == type)
+            if let minutes { #expect(input.scheduleMinutes == minutes) }
+            #expect(AppointmentLogic.schedule(of: input) == choice)
+        }
+
+        // Another interval: from a preset it keeps the minutes, from hourly/daily it starts at an hour.
+        AppointmentLogic.apply(.every15Minutes, to: &input)
+        AppointmentLogic.apply(.customInterval, to: &input)
+        #expect(input.scheduleType == "MINUTES" && input.scheduleMinutes == 15)
+        input.scheduleMinutes = 45
+        #expect(AppointmentLogic.schedule(of: input) == .customInterval)
+        var daily = AppointmentSearchInput()
+        daily.scheduleType = "DAILY"
+        daily.scheduleMinutes = nil
+        AppointmentLogic.apply(.customInterval, to: &daily)
+        #expect(daily.scheduleType == "MINUTES" && daily.scheduleMinutes == 60)
+
+        // Cron keeps its expression, and the stored search sends no interval for it.
+        input.cron = "*/15 7-20 * * 1-5"
+        AppointmentLogic.apply(.cron, to: &input)
+        #expect(input.scheduleType == "CRON" && input.cron == "*/15 7-20 * * 1-5")
+        #expect(AppointmentLogic.schedule(of: input) == .cron)
+        let object = try #require(try JSONSerialization.jsonObject(with: APIClient.encoder.encode(input)) as? [String: Any])
+        #expect(object["scheduleMinutes"] is NSNull)
+        #expect(object["cron"] as? String == "*/15 7-20 * * 1-5")
+
+        // Every choice is either a preset of the picker or cron (under Advanced).
+        #expect(Set(AppointmentSchedule.allCases) == Set(AppointmentSchedule.presets + [.cron]))
+    }
 }
 
 struct AppointmentLogicTests {

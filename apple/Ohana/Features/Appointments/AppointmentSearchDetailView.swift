@@ -2,7 +2,8 @@ import SwiftUI
 
 /// One search (search-detail.tsx): its criteria, schedule and last run, "run now" (polling until
 /// the worker is done), the earliest slot per doctor by day with the distance from home, the
-/// ignore list; editors edit, pause, delete.
+/// ignore list; editors edit, pause, delete. Its commands are in the Appointments menu too while
+/// it's on screen.
 struct AppointmentSearchDetailView: View {
     @Environment(FamilyContext.self) private var family
     @Environment(\.dismiss) private var dismiss
@@ -13,6 +14,8 @@ struct AppointmentSearchDetailView: View {
     @State private var width: CGFloat = 0
     /// Deleted here: no more reloads (they'd answer 404) while the page goes away.
     @State private var deleted = false
+    /// On screen (not covered by a pushed page): only then it sets the module menu.
+    @State private var onScreen = false
 
     var body: some View {
         LoadStateView(state: state, retry: load) { detail in
@@ -26,13 +29,17 @@ struct AppointmentSearchDetailView: View {
         .toolbar { toolbar }
         .task(id: family.revision(.appointments)) { await load() }
         .appointmentPolling(busy: state.value?.search.isBusy ?? false) { await load() }
+        .onAppear { onScreen = true }
+        .onDisappear { onScreen = false }
+        .focusedSceneValue(\.moduleMenu, onScreen && family.canEdit ? state.value.map { menu($0.search) } : nil)
         .sheet(isPresented: $editing) {
             if let search = state.value?.search {
                 AppointmentSearchEditor(search: search) { _ in }
             }
         }
-        .confirmationDialog("Delete the search?", isPresented: $confirmDelete) {
-            Button("Delete", role: .destructive) {
+        .confirmationDialog(Text("Delete “\(state.value?.search.name ?? "")”?"), isPresented: $confirmDelete,
+                            titleVisibility: .visible) {
+            Button("Delete Search", role: .destructive) {
                 perform {
                     deleted = true
                     do {
@@ -54,6 +61,28 @@ struct AppointmentSearchDetailView: View {
         await LoadState.run($state) { try await family.api.get("/appointments/searches/\(searchID)") }
     }
 
+    /// The Appointments menu (editors): Run Now ⌘R, Edit ⌘E, pause, Delete ⌘⌫.
+    private func menu(_ search: AppointmentSearch) -> ModuleMenu {
+        ModuleMenu(title: "Appointments") {
+            Button("Run Now") {
+                perform {
+                    try await AppointmentActions.runNow(family, search.id)
+                    await load()
+                }
+            }
+            .keyboardShortcut("r", modifiers: .command)
+            .disabled(search.isBusy)
+            Button("Edit Search…") { editing = true }
+                .keyboardShortcut("e", modifiers: .command)
+            Button(search.enabled ? "Pause Search" : "Resume Search") {
+                perform { try await AppointmentActions.setEnabled(family, search.id, !search.enabled) }
+            }
+            Divider()
+            Button("Delete Search…") { confirmDelete = true }
+                .keyboardShortcut(.delete, modifiers: .command)
+        }
+    }
+
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {
         if let search = state.value?.search {
             ToolbarItem(placement: .primaryAction) {
@@ -65,7 +94,6 @@ struct AppointmentSearchDetailView: View {
             if family.canEdit {
                 ToolbarItem(placement: .primaryAction) {
                     Button("Edit", systemImage: "pencil") { editing = true }
-                        .keyboardShortcut("e", modifiers: .command)
                         .help("Edit (⌘E)")
                 }
                 ToolbarItem(placement: .primaryAction) {
@@ -73,11 +101,10 @@ struct AppointmentSearchDetailView: View {
                         Toggle(isOn: Binding(get: { search.enabled }, set: { value in
                             perform { try await AppointmentActions.setEnabled(family, search.id, value) }
                         })) {
-                            Label("Run on the schedule", systemImage: "clock")
+                            Label("Check automatically", systemImage: "clock")
                         }
                         Divider()
                         Button("Delete", systemImage: "trash", role: .destructive) { confirmDelete = true }
-                            .keyboardShortcut(.delete, modifiers: .command)
                     }
                 }
             }
@@ -121,7 +148,6 @@ struct AppointmentSearchDetailView: View {
             HStack(spacing: 6) {
                 if let status = search.badgeStatus { AppointmentStatusBadge(status: status) }
                 if !search.enabled { AppointmentPausedBadge() }
-                Spacer(minLength: 0)
             }
             Text(search.name)
                 .font(.title2.weight(.semibold))
@@ -144,7 +170,6 @@ struct AppointmentSearchDetailView: View {
             }
             if family.canEdit {
                 AppointmentRunNowButton(search: search, reload: load, prominent: true)
-                    .keyboardShortcut("r", modifiers: .command)
                     .help("Run now (⌘R)")
             }
         }
@@ -209,24 +234,38 @@ struct AppointmentSearchDetailView: View {
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(search.ignored) { entry in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(entry.doctorName.isEmpty ? entry.providerSlug : entry.doctorName)
-                            if !entry.motiveLabel.isEmpty {
-                                Text(entry.motiveLabel).font(.caption).foregroundStyle(.secondary)
-                            }
+                    ViewThatFits(in: .horizontal) {
+                        HStack {
+                            ignoredEntry(entry)
+                            Spacer()
+                            showAgain(entry)
                         }
-                        Spacer()
-                        if family.canEdit {
-                            Button("Show again", systemImage: "eye") {
-                                perform { try await AppointmentActions.unignore(family, entryID: entry.id) }
-                            }
-                            .buttonStyle(.glass)
-                            .controlSize(.small)
+                        VStack(alignment: .leading, spacing: 8) {
+                            ignoredEntry(entry)
+                            showAgain(entry)
                         }
                     }
                 }
             }
+        }
+    }
+
+    private func ignoredEntry(_ entry: AppointmentIgnoredItem) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(entry.doctorName.isEmpty ? entry.providerSlug : entry.doctorName)
+            if !entry.motiveLabel.isEmpty {
+                Text(entry.motiveLabel).font(.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder private func showAgain(_ entry: AppointmentIgnoredItem) -> some View {
+        if family.canEdit {
+            Button("Show again", systemImage: "eye") {
+                perform { try await AppointmentActions.unignore(family, entryID: entry.id) }
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
         }
     }
 }
