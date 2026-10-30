@@ -51,7 +51,7 @@ struct FinanceLinkInfo {
             return ("list.bullet.indent", name.isEmpty ? String(localized: "Part of a split booking") : String(localized: "Part of \(name)"))
         }
         if let split = t.split {
-            var text = String(localized: "Split into parts: \(split.parts)")
+            var text = FinanceText.inflected("Split into ^[\(split.parts) part](inflect: true)")
             if split.remainderCents != 0 {
                 text += " · " + String(localized: "remainder \(store.money(split.remainderCents, sign: split.remainderCents > 0))")
             }
@@ -66,6 +66,7 @@ struct FinanceLinkInfo {
 /// split booking, and undo from the toast.
 struct FinanceTransactionsView: View {
     @Bindable var store: FinanceStore
+    @Environment(FamilyContext.self) private var family
     var selecting: Bool
     let onEdit: (FinanceTransaction) -> Void
 
@@ -175,6 +176,10 @@ struct FinanceTransactionsView: View {
             }
         }
         .swipeActions(edge: .leading) {
+            if let trip = store.shoppingLinks.list(for: t.date, categoryId: t.categoryId) {
+                Button("Shopping list", systemImage: "cart") { family.open(.shoppingList(id: trip.id)) }
+                    .tint(ModuleTint.meals)
+            }
             if store.canEdit {
                 if t.transferId != nil {
                     Button("Split up transfer", systemImage: "link.badge.plus") { Task { await store.unlink(t.id) } }
@@ -264,6 +269,7 @@ struct FinanceAmountText: View {
 /// The actions on one transaction (context menus).
 struct FinanceTransactionMenu: View {
     @Bindable var store: FinanceStore
+    @Environment(FamilyContext.self) private var family
     let transaction: FinanceTransaction
     let onEdit: (FinanceTransaction) -> Void
 
@@ -282,9 +288,8 @@ struct FinanceTransactionMenu: View {
         } else {
             Button("Details", systemImage: "info.circle") { onEdit(t) }
         }
-        if store.shoppingLinks.list(for: t.date, categoryId: t.categoryId) != nil {
-            // The app has no route to one list yet: this opens Meals.
-            Button("Shopping list of this day", systemImage: "cart") { Module.meals.open() }
+        if let trip = store.shoppingLinks.list(for: t.date, categoryId: t.categoryId) {
+            Button("Shopping list of this day", systemImage: "cart") { family.open(.shoppingList(id: trip.id)) }
         }
         if store.canEdit {
             if t.transferId != nil {
@@ -305,6 +310,7 @@ struct FinanceTransactionMenu: View {
 /// The Mac's table of transactions: multiple selection, a double click edits, ⌫ deletes.
 struct FinanceTransactionTable: View {
     @Bindable var store: FinanceStore
+    @Environment(FamilyContext.self) private var family
     let transactions: [FinanceTransaction]
     let info: FinanceLinkInfo
     let onEdit: (FinanceTransaction) -> Void
@@ -321,8 +327,15 @@ struct FinanceTransactionTable: View {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
                         Text(t.title).lineLimit(1)
-                        if store.shoppingLinks.list(for: t.date, categoryId: t.categoryId) != nil {
-                            Image(systemName: "cart").foregroundStyle(.secondary).help("Shopping list of this day")
+                        if let trip = store.shoppingLinks.list(for: t.date, categoryId: t.categoryId) {
+                            Button {
+                                family.open(.shoppingList(id: trip.id))
+                            } label: {
+                                Label("Shopping list of this day", systemImage: "cart").labelStyle(.iconOnly)
+                            }
+                            .buttonStyle(.borderless)
+                            .foregroundStyle(.secondary)
+                            .help("Shopping list of this day")
                         }
                         if t.imported {
                             Image(systemName: "square.and.arrow.down").foregroundStyle(.secondary)

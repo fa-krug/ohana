@@ -36,6 +36,7 @@ enum FinanceTab: String, Hashable, CaseIterable {
 struct FinanceScreen: View {
     @Bindable var store: FinanceStore
     @Environment(FamilyContext.self) private var family
+    @Environment(\.undoManager) private var undoManager
     @AppStorage("finance.tab") private var tab = FinanceTab.transactions
     @State private var editing: FinanceEditTarget?
     @State private var importing = false
@@ -82,6 +83,25 @@ struct FinanceScreen: View {
             #endif
             .animation(.spring(duration: 0.3), value: store.toast)
             .animation(.spring(duration: 0.3), value: store.selected.isEmpty)
+            // Edit → Undo / Redo (⌘Z, ⇧⌘Z) for the changes made here, while the page is shown.
+            .onChange(of: undoManager, initial: true) { store.undoRegistry.attach(undoManager) }
+            .onDisappear { store.undoRegistry.forgetAll() }
+            .onChange(of: family.pendingRoute, initial: true) {
+                guard let route = family.takeRoute(for: .finance) else { return }
+                open(route)
+            }
+    }
+
+    /// A place in Finance another module (or a link) sends the user to.
+    private func open(_ route: AppRoute) {
+        guard case let .financeTransactions(categoryID) = route else { return }
+        tab = .transactions
+        editing = nil
+        query = ""
+        #if os(iOS)
+        editMode = .inactive
+        #endif
+        Task { await store.showTransactions(category: categoryID) }
     }
 
     @ViewBuilder
@@ -152,40 +172,51 @@ struct FinanceScreen: View {
                 .help("Import a bank statement (⇧⌘I)")
             }
             ToolbarSpacer(.fixed, placement: .primaryAction)
-            ToolbarItem(placement: .primaryAction) { moreMenu }
         }
+        ToolbarItem(placement: .primaryAction) { moreMenu }
     }
 
     private var moreMenu: some View {
         Menu {
-            #if os(iOS)
-            if tab == .transactions {
-                Button(selecting ? String(localized: "Done selecting") : String(localized: "Select"), systemImage: "checkmark.circle") {
-                    withAnimation { editMode = selecting ? .inactive : .active }
-                }
-                Divider()
-            }
-            #endif
-            if !store.categories.isEmpty {
-                Button {
-                    Task { await store.autoCategorize() }
-                } label: {
-                    Label("Sort into categories", systemImage: "sparkles")
-                    Text(store.aiConfigured
-                         ? String(localized: "Like similar earlier ones, the rest with AI")
-                         : String(localized: "Like similar earlier ones (set up the assistant for the rest)"))
-                }
-                .disabled(store.categorizing != nil)
-            }
-            Button("Find transfers", systemImage: "arrow.left.arrow.right") { findingTransfers = true }
-            Button {
-                Task { await store.autoCombine() }
-            } label: {
-                Label("Combine automatically", systemImage: "wand.and.stars")
-                Text("All split bookings and likely transfers of this period, without review")
-            }
+            if store.canEdit { editActions }
+            Button("Finance settings", systemImage: "gearshape") { family.open(.settings(.finance)) }
         } label: {
             Label("More", systemImage: "ellipsis")
         }
+    }
+
+    @ViewBuilder
+    private var editActions: some View {
+        #if os(iOS)
+        if tab == .transactions {
+            Button(selecting ? String(localized: "Done selecting") : String(localized: "Select"), systemImage: "checkmark.circle") {
+                withAnimation { editMode = selecting ? .inactive : .active }
+            }
+            Divider()
+        }
+        #endif
+        if !store.categories.isEmpty {
+            Button {
+                Task { await store.autoCategorize() }
+            } label: {
+                Label("Sort into categories", systemImage: "sparkles")
+                Text(store.aiConfigured
+                     ? String(localized: "Like similar earlier ones, the rest with AI")
+                     : String(localized: "Like similar earlier ones (set up the assistant for the rest)"))
+            }
+            .disabled(store.categorizing != nil)
+            if !store.aiConfigured {
+                // The AI isn't set up: Settings → AI.
+                Button("Set up the assistant", systemImage: "gearshape.2") { family.open(.settings(.assistant)) }
+            }
+        }
+        Button("Find transfers", systemImage: "arrow.left.arrow.right") { findingTransfers = true }
+        Button {
+            Task { await store.autoCombine() }
+        } label: {
+            Label("Combine automatically", systemImage: "wand.and.stars")
+            Text("All split bookings and likely transfers of this period, without review")
+        }
+        Divider()
     }
 }
