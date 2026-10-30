@@ -2,8 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-**Ohana** is one Next.js app for a family: calendar, finance, meals, doctor appointments and an
-AI assistant. It replaces `fa-krug/family-planner`, `fa-krug/cookless` and
+**Ohana** is one app for a family: calendar, finance, meals, doctor appointments and an
+AI assistant. The repository holds two clients of one server: **`web/`**, the Next.js app (server,
+worker and web UI), and **`apple/`**, a native SwiftUI app for iOS/iPadOS and macOS that signs in
+to the same server with an API token (see *Native app* below). Paths in this file are relative
+to `web/` unless they start with `apple/`. It replaces `fa-krug/family-planner`, `fa-krug/cookless` and
 `fa-krug/findmyappointment`; [docs/plan.md](docs/plan.md) has the decisions, what comes from
 which app, and the phases. Phase 0 (accounts, families, admin, shell, worker, deploy),
 phase 1 (Calendar), phase 2 (Finance), phase 3 (the assistant: chats in the worker, tools for
@@ -11,6 +14,8 @@ every module, recipe generation and AI photos), phase 4 (Meals), phase 5 (Appoin
 notification channels) and phase 7 (connections between the modules) are done.
 
 ## Commands
+
+Run in `web/`:
 
 ```bash
 npm run dev           # Next.js dev server on http://localhost:3000
@@ -275,6 +280,26 @@ npm run import-legacy -- --family-planner dump.sql --cookless cookless.db --cook
   `tests/fixtures/legacy/family-planner.sql`.
 - **i18n:** `lib/i18n/locales/{en,de}.json`, `useT()` on the client, `getI18n()` on the server.
   Tests check that both files have the same keys and that every literal `t("…")` key exists.
+
+- **Native app (`apple/`):** SwiftUI, one source tree `apple/Ohana/` for two XcodeGen targets
+  (`Ohana` iOS 27, `Ohana-macOS` macOS 26; `project.yml`, the `.xcodeproj` is generated and not
+  committed: `cd apple && xcodegen generate`). Pairing: the app opens `/device/pair?state=…&deviceName=…`
+  (`app/(auth)/device/pair`, `lib/auth/device-pairing.ts`) in `ASWebAuthenticationSession`;
+  signed out, the page sends the user to `/login?next=…` (`safeNext`: paths of this site only);
+  "Connect" creates an API token named "<device> (app)" and redirects to
+  `ohana://auth-callback?token=…&state=…`. `DELETE /api/v1/me` deletes the calling API token
+  (the app's sign out). The app uses the family API and the other `/api/v1` routes with the
+  Bearer token; where the web pages use server actions, each module has app routes in
+  `lib/<module>/app-routes.ts` (`handle<Module>App`, plus `lib/meals/app-routes-plan.ts`),
+  registered in the family API's route list before the module's own routes (which answer 404
+  for other paths under their prefix); `POST /api/v1/families` creates a family. In the app:
+  `App/AppModel.swift` (server, token in the Keychain, `/api/v1/me`, selected family,
+  `FamilyContext`: `FamilyAPI` + `didChange`/`revision` signals between modules),
+  `Core/API/APIClient.swift` (errors `{error}` / `{message}` → `APIError`, 401 signs out),
+  `Shell/` (sidebar-adaptable `TabView`, family switcher, assistant `.inspector` ⌘J),
+  `DesignSystem/` (Liquid Glass helpers), `Features/<Module>/`. German strings: per-module
+  `apple/Localization/*.de.json`, merged into `Resources/Localizable.xcstrings` by
+  `apple/scripts/merge-localizations.py`. Build/test: `apple/README.md`.
 
 ## Conventions
 
