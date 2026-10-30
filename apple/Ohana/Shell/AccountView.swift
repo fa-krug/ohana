@@ -188,7 +188,7 @@ private struct AccountForm: View {
                         .disabled(name.count > 100)
                 }
             }
-            Picker("Language", selection: Binding(get: { user.preferredLanguage }, set: setLanguage)) {
+            Picker("Language", selection: Binding(get: { user.preferredLanguage }, set: { setLanguage($0) })) {
                 ForEach(AccountLanguage.allCases) { Text($0.title).tag($0.rawValue) }
             }
         } header: {

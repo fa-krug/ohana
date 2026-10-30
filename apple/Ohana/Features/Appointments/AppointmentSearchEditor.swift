@@ -276,7 +276,7 @@ struct AppointmentSearchEditor: View {
         Section {
             Toggle("Check automatically", isOn: $input.enabled)
             if input.enabled {
-                Picker("How often", selection: Binding(get: { schedule }, set: choose)) {
+                Picker("How often", selection: Binding(get: { schedule }, set: { choose($0) })) {
                     ForEach(AppointmentSchedule.presets) { choice in
                         Text(choice.title).tag(choice)
                     }
