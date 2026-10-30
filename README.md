@@ -1,7 +1,9 @@
 # Ohana
 
 One app for the whole family: calendar, finance, meals, doctor appointments and an assistant.
-Ohana replaces three apps, `family-planner`, `cookless` and `findmyappointment`, and moves
+It comes as a **web app** with its server ([`web/`](web), Next.js) and a **native app for
+iPhone, iPad and Mac** ([`apple/`](apple), SwiftUI with Liquid Glass) that signs in to the
+same server. Ohana replaces three apps, `family-planner`, `cookless` and `findmyappointment`, and moves
 their data over. See [the plan](docs/plan.md) for why and how, and its phases for what is
 there already.
 
@@ -293,9 +295,29 @@ Tabs, kept in the address (`?tab=`): *General* (name, members, invite links), *H
   or **email** over SMTP, each with a *Test* button. Tokens and passwords are stored
   encrypted and never shown again (leave the field empty when editing to keep them).
 
+## The iPhone, iPad and Mac app
+
+[`apple/`](apple) is a native SwiftUI app (iOS 26, macOS 26 and later) with everything the web
+app has: the overview, calendar, finance, meals (shopping lists also offline), appointments, the
+family's settings, the account, the administration, and joining a family with an invite link.
+It keeps no data of its own: every screen reads and writes the server's API. The **assistant**
+is always at hand: an inspector on the right (`⌘J`, a new chat with `⇧⌘J`) or its own page on
+iPad and Mac, an *Ask Ohana…* bar above the iPhone's tab bar, the overview's ask field, a menu
+bar window on the Mac, and *Ask Ohana* for Siri, Shortcuts and Spotlight. To sign in, enter the server's address: the app
+opens the server's sign-in page in the system browser (passkeys work), you confirm "Connect
+the Ohana app", and the app gets its own API token. It is listed on the web account page as
+"<device> (app)" and can be removed there; *Sign out* in the app removes it as well. Only
+adding a passkey (WebAuthn needs the server's own site) opens the browser. Links to a family's pages (`https://<server>/f/…`, e.g. from a
+notification, or `ohana://f/…`) open the same place in the app. Building it: see
+[apple/README.md](apple/README.md); `.github/workflows/apple.yml` tests and builds it on every
+change under `apple/`.
+
 ## Development
 
+The web app and server live in [`web/`](web); run its commands there:
+
 ```bash
+cd web
 npm install
 npm run db:migrate   # creates ./data/ohana.db and loads the units + ingredients (db:seed)
 npm run dev          # http://localhost:3000
@@ -306,15 +328,16 @@ npm test             # Vitest
 npm run typecheck
 ```
 
-Schema changes: edit `lib/db/schema.ts`, then `npm run db:generate` to add a migration under
-`drizzle/`. Settings come from the environment, see [`.env.example`](.env.example).
+Schema changes: edit `web/lib/db/schema.ts`, then `npm run db:generate` to add a migration under
+`web/drizzle/`. Settings come from the environment, see [`web/.env.example`](web/.env.example).
 
 Locked out? `npm run setup-link -- <email>` prints a new setup link for an account (in the
 container: `docker compose exec web ./node_modules/.bin/tsx scripts/setup-link.ts <email>`).
 
 ## Deployment
 
-One Docker image, two containers ([`docker-compose.production.yml`](docker-compose.production.yml)):
+One Docker image (built from [`web/`](web)), two containers
+([`docker-compose.production.yml`](docker-compose.production.yml)):
 
 - **web** applies the database migrations and the seed data (units, ingredients) at start,
   then serves Next.js on port 8000
@@ -326,7 +349,7 @@ One Docker image, two containers ([`docker-compose.production.yml`](docker-compo
 
 Both share the volume `ohana-data` (`/app/data`: the SQLite database, `media/` with the
 recipe photos (`MEDIA_ROOT`) and `backups/`).
-Pushes to `main` run the tests, build the `linux/amd64` + `linux/arm64` image, push
+Pushes to `main` that change `web/`, a `docker-compose*.yml` or `ci.yml` run the tests, build the `linux/amd64` + `linux/arm64` image, push
 `sascha384/ohana:latest` to Docker Hub and redeploy the Arcane project `ohana` (GitHub OIDC,
 no deploy secret), then wait for `/api/health`. The repository needs the secrets
 `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`.
@@ -354,9 +377,9 @@ only: copy `/app/data/media` (recipe photos) off the Pi along with `backups/`.
 
 ## Importing the old apps
 
-`scripts/import-legacy.ts` copies family-planner, cookless and findmyappointment into an
+`web/scripts/import-legacy.ts` copies family-planner, cookless and findmyappointment into an
 **empty** Ohana database, once, in one transaction (all or nothing). Run it with `--dry-run`
-first: it does the whole import, rolls it back and prints what it would do.
+first: it does the whole import, rolls it back and prints what it would do (in `web/`):
 
 ```bash
 npm run import-legacy -- --family-planner family-planner.sql \

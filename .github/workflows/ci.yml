@@ -1,10 +1,14 @@
 name: CI/CD
 
+# Only the server (web/) and its deployment: changes to the native app (apple/, its own
+# workflow) or docs alone neither build images nor redeploy.
 on:
   push:
     branches: [main]
+    paths: ['web/**', 'docker-compose*.yml', '.github/workflows/ci.yml']
   pull_request:
     branches: [main]
+    paths: ['web/**', 'docker-compose*.yml', '.github/workflows/ci.yml']
 
 env:
   REGISTRY: docker.io
@@ -14,13 +18,16 @@ jobs:
   test:
     name: Typecheck & Test
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: package-lock.json
+          cache-dependency-path: web/package-lock.json
       - name: Install dependencies
         run: npm ci
       - name: TypeScript check
@@ -58,8 +65,8 @@ jobs:
       - name: Build and push AMD64
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: ./Dockerfile
+          context: ./web
+          file: ./web/Dockerfile
           push: ${{ github.event_name == 'push' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -101,8 +108,8 @@ jobs:
       - name: Build and push ARM64
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: ./Dockerfile
+          context: ./web
+          file: ./web/Dockerfile
           push: ${{ github.event_name == 'push' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
