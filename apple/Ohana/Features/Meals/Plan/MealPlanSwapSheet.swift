@@ -54,6 +54,7 @@ struct MealPlanSwapSheet: View {
             }
             .task { await load() }
         }
+        .errorBanner()
         .presentationDetents([.medium, .large])
     }
 
@@ -66,6 +67,7 @@ struct MealPlanSwapSheet: View {
                 RemoteImage(path: recipe.imagePath)
                     .frame(width: 44, height: 44)
                     .clipShape(.rect(cornerRadius: 10))
+                    .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(verbatim: recipe.title)
                         .foregroundStyle(.primary)

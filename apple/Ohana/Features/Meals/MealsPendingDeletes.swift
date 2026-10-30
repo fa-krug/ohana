@@ -1,19 +1,56 @@
 import SwiftUI
 
-/// Deleting a recipe waits a few seconds so it can be undone (the web's
-/// lib/meals/recipes/pending-delete.ts and the list's undo toast). The recipe is hidden from
-/// the lists meanwhile; the banner offers "Undo", and so does the window's undo manager
-/// (Edit → Undo, ⌘Z) while the delete waits.
+/// Deleting a recipe or a shopping item waits a few seconds so it can be undone (the web's
+/// lib/meals/recipes/pending-delete.ts and the list's undo toast). It is hidden from the lists
+/// meanwhile; the banner offers "Undo", and so does the window's undo manager (Edit → Undo, ⌘Z)
+/// while the delete waits.
 @Observable
-final class RecipePendingDeletes {
-    static let shared = RecipePendingDeletes()
+final class MealsPendingDeletes {
+    static let shared = MealsPendingDeletes()
+
+    /// What is deleted.
+    enum Kind: Equatable {
+        case recipe, shoppingItem
+
+        func path(_ id: String) -> String {
+            switch self {
+            case .recipe: "/meals/recipes/\(id)"
+            case .shoppingItem: "/meals/shopping/items/\(id)"
+            }
+        }
+
+        /// The data the delete changes, to reload when it's done.
+        var areas: [DataArea] {
+            switch self {
+            case .recipe: [.recipes, .meals, .mealPlan]
+            case .shoppingItem: [.shopping]
+            }
+        }
+
+        /// The banner's line.
+        var message: LocalizedStringKey {
+            switch self {
+            case .recipe: "Recipe deleted."
+            case .shoppingItem: "Item deleted."
+            }
+        }
+
+        /// Edit → Undo …
+        var actionName: String {
+            switch self {
+            case .recipe: String(localized: "Delete Recipe")
+            case .shoppingItem: String(localized: "Delete Item")
+            }
+        }
+    }
 
     struct Pending: Identifiable, Equatable {
         let id: String
         let title: String
+        let kind: Kind
     }
 
-    /// Recipes waiting to be deleted, the newest last (the banner shows it).
+    /// Deletes waiting, the newest last (the banner shows it).
     private(set) var pending: [Pending] = []
     private var tasks: [String: Task<Void, Never>] = [:]
     /// Per waiting delete: the undo manager it was registered with and the target of its action.
@@ -22,17 +59,30 @@ final class RecipePendingDeletes {
     /// The target an undo action is registered for (one per delete, so it can be removed alone).
     final class UndoTarget {}
 
-    static let delay: Duration = .seconds(5)
+    /// How long a delete waits; the tests make it short.
+    var delay: Duration = .seconds(5)
 
     func isHidden(_ id: String) -> Bool { tasks[id] != nil }
 
     var latest: Pending? { pending.last }
 
-    func schedule(_ id: String, title: String, family: FamilyContext, undoManager: UndoManager? = nil) {
+    /// Hides the recipe or item now and deletes it on the server (DELETE its path) after `delay`.
+    func schedule(_ id: String, kind: Kind, title: String, family: FamilyContext, undoManager: UndoManager? = nil) {
+        let api = family.api
+        schedule(id, kind: kind, title: title, undoManager: undoManager) {
+            try await api.perform(.delete, kind.path(id))
+        } done: {
+            family.didChange(kind.areas)
+        }
+    }
+
+    /// Hides it now and runs `send` after `delay` unless undone, then `done`.
+    func schedule(_ id: String, kind: Kind, title: String, undoManager: UndoManager? = nil,
+                  send: @escaping () async throws -> Void, done: @escaping () -> Void = {}) {
         tasks[id]?.cancel()
         unregister(id)
         pending.removeAll { $0.id == id }
-        pending.append(Pending(id: id, title: title))
+        pending.append(Pending(id: id, title: title, kind: kind))
         if let undoManager {
             let target = UndoTarget()
             registrations[id] = (undoManager, target)
@@ -40,19 +90,19 @@ final class RecipePendingDeletes {
                 self?.registrations[id] = nil
                 withAnimation { self?.undo(id) }
             }
-            undoManager.setActionName(String(localized: "Delete Recipe"))
+            undoManager.setActionName(kind.actionName)
         }
-        let api = family.api
+        let delay = delay
         tasks[id] = Task { [weak self] in
-            try? await Task.sleep(for: Self.delay)
+            try? await Task.sleep(for: delay)
             guard !Task.isCancelled else { return }
             do {
-                try await api.perform(.delete, "/meals/recipes/\(id)")
+                try await send()
             } catch {
                 ErrorBanner.shared.show(error)
             }
             self?.finish(id)
-            family.didChange(.recipes, .meals, .mealPlan)
+            done()
         }
     }
 
@@ -74,21 +124,25 @@ final class RecipePendingDeletes {
     }
 }
 
-/// "Recipe deleted. Undo" at the bottom of the meals pages while a delete waits.
-struct RecipeUndoBanner: View {
-    @State private var deletes = RecipePendingDeletes.shared
+/// "Recipe deleted. Undo" (or an item) at the bottom of the meals pages while a delete waits.
+struct MealsUndoBanner: View {
+    @State private var deletes = MealsPendingDeletes.shared
 
     var body: some View {
         if let latest = deletes.latest {
             HStack(spacing: 12) {
-                Image(systemName: "trash").foregroundStyle(.secondary)
+                Image(systemName: "trash")
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("Recipe deleted.").font(.callout.weight(.semibold))
-                    Text(latest.title).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    Text(latest.kind.message).font(.callout.weight(.semibold))
+                    Text(verbatim: latest.title).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 }
+                .accessibilityElement(children: .combine)
                 Spacer(minLength: 8)
                 Button("Undo") { withAnimation { deletes.undo(latest.id) } }
                     .buttonStyle(.glassProminent)
+                    .tint(ModuleTint.meals)
             }
             .padding(.leading, 16)
             .padding(.trailing, 8)

@@ -68,9 +68,13 @@ struct ShoppingEmptyView: View {
 }
 
 /// One shopping list: its items by aisle, ticked off at once (sent in the background, queued
-/// while offline), quantities, deleting and adding items, and what the trip cost.
+/// while offline), quantities, deleting (undoable for a few seconds) and adding items (File ▸
+/// New Item, ⌘N), and what the trip cost.
 struct ShoppingListPage: View {
     @Environment(FamilyContext.self) private var family
+    @Environment(\.undoManager) private var undoManager
+    @Environment(\.mealsOnScreen) private var onScreen
+    @State private var deletes = MealsPendingDeletes.shared
     let listID: String
     /// The family's lists, for the switcher (empty: no switcher).
     var lists: [ShoppingListSummary] = []
@@ -101,6 +105,8 @@ struct ShoppingListPage: View {
         }
         .task(id: LoadKey(listID: listID, revision: family.revision(.shopping))) { await load() }
         .toolbar { toolbar }
+        .focusedSceneValue(\.newItem, onScreen && canChange && state.value != nil
+                           ? NewItemAction(title: "New Item") { showAdd = true } : nil)
         .alert("Quantity", isPresented: Binding(get: { editing != nil }, set: { if !$0 { editing = nil } }),
                presenting: editing) { item in
             TextField("Quantity", text: $quantityText)
@@ -152,7 +158,7 @@ struct ShoppingListPage: View {
 
     @ViewBuilder
     private func content(_ list: ShoppingList) -> some View {
-        let items = queue.apply(to: list.items)
+        let items = visibleItems(of: list)
         if items.isEmpty {
             ContentUnavailableView {
                 Label("Nothing to shop for", systemImage: "cart")
@@ -164,7 +170,7 @@ struct ShoppingListPage: View {
                         .buttonStyle(.glassProminent)
                 }
                 Button("Go to meal plan", systemImage: "calendar") { family.open(.mealPlan) }
-                    .buttonStyle(.glass)
+                    .buttonStyle(.bordered)
             }
         } else {
             List {
@@ -223,7 +229,7 @@ struct ShoppingListPage: View {
                     }
                     Spacer(minLength: 8)
                     Button("Back to meal plan") { family.open(.mealPlan) }
-                        .buttonStyle(.glass)
+                        .buttonStyle(.bordered)
                         .font(.subheadline)
                 }
                 .padding(.vertical, 4)
@@ -249,15 +255,20 @@ struct ShoppingListPage: View {
                     Image(systemName: "chevron.right")
                         .rotationEffect(.degrees(open ? 90 : 0))
                         .font(.caption.weight(.semibold))
+                        .accessibilityHidden(true)
                     Label(group.category.title, systemImage: group.category.systemImage)
                     Spacer()
                     Text("\(group.checkedCount) of \(group.items.count)")
                         .monospacedDigit()
                 }
+                #if os(iOS)
+                .frame(minHeight: 44)
+                #endif
                 .contentShape(.rect)
             }
             .buttonStyle(.plain)
             .accessibilityAddTraits(.isHeader)
+            .accessibilityValue(open ? Text("Expanded") : Text("Collapsed"))
         }
     }
 
@@ -268,6 +279,7 @@ struct ShoppingListPage: View {
                 .font(.title3)
                 .foregroundStyle(item.isChecked ? AnyShapeStyle(ModuleTint.meals) : AnyShapeStyle(.secondary))
                 .contentTransition(.symbolEffect(.replace))
+                .accessibilityHidden(true)
             Text(item.label())
                 .strikethrough(item.isChecked)
                 .foregroundStyle(item.isChecked ? .secondary : .primary)
@@ -333,7 +345,7 @@ struct ShoppingListPage: View {
             ToolbarItemGroup(placement: .primaryAction) {
                 ShareLink(item: ShoppingExport.text(for: ShoppingList(id: list.id, shoppingDate: list.shoppingDate,
                                                                       createdAt: list.createdAt,
-                                                                      items: queue.apply(to: list.items)))) {
+                                                                      items: visibleItems(of: list)))) {
                     Label("Share", systemImage: "square.and.arrow.up")
                 }
             }
@@ -341,10 +353,9 @@ struct ShoppingListPage: View {
                 ToolbarSpacer(.fixed, placement: .primaryAction)
                 ToolbarItemGroup(placement: .primaryAction) {
                     Button("Add item", systemImage: "plus") { showAdd = true }
-                        .keyboardShortcut("n", modifiers: [.command, .shift])
                         .disabled(savedCopy)
                     Button("Reset", systemImage: "arrow.uturn.backward") { confirmReset = true }
-                        .disabled(!queue.apply(to: list.items).contains(where: \.isChecked))
+                        .disabled(!visibleItems(of: list).contains(where: \.isChecked))
                         .help("Untick every item")
                 }
             }
@@ -358,6 +369,11 @@ struct ShoppingListPage: View {
 
     // MARK: Actions
 
+    /// The items with their ticks, without those being deleted.
+    private func visibleItems(of list: ShoppingList) -> [ShoppingItem] {
+        queue.apply(to: list.items).filter { !deletes.isHidden($0.id) }
+    }
+
     private func tick(_ item: ShoppingItem) {
         queue.set(item.id, checked: !item.isChecked)
         ticks += 1
@@ -365,7 +381,7 @@ struct ShoppingListPage: View {
 
     private func resetTicks() {
         guard let list = state.value else { return }
-        for item in queue.apply(to: list.items) where item.isChecked {
+        for item in visibleItems(of: list) where item.isChecked {
             queue.set(item.id, checked: false)
         }
         ticks += 1
@@ -385,14 +401,10 @@ struct ShoppingListPage: View {
         }
     }
 
+    /// Hidden at once, deleted after a few seconds unless undone (the bar's Undo, ⌘Z).
     private func delete(_ item: ShoppingItem) {
-        if case var .loaded(list) = state {
-            list.items.removeAll { $0.id == item.id }
-            state = .loaded(list)
-        }
-        perform {
-            defer { family.didChange(.shopping) }
-            try await family.api.perform(.delete, "/meals/shopping/items/\(item.id)")
+        withAnimation {
+            deletes.schedule(item.id, kind: .shoppingItem, title: item.label(), family: family, undoManager: undoManager)
         }
     }
 }
@@ -497,11 +509,18 @@ struct ShoppingAddItemSheet: View {
     @State private var unitID: Int?
     @State private var category: ShoppingCategory = .other
     @State private var units: [ShoppingUnit] = []
+    /// The unit picked for the user when the units came.
+    @State private var defaultUnitID: Int?
     @State private var saving = false
     @FocusState private var nameFocused: Bool
 
     private var quantityValue: Double? {
         Double(quantity.trimmingCharacters(in: .whitespaces).replacing(",", with: "."))
+    }
+
+    private var hasChanges: Bool {
+        !name.trimmingCharacters(in: .whitespaces).isEmpty || quantity != "1" || category != .other
+            || unitID != defaultUnitID
     }
 
     private var canSave: Bool {
@@ -547,10 +566,11 @@ struct ShoppingAddItemSheet: View {
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", role: .cancel) { dismiss() }
+                    CancelButton(hasChanges: hasChanges)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Add", systemImage: "checkmark", role: .confirm) { save() }
+                        .keyboardShortcut(.defaultAction)
                         .disabled(!canSave)
                 }
             }
@@ -558,6 +578,8 @@ struct ShoppingAddItemSheet: View {
             .onAppear { nameFocused = true }
             .onSubmit { if canSave { save() } }
         }
+        .errorBanner()
+        .discardGuard(hasChanges: hasChanges || saving)
         .presentationDetents([.medium, .large])
     }
 
@@ -567,6 +589,7 @@ struct ShoppingAddItemSheet: View {
             units = response.units
             if unitID == nil {
                 unitID = (units.first { $0.abbreviation == "Stk" } ?? units.first)?.id
+                defaultUnitID = unitID
             }
         } catch {
             ErrorBanner.shared.show(error)

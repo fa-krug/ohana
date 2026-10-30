@@ -22,8 +22,9 @@ struct MealsRecipeDetailView: View {
     @State private var servings: Int?
     @State private var editing = false
     @State private var sharing = false
-    @State private var cooking = false
+    @State private var cooking: MealsRecipeRef?
     @State private var confirmDelete = false
+    @ScaledMetric(relativeTo: .caption) private var stepBadge: CGFloat = 26
     @State private var photoItem: PhotosPickerItem?
     @State private var pickingPhoto = false
     @State private var importingPhoto = false
@@ -53,10 +54,8 @@ struct MealsRecipeDetailView: View {
                 RecipeExportSheet(recipe: recipe, portions: servings ?? recipe.detail.defaultServings)
             }
         }
+        .cookPresentation($cooking)
         #if os(iOS)
-        .fullScreenCover(isPresented: $cooking) {
-            NavigationStack { MealsCookView(recipeID: recipeID, servings: servings) }
-        }
         .photosPicker(isPresented: $pickingPhoto, selection: $photoItem, matching: .images)
         .onChange(of: photoItem) { _, item in
             guard let item else { return }
@@ -66,8 +65,6 @@ struct MealsRecipeDetailView: View {
                 await upload(data)
             }
         }
-        #else
-        .navigationDestination(isPresented: $cooking) { MealsCookView(recipeID: recipeID, servings: servings) }
         #endif
         .fileImporter(isPresented: $importingPhoto, allowedContentTypes: [.image]) { result in
             guard case let .success(url) = result else { return }
@@ -79,8 +76,8 @@ struct MealsRecipeDetailView: View {
         .confirmationDialog("Delete recipe?", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
                 if let recipe = state.value?.detail {
-                    RecipePendingDeletes.shared.schedule(recipe.id, title: recipe.title, family: family,
-                                                         undoManager: undoManager)
+                    MealsPendingDeletes.shared.schedule(recipe.id, kind: .recipe, title: recipe.title, family: family,
+                                                        undoManager: undoManager)
                     dismiss()
                 }
             }
@@ -145,6 +142,7 @@ struct MealsRecipeDetailView: View {
                 .frame(maxWidth: .infinity)
                 .clipShape(.rect(cornerRadius: 28))
                 .backgroundExtensionEffect()
+                .accessibilityHidden(true)
             if photoBusy {
                 ProgressView()
                     .padding(10)
@@ -156,27 +154,24 @@ struct MealsRecipeDetailView: View {
     }
 
     private func actions(_ recipe: RecipeResolved) -> some View {
-        GlassEffectContainer(spacing: 10) {
-            HStack(spacing: 10) {
-                Button {
-                    cooking = true
-                } label: {
-                    Label("Let’s cook!", systemImage: "frying.pan")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.glassProminent)
-                .controlSize(.large)
-                .disabled(recipe.detail.manualSteps.isEmpty && recipe.detail.machineSteps.isEmpty)
-                Button {
-                    sharing = true
-                } label: {
-                    Label("Share", systemImage: "square.and.arrow.up")
-                }
-                .buttonStyle(.glass)
-                .controlSize(.large)
-                .keyboardShortcut("s", modifiers: [.command, .shift])
-                .help("Share as text or PDF")
+        HStack(spacing: 10) {
+            Button {
+                cooking = MealsRecipeRef(recipeID: recipeID, servings: servings)
+            } label: {
+                Label("Let’s cook!", systemImage: "frying.pan")
+                    .frame(maxWidth: .infinity)
             }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .disabled(recipe.detail.manualSteps.isEmpty && recipe.detail.machineSteps.isEmpty)
+            Button {
+                sharing = true
+            } label: {
+                Label("Share", systemImage: "square.and.arrow.up")
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.large)
+            .help("Share as text or PDF")
         }
         .tint(ModuleTint.meals)
     }
@@ -213,8 +208,9 @@ struct MealsRecipeDetailView: View {
                         Text(verbatim: "\(index + 1)")
                             .font(.caption.bold())
                             .foregroundStyle(.white)
-                            .frame(width: 26, height: 26)
+                            .frame(width: stepBadge, height: stepBadge)
                             .background((method == .manual ? ModuleTint.meals : Color.secondary).gradient, in: .circle)
+                            .accessibilityLabel("Step \(index + 1)")
                         VStack(alignment: .leading, spacing: 6) {
                             if let program = RecipeProgram.title(of: step.programType) {
                                 Text(program).font(.subheadline.weight(.semibold)).foregroundStyle(ModuleTint.meals)
@@ -232,6 +228,7 @@ struct MealsRecipeDetailView: View {
                         }
                         Spacer(minLength: 0)
                     }
+                    .accessibilityElement(children: .combine)
                     if index < steps.count - 1 { Divider() }
                 }
             }

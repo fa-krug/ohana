@@ -33,6 +33,8 @@ struct RecipeGenerateView: View {
     }
 
     private var selectedCount: Int { results.values.filter(\.selected).count }
+    /// Recipes are coming or came and aren't saved.
+    private var hasResults: Bool { generating || !results.isEmpty }
 
     var body: some View {
         NavigationStack {
@@ -68,7 +70,7 @@ struct RecipeGenerateView: View {
                         } label: {
                             Label("Stop", systemImage: "stop.fill").frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.glass)
+                        .buttonStyle(.bordered)
                         HStack(spacing: 8) {
                             ProgressView().controlSize(.small)
                             Text(waitingForPhotos ? LocalizedStringKey("Making photos …") : LocalizedStringKey("Generating recipes …"))
@@ -80,9 +82,10 @@ struct RecipeGenerateView: View {
                         } label: {
                             Label("Generate", systemImage: "sparkles").frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.glassProminent)
+                        .buttonStyle(.borderedProminent)
                         .tint(ModuleTint.meals)
-                        .keyboardShortcut(.return, modifiers: .command)
+                        // Return generates until there is something to save.
+                        .keyboardShortcut(results.isEmpty ? .defaultAction : nil)
                     }
                 }
                 if !results.isEmpty {
@@ -106,10 +109,8 @@ struct RecipeGenerateView: View {
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", role: .cancel) {
-                        task?.cancel()
-                        dismiss()
-                    }
+                    // Generated recipes not saved yet would be lost.
+                    CancelButton(hasChanges: hasResults) { task?.cancel() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     if saving {
@@ -120,8 +121,8 @@ struct RecipeGenerateView: View {
                         } label: {
                             Text("Save \(selectedCount) recipes")
                         }
+                        .keyboardShortcut(results.isEmpty ? nil : .defaultAction)
                         .disabled(selectedCount == 0 || generating)
-                        .keyboardShortcut("s", modifiers: .command)
                     }
                 }
             }
@@ -131,7 +132,8 @@ struct RecipeGenerateView: View {
             ai = (try? await family.api.get("/meals/status", as: MealsAIStatus.self)) ?? ai
         }
         .onDisappear { task?.cancel() }
-        .interactiveDismissDisabled(generating || !results.isEmpty)
+        .errorBanner()
+        .discardGuard(hasChanges: hasResults || saving)
         .recipeSheetFrame(minWidth: 620, minHeight: 700)
     }
 

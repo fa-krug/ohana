@@ -3,6 +3,7 @@ import SwiftUI
 /// Creating or editing a recipe (web: recipe-editor.tsx): name, description, servings and times,
 /// the list, ingredients from the shared list (or new ones) with quantities and units, steps by
 /// hand and with the machine (program, settings, the step's share of the ingredients), tags.
+/// With changes it can't be swiped away, and Cancel asks before discarding them.
 struct RecipeEditorSheet: View {
     enum Mode {
         case create(RecipeListType)
@@ -39,7 +40,7 @@ struct RecipeEditorSheet: View {
             }
         }
         .task { await load() }
-        .interactiveDismissDisabled()
+        .errorBanner()
         .recipeSheetFrame(minWidth: 620, minHeight: 680)
     }
 
@@ -67,9 +68,11 @@ private struct RecipeEditorForm: View {
     let onSaved: (String) -> Void
 
     @Environment(FamilyContext.self) private var family
-    @Environment(\.dismiss) private var dismiss
     @State private var saving = false
     @State private var newTag = RecipeNewTag()
+
+    /// A tag typed but not added counts too.
+    private var hasChanges: Bool { model.hasChanges || newTag.isValid }
 
     var body: some View {
         Form {
@@ -83,6 +86,11 @@ private struct RecipeEditorForm: View {
                         ForEach(RecipeListType.allCases) { Text($0.title).tag($0) }
                     }
                 }
+            } footer: {
+                // Not before the form is touched: a new recipe starts without a name.
+                if let problem = model.titleProblem, hasChanges {
+                    Text(problem).foregroundStyle(.red)
+                }
             }
             Section {
                 Stepper(value: $model.servings, in: 1...100) {
@@ -94,18 +102,20 @@ private struct RecipeEditorForm: View {
 
             ingredientsSection
             stepsSection(.manual)
-            stepsSection(.machine)
-            tagsSection
-
-            if !model.problems.isEmpty {
+            if model.steps(.machine).isEmpty {
                 Section {
-                    ForEach(model.problems, id: \.self) { problem in
-                        Label(problem, systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.orange)
-                            .font(.callout)
+                    Button {
+                        withAnimation { model.addStep(.machine) }
+                    } label: {
+                        Label("Add Machine Steps", systemImage: "gearshape.2")
                     }
+                } footer: {
+                    Text("Steps for a kitchen machine, with its programs and settings.")
                 }
+            } else {
+                stepsSection(.machine)
             }
+            tagsSection
         }
         .formStyle(.grouped)
         .navigationTitle(model.isNew ? LocalizedStringKey("New Recipe") : LocalizedStringKey("Edit Recipe"))
@@ -114,18 +124,19 @@ private struct RecipeEditorForm: View {
         #endif
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel", role: .cancel) { dismiss() }
+                CancelButton(hasChanges: hasChanges)
             }
             ToolbarItem(placement: .confirmationAction) {
                 if saving {
                     ProgressView()
                 } else {
                     Button("Save", role: .confirm) { save() }
+                        .keyboardShortcut(.defaultAction)
                         .disabled(!model.problems.isEmpty)
-                        .keyboardShortcut("s", modifiers: .command)
                 }
             }
         }
+        .discardGuard(hasChanges: hasChanges || saving)
     }
 
     // MARK: Ingredients
@@ -146,6 +157,14 @@ private struct RecipeEditorForm: View {
             }
         } header: {
             Text("Ingredients")
+        } footer: {
+            let problems = model.ingredientProblems
+            if !problems.isEmpty {
+                VStack(alignment: .leading, spacing: 2) {
+                    ForEach(problems, id: \.self) { Text($0) }
+                }
+                .foregroundStyle(.red)
+            }
         }
     }
 
@@ -190,6 +209,9 @@ private struct RecipeEditorForm: View {
                 .padding(.vertical, 4)
             DisclosureGroup("New tag") {
                 RecipeNewTagFields(tag: $newTag)
+                Text(RecipeNewTag.oneNameHint)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
                 Button("Add") { createTag() }
                     .disabled(!newTag.isValid)
             }
@@ -200,15 +222,15 @@ private struct RecipeEditorForm: View {
 
     private func createTag() {
         let input = newTag
-        if tags.contains(where: { $0.category == input.category.rawValue
-            && $0.nameEn.lowercased() == input.nameEn.trimmingCharacters(in: .whitespaces).lowercased() }) {
+        let body = input.body
+        if tags.contains(where: { $0.category == input.category.rawValue && $0.nameEn.lowercased() == body.nameEn.lowercased() }) {
             ErrorBanner.shared.show(String(localized: "A tag with that name already exists in this category."))
             return
         }
         perform {
-            let created: RecipeIDResponse = try await family.api.send(.post, "/meals/tags", body: input.body)
+            let created: RecipeIDResponse = try await family.api.send(.post, "/meals/tags", body: body)
             tags.append(RecipeTag(id: created.id, category: input.category.rawValue,
-                                  nameEn: input.body.nameEn, nameDe: input.body.nameDe))
+                                  nameEn: body.nameEn, nameDe: body.nameDe))
             model.tagIDs.insert(created.id)
             newTag = RecipeNewTag(category: input.category)
             family.didChange(.recipes)
@@ -325,7 +347,7 @@ private struct RecipeIngredientRowEditor: View {
                                 row.name = item.name
                                 nameFocused = false
                             }
-                            .buttonStyle(.glass)
+                            .buttonStyle(.bordered)
                             .controlSize(.small)
                         }
                     }
@@ -456,20 +478,20 @@ private struct RecipeIntField: View {
     }
 }
 
-/// A tag being created: category and both names.
+/// A tag being created or renamed: its category and its names. One name is enough; the server
+/// wants both, so the other language gets the same.
 struct RecipeNewTag: Equatable {
     var category: RecipeTagCategory = .cuisine
     var nameEn = ""
     var nameDe = ""
 
-    var isValid: Bool {
-        !nameEn.trimmingCharacters(in: .whitespaces).isEmpty && !nameDe.trimmingCharacters(in: .whitespaces).isEmpty
-    }
+    static let oneNameHint: LocalizedStringKey = "One name is enough: it’s used for both languages."
+
+    var isValid: Bool { !body.nameEn.isEmpty }
 
     var body: RecipeTagInput {
-        RecipeTagInput(category: category.rawValue,
-                       nameEn: nameEn.trimmingCharacters(in: .whitespaces),
-                       nameDe: nameDe.trimmingCharacters(in: .whitespaces))
+        let en = nameEn.trimmingCharacters(in: .whitespaces), de = nameDe.trimmingCharacters(in: .whitespaces)
+        return RecipeTagInput(category: category.rawValue, nameEn: en.isEmpty ? de : en, nameDe: de.isEmpty ? en : de)
     }
 }
 

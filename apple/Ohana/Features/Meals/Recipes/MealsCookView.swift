@@ -5,8 +5,9 @@ import UIKit
 
 /// Cooking a recipe step by step (web: meals/cook/[id], cooking-view.tsx): choose servings and,
 /// for a recipe with both, by hand or with the machine; then one step at a time in big type,
-/// swiping (or ← →) between them, with the step's ingredients scaled. The screen stays awake
-/// on iPhone and iPad while cooking; the step reached is remembered per device.
+/// swiping (or ← →) between them, with the step's ingredients scaled. Always presented over
+/// everything (`cookPresentation`), so it has its own Close. The screen stays awake on iPhone
+/// and iPad while it's shown; the step reached is remembered per device.
 struct MealsCookView: View {
     let recipeID: String
     var servings: Int?
@@ -17,6 +18,7 @@ struct MealsCookView: View {
     }
 
     @Environment(FamilyContext.self) private var family
+    @Environment(\.dismiss) private var dismiss
     @State private var state: LoadState<RecipeResolved> = .idle
 
     var body: some View {
@@ -25,6 +27,20 @@ struct MealsCookView: View {
         }
         .ohanaBackground(ModuleTint.meals)
         .task(id: recipeID) { await load() }
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button(role: .close) { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+            }
+        }
+        .onAppear { keepAwake(true) }
+        .onDisappear { keepAwake(false) }
+    }
+
+    private func keepAwake(_ on: Bool) {
+        #if os(iOS)
+        UIApplication.shared.isIdleTimerDisabled = on
+        #endif
     }
 
     private func load() async {
@@ -41,8 +57,9 @@ private struct RecipeCookSession: View {
     @State private var method: RecipeCookMethod?
     @State private var started = false
     @State private var stepIndex = 0
+    @FocusState private var pagerFocused: Bool
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.isPresented) private var isPresented
+    @ScaledMetric(relativeTo: .largeTitle) private var photoSize: CGFloat = 180
 
     init(recipe: RecipeResolved, initialServings: Int) {
         self.recipe = recipe
@@ -68,12 +85,8 @@ private struct RecipeCookSession: View {
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button(role: .close) { dismiss() }
-                    .keyboardShortcut(.cancelAction)
-            }
             if started {
-                ToolbarItem(placement: .primaryAction) { servingsStepper(compact: true) }
+                ToolbarItem(placement: .primaryAction) { servingsStepper }
                 if hasBoth {
                     ToolbarItem(placement: .primaryAction) {
                         Button("Change method", systemImage: "arrow.left.arrow.right") {
@@ -87,8 +100,7 @@ private struct RecipeCookSession: View {
         .onChange(of: stepIndex) { _, index in
             if started { UserDefaults.standard.set(index, forKey: progressKey) }
         }
-        .onChange(of: started) { _, on in keepAwake(on) }
-        .onDisappear { keepAwake(false) }
+        .onChange(of: started) { _, on in pagerFocused = on }
     }
 
     // MARK: Before starting
@@ -97,19 +109,26 @@ private struct RecipeCookSession: View {
         ScrollView {
             VStack(spacing: 24) {
                 RemoteImage(path: recipe.detail.imagePath) { RecipePhotoPlaceholder() }
-                    .frame(width: 180, height: 180)
+                    .frame(width: min(photoSize, 280), height: min(photoSize, 280))
                     .clipShape(.circle)
-                    .glassEffect(.regular, in: .circle)
+                    .accessibilityHidden(true)
                     .padding(.top, 24)
                 Text(recipe.detail.title)
                     .font(.largeTitle.bold())
                     .multilineTextAlignment(.center)
+                    .accessibilityAddTraits(.isHeader)
                 VStack(spacing: 16) {
-                    HStack {
-                        Label("Servings", systemImage: "person.2").font(.headline)
-                        Spacer()
-                        servingsStepper(compact: false)
+                    Stepper(value: $servings, in: 1...50) {
+                        Label {
+                            Text("Servings: \(servings)")
+                                .monospacedDigit()
+                                .contentTransition(.numericText())
+                        } icon: {
+                            Image(systemName: "person.2")
+                        }
+                        .font(.headline)
                     }
+                    .animation(.snappy, value: servings)
                     if hasBoth {
                         Picker("Method", selection: Binding(get: { method ?? .manual }, set: { method = $0 })) {
                             ForEach(RecipeCookMethod.allCases) { Text($0.title).tag($0) }
@@ -130,7 +149,7 @@ private struct RecipeCookSession: View {
                             .frame(maxWidth: 360)
                             .padding(.vertical, 6)
                     }
-                    .buttonStyle(.glassProminent)
+                    .buttonStyle(.borderedProminent)
                     .controlSize(.extraLarge)
                     .tint(ModuleTint.meals)
                     .keyboardShortcut(.defaultAction)
@@ -148,21 +167,19 @@ private struct RecipeCookSession: View {
         withAnimation { started = true }
     }
 
-    private func servingsStepper(compact: Bool) -> some View {
+    /// The servings while cooking, in the toolbar: − count +.
+    private var servingsStepper: some View {
         HStack(spacing: 8) {
             Button { servings = max(1, servings - 1) } label: { Image(systemName: "minus") }
                 .disabled(servings <= 1)
                 .accessibilityLabel("Fewer servings")
             Text(verbatim: "\(servings)")
-                .font((compact ? Font.body : .title2).monospacedDigit().weight(.semibold))
+                .font(.body.monospacedDigit().weight(.semibold))
                 .contentTransition(.numericText())
-                .frame(minWidth: compact ? 24 : 36)
                 .accessibilityLabel("\(servings) servings")
             Button { servings = min(50, servings + 1) } label: { Image(systemName: "plus") }
                 .accessibilityLabel("More servings")
         }
-        .buttonStyle(.glass)
-        .buttonBorderShape(.circle)
         .animation(.snappy, value: servings)
     }
 
@@ -177,27 +194,46 @@ private struct RecipeCookSession: View {
         .padding()
         .frame(maxWidth: 900)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // ← and → page through the steps from a hardware keyboard.
         .focusable()
+        .focused($pagerFocused)
         .focusEffectDisabled()
         .onKeyPress(.leftArrow) { go(-1); return .handled }
         .onKeyPress(.rightArrow) { go(1); return .handled }
+        .onAppear { pagerFocused = true }
     }
 
     private var progress: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 4) {
             Text("Step \(stepIndex + 1) of \(steps.count)")
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(.secondary)
                 .contentTransition(.numericText())
+                .accessibilityHidden(true)
+            // One adjustable element for VoiceOver (swipe up or down to change the step); each
+            // segment takes taps a hit target high.
             HStack(spacing: 4) {
                 ForEach(steps.indices, id: \.self) { index in
                     Capsule()
                         .fill(index <= stepIndex ? AnyShapeStyle(ModuleTint.meals.gradient) : AnyShapeStyle(.quaternary))
                         .frame(height: 6)
+                        #if os(iOS)
+                        .padding(.vertical, 19)
+                        #else
+                        .padding(.vertical, 6)
+                        #endif
                         .contentShape(.rect)
                         .onTapGesture { withAnimation { stepIndex = index } }
-                        .accessibilityLabel("Step \(index + 1) of \(steps.count)")
-                        .accessibilityAddTraits(.isButton)
+                }
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Progress")
+            .accessibilityValue(Text("Step \(stepIndex + 1) of \(steps.count)"))
+            .accessibilityAdjustableAction { direction in
+                switch direction {
+                case .increment: go(1)
+                case .decrement: go(-1)
+                @unknown default: break
                 }
             }
             #if os(iOS)
@@ -259,57 +295,48 @@ private struct RecipeCookSession: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .scrollBounceBehavior(.basedOnSize)
-        .glassEffect(.regular.tint(ModuleTint.meals.opacity(0.12)), in: .rect(cornerRadius: 32))
+        .contentCard(cornerRadius: 32, padding: 0, tint: ModuleTint.meals)
+        .clipShape(.rect(cornerRadius: 32))
     }
 
     private var controls: some View {
-        GlassEffectContainer(spacing: 12) {
-            HStack(spacing: 12) {
-                Button {
-                    go(-1)
-                } label: {
-                    Label("Back", systemImage: "chevron.left").frame(minWidth: 90)
-                }
-                .buttonStyle(.glass)
-                .disabled(stepIndex == 0)
-                Spacer()
-                if stepIndex >= steps.count - 1 {
-                    Button {
-                        UserDefaults.standard.removeObject(forKey: progressKey)
-                        keepAwake(false)
-                        if isPresented { dismiss() } else { withAnimation { started = false } }
-                    } label: {
-                        Label("All done!", systemImage: "checkmark").frame(minWidth: 110)
-                    }
-                    .buttonStyle(.glassProminent)
-                    .tint(ModuleTint.meals)
-                } else {
-                    Button {
-                        go(1)
-                    } label: {
-                        HStack {
-                            Text("Next")
-                            Image(systemName: "chevron.right")
-                        }
-                        .frame(minWidth: 90)
-                    }
-                    .buttonStyle(.glassProminent)
-                    .tint(ModuleTint.meals)
-                }
+        HStack(spacing: 12) {
+            Button {
+                go(-1)
+            } label: {
+                Label("Back", systemImage: "chevron.left").frame(minWidth: 90)
             }
-            .controlSize(.extraLarge)
+            .buttonStyle(.bordered)
+            .disabled(stepIndex == 0)
+            Spacer()
+            if stepIndex >= steps.count - 1 {
+                Button {
+                    UserDefaults.standard.removeObject(forKey: progressKey)
+                    dismiss()
+                } label: {
+                    Label("All done!", systemImage: "checkmark").frame(minWidth: 110)
+                }
+                .buttonStyle(.borderedProminent)
+            } else {
+                Button {
+                    go(1)
+                } label: {
+                    HStack {
+                        Text("Next")
+                        Image(systemName: "chevron.right")
+                    }
+                    .frame(minWidth: 90)
+                }
+                .buttonStyle(.borderedProminent)
+            }
         }
+        .controlSize(.extraLarge)
+        .tint(ModuleTint.meals)
     }
 
     private func go(_ delta: Int) {
         let target = stepIndex + delta
         guard steps.indices.contains(target) else { return }
         withAnimation(.snappy) { stepIndex = target }
-    }
-
-    private func keepAwake(_ on: Bool) {
-        #if os(iOS)
-        UIApplication.shared.isIdleTimerDisabled = on
-        #endif
     }
 }

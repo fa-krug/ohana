@@ -56,12 +56,19 @@ final class RecipeEditorModel {
     var ingredients: [IngredientRow] = []
     var steps: [StepRow] = []
     var tagIDs: Set<String> = []
+    /// What saving would have sent when the form opened.
+    @ObservationIgnored private var original: RecipeUpsertInput?
 
     var isNew: Bool { recipeID == nil }
+
+    /// Saving would change something (rows added but left empty, like empty steps, don't count
+    /// where saving leaves them out).
+    var hasChanges: Bool { payload != original }
 
     init(listType: RecipeListType) {
         recipeID = nil
         self.listType = listType
+        original = payload
     }
 
     /// The form of a stored recipe (toInitialValues).
@@ -96,6 +103,7 @@ final class RecipeEditorModel {
         steps = recipe.manualSteps.sorted { $0.stepNumber < $1.stepNumber }.map { row($0, .manual) }
             + recipe.machineSteps.sorted { $0.stepNumber < $1.stepNumber }.map { row($0, .machine) }
         tagIDs = Set(recipe.tags.map(\.id))
+        original = payload
     }
 
     // MARK: Editing
@@ -157,7 +165,20 @@ final class RecipeEditorModel {
     /// What keeps the form from saving (the server's checks, said before sending).
     var problems: [String] {
         var out: [String] = []
-        if title.trimmingCharacters(in: .whitespaces).isEmpty { out.append(String(localized: "Title is required")) }
+        if let titleProblem { out.append(titleProblem) }
+        out += ingredientProblems
+        if let error = steps.lazy.flatMap(\.programErrors).first { out.append(error) }
+        return out
+    }
+
+    /// Shown under the name.
+    var titleProblem: String? {
+        title.trimmingCharacters(in: .whitespaces).isEmpty ? String(localized: "Title is required") : nil
+    }
+
+    /// Shown under the ingredients (a step's share is an ingredient's quantity too).
+    var ingredientProblems: [String] {
+        var out: [String] = []
         if ingredients.contains(where: { $0.ingredientID == nil && $0.name.trimmingCharacters(in: .whitespaces).isEmpty }) {
             out.append(String(localized: "Every ingredient needs a name"))
         }
@@ -166,7 +187,6 @@ final class RecipeEditorModel {
             out.append(String(localized: "Quantities must be numbers"))
         }
         if !overAllocatedRows.isEmpty { out.append(String(localized: "Step ingredients exceed recipe quantities")) }
-        if let error = steps.lazy.flatMap(\.programErrors).first { out.append(error) }
         return out
     }
 

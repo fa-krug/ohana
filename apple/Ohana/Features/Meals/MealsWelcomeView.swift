@@ -9,33 +9,34 @@ struct MealsWelcomeView: View {
     var generate: () -> Void
 
     @Environment(FamilyContext.self) private var family
+    @ScaledMetric(relativeTo: .largeTitle) private var iconSize: CGFloat = 52
 
     var body: some View {
         VStack(spacing: 20) {
             VStack(spacing: 8) {
                 Image(systemName: "fork.knife.circle.fill")
-                    .font(.system(size: 52))
+                    .font(.system(size: iconSize))
                     .foregroundStyle(ModuleTint.meals.gradient)
                     .symbolEffect(.bounce, options: .nonRepeating)
+                    .accessibilityHidden(true)
                 Text("Welcome to Meals!")
                     .font(.title.bold())
+                    .accessibilityAddTraits(.isHeader)
                 Text("Your family has no recipes yet. Here’s how to start:")
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
-            GlassEffectContainer(spacing: 10) {
-                VStack(spacing: 10) {
-                    step("Add your first recipe", "Start building your collection", systemImage: "book", action: addRecipe)
-                    if ai.generate {
-                        step("Generate with AI", "Let the assistant suggest recipes to try", systemImage: "sparkles",
-                             action: generate)
-                    }
-                    step("Create a meal plan", "Plan your meals for the week", systemImage: "calendar") {
-                        family.open(.mealPlan)
-                    }
-                    step("Invite a family member", "Cook together", systemImage: "person.badge.plus") {
-                        family.open(.settings(.members))
-                    }
+            VStack(spacing: 10) {
+                step("Add your first recipe", "Start building your collection", systemImage: "book", action: addRecipe)
+                if ai.generate {
+                    step("Generate with AI", "Let the assistant suggest recipes to try", systemImage: "sparkles",
+                         action: generate)
+                }
+                step("Create a meal plan", "Plan your meals for the week", systemImage: "calendar") {
+                    family.open(.mealPlan)
+                }
+                step("Invite a family member", "Cook together", systemImage: "person.badge.plus") {
+                    family.open(.settings(.members))
                 }
             }
             Button(action: addRecipe) {
@@ -53,24 +54,19 @@ struct MealsWelcomeView: View {
                       action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 14) {
-                Image(systemName: systemImage)
-                    .font(.title3)
-                    .foregroundStyle(ModuleTint.meals)
-                    .frame(width: 44, height: 44)
-                    .background(ModuleTint.meals.opacity(0.15), in: .circle)
+                TintedIcon(systemImage: systemImage, tint: ModuleTint.meals, size: 44)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title).font(.headline)
                     Text(subtitle).font(.subheadline).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
-                Image(systemName: "chevron.right")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.tertiary)
             }
-            .padding(12)
+            .contentCard(cornerRadius: 20, padding: 12)
             .contentShape(.rect(cornerRadius: 20))
         }
         .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 20))
+        #if os(iOS)
+        .hoverEffect(.highlight)
+        #endif
     }
 }

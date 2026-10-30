@@ -173,6 +173,52 @@ struct MealsRecipeLogicTests {
         #expect(model.payload.steps.first?.stepNumber == 1)
     }
 
+    @Test func showsTheProblemsAtTheirFields() {
+        let model = RecipeEditorModel(listType: .known)
+        #expect(model.titleProblem != nil)
+        #expect(model.ingredientProblems.isEmpty)
+        model.title = "Soup"
+        model.addIngredient(defaultUnit: 1)
+        model.ingredients[0].quantity = "a lot"
+        #expect(model.titleProblem == nil)
+        #expect(model.ingredientProblems.count == 2) // no name, no number
+        #expect(model.problems == model.ingredientProblems)
+    }
+
+    @Test func tracksChangesHonestly() throws {
+        let new = RecipeEditorModel(listType: .toTry)
+        #expect(!new.hasChanges)
+        new.addStep(.manual) // empty: saving leaves it out
+        #expect(!new.hasChanges)
+        new.steps[0].instruction = "Stir"
+        #expect(new.hasChanges)
+        new.steps[0].instruction = ""
+        #expect(!new.hasChanges)
+
+        let response = try MealsRecipeDecodingTests.detail()
+        let stored = RecipeEditorModel(response.recipe, catalog: response.ingredients)
+        #expect(!stored.hasChanges)
+        stored.tagIDs.insert("t2")
+        #expect(stored.hasChanges)
+        stored.tagIDs.remove("t2")
+        #expect(!stored.hasChanges)
+        stored.servings += 1
+        #expect(stored.hasChanges)
+    }
+
+    @Test func aNewTagNeedsOnlyOneName() {
+        #expect(!RecipeNewTag().isValid)
+        #expect(!RecipeNewTag(nameEn: "  ").isValid)
+        let english = RecipeNewTag(category: .dietary, nameEn: " Spicy ")
+        #expect(english.isValid)
+        #expect(english.body.nameEn == "Spicy" && english.body.nameDe == "Spicy")
+        #expect(english.body.category == "DIETARY")
+        let german = RecipeNewTag(nameDe: "Scharf").body
+        #expect(german.nameEn == "Scharf" && german.nameDe == "Scharf")
+        let both = RecipeNewTag(nameEn: "Spicy", nameDe: "Scharf").body
+        #expect(both.nameEn == "Spicy" && both.nameDe == "Scharf")
+    }
+
     @Test func movesStepsWithinTheirMethod() {
         let model = RecipeEditorModel(listType: .known)
         model.addStep(.manual); model.addStep(.machine); model.addStep(.manual)

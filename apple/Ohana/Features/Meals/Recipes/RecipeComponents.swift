@@ -49,22 +49,13 @@ struct RecipeTagPicker: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                         .textCase(.uppercase)
+                        .accessibilityAddTraits(.isHeader)
                     RecipeFlowLayout(spacing: 6) {
                         ForEach(group.tags) { tag in
                             let on = selection.contains(tag.id)
-                            Button {
+                            MealsChipButton(title: tag.name, isOn: on, tint: tag.color, showsCheckmark: true) {
                                 if on { selection.remove(tag.id) } else { selection.insert(tag.id) }
-                            } label: {
-                                Label(tag.name, systemImage: on ? "checkmark" : "plus")
-                                    .labelStyle(RecipeChipLabelStyle(showsIcon: on))
-                                    .font(.subheadline)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 5)
-                                    .foregroundStyle(on ? Color.white : .primary)
-                                    .background(on ? AnyShapeStyle(tag.color.gradient) : AnyShapeStyle(.quaternary), in: .capsule)
                             }
-                            .buttonStyle(.plain)
-                            .accessibilityAddTraits(on ? .isSelected : [])
                         }
                     }
                 }
@@ -83,13 +74,35 @@ struct RecipeTagPicker: View {
     }
 }
 
-private struct RecipeChipLabelStyle: LabelStyle {
-    let showsIcon: Bool
-    func makeBody(configuration: Configuration) -> some View {
-        HStack(spacing: 4) {
-            if showsIcon { configuration.icon.imageScale(.small) }
-            configuration.title
+/// A chip switched on and off (tags, shopping days): filled with its tint when on, with a
+/// checkmark if asked. On iPhone and iPad it takes taps 44 pt high, more than the capsule shows.
+struct MealsChipButton: View {
+    let title: String
+    let isOn: Bool
+    let tint: Color
+    var showsCheckmark = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                if showsCheckmark && isOn {
+                    Image(systemName: "checkmark").imageScale(.small)
+                }
+                Text(verbatim: title)
+            }
+            .font(.subheadline.weight(isOn ? .semibold : .regular))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .foregroundStyle(isOn ? Color.white : .primary)
+            .background(isOn ? AnyShapeStyle(tint.gradient) : AnyShapeStyle(.quaternary), in: .capsule)
+            #if os(iOS)
+            .frame(minHeight: 44)
+            #endif
+            .contentShape(.rect)
         }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 }
 
@@ -195,16 +208,19 @@ struct RecipeStepParams: View {
     }
 }
 
-/// A placeholder where a recipe has no photo.
+/// A placeholder where a recipe has no photo (decoration: hidden from VoiceOver).
 struct RecipePhotoPlaceholder: View {
+    @ScaledMetric(relativeTo: .title) private var iconSize: CGFloat = 30
+
     var body: some View {
         ZStack {
             LinearGradient(colors: [ModuleTint.meals.opacity(0.35), ModuleTint.meals.opacity(0.12)],
                            startPoint: .topLeading, endPoint: .bottomTrailing)
             Image(systemName: "fork.knife")
-                .font(.system(size: 30, weight: .semibold))
+                .font(.system(size: iconSize, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.85))
         }
+        .accessibilityHidden(true)
     }
 }
 
