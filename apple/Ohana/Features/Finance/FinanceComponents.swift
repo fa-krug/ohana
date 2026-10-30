@@ -9,6 +9,15 @@ extension View {
         self
         #endif
     }
+
+    /// Large controls on iOS, so their hit targets reach 44 pt.
+    func financeTouchSize() -> some View {
+        #if os(iOS)
+        controlSize(.large)
+        #else
+        self
+        #endif
+    }
 }
 
 /// A small dot in a category's or account's color.
@@ -37,7 +46,7 @@ struct FinanceCategoryLabel: View {
     }
 }
 
-/// A small glass pill with the account's color, icon and name.
+/// A small pill with the account's color, icon and name.
 struct FinanceAccountChip: View {
     let account: FinanceAccount
 
@@ -150,18 +159,27 @@ struct FinanceCategoryPickerList: View {
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(selection == id ? .isSelected : [])
+        // A subcategory says where it sits; sighted people see it by the indentation.
+        .accessibilityHint(id.flatMap { depth > 0 ? Text(tree.path($0)) : nil } ?? Text(verbatim: ""))
     }
 }
 
-/// Income, expenses and the difference, as headline numbers.
+/// Income, expenses and the difference, as headline numbers: cards side by side (one below the
+/// other at accessibility sizes), or `inline` without cards, for a list row.
 struct FinanceStatTiles: View {
     let income: Int
     let expense: Int
     let currency: String
+    var inline = false
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         let net = income - expense
-        HStack(spacing: 10) {
+        let layout = typeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 10))
+            : AnyLayout(HStackLayout(alignment: .top, spacing: 10))
+        layout {
             tile("Income", FinanceMoney.format(income, currency: currency), dot: .green)
             tile("Expenses", FinanceMoney.format(expense, currency: currency), dot: .orange)
             tile("Net", FinanceMoney.format(net, currency: currency, sign: true), color: net < 0 ? .red : .primary,
@@ -169,25 +187,29 @@ struct FinanceStatTiles: View {
         }
     }
 
+    @ViewBuilder
     private func tile(_ title: LocalizedStringKey, _ value: String, dot: Color? = nil, color: Color = .primary,
                       hint: String? = nil) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
+        let content = VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 5) {
                 if let dot { RoundedRectangle(cornerRadius: 2).fill(dot).frame(width: 9, height: 9) }
                 Text(title).lineLimit(1)
             }
             .font(.caption)
             .foregroundStyle(.secondary)
+            // The amount keeps its sign: the color isn't the only hint that it's negative.
             Text(value)
-                .font(.headline.monospacedDigit())
+                .font((inline ? Font.subheadline : .headline).weight(.semibold).monospacedDigit())
                 .foregroundStyle(color)
-                .lineLimit(1)
+                .lineLimit(typeSize.isAccessibilitySize ? nil : 1)
                 .minimumScaleFactor(0.6)
             if let hint {
                 Text(hint).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
             }
         }
-        .contentCard(cornerRadius: 18, padding: 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+        if inline { content } else { content.contentCard(cornerRadius: 18, padding: 12) }
     }
 }
 
@@ -222,14 +244,12 @@ struct FinanceAccountCards: View {
                     .padding(.horizontal, 4)
             }
             ScrollView(.horizontal) {
-                GlassEffectContainer(spacing: 10) {
-                    HStack(spacing: 10) {
-                        ForEach(cards) { card in
-                            cardView(card, past: past)
-                        }
+                HStack(alignment: .top, spacing: 10) {
+                    ForEach(cards) { card in
+                        cardView(card, past: past)
                     }
-                    .padding(.vertical, 2)
                 }
+                .padding(.vertical, 2)
             }
             .scrollIndicators(.hidden)
         }
@@ -237,6 +257,7 @@ struct FinanceAccountCards: View {
 
     private func cardView(_ card: Card, past: Bool) -> some View {
         let active = !card.id.isEmpty && store.filter.account == card.id
+        let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
         return Button {
             Task { await store.setFilter { $0.account = store.filter.account == card.id ? "" : card.id } }
         } label: {
@@ -244,6 +265,10 @@ struct FinanceAccountCards: View {
                 HStack(spacing: 5) {
                     if let color = card.color { FinanceColorDot(hex: color) }
                     Text(card.label).lineLimit(1)
+                    if active {
+                        // Picked: a checkmark as well as the tint.
+                        Image(systemName: "checkmark.circle.fill").foregroundStyle(ModuleTint.finance)
+                    }
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -256,143 +281,121 @@ struct FinanceAccountCards: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .frame(minWidth: 120, alignment: .leading)
+            .frame(minWidth: 120, minHeight: 44, alignment: .leading)
             .padding(12)
-            .contentShape(.rect)
+            .background {
+                shape.fill(Color.cardBackground)
+                    .overlay { if active { shape.fill(ModuleTint.finance.opacity(0.15)) } }
+                    .overlay { if active { shape.strokeBorder(ModuleTint.finance, lineWidth: 1.5) } }
+            }
+            .contentShape(shape)
         }
         .buttonStyle(.plain)
-        .glassEffect(.regular.tint(active ? ModuleTint.finance.opacity(0.35) : .clear).interactive(),
-                     in: .rect(cornerRadius: 18))
+        .accessibilityElement(children: .combine)
         .accessibilityAddTraits(active ? .isSelected : [])
+        .accessibilityHint(Text(card.id.isEmpty ? String(localized: "Show all accounts") : String(localized: "Show only this account")))
         .help(Text(card.id.isEmpty ? String(localized: "Show all accounts") : String(localized: "Show only this account")))
     }
 }
 
-/// The period: previous, the period (a menu to pick month, year or all time), next.
+/// The period: previous, the period (a menu to pick month, year or all time), next. `floating`
+/// above the content it is glass; in a list (iPhone) it is part of the content. The menu bar's
+/// Finance menu steps it with ⌘[ and ⌘].
 struct FinancePeriodBar: View {
     @Bindable var store: FinanceStore
+    var floating = true
 
     var body: some View {
-        GlassEffectContainer(spacing: 8) {
-            HStack(spacing: 8) {
-                if store.period.mode != .all {
-                    Button {
-                        Task { await store.step(-1) }
-                    } label: {
-                        Label("Previous", systemImage: "chevron.left").labelStyle(.iconOnly)
-                    }
-                    .keyboardShortcut(.leftArrow, modifiers: [.command, .option])
-                    .help("Previous (⌥⌘←)")
-                }
-                Menu {
-                    Picker("Period", selection: Binding(
-                        get: { store.period.mode },
-                        set: { mode in Task { await store.setPeriod(FinancePeriod(mode: mode, year: store.period.year, month: store.period.month)) } }
-                    )) {
-                        ForEach(FinancePeriod.Mode.allCases) { Text($0.title).tag($0) }
-                    }
-                    .pickerStyle(.inline)
-                    Divider()
-                    Button("Today", systemImage: "calendar") {
-                        let now = FinancePeriod.current()
-                        Task { await store.setPeriod(FinancePeriod(mode: store.period.mode == .all ? .month : store.period.mode,
-                                                                   year: now.year, month: now.month)) }
-                    }
-                } label: {
-                    Text(store.period.title)
-                        .font(.headline.monospacedDigit())
-                        .frame(minWidth: 120)
-                }
-                .menuIndicator(.visible)
-                if store.period.mode != .all {
-                    Button {
-                        Task { await store.step(1) }
-                    } label: {
-                        Label("Next", systemImage: "chevron.right").labelStyle(.iconOnly)
-                    }
-                    .keyboardShortcut(.rightArrow, modifiers: [.command, .option])
-                    .help("Next (⌥⌘→)")
-                }
+        if floating {
+            GlassEffectContainer(spacing: 8) {
+                bar.buttonStyle(.glass)
             }
-            .buttonStyle(.glass)
-            .menuStyle(.button)
+        } else {
+            bar.buttonStyle(.bordered)
         }
+    }
+
+    private var bar: some View {
+        HStack(spacing: 8) {
+            if store.period.mode != .all {
+                Button {
+                    Task { await store.step(-1) }
+                } label: {
+                    Label("Previous period", systemImage: "chevron.left").labelStyle(.iconOnly)
+                }
+                .help("Previous period (⌘[)")
+            }
+            Menu {
+                Picker("Period", selection: Binding(
+                    get: { store.period.mode },
+                    set: { mode in Task { await store.setPeriod(FinancePeriod(mode: mode, year: store.period.year, month: store.period.month)) } }
+                )) {
+                    ForEach(FinancePeriod.Mode.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.inline)
+                Divider()
+                Button("Today", systemImage: "calendar") { Task { await store.goToToday() } }
+            } label: {
+                Text(store.period.title)
+                    .font(.headline.monospacedDigit())
+                    .frame(minWidth: 120)
+            }
+            .menuIndicator(.visible)
+            .accessibilityLabel(Text("Period"))
+            .accessibilityValue(Text(store.period.title))
+            if store.period.mode != .all {
+                Button {
+                    Task { await store.step(1) }
+                } label: {
+                    Label("Next period", systemImage: "chevron.right").labelStyle(.iconOnly)
+                }
+                .help("Next period (⌘])")
+            }
+        }
+        .menuStyle(.button)
+        .financeTouchSize()
     }
 }
 
-/// The filters of the list as glass menus: account, category, kind.
+/// The filters of the list as menus in the content (iPad, Mac): account, category, kind.
 struct FinanceFilterBar: View {
     @Bindable var store: FinanceStore
 
     var body: some View {
         ScrollView(.horizontal) {
-            GlassEffectContainer(spacing: 8) {
-                HStack(spacing: 8) {
-                    if !store.accounts.isEmpty {
-                        Menu {
-                            Picker("Account", selection: filterBinding(\.account)) {
-                                Text("All accounts").tag("")
-                                Text("Without account").tag("none")
-                                ForEach(store.accounts) { Text($0.label).tag($0.id) }
-                            }
-                            .pickerStyle(.inline)
-                        } label: {
-                            chip("building.columns", accountTitle, active: !store.filter.account.isEmpty)
-                        }
-                    }
+            HStack(spacing: 8) {
+                if !store.accounts.isEmpty {
                     Menu {
-                        Button("All categories") { set { $0.category = "" } }
-                        Button("Uncategorized") { set { $0.category = "none" } }
-                        Divider()
-                        ForEach(store.tree.children(of: nil)) { node in
-                            FinanceCategoryMenuNode(tree: store.tree, node: node,
-                                                    selection: store.filter.category.isEmpty ? nil : store.filter.category) { id in
-                                set { $0.category = id ?? "" }
-                            }
-                        }
+                        FinanceAccountFilterPicker(store: store).pickerStyle(.inline)
                     } label: {
-                        chip("tag", categoryTitle, active: !store.filter.category.isEmpty)
-                    }
-                    Menu {
-                        Picker("Kind", selection: Binding(get: { store.filter.kind }, set: { kind in set { $0.kind = kind } })) {
-                            ForEach(FinanceFilter.Kind.allCases) { Text($0.title).tag($0) }
-                        }
-                        .pickerStyle(.inline)
-                    } label: {
-                        chip("arrow.up.arrow.down", store.filter.kind.title, active: store.filter.kind != .all)
-                    }
-                    if store.filter.isActive {
-                        Button {
-                            set { $0.category = ""; $0.account = ""; $0.kind = .all }
-                        } label: {
-                            Label("Clear filters", systemImage: "xmark").labelStyle(.iconOnly)
-                        }
-                        .buttonStyle(.glass)
-                        .help("Clear filters")
+                        chip("building.columns", FinanceFilterTitles.account(store), active: !store.filter.account.isEmpty)
                     }
                 }
-                .menuStyle(.button)
-                .buttonStyle(.glass)
-                .padding(.vertical, 2)
+                Menu {
+                    FinanceCategoryFilterItems(store: store)
+                } label: {
+                    chip("tag", FinanceFilterTitles.category(store), active: !store.filter.category.isEmpty)
+                }
+                Menu {
+                    FinanceKindFilterPicker(store: store).pickerStyle(.inline)
+                } label: {
+                    chip("arrow.up.arrow.down", store.filter.kind.title, active: store.filter.kind != .all)
+                }
+                if store.filter.isActive {
+                    Button {
+                        Task { await store.clearFilters() }
+                    } label: {
+                        Label("Clear filters", systemImage: "xmark").labelStyle(.iconOnly)
+                    }
+                    .help("Clear filters")
+                }
             }
+            .menuStyle(.button)
+            .buttonStyle(.bordered)
+            .financeTouchSize()
+            .padding(.vertical, 2)
         }
         .scrollIndicators(.hidden)
-    }
-
-    private var accountTitle: String {
-        switch store.filter.account {
-        case "": String(localized: "All accounts")
-        case "none": String(localized: "Without account")
-        default: store.account(store.filter.account)?.label ?? String(localized: "Account")
-        }
-    }
-
-    private var categoryTitle: String {
-        switch store.filter.category {
-        case "": String(localized: "All categories")
-        case "none": String(localized: "Uncategorized")
-        default: store.category(store.filter.category)?.label ?? String(localized: "Category")
-        }
     }
 
     private func chip(_ icon: String, _ title: String, active: Bool) -> some View {
@@ -400,13 +403,102 @@ struct FinanceFilterBar: View {
             .lineLimit(1)
             .foregroundStyle(active ? ModuleTint.finance : .primary)
     }
+}
 
-    private func filterBinding(_ key: WritableKeyPath<FinanceFilter, String>) -> Binding<String> {
-        Binding(get: { store.filter[keyPath: key] }, set: { value in set { $0[keyPath: key] = value } })
+/// The toolbar's filter menu on iPhone: the same filters as menu items, badged with how many
+/// are on.
+struct FinanceFilterMenu: View {
+    @Bindable var store: FinanceStore
+
+    var body: some View {
+        let count = store.filter.activeCount
+        Menu {
+            if !store.accounts.isEmpty {
+                FinanceAccountFilterPicker(store: store).pickerStyle(.menu)
+            }
+            Menu {
+                FinanceCategoryFilterItems(store: store)
+            } label: {
+                Label("Category", systemImage: "tag")
+                Text(FinanceFilterTitles.category(store))
+            }
+            FinanceKindFilterPicker(store: store).pickerStyle(.menu)
+            if store.filter.isActive {
+                Divider()
+                Button("Clear filters", systemImage: "xmark") { Task { await store.clearFilters() } }
+            }
+        } label: {
+            Label("Filter", systemImage: count > 0 ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+        }
+        .badge(count)
+        .accessibilityValue(count > 0 ? Text(FinanceText.inflected("^[\(count) filter](inflect: true) on")) : Text(verbatim: ""))
+    }
+}
+
+/// What the filter menus show for the current account and category.
+@MainActor
+enum FinanceFilterTitles {
+    static func account(_ store: FinanceStore) -> String {
+        switch store.filter.account {
+        case "": String(localized: "All accounts")
+        case "none": String(localized: "Without account")
+        default: store.account(store.filter.account)?.label ?? String(localized: "Account")
+        }
     }
 
-    private func set(_ change: @escaping (inout FinanceFilter) -> Void) {
-        Task { await store.setFilter(change) }
+    static func category(_ store: FinanceStore) -> String {
+        switch store.filter.category {
+        case "": String(localized: "All categories")
+        case "none": String(localized: "Uncategorized")
+        default: store.category(store.filter.category)?.label ?? String(localized: "Category")
+        }
+    }
+}
+
+struct FinanceAccountFilterPicker: View {
+    @Bindable var store: FinanceStore
+
+    var body: some View {
+        Picker(selection: Binding(get: { store.filter.account }, set: { id in Task { await store.setFilter { $0.account = id } } })) {
+            Text("All accounts").tag("")
+            Text("Without account").tag("none")
+            ForEach(store.accounts) { Text($0.label).tag($0.id) }
+        } label: {
+            Label("Account", systemImage: "building.columns")
+        }
+    }
+}
+
+struct FinanceKindFilterPicker: View {
+    @Bindable var store: FinanceStore
+
+    var body: some View {
+        Picker(selection: Binding(get: { store.filter.kind }, set: { kind in Task { await store.setFilter { $0.kind = kind } } })) {
+            ForEach(FinanceFilter.Kind.allCases) { Text($0.title).tag($0) }
+        } label: {
+            Label("Kind", systemImage: "arrow.up.arrow.down")
+        }
+    }
+}
+
+/// All, uncategorized, and the category tree (a category includes its subcategories).
+struct FinanceCategoryFilterItems: View {
+    @Bindable var store: FinanceStore
+
+    var body: some View {
+        Button("All categories") { set("") }
+        Button("Uncategorized") { set("none") }
+        Divider()
+        ForEach(store.tree.children(of: nil)) { node in
+            FinanceCategoryMenuNode(tree: store.tree, node: node,
+                                    selection: store.filter.category.isEmpty ? nil : store.filter.category) { id in
+                set(id ?? "")
+            }
+        }
+    }
+
+    private func set(_ category: String) {
+        Task { await store.setFilter { $0.category = category } }
     }
 }
 
@@ -430,13 +522,15 @@ struct FinanceToastView: View {
                 store.dismissToast()
             } label: {
                 Image(systemName: "xmark")
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(.rect)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Dismiss")
         }
         .padding(.leading, 16)
-        .padding(.trailing, 12)
-        .padding(.vertical, 8)
+        .padding(.trailing, 2)
+        .padding(.vertical, 2)
         .glassEffect(.regular, in: .capsule)
     }
 }

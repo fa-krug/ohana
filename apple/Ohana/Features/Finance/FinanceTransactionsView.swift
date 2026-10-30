@@ -61,12 +61,16 @@ struct FinanceLinkInfo {
     }
 }
 
-/// The filtered transactions of the period: a list grouped by day on iPhone and iPad, a table
-/// on the Mac. Editors change categories inline, combine the ticked rows into a transfer or a
+/// The filtered transactions of the period: a sortable table on the Mac and the iPad, a list
+/// grouped by day on the iPhone (where the period, the balances and the totals scroll away
+/// with it). Editors change categories inline, combine the selected rows into a transfer or a
 /// split booking, and undo from the toast.
 struct FinanceTransactionsView: View {
     @Bindable var store: FinanceStore
     @Environment(FamilyContext.self) private var family
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    #endif
     var selecting: Bool
     let onEdit: (FinanceTransaction) -> Void
 
@@ -89,9 +93,26 @@ struct FinanceTransactionsView: View {
     @ViewBuilder
     private func content(_ list: FinanceTransactionList) -> some View {
         let info = FinanceLinkInfo(list.transactions)
-        #if os(macOS)
+        #if os(iOS)
+        if sizeClass == .compact {
+            compactList(list, info: info)
+        } else {
+            table(list, info: info)
+        }
+        #else
+        table(list, info: info)
+        #endif
+    }
+
+    private func table(_ list: FinanceTransactionList, info: FinanceLinkInfo) -> some View {
         VStack(spacing: 12) {
-            header(list).padding(.horizontal, 20).padding(.top, 8)
+            VStack(alignment: .leading, spacing: 12) {
+                if !store.accounts.isEmpty { FinanceAccountCards(store: store) }
+                FinanceStatTiles(income: list.incomeCents, expense: list.expenseCents, currency: store.currency)
+                FinanceFilterBar(store: store)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
             if list.transactions.isEmpty {
                 empty.frame(maxHeight: .infinity)
             } else {
@@ -99,13 +120,48 @@ struct FinanceTransactionsView: View {
                 if list.total > list.transactions.count { more(list) }
             }
         }
-        #else
+    }
+
+    private var empty: some View {
+        ContentUnavailableView {
+            Label("No transactions", systemImage: "banknote")
+        } description: {
+            Text(store.canEdit
+                 ? String(localized: "No transactions in this period. Add one or import a bank statement (CSV).")
+                 : String(localized: "No transactions in this period."))
+        }
+    }
+
+    private func more(_ list: FinanceTransactionList) -> some View {
+        Button("Show more (\(list.total - list.transactions.count) left)") { Task { await store.showMore() } }
+            .buttonStyle(.bordered)
+            .padding(.bottom, 8)
+    }
+
+    #if os(iOS)
+    /// The iPhone's list: the period, the balances and a one-line summary first, so the first
+    /// transactions show high on the screen and the rest scrolls away with the list.
+    private func compactList(_ list: FinanceTransactionList, info: FinanceLinkInfo) -> some View {
         List(selection: $store.selected) {
-            header(list)
-                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .selectionDisabled()
+            Section {
+                FinancePeriodBar(store: store, floating: false)
+                    .frame(maxWidth: .infinity)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .selectionDisabled()
+                if !store.accounts.isEmpty {
+                    FinanceAccountCards(store: store)
+                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .selectionDisabled()
+                }
+            }
+            Section {
+                FinanceStatTiles(income: list.incomeCents, expense: list.expenseCents, currency: store.currency, inline: true)
+                    .selectionDisabled()
+            }
             if list.transactions.isEmpty {
                 empty
                     .listRowBackground(Color.clear)
@@ -127,36 +183,11 @@ struct FinanceTransactionsView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .listSectionSpacing(.compact)
         .opacity(store.loadingList ? 0.6 : 1)
         .animation(.default, value: store.loadingList)
-        #endif
     }
 
-    private func header(_ list: FinanceTransactionList) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if !store.accounts.isEmpty { FinanceAccountCards(store: store) }
-            FinanceStatTiles(income: list.incomeCents, expense: list.expenseCents, currency: store.currency)
-            FinanceFilterBar(store: store)
-        }
-    }
-
-    private var empty: some View {
-        ContentUnavailableView {
-            Label("No transactions", systemImage: "banknote")
-        } description: {
-            Text(store.canEdit
-                 ? String(localized: "No transactions in this period. Add one or import a bank statement (CSV).")
-                 : String(localized: "No transactions in this period."))
-        }
-    }
-
-    private func more(_ list: FinanceTransactionList) -> some View {
-        Button("Show more (\(list.total - list.transactions.count) left)") { Task { await store.showMore() } }
-            .buttonStyle(.glass)
-            .padding(.bottom, 8)
-    }
-
-    #if os(iOS)
     @ViewBuilder
     private func row(_ t: FinanceTransaction, info: FinanceLinkInfo) -> some View {
         let content = FinanceTransactionRow(store: store, transaction: t, detail: info.detail(t, store: store))
@@ -211,6 +242,7 @@ struct FinanceTransactionRow: View {
                 .fill(category.map { FinanceColor.color($0.color) } ?? Color.secondary.opacity(0.25))
                 .frame(width: 4)
                 .padding(.vertical, 2)
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 3) {
                 Text(t.title).font(.body.weight(.medium)).lineLimit(1)
                 if let (icon, text) = detail {
@@ -244,11 +276,13 @@ struct FinanceTransactionRow: View {
             }
         }
         .padding(.vertical, 2)
+        .frame(minHeight: 44)
+        .accessibilityElement(children: .combine)
     }
 }
 
-/// The amount: green in, red out; muted for a transfer leg (it counts once, by the group's sum)
-/// and a split booking (it counts through its parts).
+/// The amount: green in, red out, always with its sign; muted for a transfer leg (it counts
+/// once, by the group's sum) and a split booking (it counts through its parts).
 struct FinanceAmountText: View {
     @Bindable var store: FinanceStore
     let transaction: FinanceTransaction
@@ -306,77 +340,88 @@ struct FinanceTransactionMenu: View {
     }
 }
 
-#if os(macOS)
-/// The Mac's table of transactions: multiple selection, a double click edits, ⌫ deletes.
+/// A transaction as the table sorts it: with the names its category and account show.
+nonisolated struct FinanceTableRow: Identifiable, Sendable {
+    let transaction: FinanceTransaction
+    let id: String
+    let date: String
+    let title: String
+    let amountCents: Int
+    let category: String
+    let account: String
+
+    @MainActor
+    init(transaction t: FinanceTransaction, category: String = "", account: String = "") {
+        transaction = t
+        id = t.id
+        date = t.date
+        title = t.title
+        amountCents = t.amountCents
+        self.category = category
+        self.account = account
+    }
+}
+
+/// The table's sorting. Newest first is the server's own order (within a day the newest booked
+/// first), and oldest first exactly its reverse; other columns sort stably on top of it.
+enum FinanceTableSort {
+    static var newestFirst: [KeyPathComparator<FinanceTableRow>] { [KeyPathComparator(\.date, order: .reverse)] }
+
+    static func sorted(_ rows: [FinanceTableRow], by order: [KeyPathComparator<FinanceTableRow>]) -> [FinanceTableRow] {
+        guard let first = order.first else { return rows }
+        if first.keyPath == \FinanceTableRow.date {
+            return first.order == .reverse ? rows : rows.reversed()
+        }
+        return rows.sorted(using: order)
+    }
+}
+
+/// The table of transactions (Mac, iPad): multiple selection, sortable and customizable
+/// columns (remembered per window), a double click or tap edits, ⌫ deletes on the Mac.
 struct FinanceTransactionTable: View {
     @Bindable var store: FinanceStore
     @Environment(FamilyContext.self) private var family
     let transactions: [FinanceTransaction]
     let info: FinanceLinkInfo
     let onEdit: (FinanceTransaction) -> Void
+    @State private var sortOrder = FinanceTableSort.newestFirst
+    @SceneStorage("finance.columns") private var columns: TableColumnCustomization<FinanceTableRow>
 
     var body: some View {
-        Table(transactions, selection: $store.selected) {
-            TableColumn("Date") { t in
-                Text(Day(t.date)?.formatted(.dateTime.day().month(.abbreviated).year()) ?? t.date)
+        let rows = FinanceTableSort.sorted(transactions.map {
+            FinanceTableRow(transaction: $0, category: store.category($0.categoryId)?.label ?? "",
+                            account: store.account($0.accountId)?.label ?? "")
+        }, by: sortOrder)
+        Table(rows, selection: $store.selected, sortOrder: $sortOrder, columnCustomization: $columns) {
+            TableColumn("Date", value: \.date) { row in
+                Text(Day(row.date)?.formatted(.dateTime.day().month(.abbreviated).year()) ?? row.date)
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
             }
             .width(min: 80, ideal: 100, max: 130)
-            TableColumn("Payee") { t in
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
-                        Text(t.title).lineLimit(1)
-                        if let trip = store.shoppingLinks.list(for: t.date, categoryId: t.categoryId) {
-                            Button {
-                                family.open(.shoppingList(id: trip.id))
-                            } label: {
-                                Label("Shopping list of this day", systemImage: "cart").labelStyle(.iconOnly)
-                            }
-                            .buttonStyle(.borderless)
-                            .foregroundStyle(.secondary)
-                            .help("Shopping list of this day")
-                        }
-                        if t.imported {
-                            Image(systemName: "square.and.arrow.down").foregroundStyle(.secondary)
-                                .help("Imported from a bank statement")
-                        }
-                    }
-                    if let (icon, text) = info.detail(t, store: store) {
-                        Label(text, systemImage: icon).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                    } else if !t.payee.isEmpty && !t.description.isEmpty {
-                        Text(t.description).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                    }
-                }
+            .customizationID("date")
+            TableColumn("Payee", value: \.title, comparator: .localizedStandard) { row in
+                payee(row.transaction)
             }
             .width(min: 180, ideal: 320)
-            TableColumn("Category") { t in
-                if store.canEdit {
-                    Menu {
-                        FinanceCategoryMenuItems(tree: store.tree, selection: t.categoryId,
-                                                 fits: { FinanceCategoryTree.fits($0, income: t.amountCents > 0) }) { id in
-                            Task { await store.setCategory([t.id], to: id) }
-                        }
-                    } label: {
-                        FinanceCategoryLabel(category: store.category(t.categoryId))
-                    }
-                    .menuStyle(.borderlessButton)
-                    .menuIndicator(.hidden)
-                    .help(store.category(t.categoryId).map { store.tree.path($0.id) } ?? "")
-                } else {
-                    FinanceCategoryLabel(category: store.category(t.categoryId))
-                }
+            .customizationID("payee")
+            .disabledCustomizationBehavior(.visibility)
+            TableColumn("Category", value: \.category, comparator: .localizedStandard) { row in
+                category(row.transaction)
             }
             .width(min: 120, ideal: 180)
-            TableColumn("Account") { t in
-                if let account = store.account(t.accountId) { FinanceAccountChip(account: account) }
+            .customizationID("category")
+            TableColumn("Account", value: \.account, comparator: .localizedStandard) { row in
+                if let account = store.account(row.transaction.accountId) { FinanceAccountChip(account: account) }
             }
             .width(min: 80, ideal: 120)
-            TableColumn("Amount") { t in
-                FinanceAmountText(store: store, transaction: t)
+            .customizationID("account")
+            TableColumn("Amount", value: \.amountCents) { row in
+                FinanceAmountText(store: store, transaction: row.transaction)
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
             .width(min: 90, ideal: 110)
+            .customizationID("amount")
         }
         .contextMenu(forSelectionType: String.self) { ids in
             if ids.count == 1, let id = ids.first, let t = transactions.first(where: { $0.id == id }) {
@@ -387,17 +432,82 @@ struct FinanceTransactionTable: View {
         } primaryAction: { ids in
             if ids.count == 1, let id = ids.first, let t = transactions.first(where: { $0.id == id }) { onEdit(t) }
         }
+        #if os(macOS)
         .onDeleteCommand {
             guard store.canEdit, !store.selected.isEmpty else { return }
             Task { await store.delete(Array(store.selected)) }
         }
+        #endif
         .scrollContentBackground(.hidden)
         .opacity(store.loadingList ? 0.6 : 1)
     }
-}
-#endif
 
-/// The actions on several ticked transactions (Mac context menu).
+    private func payee(_ t: FinanceTransaction) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 6) {
+                Text(t.title).lineLimit(1)
+                if let trip = store.shoppingLinks.list(for: t.date, categoryId: t.categoryId) {
+                    Button {
+                        family.open(.shoppingList(id: trip.id))
+                    } label: {
+                        Label("Shopping list of this day", systemImage: "cart").labelStyle(.iconOnly)
+                    }
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(.secondary)
+                    .help("Shopping list of this day")
+                }
+                if t.imported {
+                    Image(systemName: "square.and.arrow.down").foregroundStyle(.secondary)
+                        .help("Imported from a bank statement")
+                        .accessibilityLabel("Imported from a bank statement")
+                }
+            }
+            if let (icon, text) = info.detail(t, store: store) {
+                Label(text, systemImage: icon).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            } else if !t.payee.isEmpty && !t.description.isEmpty {
+                Text(t.description).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func category(_ t: FinanceTransaction) -> some View {
+        if store.canEdit {
+            Menu {
+                FinanceCategoryMenuItems(tree: store.tree, selection: t.categoryId,
+                                         fits: { FinanceCategoryTree.fits($0, income: t.amountCents > 0) }) { id in
+                    Task { await store.setCategory([t.id], to: id) }
+                }
+            } label: {
+                FinanceCategoryLabel(category: store.category(t.categoryId))
+            }
+            .menuStyle(.button)
+            .buttonStyle(.borderless)
+            .menuIndicator(.hidden)
+            .help(store.category(t.categoryId).map { store.tree.path($0.id) } ?? "")
+        } else {
+            FinanceCategoryLabel(category: store.category(t.categoryId))
+        }
+    }
+}
+
+/// Combining the selected transactions into a transfer or a split booking.
+struct FinanceCombineButtons: View {
+    @Bindable var store: FinanceStore
+    let selected: [FinanceTransaction]
+
+    var body: some View {
+        Button("Combine into a transfer", systemImage: "link") { Task { await store.link(selected.map(\.id)) } }
+            .disabled(!FinanceStore.canLink(selected))
+        Button("Combine into a split booking", systemImage: "rectangle.split.3x1") {
+            guard let booking = FinanceStore.splitBooking(of: selected) else { return }
+            Task { await store.split(booking: booking.id, parts: selected.filter { $0.id != booking.id }.map(\.id)) }
+        }
+        .disabled(!FinanceStore.canSplit(selected))
+    }
+}
+
+/// The actions on several selected transactions (the table's context menu).
 struct FinanceSelectionMenu: View {
     @Bindable var store: FinanceStore
     let ids: Set<String>
@@ -411,39 +521,46 @@ struct FinanceSelectionMenu: View {
         } label: {
             Label("Category", systemImage: "tag")
         }
-        Button("Combine into a transfer", systemImage: "link") { Task { await store.link(selected.map(\.id)) } }
-            .disabled(!FinanceStore.canLink(selected))
-        Button("Combine into a split booking", systemImage: "rectangle.split.3x1") {
-            guard let booking = FinanceStore.splitBooking(of: selected) else { return }
-            Task { await store.split(booking: booking.id, parts: selected.filter { $0.id != booking.id }.map(\.id)) }
-        }
-        .disabled(!FinanceStore.canSplit(selected))
+        FinanceCombineButtons(store: store, selected: selected)
         Divider()
         Button("Delete", systemImage: "trash", role: .destructive) { Task { await store.delete(selected.map(\.id)) } }
     }
 }
 
-/// What the ticked rows add up to, and what can be done with them: set their category, combine
-/// them into a transfer or a split booking, delete them.
-struct FinanceSelectionBar: View {
+/// What the selected transactions add up to, and how they would count combined.
+struct FinanceSelectionSummary: View {
     @Bindable var store: FinanceStore
 
     var body: some View {
         let selected = store.selectedTransactions
         let net = selected.reduce(0) { $0 + $1.amountCents }
+        VStack(alignment: .leading, spacing: 2) {
+            Text("\(selected.count) selected · sum \(store.money(net, sign: true))")
+                .font(.subheadline.weight(.semibold).monospacedDigit())
+            if selected.count >= 2 {
+                Text(net == 0 ? String(localized: "Adds up to 0: counts neither as income nor as an expense.")
+                     : net > 0 ? String(localized: "Counts once, as income of \(store.money(abs(net))).")
+                     : String(localized: "Counts once, as an expense of \(store.money(abs(net))).")
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+#if os(macOS)
+/// The Mac's bar above the selected rows: what they add up to, and what can be done with them:
+/// set their category, combine them into a transfer or a split booking, delete them.
+struct FinanceSelectionBar: View {
+    @Bindable var store: FinanceStore
+
+    var body: some View {
+        let selected = store.selectedTransactions
         let booking = FinanceStore.splitBooking(of: selected)
         VStack(alignment: .leading, spacing: 8) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("\(selected.count) selected · sum \(store.money(net, sign: true))")
-                    .font(.subheadline.weight(.semibold).monospacedDigit())
-                if selected.count >= 2 {
-                    Text(net == 0 ? String(localized: "Adds up to 0: counts neither as income nor as an expense.")
-                         : net > 0 ? String(localized: "Counts once, as income of \(store.money(abs(net))).")
-                         : String(localized: "Counts once, as an expense of \(store.money(abs(net)))."))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
+            FinanceSelectionSummary(store: store)
             ViewThatFits(in: .horizontal) {
                 actions(selected, booking: booking).labelStyle(.titleAndIcon)
                 actions(selected, booking: booking).labelStyle(.iconOnly)
@@ -487,3 +604,4 @@ struct FinanceSelectionBar: View {
         }
     }
 }
+#endif
