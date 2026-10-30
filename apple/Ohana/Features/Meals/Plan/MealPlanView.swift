@@ -38,7 +38,6 @@ struct MealPlanView: View {
             if family.canEdit, let data = state.value, data.plan != nil {
                 ToolbarItem(placement: .primaryAction) {
                     Button("Update plan", systemImage: "slider.horizontal.3") { showSetup = true }
-                        .keyboardShortcut(",", modifiers: [.command, .shift])
                 }
             }
         }

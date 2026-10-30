@@ -246,7 +246,8 @@ struct MealsRecipeDetailView: View {
                 } label: {
                     Label("Edit", systemImage: "pencil")
                 }
-                .keyboardShortcut("e", modifiers: .command)
+                // ⌘E is the system's "Use Selection for Find".
+                .keyboardShortcut("e", modifiers: [.command, .option])
                 Menu {
                     Section("Photo") {
                         Button {
