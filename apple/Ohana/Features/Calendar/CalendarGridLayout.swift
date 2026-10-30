@@ -1,0 +1,75 @@
+import CoreGraphics
+
+/// Where the days sit in the two grids, and which day a point hits (for taps and drags).
+enum CalendarGridLayout {
+    /// The year grid: 12 rows (months) × 31 columns (days), after a label column and a header.
+    struct Year: Equatable {
+        var width: CGFloat
+        var labelWidth: CGFloat = 40
+        var headerHeight: CGFloat = 22
+        var rowHeight: CGFloat = 30
+
+        var cellWidth: CGFloat { max(1, (width - labelWidth) / 31) }
+        var height: CGFloat { headerHeight + rowHeight * 12 }
+
+        /// The day under the point; `clamp` (while dragging) gives the nearest day of the grid
+        /// for points outside of it or on a month's missing days.
+        func day(at p: CGPoint, year: Int, clamp: Bool = false) -> Day? {
+            var col = Int(((p.x - labelWidth) / cellWidth).rounded(.down))
+            var row = Int(((p.y - headerHeight) / rowHeight).rounded(.down))
+            if clamp {
+                col = min(max(col, 0), 30)
+                row = min(max(row, 0), 11)
+            } else if !(0..<31).contains(col) || !(0..<12).contains(row) {
+                return nil
+            }
+            let month = row + 1
+            let last = CalendarMath.daysInMonth(year: year, month: month)
+            if col + 1 > last {
+                return clamp ? Day(year: year, month: month, day: last) : nil
+            }
+            return Day(year: year, month: month, day: col + 1)
+        }
+
+        func frame(of day: Day) -> CGRect {
+            CGRect(x: labelWidth + CGFloat(day.day - 1) * cellWidth,
+                   y: headerHeight + CGFloat(day.month - 1) * rowHeight,
+                   width: cellWidth, height: rowHeight)
+        }
+    }
+
+    /// A month: weeks of 7 columns starting on `firstWeekday` (1 = Sunday).
+    struct Month: Equatable {
+        var year: Int
+        var month: Int
+        var firstWeekday: Int
+        var width: CGFloat
+        var rowHeight: CGFloat
+
+        var blanks: Int { CalendarMath.leadingBlanks(year: year, month: month, firstWeekday: firstWeekday) }
+        var dayCount: Int { CalendarMath.daysInMonth(year: year, month: month) }
+        var rows: Int { (blanks + dayCount + 6) / 7 }
+        var cellWidth: CGFloat { max(1, width / 7) }
+        var height: CGFloat { CGFloat(rows) * rowHeight }
+
+        func day(at p: CGPoint, clamp: Bool = false) -> Day? {
+            var col = Int((p.x / cellWidth).rounded(.down))
+            var row = Int((p.y / rowHeight).rounded(.down))
+            if clamp {
+                col = min(max(col, 0), 6)
+                row = min(max(row, 0), rows - 1)
+            } else if !(0..<7).contains(col) || !(0..<rows).contains(row) {
+                return nil
+            }
+            let n = row * 7 + col - blanks + 1
+            if n < 1 { return clamp ? Day(year: year, month: month, day: 1) : nil }
+            if n > dayCount { return clamp ? Day(year: year, month: month, day: dayCount) : nil }
+            return Day(year: year, month: month, day: n)
+        }
+
+        func frame(of day: Day) -> CGRect {
+            let i = blanks + day.day - 1
+            return CGRect(x: CGFloat(i % 7) * cellWidth, y: CGFloat(i / 7) * rowHeight, width: cellWidth, height: rowHeight)
+        }
+    }
+}
