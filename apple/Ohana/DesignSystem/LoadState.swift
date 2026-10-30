@@ -128,6 +128,21 @@ struct ErrorBannerOverlay: ViewModifier {
     }
 }
 
+/// The banner for content that is a sheet only on compact width (an inspector): elsewhere the
+/// window's own banner shows above it already.
+struct CompactErrorBanner: ViewModifier {
+    @Environment(\.horizontalSizeClass) private var sizeClass
+
+    func body(content: Content) -> some View {
+        if sizeClass == .compact {
+            content.modifier(ErrorBannerOverlay())
+        } else {
+            content
+        }
+    }
+}
+
 extension View {
     func errorBanner() -> some View { modifier(ErrorBannerOverlay()) }
+    func errorBannerWhenCompact() -> some View { modifier(CompactErrorBanner()) }
 }

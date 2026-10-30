@@ -30,7 +30,7 @@ struct AppShell: View {
             #endif
             .inspector(isPresented: $showAssistant) {
                 AssistantPanel()
-                    .errorBanner()
+                    .errorBannerWhenCompact()
                     .inspectorColumnWidth(min: 320, ideal: 400, max: 560)
             }
             .environment(context)
