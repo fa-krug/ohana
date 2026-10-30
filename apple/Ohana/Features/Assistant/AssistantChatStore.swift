@@ -1,0 +1,554 @@
+import Foundation
+import Observation
+
+/// The open chat (web: chat-store.ts `Chat`). `id` is "" until the server named a new chat.
+struct AssistantChat: Equatable {
+    var id: String
+    var title: String
+    var status: String
+    var items: [AssistantItem]
+    /// The items are saved up to this revision (the server sends what changed since).
+    var rev: Int
+    var usage: AssistantUsage?
+    /// The page the chat belongs to; nil: it takes the page of its next message.
+    var page: String?
+    /// Messages waiting for the running turn to end ("local-" ids are on their way).
+    var queued: [AssistantQueued]
+
+    var isRunning: Bool { status == "running" }
+}
+
+/// What a running turn does, and since when this device knows it.
+struct AssistantActivityState: Equatable {
+    var activity: AssistantActivity
+    var at: Date
+}
+
+/// The AI chats of one family (web: components/assistant/chat-store.ts). They live on the
+/// server, whose worker runs the turns (they go on when the app is closed, and every device sees
+/// the same chats). The store lists the chats, shows the open one and follows it while a turn
+/// runs: the server streams what changed from its database (server-sent events, `since` a
+/// revision), and the stream is simply asked for again when it ends or breaks off.
+@Observable
+final class AssistantChatStore {
+    private(set) var settings: AssistantSettings?
+    private(set) var settingsError: String?
+    /// The user's chats, the latest first.
+    private(set) var chats: [AssistantChatSummary] = []
+    private(set) var chatsLoaded = false
+    private(set) var currentID: String?
+    /// The open chat, once loaded (or a new one being started).
+    private(set) var current: AssistantChat?
+    /// Set while a turn runs.
+    private(set) var activity: AssistantActivityState?
+    /// A message is on its way to the server.
+    private(set) var sending = false
+
+    @ObservationIgnored let api: FamilyAPI
+    /// Called after the assistant (or an undo) changed something, so the screens reload it.
+    @ObservationIgnored var onChange: ([DataArea]) -> Void = { _ in }
+    /// The page the user looks at (overview | calendar | finance | meals | appointments |
+    /// settings), sent along with every message (with this year).
+    @ObservationIgnored var page = "overview"
+
+    private func context() -> (page: String, year: Int) {
+        (page, Calendar.current.component(.year, from: .now))
+    }
+
+    /// Changes and tool calls this device has seen, so it reloads the data only for new ones.
+    @ObservationIgnored private var seen = Set<String>()
+    @ObservationIgnored private var following: Task<Void, Never>?
+    @ObservationIgnored private var followID = 0
+
+    init(api: FamilyAPI) {
+        self.api = api
+    }
+
+    /// One store per family and session, so the open chat survives closing the panel.
+    private static var stores: [String: AssistantChatStore] = [:]
+
+    static func shared(for api: FamilyAPI) -> AssistantChatStore {
+        let key = "\(ObjectIdentifier(api.client).hashValue):\(api.familyID)"
+        if let store = stores[key] { return store }
+        let store = AssistantChatStore(api: api)
+        stores[key] = store
+        return store
+    }
+
+    /// A turn runs in the open chat (or a message is on its way).
+    var busy: Bool { sending || current?.isRunning == true }
+
+    var isFollowing: Bool { following != nil }
+
+    var ready: Bool { settings?.configured == true }
+
+    // MARK: Loading
+
+    func loadSettings() async {
+        do {
+            settings = try await api.get("/ai/settings", as: AssistantSettings.self)
+            settingsError = nil
+        } catch is CancellationError {
+        } catch {
+            settingsError = error.localizedDescription
+        }
+    }
+
+    func setSettings(_ s: AssistantSettings) { settings = s }
+
+    func loadChats() async {
+        do {
+            chats = try await api.get("/ai/chats", as: AssistantChatList.self).chats
+            chatsLoaded = true
+        } catch {
+            // Offline or not allowed: the list stays as it is.
+        }
+    }
+
+    /// Back in the app (another device may have chatted meanwhile): the list and the open chat
+    /// catch up.
+    func refresh() async {
+        if let id = current?.id, !id.isEmpty, following == nil { follow(id) }
+        await loadChats()
+    }
+
+    /// Shows a chat as given, marking what it changed so far as seen (previews and tests).
+    func show(_ chat: AssistantChat) {
+        unfollow()
+        for item in chat.items { markSeen(item) }
+        currentID = chat.id.isEmpty ? nil : chat.id
+        current = chat
+    }
+
+    func newChat() {
+        unfollow()
+        currentID = nil
+        current = nil
+        activity = nil
+    }
+
+    /// Opens a chat (a running turn goes on either way).
+    func open(_ id: String) async {
+        if id == currentID, current != nil { return }
+        unfollow()
+        currentID = id
+        current = nil
+        activity = nil
+        do {
+            let s = try await api.get("/ai/chats/\(Self.enc(id))", as: AssistantChatState.self)
+            guard currentID == id else { return }
+            for item in s.items { markSeen(item) }
+            current = AssistantChat(
+                id: id, title: s.chat.title, status: s.chat.status, items: s.items, rev: s.rev,
+                usage: s.chat.usage, page: s.chat.page, queued: s.chat.queued ?? []
+            )
+            summary(s.chat)
+            if s.chat.isRunning { follow(id) }
+        } catch is CancellationError {
+        } catch {
+            guard currentID == id else { return }
+            if (error as? APIError)?.status == 404 {
+                chats.removeAll { $0.id == id }
+                currentID = nil
+            }
+            ErrorBanner.shared.show(error)
+        }
+    }
+
+    func remove(_ id: String) async {
+        do {
+            try await api.perform(.delete, "/ai/chats/\(Self.enc(id))")
+        } catch {
+            if (error as? APIError)?.status != 404 {
+                ErrorBanner.shared.show(error)
+                return
+            }
+        }
+        chats.removeAll { $0.id == id }
+        if currentID == id { newChat() }
+    }
+
+    /// Stops the open chat's turn; it ends with what it did so far.
+    func stop() async {
+        guard let id = current?.id, !id.isEmpty else { return }
+        do {
+            try await api.perform(.post, "/ai/chats/\(Self.enc(id))/stop", body: Empty())
+            if following == nil { follow(id) }
+        } catch {
+            ErrorBanner.shared.show(error)
+        }
+    }
+
+    /// Moves the open chat to the page the user looks at: its next turns are about that page.
+    func moveHere() async {
+        guard var c = current, let before = c.page, !c.id.isEmpty else { return }
+        let page = context().page
+        c.page = page
+        current = c
+        do {
+            struct Body: Encodable { let page: String }
+            let r = try await api.send(.post, "/ai/chats/\(Self.enc(c.id))/page", body: Body(page: page),
+                                       as: AssistantQueueResult.self)
+            summary(r.chat)
+        } catch {
+            if current?.id == c.id { current?.page = before }
+            ErrorBanner.shared.show(error)
+        }
+    }
+
+    // MARK: Sending
+
+    private var language: String {
+        let preferred = Bundle.main.preferredLocalizations.first ?? Locale.current.language.languageCode?.identifier
+        return preferred?.hasPrefix("de") == true ? "de" : "en"
+    }
+
+    private func input(text: String, attachments: [AssistantOutgoingAttachment]) -> AssistantChatInput {
+        let here = context()
+        return AssistantChatInput(
+            text: text, attachments: attachments, page: current?.page ?? here.page, year: here.year,
+            lang: language, today: AssistantDates.day()
+        )
+    }
+
+    /// Sends a message; while a turn runs, it waits on the server and goes next. Throws when it
+    /// couldn't wait (the composer gets the text back).
+    func send(_ text: String, attachments: [AssistantOutgoingAttachment] = []) async throws {
+        let message = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !message.isEmpty || !attachments.isEmpty else { return }
+        let input = input(text: message, attachments: attachments)
+        if busy {
+            let shown = AssistantQueued(
+                id: "local-\(UUID().uuidString)", text: message,
+                attachments: attachments.isEmpty ? nil : attachments.map { .init(kind: $0.kind, name: $0.name) }
+            )
+            try await enqueue(shown, input: input)
+            return
+        }
+        let item = AssistantItem.user(
+            text: message,
+            attachments: attachments.map { .init(kind: $0.kind, name: $0.name, url: $0.kind == "image" ? $0.url : nil) }
+        )
+        if current == nil {
+            current = AssistantChat(
+                id: "", title: String((message.isEmpty ? attachments[0].name : message).prefix(60)),
+                status: "idle", items: [], rev: 0, usage: nil, page: input.page, queued: []
+            )
+        }
+        guard var c = current else { return }
+        // A new message instead of an answer: the question stays unanswered.
+        if let open = openQuestion() {
+            var skipped = open.question
+            skipped.skipped = true
+            c.items[open.index] = .question(skipped)
+        }
+        c.items.append(item)
+        current = c
+        let path = c.id.isEmpty ? "/ai/chats" : "/ai/chats/\(Self.enc(c.id))/messages"
+        let request = try jsonRequest(.post, path, body: input)
+        start(c.id.isEmpty ? nil : c.id, request: request)
+    }
+
+    /// A message while the open chat's turn runs: shown as waiting right away, kept on the
+    /// server, which sends it once the turn is over.
+    private func enqueue(_ shown: AssistantQueued, input: AssistantChatInput) async throws {
+        guard let id = current?.id, !id.isEmpty else {
+            // A new chat gets its id with the first answer: nothing to wait in yet.
+            let message = String(localized: "Just a moment, the chat is starting.")
+            ErrorBanner.shared.show(message)
+            throw AssistantStoreError.notYet(message)
+        }
+        current?.queued.append(shown)
+        do {
+            let r = try await api.send(.post, "/ai/chats/\(Self.enc(id))/queue", body: input, as: AssistantQueueResult.self)
+            summary(r.chat)
+            guard current?.id == id else { return }
+            current?.queued = Self.queued(r.chat, before: current?.queued.filter { $0.id != shown.id } ?? [])
+            current?.status = r.chat.status
+            // The turn was over by then: the message started the next one.
+            if r.chat.isRunning, following == nil { follow(id) }
+        } catch {
+            if current?.id == id { current?.queued.removeAll { $0.id == shown.id } }
+            ErrorBanner.shared.show(error)
+            throw error
+        }
+    }
+
+    /// Takes back a waiting message of the open chat (unless its turn started already).
+    func unqueue(_ entry: String) async {
+        guard let id = current?.id, !id.isEmpty, !entry.hasPrefix("local-") else { return }
+        current?.queued.removeAll { $0.id == entry }
+        do {
+            struct Body: Encodable { let id: String }
+            let r = try await api.send(.post, "/ai/chats/\(Self.enc(id))/unqueue", body: Body(id: entry),
+                                       as: AssistantQueueResult.self)
+            if current?.id == id { current?.queued = Self.queued(r.chat, before: current?.queued ?? []) }
+        } catch {
+            ErrorBanner.shared.show(error)
+        }
+    }
+
+    /// The open chat's question that waits for an answer, with its position.
+    func openQuestion() -> (index: Int, question: AssistantQuestion)? {
+        guard let items = current?.items, !busy,
+              let index = items.lastIndex(where: { if case .question = $0 { true } else { false } }),
+              case let .question(q) = items[index], q.answer == nil, !q.skipped,
+              !items[(index + 1)...].contains(where: \.isUser)
+        else { return nil }
+        return (index, q)
+    }
+
+    /// Answers the open question of the current chat, and the assistant goes on.
+    func answer(selected: [String], text: String) {
+        let own = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let c = current, !c.id.isEmpty, let open = openQuestion(), !busy,
+              !selected.isEmpty || !own.isEmpty else { return }
+        let (index, q) = open
+        var answered = q
+        answered.answer = .init(selected: selected, text: own.isEmpty ? nil : own)
+        current?.items[index] = .question(answered)
+        let here = context()
+        let body = AssistantAnswerInput(
+            id: q.id, selected: selected, text: own.isEmpty ? nil : own, page: c.page ?? here.page,
+            year: here.year, lang: language, today: AssistantDates.day()
+        )
+        do {
+            start(c.id, request: try jsonRequest(.post, "/ai/chats/\(Self.enc(c.id))/answer", body: body))
+        } catch {
+            ErrorBanner.shared.show(error)
+        }
+    }
+
+    private func jsonRequest(_ method: HTTPMethod, _ sub: String, body: some Encodable) throws -> URLRequest {
+        let data = try APIClient.encoder.encode(body)
+        var req = api.client.request(method, api.path(sub), body: data)
+        req.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+        return req
+    }
+
+    /// Sends a message (or an answer) with `request`, then follows the turn.
+    private func start(_ id: String?, request: URLRequest) {
+        sending = true
+        activity = .init(activity: .init(kind: "thinking"), at: .now)
+        follow(id, first: request)
+    }
+
+    // MARK: Following
+
+    func unfollow() {
+        following?.cancel()
+        following = nil
+    }
+
+    /// Follows a chat until no turn runs in it: with `first` (a message being sent), then with
+    /// follow requests from what this device has. The server runs the turn either way, so a
+    /// stream that breaks off is simply asked for again.
+    private func follow(_ id: String?, first: URLRequest? = nil) {
+        unfollow()
+        followID += 1
+        let token = followID
+        following = Task { [weak self] in
+            await self?.followLoop(id, first: first, token: token)
+        }
+    }
+
+    private func followLoop(_ id: String?, first: URLRequest?, token: Int) async {
+        var chatID = id
+        var request = first
+        var failures = 0
+        while !Task.isCancelled {
+            var ended = false
+            var heard = false
+            do {
+                let req: URLRequest
+                if let r = request {
+                    req = r
+                    request = nil
+                } else if let chatID {
+                    var r = api.client.request(.get, api.path("/ai/chats/\(Self.enc(chatID))/events"),
+                                               query: ["since": String(current?.id == chatID ? current?.rev ?? 0 : 0)])
+                    r.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+                    req = r
+                } else {
+                    break
+                }
+                var parser = AssistantSSEParser()
+                for try await line in try await api.client.lines(req) {
+                    if Task.isCancelled { break }
+                    guard let (name, data) = parser.feed(line), name != "ping" else { continue }
+                    heard = true
+                    guard let event = try? AssistantChatEvent.parse(event: name, data: data) else { continue }
+                    if case let .chat(s) = event, chatID == nil { chatID = s.id }
+                    if case .end = event { ended = true }
+                    if let chatID { apply(chatID, event) }
+                }
+            } catch {
+                if Task.isCancelled || error is CancellationError { break }
+                if first != nil, !heard, sending {
+                    // The message didn't get through: the chat says so (it stays visible).
+                    sending = false
+                    failed(error.localizedDescription)
+                    if (error as? APIError)?.status == nil { await loadChats() } // maybe it did
+                    break
+                }
+                // Refused (the chat is gone, or no longer ours): following won't help.
+                if let status = (error as? APIError)?.status, status < 500, status != 429 { break }
+                failures += 1
+            }
+            sending = false
+            if Task.isCancelled || ended { break }
+            // Reconnect at once after a good stream, else a little later each time.
+            if heard {
+                failures = 0
+            } else {
+                try? await Task.sleep(for: .milliseconds(min(10_000, 1000 << min(failures, 4))))
+            }
+        }
+        if followID == token {
+            following = nil
+            sending = false
+            if current?.id == chatID, current?.isRunning != true { activity = nil }
+        }
+    }
+
+    private func failed(_ text: String) {
+        if current != nil {
+            current?.items.append(.error(text: text))
+            if current?.id.isEmpty == true { current?.status = "idle" }
+        }
+        activity = nil
+    }
+
+    /// Keeps a chat's summary in the list (the latest first).
+    private func summary(_ s: AssistantChatSummary) {
+        var list = chats.filter { $0.id != s.id }
+        list.append(s)
+        chats = list.sorted { $0.updatedAt > $1.updatedAt }
+    }
+
+    /// The messages that wait as the server says, then the ones still on their way to it.
+    static func queued(_ chat: AssistantChatSummary, before: [AssistantQueued]) -> [AssistantQueued] {
+        (chat.queued ?? []) + before.filter(\.isLocal)
+    }
+
+    /// Marks an item as seen; returns the areas it changed if it is new to this device.
+    @discardableResult
+    private func markSeen(_ item: AssistantItem) -> [DataArea] {
+        switch item {
+        case let .change(change):
+            guard seen.insert("change:" + change.id).inserted else { return [] }
+            return AssistantChangeAreas.areas(change: change.change, undo: change.undo)
+        case let .tool(tool) where tool.status == "ok":
+            guard seen.insert("tool:" + tool.id).inserted else { return [] }
+            return AssistantChangeAreas.areas(tool: tool.name)
+        default:
+            return []
+        }
+    }
+
+    /// What a chat's stream says (exposed for tests).
+    func apply(_ id: String, _ event: AssistantChatEvent) {
+        // A new chat gets its id with the first event.
+        if var c = current, c.id.isEmpty, case .chat = event, currentID == nil {
+            c.id = id
+            current = c
+            currentID = id
+        }
+        let isOpen = current?.id == id
+        switch event {
+        case let .chat(s):
+            summary(s)
+            guard isOpen, var c = current else { break }
+            c.title = s.title
+            c.status = s.status
+            c.usage = s.usage ?? c.usage
+            c.page = s.page ?? c.page
+            c.queued = Self.queued(s, before: c.queued)
+            current = c
+            if let a = s.activity, s.isRunning {
+                if activity?.activity != a { activity = .init(activity: a, at: .now) }
+            } else {
+                activity = nil
+            }
+        case let .items(rev, items):
+            guard isOpen, var c = current else { break }
+            var changed: [DataArea] = []
+            for (seq, item) in items where seq >= 0 {
+                while c.items.count <= seq { c.items.append(.unknown(kind: "")) }
+                c.items[seq] = item
+                changed += markSeen(item)
+            }
+            if let rev { c.rev = max(c.rev, rev) }
+            current = c
+            let areas = AssistantChangeAreas.unique(changed)
+            if !areas.isEmpty { onChange(areas) }
+        case let .delta(seq, text):
+            guard isOpen, var c = current, c.items.indices.contains(seq),
+                  case let .assistant(before) = c.items[seq] else { break }
+            c.items[seq] = .assistant(text: before + text)
+            current = c
+            activity = .init(activity: .init(kind: "writing"), at: .now)
+        case let .end(deleted):
+            if deleted {
+                chats.removeAll { $0.id == id }
+                if isOpen { newChat() }
+            } else if isOpen {
+                current?.status = "idle"
+                activity = nil
+            }
+        case .reconnect:
+            break
+        }
+    }
+
+    /// A tool call's result, as far as the chat keeps it.
+    func toolResult(_ id: String) -> String? {
+        for item in current?.items ?? [] {
+            if case let .tool(t) = item, t.id == id { return t.result }
+        }
+        return nil
+    }
+
+    // MARK: Undo
+
+    /// Undoes a change of the open chat: replays its undo requests on the family API, then tells
+    /// the chat (the model hears it with the next message).
+    func undo(_ changeID: String) async {
+        guard let chat = current, !chat.id.isEmpty,
+              let index = chat.items.firstIndex(where: { if case let .change(c) = $0 { c.id == changeID } else { false } }),
+              case let .change(change) = chat.items[index], !change.undone else { return }
+        do {
+            for step in change.undo { try await replay(step) }
+            if current?.id == chat.id, current?.items.indices.contains(index) == true {
+                var done = change
+                done.undone = true
+                current?.items[index] = .change(done)
+            }
+            onChange(AssistantChangeAreas.areas(change: change.change, undo: change.undo))
+        } catch {
+            ErrorBanner.shared.show(String(localized: "Couldn’t undo: \(error.localizedDescription)"))
+            return
+        }
+        struct Body: Encodable { let id: String }
+        try? await api.perform(.post, "/ai/chats/\(Self.enc(chat.id))/undone", body: Body(id: changeID))
+    }
+
+    /// One undo request, relative to the family.
+    private func replay(_ step: AssistantUndoStep) async throws {
+        guard let method = HTTPMethod(rawValue: step.method.uppercased()) else { return }
+        let body = try step.body.map { try APIClient.encoder.encode($0) }
+        let req = api.client.request(method, api.path(step.path), body: body)
+        _ = try await api.client.data(for: req)
+    }
+
+    /// A chat id in a path (uuids; `APIClient.url` encodes what needs it).
+    static func enc(_ id: String) -> String { id }
+}
+
+enum AssistantStoreError: LocalizedError {
+    case notYet(String)
+
+    var errorDescription: String? {
+        switch self { case let .notYet(message): message }
+    }
+}
