@@ -1,8 +1,9 @@
 {
   "Account": "Konto",
   "Account…": "Konto …",
+  "Administration": "Verwaltung",
   "Appearance": "Darstellung",
-  "Appointments": "Termine",
+  "Appointments": "Arzttermine",
   "Assistant": "Assistent",
   "Assistant (⌘J)": "Assistent (⌘J)",
   "Calendar": "Kalender",
@@ -23,9 +24,10 @@
   "Meals": "Essen",
   "New family…": "Neue Familie …",
   "No family yet": "Noch keine Familie",
+  "Ohana": "Ohana",
+  "On the web": "Im Web",
   "Overview": "Übersicht",
   "Passkeys, password and API tokens": "Passkeys, Passwort und API-Tokens",
-  "Administration": "Verwaltung",
   "Reload": "Neu laden",
   "Server": "Server",
   "Settings": "Einstellungen",
@@ -43,7 +45,5 @@
   "You sign in on your server’s page; the app gets its own key, which you can remove on your account page.": "Du meldest dich auf der Seite deines Servers an; die App bekommt einen eigenen Schlüssel, den du auf deiner Kontoseite entfernen kannst.",
   "Your Ohana server": "Dein Ohana-Server",
   "Your session has ended, sign in again.": "Deine Sitzung ist abgelaufen, melde dich erneut an.",
-  "On the web": "Im Web",
-  "ohana.example.com": "ohana.example.com",
-  "Ohana": "Ohana"
+  "ohana.example.com": "ohana.example.com"
 }

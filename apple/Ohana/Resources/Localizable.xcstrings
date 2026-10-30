@@ -1,0 +1,8396 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "%@ (disabled)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (deaktiviert)"
+          }
+        }
+      }
+    },
+    "%@ and %lld more": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ und %lld weitere"
+          }
+        }
+      }
+    },
+    "%@ answered: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ antwortet: %@"
+          }
+        }
+      }
+    },
+    "%@ in your finances, %@ – %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ in euren Finanzen, %@ – %@"
+          }
+        }
+      }
+    },
+    "%@ is planned instead": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stattdessen gibt es %@"
+          }
+        }
+      }
+    },
+    "%@ turns %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ wird %lld"
+          }
+        }
+      }
+    },
+    "%@ · age %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · Alter %lld"
+          }
+        }
+      }
+    },
+    "%@ – %@: %lld days in %@, %lld workdays": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ – %@: %lld Tage in %@, %lld Arbeitstage"
+          }
+        }
+      }
+    },
+    "%lld changes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Änderungen"
+          }
+        }
+      }
+    },
+    "%lld days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Tage"
+          }
+        }
+      }
+    },
+    "%lld days selected (%lld weekdays): %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Tage ausgewählt (%lld Wochentage): %@"
+          }
+        }
+      }
+    },
+    "%lld days · %lld workdays": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Tage · %lld Arbeitstage"
+          }
+        }
+      }
+    },
+    "%lld found · %lld matching · %lld appointments": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld gefunden · %lld passend · %lld Termine"
+          }
+        }
+      }
+    },
+    "%lld g": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld g"
+          }
+        }
+      }
+    },
+    "%lld ingredients · %lld servings · %lld min": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Zutaten · %lld Portionen · %lld Min."
+          }
+        }
+      }
+    },
+    "%lld items to grab": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Sachen"
+          }
+        }
+      }
+    },
+    "%lld of %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld von %lld"
+          }
+        }
+      }
+    },
+    "%lld of %lld items left to buy": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch %lld von %lld Artikeln zu kaufen"
+          }
+        }
+      }
+    },
+    "%lld queries": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Abfragen"
+          }
+        }
+      }
+    },
+    "%lld recipes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Rezepte"
+          }
+        }
+      }
+    },
+    "%lld selected": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld ausgewählt"
+          }
+        }
+      }
+    },
+    "%lld servings": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Portionen"
+          }
+        }
+      }
+    },
+    "%lld uncovered weekdays": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Wochentage nicht abgedeckt"
+          }
+        }
+      }
+    },
+    "%lld weekdays with “%@” not covered yet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Wochentage mit „%@“ noch nicht abgedeckt"
+          }
+        }
+      }
+    },
+    "%lld °C": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld °C"
+          }
+        }
+      }
+    },
+    "%lldd": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld T"
+          }
+        }
+      }
+    },
+    "(Leftover)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(Reste)"
+          }
+        }
+      }
+    },
+    "(next available)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(nächster freier Termin)"
+          }
+        }
+      }
+    },
+    "(off)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(aus)"
+          }
+        }
+      }
+    },
+    "(you)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(du)"
+          }
+        }
+      }
+    },
+    "1 change": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 Änderung"
+          }
+        }
+      }
+    },
+    "1 query": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 Abfrage"
+          }
+        }
+      }
+    },
+    "A cron expression has five fields (m h dom mon dow).": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Cron-Ausdruck hat fünf Felder (m h dom mon dow)."
+          }
+        }
+      }
+    },
+    "A family keeps your calendar, finances, meals and appointments together. You can invite the others afterwards.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Familie hält euren Kalender, eure Finanzen, das Essen und die Arzttermine zusammen. Die anderen kannst du danach einladen."
+          }
+        }
+      }
+    },
+    "A key ending in %@ is saved. Type a new one to replace it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Schlüssel mit der Endung %@ ist gespeichert. Gib einen neuen ein, um ihn zu ersetzen."
+          }
+        }
+      }
+    },
+    "A new ingredient": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine neue Zutat"
+          }
+        }
+      }
+    },
+    "A read-only calendar feed. Apple Calendar checks it for changes regularly. The only link that works without signing in: it opens the calendar feed, nothing else.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein schreibgeschützter Kalender-Feed. Apple Kalender prüft ihn regelmäßig auf Änderungen. Der einzige Link, der ohne Anmeldung funktioniert: Er öffnet nur das Kalender-Abo, sonst nichts."
+          }
+        }
+      }
+    },
+    "A search watches Doctolib and jameda for a speciality near a place and tells you when an appointment frees up.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Suche beobachtet Doctolib und jameda nach einer Fachrichtung in deiner Nähe und meldet sich, sobald ein Termin frei wird."
+          }
+        }
+      }
+    },
+    "A subscription stored in iCloud appears on all your Apple devices and on iCloud.com.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein in iCloud gespeichertes Abo erscheint auf all deinen Apple-Geräten und auf iCloud.com."
+          }
+        }
+      }
+    },
+    "A tag with that name already exists in this category.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Tag mit diesem Namen existiert bereits in dieser Kategorie."
+          }
+        }
+      }
+    },
+    "A token is stored; leave the field empty to keep it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Token ist gespeichert; lass das Feld leer, um ihn zu behalten."
+          }
+        }
+      }
+    },
+    "AI model": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KI-Modell"
+          }
+        }
+      }
+    },
+    "API URL": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API-URL"
+          }
+        }
+      }
+    },
+    "API key": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API-Schlüssel"
+          }
+        }
+      }
+    },
+    "Access token / API key": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Access-Token / API-Schlüssel"
+          }
+        }
+      }
+    },
+    "Account": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konto"
+          }
+        }
+      }
+    },
+    "Account…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konto …"
+          }
+        }
+      }
+    },
+    "Actions": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktionen"
+          }
+        }
+      }
+    },
+    "Actions for %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktionen für %@"
+          }
+        }
+      }
+    },
+    "Active": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktiv"
+          }
+        }
+      }
+    },
+    "Add": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hinzufügen"
+          }
+        }
+      }
+    },
+    "Add Recipe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rezept hinzufügen"
+          }
+        }
+      }
+    },
+    "Add Tag": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tag hinzufügen"
+          }
+        }
+      }
+    },
+    "Add a channel": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kanal hinzufügen"
+          }
+        }
+      }
+    },
+    "Add a channel below first.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lege zuerst unten einen Kanal an."
+          }
+        }
+      }
+    },
+    "Add a person": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Person hinzufügen"
+          }
+        }
+      }
+    },
+    "Add a timed event on the first selected day": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einen Termin mit Uhrzeit am ersten ausgewählten Tag hinzufügen"
+          }
+        }
+      }
+    },
+    "Add an icon or comment to the selected days (N)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Den ausgewählten Tagen ein Symbol oder einen Kommentar geben (N)"
+          }
+        }
+      }
+    },
+    "Add by email": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per E-Mail hinzufügen"
+          }
+        }
+      }
+    },
+    "Add event": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termin hinzufügen"
+          }
+        }
+      }
+    },
+    "Add event…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termin hinzufügen …"
+          }
+        }
+      }
+    },
+    "Add ingredient": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zutat hinzufügen"
+          }
+        }
+      }
+    },
+    "Add ingredient to step": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zutat zum Schritt hinzufügen"
+          }
+        }
+      }
+    },
+    "Add item": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Artikel hinzufügen"
+          }
+        }
+      }
+    },
+    "Add one in the settings.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leg einen in den Einstellungen an."
+          }
+        }
+      }
+    },
+    "Add step": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schritt hinzufügen"
+          }
+        }
+      }
+    },
+    "Add to calendar": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In den Kalender"
+          }
+        }
+      }
+    },
+    "Add type": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Art hinzufügen"
+          }
+        }
+      }
+    },
+    "Add types": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arten hinzufügen"
+          }
+        }
+      }
+    },
+    "Add your first recipe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erstes Rezept hinzufügen"
+          }
+        }
+      }
+    },
+    "Adding a calendar event": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trägt einen Termin ein"
+          }
+        }
+      }
+    },
+    "Adding to the shopping list": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ergänzt die Einkaufsliste"
+          }
+        }
+      }
+    },
+    "Additional wishes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weitere Wünsche"
+          }
+        }
+      }
+    },
+    "Address": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adresse"
+          }
+        }
+      }
+    },
+    "Administration": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verwaltung"
+          }
+        }
+      }
+    },
+    "Aisle": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abteilung"
+          }
+        }
+      }
+    },
+    "All channels": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Kanäle"
+          }
+        }
+      }
+    },
+    "All covered": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alles abgedeckt"
+          }
+        }
+      }
+    },
+    "All day": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ganztägig"
+          }
+        }
+      }
+    },
+    "All done!": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alles erledigt!"
+          }
+        }
+      }
+    },
+    "All “%@” days in %@ are covered": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle „%@“-Tage in %@ sind abgedeckt"
+          }
+        }
+      }
+    },
+    "Allow changes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Änderungen erlauben"
+          }
+        }
+      }
+    },
+    "Always show weekdays": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wochentage immer anzeigen"
+          }
+        }
+      }
+    },
+    "Analyzing transactions": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wertet Buchungen aus"
+          }
+        }
+      }
+    },
+    "Answer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antworten"
+          }
+        }
+      }
+    },
+    "Any": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Egal"
+          }
+        }
+      }
+    },
+    "Any API that speaks OpenAI’s chat format with tool calls. Everyone in the family uses this setup.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jede API, die OpenAIs Chat-Format mit Tool-Aufrufen spricht. Die ganze Familie nutzt diese Einrichtung."
+          }
+        }
+      }
+    },
+    "Appearance": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Darstellung"
+          }
+        }
+      }
+    },
+    "Appointment found": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termin gefunden"
+          }
+        }
+      }
+    },
+    "Appointment searches": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terminsuchen"
+          }
+        }
+      }
+    },
+    "Appointments": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termine"
+          }
+        }
+      }
+    },
+    "Ask me anything about your family’s plans, for example:": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frag mich alles zu den Plänen deiner Familie, zum Beispiel:"
+          }
+        }
+      }
+    },
+    "Ask me anything…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frag mich etwas…"
+          }
+        }
+      }
+    },
+    "Asking a question": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stellt eine Frage"
+          }
+        }
+      }
+    },
+    "Assistant": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Assistent"
+          }
+        }
+      }
+    },
+    "Assistant (⌘J)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Assistent (⌘J)"
+          }
+        }
+      }
+    },
+    "Assistant finished": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Assistent fertig"
+          }
+        }
+      }
+    },
+    "Assistant settings": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einstellungen des Assistenten"
+          }
+        }
+      }
+    },
+    "At most %lld attachments per message.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Höchstens %lld Anhänge pro Nachricht."
+          }
+        }
+      }
+    },
+    "Attach images or text files": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bilder oder Textdateien anhängen"
+          }
+        }
+      }
+    },
+    "Away": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unterwegs"
+          }
+        }
+      }
+    },
+    "Away · %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unterwegs · %@"
+          }
+        }
+      }
+    },
+    "Away: the whole family is away from home on these days, the meal plan plans no meals for them.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unterwegs: Die ganze Familie ist an diesen Tagen nicht zu Hause, der Essensplan plant für sie keine Mahlzeiten."
+          }
+        }
+      }
+    },
+    "Back": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zurück"
+          }
+        }
+      }
+    },
+    "Balance": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saldo"
+          }
+        }
+      }
+    },
+    "Birthday": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geburtstag"
+          }
+        }
+      }
+    },
+    "Birthday (optional)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geburtstag (optional)"
+          }
+        }
+      }
+    },
+    "Birthdays": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geburtstage"
+          }
+        }
+      }
+    },
+    "Blending": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mixen"
+          }
+        }
+      }
+    },
+    "Book": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buchen"
+          }
+        }
+      }
+    },
+    "Book it on the practice’s page first. Ohana then shows it in the calendar (and in the calendar feed, if you subscribed with booked appointments).": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buche ihn zuerst auf der Seite der Praxis. Ohana zeigt ihn dann im Kalender (und im Kalender-Feed, wenn du ihn mit gebuchten Terminen abonniert hast)."
+          }
+        }
+      }
+    },
+    "Book on %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf %@ buchen"
+          }
+        }
+      }
+    },
+    "Bookable appointment": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buchbarer Termin"
+          }
+        }
+      }
+    },
+    "Booked appointments": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gebuchte Termine"
+          }
+        }
+      }
+    },
+    "Booked appointments (with time)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gebuchte Termine (mit Uhrzeit)"
+          }
+        }
+      }
+    },
+    "Booked for %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gebucht für %@"
+          }
+        }
+      }
+    },
+    "Booked from an appointment search.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus einer Terminsuche gebucht."
+          }
+        }
+      }
+    },
+    "Booked this appointment?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diesen Termin gebucht?"
+          }
+        }
+      }
+    },
+    "Bot token": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bot-Token"
+          }
+        }
+      }
+    },
+    "By Hand": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Von Hand"
+          }
+        }
+      }
+    },
+    "Calculating": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechnet"
+          }
+        }
+      }
+    },
+    "Calendar": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalender"
+          }
+        }
+      }
+    },
+    "Calendar settings": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalender-Einstellungen"
+          }
+        }
+      }
+    },
+    "Calendar subscription": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalender-Abo"
+          }
+        }
+      }
+    },
+    "Calendar subscriptions made with the old link stop updating.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Damit angelegte Kalender-Abos werden nicht mehr aktualisiert."
+          }
+        }
+      }
+    },
+    "Calendar subscriptions with the current address stop updating and need to be added again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalender-Abos mit der bisherigen Adresse werden nicht mehr aktualisiert und müssen neu hinzugefügt werden."
+          }
+        }
+      }
+    },
+    "Calendar view": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalenderansicht"
+          }
+        }
+      }
+    },
+    "Calendar, finances, meals and appointments for your family.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalender, Finanzen, Essen und Arzttermine für deine Familie."
+          }
+        }
+      }
+    },
+    "Cancel": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abbrechen"
+          }
+        }
+      }
+    },
+    "Can’t attach “%@”: only images and text files (like .txt, .csv, .json) are supported.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ lässt sich nicht anhängen: Nur Bilder und Textdateien (etwa .txt, .csv, .json) werden unterstützt."
+          }
+        }
+      }
+    },
+    "Can’t reach your server": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Server ist nicht erreichbar"
+          }
+        }
+      }
+    },
+    "Category": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kategorie"
+          }
+        }
+      }
+    },
+    "Change quantity": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menge ändern"
+          }
+        }
+      }
+    },
+    "Changing an appointment search": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ändert eine Terminsuche"
+          }
+        }
+      }
+    },
+    "Changing calendar entries": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ändert Kalendereinträge"
+          }
+        }
+      }
+    },
+    "Changing categories": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ändert Kategorien"
+          }
+        }
+      }
+    },
+    "Changing day notes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ändert Tagesnotizen"
+          }
+        }
+      }
+    },
+    "Changing entry types": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ändert Arten"
+          }
+        }
+      }
+    },
+    "Changing transactions": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ändert Buchungen"
+          }
+        }
+      }
+    },
+    "Channels": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kanäle"
+          }
+        }
+      }
+    },
+    "Chat ID": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chat-ID"
+          }
+        }
+      }
+    },
+    "Chats": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chats"
+          }
+        }
+      }
+    },
+    "Child-friendly only": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur kinderfreundlich"
+          }
+        }
+      }
+    },
+    "Choose files": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dateien auswählen"
+          }
+        }
+      }
+    },
+    "Choose the groceries category in Settings → Finance.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle die Lebensmittel-Kategorie unter Einstellungen → Finanzen."
+          }
+        }
+      }
+    },
+    "Chopping": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zerkleinern"
+          }
+        }
+      }
+    },
+    "Clear": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leeren"
+          }
+        }
+      }
+    },
+    "Clear filters": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filter zurücksetzen"
+          }
+        }
+      }
+    },
+    "Clear the selection": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auswahl aufheben"
+          }
+        }
+      }
+    },
+    "Clear the selection (Esc)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auswahl aufheben (Esc)"
+          }
+        }
+      }
+    },
+    "Click (or press %lld) to toggle it on the selected days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klicken (oder %lld drücken), um sie auf den ausgewählten Tagen umzuschalten"
+          }
+        }
+      }
+    },
+    "Click or drag over days to select them. Shift-click extends, ⌘-click adds days.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tage anklicken oder darüber ziehen, um sie auszuwählen. Umschalt-Klick erweitert, ⌘-Klick fügt Tage hinzu."
+          }
+        }
+      }
+    },
+    "Collapsed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eingeklappt"
+          }
+        }
+      }
+    },
+    "Color": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Farbe"
+          }
+        }
+      }
+    },
+    "Combining transfers and split bookings": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fasst Umbuchungen und Splitbuchungen zusammen"
+          }
+        }
+      }
+    },
+    "Coming up": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demnächst"
+          }
+        }
+      }
+    },
+    "Comment": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kommentar"
+          }
+        }
+      }
+    },
+    "Condensing the earlier conversation…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fasst den bisherigen Verlauf zusammen…"
+          }
+        }
+      }
+    },
+    "Condition": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erkrankung"
+          }
+        }
+      }
+    },
+    "Connect any OpenAI-compatible AI (OpenAI, OpenRouter, Mistral, Gemini, a local model …) in the settings. It can then look things up on the web and plan in your calendar and finances.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbinde eine beliebige OpenAI-kompatible KI (OpenAI, OpenRouter, Mistral, Gemini, ein lokales Modell …) in den Einstellungen. Dann kann sie im Web recherchieren und in Kalender und Finanzen planen."
+          }
+        }
+      }
+    },
+    "Context window (tokens)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kontextfenster (Tokens)"
+          }
+        }
+      }
+    },
+    "Context: %@ of %@ tokens (%lld%%)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kontext: %@ von %@ Tokens (%lld %%)"
+          }
+        }
+      }
+    },
+    "Cook": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kochen"
+          }
+        }
+      }
+    },
+    "Cooking %lld min": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kochen %lld Min."
+          }
+        }
+      }
+    },
+    "Cooking (min)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kochen (Min.)"
+          }
+        }
+      }
+    },
+    "Copied": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopiert"
+          }
+        }
+      }
+    },
+    "Copied %lld days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Tage kopiert"
+          }
+        }
+      }
+    },
+    "Copied.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopiert."
+          }
+        }
+      }
+    },
+    "Copy": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopieren"
+          }
+        }
+      }
+    },
+    "Copy days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tage kopieren"
+          }
+        }
+      }
+    },
+    "Copy from another year": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus einem anderen Jahr übernehmen"
+          }
+        }
+      }
+    },
+    "Copy the answer, with all tool results": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antwort kopieren, mit allen Tool-Ergebnissen"
+          }
+        }
+      }
+    },
+    "Copy the chat, with all tool results": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chat kopieren, mit allen Tool-Ergebnissen"
+          }
+        }
+      }
+    },
+    "Copy types from %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arten aus %@ übernehmen"
+          }
+        }
+      }
+    },
+    "Couldn’t export the family: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Familie konnte nicht exportiert werden: %@"
+          }
+        }
+      }
+    },
+    "Couldn’t import the file: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Datei konnte nicht importiert werden: %@"
+          }
+        }
+      }
+    },
+    "Couldn’t load": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konnte nicht geladen werden"
+          }
+        }
+      }
+    },
+    "Couldn’t read “%@”.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ konnte nicht gelesen werden."
+          }
+        }
+      }
+    },
+    "Couldn’t save: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speichern fehlgeschlagen: %@"
+          }
+        }
+      }
+    },
+    "Couldn’t undo: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rückgängig machen fehlgeschlagen: %@"
+          }
+        }
+      }
+    },
+    "Counting calendar days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zählt Kalendertage"
+          }
+        }
+      }
+    },
+    "Covers": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Betreut"
+          }
+        }
+      }
+    },
+    "Create": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anlegen"
+          }
+        }
+      }
+    },
+    "Create a family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Familie anlegen"
+          }
+        }
+      }
+    },
+    "Create a family, or ask someone to invite you to theirs.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lege eine Familie an oder lass dich in eine einladen."
+          }
+        }
+      }
+    },
+    "Create a meal plan and we’ll sort it out for you!": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erstelle einen Essensplan und wir kümmern uns drum!"
+          }
+        }
+      }
+    },
+    "Create an invite link so they can sign in": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einladungslink erstellen, damit die Person sich anmelden kann"
+          }
+        }
+      }
+    },
+    "Create invite link": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einladungslink erstellen"
+          }
+        }
+      }
+    },
+    "Create search": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche anlegen"
+          }
+        }
+      }
+    },
+    "Creating an appointment search": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Legt eine Terminsuche an"
+          }
+        }
+      }
+    },
+    "Cron (m h dom mon dow)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cron (m h dom mon dow)"
+          }
+        }
+      }
+    },
+    "Cron expression": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cron-Ausdruck"
+          }
+        }
+      }
+    },
+    "Cuisine": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Küche"
+          }
+        }
+      }
+    },
+    "Custom": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eigenes"
+          }
+        }
+      }
+    },
+    "Cut days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tage ausschneiden"
+          }
+        }
+      }
+    },
+    "Daily": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Täglich"
+          }
+        }
+      }
+    },
+    "Dairy": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Milchprodukte"
+          }
+        }
+      }
+    },
+    "Dark": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dunkel"
+          }
+        }
+      }
+    },
+    "Data": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Daten"
+          }
+        }
+      }
+    },
+    "Date": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datum"
+          }
+        }
+      }
+    },
+    "Day off": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frei"
+          }
+        }
+      }
+    },
+    "Day without cover": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tag ohne Betreuung"
+          }
+        }
+      }
+    },
+    "Delete": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Löschen"
+          }
+        }
+      }
+    },
+    "Delete %@?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ löschen?"
+          }
+        }
+      }
+    },
+    "Delete chat": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chat löschen"
+          }
+        }
+      }
+    },
+    "Delete event": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termin löschen"
+          }
+        }
+      }
+    },
+    "Delete recipe?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rezept löschen?"
+          }
+        }
+      }
+    },
+    "Delete tag?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tag löschen?"
+          }
+        }
+      }
+    },
+    "Delete the channel “%@”?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Den Kanal „%@“ löschen?"
+          }
+        }
+      }
+    },
+    "Delete the family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Familie löschen"
+          }
+        }
+      }
+    },
+    "Delete the search “%@” with its history?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Suche „%@“ mit ihrem Verlauf löschen?"
+          }
+        }
+      }
+    },
+    "Delete the search?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche löschen?"
+          }
+        }
+      }
+    },
+    "Delete this recipe? You’ll have a few seconds to undo.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Rezept löschen? Du hast ein paar Sekunden, um es rückgängig zu machen."
+          }
+        }
+      }
+    },
+    "Delete this tag?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diesen Tag löschen?"
+          }
+        }
+      }
+    },
+    "Delete type": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Art löschen"
+          }
+        }
+      }
+    },
+    "Delete “%@”?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ löschen?"
+          }
+        }
+      }
+    },
+    "Description": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beschreibung"
+          }
+        }
+      }
+    },
+    "Details": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Details"
+          }
+        }
+      }
+    },
+    "Details…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Details …"
+          }
+        }
+      }
+    },
+    "Dietary": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ernährung"
+          }
+        }
+      }
+    },
+    "Dinner": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abend"
+          }
+        }
+      }
+    },
+    "Direction": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Richtung"
+          }
+        }
+      }
+    },
+    "Dismiss": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schließen"
+          }
+        }
+      }
+    },
+    "Distance from home": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entfernung von zu Hause"
+          }
+        }
+      }
+    },
+    "Doctors (with their reason for the visit) this search skips. Ignore one from its appointment page.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ärztinnen und Ärzte (mit ihrem Anliegen), die diese Suche überspringt. Ignorieren kannst du auf der Seite eines Termins."
+          }
+        }
+      }
+    },
+    "Done": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fertig"
+          }
+        }
+      }
+    },
+    "Duration (s)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dauer (Sek.)"
+          }
+        }
+      }
+    },
+    "E.g. gpt-image-1 or dall-e-3 (OpenAI), gemini-2.5-flash-image (Google’s Gemini API). Empty: no AI photos.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Z. B. gpt-image-1 oder dall-e-3 (OpenAI), gemini-2.5-flash-image (Googles Gemini-API). Leer: keine KI-Fotos."
+          }
+        }
+      }
+    },
+    "E.g. “Day care closed”. A weekday with this entry and nothing that covers it is flagged as a gap.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Z. B. „Kita geschlossen“. Ein Wochentag mit diesem Eintrag ohne Betreuung wird als Lücke markiert."
+          }
+        }
+      }
+    },
+    "E.g. “Holiday”. Covers everything and doesn’t count as a used vacation day.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Z. B. „Feiertag“. Deckt alles ab und zählt nicht als genommener Urlaubstag."
+          }
+        }
+      }
+    },
+    "E.g. “Vacation Dad”. Covers a “needs cover” day.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Z. B. „Urlaub Papa“. Deckt einen Tag ab, der Betreuung braucht."
+          }
+        }
+      }
+    },
+    "Earlier messages condensed for the model": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ältere Nachrichten für das Modell zusammengefasst"
+          }
+        }
+      }
+    },
+    "Earliest appointment per doctor": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frühester Termin je Ärztin/Arzt"
+          }
+        }
+      }
+    },
+    "Edit": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bearbeiten"
+          }
+        }
+      }
+    },
+    "Edit (⌘E)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bearbeiten (⌘E)"
+          }
+        }
+      }
+    },
+    "Edit Recipe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rezept bearbeiten"
+          }
+        }
+      }
+    },
+    "Edit Tag": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tag bearbeiten"
+          }
+        }
+      }
+    },
+    "Edit channel": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kanal bearbeiten"
+          }
+        }
+      }
+    },
+    "Edit event": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termin bearbeiten"
+          }
+        }
+      }
+    },
+    "Edit person": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Person bearbeiten"
+          }
+        }
+      }
+    },
+    "Edit search": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche bearbeiten"
+          }
+        }
+      }
+    },
+    "Edit types": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arten bearbeiten"
+          }
+        }
+      }
+    },
+    "Editor": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bearbeiten"
+          }
+        }
+      }
+    },
+    "Egg Cooking": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eier kochen"
+          }
+        }
+      }
+    },
+    "Email": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "E-Mail"
+          }
+        }
+      }
+    },
+    "Email over SMTP": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "E-Mail über SMTP"
+          }
+        }
+      }
+    },
+    "End time": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endzeit"
+          }
+        }
+      }
+    },
+    "Ends": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ende"
+          }
+        }
+      }
+    },
+    "Entry types %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eintragsarten %@"
+          }
+        }
+      }
+    },
+    "Entry types and the calendar feed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eintragsarten und das Kalender-Abo"
+          }
+        }
+      }
+    },
+    "Event": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termin"
+          }
+        }
+      }
+    },
+    "Event actions": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktionen des Termins"
+          }
+        }
+      }
+    },
+    "Every N minutes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle N Minuten"
+          }
+        }
+      }
+    },
+    "Every ingredient needs a name": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jede Zutat braucht einen Namen"
+          }
+        }
+      }
+    },
+    "Every recipe should be …": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jedes Rezept soll … sein"
+          }
+        }
+      }
+    },
+    "Every run of this search with what it found. Runs older than 30 days are deleted.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jeder Lauf dieser Suche mit dem, was er gefunden hat. Läufe, die älter als 30 Tage sind, werden gelöscht."
+          }
+        }
+      }
+    },
+    "Everything bought": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alles eingekauft"
+          }
+        }
+      }
+    },
+    "Everything in it is deleted. This can’t be undone.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alles darin wird gelöscht. Das lässt sich nicht rückgängig machen."
+          }
+        }
+      }
+    },
+    "Everything on this list has been checked off": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alles auf dieser Liste wurde abgehakt"
+          }
+        }
+      }
+    },
+    "Exclude tags": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tags ausschließen"
+          }
+        }
+      }
+    },
+    "Expanded": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgeklappt"
+          }
+        }
+      }
+    },
+    "Expenses": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgaben"
+          }
+        }
+      }
+    },
+    "Export": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exportieren"
+          }
+        }
+      }
+    },
+    "Export and import": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export und Import"
+          }
+        }
+      }
+    },
+    "Family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Familie"
+          }
+        }
+      }
+    },
+    "Family name": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name der Familie"
+          }
+        }
+      }
+    },
+    "Family settings": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Familieneinstellungen"
+          }
+        }
+      }
+    },
+    "Favourites": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Favoriten"
+          }
+        }
+      }
+    },
+    "Fermentation": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fermentieren"
+          }
+        }
+      }
+    },
+    "Fewer servings": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weniger Portionen"
+          }
+        }
+      }
+    },
+    "Filter": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filter"
+          }
+        }
+      }
+    },
+    "Finance": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finanzen"
+          }
+        }
+      }
+    },
+    "Find a dermatologist appointment before June.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Such mir einen Hautarzttermin vor Juni."
+          }
+        }
+      }
+    },
+    "For a new ingredient; one Ohana knows keeps its own aisle.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für eine neue Zutat; eine, die Ohana kennt, behält ihre Abteilung."
+          }
+        }
+      }
+    },
+    "For other AI agents that use Ohana’s API with an API token:": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für andere KI-Agenten, die Ohanas API mit einem API-Token nutzen:"
+          }
+        }
+      }
+    },
+    "For someone without an account, like a child. You can create an invite link for them now or later.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für jemanden ohne Konto, z. B. ein Kind. Einen Einladungslink kannst du jetzt oder später erstellen."
+          }
+        }
+      }
+    },
+    "For someone without an account, like a child. You can create an invite link for them now or later. Someone with an Ohana account already is added by email.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für jemanden ohne Konto, z. B. ein Kind. Einen Einladungslink kannst du jetzt oder später erstellen. Wer schon ein Ohana-Konto hat, wird per E-Mail hinzugefügt."
+          }
+        }
+      }
+    },
+    "For whom": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für wen"
+          }
+        }
+      }
+    },
+    "Free text": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Freitext"
+          }
+        }
+      }
+    },
+    "Frequency": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rhythmus"
+          }
+        }
+      }
+    },
+    "From the ingredient list": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus der Zutatenliste"
+          }
+        }
+      }
+    },
+    "From your meal plan": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus deinem Essensplan"
+          }
+        }
+      }
+    },
+    "Frozen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tiefkühl"
+          }
+        }
+      }
+    },
+    "Fruit & Veg": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obst & Gemüse"
+          }
+        }
+      }
+    },
+    "General": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allgemein"
+          }
+        }
+      }
+    },
+    "Generate": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Generieren"
+          }
+        }
+      }
+    },
+    "Generate meal plan": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speiseplan generieren"
+          }
+        }
+      }
+    },
+    "Generate recipes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rezepte erstellen"
+          }
+        }
+      }
+    },
+    "Generate with AI": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit KI erstellen"
+          }
+        }
+      }
+    },
+    "Generating failed: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erstellen fehlgeschlagen: %@"
+          }
+        }
+      }
+    },
+    "Generating recipes …": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rezepte werden erstellt …"
+          }
+        }
+      }
+    },
+    "Give it a title.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib ihm einen Titel."
+          }
+        }
+      }
+    },
+    "Give the search a name.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib der Suche einen Namen."
+          }
+        }
+      }
+    },
+    "Go": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gehe zu"
+          }
+        }
+      }
+    },
+    "Good afternoon": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guten Tag"
+          }
+        }
+      }
+    },
+    "Good afternoon, %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guten Tag, %@"
+          }
+        }
+      }
+    },
+    "Good evening": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guten Abend"
+          }
+        }
+      }
+    },
+    "Good evening, %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guten Abend, %@"
+          }
+        }
+      }
+    },
+    "Good morning": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guten Morgen"
+          }
+        }
+      }
+    },
+    "Good morning, %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guten Morgen, %@"
+          }
+        }
+      }
+    },
+    "Has an Ohana account already? Add them with the email of their account.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schon ein Ohana-Konto? Füge die Person mit der E-Mail ihres Kontos hinzu."
+          }
+        }
+      }
+    },
+    "Hide video consultations": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Videosprechstunden ausblenden"
+          }
+        }
+      }
+    },
+    "History": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verlauf"
+          }
+        }
+      }
+    },
+    "Home": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zuhause"
+          }
+        }
+      }
+    },
+    "Home address": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heimatadresse"
+          }
+        }
+      }
+    },
+    "Hourly": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stündlich"
+          }
+        }
+      }
+    },
+    "Household": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haushalt"
+          }
+        }
+      }
+    },
+    "How many tokens the model takes at once. Empty: from the API’s model list if it says, else 128,000. Long chats are condensed before it is full.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie viele Tokens das Modell auf einmal verarbeitet. Leer: aus der Modellliste der API, wenn sie es angibt, sonst 128.000. Lange Chats werden zusammengefasst, bevor es voll ist."
+          }
+        }
+      }
+    },
+    "How much did we spend on groceries this year, per month?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie viel haben wir dieses Jahr pro Monat für Lebensmittel ausgegeben?"
+          }
+        }
+      }
+    },
+    "How much of the model’s context window this chat uses. Before it is full, older messages are condensed into a summary, so long tasks can go on.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie viel vom Kontextfenster des Modells dieser Chat belegt. Bevor es voll ist, werden ältere Nachrichten zu einer Zusammenfassung verdichtet, damit lange Aufgaben weiterlaufen können."
+          }
+        }
+      }
+    },
+    "How to add it to iCloud": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "So fügst du es zu iCloud hinzu"
+          }
+        }
+      }
+    },
+    "Icon": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Symbol"
+          }
+        }
+      }
+    },
+    "Icon & note": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Symbol & Notiz"
+          }
+        }
+      }
+    },
+    "Icon & note…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Symbol & Notiz …"
+          }
+        }
+      }
+    },
+    "Icons & notes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Symbole & Notizen"
+          }
+        }
+      }
+    },
+    "Ignore": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignorieren"
+          }
+        }
+      }
+    },
+    "Ignore list": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignorierliste"
+          }
+        }
+      }
+    },
+    "Image model": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bildmodell"
+          }
+        }
+      }
+    },
+    "Import": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importieren"
+          }
+        }
+      }
+    },
+    "Imported.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importiert."
+          }
+        }
+      }
+    },
+    "Import…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importieren …"
+          }
+        }
+      }
+    },
+    "In": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein"
+          }
+        }
+      }
+    },
+    "In the evening before a shopping day: what is still on its list.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Am Abend vor einem Einkaufstag: was noch auf der Liste steht."
+          }
+        }
+      }
+    },
+    "In the morning, when a weekday in the next two weeks needs cover (e.g. a day-care closure) and nobody covers it yet.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Morgens, wenn ein Werktag in den nächsten zwei Wochen Betreuung braucht (z. B. eine Kita-Schließung) und noch niemand übernimmt."
+          }
+        }
+      }
+    },
+    "Including the version, e.g. …/v1. A model on your home network works only if the server allows it (AI_ALLOW_PRIVATE_ENDPOINT).": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit Version, z. B. …/v1. Ein Modell im Heimnetz geht nur, wenn der Server es erlaubt (AI_ALLOW_PRIVATE_ENDPOINT)."
+          }
+        }
+      }
+    },
+    "Income": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einnahmen"
+          }
+        }
+      }
+    },
+    "Ingredient": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zutat"
+          }
+        }
+      }
+    },
+    "Ingredients": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zutaten"
+          }
+        }
+      }
+    },
+    "Instruction": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anleitung"
+          }
+        }
+      }
+    },
+    "Insurance": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Versicherung"
+          }
+        }
+      }
+    },
+    "Interrupted": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unterbrochen"
+          }
+        }
+      }
+    },
+    "Interval (minutes)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intervall (Minuten)"
+          }
+        }
+      }
+    },
+    "Invite": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einladen"
+          }
+        }
+      }
+    },
+    "Invite link created": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einladungslink erstellt"
+          }
+        }
+      }
+    },
+    "Invite link open": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einladungslink offen"
+          }
+        }
+      }
+    },
+    "Invite links": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einladungslinks"
+          }
+        }
+      }
+    },
+    "It is used on %lld days in %@. This can’t be undone.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Art wird an %lld Tagen in %@ verwendet. Das kann nicht rückgängig gemacht werden."
+          }
+        }
+      }
+    },
+    "Joins as": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tritt bei als"
+          }
+        }
+      }
+    },
+    "Jump to the next uncovered day (G)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zum nächsten nicht abgedeckten Tag springen (G)"
+          }
+        }
+      }
+    },
+    "Just a color, no coverage logic.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur eine Farbe, ohne Betreuungslogik."
+          }
+        }
+      }
+    },
+    "Just a moment, the chat is starting.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einen Moment, der Chat startet gerade."
+          }
+        }
+      }
+    },
+    "Kind": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Art"
+          }
+        }
+      }
+    },
+    "Kneading": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kneten"
+          }
+        }
+      }
+    },
+    "Known-recipe ratio": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anteil bekannter Rezepte"
+          }
+        }
+      }
+    },
+    "Leave %@?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ verlassen?"
+          }
+        }
+      }
+    },
+    "Leave empty to keep it": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leer lassen, um ihn zu behalten"
+          }
+        }
+      }
+    },
+    "Leave or delete": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verlassen oder löschen"
+          }
+        }
+      }
+    },
+    "Leave the family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Familie verlassen"
+          }
+        }
+      }
+    },
+    "Left": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Links"
+          }
+        }
+      }
+    },
+    "Leftover days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resteverwertung (Tage)"
+          }
+        }
+      }
+    },
+    "Leftovers": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reste"
+          }
+        }
+      }
+    },
+    "Lets the assistant search the web (e.g. for school holidays). Without it, it can still read pages you link.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Damit kann der Assistent im Web suchen (z. B. nach Schulferien). Ohne kann er trotzdem Seiten lesen, die du verlinkst."
+          }
+        }
+      }
+    },
+    "Let’s cook!": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los geht’s!"
+          }
+        }
+      }
+    },
+    "Let’s go!": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los geht's!"
+          }
+        }
+      }
+    },
+    "Light": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hell"
+          }
+        }
+      }
+    },
+    "Link": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link"
+          }
+        }
+      }
+    },
+    "List": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liste"
+          }
+        }
+      }
+    },
+    "Lists": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listen"
+          }
+        }
+      }
+    },
+    "Load models": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modelle laden"
+          }
+        }
+      }
+    },
+    "Load the list from the API, or type a model name. It needs to support tool calls.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lade die Liste von der API oder gib einen Modellnamen ein. Es muss Tool-Aufrufe können."
+          }
+        }
+      }
+    },
+    "Loading your families…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Familien werden geladen …"
+          }
+        }
+      }
+    },
+    "Location": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ort"
+          }
+        }
+      }
+    },
+    "Look up next year’s public holidays here and add them to the calendar.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Such die Feiertage des nächsten Jahres heraus und trag sie in den Kalender ein."
+          }
+        }
+      }
+    },
+    "Looking through the recipes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sieht die Rezepte durch"
+          }
+        }
+      }
+    },
+    "Looking up specialities": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sucht Fachrichtungen"
+          }
+        }
+      }
+    },
+    "Lunch": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mittag"
+          }
+        }
+      }
+    },
+    "Mac: Calendar → File → New Calendar Subscription…, paste the URL, set Location to iCloud so it syncs to all your devices, and pick an auto-refresh interval.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac: Kalender → Ablage → Neues Kalenderabonnement …, URL einfügen, Ort auf iCloud stellen, damit es auf alle Geräte synchronisiert wird, und ein Aktualisierungsintervall wählen."
+          }
+        }
+      }
+    },
+    "Machine": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maschine"
+          }
+        }
+      }
+    },
+    "Machine steps": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maschinen-Schritte"
+          }
+        }
+      }
+    },
+    "Make a new feed address?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine neue Abo-Adresse erstellen?"
+          }
+        }
+      }
+    },
+    "Make photos": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotos machen"
+          }
+        }
+      }
+    },
+    "Making photos …": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotos werden gemacht …"
+          }
+        }
+      }
+    },
+    "Manual Cooking": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manuelles Kochen"
+          }
+        }
+      }
+    },
+    "Manual steps": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manuelle Schritte"
+          }
+        }
+      }
+    },
+    "Mark as booked": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Als gebucht eintragen"
+          }
+        }
+      }
+    },
+    "Mark as booked (⌘B)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Als gebucht eintragen (⌘B)"
+          }
+        }
+      }
+    },
+    "Marking a slot as booked": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trägt einen Termin als gebucht ein"
+          }
+        }
+      }
+    },
+    "Meal Type": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mahlzeittyp"
+          }
+        }
+      }
+    },
+    "Meal plan": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Essensplan"
+          }
+        }
+      }
+    },
+    "Meal removed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mahlzeit entfernt"
+          }
+        }
+      }
+    },
+    "Meals": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Essen"
+          }
+        }
+      }
+    },
+    "Meat & Fish": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fleisch & Fisch"
+          }
+        }
+      }
+    },
+    "Members": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mitglieder"
+          }
+        }
+      }
+    },
+    "Method": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zubereitung"
+          }
+        }
+      }
+    },
+    "Model": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modell"
+          }
+        }
+      }
+    },
+    "Modules": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bereiche"
+          }
+        }
+      }
+    },
+    "Month": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monat"
+          }
+        }
+      }
+    },
+    "More": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mehr"
+          }
+        }
+      }
+    },
+    "More results: %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weitere Ergebnisse: %lld"
+          }
+        }
+      }
+    },
+    "More servings": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mehr Portionen"
+          }
+        }
+      }
+    },
+    "Most went to %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das meiste ging an %@"
+          }
+        }
+      }
+    },
+    "Move down": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nach unten"
+          }
+        }
+      }
+    },
+    "Move to %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zu %@ verschieben"
+          }
+        }
+      }
+    },
+    "Move to Favourites": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zu Favoriten verschieben"
+          }
+        }
+      }
+    },
+    "Move to Want to try": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zu Ausprobieren verschieben"
+          }
+        }
+      }
+    },
+    "Move up": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nach oben"
+          }
+        }
+      }
+    },
+    "Multi-select": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mehrfachauswahl"
+          }
+        }
+      }
+    },
+    "Name": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name"
+          }
+        }
+      }
+    },
+    "Name (English)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name (Englisch)"
+          }
+        }
+      }
+    },
+    "Name (German)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name (Deutsch)"
+          }
+        }
+      }
+    },
+    "Name A–Z": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name A–Z"
+          }
+        }
+      }
+    },
+    "Name Z–A": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name Z–A"
+          }
+        }
+      }
+    },
+    "Needs cover": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Braucht Betreuung"
+          }
+        }
+      }
+    },
+    "New Recipe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neues Rezept"
+          }
+        }
+      }
+    },
+    "New channel": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neuer Kanal"
+          }
+        }
+      }
+    },
+    "New chat": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neuer Chat"
+          }
+        }
+      }
+    },
+    "New event": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neuer Termin"
+          }
+        }
+      }
+    },
+    "New family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Familie"
+          }
+        }
+      }
+    },
+    "New family…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Familie …"
+          }
+        }
+      }
+    },
+    "New feed address": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Abo-Adresse"
+          }
+        }
+      }
+    },
+    "New feed address made.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Abo-Adresse erstellt."
+          }
+        }
+      }
+    },
+    "New search": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Suche"
+          }
+        }
+      }
+    },
+    "New search (⇧⌘N)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Suche (⇧⌘N)"
+          }
+        }
+      }
+    },
+    "New tag": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neuer Tag"
+          }
+        }
+      }
+    },
+    "New type %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Art %lld"
+          }
+        }
+      }
+    },
+    "Newest first": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neueste zuerst"
+          }
+        }
+      }
+    },
+    "Next": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weiter"
+          }
+        }
+      }
+    },
+    "Next available appointment": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nächster freier Termin"
+          }
+        }
+      }
+    },
+    "Next gap": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nächste Lücke"
+          }
+        }
+      }
+    },
+    "Next iteration started": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nächste Iteration gestartet"
+          }
+        }
+      }
+    },
+    "Next message – sent once this answer is done…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nächste Nachricht – wird nach dieser Antwort gesendet…"
+          }
+        }
+      }
+    },
+    "Next month": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nächster Monat"
+          }
+        }
+      }
+    },
+    "Next uncovered day: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nächster nicht abgedeckter Tag: %@"
+          }
+        }
+      }
+    },
+    "Next year": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nächstes Jahr"
+          }
+        }
+      }
+    },
+    "Next year (Page Down)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nächstes Jahr (Bild ↓)"
+          }
+        }
+      }
+    },
+    "No account": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohne Konto"
+          }
+        }
+      }
+    },
+    "No active plan": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein aktiver Plan"
+          }
+        }
+      }
+    },
+    "No appointments today.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heute keine Termine."
+          }
+        }
+      }
+    },
+    "No bookable appointments in the latest run.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Im letzten Lauf keine buchbaren Termine."
+          }
+        }
+      }
+    },
+    "No chats yet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Chats"
+          }
+        }
+      }
+    },
+    "No entry types for %@ yet.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Eintragsarten für %@."
+          }
+        }
+      }
+    },
+    "No entry types for %@.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Eintragsarten für %@."
+          }
+        }
+      }
+    },
+    "No family yet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Familie"
+          }
+        }
+      }
+    },
+    "No home address yet.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Heimatadresse."
+          }
+        }
+      }
+    },
+    "No matches": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Treffer"
+          }
+        }
+      }
+    },
+    "No meal plan yet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch kein Essensplan"
+          }
+        }
+      }
+    },
+    "No notification channels yet.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Benachrichtigungskanäle."
+          }
+        }
+      }
+    },
+    "No open invite links.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine offenen Einladungslinks."
+          }
+        }
+      }
+    },
+    "No recipe has these tags.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Rezept hat diese Tags."
+          }
+        }
+      }
+    },
+    "No recipes came up. Try other settings.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Es kamen keine Rezepte heraus. Probier andere Einstellungen."
+          }
+        }
+      }
+    },
+    "No recipes yet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Rezepte"
+          }
+        }
+      }
+    },
+    "No runs yet.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Läufe."
+          }
+        }
+      }
+    },
+    "No searches yet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Suchen"
+          }
+        }
+      }
+    },
+    "No searches yet: Ohana can watch Doctolib and jameda for you.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Suchen: Ohana kann Doctolib und jameda für euch beobachten."
+          }
+        }
+      }
+    },
+    "No shopping list yet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Einkaufsliste"
+          }
+        }
+      }
+    },
+    "No transactions this month yet.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Buchungen in diesem Monat."
+          }
+        }
+      }
+    },
+    "No transactions yet.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Buchungen."
+          }
+        }
+      }
+    },
+    "No uncovered days coming up.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine offenen Tage in nächster Zeit."
+          }
+        }
+      }
+    },
+    "No uncovered days in %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine offenen Tage in %@"
+          }
+        }
+      }
+    },
+    "Nobody has set up the assistant for this family yet. Ask an editor of the family to do it in the settings.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für diese Familie hat noch niemand den Assistenten eingerichtet. Bitte jemanden, der die Familie bearbeiten darf, das in den Einstellungen zu tun."
+          }
+        }
+      }
+    },
+    "None": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine"
+          }
+        }
+      }
+    },
+    "Normal": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Normal"
+          }
+        }
+      }
+    },
+    "Not answered": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht beantwortet"
+          }
+        }
+      }
+    },
+    "Not covered": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht abgedeckt"
+          }
+        }
+      }
+    },
+    "Not run yet: results appear after the first run.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch nicht gelaufen: Ergebnisse erscheinen nach dem ersten Lauf."
+          }
+        }
+      }
+    },
+    "Not set up": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht eingerichtet"
+          }
+        }
+      }
+    },
+    "Not set.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht eingetragen."
+          }
+        }
+      }
+    },
+    "Note": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notiz"
+          }
+        }
+      }
+    },
+    "Nothing found yet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch nichts gefunden"
+          }
+        }
+      }
+    },
+    "Nothing ignored.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nichts ignoriert."
+          }
+        }
+      }
+    },
+    "Nothing on the selected days yet.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf den ausgewählten Tagen ist noch nichts eingetragen."
+          }
+        }
+      }
+    },
+    "Nothing planned": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nichts geplant"
+          }
+        }
+      }
+    },
+    "Nothing planned for the next weeks.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für die nächsten Wochen ist nichts eingetragen."
+          }
+        }
+      }
+    },
+    "Nothing to redo": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nichts zum Wiederholen"
+          }
+        }
+      }
+    },
+    "Nothing to shop for": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nichts einzukaufen"
+          }
+        }
+      }
+    },
+    "Nothing to undo": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nichts zum Rückgängigmachen"
+          }
+        }
+      }
+    },
+    "Notifications": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benachrichtigungen"
+          }
+        }
+      }
+    },
+    "Number of recipes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anzahl Rezepte"
+          }
+        }
+      }
+    },
+    "OK": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        }
+      }
+    },
+    "Off": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus"
+          }
+        }
+      }
+    },
+    "Offline – retrying": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Offline – neuer Versuch"
+          }
+        }
+      }
+    },
+    "Ohana": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohana"
+          }
+        }
+      }
+    },
+    "Ohana shows here what this shopping trip cost, from the finances’ groceries category.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hier zeigt Ohana, was dieser Einkauf gekostet hat – aus der Lebensmittel-Kategorie der Finanzen."
+          }
+        }
+      }
+    },
+    "Old calendar link": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alter Kalender-Link"
+          }
+        }
+      }
+    },
+    "Old link removed.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alter Link entfernt."
+          }
+        }
+      }
+    },
+    "On the accounts: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf den Konten: %@"
+          }
+        }
+      }
+    },
+    "On the web": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Im Web"
+          }
+        }
+      }
+    },
+    "Only editors of the family can change entry types.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur wer die Familie bearbeiten darf, kann die Arten ändern."
+          }
+        }
+      }
+    },
+    "Only editors of the family can set up the assistant. You can chat with it once it is set up; it only reads for you.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur wer die Familie bearbeiten darf, kann den Assistenten einrichten. Sobald er eingerichtet ist, kannst du mit ihm chatten; für dich liest er nur."
+          }
+        }
+      }
+    },
+    "Only notify when an appointment is earlier than the earliest seen so far": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur benachrichtigen, wenn ein Termin früher ist als der früheste bisher gesehene"
+          }
+        }
+      }
+    },
+    "Only possible when you are the last member.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur möglich, wenn du das letzte Mitglied bist."
+          }
+        }
+      }
+    },
+    "Only the first %lld days are listed.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur die ersten %lld Tage werden angezeigt."
+          }
+        }
+      }
+    },
+    "Open": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffnen"
+          }
+        }
+      }
+    },
+    "Open in Maps": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Karten öffnen"
+          }
+        }
+      }
+    },
+    "Open link": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link öffnen"
+          }
+        }
+      }
+    },
+    "Open recipe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rezept öffnen"
+          }
+        }
+      }
+    },
+    "Open search": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche öffnen"
+          }
+        }
+      }
+    },
+    "Open the provider’s page": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seite des Anbieters öffnen"
+          }
+        }
+      }
+    },
+    "Open the settings": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einstellungen öffnen"
+          }
+        }
+      }
+    },
+    "Opens %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffnet %@"
+          }
+        }
+      }
+    },
+    "Or any other emoji": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oder ein beliebiges anderes Emoji"
+          }
+        }
+      }
+    },
+    "Organize your recipes with tags.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Organisiere deine Rezepte mit Tags."
+          }
+        }
+      }
+    },
+    "Other": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonstiges"
+          }
+        }
+      }
+    },
+    "Other color": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Andere Farbe"
+          }
+        }
+      }
+    },
+    "Out": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus"
+          }
+        }
+      }
+    },
+    "Overview": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Übersicht"
+          }
+        }
+      }
+    },
+    "Pantry": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorratskammer"
+          }
+        }
+      }
+    },
+    "Passkeys, password and API tokens": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passkeys, Passwort und API-Tokens"
+          }
+        }
+      }
+    },
+    "Paste": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einfügen"
+          }
+        }
+      }
+    },
+    "Pause": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pausieren"
+          }
+        }
+      }
+    },
+    "Permissions": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Berechtigungen"
+          }
+        }
+      }
+    },
+    "Photo": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto"
+          }
+        }
+      }
+    },
+    "Photo %lld.jpg": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto %lld.jpg"
+          }
+        }
+      }
+    },
+    "Photo library": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotomediathek"
+          }
+        }
+      }
+    },
+    "Pick 1–2 shopping days, at least 3 days apart.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1–2 Einkaufstage mit mind. 3 Tagen Abstand wählen."
+          }
+        }
+      }
+    },
+    "Pick a Doctolib speciality.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle eine Doctolib-Fachrichtung."
+          }
+        }
+      }
+    },
+    "Pick a jameda speciality.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle eine jameda-Fachrichtung."
+          }
+        }
+      }
+    },
+    "Pick a location from the suggestions.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle einen Ort aus den Vorschlägen."
+          }
+        }
+      }
+    },
+    "Pick a model": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modell wählen"
+          }
+        }
+      }
+    },
+    "Pick one or more, or write your own answer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle eine oder mehrere Antworten oder schreib deine eigene"
+          }
+        }
+      }
+    },
+    "Pick one, or write your own answer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle eine Antwort oder schreib deine eigene"
+          }
+        }
+      }
+    },
+    "Plan": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Planung"
+          }
+        }
+      }
+    },
+    "Plan next week’s meals without fish.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plane das Essen für nächste Woche ohne Fisch."
+          }
+        }
+      }
+    },
+    "Plan refreshed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plan aufgefrischt"
+          }
+        }
+      }
+    },
+    "Plan these days again": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Tage neu planen"
+          }
+        }
+      }
+    },
+    "Plan these days again?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Tage neu planen?"
+          }
+        }
+      }
+    },
+    "Planned already": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schon eingeplant"
+          }
+        }
+      }
+    },
+    "Planning meals": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plant das Essen"
+          }
+        }
+      }
+    },
+    "Port": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Port"
+          }
+        }
+      }
+    },
+    "Practice": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Praxis"
+          }
+        }
+      }
+    },
+    "Pre-Cleaning": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorreinigen"
+          }
+        }
+      }
+    },
+    "Prep %lld min": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorbereitung %lld Min."
+          }
+        }
+      }
+    },
+    "Prep (min)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorbereitung (Min.)"
+          }
+        }
+      }
+    },
+    "Preview on Doctolib": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorschau auf Doctolib"
+          }
+        }
+      }
+    },
+    "Preview on jameda": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorschau auf jameda"
+          }
+        }
+      }
+    },
+    "Previous month": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorheriger Monat"
+          }
+        }
+      }
+    },
+    "Previous plans": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frühere Pläne"
+          }
+        }
+      }
+    },
+    "Previous year": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorheriges Jahr"
+          }
+        }
+      }
+    },
+    "Previous year (Page Up)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorheriges Jahr (Bild ↑)"
+          }
+        }
+      }
+    },
+    "Private": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privat"
+          }
+        }
+      }
+    },
+    "Program": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Programm"
+          }
+        }
+      }
+    },
+    "Protein": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Protein"
+          }
+        }
+      }
+    },
+    "Public": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gesetzlich"
+          }
+        }
+      }
+    },
+    "Pushbullet, Pushover, Telegram or email over SMTP.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pushbullet, Pushover, Telegram oder E-Mail über SMTP."
+          }
+        }
+      }
+    },
+    "Qty": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menge"
+          }
+        }
+      }
+    },
+    "Quantities must be numbers": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mengen müssen Zahlen sein"
+          }
+        }
+      }
+    },
+    "Quantity": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menge"
+          }
+        }
+      }
+    },
+    "Queued": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wartet"
+          }
+        }
+      }
+    },
+    "Range": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bereich"
+          }
+        }
+      }
+    },
+    "Reading %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liest %@"
+          }
+        }
+      }
+    },
+    "Reading a recipe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liest ein Rezept"
+          }
+        }
+      }
+    },
+    "Reading a slot": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liest einen Termin"
+          }
+        }
+      }
+    },
+    "Reading calendar events": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liest Termine im Kalender"
+          }
+        }
+      }
+    },
+    "Reading the appointment searches": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liest die Terminsuchen"
+          }
+        }
+      }
+    },
+    "Reading the calendar": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liest den Kalender"
+          }
+        }
+      }
+    },
+    "Reading the meal plan": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liest den Essensplan"
+          }
+        }
+      }
+    },
+    "Reading the shopping list": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liest die Einkaufsliste"
+          }
+        }
+      }
+    },
+    "Reading transactions": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liest Buchungen"
+          }
+        }
+      }
+    },
+    "Reason for the visit": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anliegen"
+          }
+        }
+      }
+    },
+    "Recently updated": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zuletzt bearbeitet"
+          }
+        }
+      }
+    },
+    "Recipe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rezept"
+          }
+        }
+      }
+    },
+    "Recipe deleted.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rezept gelöscht."
+          }
+        }
+      }
+    },
+    "Recipe name": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rezeptname"
+          }
+        }
+      }
+    },
+    "Recipe photos": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rezeptfotos"
+          }
+        }
+      }
+    },
+    "Recipes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rezepte"
+          }
+        }
+      }
+    },
+    "Recipes with these tags aren’t planned.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rezepte mit diesen Tags werden nicht eingeplant."
+          }
+        }
+      }
+    },
+    "Recipient email": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empfänger-E-Mail"
+          }
+        }
+      }
+    },
+    "Redo": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wiederholen"
+          }
+        }
+      }
+    },
+    "Redo (⇧⌘Z)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wiederholen (⇧⌘Z)"
+          }
+        }
+      }
+    },
+    "Refresh": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auffrischen"
+          }
+        }
+      }
+    },
+    "Reload": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neu laden"
+          }
+        }
+      }
+    },
+    "Remove": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entfernen"
+          }
+        }
+      }
+    },
+    "Remove %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ entfernen"
+          }
+        }
+      }
+    },
+    "Remove %@ from the family?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ aus der Familie entfernen?"
+          }
+        }
+      }
+    },
+    "Remove Photo": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto entfernen"
+          }
+        }
+      }
+    },
+    "Remove all entries from the selected days (Delete)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Einträge der ausgewählten Tage entfernen (Entf)"
+          }
+        }
+      }
+    },
+    "Remove home address": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heimatadresse entfernen"
+          }
+        }
+      }
+    },
+    "Remove the appointment?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termin entfernen?"
+          }
+        }
+      }
+    },
+    "Remove the home address?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heimatadresse entfernen?"
+          }
+        }
+      }
+    },
+    "Remove the old calendar link?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Den alten Kalender-Link entfernen?"
+          }
+        }
+      }
+    },
+    "Remove this appointment from Ohana? This doesn’t cancel it with the practice.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diesen Termin aus Ohana entfernen? Bei der Praxis wird er dadurch nicht abgesagt."
+          }
+        }
+      }
+    },
+    "Removing a calendar event": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entfernt einen Termin"
+          }
+        }
+      }
+    },
+    "Rename": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umbenennen"
+          }
+        }
+      }
+    },
+    "Replace": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ersetzen"
+          }
+        }
+      }
+    },
+    "Replace the calendar and the finances of “%@” with the contents of “%@”? All years, entry types, entries, notes and finances are overwritten; the name, the members and the links stay. This can’t be undone.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalender und Finanzen von „%@“ durch den Inhalt von „%@“ ersetzen? Alle Jahre, Eintragsarten, Einträge, Notizen und Finanzen werden überschrieben; Name, Mitglieder und Links bleiben. Das lässt sich nicht rückgängig machen."
+          }
+        }
+      }
+    },
+    "Replace the family’s data?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Daten der Familie ersetzen?"
+          }
+        }
+      }
+    },
+    "Replaces the calendar (all years) and the finances of this family with those of an exported file; the name, the members and the links stay. Can’t be undone – export first to keep a copy.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ersetzt den Kalender (alle Jahre) und die Finanzen dieser Familie durch die einer exportierten Datei; Name, Mitglieder und Links bleiben. Lässt sich nicht rückgängig machen – vorher exportieren, um eine Kopie zu behalten."
+          }
+        }
+      }
+    },
+    "Reset": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zurücksetzen"
+          }
+        }
+      }
+    },
+    "Reset to Defaults": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf Standard zurücksetzen"
+          }
+        }
+      }
+    },
+    "Result pages": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ergebnisseiten"
+          }
+        }
+      }
+    },
+    "Result pages must be between 1 and 20.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ergebnisseiten müssen zwischen 1 und 20 liegen."
+          }
+        }
+      }
+    },
+    "Resume": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fortsetzen"
+          }
+        }
+      }
+    },
+    "Revoke": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Widerrufen"
+          }
+        }
+      }
+    },
+    "Right": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechts"
+          }
+        }
+      }
+    },
+    "Role": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rolle"
+          }
+        }
+      }
+    },
+    "Run now": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jetzt suchen"
+          }
+        }
+      }
+    },
+    "Run now (⌘R)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jetzt suchen (⌘R)"
+          }
+        }
+      }
+    },
+    "Run on the schedule": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nach Zeitplan ausführen"
+          }
+        }
+      }
+    },
+    "Running…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Läuft…"
+          }
+        }
+      }
+    },
+    "SMTP password": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SMTP-Passwort"
+          }
+        }
+      }
+    },
+    "SMTP server": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SMTP-Server"
+          }
+        }
+      }
+    },
+    "SMTP user": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SMTP-Benutzer"
+          }
+        }
+      }
+    },
+    "Save": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speichern"
+          }
+        }
+      }
+    },
+    "Save %lld recipes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Rezepte speichern"
+          }
+        }
+      }
+    },
+    "Save 1 recipe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 Rezept speichern"
+          }
+        }
+      }
+    },
+    "Saved on this device. Weekends are left out when filling, pasting or toggling ranges.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird auf diesem Gerät gespeichert. Wochenenden werden beim Füllen, Einfügen und Umschalten von Bereichen ausgelassen."
+          }
+        }
+      }
+    },
+    "Saving a recipe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speichert ein Rezept"
+          }
+        }
+      }
+    },
+    "Saving plans anew from today: the current meals and shopping lists are replaced.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speichern plant ab heute neu: die aktuellen Mahlzeiten und Einkaufslisten werden ersetzt."
+          }
+        }
+      }
+    },
+    "Saving…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speichert …"
+          }
+        }
+      }
+    },
+    "Schedule": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeitplan"
+          }
+        }
+      }
+    },
+    "Search": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche"
+          }
+        }
+      }
+    },
+    "Search API key": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API-Schlüssel der Suche"
+          }
+        }
+      }
+    },
+    "Search a city or address…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stadt oder Adresse suchen…"
+          }
+        }
+      }
+    },
+    "Search a speciality…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fachrichtung suchen…"
+          }
+        }
+      }
+    },
+    "Search ingredient…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zutat suchen…"
+          }
+        }
+      }
+    },
+    "Search on Google": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf Google suchen"
+          }
+        }
+      }
+    },
+    "Search provider": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suchanbieter"
+          }
+        }
+      }
+    },
+    "Search recipes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rezepte suchen"
+          }
+        }
+      }
+    },
+    "Search searches": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suchen durchsuchen"
+          }
+        }
+      }
+    },
+    "Searches stop sending to it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suchen schicken dann nicht mehr dorthin."
+          }
+        }
+      }
+    },
+    "Searching the web: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sucht im Web: %@"
+          }
+        }
+      }
+    },
+    "Searing": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anbraten"
+          }
+        }
+      }
+    },
+    "Select all": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alles auswählen"
+          }
+        }
+      }
+    },
+    "Select days to see and change them.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle Tage aus, um sie anzusehen und zu ändern."
+          }
+        }
+      }
+    },
+    "Select some days first": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle zuerst Tage aus"
+          }
+        }
+      }
+    },
+    "Select where to paste first": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle zuerst aus, wo eingefügt werden soll"
+          }
+        }
+      }
+    },
+    "Self-payer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selbstzahler"
+          }
+        }
+      }
+    },
+    "Send": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senden"
+          }
+        }
+      }
+    },
+    "Send after this answer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nach dieser Antwort senden"
+          }
+        }
+      }
+    },
+    "Send to": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senden an"
+          }
+        }
+      }
+    },
+    "Sender address": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Absenderadresse"
+          }
+        }
+      }
+    },
+    "Sending failed: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senden fehlgeschlagen: %@"
+          }
+        }
+      }
+    },
+    "Server": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server"
+          }
+        }
+      }
+    },
+    "Service": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dienst"
+          }
+        }
+      }
+    },
+    "Servings": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Portionen"
+          }
+        }
+      }
+    },
+    "Set birthday": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geburtstag eintragen"
+          }
+        }
+      }
+    },
+    "Set it": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jetzt eintragen"
+          }
+        }
+      }
+    },
+    "Set up": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eingerichtet"
+          }
+        }
+      }
+    },
+    "Set up the assistant": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Assistenten einrichten"
+          }
+        }
+      }
+    },
+    "Set up the assistant in the settings first": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Richte den Assistenten zuerst in den Einstellungen ein"
+          }
+        }
+      }
+    },
+    "Set up this year’s entry types: day care closed, each parent’s vacation and public holidays.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leg die Arten für dieses Jahr an: Kita geschlossen, Urlaub für jedes Elternteil und Feiertage."
+          }
+        }
+      }
+    },
+    "Set up your first plan to get cooking!": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erstelle deinen ersten Plan und leg los!"
+          }
+        }
+      }
+    },
+    "Setting the statistic average": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Setzt den statistischen Durchschnitt"
+          }
+        }
+      }
+    },
+    "Settings": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einstellungen"
+          }
+        }
+      }
+    },
+    "Share": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teilen"
+          }
+        }
+      }
+    },
+    "Share invite link": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einladungslink teilen"
+          }
+        }
+      }
+    },
+    "Shopping": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einkaufen"
+          }
+        }
+      }
+    },
+    "Shopping day": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einkaufstag"
+          }
+        }
+      }
+    },
+    "Shopping days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einkaufstage"
+          }
+        }
+      }
+    },
+    "Shopping for %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einkauf für %@"
+          }
+        }
+      }
+    },
+    "Shopping list": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einkaufsliste"
+          }
+        }
+      }
+    },
+    "Shopping reminder": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einkaufserinnerung"
+          }
+        }
+      }
+    },
+    "Show again": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wieder anzeigen"
+          }
+        }
+      }
+    },
+    "Show in calendar": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Im Kalender zeigen"
+          }
+        }
+      }
+    },
+    "Sign in": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anmelden"
+          }
+        }
+      }
+    },
+    "Sign out": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abmelden"
+          }
+        }
+      }
+    },
+    "Sign out of Ohana on this device?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf diesem Gerät von Ohana abmelden?"
+          }
+        }
+      }
+    },
+    "Signing in didn’t finish. Please try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Anmeldung wurde nicht abgeschlossen. Bitte versuche es noch einmal."
+          }
+        }
+      }
+    },
+    "Skip this doctor with this reason for the visit in this search from now on": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Ärztin/diesen Arzt mit diesem Anliegen in dieser Suche ab jetzt überspringen"
+          }
+        }
+      }
+    },
+    "Skip weekends": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wochenenden auslassen"
+          }
+        }
+      }
+    },
+    "Slots you marked as booked; they show in the calendar.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termine, die ihr als gebucht eingetragen habt; sie stehen im Kalender."
+          }
+        }
+      }
+    },
+    "Slow Cooking": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schmoren"
+          }
+        }
+      }
+    },
+    "Something light": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was Leichtes"
+          }
+        }
+      }
+    },
+    "Sort": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sortieren"
+          }
+        }
+      }
+    },
+    "Sort our uncategorized transactions into categories.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ordne unsere Buchungen ohne Kategorie passenden Kategorien zu."
+          }
+        }
+      }
+    },
+    "Sous Vide": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sous Vide"
+          }
+        }
+      }
+    },
+    "Speciality": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fachrichtung"
+          }
+        }
+      }
+    },
+    "Speciality, treatment or condition": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fachgebiet, Leistung oder Erkrankung"
+          }
+        }
+      }
+    },
+    "Speed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stufe"
+          }
+        }
+      }
+    },
+    "Speed %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stufe %lld"
+          }
+        }
+      }
+    },
+    "Spent": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgegeben"
+          }
+        }
+      }
+    },
+    "Start building your collection": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starte deine Sammlung"
+          }
+        }
+      }
+    },
+    "Start next iteration": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nächste Iteration starten"
+          }
+        }
+      }
+    },
+    "Starting an appointment search": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Startet eine Terminsuche"
+          }
+        }
+      }
+    },
+    "Starts": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beginn"
+          }
+        }
+      }
+    },
+    "Status": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status"
+          }
+        }
+      }
+    },
+    "Steaming": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dampfgaren"
+          }
+        }
+      }
+    },
+    "Step %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schritt %lld"
+          }
+        }
+      }
+    },
+    "Step %lld of %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schritt %lld von %lld"
+          }
+        }
+      }
+    },
+    "Step ingredients exceed recipe quantities": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schrittmengen überschreiten Rezeptmengen"
+          }
+        }
+      }
+    },
+    "Stop": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stopp"
+          }
+        }
+      }
+    },
+    "Stop watching this search": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Suche beenden"
+          }
+        }
+      }
+    },
+    "Stored encrypted on the server and never shown again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird verschlüsselt auf dem Server gespeichert und nie wieder angezeigt."
+          }
+        }
+      }
+    },
+    "Street, ZIP city": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Straße, PLZ Ort"
+          }
+        }
+      }
+    },
+    "Subscribe on this device": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf diesem Gerät abonnieren"
+          }
+        }
+      }
+    },
+    "Subscription URL": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abo-Adresse"
+          }
+        }
+      }
+    },
+    "Suggest categories for our finances and add them.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schlag Kategorien für unsere Finanzen vor und leg sie an."
+          }
+        }
+      }
+    },
+    "Summing up the finances": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechnet die Finanzen zusammen"
+          }
+        }
+      }
+    },
+    "Surprise me": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Überrasch mich"
+          }
+        }
+      }
+    },
+    "Swap %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ tauschen"
+          }
+        }
+      }
+    },
+    "Swap…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tauschen …"
+          }
+        }
+      }
+    },
+    "System": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System"
+          }
+        }
+      }
+    },
+    "Tags": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tags"
+          }
+        }
+      }
+    },
+    "Take back this message": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nachricht zurücknehmen"
+          }
+        }
+      }
+    },
+    "Tap a day to select it – long-press and drag for a range.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tippe auf einen Tag – lange drücken und ziehen wählt einen Bereich."
+          }
+        }
+      }
+    },
+    "Tap a start day, enable this, then tap the end day": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starttag antippen, dies aktivieren, dann den Endtag antippen"
+          }
+        }
+      }
+    },
+    "Tap days to add them to the selection or remove them": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tage antippen, um sie zur Auswahl hinzuzufügen oder daraus zu entfernen"
+          }
+        }
+      }
+    },
+    "Temperature (°C)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Temperatur (°C)"
+          }
+        }
+      }
+    },
+    "Test": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Testen"
+          }
+        }
+      }
+    },
+    "Test message sent.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Testnachricht verschickt."
+          }
+        }
+      }
+    },
+    "That doesn’t look like an Ohana server address.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das sieht nicht wie die Adresse eines Ohana-Servers aus."
+          }
+        }
+      }
+    },
+    "That file isn’t a picture.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Datei ist kein Bild."
+          }
+        }
+      }
+    },
+    "The API returned no models": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die API hat keine Modelle geliefert"
+          }
+        }
+      }
+    },
+    "The assistant may change the calendar, finances, meals and appointment searches for editors (most changes can be undone). Off: it only reads. For viewers it always only reads.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Assistent darf für Bearbeiter Kalender, Finanzen, Essen und Terminsuchen ändern (die meisten Änderungen lassen sich rückgängig machen). Aus: Er liest nur. Für Betrachter liest er immer nur."
+          }
+        }
+      }
+    },
+    "The cron expression is too long (max. 100).": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Cron-Ausdruck ist zu lang (max. 100)."
+          }
+        }
+      }
+    },
+    "The end must be after the start.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Ende muss nach dem Beginn liegen."
+          }
+        }
+      }
+    },
+    "The feed address of this family in family-planner. Its event ids live on, so subscriptions moved over keep their events.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Abo-Adresse dieser Familie im Familienplaner. Ihre Termin-IDs bleiben erhalten, damit umgezogene Abos ihre Termine behalten."
+          }
+        }
+      }
+    },
+    "The image is no longer stored.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Bild ist nicht mehr gespeichert."
+          }
+        }
+      }
+    },
+    "The interval must be between 1 and 1440 minutes.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Intervall muss zwischen 1 und 1440 Minuten liegen."
+          }
+        }
+      }
+    },
+    "The link lets someone join the family, with a new account or their existing one. Valid for 7 days, once.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit dem Link tritt jemand der Familie bei, mit einem neuen oder dem eigenen Konto. 7 Tage gültig, einmal nutzbar."
+          }
+        }
+      }
+    },
+    "The link must start with http:// or https://.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Link muss mit http:// oder https:// beginnen."
+          }
+        }
+      }
+    },
+    "The meals and shopping lists of these days are planned anew.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Mahlzeiten und Einkaufslisten dieser Tage werden neu geplant."
+          }
+        }
+      }
+    },
+    "The meals module can make a photo of a recipe with an image model of the same API. Without one, the photo buttons stay hidden.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Essen-Modul kann mit einem Bildmodell derselben API ein Foto zu einem Rezept machen. Ohne Bildmodell bleiben die Foto-Knöpfe ausgeblendet."
+          }
+        }
+      }
+    },
+    "The model didn’t answer – trying again (%lld/%lld)…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Modell hat nicht geantwortet – neuer Versuch (%lld/%lld)…"
+          }
+        }
+      }
+    },
+    "The name is too long (max. 200).": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Name ist zu lang (max. 200)."
+          }
+        }
+      }
+    },
+    "The photos couldn’t be made: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Fotos konnten nicht gemacht werden: %@"
+          }
+        }
+      }
+    },
+    "The quantity must be a number above 0.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Menge muss eine Zahl über 0 sein."
+          }
+        }
+      }
+    },
+    "The selected days have different notes – saving replaces them.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die ausgewählten Tage haben unterschiedliche Notizen – beim Speichern werden sie ersetzt."
+          }
+        }
+      }
+    },
+    "The server answered with an error (%lld).": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Server hat mit einem Fehler geantwortet (%lld)."
+          }
+        }
+      }
+    },
+    "The server sent something unexpected: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Server hat etwas Unerwartetes geschickt: %@"
+          }
+        }
+      }
+    },
+    "The share of meals from your favourites; the rest are recipes you want to try.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Anteil der Mahlzeiten aus deinen Favoriten; der Rest sind Rezepte, die du ausprobieren willst."
+          }
+        }
+      }
+    },
+    "The whole family as a JSON file: the calendar of all years (entry types, entries, notes) and the finances (accounts, categories, transactions, settings). Viewers can export too.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die ganze Familie als JSON-Datei: der Kalender aller Jahre (Eintragsarten, Einträge, Notizen) und die Finanzen (Konten, Kategorien, Buchungen, Einstellungen). Auch Betrachter können exportieren."
+          }
+        }
+      }
+    },
+    "Theme": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Design"
+          }
+        }
+      }
+    },
+    "These open your Ohana server in the browser.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese öffnen deinen Ohana-Server im Browser."
+          }
+        }
+      }
+    },
+    "These types belong to %@ – every year has its own. Changes are saved immediately. Copying from another year adds the types that %@ doesn’t have yet.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Arten gehören zu %@ – jedes Jahr hat eigene. Änderungen werden sofort gespeichert. Beim Übernehmen aus einem anderen Jahr kommen die Arten hinzu, die %@ noch nicht hat."
+          }
+        }
+      }
+    },
+    "Thinking…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Denkt nach…"
+          }
+        }
+      }
+    },
+    "This calendar can’t be loaded: the family doesn’t exist (anymore), or you’re not a member of it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieser Kalender lässt sich nicht laden: Die Familie gibt es nicht (mehr), oder du bist kein Mitglied."
+          }
+        }
+      }
+    },
+    "This chat belongs to %@.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieser Chat gehört zu %@."
+          }
+        }
+      }
+    },
+    "This isn’t a family export (a .json file from Settings → Data → Export).": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das ist kein Familien-Export (eine .json-Datei aus Einstellungen → Daten → Exportieren)."
+          }
+        }
+      }
+    },
+    "This month · %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieser Monat · %@"
+          }
+        }
+      }
+    },
+    "This plan has wrapped up!": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieser Plan ist durch!"
+          }
+        }
+      }
+    },
+    "This recipe has no steps yet.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Rezept hat noch keine Schritte."
+          }
+        }
+      }
+    },
+    "This will delete all tags (including custom ones) and remove them from your recipes. Start fresh with the defaults?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das löscht alle Tags (auch eigene) und entfernt sie von deinen Rezepten. Mit den Standards neu starten?"
+          }
+        }
+      }
+    },
+    "Tick": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abhaken"
+          }
+        }
+      }
+    },
+    "Ticking off the shopping list": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hakt die Einkaufsliste ab"
+          }
+        }
+      }
+    },
+    "Ticks are sent when the connection is back.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abgehaktes wird gesendet, sobald die Verbindung wieder da ist."
+          }
+        }
+      }
+    },
+    "Time": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uhrzeit"
+          }
+        }
+      }
+    },
+    "Time to plan your next round!": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeit für die nächste Runde!"
+          }
+        }
+      }
+    },
+    "Timed events such as booked doctor’s appointments; they name the doctor and the practice": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termine mit Uhrzeit, z. B. gebuchte Arzttermine; sie nennen Arzt und Praxis"
+          }
+        }
+      }
+    },
+    "Title": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Titel"
+          }
+        }
+      }
+    },
+    "Title is required": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Titel ist erforderlich"
+          }
+        }
+      }
+    },
+    "Today": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heute"
+          }
+        }
+      }
+    },
+    "Today · %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heute · %@"
+          }
+        }
+      }
+    },
+    "Tokens and passwords are stored encrypted.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tokens und Passwörter werden verschlüsselt gespeichert."
+          }
+        }
+      }
+    },
+    "Transfers": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umbuchungen"
+          }
+        }
+      }
+    },
+    "Treatment": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leistung"
+          }
+        }
+      }
+    },
+    "Try again": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erneut versuchen"
+          }
+        }
+      }
+    },
+    "Turbo": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turbo"
+          }
+        }
+      }
+    },
+    "Turns the search off; you can turn it on again when editing it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schaltet die Suche aus; beim Bearbeiten kannst du sie wieder einschalten."
+          }
+        }
+      }
+    },
+    "Types copied.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arten übernommen."
+          }
+        }
+      }
+    },
+    "Uncategorized": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohne Kategorie"
+          }
+        }
+      }
+    },
+    "Undo": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rückgängig"
+          }
+        }
+      }
+    },
+    "Undo (⌘Z)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rückgängig (⌘Z)"
+          }
+        }
+      }
+    },
+    "Undone": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rückgängig gemacht"
+          }
+        }
+      }
+    },
+    "Unit": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einheit"
+          }
+        }
+      }
+    },
+    "Unknown": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unbekannt"
+          }
+        }
+      }
+    },
+    "Unknown types: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unbekannte Arten: %@"
+          }
+        }
+      }
+    },
+    "Unnamed ingredient": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unbenannte Zutat"
+          }
+        }
+      }
+    },
+    "Untick": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht abhaken"
+          }
+        }
+      }
+    },
+    "Untick every item": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Haken entfernen"
+          }
+        }
+      }
+    },
+    "Untick every item?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Haken entfernen?"
+          }
+        }
+      }
+    },
+    "Until": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bis"
+          }
+        }
+      }
+    },
+    "Until (optional)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bis (optional)"
+          }
+        }
+      }
+    },
+    "Update plan": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plan anpassen"
+          }
+        }
+      }
+    },
+    "Upload Photo": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto hochladen"
+          }
+        }
+      }
+    },
+    "Use the home address": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heimatadresse verwenden"
+          }
+        }
+      }
+    },
+    "User key": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "User Key"
+          }
+        }
+      }
+    },
+    "Video consultations": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Videosprechstunde"
+          }
+        }
+      }
+    },
+    "Video consultations only": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur Videosprechstunde"
+          }
+        }
+      }
+    },
+    "View": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ansicht"
+          }
+        }
+      }
+    },
+    "View only": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur ansehen"
+          }
+        }
+      }
+    },
+    "Viewer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ansehen"
+          }
+        }
+      }
+    },
+    "Want to try": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausprobieren"
+          }
+        }
+      }
+    },
+    "Watches Doctolib and jameda and tells you when an appointment frees up.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beobachtet Doctolib und jameda und meldet sich, wenn ein Termin frei wird."
+          }
+        }
+      }
+    },
+    "Web search": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Websuche"
+          }
+        }
+      }
+    },
+    "Weekends are left out when filling, pasting or toggling ranges": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wochenenden werden beim Füllen, Einfügen und Umschalten von Bereichen ausgelassen"
+          }
+        }
+      }
+    },
+    "Weeks per iteration": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wochen pro Iteration"
+          }
+        }
+      }
+    },
+    "Weighing": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waage"
+          }
+        }
+      }
+    },
+    "Weight (g)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gewicht (g)"
+          }
+        }
+      }
+    },
+    "Welcome to %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Willkommen bei %@"
+          }
+        }
+      }
+    },
+    "What Ohana tells you": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Worüber Ohana dich informiert"
+          }
+        }
+      }
+    },
+    "What do the roles do?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was bewirken die Rollen?"
+          }
+        }
+      }
+    },
+    "What to do in this step…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was in diesem Schritt zu tun ist…"
+          }
+        }
+      }
+    },
+    "What’s it called?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie heißt das Rezept?"
+          }
+        }
+      }
+    },
+    "What’s still on the shopping list? Add 2 l of milk.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was steht noch auf der Einkaufsliste? Setz 2 l Milch dazu."
+          }
+        }
+      }
+    },
+    "When a search finds a new or earlier appointment. Each search chooses its channels.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wenn eine Suche einen neuen oder früheren Termin findet. Jede Suche wählt ihre Kanäle selbst."
+          }
+        }
+      }
+    },
+    "When the assistant worked on a request for a while (30 seconds or more) and the chat isn’t open anywhere.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wenn der Assistent länger (30 Sekunden oder mehr) an einer Anfrage gearbeitet hat und der Chat nirgends offen ist."
+          }
+        }
+      }
+    },
+    "Where Ohana sends news for the family, e.g. a newly free appointment. Tokens and passwords are stored encrypted.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wohin Ohana Neuigkeiten für die Familie schickt, z. B. einen frei gewordenen Termin. Tokens und Passwörter werden verschlüsselt gespeichert."
+          }
+        }
+      }
+    },
+    "Where new appointments of this search are sent.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wohin neue Termine dieser Suche geschickt werden."
+          }
+        }
+      }
+    },
+    "Where the family lives: appointments show how far a practice is from here.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wo die Familie wohnt: Termine zeigen, wie weit eine Praxis von hier entfernt ist."
+          }
+        }
+      }
+    },
+    "Where to search": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wo gesucht wird"
+          }
+        }
+      }
+    },
+    "Which days this year still need cover, and who could take them?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Welche Tage brauchen dieses Jahr noch Betreuung, und wer könnte sie übernehmen?"
+          }
+        }
+      }
+    },
+    "Which news go to the channels below. Each message is sent once; nothing repeats every day.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Welche Neuigkeiten an die Kanäle unten gehen. Jede Nachricht kommt einmal; nichts wiederholt sich täglich."
+          }
+        }
+      }
+    },
+    "Which searches found something, and what is the earliest slot?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Welche Suchen haben etwas gefunden, und was ist der früheste Termin?"
+          }
+        }
+      }
+    },
+    "Who it is for": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für wen"
+          }
+        }
+      }
+    },
+    "With any role: the whole family is away from home, the meal plan leaves these days out.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bei jeder Rolle: Die ganze Familie ist nicht zu Hause, der Essensplan lässt diese Tage aus."
+          }
+        }
+      }
+    },
+    "Within (days)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Innerhalb von (Tagen)"
+          }
+        }
+      }
+    },
+    "Within (days) must be between 1 and 365.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Innerhalb von (Tagen) muss zwischen 1 und 365 liegen."
+          }
+        }
+      }
+    },
+    "Writing…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schreibt…"
+          }
+        }
+      }
+    },
+    "Year": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jahr"
+          }
+        }
+      }
+    },
+    "You": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du"
+          }
+        }
+      }
+    },
+    "You are a viewer in this family: you can look at everything but not change it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du darfst diese Familie nur ansehen: du siehst alles, kannst aber nichts ändern."
+          }
+        }
+      }
+    },
+    "You are a viewer in this family: you can look at the calendar but not change it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du kannst in dieser Familie nur ansehen: Den Kalender siehst du, ändern kannst du ihn nicht."
+          }
+        }
+      }
+    },
+    "You sign in on your server’s page; the app gets its own key, which you can remove on your account page.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du meldest dich auf der Seite deines Servers an; die App bekommt einen eigenen Schlüssel, den du auf deiner Kontoseite entfernen kannst."
+          }
+        }
+      }
+    },
+    "You won’t see it anymore unless someone adds you again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du siehst sie dann nicht mehr, bis dich jemand wieder hinzufügt."
+          }
+        }
+      }
+    },
+    "Your Ohana server": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Ohana-Server"
+          }
+        }
+      }
+    },
+    "Your family has no notification channels yet.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Familie hat noch keine Benachrichtigungskanäle."
+          }
+        }
+      }
+    },
+    "Your messages and the data the assistant looks at are sent to the AI API you set up above.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Nachrichten und die Daten, die der Assistent ansieht, gehen an die oben eingerichtete KI-API."
+          }
+        }
+      }
+    },
+    "Your own answer…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eigene Antwort…"
+          }
+        }
+      }
+    },
+    "Your session has ended, sign in again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Sitzung ist abgelaufen, melde dich erneut an."
+          }
+        }
+      }
+    },
+    "can change everything and add people": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "darf alles ändern und Leute hinzufügen"
+          }
+        }
+      }
+    },
+    "can only look": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "darf nur ansehen"
+          }
+        }
+      }
+    },
+    "cron: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cron: %@"
+          }
+        }
+      }
+    },
+    "daily": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "täglich"
+          }
+        }
+      }
+    },
+    "e.g. Christmas": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "z. B. Weihnachten"
+          }
+        }
+      }
+    },
+    "e.g. Dermatologist Munich": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "z. B. Hautarzt München"
+          }
+        }
+      }
+    },
+    "e.g. Mia": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "z. B. Mia"
+          }
+        }
+      }
+    },
+    "e.g. Sascha’s phone": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "z. B. Saschas Handy"
+          }
+        }
+      }
+    },
+    "e.g. The Krugs": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "z. B. Familie Krug"
+          }
+        }
+      }
+    },
+    "e.g. comfort food for cold days, ready in 30 minutes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "z. B. Wohlfühlessen für kalte Tage, in 30 Minuten fertig"
+          }
+        }
+      }
+    },
+    "error": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fehler"
+          }
+        }
+      }
+    },
+    "every %lld min": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "alle %lld Min."
+          }
+        }
+      }
+    },
+    "for %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "für %@"
+          }
+        }
+      }
+    },
+    "found": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "gefunden"
+          }
+        }
+      }
+    },
+    "from %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ab %@"
+          }
+        }
+      }
+    },
+    "from row %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ab Zeile %lld"
+          }
+        }
+      }
+    },
+    "hourly": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "stündlich"
+          }
+        }
+      }
+    },
+    "iPhone / iPad: tap “Subscribe on this device” (or Settings → Apps → Calendar → Calendar Accounts → Add Account → Other → Add Subscribed Calendar, and paste the URL).": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone / iPad: auf „Auf diesem Gerät abonnieren“ tippen (oder Einstellungen → Apps → Kalender → Kalenderaccounts → Account hinzufügen → Andere → Kalenderabo hinzufügen und die URL einfügen)."
+          }
+        }
+      }
+    },
+    "instructions for AI agents": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anleitung für KI-Agenten"
+          }
+        }
+      }
+    },
+    "last run %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "zuletzt %@"
+          }
+        }
+      }
+    },
+    "never run": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "noch nie gelaufen"
+          }
+        }
+      }
+    },
+    "next run %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "nächster Lauf %@"
+          }
+        }
+      }
+    },
+    "not scheduled": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "nicht geplant"
+          }
+        }
+      }
+    },
+    "nothing free": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "nichts frei"
+          }
+        }
+      }
+    },
+    "notified": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "benachrichtigt"
+          }
+        }
+      }
+    },
+    "ohana.example.com": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ohana.example.com"
+          }
+        }
+      }
+    },
+    "paused": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pausiert"
+          }
+        }
+      }
+    },
+    "queued": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eingereiht"
+          }
+        }
+      }
+    },
+    "running": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "läuft"
+          }
+        }
+      }
+    },
+    "scheduled": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "geplant"
+          }
+        }
+      }
+    },
+    "started by hand": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "von Hand gestartet"
+          }
+        }
+      }
+    },
+    "until %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "bis %@"
+          }
+        }
+      }
+    },
+    "valid until %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "gültig bis %@"
+          }
+        }
+      }
+    },
+    "without %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ohne %@"
+          }
+        }
+      }
+    },
+    "· Away": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· Unterwegs"
+          }
+        }
+      }
+    },
+    "—": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        }
+      }
+    },
+    "“%@” is too big (max. %lld MB).": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ ist zu groß (max. %lld MB)."
+          }
+        }
+      }
+    },
+    "“⚠ Not covered” warnings": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„⚠ Nicht abgedeckt“-Warnungen"
+          }
+        }
+      }
+    },
+    "🎂 %@ turns %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🎂 %@ wird %lld"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}
