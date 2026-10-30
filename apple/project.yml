@@ -1,0 +1,165 @@
+name: Ohana
+
+options:
+  bundleIdPrefix: de.fa-krug
+  # Built with the 27 SDKs. The Mac target runs from macOS 26 (Tahoe, the first with Liquid
+  # Glass): APIs newer than 26 need `if #available(macOS 27, *)` there.
+  deploymentTarget:
+    iOS: "27.0"
+    macOS: "26.0"
+  xcodeVersion: "27.0"
+  generateEmptyDirectories: true
+  developmentLanguage: en
+  knownRegions:
+    - en
+    - de
+    - Base
+
+settings:
+  base:
+    SWIFT_VERSION: "6"
+    # Approachable concurrency: code is on the main actor unless it says otherwise.
+    SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+    SWIFT_APPROACHABLE_CONCURRENCY: YES
+    SWIFT_STRICT_CONCURRENCY: complete
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: 1
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: HS26J3YA63
+    VERSIONING_SYSTEM: apple-generic
+    SWIFT_EMIT_LOC_STRINGS: YES
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    GENERATE_INFOPLIST_FILE: true
+    INFOPLIST_KEY_CFBundleDisplayName: Ohana
+    INFOPLIST_KEY_NSHumanReadableCopyright: "Copyright © 2026 Sascha Krug. All rights reserved."
+    INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: false
+    INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.lifestyle
+  configs:
+    Release:
+      ENABLE_TESTABILITY: false
+
+targets:
+  # iOS / iPadOS. Named plainly "Ohana" like yana-ios's "Yana"; the Mac build is its own
+  # native target (Ohana-macOS) over the same sources, not Catalyst.
+  Ohana:
+    type: application
+    platform: iOS
+    sources:
+      - path: Ohana
+        excludes:
+          - "Info-*.plist"
+    info:
+      path: Ohana/Info-iOS.plist
+      properties:
+        CFBundleDisplayName: Ohana
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        NSPhotoLibraryUsageDescription: "Ohana uses your photos for recipe pictures."
+        NSCameraUsageDescription: "Ohana uses the camera for recipe pictures."
+        CFBundleURLTypes:
+          - CFBundleURLName: de.fa-krug.Ohana.pairing
+            CFBundleURLSchemes: [ohana]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: de.fa-krug.Ohana
+        GENERATE_INFOPLIST_FILE: false
+        CODE_SIGN_ENTITLEMENTS: Ohana/Entitlements/Ohana-iOS.entitlements
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: false
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+
+  Ohana-macOS:
+    type: application
+    platform: macOS
+    sources:
+      - path: Ohana
+        excludes:
+          - "Info-*.plist"
+    info:
+      path: Ohana/Info-macOS.plist
+      properties:
+        CFBundleDisplayName: Ohana
+        LSApplicationCategoryType: public.app-category.lifestyle
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        CFBundleURLTypes:
+          - CFBundleURLName: de.fa-krug.Ohana.pairing
+            CFBundleURLSchemes: [ohana]
+    settings:
+      base:
+        # Both targets build "Ohana.app" with one bundle id, so the Keychain item is shared.
+        PRODUCT_NAME: Ohana
+        PRODUCT_BUNDLE_IDENTIFIER: de.fa-krug.Ohana
+        GENERATE_INFOPLIST_FILE: false
+        CODE_SIGN_ENTITLEMENTS: Ohana/Entitlements/Ohana-macOS.entitlements
+        ENABLE_HARDENED_RUNTIME: YES
+        COMBINE_HIDPI_IMAGES: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+
+  OhanaTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: OhanaTests
+    dependencies:
+      - target: Ohana
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: de.fa-krug.Ohana.tests
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Ohana.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Ohana"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+
+  OhanaTests-macOS:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: OhanaTests
+    dependencies:
+      - target: Ohana-macOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: de.fa-krug.Ohana.tests.macos
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Ohana.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Ohana"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+
+schemes:
+  Ohana:
+    build:
+      targets:
+        Ohana: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - OhanaTests
+    archive:
+      config: Release
+
+  Ohana-macOS:
+    build:
+      targets:
+        Ohana-macOS: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - OhanaTests-macOS
+    archive:
+      config: Release

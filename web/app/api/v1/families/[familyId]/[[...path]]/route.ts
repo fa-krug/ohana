@@ -9,6 +9,7 @@ import { handleMeals } from "@/lib/meals/family-routes";
 import { handleAppointments } from "@/lib/appointments/family-routes";
 import { handleFamilyApp } from "@/lib/families/app-routes";
 import { handleMealsApp } from "@/lib/meals/app-routes";
+import { handleMealPlanApp } from "@/lib/meals/app-routes-plan";
 import { handleAppointmentsApp } from "@/lib/appointments/app-routes";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +29,7 @@ const handler = createFamilyApi(
     handleEvents,
     handleFinance,
     handleMealsApp,
+    handleMealPlanApp,
     handleMeals,
     handleAppointmentsApp,
     handleAppointments,
