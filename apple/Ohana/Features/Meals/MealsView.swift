@@ -37,7 +37,6 @@ struct MealsView: View {
             switch segment {
             case .recipes:
                 RecipeListView()
-                    .ohanaBackground(ModuleTint.meals)
                     .navigationTitle("Recipes")
             case .plan:
                 MealPlanView()
@@ -49,6 +48,7 @@ struct MealsView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .ohanaBackground(ModuleTint.meals)
         .safeAreaInset(edge: .top, spacing: 0) {
             MealsSegmentSwitcher(selection: $segment)
                 .padding(.horizontal)

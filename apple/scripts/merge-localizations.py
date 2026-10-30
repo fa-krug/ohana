@@ -5,8 +5,8 @@ Usage: scripts/merge-localizations.py [DERIVED_DATA]
 
 Localization/*.de.json map String Catalog keys (the English literal, interpolations as %@ /
 %lld / %lf) to German. With DERIVED_DATA (the -derivedDataPath of a build), the keys the
-compiler extracted (*.stringsdata) are the catalog's keys, and the script lists those without
-a German translation; without it, the keys of the JSON files are used.
+compiler extracted (*.stringsdata) are added too, and the script lists those without a German
+translation.
 """
 import glob
 import json
@@ -39,8 +39,9 @@ if len(sys.argv) > 1:
 else:
     keys = set(translations)
 
+# Translated keys stay even when this build didn't extract them (iOS-only strings in a Mac build).
 strings = {}
-for key in sorted(keys | (set(translations) if len(sys.argv) <= 1 else set())):
+for key in sorted(keys | set(translations)):
     entry = {}
     if key in translations:
         entry["localizations"] = {"de": {"stringUnit": {"state": "translated", "value": translations[key]}}}

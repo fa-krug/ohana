@@ -146,6 +146,9 @@ schemes:
       config: Debug
     test:
       config: Debug
+      # The tests compare English strings; the catalog would give German on a German Mac.
+      language: en
+      region: US
       targets:
         - OhanaTests
     archive:
@@ -159,6 +162,9 @@ schemes:
       config: Debug
     test:
       config: Debug
+      # The tests compare English strings; the catalog would give German on a German Mac.
+      language: en
+      region: US
       targets:
         - OhanaTests-macOS
     archive:

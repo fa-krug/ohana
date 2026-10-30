@@ -61,6 +61,21 @@ xcodebuild -scheme Ohana -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWE
 xcodebuild -scheme Ohana-macOS -destination 'platform=macOS' test
 ```
 
+In Debug builds, `-OHANA_DEV_SERVER http://localhost:3000 -OHANA_DEV_TOKEN ohana_…` (an API
+token from the web account page) signs in without pairing, and `-OHANA_DEV_MODULE calendar` /
+`-OHANA_DEV_ASSISTANT YES` open a module or the assistant at launch (Xcode: scheme → Run →
+Arguments). The test schemes run in English, since the tests compare English strings.
+
+## Translations
+
+German strings live per module in `Localization/<module>.de.json` (String Catalog key → German;
+interpolations as `%@`, `%lld`, `%lf`). After adding strings, build once and merge:
+
+```bash
+xcodebuild -scheme Ohana -destination 'generic/platform=iOS' -derivedDataPath build/dd CODE_SIGNING_ALLOWED=NO build
+scripts/merge-localizations.py build/dd   # rewrites Ohana/Resources/Localizable.xcstrings, lists keys without German
+```
+
 ## Conventions
 
 - Swift 6 with main-actor default isolation; `@Observable` models, `async`/`await`, no Combine.

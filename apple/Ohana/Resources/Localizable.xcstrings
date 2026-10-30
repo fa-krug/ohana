@@ -1,6 +1,16 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ (%@) becomes the booking, the others its parts": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (%@) wird die Buchung, die anderen ihre Teile"
+          }
+        }
+      }
+    },
     "%@ (disabled)": {
       "localizations": {
         "de": {
@@ -77,6 +87,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ – %@: %lld Tage in %@, %lld Arbeitstage"
+          }
+        }
+      }
+    },
+    "%@: %@ per month": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: %@ pro Monat"
+          }
+        }
+      }
+    },
+    "%lld %% above": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld %% darüber"
+          }
+        }
+      }
+    },
+    "%lld %% below": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld %% darunter"
+          }
+        }
+      }
+    },
+    "%lld %% left": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld %% übrig"
           }
         }
       }
@@ -161,6 +211,26 @@
         }
       }
     },
+    "%lld min": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Min."
+          }
+        }
+      }
+    },
+    "%lld months": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Monate"
+          }
+        }
+      }
+    },
     "%lld of %lld": {
       "localizations": {
         "de": {
@@ -211,6 +281,16 @@
         }
       }
     },
+    "%lld selected · sum %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld ausgewählt · Summe %@"
+          }
+        }
+      }
+    },
     "%lld servings": {
       "localizations": {
         "de": {
@@ -257,6 +337,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld T"
+          }
+        }
+      }
+    },
+    "(%lld like similar ones)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(%lld wie ähnliche)"
+          }
+        }
+      }
+    },
+    "(%lld were there already)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(%lld waren schon da)"
           }
         }
       }
@@ -381,6 +481,16 @@
         }
       }
     },
+    "A subcategory has the kind of its top-level category.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Unterkategorie hat die Art ihrer obersten Kategorie."
+          }
+        }
+      }
+    },
     "A subscription stored in iCloud appears on all your Apple devices and on iCloud.com.": {
       "localizations": {
         "de": {
@@ -407,6 +517,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ein Token ist gespeichert; lass das Feld leer, um ihn zu behalten."
+          }
+        }
+      }
+    },
+    "A transfer is the same amount leaving one account and arriving on another, at most 4 days apart.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Umbuchung ist derselbe Betrag, der von einem Konto abgeht und auf einem anderen ankommt, höchstens 4 Tage auseinander."
           }
         }
       }
@@ -457,6 +577,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Konto"
+          }
+        }
+      }
+    },
+    "Account %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konto %lld"
+          }
+        }
+      }
+    },
+    "Accounts": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konten"
           }
         }
       }
@@ -571,6 +711,16 @@
         }
       }
     },
+    "Add account": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konto hinzufügen"
+          }
+        }
+      }
+    },
     "Add an icon or comment to the selected days (N)": {
       "localizations": {
         "de": {
@@ -587,6 +737,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Per E-Mail hinzufügen"
+          }
+        }
+      }
+    },
+    "Add category": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kategorie hinzufügen"
+          }
+        }
+      }
+    },
+    "Add default categories": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standard-Kategorien hinzufügen"
           }
         }
       }
@@ -661,12 +831,42 @@
         }
       }
     },
+    "Add subcategory": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unterkategorie hinzufügen"
+          }
+        }
+      }
+    },
     "Add to calendar": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "In den Kalender"
+          }
+        }
+      }
+    },
+    "Add transaction": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buchung hinzufügen"
+          }
+        }
+      }
+    },
+    "Add transaction (⌘N)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buchung hinzufügen (⌘N)"
           }
         }
       }
@@ -741,6 +941,16 @@
         }
       }
     },
+    "Adds up to 0: counts neither as income nor as an expense.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ergibt 0: zählt weder als Einnahme noch als Ausgabe."
+          }
+        }
+      }
+    },
     "Administration": {
       "localizations": {
         "de": {
@@ -757,6 +967,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Abteilung"
+          }
+        }
+      }
+    },
+    "All accounts": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Konten"
+          }
+        }
+      }
+    },
+    "All categories": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Kategorien"
           }
         }
       }
@@ -801,6 +1031,56 @@
         }
       }
     },
+    "All finance data deleted": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Finanzdaten gelöscht"
+          }
+        }
+      }
+    },
+    "All its transactions are deleted as well. This can’t be undone.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle seine Buchungen werden ebenfalls gelöscht. Das lässt sich nicht rückgängig machen."
+          }
+        }
+      }
+    },
+    "All split bookings and likely transfers of this period, without review": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Aufteilungen und wahrscheinlichen Umbuchungen dieses Zeitraums, ohne Prüfung"
+          }
+        }
+      }
+    },
+    "All time": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gesamt"
+          }
+        }
+      }
+    },
+    "All transactions, accounts, categories and saved bank formats are deleted for everyone in this family. This can’t be undone.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Buchungen, Konten, Kategorien und gespeicherten Bankformate werden für alle in dieser Familie gelöscht. Das lässt sich nicht rückgängig machen."
+          }
+        }
+      }
+    },
     "All “%@” days in %@ are covered": {
       "localizations": {
         "de": {
@@ -827,6 +1107,56 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wochentage immer anzeigen"
+          }
+        }
+      }
+    },
+    "Always show weekdays in the year view": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wochentage in der Jahresansicht immer anzeigen"
+          }
+        }
+      }
+    },
+    "Amount": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Betrag"
+          }
+        }
+      }
+    },
+    "Amount (%@)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Betrag (%@)"
+          }
+        }
+      }
+    },
+    "Amounts": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beträge"
+          }
+        }
+      }
+    },
+    "Amounts must be numbers from 0, “from” not above “to”.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beträge müssen Zahlen ab 0 sein, „von“ nicht über „bis“."
           }
         }
       }
@@ -906,7 +1236,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Termine"
+            "value": "Arzttermine"
           }
         }
       }
@@ -1001,6 +1331,26 @@
         }
       }
     },
+    "Automatic (a category called Groceries)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatisch (eine Kategorie namens Lebensmittel)"
+          }
+        }
+      }
+    },
+    "Automatic: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatisch: %@"
+          }
+        }
+      }
+    },
     "Away": {
       "localizations": {
         "de": {
@@ -1047,6 +1397,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Saldo"
+          }
+        }
+      }
+    },
+    "Balances on %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kontostände am %@"
           }
         }
       }
@@ -1191,12 +1551,32 @@
         }
       }
     },
+    "Both": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beides"
+          }
+        }
+      }
+    },
     "By Hand": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Von Hand"
+          }
+        }
+      }
+    },
+    "By category": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nach Kategorie"
           }
         }
       }
@@ -1311,12 +1691,32 @@
         }
       }
     },
+    "Categories": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kategorien"
+          }
+        }
+      }
+    },
     "Category": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Kategorie"
+          }
+        }
+      }
+    },
+    "Category %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kategorie %lld"
           }
         }
       }
@@ -1401,6 +1801,16 @@
         }
       }
     },
+    "Character set": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeichensatz"
+          }
+        }
+      }
+    },
     "Chat ID": {
       "localizations": {
         "de": {
@@ -1427,6 +1837,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nur kinderfreundlich"
+          }
+        }
+      }
+    },
+    "Choose CSV file": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CSV-Datei auswählen"
+          }
+        }
+      }
+    },
+    "Choose File": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datei auswählen"
           }
         }
       }
@@ -1481,6 +1911,16 @@
         }
       }
     },
+    "Clear selection": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auswahl aufheben"
+          }
+        }
+      }
+    },
     "Clear the selection": {
       "localizations": {
         "de": {
@@ -1521,6 +1961,16 @@
         }
       }
     },
+    "Close": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schließen"
+          }
+        }
+      }
+    },
     "Collapsed": {
       "localizations": {
         "de": {
@@ -1537,6 +1987,106 @@
           "stringUnit": {
             "state": "translated",
             "value": "Farbe"
+          }
+        }
+      }
+    },
+    "Column %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spalte %lld"
+          }
+        }
+      }
+    },
+    "Columns": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spalten"
+          }
+        }
+      }
+    },
+    "Combine %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld zusammenfassen"
+          }
+        }
+      }
+    },
+    "Combine automatically": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatisch zusammenfassen"
+          }
+        }
+      }
+    },
+    "Combine into a split booking": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Als Aufteilung zusammenfassen"
+          }
+        }
+      }
+    },
+    "Combine into a transfer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Als Umbuchung zusammenfassen"
+          }
+        }
+      }
+    },
+    "Combine transfers and split bookings automatically": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umbuchungen und Aufteilungen automatisch zusammenfassen"
+          }
+        }
+      }
+    },
+    "Combined %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zusammengefasst – %@"
+          }
+        }
+      }
+    },
+    "Combined into a split booking": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Als Aufteilung zusammengefasst"
+          }
+        }
+      }
+    },
+    "Combined into a transfer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Als Umbuchung zusammengefasst"
           }
         }
       }
@@ -1567,6 +2117,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kommentar"
+          }
+        }
+      }
+    },
+    "Comparison": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vergleich"
           }
         }
       }
@@ -1811,6 +2371,26 @@
         }
       }
     },
+    "Counts once, as an expense of %@.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zählt einmal, als Ausgabe von %@."
+          }
+        }
+      }
+    },
+    "Counts once, as income of %@.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zählt einmal, als Einnahme von %@."
+          }
+        }
+      }
+    },
     "Covers": {
       "localizations": {
         "de": {
@@ -1901,6 +2481,16 @@
         }
       }
     },
+    "Credit (in)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haben (ein)"
+          }
+        }
+      }
+    },
     "Cron (m h dom mon dow)": {
       "localizations": {
         "de": {
@@ -1927,6 +2517,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Küche"
+          }
+        }
+      }
+    },
+    "Currency": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Währung"
           }
         }
       }
@@ -1971,6 +2571,16 @@
         }
       }
     },
+    "Danger zone": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gefahrenzone"
+          }
+        }
+      }
+    },
     "Dark": {
       "localizations": {
         "de": {
@@ -2001,6 +2611,16 @@
         }
       }
     },
+    "Date format": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datumsformat"
+          }
+        }
+      }
+    },
     "Day off": {
       "localizations": {
         "de": {
@@ -2021,6 +2641,26 @@
         }
       }
     },
+    "Debit (out)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Soll (aus)"
+          }
+        }
+      }
+    },
+    "Debit and credit": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Soll und Haben"
+          }
+        }
+      }
+    },
     "Delete": {
       "localizations": {
         "de": {
@@ -2037,6 +2677,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ löschen?"
+          }
+        }
+      }
+    },
+    "Delete all finance data": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Finanzdaten löschen"
+          }
+        }
+      }
+    },
+    "Delete all finance data?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Finanzdaten löschen?"
           }
         }
       }
@@ -2077,6 +2737,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tag löschen?"
+          }
+        }
+      }
+    },
+    "Delete the account “%@”?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Konto „%@“ löschen?"
+          }
+        }
+      }
+    },
+    "Delete the category “%@”?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Kategorie „%@“ löschen?"
           }
         }
       }
@@ -2141,6 +2821,26 @@
         }
       }
     },
+    "Delete this transaction?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Buchung löschen?"
+          }
+        }
+      }
+    },
+    "Delete transaction": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buchung löschen"
+          }
+        }
+      }
+    },
     "Delete type": {
       "localizations": {
         "de": {
@@ -2157,6 +2857,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "„%@“ löschen?"
+          }
+        }
+      }
+    },
+    "Deletes all transactions, accounts, categories and saved bank formats of this family and resets the currency. The calendar stays as it is.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Löscht alle Buchungen, Konten, Kategorien und gespeicherten Bankformate dieser Familie und setzt die Währung zurück. Der Kalender bleibt unverändert."
+          }
+        }
+      }
+    },
+    "Delimiter": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trennzeichen"
           }
         }
       }
@@ -2221,6 +2941,16 @@
         }
       }
     },
+    "Directly in “%@”": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Direkt in „%@“"
+          }
+        }
+      }
+    },
     "Dismiss": {
       "localizations": {
         "de": {
@@ -2257,6 +2987,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fertig"
+          }
+        }
+      }
+    },
+    "Done selecting": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auswahl beenden"
           }
         }
       }
@@ -2307,6 +3047,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Z. B. „Urlaub Papa“. Deckt einen Tag ab, der Betreuung braucht."
+          }
+        }
+      }
+    },
+    "Each amount is a range per month in %@, from the lower to the upper households; a single value is a single average. Leave empty what you don’t know.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jeder Betrag ist eine Spanne pro Monat in %@, von den unteren bis zu den oberen Haushalten; nur ein Wert ist ein einzelner Durchschnitt. Was ihr nicht wisst, bleibt leer."
           }
         }
       }
@@ -2411,6 +3161,16 @@
         }
       }
     },
+    "Edit transaction": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buchung bearbeiten"
+          }
+        }
+      }
+    },
     "Edit types": {
       "localizations": {
         "de": {
@@ -2477,6 +3237,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ende"
+          }
+        }
+      }
+    },
+    "Enter a name.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib einen Namen ein."
+          }
+        }
+      }
+    },
+    "Enter an amount, e.g. %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib einen Betrag ein, z. B. %@"
           }
         }
       }
@@ -2611,12 +3391,32 @@
         }
       }
     },
+    "Expense": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgabe"
+          }
+        }
+      }
+    },
     "Expenses": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Ausgaben"
+          }
+        }
+      }
+    },
+    "Expenses by category": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgaben nach Kategorie"
           }
         }
       }
@@ -2637,6 +3437,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Export und Import"
+          }
+        }
+      }
+    },
+    "Export the transactions from your online banking as a CSV file and pick it here. Rows imported before are skipped.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exportiere die Umsätze aus deinem Online-Banking als CSV-Datei und wähle sie hier aus. Schon importierte Zeilen werden übersprungen."
           }
         }
       }
@@ -2701,6 +3511,26 @@
         }
       }
     },
+    "Figures the overview measures your months against, e.g. household spending according to the statistics office.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zahlen, an denen die Übersicht eure Monate misst, z. B. die Haushaltsausgaben laut Statistikamt."
+          }
+        }
+      }
+    },
+    "File": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datei"
+          }
+        }
+      }
+    },
     "Filter": {
       "localizations": {
         "de": {
@@ -2727,6 +3557,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Such mir einen Hautarzttermin vor Juni."
+          }
+        }
+      }
+    },
+    "Find transfers": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umbuchungen finden"
+          }
+        }
+      }
+    },
+    "First row holds the column names": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erste Zeile enthält Spaltennamen"
+          }
+        }
+      }
+    },
+    "First rows": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erste Zeilen"
           }
         }
       }
@@ -2797,6 +3657,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rhythmus"
+          }
+        }
+      }
+    },
+    "From": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Von"
           }
         }
       }
@@ -3001,6 +3871,26 @@
         }
       }
     },
+    "Groceries": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lebensmittel"
+          }
+        }
+      }
+    },
+    "Groceries category": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lebensmittel-Kategorie"
+          }
+        }
+      }
+    },
     "Has an Ohana account already? Add them with the email of their account.": {
       "localizations": {
         "de": {
@@ -3101,6 +3991,16 @@
         }
       }
     },
+    "How the columns of a bank’s CSV files map, recognized by the header row. Remove one to set it up anew at the next import.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie die Spalten der CSV-Dateien einer Bank zugeordnet werden, erkannt an der Kopfzeile. Entferne eins, um es beim nächsten Import neu einzustellen."
+          }
+        }
+      }
+    },
     "How to add it to iCloud": {
       "localizations": {
         "de": {
@@ -3137,6 +4037,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Symbol & Notiz …"
+          }
+        }
+      }
+    },
+    "Icon (an emoji)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Symbol (ein Emoji)"
           }
         }
       }
@@ -3191,12 +4101,102 @@
         }
       }
     },
+    "Import %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld importieren"
+          }
+        }
+      }
+    },
+    "Import CSV": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CSV importieren"
+          }
+        }
+      }
+    },
+    "Import a bank statement (⇧⌘I)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kontoauszug importieren (⇧⌘I)"
+          }
+        }
+      }
+    },
+    "Import bank statement": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kontoauszug importieren"
+          }
+        }
+      }
+    },
+    "Import failed: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import fehlgeschlagen: %@"
+          }
+        }
+      }
+    },
+    "Imported before": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schon importiert"
+          }
+        }
+      }
+    },
+    "Imported before, skipped: %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schon importiert, übersprungen: %lld"
+          }
+        }
+      }
+    },
+    "Imported from a bank statement": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus einem Kontoauszug importiert"
+          }
+        }
+      }
+    },
     "Imported.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Importiert."
+          }
+        }
+      }
+    },
+    "Imported: %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importiert: %lld"
           }
         }
       }
@@ -3217,6 +4217,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ein"
+          }
+        }
+      }
+    },
+    "In and out": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein und aus"
           }
         }
       }
@@ -3257,6 +4267,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Einnahmen"
+          }
+        }
+      }
+    },
+    "Income by category": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einnahmen nach Kategorie"
           }
         }
       }
@@ -3371,6 +4391,26 @@
         }
       }
     },
+    "Its transactions and subcategories move to “%@”.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ihre Buchungen und Unterkategorien wandern nach „%@“."
+          }
+        }
+      }
+    },
+    "Its transactions stay, without a category. Its subcategories move up to the top level.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ihre Buchungen bleiben erhalten, ohne Kategorie. Ihre Unterkategorien rücken auf die oberste Ebene."
+          }
+        }
+      }
+    },
     "Joins as": {
       "localizations": {
         "de": {
@@ -3437,6 +4477,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Anteil bekannter Rezepte"
+          }
+        }
+      }
+    },
+    "Last month": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Letzter Monat"
+          }
+        }
+      }
+    },
+    "Last year": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Letztes Jahr"
           }
         }
       }
@@ -3547,6 +4607,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hell"
+          }
+        }
+      }
+    },
+    "Like similar earlier ones (set up the assistant for the rest)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie ähnliche frühere (mit eingerichtetem Assistenten auch den Rest)"
+          }
+        }
+      }
+    },
+    "Like similar earlier ones, the rest with AI": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie ähnliche frühere, den Rest mit KI"
           }
         }
       }
@@ -3921,6 +5001,16 @@
         }
       }
     },
+    "Move to": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verschieben nach"
+          }
+        }
+      }
+    },
     "Move to %@": {
       "localizations": {
         "de": {
@@ -4031,12 +5121,42 @@
         }
       }
     },
+    "Net": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saldo"
+          }
+        }
+      }
+    },
     "New Recipe": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Neues Rezept"
+          }
+        }
+      }
+    },
+    "New account": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neues Konto"
+          }
+        }
+      }
+    },
+    "New category": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Kategorie"
           }
         }
       }
@@ -4141,6 +5261,26 @@
         }
       }
     },
+    "New transaction": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Buchung"
+          }
+        }
+      }
+    },
+    "New transactions: %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Buchungen: %lld"
+          }
+        }
+      }
+    },
     "New type %lld": {
       "localizations": {
         "de": {
@@ -4167,6 +5307,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Weiter"
+          }
+        }
+      }
+    },
+    "Next (⌥⌘→)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weiter (⌥⌘→)"
           }
         }
       }
@@ -4261,6 +5411,16 @@
         }
       }
     },
+    "No accounts yet.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Konten."
+          }
+        }
+      }
+    },
     "No active plan": {
       "localizations": {
         "de": {
@@ -4341,6 +5501,16 @@
         }
       }
     },
+    "No likely transfers": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine wahrscheinlichen Umbuchungen"
+          }
+        }
+      }
+    },
     "No matches": {
       "localizations": {
         "de": {
@@ -4377,6 +5547,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Keine offenen Einladungslinks."
+          }
+        }
+      }
+    },
+    "No readable rows yet: check the columns.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine lesbaren Zeilen: Prüfe die Spalten."
           }
         }
       }
@@ -4451,6 +5631,56 @@
         }
       }
     },
+    "No transaction could be sorted": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Buchung konnte einsortiert werden"
+          }
+        }
+      }
+    },
+    "No transactions": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Buchungen"
+          }
+        }
+      }
+    },
+    "No transactions in this period yet.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Buchungen in diesem Zeitraum."
+          }
+        }
+      }
+    },
+    "No transactions in this period.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Buchungen in diesem Zeitraum."
+          }
+        }
+      }
+    },
+    "No transactions in this period. Add one or import a bank statement (CSV).": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Buchungen in diesem Zeitraum. Füge eine hinzu oder importiere einen Kontoauszug (CSV)."
+          }
+        }
+      }
+    },
     "No transactions this month yet.": {
       "localizations": {
         "de": {
@@ -4467,6 +5697,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noch keine Buchungen."
+          }
+        }
+      }
+    },
+    "No transfers or split bookings found": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Umbuchungen oder Aufteilungen gefunden"
           }
         }
       }
@@ -4511,6 +5751,16 @@
         }
       }
     },
+    "None yet: the import remembers the format of a bank’s files.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine: Der Import merkt sich das Format der Dateien einer Bank."
+          }
+        }
+      }
+    },
     "Normal": {
       "localizations": {
         "de": {
@@ -4547,6 +5797,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noch nicht gelaufen: Ergebnisse erscheinen nach dem ersten Lauf."
+          }
+        }
+      }
+    },
+    "Not set": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht festgelegt"
           }
         }
       }
@@ -4597,6 +5857,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nichts ignoriert."
+          }
+        }
+      }
+    },
+    "Nothing new: all %lld were there already": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nichts Neues: alle %lld waren schon da"
           }
         }
       }
@@ -4667,6 +5937,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Benachrichtigungen"
+          }
+        }
+      }
+    },
+    "Now %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktuell %@"
+          }
+        }
+      }
+    },
+    "Number format": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zahlenformat"
           }
         }
       }
@@ -4771,6 +6061,16 @@
         }
       }
     },
+    "One column (+/−)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Spalte (+/−)"
+          }
+        }
+      }
+    },
     "Only editors of the family can change entry types.": {
       "localizations": {
         "de": {
@@ -4817,6 +6117,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nur die ersten %lld Tage werden angezeigt."
+          }
+        }
+      }
+    },
+    "Only transactions that aren’t part of a transfer or split booking yet can be combined": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur Buchungen, die noch zu keiner Umbuchung oder Aufteilung gehören, lassen sich zusammenfassen"
           }
         }
       }
@@ -4887,6 +6197,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Einstellungen öffnen"
+          }
+        }
+      }
+    },
+    "Opening balance": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anfangsstand"
+          }
+        }
+      }
+    },
+    "Opening balance %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anfangsstand %@"
+          }
+        }
+      }
+    },
+    "Opening balance (%@)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anfangsstand (%@)"
           }
         }
       }
@@ -4971,6 +6311,56 @@
         }
       }
     },
+    "Parent": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Übergeordnet"
+          }
+        }
+      }
+    },
+    "Part of %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teil von %@"
+          }
+        }
+      }
+    },
+    "Part of a split booking": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teil einer Aufteilung"
+          }
+        }
+      }
+    },
+    "Part of a transfer: it counts only once, as the sum of its transactions": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teil einer Umbuchung: Sie zählt nur einmal, als Summe ihrer Buchungen"
+          }
+        }
+      }
+    },
+    "Parts and split bookings can’t belong to a transfer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teile und aufgeteilte Buchungen können nicht zu einer Umbuchung gehören"
+          }
+        }
+      }
+    },
     "Passkeys, password and API tokens": {
       "localizations": {
         "de": {
@@ -4997,6 +6387,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pausieren"
+          }
+        }
+      }
+    },
+    "Payee": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empfänger"
+          }
+        }
+      }
+    },
+    "Per category": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pro Kategorie"
+          }
+        }
+      }
+    },
+    "Per month": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pro Monat"
+          }
+        }
+      }
+    },
+    "Period": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeitraum"
           }
         }
       }
@@ -5247,6 +6677,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vorschau auf jameda"
+          }
+        }
+      }
+    },
+    "Previous": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zurück"
+          }
+        }
+      }
+    },
+    "Previous (⌥⌘←)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zurück (⌥⌘←)"
           }
         }
       }
@@ -5611,6 +7061,16 @@
         }
       }
     },
+    "Remember this format for the next statement": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Format für den nächsten Auszug merken"
+          }
+        }
+      }
+    },
     "Remove": {
       "localizations": {
         "de": {
@@ -5851,6 +7311,56 @@
         }
       }
     },
+    "Rows": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeilen"
+          }
+        }
+      }
+    },
+    "Rows before the table": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeilen vor der Tabelle"
+          }
+        }
+      }
+    },
+    "Rows read: %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeilen gelesen: %lld"
+          }
+        }
+      }
+    },
+    "Rows read: %lld, unreadable: %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeilen gelesen: %lld, nicht lesbar: %lld"
+          }
+        }
+      }
+    },
+    "Rows without a date or amount, skipped: %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeilen ohne Datum oder Betrag, übersprungen: %lld"
+          }
+        }
+      }
+    },
     "Run now": {
       "localizations": {
         "de": {
@@ -5947,6 +7457,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "1 Rezept speichern"
+          }
+        }
+      }
+    },
+    "Saved": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gespeichert"
+          }
+        }
+      }
+    },
+    "Saved bank formats": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gespeicherte Bankformate"
           }
         }
       }
@@ -6061,6 +7591,16 @@
         }
       }
     },
+    "Search payee, description, note": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empfänger, Beschreibung, Notiz suchen"
+          }
+        }
+      }
+    },
     "Search provider": {
       "localizations": {
         "de": {
@@ -6117,6 +7657,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Anbraten"
+          }
+        }
+      }
+    },
+    "Select": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auswählen"
           }
         }
       }
@@ -6321,6 +7871,16 @@
         }
       }
     },
+    "Set, without a source": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Festgelegt, ohne Quelle"
+          }
+        }
+      }
+    },
     "Setting the statistic average": {
       "localizations": {
         "de": {
@@ -6411,6 +7971,16 @@
         }
       }
     },
+    "Shopping list of this day": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einkaufsliste dieses Tages"
+          }
+        }
+      }
+    },
     "Shopping reminder": {
       "localizations": {
         "de": {
@@ -6431,12 +8001,42 @@
         }
       }
     },
+    "Show all accounts": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Konten zeigen"
+          }
+        }
+      }
+    },
     "Show in calendar": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Im Kalender zeigen"
+          }
+        }
+      }
+    },
+    "Show more (%lld left)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mehr anzeigen (noch %lld)"
+          }
+        }
+      }
+    },
+    "Show only this account": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur dieses Konto zeigen"
           }
         }
       }
@@ -6541,12 +8141,82 @@
         }
       }
     },
+    "Sort into categories": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatisch einsortieren"
+          }
+        }
+      }
+    },
     "Sort our uncategorized transactions into categories.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Ordne unsere Buchungen ohne Kategorie passenden Kategorien zu."
+          }
+        }
+      }
+    },
+    "Sort the new transactions into categories (like similar ones, the rest with AI)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die neuen Buchungen in Kategorien einsortieren (wie ähnliche, den Rest mit KI)"
+          }
+        }
+      }
+    },
+    "Sort the new transactions into categories like similar earlier ones": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die neuen Buchungen wie ähnliche frühere in Kategorien einsortieren"
+          }
+        }
+      }
+    },
+    "Sorted into categories: %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Kategorien einsortiert: %lld"
+          }
+        }
+      }
+    },
+    "Sorting…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sortiere ein…"
+          }
+        }
+      }
+    },
+    "Sorting… %lld of %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sortiere ein… %lld von %lld"
+          }
+        }
+      }
+    },
+    "Source": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quelle"
           }
         }
       }
@@ -6611,6 +8281,66 @@
         }
       }
     },
+    "Split": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufteilen"
+          }
+        }
+      }
+    },
+    "Split booking undone": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufteilung aufgehoben"
+          }
+        }
+      }
+    },
+    "Split booking: it counts only through its parts and what they leave over": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufgeteilte Buchung: Sie zählt nur über ihre Teile und den Rest, den diese übrig lassen"
+          }
+        }
+      }
+    },
+    "Split bookings to combine: %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufteilungen zum Zusammenfassen: %lld"
+          }
+        }
+      }
+    },
+    "Split into parts: %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufgeteilt in Teile: %lld"
+          }
+        }
+      }
+    },
+    "Split up transfer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umbuchung auflösen"
+          }
+        }
+      }
+    },
     "Start building your collection": {
       "localizations": {
         "de": {
@@ -6647,6 +8377,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Beginn"
+          }
+        }
+      }
+    },
+    "Statistic average": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Statistischer Durchschnitt"
           }
         }
       }
@@ -6811,6 +8551,16 @@
         }
       }
     },
+    "Swipe left or right to switch steps": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wische nach links oder rechts zum Blättern"
+          }
+        }
+      }
+    },
     "System": {
       "localizations": {
         "de": {
@@ -6837,6 +8587,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nachricht zurücknehmen"
+          }
+        }
+      }
+    },
+    "Take out of the split": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus der Aufteilung nehmen"
+          }
+        }
+      }
+    },
+    "Taken out of the split": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus der Aufteilung genommen"
           }
         }
       }
@@ -6921,6 +8691,16 @@
         }
       }
     },
+    "The AI couldn’t sort: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die KI konnte nicht einsortieren: %@"
+          }
+        }
+      }
+    },
     "The API returned no models": {
       "localizations": {
         "de": {
@@ -6937,6 +8717,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Der Assistent darf für Bearbeiter Kalender, Finanzen, Essen und Terminsuchen ändern (die meisten Änderungen lassen sich rückgängig machen). Aus: Er liest nur. Für Betrachter liest er immer nur."
+          }
+        }
+      }
+    },
+    "The category of your grocery shopping (with its subcategories): a shopping list shows what was spent in it on the shopping day (± 1 day), and those transactions link to the list.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Kategorie eurer Lebensmitteleinkäufe (mit ihren Unterkategorien): Eine Einkaufsliste zeigt, was am Einkaufstag (± 1 Tag) darin ausgegeben wurde, und diese Buchungen verlinken auf die Liste."
           }
         }
       }
@@ -6967,6 +8757,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Die Abo-Adresse dieser Familie im Familienplaner. Ihre Termin-IDs bleiben erhalten, damit umgezogene Abos ihre Termine behalten."
+          }
+        }
+      }
+    },
+    "The file is not valid UTF-8.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Datei ist kein gültiges UTF-8."
           }
         }
       }
@@ -7067,6 +8867,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Die Menge muss eine Zahl über 0 sein."
+          }
+        }
+      }
+    },
+    "The same amount leaves one of your accounts and arrives on another within a few days. Combined, both count nothing: the money stayed in the family.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Derselbe Betrag geht von einem eurer Konten ab und kommt innerhalb weniger Tage auf einem anderen an. Zusammengefasst zählen beide nichts: Das Geld ist in der Familie geblieben."
           }
         }
       }
@@ -7191,6 +9001,16 @@
         }
       }
     },
+    "This month": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieser Monat"
+          }
+        }
+      }
+    },
     "This month · %@": {
       "localizations": {
         "de": {
@@ -7227,6 +9047,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Das löscht alle Tags (auch eigene) und entfernt sie von deinen Rezepten. Mit den Standards neu starten?"
+          }
+        }
+      }
+    },
+    "This year": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Jahr"
           }
         }
       }
@@ -7311,6 +9141,16 @@
         }
       }
     },
+    "To sort the transactions. Income categories show for money coming in, expense categories for money going out, “both” for both. Categories can have subcategories, as deep as you like: a subcategory has the kind of its top-level category, and a category’s totals include its subcategories.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zum Einordnen der Buchungen. Einnahme-Kategorien erscheinen bei Geld, das hereinkommt, Ausgabe-Kategorien bei Geld, das hinausgeht, „beides“ bei beidem. Kategorien können Unterkategorien haben, beliebig tief: Eine Unterkategorie hat die Art ihrer obersten Kategorie, und die Summen einer Kategorie enthalten ihre Unterkategorien."
+          }
+        }
+      }
+    },
     "Today": {
       "localizations": {
         "de": {
@@ -7341,12 +9181,122 @@
         }
       }
     },
+    "Top level": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oberste Ebene"
+          }
+        }
+      }
+    },
+    "Totals": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Summen"
+          }
+        }
+      }
+    },
+    "Transaction": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buchung"
+          }
+        }
+      }
+    },
+    "Transaction added": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buchung hinzugefügt"
+          }
+        }
+      }
+    },
+    "Transaction deleted": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buchung gelöscht"
+          }
+        }
+      }
+    },
+    "Transactions": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buchungen"
+          }
+        }
+      }
+    },
+    "Transactions deleted: %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buchungen gelöscht: %lld"
+          }
+        }
+      }
+    },
+    "Transfer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umbuchung"
+          }
+        }
+      }
+    },
+    "Transfer split up": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umbuchung aufgelöst"
+          }
+        }
+      }
+    },
     "Transfers": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Umbuchungen"
+          }
+        }
+      }
+    },
+    "Transfers combined: %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umbuchungen zusammengefasst: %lld"
+          }
+        }
+      }
+    },
+    "Transfers to combine: %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umbuchungen zum Zusammenfassen: %lld"
           }
         }
       }
@@ -7427,6 +9377,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rückgängig (⌘Z)"
+          }
+        }
+      }
+    },
+    "Undo split": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufteilung aufheben"
           }
         }
       }
@@ -7881,6 +9841,16 @@
         }
       }
     },
+    "Without account": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohne Konto"
+          }
+        }
+      }
+    },
     "Writing…": {
       "localizations": {
         "de": {
@@ -7931,6 +9901,16 @@
         }
       }
     },
+    "You can look at the finances; only editors can change them.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du kannst die Finanzen ansehen, ändern können sie nur Bearbeiter."
+          }
+        }
+      }
+    },
     "You sign in on your server’s page; the app gets its own key, which you can remove on your account page.": {
       "localizations": {
         "de": {
@@ -7957,6 +9937,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dein Ohana-Server"
+          }
+        }
+      }
+    },
+    "Your bank accounts, cash or cards. A transaction can belong to one; the balance is the opening balance plus all its transactions.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eure Bankkonten, Bargeld oder Karten. Eine Buchung kann zu einem gehören; der Kontostand ist der Anfangsstand plus alle seine Buchungen."
           }
         }
       }
@@ -7997,6 +9987,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Deine Sitzung ist abgelaufen, melde dich erneut an."
+          }
+        }
+      }
+    },
+    "above": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "darüber"
+          }
+        }
+      }
+    },
+    "all per month": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "alles pro Monat"
           }
         }
       }
@@ -8101,6 +10111,16 @@
         }
       }
     },
+    "e.g. statistics office 2024, couple with 2 children": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "z. B. Destatis 2024, Paar mit 2 Kindern"
+          }
+        }
+      }
+    },
     "error": {
       "localizations": {
         "de": {
@@ -8141,6 +10161,16 @@
         }
       }
     },
+    "from": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "von"
+          }
+        }
+      }
+    },
     "from %@": {
       "localizations": {
         "de": {
@@ -8177,6 +10207,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "iPhone / iPad: auf „Auf diesem Gerät abonnieren“ tippen (oder Einstellungen → Apps → Kalender → Kalenderaccounts → Account hinzufügen → Andere → Kalenderabo hinzufügen und die URL einfügen)."
+          }
+        }
+      }
+    },
+    "in the range, lower half": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "in der Spanne, untere Hälfte"
+          }
+        }
+      }
+    },
+    "in the range, upper half": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "in der Spanne, obere Hälfte"
           }
         }
       }
@@ -8241,6 +10291,16 @@
         }
       }
     },
+    "nothing to compare yet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "noch nichts zum Vergleichen"
+          }
+        }
+      }
+    },
     "notified": {
       "localizations": {
         "de": {
@@ -8257,6 +10317,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "ohana.example.com"
+          }
+        }
+      }
+    },
+    "on average": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "im Durchschnitt"
           }
         }
       }
@@ -8281,6 +10351,16 @@
         }
       }
     },
+    "remainder %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rest %@"
+          }
+        }
+      }
+    },
     "running": {
       "localizations": {
         "de": {
@@ -8301,12 +10381,52 @@
         }
       }
     },
+    "split bookings: %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufteilungen: %lld"
+          }
+        }
+      }
+    },
     "started by hand": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "von Hand gestartet"
+          }
+        }
+      }
+    },
+    "statistic range": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "statistische Spanne"
+          }
+        }
+      }
+    },
+    "to": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "bis"
+          }
+        }
+      }
+    },
+    "transfers: %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umbuchungen: %lld"
           }
         }
       }
@@ -8347,6 +10467,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "· Unterwegs"
+          }
+        }
+      }
+    },
+    "Ø = average of the completed months. The percentages show how “%@” differs from each column.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ø = Durchschnitt der abgeschlossenen Monate. Die Prozente zeigen, wie „%@“ von der jeweiligen Spalte abweicht."
           }
         }
       }

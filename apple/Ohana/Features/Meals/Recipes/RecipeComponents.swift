@@ -143,10 +143,18 @@ struct RecipeMetaRow: View {
     let servings: Int
 
     var body: some View {
-        HStack(spacing: 12) {
-            if let prep { Label("Prep \(prep) min", systemImage: "timer") }
-            if let cook { Label("Cooking \(cook) min", systemImage: "flame") }
-            Label("\(servings) servings", systemImage: "person.2")
+        // The words where they fit (the recipe page), only the numbers on a narrow card.
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) {
+                if let prep { Label("Prep \(prep) min", systemImage: "timer") }
+                if let cook { Label("Cooking \(cook) min", systemImage: "flame") }
+                Label("\(servings) servings", systemImage: "person.2")
+            }
+            HStack(spacing: 10) {
+                if let prep { Label("\(prep) min", systemImage: "timer") }
+                if let cook { Label("\(cook) min", systemImage: "flame") }
+                Label(String(servings), systemImage: "person.2")
+            }
         }
         .font(.caption)
         .foregroundStyle(.secondary)
