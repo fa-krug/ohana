@@ -36,6 +36,7 @@ struct WelcomeView: View {
                             .font(.headline)
                         TextField("ohana.example.com", text: $server)
                             .textContentType(.URL)
+                            .textFieldStyle(.plain)
                             .autocorrectionDisabled()
                             #if os(iOS)
                             .keyboardType(.URL)

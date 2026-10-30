@@ -44,9 +44,20 @@ final class AppModel {
 
     init() {
         selectedFamilyID = UserDefaults.standard.string(forKey: Keys.family)
+        #if DEBUG
+        // Development: `-OHANA_DEV_SERVER http://localhost:3000 -OHANA_DEV_TOKEN ohana_…` as launch
+        // arguments signs in with an API token without pairing (nothing is stored).
+        if let text = UserDefaults.standard.string(forKey: "OHANA_DEV_SERVER"), let url = URL(string: text),
+           let token = UserDefaults.standard.string(forKey: "OHANA_DEV_TOKEN") {
+            connect(server: url, token: token)
+            Task { await refresh() }
+            return
+        }
+        #endif
         if let text = UserDefaults.standard.string(forKey: Keys.server), let url = URL(string: text),
            let token = Keychain.load(Keys.token) {
             connect(server: url, token: token)
+            Task { await refresh() }
         }
     }
 
