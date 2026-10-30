@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 enum HTTPMethod: String, Sendable {
     case get = "GET", post = "POST", patch = "PATCH", put = "PUT", delete = "DELETE"
@@ -8,6 +9,9 @@ enum HTTPMethod: String, Sendable {
 /// token the pairing page handed out). Paths are absolute on the server (`/api/v1/me`); a family's
 /// routes go through `FamilyAPI`. A 401 calls `onUnauthorized` (the app signs out) and throws.
 final class APIClient {
+    /// Failed requests and answers that don't decode (Console: subsystem de.fa-krug.Ohana).
+    static let log = Logger(subsystem: "de.fa-krug.Ohana", category: "api")
+
     let baseURL: URL
     private let token: String?
     private let session: URLSession
@@ -78,6 +82,7 @@ final class APIClient {
     func check(_ http: HTTPURLResponse, data: Data) throws {
         guard !(200..<300).contains(http.statusCode) else { return }
         let message = APIError.message(from: data)
+        Self.log.error("HTTP \(http.statusCode) \(http.url?.path() ?? "", privacy: .public): \(message ?? "", privacy: .public)")
         if http.statusCode == 401 {
             onUnauthorized?()
             throw APIError.unauthorized(message)
@@ -90,6 +95,7 @@ final class APIClient {
         do {
             return try Self.decoder.decode(T.self, from: data)
         } catch {
+            Self.log.fault("Can't decode \(String(describing: T.self), privacy: .public): \(Self.describe(error), privacy: .public)")
             throw APIError.decoding(Self.describe(error))
         }
     }

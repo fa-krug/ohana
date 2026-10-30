@@ -88,6 +88,10 @@ struct AppShell: View {
                 if defaults.object(forKey: "OHANA_DEV_ASSISTANT") != nil {
                     showAssistant = defaults.bool(forKey: "OHANA_DEV_ASSISTANT")
                 }
+                // `-OHANA_DEV_URL ohana://f/{id}/meals/recipes/{id}` opens a link at launch.
+                if let link = defaults.string(forKey: "OHANA_DEV_URL"), let url = URL(string: link) {
+                    app.open(url)
+                }
             }
             #endif
         } else {
