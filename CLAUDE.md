@@ -316,7 +316,7 @@ npm run import-legacy -- --family-planner dump.sql --cookless cookless.db --cook
   page, `AppRoute`: `family.open(.recipe(id:))` etc. switches to the module, whose root takes it
   with `family.takeRoute(for:)`; web paths `/f/{id}/…` and `ohana://f/{id}/…` map onto routes),
   `DesignSystem/` (solid content cards — Liquid Glass only on bars and floating controls —, error banner, `CancelButton`/`discardGuard`; the module sets `newItem`/`moduleMenu` focused values for File ▸ New and its menu), `Features/<Module>/` (plus `Account/`, `Admin/`).
-  The assistant: `family.ask(prompt, send:, newChat:)` opens it ready to type from anywhere (⇧⌘J, the overview's field, the Mac's `MenuBarExtra`, the
+  The assistant: `family.ask(prompt, send:, newChat:)` opens it ready to type from anywhere (⇧⌘J, the overview's field, the Mac's menu bar item (`MenuBarItem`, an AppKit status item: SwiftUI's `MenuBarExtra` re-sets its icon on every window redraw and crashed the app), the
   `AskOhanaIntent` App Shortcut). German strings: per-module
   `apple/Localization/*.de.json`, merged into `Resources/Localizable.xcstrings` by
   `apple/scripts/merge-localizations.py` (`--check` in CI). Build/test: `apple/README.md`; CI:
