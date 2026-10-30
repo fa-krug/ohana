@@ -349,7 +349,7 @@ One Docker image (built from [`web/`](web)), two containers
 
 Both share the volume `ohana-data` (`/app/data`: the SQLite database, `media/` with the
 recipe photos (`MEDIA_ROOT`) and `backups/`).
-Pushes to `main` run the tests, build the `linux/amd64` + `linux/arm64` image, push
+Pushes to `main` that change `web/`, a `docker-compose*.yml` or `ci.yml` run the tests, build the `linux/amd64` + `linux/arm64` image, push
 `sascha384/ohana:latest` to Docker Hub and redeploy the Arcane project `ohana` (GitHub OIDC,
 no deploy secret), then wait for `/api/health`. The repository needs the secrets
 `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`.

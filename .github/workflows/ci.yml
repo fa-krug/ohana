@@ -1,10 +1,14 @@
 name: CI/CD
 
+# Only the server (web/) and its deployment: changes to the native app (apple/, its own
+# workflow) or docs alone neither build images nor redeploy.
 on:
   push:
     branches: [main]
+    paths: ['web/**', 'docker-compose*.yml', '.github/workflows/ci.yml']
   pull_request:
     branches: [main]
+    paths: ['web/**', 'docker-compose*.yml', '.github/workflows/ci.yml']
 
 env:
   REGISTRY: docker.io

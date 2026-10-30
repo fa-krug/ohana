@@ -5,7 +5,8 @@ description: Use when asked to deploy, ship or release Ohana to production. Depl
 
 # Deploy Ohana
 
-A push to `origin/main` runs `.github/workflows/ci.yml`: typecheck and tests → build
+A push to `origin/main` that touches `web/**`, `docker-compose*.yml` or the workflow runs
+`.github/workflows/ci.yml` (changes to `apple/` or docs alone don't deploy): typecheck and tests → build
 linux/amd64 + linux/arm64 images → push `sascha384/ohana:latest` → redeploy the Arcane
 project `ohana` with `arcane-cli` (GitHub OIDC federated credential, no deploy secret) → wait
 for `https://ohana.fa-krug.de/api/health`.
