@@ -95,7 +95,7 @@ struct AppointmentRunCounts: View {
     let run: AppointmentRunSummary
 
     var body: some View {
-        Text("\(run.doctorsFound) found · \(run.doctorsMatched) matching · \(run.slotsFound) appointments")
+        Text(AppointmentLogic.runCounts(found: run.doctorsFound, matched: run.doctorsMatched, slots: run.slotsFound))
     }
 }
 
@@ -118,20 +118,34 @@ struct AppointmentRunMessage: View {
     }
 }
 
-/// Keeps reloading while a run is queued or running (every 3 s), as the web's `useRunRefresh`.
+/// Reloads like the web's `useRunRefresh`: every 3 s while a run is queued or running, else every
+/// 45 s, while the page is on screen and the app active; and right away when the app becomes
+/// active again (runs the worker made meanwhile show up).
 struct AppointmentPolling: ViewModifier {
     let busy: Bool
     let reload: () async -> Void
+    @Environment(\.scenePhase) private var scenePhase
+
+    private struct Key: Hashable {
+        let busy: Bool
+        let active: Bool
+    }
 
     func body(content: Content) -> some View {
-        content.task(id: busy) {
-            guard busy else { return }
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(3))
-                if Task.isCancelled { return }
-                await reload()
+        content
+            .task(id: Key(busy: busy, active: scenePhase == .active)) {
+                guard scenePhase == .active else { return }
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: AppointmentRefresh.interval(busy: busy))
+                    if Task.isCancelled { return }
+                    await reload()
+                }
             }
-        }
+            .onChange(of: scenePhase) { old, new in
+                if new == .active, old != .active {
+                    Task { await reload() }
+                }
+            }
     }
 }
 

@@ -74,7 +74,7 @@ struct CreateFamilySheet: View {
                 let family: FamilySummary = try await client.send(.post, "/api/v1/families", body: body)
                 await app.refresh()
                 app.selectedFamilyID = family.id
-                Module.overview.open()
+                if let created = app.selectedFamily { app.context(for: created)?.open(.module(.overview)) }
                 dismiss()
             } catch is CancellationError {
             } catch {

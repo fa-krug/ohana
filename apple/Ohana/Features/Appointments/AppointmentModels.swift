@@ -382,3 +382,35 @@ enum AppointmentRoute: Hashable {
     case history(String)
     case slot(searchID: String, resultID: Int)
 }
+
+/// What the module's root does with an app route (`family.open`): push a page, open the editor
+/// for a new search, or show the list.
+enum AppointmentRouteAction: Hashable {
+    case push(AppointmentRoute)
+    case newSearch
+    case list
+}
+
+extension AppointmentRoute {
+    static func from(_ route: AppRoute) -> AppointmentRouteAction {
+        switch route {
+        case let .appointmentSearch(id):
+            return .push(.search(id))
+        case let .appointmentSlot(searchID, resultID):
+            guard let result = Int(resultID) else { return .push(.search(searchID)) }
+            return .push(.slot(searchID: searchID, resultID: result))
+        case .newAppointmentSearch:
+            return .newSearch
+        default:
+            return .list
+        }
+    }
+}
+
+/// How often the appointment pages reload (the web's use-auto-refresh.ts `useRunRefresh`): every
+/// 3 s while a run is queued or running, else every 45 s; only while the app is active.
+enum AppointmentRefresh {
+    static func interval(busy: Bool) -> Duration {
+        busy ? .seconds(3) : .seconds(45)
+    }
+}

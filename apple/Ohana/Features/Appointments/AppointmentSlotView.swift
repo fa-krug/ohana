@@ -121,7 +121,7 @@ struct AppointmentSlotView: View {
                 LabeledContent("Distance from home") {
                     VStack(alignment: .trailing, spacing: 2) {
                         Text("No home address yet.").foregroundStyle(.secondary)
-                        Button("Set it") { Module.settings.open() }
+                        Button("Set it") { family.open(.settings(.home)) }
                             .buttonStyle(.borderless)
                     }
                 }
@@ -155,7 +155,9 @@ struct AppointmentSlotView: View {
                 Image(systemName: "calendar.badge.checkmark").foregroundStyle(.green)
             }
             HStack {
-                Button("Calendar", systemImage: "calendar") { Module.calendar.open() }
+                Button("Calendar", systemImage: "calendar") {
+                    family.open(AppointmentLogic.calendarRoute(date: booked.date))
+                }
                     .buttonStyle(.glass)
                 if family.canEdit {
                     Button("Remove", systemImage: "trash", role: .destructive) { confirmRemove = true }
@@ -311,6 +313,7 @@ struct AppointmentBookSheet: View {
                 .post, "/appointments/searches/\(detail.searchId)/slots/\(detail.slot.resultId)/book", body: body
             )
             family.didChange(.appointments, .events, .calendar)
+            ErrorBanner.shared.success(String(localized: "Added to the calendar."))
             await saved()
             dismiss()
         }

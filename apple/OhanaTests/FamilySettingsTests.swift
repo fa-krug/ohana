@@ -115,4 +115,17 @@ struct FamilySettingsTests {
         let pretty = String(decoding: FamilyExportFile.pretty(Data(#"{"a":"x/y"}"#.utf8)), as: UTF8.self)
         #expect(pretty.contains("\n") && pretty.contains("x/y"))
     }
+
+    @Test func writesAgesWithPlurals() {
+        let today = Day(year: 2026, month: 11, day: 20)
+        #expect(FamilyBirthdays.text(Day(year: 2025, month: 11, day: 20), today: today).hasSuffix(" · 1 year"))
+        #expect(FamilyBirthdays.text(Day(year: 2018, month: 11, day: 15), today: today).hasSuffix(" · 8 years"))
+    }
+
+    @Test func opensSettingsPagesByRoute() {
+        #expect(FamilySettingsPageView.page(for: .settings(.home)) == .home)
+        #expect(FamilySettingsPageView.page(for: .settings(.notifications)) == .notifications)
+        #expect(FamilySettingsPageView.page(for: .module(.settings)) == nil)
+        #expect(AppRoute.settings(.data).module == .settings)
+    }
 }

@@ -7,6 +7,8 @@ import SwiftUI
 struct FamilySettingsView: View {
     @Environment(FamilyContext.self) private var family
     @State private var model = FamilySettingsModel()
+    /// A page opened by a route (`family.open(.settings(.home))`).
+    @State private var page: SettingsPage?
 
     var body: some View {
         LoadStateView(state: model.state, retry: { await model.load(family.api) }) { household in
@@ -15,6 +17,38 @@ struct FamilySettingsView: View {
         .ohanaBackground(ModuleTint.settings)
         .navigationTitle("Settings")
         .task(id: [family.revision(.family), family.revision(.settings)]) { await model.load(family.api) }
+        .navigationDestination(item: $page) { page in
+            FamilySettingsPageView(page: page, model: model).id(page)
+        }
+        .onChange(of: family.pendingRoute, initial: true) {
+            guard let route = family.takeRoute(for: .settings) else { return }
+            page = FamilySettingsPageView.page(for: route)
+        }
+    }
+}
+
+/// One page of the settings: the household's (members, home address, notifications), a module's
+/// settings, or the family's data.
+struct FamilySettingsPageView: View {
+    let page: SettingsPage
+    let model: FamilySettingsModel
+
+    /// The page a route opens; nil for the settings themselves.
+    static func page(for route: AppRoute) -> SettingsPage? {
+        if case let .settings(page) = route { return page }
+        return nil
+    }
+
+    var body: some View {
+        switch page {
+        case .members: FamilyMembersView(model: model)
+        case .home: FamilyHomeAddressView(model: model)
+        case .notifications: FamilyNotificationsView(model: model)
+        case .calendar: CalendarSettingsView()
+        case .finance: FinanceSettingsView()
+        case .assistant: AssistantSettingsView()
+        case .data: FamilyDataView(familyName: model.household?.name ?? "", canEdit: model.household?.canEdit ?? false)
+        }
     }
 }
 
@@ -36,12 +70,14 @@ final class FamilySettingsModel {
         }
     }
 
-    /// Runs a change (errors go to the banner), then reloads and tells the other screens.
-    func change(_ family: FamilyContext, _ action: @escaping () async throws -> Void) {
+    /// Runs a change (errors go to the banner), then reloads, tells the other screens and
+    /// confirms with `success`.
+    func change(_ family: FamilyContext, success: String? = nil, _ action: @escaping () async throws -> Void) {
         perform {
             try await action()
             await self.load(family.api)
             family.didChange(.family)
+            if let success { ErrorBanner.shared.success(success) }
         }
     }
 
@@ -110,7 +146,7 @@ private struct FamilySettingsForm: View {
 
             Section("Household") {
                 NavigationLink {
-                    FamilyMembersView(model: model)
+                    FamilySettingsPageView(page: .members, model: model)
                 } label: {
                     LabeledContent {
                         Text(household.members.count + household.people.count, format: .number)
@@ -119,7 +155,7 @@ private struct FamilySettingsForm: View {
                     }
                 }
                 NavigationLink {
-                    FamilyHomeAddressView(model: model)
+                    FamilySettingsPageView(page: .home, model: model)
                 } label: {
                     LabeledContent {
                         Text(household.home.address ?? String(localized: "Not set."))
@@ -129,7 +165,7 @@ private struct FamilySettingsForm: View {
                     }
                 }
                 NavigationLink {
-                    FamilyNotificationsView(model: model)
+                    FamilySettingsPageView(page: .notifications, model: model)
                 } label: {
                     LabeledContent {
                         Text(household.channels.count, format: .number)
@@ -141,17 +177,17 @@ private struct FamilySettingsForm: View {
 
             Section("Modules") {
                 NavigationLink {
-                    CalendarSettingsView()
+                    FamilySettingsPageView(page: .calendar, model: model)
                 } label: {
                     FamilySettingsLabel(title: "Calendar", systemImage: Module.calendar.systemImage, tint: ModuleTint.calendar)
                 }
                 NavigationLink {
-                    FinanceSettingsView()
+                    FamilySettingsPageView(page: .finance, model: model)
                 } label: {
                     FamilySettingsLabel(title: "Finance", systemImage: Module.finance.systemImage, tint: ModuleTint.finance)
                 }
                 NavigationLink {
-                    AssistantSettingsView()
+                    FamilySettingsPageView(page: .assistant, model: model)
                 } label: {
                     FamilySettingsLabel(title: "Assistant", systemImage: "sparkles", tint: ModuleTint.assistant)
                 }
@@ -159,7 +195,7 @@ private struct FamilySettingsForm: View {
 
             Section("Data") {
                 NavigationLink {
-                    FamilyDataView(familyName: household.name, canEdit: household.canEdit)
+                    FamilySettingsPageView(page: .data, model: model)
                 } label: {
                     FamilySettingsLabel(title: "Export and import", systemImage: "externaldrive.fill", tint: .teal)
                 }
@@ -202,7 +238,7 @@ private struct FamilySettingsForm: View {
         let new = trimmedName
         guard household.canEdit, !new.isEmpty, new != household.name else { return }
         let api = family.api
-        model.change(family) {
+        model.change(family, success: String(localized: "Family renamed.")) {
             try await api.perform(.patch, "", body: FamilyNameInput(name: new))
             await app.refresh()
         }
@@ -213,6 +249,7 @@ private struct FamilySettingsForm: View {
         perform {
             try await api.perform(.delete, "/household/members/\(selfId)")
             await app.refresh()
+            ErrorBanner.shared.success(String(localized: "You left the family."))
         }
     }
 
@@ -221,6 +258,7 @@ private struct FamilySettingsForm: View {
         perform {
             try await api.perform(.delete, "/household")
             await app.refresh()
+            ErrorBanner.shared.success(String(localized: "Family deleted."))
         }
     }
 }
