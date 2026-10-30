@@ -77,7 +77,9 @@ users of the team; external ones need a beta review, which needs a demo server a
 since the app does nothing without a server).
 
 Xcode Cloud builds, signs and uploads the releases (the workflow is set up in Xcode / App Store
-Connect). `ci_scripts/ci_post_clone.sh` generates the project with XcodeGen there, since
+Connect). The workflow needs one Archive action per platform, each with its own scheme: iOS with
+`Ohana`, macOS with `Ohana-macOS` (the `Ohana` scheme is the iOS app only, so a macOS archive of
+it finds no destination). `ci_scripts/ci_post_clone.sh` generates the project with XcodeGen there, since
 `Ohana.xcodeproj` isn't committed. `MARKETING_VERSION` in `project.yml` is the version people see;
 raise it for a new release. The build number (`CURRENT_PROJECT_VERSION`) doesn't need editing:
 Xcode Cloud gives every build its own. The app declares no encryption beyond HTTPS
