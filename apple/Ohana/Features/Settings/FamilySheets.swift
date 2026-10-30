@@ -5,12 +5,14 @@ import UIKit
 import AppKit
 #endif
 
-/// The frame of the settings' small editors: a grouped form in a sheet with Cancel and a
+/// The frame of the settings' small editors: a grouped form in a sheet with Cancel (asking
+/// before it throws `hasChanges` away; the sheet can't be swiped away with them either) and a
 /// confirm button; the save runs here and a failure shows in the form.
 struct FamilySheetForm<Content: View>: View {
     let title: LocalizedStringKey
     var confirmTitle: LocalizedStringKey = "Save"
     let canSave: Bool
+    let hasChanges: Bool
     let save: () async throws -> Void
     @ViewBuilder var content: Content
 
@@ -36,7 +38,7 @@ struct FamilySheetForm<Content: View>: View {
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", role: .cancel) { dismiss() }
+                    CancelButton(hasChanges: hasChanges)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     if busy {
@@ -50,6 +52,8 @@ struct FamilySheetForm<Content: View>: View {
                 }
             }
         }
+        .discardGuard(hasChanges: hasChanges)
+        .errorBanner()
         #if os(iOS)
         .presentationDetents([.medium, .large])
         #else
@@ -110,7 +114,8 @@ struct FamilyBirthdaySheet: View {
     }
 
     var body: some View {
-        FamilySheetForm(title: "Birthday", canSave: birthday != original, save: { try await save(birthday) }) {
+        FamilySheetForm(title: "Birthday", canSave: birthday != original, hasChanges: birthday != original,
+                        save: { try await save(birthday) }) {
             Section {
                 FamilyBirthdayField(title: "Birthday", birthday: $birthday)
             } header: {
@@ -143,11 +148,15 @@ struct FamilyPersonSheet: View {
 
     private var trimmed: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var unchanged: Bool { person != nil && trimmed == person?.name && birthday == person?.birthday }
+    private var hasChanges: Bool {
+        trimmed != (person?.name ?? "") || birthday != person?.birthday || withInvite
+    }
 
     var body: some View {
         FamilySheetForm(title: person == nil ? "Add a person" : "Edit person",
                         confirmTitle: person == nil ? "Add" : "Save",
                         canSave: !trimmed.isEmpty && trimmed.count <= 80 && !unchanged,
+                        hasChanges: hasChanges,
                         save: {
                             try await save(FamilyPersonInput(name: trimmed, birthday: birthday,
                                                              invite: person == nil && withInvite ? inviteRole : nil))
@@ -156,7 +165,9 @@ struct FamilyPersonSheet: View {
                 TextField("Name", text: $name)
                 FamilyBirthdayField(title: "Birthday (optional)", birthday: $birthday)
             } footer: {
-                if person == nil {
+                if trimmed.count > 80 {
+                    Text("The name is too long (max. 80).").foregroundStyle(.red)
+                } else if person == nil {
                     Text("For someone without an account, like a child. You can create an invite link for them now or later.")
                 }
             }
@@ -181,7 +192,7 @@ struct FamilyAddByEmailSheet: View {
     private var trimmed: String { email.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     var body: some View {
-        FamilySheetForm(title: "Add by email", confirmTitle: "Add", canSave: !trimmed.isEmpty,
+        FamilySheetForm(title: "Add by email", confirmTitle: "Add", canSave: !trimmed.isEmpty, hasChanges: !trimmed.isEmpty,
                         save: { try await save(FamilyAddMemberInput(email: trimmed, role: role)) }) {
             Section {
                 TextField("Email", text: $email)
@@ -241,21 +252,11 @@ struct FamilyInviteLinkSheet: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
-                GlassEffectContainer(spacing: 12) {
-                    HStack(spacing: 12) {
-                        ShareLink(item: link.url) {
-                            Label("Share", systemImage: "square.and.arrow.up")
-                        }
-                        .buttonStyle(.glassProminent)
-                        Button {
-                            FamilyPasteboard.copy(link.url.absoluteString)
-                            copied = true
-                        } label: {
-                            Label(copied ? "Copied." : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc")
-                        }
-                        .buttonStyle(.glass)
-                    }
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 12) { linkButtons }
+                    VStack(spacing: 12) { linkButtons }
                 }
+                .controlSize(.large)
             }
             .padding(24)
             .frame(maxWidth: 520)
@@ -265,11 +266,26 @@ struct FamilyInviteLinkSheet: View {
                 }
             }
         }
+        .errorBanner()
         #if os(iOS)
-        .presentationDetents([.medium])
+        .presentationDetents([.medium, .large])
         #else
         .frame(minWidth: 440, minHeight: 360)
         #endif
+    }
+
+    @ViewBuilder private var linkButtons: some View {
+        ShareLink(item: link.url) {
+            Label("Share", systemImage: "square.and.arrow.up")
+        }
+        .buttonStyle(.borderedProminent)
+        Button {
+            FamilyPasteboard.copy(link.url.absoluteString)
+            copied = true
+        } label: {
+            Label(copied ? "Copied." : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc")
+        }
+        .buttonStyle(.bordered)
     }
 }
 
@@ -302,11 +318,13 @@ struct FamilyChannelSheet: View {
     let channel: FamilyChannel?
     let save: (FamilyChannelInput) async throws -> Void
     @State private var input: FamilyChannelInput
+    private let original: FamilyChannelInput
 
     init(channel: FamilyChannel?, save: @escaping (FamilyChannelInput) async throws -> Void) {
         self.channel = channel
         self.save = save
-        _input = State(initialValue: channel.map(FamilyChannelInput.init) ?? FamilyChannelInput())
+        original = channel.map(FamilyChannelInput.init) ?? FamilyChannelInput()
+        _input = State(initialValue: original)
     }
 
     private var hasToken: Bool { channel?.hasToken == true }
@@ -314,6 +332,7 @@ struct FamilyChannelSheet: View {
     var body: some View {
         FamilySheetForm(title: channel == nil ? "New channel" : "Edit channel",
                         canSave: input.canSave(hasToken: hasToken),
+                        hasChanges: input != original,
                         save: { try await save(input) }) {
             Section {
                 TextField("Name", text: $input.name, prompt: Text("e.g. Sascha’s phone"))

@@ -39,6 +39,33 @@ struct AccountTests {
         #expect(AccountRules.sortedTokens(a.tokens).map(\.id) == ["t1", "t0"])
     }
 
+    @Test func tellsSignedInDevicesFromScriptTokens() throws {
+        let a = try decode(AccountOverview.self, Self.account)
+        #expect(AccountRules.deviceTokens(a.tokens).map(\.id) == ["t1"])
+        #expect(AccountRules.scriptTokens(a.tokens).map(\.id) == ["t0"])
+        #expect(AccountRules.deviceName(a.tokens[1]) == "iPhone")
+
+        let paired = try decode(AccountToken.self, """
+        {"id":"t3","name":"Mac mini (app)","createdAt":"2026-11-01T12:00:00.000Z","lastUsedAt":null,"current":false}
+        """)
+        let unnamed = try decode(AccountToken.self, """
+        {"id":"t4","name":"Ohana app","createdAt":"2026-11-01T12:00:00.000Z","lastUsedAt":null,"current":false}
+        """)
+        #expect(AccountRules.isDevice(paired) && AccountRules.isDevice(unnamed))
+        #expect(AccountRules.deviceName(paired) == "Mac mini")
+        #expect(AccountRules.deviceName(unnamed) == "Ohana app")
+        // The device signed in here comes first, the others in the server's order.
+        #expect(AccountRules.deviceTokens([paired] + a.tokens + [unnamed]).map(\.id) == ["t1", "t3", "t4"])
+        #expect(AccountRules.scriptTokens([paired] + a.tokens + [unnamed]).map(\.id) == ["t0"])
+    }
+
+    @Test func showsTheMacTabsOneEachAndTheRestOnIPhone() {
+        #expect(AccountPage.all.shows(.account) && AccountPage.all.shows(.security) && AccountPage.all.shows(.general))
+        #expect(!AccountPage.all.shows(.developer))
+        #expect(AccountPage.developer.shows(.developer) && !AccountPage.developer.shows(.account))
+        #expect(!AccountPage.general.shows(.security))
+    }
+
     @Test func keepsAWayToSignIn() throws {
         let a = try decode(AccountOverview.self, Self.account)
         #expect(AccountRules.canRemovePassword(a))

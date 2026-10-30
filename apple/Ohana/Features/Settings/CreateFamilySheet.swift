@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Creating a family (the web's families/new): a name; the server adds the calendar's preset
 /// types, the finance categories and the meal tags in the account's language. The new family is
-/// then the one on screen.
+/// then the one on screen. Its presenters add `.errorBanner()`.
 struct CreateFamilySheet: View {
     @Environment(AppModel.self) private var app
     @Environment(\.dismiss) private var dismiss
@@ -32,6 +32,8 @@ struct CreateFamilySheet: View {
                 } footer: {
                     if let error {
                         Label(error, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.red)
+                    } else if trimmed.count > 100 {
+                        Text("The name is too long (max. 100).").foregroundStyle(.red)
                     }
                 }
             }
@@ -42,7 +44,7 @@ struct CreateFamilySheet: View {
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", role: .cancel) { dismiss() }
+                    CancelButton(hasChanges: !trimmed.isEmpty)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     if busy {
@@ -57,6 +59,7 @@ struct CreateFamilySheet: View {
             }
             .onAppear { focused = true }
         }
+        .discardGuard(hasChanges: !trimmed.isEmpty)
         #if os(iOS)
         .presentationDetents([.medium])
         #else

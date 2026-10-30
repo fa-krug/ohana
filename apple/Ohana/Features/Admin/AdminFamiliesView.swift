@@ -21,12 +21,12 @@ struct AdminFamiliesView: View {
                             HStack(spacing: 12) {
                                 TintedIcon(systemImage: "house.fill", tint: .ohana, size: 32)
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(family.name).fontWeight(.medium).lineLimit(1)
+                                    Text(family.name).fontWeight(.medium).lineLimit(2)
                                     Text(family.members.isEmpty ? String(localized: "No members.")
                                                                 : family.members.map(\.displayName).joined(separator: ", "))
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
-                                        .lineLimit(1)
+                                        .lineLimit(2)
                                 }
                             }
                         }
@@ -73,6 +73,7 @@ struct AdminFamilyDetailView: View {
     @Binding var families: LoadState<[AdminFamily]>
     @Environment(AppModel.self) private var app
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var renaming = false
     @State private var adding = false
     @State private var confirmation: AccountConfirmation?
@@ -139,35 +140,43 @@ struct AdminFamilyDetailView: View {
     }
 
     private func memberRow(_ member: AdminFamilyMember, family: AdminFamily) -> some View {
-        HStack(spacing: 12) {
-            AdminInitials(name: member.displayName)
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 4) {
-                    Text(member.displayName).fontWeight(.medium).lineLimit(1)
-                    if member.userId == app.me?.id { Text("(you)").foregroundStyle(.secondary) }
-                }
-                if !member.name.isEmpty {
-                    Text(member.email).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+        // Name, role and remove in a row; the controls go under the name at accessibility sizes.
+        let layout = typeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(spacing: 12))
+        return layout {
+            HStack(spacing: 12) {
+                AdminInitials(name: member.displayName)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(member.userId == app.me?.id ? String(localized: "\(member.displayName) (you)") : member.displayName)
+                        .fontWeight(.medium)
+                        .lineLimit(2)
+                    if !member.name.isEmpty {
+                        Text(member.email).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                    }
                 }
             }
             Spacer(minLength: 8)
-            Picker("Role", selection: Binding(get: { member.role }, set: { setRole(member, $0) })) {
-                ForEach([FamilyRole.editor, .viewer], id: \.self) { Text(AdminText.role($0)).tag($0) }
+            HStack(spacing: 12) {
+                Picker("Role", selection: Binding(get: { member.role }, set: { setRole(member, $0) })) {
+                    ForEach([FamilyRole.editor, .viewer], id: \.self) { Text(AdminText.role($0)).tag($0) }
+                }
+                .labelsHidden()
+                .fixedSize()
+                .disabled(!AdminRules.canChangeRole(of: member, in: family))
+                .accessibilityLabel(Text("Role of \(member.displayName)"))
+                Button(role: .destructive) {
+                    confirmation = AccountConfirmation(
+                        title: String(localized: "Remove \(member.displayName) from \(family.name)?"),
+                        button: String(localized: "Remove")
+                    ) { remove(member) }
+                } label: {
+                    Image(systemName: "person.badge.minus")
+                        .rowHitTarget()
+                        .accessibilityLabel(Text("Remove \(member.displayName)"))
+                }
+                .buttonStyle(.borderless)
+                .disabled(!AdminRules.canRemove(member, from: family))
             }
-            .labelsHidden()
-            .fixedSize()
-            .disabled(!AdminRules.canChangeRole(of: member, in: family))
-            Button(role: .destructive) {
-                confirmation = AccountConfirmation(
-                    title: String(localized: "Remove \(member.displayName) from \(family.name)?"),
-                    button: String(localized: "Remove")
-                ) { remove(member) }
-            } label: {
-                Image(systemName: "person.badge.minus")
-                    .accessibilityLabel(Text("Remove \(member.displayName)"))
-            }
-            .buttonStyle(.borderless)
-            .disabled(!AdminRules.canRemove(member, from: family))
         }
     }
 
@@ -230,11 +239,14 @@ struct AdminFamilyNameSheet: View {
     var body: some View {
         AccountSheetForm(title: title, confirmTitle: original.isEmpty ? "Create" : "Save",
                          canSave: !trimmed.isEmpty && trimmed.count <= 100 && trimmed != original,
+                         hasChanges: trimmed != original,
                          save: { try await save(trimmed) }) {
             Section {
                 TextField("Family name", text: $name, prompt: Text("e.g. The Krugs"))
             } footer: {
-                if original.isEmpty {
+                if trimmed.count > 100 {
+                    Text("The name is too long (max. 100).").foregroundStyle(.red)
+                } else if original.isEmpty {
                     Text("The family starts without members: add them afterwards.")
                 }
             }
@@ -251,7 +263,7 @@ struct AdminAddMemberSheet: View {
     private var trimmed: String { email.trimmingCharacters(in: .whitespaces).lowercased() }
 
     var body: some View {
-        AccountSheetForm(title: "Add member", confirmTitle: "Add", canSave: !trimmed.isEmpty,
+        AccountSheetForm(title: "Add member", confirmTitle: "Add", canSave: !trimmed.isEmpty, hasChanges: !trimmed.isEmpty,
                          save: { try await save(AdminMemberInput(email: trimmed, role: role)) }) {
             Section {
                 TextField("Email", text: $email)

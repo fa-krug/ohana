@@ -1,25 +1,54 @@
 import SwiftUI
 
 /// The account on this device (the web's /account): profile and language, email, password,
-/// passkeys, API tokens, the signed-in browsers, appearance, administration for admins, and
-/// signing out. The Mac's Settings window; a sheet on iPhone and iPad. Adding a passkey stays on
-/// the web: a passkey belongs to the server's own domain.
+/// passkeys, the signed-in devices and browsers, appearance, administration for admins, signing
+/// out, and (under Advanced) API tokens for scripts. On the Mac it's the Settings window (⌘,)
+/// with toolbar tabs; on iPhone and iPad one grouped form in a sheet, the API tokens a page of
+/// it. Adding a passkey stays on the web: a passkey belongs to the server's own domain.
 struct AccountView: View {
     @AppStorage("appearance") private var appearance = Appearance.system
 
     @Environment(AppModel.self) private var app
 
     var body: some View {
-        NavigationStack {
+        Group {
             if app.client == nil {
                 ContentUnavailableView("Not signed in", systemImage: "person.crop.circle.badge.questionmark",
                                        description: Text("Connect Ohana to your server first."))
             } else {
-                AccountForm()
+                #if os(macOS)
+                TabView {
+                    Tab("General", systemImage: "gearshape") { AccountForm(page: .general) }
+                    Tab("Account", systemImage: "person.crop.circle") { AccountForm(page: .account) }
+                    Tab("Sign-In & Security", systemImage: "lock") { AccountForm(page: .security) }
+                    Tab("Advanced", systemImage: "gearshape.2") { AccountForm(page: .developer) }
+                }
+                #else
+                NavigationStack { AccountForm(page: .all) }
+                #endif
             }
         }
         .errorBanner()
         .preferredColorScheme(appearance.colorScheme)
+    }
+}
+
+/// Which part of the account a form shows: everything on iPhone and iPad (but the API tokens,
+/// a page of their own there), one tab of the Mac's Settings window otherwise.
+enum AccountPage: Hashable {
+    case all
+    /// Appearance (and the Mac's menu bar assistant).
+    case general
+    /// Who you are: name, language, email; administration, signing out.
+    case account
+    /// Password, passkeys, the signed-in devices and browsers.
+    case security
+    /// API tokens for scripts and programs.
+    case developer
+
+    /// Whether the form shows `part`.
+    func shows(_ part: AccountPage) -> Bool {
+        self == .all ? part != .developer : self == part
     }
 }
 
@@ -43,12 +72,14 @@ private enum AccountSheet: Identifiable {
 }
 
 private struct AccountForm: View {
+    let page: AccountPage
     @Environment(AppModel.self) private var app
     @Environment(\.openURL) private var openURL
     @Environment(\.dismiss) private var dismiss
     @AppStorage("appearance") private var appearance = Appearance.system
     #if os(macOS)
     @AppStorage("menuBarAssistant") private var menuBarAssistant = true
+    @State private var showAdmin = false
     #endif
 
     @State private var state: LoadState<AccountOverview> = .idle
@@ -59,73 +90,62 @@ private struct AccountForm: View {
     @FocusState private var nameFocused: Bool
 
     private var user: UserAccount? { state.value?.user ?? app.me }
+    /// The general tab shows nothing of the server's.
+    private var needsOverview: Bool { page != .general }
 
     var body: some View {
         Form {
-            header
+            if page.shows(.account) { header }
 
-            if let overview = state.value {
-                profileSection(overview.user)
-                emailSection(overview.user)
-                passwordSection(overview)
-                passkeysSection(overview)
-                tokensSection(overview)
-                sessionsSection(overview)
-            } else if case let .failed(message) = state {
-                Section {
-                    Label(message, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.red)
-                    Button("Try again") { Task { await load() } }
-                    webLink("Open the account page on the web", systemImage: "safari")
-                }
-            } else {
-                Section { ProgressView().frame(maxWidth: .infinity) }
-            }
-
-            Section {
-                Picker("Theme", selection: $appearance) {
-                    ForEach(Appearance.allCases) { Text($0.title).tag($0) }
-                }
-                #if os(macOS)
-                Toggle("Show the assistant in the menu bar", isOn: $menuBarAssistant)
-                #endif
-            } header: {
-                Text("Appearance")
-            } footer: {
-                Text("Applies to this device only.")
-            }
-
-            if user?.isAdmin == true {
-                Section {
-                    NavigationLink {
-                        AdminView()
-                    } label: {
-                        Label("Administration", systemImage: "person.badge.shield.checkmark")
+            if needsOverview {
+                if let overview = state.value {
+                    if page.shows(.account) {
+                        profileSection(overview.user)
+                        emailSection(overview.user)
                     }
-                } footer: {
-                    Text("Users and families of this server.")
+                    if page.shows(.security) {
+                        passwordSection(overview)
+                        passkeysSection(overview)
+                        devicesSection(overview)
+                    }
+                    if page == .developer { developerSections(overview) }
+                } else if case let .failed(message) = state {
+                    Section {
+                        Label(message, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.red)
+                        Button("Try again") { Task { await load() } }
+                        webLink("Open the account page on the web", systemImage: "safari")
+                    }
+                } else {
+                    Section { ProgressView().frame(maxWidth: .infinity) }
                 }
             }
 
-            Section {
-                Button("Sign out", role: .destructive) { confirmSignOut = true }
-            } footer: {
-                Text("Signs this device out and deletes its token.")
+            if page.shows(.general) { appearanceSection }
+            if page.shows(.account) {
+                adminSection
+                if page == .all { advancedSection }
+                signOutSection
             }
         }
         .formStyle(.grouped)
-        .navigationTitle("Account")
+        .navigationTitle(page == .developer ? "API tokens" : "Account")
         .toolbar {
             #if os(iOS)
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Done", systemImage: "checkmark") { dismiss() }
+            if page == .all {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done", systemImage: "checkmark") { dismiss() }
+                }
             }
             #endif
         }
-        .task(id: app.me?.id) { await load() }
+        .task(id: app.me?.id) { if needsOverview { await load() } }
         .refreshable { await load() }
         .sheet(item: $sheet) { sheet in
             sheetView(sheet)
         }
+        #if os(macOS)
+        .sheet(isPresented: $showAdmin) { AdminSheet() }
+        #endif
         .accountConfirmation($confirmation)
         .confirmationDialog("Sign out of Ohana on this device?", isPresented: $confirmSignOut, titleVisibility: .visible) {
             Button("Sign out", role: .destructive) {
@@ -137,7 +157,7 @@ private struct AccountForm: View {
         }
     }
 
-    // MARK: Sections
+    // MARK: Account
 
     private var header: some View {
         Section {
@@ -148,6 +168,7 @@ private struct AccountForm: View {
                     Text(user?.email ?? "").font(.subheadline).foregroundStyle(.secondary)
                 }
             }
+            .accessibilityElement(children: .combine)
             if let server = app.serverURL {
                 LabeledContent("Server", value: server.host() ?? server.absoluteString)
             }
@@ -163,7 +184,7 @@ private struct AccountForm: View {
                     .submitLabel(.done)
                 if AccountRules.trimmed(name) ?? "" != user.name {
                     Button("Save", action: saveName)
-                        .buttonStyle(.glassProminent)
+                        .buttonStyle(.borderedProminent)
                         .disabled(name.count > 100)
                 }
             }
@@ -173,7 +194,11 @@ private struct AccountForm: View {
         } header: {
             Text("Profile")
         } footer: {
-            Text("The language of notifications and of what Ohana names for you, like a new family’s calendar types.")
+            if name.count > 100 {
+                Text("The name is too long (max. 100).").foregroundStyle(.red)
+            } else {
+                Text("The language of notifications and of what Ohana names for you, like a new family’s calendar types.")
+            }
         }
     }
 
@@ -194,6 +219,68 @@ private struct AccountForm: View {
             }
         }
     }
+
+    @ViewBuilder private var adminSection: some View {
+        if user?.isAdmin == true {
+            Section {
+                #if os(macOS)
+                Button("Open Administration…", systemImage: "person.badge.shield.checkmark") { showAdmin = true }
+                #else
+                NavigationLink {
+                    AdminView()
+                } label: {
+                    Label("Administration", systemImage: "person.badge.shield.checkmark")
+                }
+                #endif
+            } header: {
+                Text("Administration")
+            } footer: {
+                Text("Users and families of this server.")
+            }
+        }
+    }
+
+    /// iPhone and iPad: the API tokens are a page here; on the Mac they're the Advanced tab.
+    private var advancedSection: some View {
+        Section {
+            NavigationLink {
+                AccountForm(page: .developer)
+            } label: {
+                Label("API tokens", systemImage: "terminal")
+            }
+        } header: {
+            Text("Advanced")
+        } footer: {
+            Text("For your own programs and scripts. You don’t need this to use Ohana.")
+        }
+    }
+
+    private var signOutSection: some View {
+        Section {
+            Button("Sign out", role: .destructive) { confirmSignOut = true }
+        } footer: {
+            Text("Signs this device out and deletes its token.")
+        }
+    }
+
+    // MARK: General
+
+    private var appearanceSection: some View {
+        Section {
+            Picker("Theme", selection: $appearance) {
+                ForEach(Appearance.allCases) { Text($0.title).tag($0) }
+            }
+            #if os(macOS)
+            Toggle("Show the assistant in the menu bar", isOn: $menuBarAssistant)
+            #endif
+        } header: {
+            Text("Appearance")
+        } footer: {
+            Text("Applies to this device only.")
+        }
+    }
+
+    // MARK: Sign-in and security
 
     private func passwordSection(_ overview: AccountOverview) -> some View {
         Section {
@@ -234,9 +321,9 @@ private struct AccountForm: View {
     private func passkeyRow(_ passkey: AccountPasskey, canDelete: Bool) -> some View {
         let title = passkey.deviceName.isEmpty ? String(localized: "Passkey") : passkey.deviceName
         return HStack(spacing: 12) {
-            Image(systemName: "person.badge.key.fill").foregroundStyle(Color.ohana)
+            Image(systemName: "person.badge.key.fill").foregroundStyle(Color.ohana).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).lineLimit(1)
+                Text(title).lineLimit(2)
                 Text(AccountDates.line(created: passkey.createdDate, lastUsed: passkey.lastUsedDate))
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -246,6 +333,7 @@ private struct AccountForm: View {
                 passkeyActions(passkey, title: title, canDelete: canDelete)
             } label: {
                 Image(systemName: "ellipsis.circle")
+                    .rowHitTarget()
                     .accessibilityLabel(Text("Actions for \(title)"))
             }
             .menuStyle(.button)
@@ -268,37 +356,105 @@ private struct AccountForm: View {
         .disabled(!canDelete)
     }
 
-    private func tokensSection(_ overview: AccountOverview) -> some View {
+    /// The Ohana apps signed in to the account (their tokens), and the browsers signed in on the web.
+    private func devicesSection(_ overview: AccountOverview) -> some View {
         Section {
-            if overview.tokens.isEmpty {
+            ForEach(AccountRules.deviceTokens(overview.tokens)) { token in
+                deviceRow(token)
+            }
+            LabeledContent("Browsers signed in on the web", value: overview.sessions.formatted())
+            Button("Sign out all browsers", systemImage: "rectangle.portrait.and.arrow.right") {
+                confirmation = AccountConfirmation(
+                    title: String(localized: "Sign out all browsers?"),
+                    button: String(localized: "Sign out"),
+                    message: String(localized: "Every browser signed in to your account is signed out. The apps listed above stay signed in.")
+                ) { signOutOthers() }
+            }
+            .disabled(overview.sessions == 0)
+        } header: {
+            Text("Signed-in devices")
+        } footer: {
+            Text("Where your account is signed in. Sign out a device you don’t use anymore or don’t recognize.")
+        }
+    }
+
+    private func deviceRow(_ token: AccountToken) -> some View {
+        let device = AccountRules.deviceName(token)
+        return HStack(spacing: 12) {
+            Image(systemName: token.current ? Self.thisDeviceIcon : "ipad.and.iphone")
+                .foregroundStyle(token.current ? Color.ohana : .secondary)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(device).lineLimit(2)
+                Group {
+                    if token.current {
+                        Text("This device")
+                    } else {
+                        Text(AccountDates.line(created: token.createdDate, lastUsed: token.lastUsedDate))
+                    }
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 8)
+            Button(role: .destructive) {
+                confirmDelete(token)
+            } label: {
+                Text("Sign out").rowHitTarget()
+            }
+            .buttonStyle(.borderless)
+            .accessibilityLabel(Text("Sign out \(device)"))
+        }
+        .contextMenu {
+            Button("Sign out", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) { confirmDelete(token) }
+        }
+    }
+
+    private static var thisDeviceIcon: String {
+        #if os(macOS)
+        "laptopcomputer"
+        #else
+        "iphone.gen3"
+        #endif
+    }
+
+    // MARK: Advanced: API tokens
+
+    @ViewBuilder
+    private func developerSections(_ overview: AccountOverview) -> some View {
+        let tokens = AccountRules.scriptTokens(overview.tokens)
+        Section {
+            if tokens.isEmpty {
                 Text("No API tokens.").foregroundStyle(.secondary)
             }
-            ForEach(AccountRules.sortedTokens(overview.tokens)) { token in
+            ForEach(tokens) { token in
                 tokenRow(token)
             }
             Button("Create token…", systemImage: "plus") { sheet = .createToken }
         } header: {
             Text("API tokens")
         } footer: {
-            Text("Apps like this one sign in with a token, and so can scripts and AI agents (\"Authorization: Bearer <token>\"). A token can do everything you can.")
+            Text("A token lets one of your own programs, like a script or a home automation system, use Ohana as you. It can do everything you can: only create one for programs you trust, and delete it when you stop using them.")
+        }
+        Section {
+            DisclosureGroup("How to use") {
+                Text("Send the token with every request, in this header:")
+                Text(verbatim: "Authorization: Bearer <token>")
+                    .font(.callout.monospaced())
+                    .textSelection(.enabled)
+                if let server = app.serverURL {
+                    Text("The requests go to \(server.appending(path: "api/v1").absoluteString).")
+                        .textSelection(.enabled)
+                }
+            }
         }
     }
 
     private func tokenRow(_ token: AccountToken) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: token.current ? "iphone.gen3" : "key.horizontal")
-                .foregroundStyle(token.current ? Color.ohana : .secondary)
+            Image(systemName: "key.horizontal").foregroundStyle(.secondary).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(token.name.isEmpty ? String(localized: "Token") : token.name).lineLimit(1)
-                    if token.current {
-                        Text("This device")
-                            .font(.caption2.weight(.semibold))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color.ohana.opacity(0.18), in: .capsule)
-                    }
-                }
+                Text(token.name.isEmpty ? String(localized: "Token") : token.name).lineLimit(2)
                 Text(AccountDates.line(created: token.createdDate, lastUsed: token.lastUsedDate))
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -308,28 +464,13 @@ private struct AccountForm: View {
                 confirmDelete(token)
             } label: {
                 Image(systemName: "trash")
+                    .rowHitTarget()
                     .accessibilityLabel(Text("Delete \(token.name)"))
             }
             .buttonStyle(.borderless)
         }
         .contextMenu {
             Button("Delete", systemImage: "trash", role: .destructive) { confirmDelete(token) }
-        }
-    }
-
-    private func sessionsSection(_ overview: AccountOverview) -> some View {
-        Section {
-            LabeledContent("Signed-in browsers", value: overview.sessions.formatted())
-            Button("Sign out other devices", systemImage: "rectangle.portrait.and.arrow.right") {
-                confirmation = AccountConfirmation(
-                    title: String(localized: "Sign out the other devices?"),
-                    button: String(localized: "Sign out"),
-                    message: String(localized: "Every browser signed in to your account is signed out. This device and other apps stay signed in: delete their tokens above.")
-                ) { signOutOthers() }
-            }
-            .disabled(overview.sessions == 0)
-        } header: {
-            Text("Other devices")
         }
     }
 
@@ -340,7 +481,6 @@ private struct AccountForm: View {
             Label(title, systemImage: systemImage)
         }
     }
-
     // MARK: Sheets
 
     @ViewBuilder
@@ -426,13 +566,21 @@ private struct AccountForm: View {
         }
     }
 
-    /// Deleting the device's own token signs the app out: that is said before, not found after.
+    /// Signing a device out deletes its token; for this device that signs the app out, which is
+    /// said before, not found after.
     private func confirmDelete(_ token: AccountToken) {
+        let device = AccountRules.deviceName(token)
         if token.current {
             confirmation = AccountConfirmation(
-                title: String(localized: "Delete this device’s token?"),
-                button: String(localized: "Delete and sign out"),
-                message: String(localized: "Ohana on this device signs in with it: you are signed out right away and pair the app again to come back.")
+                title: String(localized: "Sign out this device?"),
+                button: String(localized: "Sign out"),
+                message: String(localized: "You are signed out right away and connect the app again to come back.")
+            ) { deleteToken(token) }
+        } else if AccountRules.isDevice(token) {
+            confirmation = AccountConfirmation(
+                title: String(localized: "Sign out \(device)?"),
+                button: String(localized: "Sign out"),
+                message: String(localized: "Ohana on \(device) is signed out right away. It can be connected again.")
             ) { deleteToken(token) }
         } else {
             confirmation = AccountConfirmation(
@@ -452,7 +600,8 @@ private struct AccountForm: View {
                 dismiss()
                 return
             }
-            ErrorBanner.shared.success(String(localized: "Token deleted."))
+            ErrorBanner.shared.success(AccountRules.isDevice(token) ? String(localized: "Signed out.")
+                                                                    : String(localized: "Token deleted."))
             await load()
         }
     }
@@ -461,7 +610,7 @@ private struct AccountForm: View {
         guard let client = app.client else { return }
         perform {
             let _: JSONValue = try await client.send(.delete, "/api/v1/me/sessions")
-            ErrorBanner.shared.success(String(localized: "Other devices signed out."))
+            ErrorBanner.shared.success(String(localized: "Browsers signed out."))
             await load()
         }
     }

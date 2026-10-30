@@ -1,4 +1,5 @@
 {
+  "%@ (you)": "%@ (du)",
   "%@ and ^[%lld more doctor](inflect: true)": {
     "one": "%@ und %lld weitere Praxis",
     "other": "%@ und %lld weitere Praxen"
@@ -10,8 +11,8 @@
   },
   "%lld of ^[%lld item](inflect: true) left to buy": "Noch %lld von %lld Artikeln zu kaufen",
   "(off)": "(aus)",
-  "(you)": "(du)",
   "A family keeps your calendar, finances, meals and appointments together. You can invite the others afterwards.": "Eine Familie hält euren Kalender, eure Finanzen, das Essen und die Arzttermine zusammen. Die anderen kannst du danach einladen.",
+  "A family needs a name.": "Eine Familie braucht einen Namen.",
   "A token is stored; leave the field empty to keep it.": "Ein Token ist gespeichert; lass das Feld leer, um ihn zu behalten.",
   "Access token / API key": "Access-Token / API-Schlüssel",
   "Actions for %@": "Aktionen für %@",
@@ -146,6 +147,8 @@
   "Replace the family’s data?": "Daten der Familie ersetzen?",
   "Replaces the calendar (all years) and the finances of this family with those of an exported file; the name, the members and the links stay. Can’t be undone – export first to keep a copy.": "Ersetzt den Kalender (alle Jahre) und die Finanzen dieser Familie durch die einer exportierten Datei; Name, Mitglieder und Links bleiben. Lässt sich nicht rückgängig machen – vorher exportieren, um eine Kopie zu behalten.",
   "Revoke": "Widerrufen",
+  "Revoke the invite link for %@?": "Einladungslink für %@ widerrufen?",
+  "Revoke this invite link?": "Diesen Einladungslink widerrufen?",
   "Role": "Rolle",
   "Role changed.": "Rolle geändert.",
   "SMTP password": "SMTP-Passwort",
@@ -155,6 +158,7 @@
   "Saved.": "Gespeichert.",
   "Search": "Suche",
   "Searches stop sending to it.": "Suchen schicken dann nicht mehr dorthin.",
+  "Send a test message to %@": "Testnachricht an %@ senden",
   "Send to": "Senden an",
   "Sender address": "Absenderadresse",
   "Sending failed: %@": "Senden fehlgeschlagen: %@",
@@ -169,6 +173,7 @@
   "Test": "Testen",
   "Test message sent.": "Testnachricht verschickt.",
   "The link lets someone join the family, with a new account or their existing one. Valid for 7 days, once.": "Mit dem Link tritt jemand der Familie bei, mit einem neuen oder dem eigenen Konto. 7 Tage gültig, einmal nutzbar.",
+  "The name is too long (max. 80).": "Der Name ist zu lang (max. 80).",
   "The whole family as a JSON file: the calendar of all years (entry types, entries, notes) and the finances (accounts, categories, transactions, settings). Viewers can export too.": "Die ganze Familie als JSON-Datei: der Kalender aller Jahre (Eintragsarten, Einträge, Notizen) und die Finanzen (Konten, Kategorien, Buchungen, Einstellungen). Auch Betrachter können exportieren.",
   "This isn’t a family export (a .json file from Settings → Data → Export).": "Das ist kein Familien-Export (eine .json-Datei aus Einstellungen → Daten → Exportieren).",
   "This month · %@": "Dieser Monat · %@",
@@ -186,6 +191,7 @@
   "Where Ohana sends news for the family, e.g. a newly free appointment. Tokens and passwords are stored encrypted.": "Wohin Ohana Neuigkeiten für die Familie schickt, z. B. einen frei gewordenen Termin. Tokens und Passwörter werden verschlüsselt gespeichert.",
   "Where the family lives: appointments show how far a practice is from here.": "Wo die Familie wohnt: Termine zeigen, wie weit eine Praxis von hier entfernt ist.",
   "Which news go to the channels below. Each message is sent once; nothing repeats every day.": "Welche Neuigkeiten an die Kanäle unten gehen. Jede Nachricht kommt einmal; nichts wiederholt sich täglich.",
+  "Whoever has it can’t join with it anymore.": "Wer ihn hat, kann damit nicht mehr beitreten.",
   "You are a viewer in this family: you can look at everything but not change it.": "Du darfst diese Familie nur ansehen: du siehst alles, kannst aber nichts ändern.",
   "You left the family.": "Du hast die Familie verlassen.",
   "You won’t see it anymore unless someone adds you again.": "Du siehst sie dann nicht mehr, bis dich jemand wieder hinzufügt.",
