@@ -6,13 +6,21 @@ import SwiftUI
 struct AppShell: View {
     @Environment(AppModel.self) private var app
     @Environment(\.horizontalSizeClass) private var sizeClass
-    @SceneStorage("module") private var module: Module = .overview
+    /// The tab on screen; nil until one is picked: then the scene's last one (`storedModule`).
+    /// The tab view's selection is this state, only mirrored to the scene storage: bound to it
+    /// directly, the iPhone's tab bar jumps back to the old tab for a moment at every switch.
+    @State private var module: Module?
+    @SceneStorage("module") private var storedModule: Module = .overview
+
+    private var selection: Binding<Module> {
+        Binding { module ?? storedModule } set: { module = $0 }
+    }
     @SceneStorage("assistant") private var showAssistant = false
 
     var body: some View {
         @Bindable var app = app
         if let family = app.selectedFamily, let context = app.context(for: family) {
-            TabView(selection: $module) {
+            TabView(selection: selection) {
                 ForEach(Module.allCases) { item in
                     Tab(item.title, systemImage: item.systemImage, value: item) {
                         NavigationStack {
@@ -28,6 +36,7 @@ struct AppShell: View {
             }
             .tabViewStyle(.sidebarAdaptable)
             .tabViewSidebarHeader { FamilySwitcher() }
+            .onChange(of: module) { if let module { storedModule = module } }
             #if os(iOS)
             .tabBarMinimizeBehavior(.onScrollDown)
             // "Ask Ohana" floats above the iPhone's tab bar on every page.
@@ -43,13 +52,13 @@ struct AppShell: View {
             }
             .environment(context)
             .id(family.id)
-            .focusedSceneValue(\.shell, ShellFocus(module: $module, assistant: $showAssistant) {
+            .focusedSceneValue(\.shell, ShellFocus(module: selection, assistant: $showAssistant) {
                 context.ask(newChat: true)
             })
             .onChange(of: context.assistantRequest?.id) {
                 guard context.assistantRequest != nil else { return }
                 // The assistant's page takes the request itself when it's on screen.
-                if module == .assistant, sizeClass != .compact { return }
+                if selection.wrappedValue == .assistant, sizeClass != .compact { return }
                 showAssistant = true
             }
             .onChange(of: AssistantInbox.shared.pending?.id, initial: true) {
