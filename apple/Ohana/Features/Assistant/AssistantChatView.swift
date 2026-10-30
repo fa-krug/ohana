@@ -786,7 +786,9 @@ private struct AssistantImagePaste: ViewModifier {
     let paste: ([Data]) -> Void
 
     func body(content: Content) -> some View {
-        #if os(iOS)
+        // Only the iOS 27 SDK (Swift 6.4, Xcode 27) has `pasteDestination` on iOS; older Xcodes
+        // (CI's) build without it.
+        #if os(iOS) && compiler(>=6.4)
         if #available(iOS 27, *) {
             content.pasteDestination(for: AssistantPastedImage.self) { images in
                 paste(images.map(\.data))
