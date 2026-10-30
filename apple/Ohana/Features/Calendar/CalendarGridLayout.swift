@@ -72,4 +72,21 @@ enum CalendarGridLayout {
             return CGRect(x: CGFloat(i % 7) * cellWidth, y: CGFloat(i / 7) * rowHeight, width: cellWidth, height: rowHeight)
         }
     }
+
+    /// The list of months: the day under a point, given where each month's grid sits (`frames`,
+    /// by month, in the list's coordinate space; only the ones on screen). With `clamp` (while
+    /// dragging) a point between or beyond the grids gives the closest month's nearest day.
+    static func day(at p: CGPoint, inMonths frames: [Int: CGRect], year: Int, firstWeekday: Int,
+                    rowHeight: CGFloat, clamp: Bool = false) -> Day? {
+        let months = frames.sorted { $0.key < $1.key }
+        let inside = months.first { $0.value.minY <= p.y && p.y < $0.value.maxY }
+        let picked = inside ?? (clamp ? months.min { distance(p.y, $0.value) < distance(p.y, $1.value) } : nil)
+        guard let (month, frame) = picked else { return nil }
+        let layout = Month(year: year, month: month, firstWeekday: firstWeekday, width: frame.width, rowHeight: rowHeight)
+        return layout.day(at: CGPoint(x: p.x - frame.minX, y: p.y - frame.minY), clamp: clamp)
+    }
+
+    private static func distance(_ y: CGFloat, _ frame: CGRect) -> CGFloat {
+        y < frame.minY ? frame.minY - y : max(0, y - frame.maxY)
+    }
 }

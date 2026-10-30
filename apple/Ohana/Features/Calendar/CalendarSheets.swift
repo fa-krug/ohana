@@ -5,12 +5,16 @@ enum CalendarSheet: Identifiable {
     case note([Day])
     case event(CalendarEventDraft)
     case details
+    case repeatDays
+    case help
 
     var id: String {
         switch self {
         case let .note(days): "note-" + days.map(\.description).joined(separator: ",")
         case let .event(draft): "event-" + (draft.eventID ?? "new")
         case .details: "details"
+        case .repeatDays: "repeat"
+        case .help: "help"
         }
     }
 }
@@ -20,6 +24,8 @@ struct CalendarEventDraft: Equatable {
     var eventID: String?
     var input: CalendarEventInput
     var isAppointment = false
+    /// The appointment search it was booked from.
+    var searchID: String?
 
     static func new(on day: Day) -> CalendarEventDraft {
         CalendarEventDraft(input: CalendarEventInput(date: day, start: nil, end: nil, title: ""))
@@ -36,6 +42,7 @@ struct CalendarEventDraft: Equatable {
         input = CalendarEventInput(date: event.date, start: event.start, end: event.end, title: event.title,
                                    location: event.location, person: event.person, note: event.note, url: event.url)
         isAppointment = event.isAppointment
+        searchID = event.searchId
     }
 
     /// What's wrong with it (the server's checks), nil when it can be saved.
@@ -76,6 +83,16 @@ final class CalendarActions {
     }
 
     func showDetails() { sheet = .details }
+
+    /// The fill handle's equivalent for touch (and the menus): repeat the selection up to a day.
+    func repeatSelection() {
+        guard store.canRepeat else {
+            return store.showToast(String(localized: "Select days that follow each other first"))
+        }
+        sheet = .repeatDays
+    }
+
+    func showHelp() { sheet = .help }
 }
 
 // MARK: Note
@@ -88,6 +105,9 @@ struct CalendarNoteSheet: View {
     @State private var icon = ""
     @State private var comment = ""
     @State private var same = true
+    /// With a keyboard (Mac) the comment has the focus; on touch screens the keyboard would
+    /// cover the icons.
+    @FocusState private var commentFocused: Bool
 
     static let icons = ["🎄", "🎅", "🎁", "🎆", "🐣", "🐰", "🎃", "🎂", "🎉", "❤️",
                         "⭐", "📌", "✈️", "🏖️", "⛷️", "🏫", "🏥", "🎓", "💼", "⚽"]
@@ -117,6 +137,7 @@ struct CalendarNoteSheet: View {
                     .padding(.vertical, 4)
                     TextField("Or any other emoji", text: $icon)
                         .onChange(of: icon) { _, value in if value.utf16.count > 16 { icon = String(value.prefix(4)) } }
+                        .onSubmit { save() }
                 } header: {
                     Text("Icon")
                 }
@@ -124,6 +145,7 @@ struct CalendarNoteSheet: View {
                     TextField("e.g. Christmas", text: $comment, axis: .vertical)
                         .lineLimit(3...6)
                         .onChange(of: comment) { _, value in if value.count > 500 { comment = String(value.prefix(500)) } }
+                        .focused($commentFocused)
                 }
                 if !same {
                     Section {
@@ -166,6 +188,9 @@ struct CalendarNoteSheet: View {
                 icon = first.icon
                 comment = first.comment
             }
+            #if os(macOS)
+            commentFocused = true
+            #endif
         }
     }
 
@@ -193,6 +218,7 @@ extension View {
 
 /// Adds or edits a timed event (POST /events, PATCH /events/{id}).
 struct CalendarEventSheet: View {
+    @Environment(FamilyContext.self) private var family
     let store: CalendarStore
     @State var draft: CalendarEventDraft
     @Environment(\.dismiss) private var dismiss
@@ -227,7 +253,16 @@ struct CalendarEventSheet: View {
                         .lineLimit(2...5)
                 } footer: {
                     if draft.isAppointment {
-                        Text("Booked from an appointment search.")
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Booked from an appointment search.")
+                            if let searchID = draft.searchID {
+                                Button("Open the appointment search") {
+                                    dismiss()
+                                    family.open(.appointmentSearch(id: searchID))
+                                }
+                                .buttonStyle(.borderless)
+                            }
+                        }
                     }
                 }
                 if let problem = draft.problem, !draft.input.title.isEmpty {
@@ -330,6 +365,7 @@ struct CalendarEventSheet: View {
 
 /// The selected days with their entries, notes, events and birthdays, and their actions.
 struct CalendarSelectionDetails: View {
+    @Environment(FamilyContext.self) private var family
     let store: CalendarStore
     let actions: CalendarActions
     /// Days shown at most (a long selection lists the days that have something).
@@ -423,6 +459,12 @@ struct CalendarSelectionDetails: View {
         .glassCard(cornerRadius: 18, padding: 12)
     }
 
+    /// The appointment search an event was booked from (the details sheet closes first).
+    private func openSearch(_ id: String) {
+        actions.sheet = nil
+        family.open(.appointmentSearch(id: id))
+    }
+
     private func eventRow(_ event: CalendarEvent) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: event.isAppointment ? "stethoscope" : "clock")
@@ -445,6 +487,14 @@ struct CalendarSelectionDetails: View {
                         Label("Open link", systemImage: "link").font(.caption)
                     }
                 }
+                if event.isAppointment, let searchID = event.searchId {
+                    Button {
+                        openSearch(searchID)
+                    } label: {
+                        Label("Open the appointment search", systemImage: "stethoscope").font(.caption)
+                    }
+                    .buttonStyle(.borderless)
+                }
             }
             Spacer(minLength: 0)
             if !store.readOnly {
@@ -464,6 +514,9 @@ struct CalendarSelectionDetails: View {
         }
         .contentShape(.rect)
         .contextMenu {
+            if event.isAppointment, let searchID = event.searchId {
+                Button("Open the appointment search", systemImage: "stethoscope") { openSearch(searchID) }
+            }
             if !store.readOnly {
                 Button("Edit", systemImage: "pencil") { actions.editEvent(event) }
                 Button("Delete", systemImage: "trash", role: .destructive) {

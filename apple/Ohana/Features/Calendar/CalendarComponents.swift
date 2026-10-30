@@ -76,12 +76,33 @@ enum CalendarText {
         String(localized: "🎂 \(b.name) turns \(b.age)")
     }
 
-    static func days(_ n: Int) -> String { String(localized: "\(n) days") }
+    /// A string with a plural: English inflects `^[\(n) day](inflect: true)`, the German
+    /// translation has one/other variants. (`String(localized:)` leaves the markup as it is.)
+    static func plural(_ value: String.LocalizationValue) -> String {
+        String(AttributedString(localized: value).characters)
+    }
+
+    /// "1 day", "5 days".
+    static func days(_ n: Int) -> String { plural("^[\(n) day](inflect: true)") }
+    static func weekdays(_ n: Int) -> String { plural("^[\(n) weekday](inflect: true)") }
+    static func workdays(_ n: Int) -> String { plural("^[\(n) workday](inflect: true)") }
 
     /// "5 days selected (3 weekdays): Mon 3 Mar – Fri 7 Mar".
     static func selection(_ days: [Day]) -> String {
         let work = days.filter { !CalendarMath.isWeekend($0) }.count
-        return String(localized: "\(days.count) days selected (\(work) weekdays): \(span(days))")
+        return String(localized: "\(Self.days(days.count)) selected (\(weekdays(work))): \(span(days))")
+    }
+
+    /// While the fill handle is dragged: how many days it fills.
+    static func fill(_ fill: CalendarFill) -> String {
+        fill.targets.isEmpty
+            ? String(localized: "Drag past the selection to repeat it")
+            : String(localized: "Fill \(days(fill.targets.count))")
+    }
+
+    /// "It is used on 3 days in 2026. This can’t be undone."
+    static func usedOn(_ n: Int, year: Int) -> String {
+        plural("It is used on ^[\(n) day](inflect: true) in \(String(year)). This can’t be undone.")
     }
 
     /// Weekday letters in the order of the device's week (`firstWeekday`).
@@ -146,40 +167,51 @@ struct CalendarSwatch: View {
 }
 
 /// The year's types as toggle chips with their workday counts; on the selection they add or
-/// remove the type. A year without types offers to copy them from another year.
+/// remove the type. `wrap`: in rows (iPad and Mac), else one row that scrolls (the dock). A
+/// year without types offers to copy them from another year.
 struct CalendarTypeChips: View {
+    @Environment(FamilyContext.self) private var family
     @Bindable var store: CalendarStore
     var showEditLink = true
+    var wrap = false
 
     var body: some View {
         if store.types.isEmpty {
             if store.typeYears != nil { CalendarEmptyTypes(store: store) }
+        } else if wrap {
+            GlassEffectContainer(spacing: 8) {
+                CalendarFlowLayout(spacing: 8) { chips }
+                    .padding(.vertical, 2)
+            }
         } else {
-            let stats = store.stats
             ScrollView(.horizontal) {
                 GlassEffectContainer(spacing: 8) {
-                    HStack(spacing: 8) {
-                        ForEach(Array(store.types.enumerated()), id: \.element.id) { index, type in
-                            chip(type, index: index, stats: stats[type.id] ?? CalendarTypeStats())
-                        }
-                        if showEditLink && !store.readOnly {
-                            NavigationLink {
-                                CalendarSettingsView()
-                            } label: {
-                                Image(systemName: "pencil")
-                                    .frame(width: 30, height: 30)
-                            }
-                            .buttonStyle(.glass)
-                            .buttonBorderShape(.circle)
-                            .help("Edit types")
-                            .accessibilityLabel("Edit types")
-                        }
-                    }
-                    .padding(.horizontal, 2)
-                    .padding(.vertical, 4)
+                    HStack(spacing: 8) { chips }
+                        .padding(.horizontal, 2)
+                        .padding(.vertical, 4)
                 }
             }
             .scrollIndicators(.hidden)
+        }
+    }
+
+    @ViewBuilder
+    private var chips: some View {
+        let stats = store.stats
+        ForEach(Array(store.types.enumerated()), id: \.element.id) { index, type in
+            chip(type, index: index, stats: stats[type.id] ?? CalendarTypeStats())
+        }
+        if showEditLink && !store.readOnly {
+            Button {
+                family.open(.settings(.calendar))
+            } label: {
+                Image(systemName: "pencil")
+                    .frame(width: 30, height: 30)
+            }
+            .buttonStyle(.glass)
+            .buttonBorderShape(.circle)
+            .help("Edit types")
+            .accessibilityLabel("Edit types")
         }
     }
 
@@ -208,7 +240,7 @@ struct CalendarTypeChips: View {
     }
 
     private func chipHelp(_ type: CalendarEntryType, index: Int, stats: CalendarTypeStats) -> String {
-        var text = String(localized: "\(type.name) – \(type.role.title): \(stats.days) days in \(String(store.year)), \(stats.workdays) workdays")
+        var text = String(localized: "\(type.name) – \(type.role.title): \(CalendarText.days(stats.days)) in \(String(store.year)), \(CalendarText.workdays(stats.workdays))")
         if !store.readOnly && index < 9 {
             text += "\n" + String(localized: "Click (or press \(index + 1)) to toggle it on the selected days")
         }
@@ -216,8 +248,56 @@ struct CalendarTypeChips: View {
     }
 }
 
+/// Lays its views out in rows, wrapping when the width is used up (the type chips).
+struct CalendarFlowLayout: Layout {
+    var spacing: CGFloat = 8
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let rows = arrange(width: proposal.width ?? .infinity, subviews: subviews)
+        let width = rows.map(\.width).max() ?? 0
+        let height = rows.map(\.height).reduce(0, +) + spacing * CGFloat(max(0, rows.count - 1))
+        return CGSize(width: proposal.width ?? width, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var y = bounds.minY
+        for row in arrange(width: bounds.width, subviews: subviews) {
+            var x = bounds.minX
+            for index in row.indices {
+                let size = subviews[index].sizeThatFits(.unspecified)
+                subviews[index].place(at: CGPoint(x: x, y: y + (row.height - size.height) / 2), proposal: ProposedViewSize(size))
+                x += size.width + spacing
+            }
+            y += row.height + spacing
+        }
+    }
+
+    private struct Row {
+        var indices: [Int] = []
+        var width: CGFloat = 0
+        var height: CGFloat = 0
+    }
+
+    private func arrange(width: CGFloat, subviews: Subviews) -> [Row] {
+        var rows = [Row()]
+        for index in subviews.indices {
+            let size = subviews[index].sizeThatFits(.unspecified)
+            let last = rows.count - 1
+            if !rows[last].indices.isEmpty && rows[last].width + spacing + size.width > width {
+                rows.append(Row())
+            }
+            let i = rows.count - 1
+            rows[i].width += (rows[i].indices.isEmpty ? 0 : spacing) + size.width
+            rows[i].height = max(rows[i].height, size.height)
+            rows[i].indices.append(index)
+        }
+        return rows.filter { !$0.indices.isEmpty }
+    }
+}
+
 /// "No entry types for 2027 yet", with copying from the closest year.
 struct CalendarEmptyTypes: View {
+    @Environment(FamilyContext.self) private var family
     let store: CalendarStore
 
     var body: some View {
@@ -231,8 +311,9 @@ struct CalendarEmptyTypes: View {
                         perform { try await store.copyTypes(from: source) }
                     }
                     .buttonStyle(.glassProminent)
+                    .help("Start \(String(store.year)) with the types of \(String(source)); you can change them afterwards")
                 } else {
-                    NavigationLink("Add types") { CalendarSettingsView() }
+                    Button("Add types") { family.open(.settings(.calendar)) }
                         .buttonStyle(.glassProminent)
                 }
             }
@@ -255,7 +336,8 @@ struct CalendarCoveragePill: View {
                     Label("All covered", systemImage: "checkmark.circle.fill")
                         .foregroundStyle(.green)
                 } else {
-                    Label("\(gaps.count) uncovered weekdays", systemImage: "exclamationmark.triangle.fill")
+                    Label(CalendarText.plural("^[\(gaps.count) uncovered weekday](inflect: true)"),
+                          systemImage: "exclamationmark.triangle.fill")
                         .foregroundStyle(.red)
                     Button {
                         if let day = store.nextGap() { onJump(day) }
@@ -276,7 +358,7 @@ struct CalendarCoveragePill: View {
             .glassEffect(.regular.tint((gaps.isEmpty ? Color.green : Color.red).opacity(0.12)), in: .capsule)
             .help(gaps.isEmpty
                   ? String(localized: "All “\(names)” days in \(String(store.year)) are covered")
-                  : String(localized: "\(gaps.count) weekdays with “\(names)” not covered yet"))
+                  : String(localized: "\(CalendarText.weekdays(gaps.count)) with “\(names)” not covered yet"))
         }
     }
 }
