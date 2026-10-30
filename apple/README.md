@@ -42,8 +42,8 @@ Ohana/
                   FamilyContext: the family's API and change signals)
   Core/           APIClient + FamilyAPI (JSON over /api/v1), APIError, JSONValue, Keychain,
                   DevicePairing, account models, Day / Money helpers
-  DesignSystem/   Liquid Glass helpers (glassCard, GlassSection, TintedIcon), OhanaBackground,
-                  LoadState / LoadStateView, ErrorBanner, RemoteImage
+  DesignSystem/   Content surfaces (contentCard, CardSection, chip, TintedIcon), OhanaBackground,
+                  LoadState / LoadStateView, ErrorBanner, CancelButton / discardGuard, RemoteImage
   Shell/          RootView, WelcomeView (pairing), AppShell (sidebar-adaptable TabView, family
                   switcher, assistant inspector ⌘J), AccountView
   Features/       One folder per module: Overview, Calendar, Finance, Meals, Appointments,
@@ -84,9 +84,17 @@ scripts/merge-localizations.py build/dd   # rewrites Ohana/Resources/Localizable
 - A screen loads with `.task(id: family.revision(.area))` into a `LoadState` and shows it with
   `LoadStateView`; after a change it calls `family.didChange(.area)` so other screens showing the
   same data reload (the assistant does this for what its tools changed).
-- Errors of actions go to the window's banner: `perform { try await … }`.
-- Liquid Glass for the navigation layer and floating controls (`.buttonStyle(.glass)`,
-  `.glassProminent`, `GlassEffectContainer`), `glassCard()` for cards on `ohanaBackground()`.
+- Errors of actions go to the window's banner: `perform { try await … }` (VoiceOver announces it);
+  every sheet's content has `.errorBanner()` so it shows there too.
+- Liquid Glass only for the navigation layer and controls floating above the content (bars,
+  toasts, floating buttons: `.buttonStyle(.glass)`, `.glassProminent`, `GlassEffectContainer`).
+  Content sits on solid `contentCard()` / `CardSection` on `ohanaBackground()`.
+- Editor sheets: `CancelButton(hasChanges:)` + `.discardGuard(hasChanges:)` (ask before
+  discarding), Save in `.confirmationAction` with `.keyboardShortcut(.defaultAction)`, errors at
+  the field.
+- Menus: the visible module sets `focusedSceneValue(\.newItem, …)` (File ▸ New …, ⌘N) and
+  `focusedSceneValue(\.moduleMenu, …)` (its own menu in the menu bar and the iPad's ⌘ list); only
+  ⌘-shortcuts there, none of the system's (⌘E, ⌘F, ⌘S, ⇧⌘S, …). New Window is ⌥⌘N.
 - Strings are English literals (`Text("…")`); the German translations are in
   `Resources/Localizable.xcstrings`.
 - Code for both platforms: iOS-only modifiers behind `#if os(iOS)`; nothing newer than macOS 26
