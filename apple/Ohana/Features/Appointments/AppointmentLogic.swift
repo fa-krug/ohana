@@ -273,4 +273,21 @@ enum AppointmentLogic {
         guard let date = Date.server(iso) else { return iso }
         return date.formatted(date: full ? .complete : .abbreviated, time: .shortened)
     }
+
+    /// A booked appointment's day in the calendar ("YYYY-MM-DD"; the calendar itself when
+    /// unreadable).
+    static func calendarRoute(date: String) -> AppRoute {
+        Day(date).map { .calendarDay($0) } ?? .module(.calendar)
+    }
+
+    /// "2 more doctors" under a search card's first three (`appointments.moreResults`).
+    static func moreDoctors(_ count: Int) -> AttributedString {
+        AttributedString(localized: "^[\(count) more doctor](inflect: true)")
+    }
+
+    /// "3 found · 2 matching · 1 appointment" of a run (`appointments.run.*`).
+    static func runCounts(found: Int, matched: Int, slots: Int) -> AttributedString {
+        AttributedString(localized: "\(found) found · \(matched) matching · ")
+            + AttributedString(localized: "^[\(slots) appointment](inflect: true)")
+    }
 }

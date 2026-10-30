@@ -223,3 +223,73 @@ extension Color {
                      blue: Double(value & 0xFF) / 255)
     }
 }
+
+// MARK: Links
+
+/// Where each row of the overview leads (an `AppRoute`, opened with `family.open`).
+enum OverviewLinks {
+    /// A calendar run or an event: its (first) day in the calendar.
+    static func route(for item: OverviewUpcomingItem) -> AppRoute {
+        .calendarDay(item.date)
+    }
+
+    static func route(for event: OverviewEvent) -> AppRoute {
+        .calendarDay(event.date)
+    }
+
+    static func route(for birthday: OverviewBirthday) -> AppRoute {
+        .calendarDay(birthday.day)
+    }
+
+    /// Today's recipe, or the meal plan when nothing is planned.
+    static func meal(_ meals: OverviewMealsSummary) -> AppRoute {
+        meals.today.map { .recipe(id: $0.recipeId) } ?? .mealPlan
+    }
+
+    /// The overview's shopping list, or the latest one.
+    static func shopping(_ meals: OverviewMealsSummary) -> AppRoute {
+        .shoppingList(id: meals.shopping?.id)
+    }
+
+    /// The transactions of the category most money went to this month.
+    static func topExpense(_ summary: OverviewMonthSummary) -> AppRoute {
+        .financeTransactions(categoryID: summary.topExpense?.categoryId)
+    }
+
+    /// A search's earliest find, or the search itself.
+    static func route(for search: OverviewSearchFind) -> AppRoute {
+        if let first = search.first {
+            return .appointmentSlot(searchID: search.id, resultID: String(first.resultId))
+        }
+        return .appointmentSearch(id: search.id)
+    }
+}
+
+extension OverviewFormat {
+    /// "Dr. Weber and 2 more doctors" (`home.searchFirst`).
+    static func doctorAndMore(_ name: String, more: Int) -> AttributedString {
+        AttributedString(localized: "\(name) and ^[\(more) more doctor](inflect: true)")
+    }
+
+    /// "3 of 12 items left to buy" (`meals.overview.toBuy`).
+    static func itemsLeft(open: Int, total: Int) -> AttributedString {
+        AttributedString(localized: "\(open) of ^[\(total) item](inflect: true) left to buy")
+    }
+}
+
+/// The "Ask Ohana…" field's example questions.
+enum OverviewAsk {
+    static func suggestions(canEdit: Bool) -> [String] {
+        [
+            String(localized: "What's on this week?"),
+            canEdit ? String(localized: "Plan next week's meals") : String(localized: "What's for dinner today?"),
+            String(localized: "How much did we spend on groceries?"),
+        ]
+    }
+
+    /// The question to send, or nil for a blank field.
+    static func question(_ text: String) -> String? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+}

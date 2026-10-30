@@ -21,12 +21,24 @@
         }
       }
     },
-    "%@ and %lld more": {
+    "%@ and ^[%lld more doctor](inflect: true)": {
       "localizations": {
         "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ und %lld weitere"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%@ und %lld weitere Praxis"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%@ und %lld weitere Praxen"
+                }
+              }
+            }
           }
         }
       }
@@ -71,12 +83,24 @@
         }
       }
     },
-    "%@ · age %lld": {
+    "%@ · ^[%lld year](inflect: true)": {
       "localizations": {
         "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ · Alter %lld"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%@ · %lld Jahr"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%@ · %lld Jahre"
+                }
+              }
+            }
           }
         }
       }
@@ -171,12 +195,12 @@
         }
       }
     },
-    "%lld found · %lld matching · %lld appointments": {
+    "%lld found · %lld matching · ": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld gefunden · %lld passend · %lld Termine"
+            "value": "%lld gefunden · %lld passend · "
           }
         }
       }
@@ -241,7 +265,7 @@
         }
       }
     },
-    "%lld of %lld items left to buy": {
+    "%lld of ^[%lld item](inflect: true) left to buy": {
       "localizations": {
         "de": {
           "stringUnit": {
@@ -901,6 +925,26 @@
         }
       }
     },
+    "Added to the calendar.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In den Kalender eingetragen."
+          }
+        }
+      }
+    },
+    "Added.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hinzugefügt."
+          }
+        }
+      }
+    },
     "Adding a calendar event": {
       "localizations": {
         "de": {
@@ -1221,6 +1265,16 @@
         }
       }
     },
+    "Appointment removed.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termin entfernt."
+          }
+        }
+      }
+    },
     "Appointment searches": {
       "localizations": {
         "de": {
@@ -1487,6 +1541,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Geburtstag (optional)"
+          }
+        }
+      }
+    },
+    "Birthday saved.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geburtstag gespeichert."
           }
         }
       }
@@ -1847,6 +1911,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ändert Buchungen"
+          }
+        }
+      }
+    },
+    "Channel deleted.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kanal gelöscht."
+          }
+        }
+      }
+    },
+    "Channel saved.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kanal gespeichert."
           }
         }
       }
@@ -3521,12 +3605,32 @@
         }
       }
     },
+    "Family deleted.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Familie gelöscht."
+          }
+        }
+      }
+    },
     "Family name": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Name der Familie"
+          }
+        }
+      }
+    },
+    "Family renamed.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Familie umbenannt."
           }
         }
       }
@@ -4001,6 +4105,26 @@
         }
       }
     },
+    "Home address removed.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heimatadresse entfernt."
+          }
+        }
+      }
+    },
+    "Home address saved.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heimatadresse gespeichert."
+          }
+        }
+      }
+    },
     "Hourly": {
       "localizations": {
         "de": {
@@ -4037,6 +4161,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wie viel haben wir dieses Jahr pro Monat für Lebensmittel ausgegeben?"
+          }
+        }
+      }
+    },
+    "How much did we spend on groceries?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie viel haben wir für Lebensmittel ausgegeben?"
           }
         }
       }
@@ -4137,6 +4271,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ignorierliste"
+          }
+        }
+      }
+    },
+    "Ignored.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignoriert."
           }
         }
       }
@@ -4427,6 +4571,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Einladungslink offen"
+          }
+        }
+      }
+    },
+    "Invite link revoked.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einladungslink widerrufen."
           }
         }
       }
@@ -5017,16 +5171,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mehr"
-          }
-        }
-      }
-    },
-    "More results: %lld": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Weitere Ergebnisse: %lld"
           }
         }
       }
@@ -6241,6 +6385,16 @@
         }
       }
     },
+    "Open the cook view": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kochansicht öffnen"
+          }
+        }
+      }
+    },
     "Open the provider’s page": {
       "localizations": {
         "de": {
@@ -6611,6 +6765,16 @@
         }
       }
     },
+    "Plan next week's meals": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plane das Essen für nächste Woche"
+          }
+        }
+      }
+    },
     "Plan next week’s meals without fish.": {
       "localizations": {
         "de": {
@@ -6897,6 +7061,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wartet"
+          }
+        }
+      }
+    },
+    "Queued: the search runs in a few seconds.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eingereiht: die Suche läuft in ein paar Sekunden."
           }
         }
       }
@@ -7241,6 +7415,26 @@
         }
       }
     },
+    "Removed from the ignore list.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Von der Ignorierliste entfernt."
+          }
+        }
+      }
+    },
+    "Removed.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entfernt."
+          }
+        }
+      }
+    },
     "Removing a calendar event": {
       "localizations": {
         "de": {
@@ -7377,6 +7571,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rolle"
+          }
+        }
+      }
+    },
+    "Role changed.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rolle geändert."
           }
         }
       }
@@ -7561,6 +7765,16 @@
         }
       }
     },
+    "Saved.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gespeichert."
+          }
+        }
+      }
+    },
     "Saving a recipe": {
       "localizations": {
         "de": {
@@ -7641,6 +7855,26 @@
         }
       }
     },
+    "Search created.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche angelegt."
+          }
+        }
+      }
+    },
+    "Search deleted.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche gelöscht."
+          }
+        }
+      }
+    },
     "Search ingredient…": {
       "localizations": {
         "de": {
@@ -7687,6 +7921,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rezepte suchen"
+          }
+        }
+      }
+    },
+    "Search saved.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche gespeichert."
           }
         }
       }
@@ -9771,6 +10015,26 @@
         }
       }
     },
+    "What's for dinner today?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was gibt es heute zu essen?"
+          }
+        }
+      }
+    },
+    "What's on this week?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was steht diese Woche an?"
+          }
+        }
+      }
+    },
     "What’s it called?": {
       "localizations": {
         "de": {
@@ -9991,6 +10255,16 @@
         }
       }
     },
+    "You left the family.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du hast die Familie verlassen."
+          }
+        }
+      }
+    },
     "You sign in on your server’s page; the app gets its own key, which you can remove on your account page.": {
       "localizations": {
         "de": {
@@ -10067,6 +10341,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "Deine Sitzung ist abgelaufen, melde dich erneut an."
+          }
+        }
+      }
+    },
+    "^[%lld appointment](inflect: true)": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Termin"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Termine"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "^[%lld more doctor](inflect: true)": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld weitere Praxis"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld weitere Praxen"
+                }
+              }
+            }
           }
         }
       }

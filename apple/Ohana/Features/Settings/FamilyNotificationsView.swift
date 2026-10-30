@@ -31,6 +31,7 @@ struct FamilyNotificationsView: View {
                 }
                 await model.load(family.api)
                 family.didChange(.family)
+                ErrorBanner.shared.success(String(localized: "Channel saved."))
             }
         }
         .familyConfirmation($confirmation)
@@ -136,7 +137,7 @@ struct FamilyNotificationsView: View {
                 message: String(localized: "Searches stop sending to it.")
             ) {
                 let api = family.api
-                model.change(family) {
+                model.change(family, success: String(localized: "Channel deleted.")) {
                     try await api.perform(.delete, "/household/notifications/channels/\(channel.id)")
                 }
             }

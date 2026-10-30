@@ -242,4 +242,33 @@ struct AppointmentLogicTests {
         #expect(object["end"] == nil)
         #expect(object["stopSearch"] as? Bool == true)
     }
+
+    @Test func takesItsAppRoutes() {
+        #expect(AppointmentRoute.from(.appointmentSearch(id: "s1")) == .push(.search("s1")))
+        #expect(AppointmentRoute.from(.appointmentSlot(searchID: "s1", resultID: "42")) == .push(.slot(searchID: "s1", resultID: 42)))
+        // A result id that isn't a number (a broken link) still shows its search.
+        #expect(AppointmentRoute.from(.appointmentSlot(searchID: "s1", resultID: "x")) == .push(.search("s1")))
+        #expect(AppointmentRoute.from(.newAppointmentSearch) == .newSearch)
+        #expect(AppointmentRoute.from(.module(.appointments)) == .list)
+        // Web links (and notifications' deep links) reach the same pages.
+        let parsed = AppRoute.parse(webPath: "/f/fam/appointments/s1/slots/42")
+        #expect(parsed?.route == .appointmentSlot(searchID: "s1", resultID: "42"))
+    }
+
+    @Test func linksBookingsToTheirDay() {
+        #expect(AppointmentLogic.calendarRoute(date: "2026-11-03") == .calendarDay(Day(year: 2026, month: 11, day: 3)))
+        #expect(AppointmentLogic.calendarRoute(date: "nope") == .module(.calendar))
+    }
+
+    @Test func refreshesLikeTheWeb() {
+        #expect(AppointmentRefresh.interval(busy: true) == .seconds(3))
+        #expect(AppointmentRefresh.interval(busy: false) == .seconds(45))
+    }
+
+    @Test func countsWithPlurals() {
+        #expect(String(AppointmentLogic.moreDoctors(1).characters) == "1 more doctor")
+        #expect(String(AppointmentLogic.moreDoctors(4).characters) == "4 more doctors")
+        #expect(String(AppointmentLogic.runCounts(found: 3, matched: 2, slots: 1).characters) == "3 found · 2 matching · 1 appointment")
+        #expect(String(AppointmentLogic.runCounts(found: 3, matched: 2, slots: 5).characters) == "3 found · 2 matching · 5 appointments")
+    }
 }

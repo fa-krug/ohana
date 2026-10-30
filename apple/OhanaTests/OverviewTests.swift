@@ -93,4 +93,42 @@ struct OverviewTests {
         #expect(Color(overviewHex: "0f0") == Color(red: 0, green: 1, blue: 0))
         #expect(Color(overviewHex: "nope") == .gray)
     }
+
+    @Test func linksEveryRowToItsPlace() throws {
+        let d = try JSONDecoder().decode(OverviewDashboard.self, from: Data(Self.fullSample.utf8))
+        #expect(d.upcoming.map(OverviewLinks.route(for:)) == [.calendarDay(Day("2026-10-30")!), .calendarDay(Day("2026-11-03")!)])
+        #expect(OverviewLinks.meal(d.meals) == .recipe(id: "r1"))
+        #expect(OverviewLinks.shopping(d.meals) == .shoppingList(id: "l1"))
+        #expect(OverviewLinks.topExpense(d.finance) == .financeTransactions(categoryID: "c1"))
+        #expect(d.searches.map(OverviewLinks.route(for:)) == [
+            .appointmentSlot(searchID: "s1", resultID: "42"), .appointmentSearch(id: "s2"),
+        ])
+
+        let empty = try JSONDecoder().decode(OverviewDashboard.self, from: Data(Self.serverSample.utf8))
+        #expect(OverviewLinks.meal(empty.meals) == .mealPlan)
+        #expect(OverviewLinks.shopping(empty.meals) == .shoppingList(id: nil))
+        #expect(OverviewLinks.topExpense(empty.finance) == .financeTransactions(categoryID: nil))
+        #expect(empty.birthdays.map(OverviewLinks.route(for:)).first == .calendarDay(Day("2026-11-15")!))
+        #expect(OverviewLinks.route(for: empty.todayEvents[0]) == .calendarDay(Day("2026-11-01")!))
+        // Every route lands in the module it belongs to.
+        #expect(OverviewLinks.route(for: d.searches[0]).module == .appointments)
+        #expect(OverviewLinks.topExpense(d.finance).module == .finance)
+    }
+
+    @Test func countsWithPlurals() {
+        #expect(String(OverviewFormat.doctorAndMore("Dr. Weber", more: 1).characters) == "Dr. Weber and 1 more doctor")
+        #expect(String(OverviewFormat.doctorAndMore("Dr. Weber", more: 2).characters) == "Dr. Weber and 2 more doctors")
+        #expect(String(OverviewFormat.itemsLeft(open: 1, total: 1).characters) == "1 of 1 item left to buy")
+        #expect(String(OverviewFormat.itemsLeft(open: 3, total: 12).characters) == "3 of 12 items left to buy")
+    }
+
+    @Test func asksTheAssistant() {
+        #expect(OverviewAsk.question("  What's for dinner?\n") == "What's for dinner?")
+        #expect(OverviewAsk.question(" \n") == nil)
+        let editor = OverviewAsk.suggestions(canEdit: true)
+        #expect(editor.count == 3 && Set(editor).count == 3)
+        #expect(editor.contains("Plan next week's meals"))
+        // Viewers can't change the plan: no suggestion that would.
+        #expect(!OverviewAsk.suggestions(canEdit: false).contains("Plan next week's meals"))
+    }
 }

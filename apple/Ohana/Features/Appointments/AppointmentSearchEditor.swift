@@ -226,7 +226,7 @@ struct AppointmentSearchEditor: View {
                         .foregroundStyle(.secondary)
                     Button("Add one in the settings.") {
                         dismiss()
-                        Module.settings.open()
+                        family.open(.settings(.notifications))
                     }
                 } else {
                     ForEach(options.channels) { channel in
@@ -283,6 +283,7 @@ struct AppointmentSearchEditor: View {
                     id = created.id
                 }
                 family.didChange(.appointments)
+                ErrorBanner.shared.success(search == nil ? String(localized: "Search created.") : String(localized: "Search saved."))
                 dismiss()
                 saved(id)
             } catch is CancellationError {

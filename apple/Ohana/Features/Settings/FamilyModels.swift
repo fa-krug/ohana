@@ -326,11 +326,11 @@ enum FamilyBirthdays {
         return (today.month, today.day) < (birthday.month, birthday.day) ? years - 1 : years
     }
 
-    /// "3 May 2019 · age 7"
+    /// "3 May 2019 · 7 years" (`settings.birthdayAge`).
     static func text(_ birthday: Day, today: Day = .today) -> String {
         let date = birthday.formatted(.dateTime.day().month(.abbreviated).year())
         let age = age(birthday, on: today)
-        return String(localized: "\(date) · age \(age)")
+        return String(AttributedString(localized: "\(date) · ^[\(age) year](inflect: true)").characters)
     }
 }
 

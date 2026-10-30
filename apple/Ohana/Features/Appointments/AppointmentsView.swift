@@ -33,7 +33,16 @@ struct AppointmentsView: View {
         .task(id: [family.revision(.appointments), family.revision(.events)]) { await load() }
         .appointmentPolling(busy: state.value?.searches.contains(where: \.isBusy) ?? false) { await load() }
         .navigationDestination(for: AppointmentRoute.self) { AppointmentRouteView(route: $0) }
-        .navigationDestination(item: $pushed) { AppointmentRouteView(route: $0) }
+        // `.id`: another route replaces the pushed page with a fresh one.
+        .navigationDestination(item: $pushed) { AppointmentRouteView(route: $0).id($0) }
+        .onChange(of: family.pendingRoute, initial: true) {
+            guard let route = family.takeRoute(for: .appointments) else { return }
+            switch AppointmentRoute.from(route) {
+            case let .push(target): pushed = target
+            case .newSearch: if family.canEdit { creating = true }
+            case .list: pushed = nil
+            }
+        }
         .sheet(isPresented: $creating) {
             AppointmentSearchEditor(search: nil) { id in pushed = .search(id) }
         }
@@ -149,7 +158,7 @@ struct AppointmentsView: View {
 
     private func bookedSection(_ events: [AppointmentEvent]) -> some View {
         GlassSection("Booked appointments", systemImage: "calendar.badge.checkmark", tint: ModuleTint.appointments) {
-            Button("Calendar", systemImage: "calendar") { Module.calendar.open() }
+            Button("Calendar", systemImage: "calendar") { family.open(.module(.calendar)) }
                 .font(.subheadline)
                 .buttonStyle(.glass)
         } content: {
@@ -158,7 +167,8 @@ struct AppointmentsView: View {
                 .foregroundStyle(.secondary)
             ForEach(Array(events.enumerated()), id: \.element.id) { index, event in
                 if index > 0 { Divider() }
-                AppointmentBookedRow(event: event, canEdit: family.canEdit, open: { pushed = $0 }) { removing = event }
+                AppointmentBookedRow(event: event, canEdit: family.canEdit, open: { pushed = $0 },
+                                     showDay: { family.open($0) }) { removing = event }
             }
         }
     }
@@ -169,15 +179,23 @@ struct AppointmentBookedRow: View {
     let event: AppointmentEvent
     let canEdit: Bool
     let open: (AppointmentRoute) -> Void
+    /// Opens the event's day in the calendar.
+    let showDay: (AppRoute) -> Void
     let remove: () -> Void
     @Environment(\.openURL) private var openURL
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(AppointmentLogic.formatBooking(date: event.date, start: event.start))
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(ModuleTint.appointments)
+                Button {
+                    showDay(AppointmentLogic.calendarRoute(date: event.date))
+                } label: {
+                    Text(AppointmentLogic.formatBooking(date: event.date, start: event.start))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(ModuleTint.appointments)
+                }
+                .buttonStyle(.plain)
+                .help("Show in calendar")
                 title
                 if !event.location.isEmpty {
                     Label(event.location, systemImage: "mappin")
@@ -204,7 +222,7 @@ struct AppointmentBookedRow: View {
             if let searchId = event.searchId {
                 Button("Open search", systemImage: "magnifyingglass") { open(.search(searchId)) }
             }
-            Button("Show in calendar", systemImage: "calendar") { Module.calendar.open() }
+            Button("Show in calendar", systemImage: "calendar") { showDay(AppointmentLogic.calendarRoute(date: event.date)) }
             if canEdit {
                 Button("Remove", systemImage: "trash", role: .destructive, action: remove)
             }
@@ -264,7 +282,7 @@ struct AppointmentSearchCard: View {
                 let more = search.doctors.count - shown.count
                 if more > 0 {
                     NavigationLink(value: AppointmentRoute.search(search.id)) {
-                        Text("More results: \(more)")
+                        Text(AppointmentLogic.moreDoctors(more))
                             .font(.subheadline)
                             .foregroundStyle(ModuleTint.appointments)
                     }
@@ -359,6 +377,7 @@ struct AppointmentButtonStyle: ViewModifier {
 enum AppointmentActions {
     static func runNow(_ family: FamilyContext, _ searchID: String) async throws {
         try await family.api.perform(.post, "/appointments/searches/\(searchID)/run")
+        ErrorBanner.shared.success(String(localized: "Queued: the search runs in a few seconds."))
     }
 
     static func setEnabled(_ family: FamilyContext, _ searchID: String, _ enabled: Bool) async throws {
@@ -369,21 +388,25 @@ enum AppointmentActions {
     static func delete(_ family: FamilyContext, _ searchID: String) async throws {
         try await family.api.perform(.delete, "/appointments/searches/\(searchID)")
         family.didChange(.appointments, .events, .calendar)
+        ErrorBanner.shared.success(String(localized: "Search deleted."))
     }
 
     static func ignore(_ family: FamilyContext, resultID: Int) async throws {
         try await family.api.perform(.post, "/appointments/results/\(resultID)/ignore")
         family.didChange(.appointments)
+        ErrorBanner.shared.success(String(localized: "Ignored."))
     }
 
     static func unignore(_ family: FamilyContext, entryID: Int) async throws {
         try await family.api.perform(.delete, "/appointments/ignored/\(entryID)")
         family.didChange(.appointments)
+        ErrorBanner.shared.success(String(localized: "Removed from the ignore list."))
     }
 
     static func removeBooking(_ family: FamilyContext, _ eventID: String) async throws {
         try await family.api.perform(.delete, "/appointments/bookings/\(eventID)")
         family.didChange(.appointments, .events, .calendar)
+        ErrorBanner.shared.success(String(localized: "Appointment removed."))
     }
 
     /// "last run 3 Nov 2026 at 09:30" or "never run".

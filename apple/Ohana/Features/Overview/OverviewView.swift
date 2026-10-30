@@ -1,9 +1,10 @@
 import SwiftUI
 
 /// The family overview (the web app's app/(app)/f/[familyId]/page.tsx): one dashboard over all
-/// modules. Today, the meals and the shopping list, the next birthdays, what comes up, this
-/// month's finances and the appointment searches' latest finds, as glass cards; each card opens
-/// its module.
+/// modules. "Ask Ohana…", today, the meals and the shopping list, the next birthdays, what comes
+/// up, this month's finances and the appointment searches' latest finds, as glass cards. A
+/// card's header opens its module; each row opens its exact place (a day of the calendar, a
+/// recipe, a shopping list, a category's transactions, an appointment slot).
 struct OverviewView: View {
     @Environment(FamilyContext.self) private var family
     @Environment(AppModel.self) private var app
@@ -16,6 +17,7 @@ struct OverviewView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 OverviewHeader(familyName: family.family.name, userName: app.me?.name ?? "")
+                OverviewAskField()
                 OverviewModuleChips()
                 LoadStateView(state: state, retry: load) { dashboard in
                     OverviewGrid(dashboard: dashboard)
@@ -59,8 +61,87 @@ private struct OverviewHeader: View {
     }
 }
 
+/// "Ask Ohana…": a question typed here goes to a new chat with the assistant; the chips below
+/// ask an example question.
+private struct OverviewAskField: View {
+    @Environment(FamilyContext.self) private var family
+    @State private var text = ""
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 12) {
+                Button {
+                    if let question = OverviewAsk.question(text) {
+                        send(question)
+                    } else {
+                        family.ask(newChat: true)
+                    }
+                } label: {
+                    Image(systemName: "sparkles")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(ModuleTint.assistant)
+                        .frame(width: 28, height: 28)
+                        .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("Ask the assistant"))
+                TextField("Ask Ohana…", text: $text)
+                    .textFieldStyle(.plain)
+                    .font(.body)
+                    .focused($focused)
+                    .submitLabel(.send)
+                    .onSubmit {
+                        if let question = OverviewAsk.question(text) { send(question) }
+                    }
+                if OverviewAsk.question(text) != nil {
+                    Button {
+                        if let question = OverviewAsk.question(text) { send(question) }
+                    } label: {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(ModuleTint.assistant)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text("Send"))
+                    .transition(.scale.combined(with: .opacity))
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .glassEffect(.regular.tint(ModuleTint.assistant.opacity(0.18)).interactive(), in: .capsule)
+            .animation(.snappy, value: OverviewAsk.question(text) == nil)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                GlassEffectContainer(spacing: 8) {
+                    HStack(spacing: 8) {
+                        ForEach(OverviewAsk.suggestions(canEdit: family.canEdit), id: \.self) { suggestion in
+                            Button {
+                                family.ask(suggestion, send: true, newChat: true)
+                            } label: {
+                                Text(verbatim: suggestion)
+                                    .font(.subheadline)
+                            }
+                            .buttonStyle(.glass)
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
+            }
+            .scrollClipDisabled()
+        }
+    }
+
+    private func send(_ question: String) {
+        family.ask(question, send: true, newChat: true)
+        text = ""
+        focused = false
+    }
+}
+
 /// The modules as glass chips (the web overview's module links).
 private struct OverviewModuleChips: View {
+    @Environment(FamilyContext.self) private var family
     private let modules: [Module] = [.calendar, .finance, .meals, .appointments]
 
     var body: some View {
@@ -69,7 +150,7 @@ private struct OverviewModuleChips: View {
                 HStack(spacing: 8) {
                     ForEach(modules) { module in
                         Button {
-                            module.open()
+                            family.open(.module(module))
                         } label: {
                             Label(module.title, systemImage: module.systemImage)
                                 .foregroundStyle(module.tint)
@@ -105,18 +186,21 @@ private struct OverviewGrid: View {
 
 // MARK: Cards
 
-/// A glass card that opens a module when tapped.
+/// A glass card: its header opens the module (or `route`), the content's rows open their own
+/// places (`OverviewRow`).
 private struct OverviewCard<Content: View>: View {
+    @Environment(FamilyContext.self) private var family
     let title: Text
     let systemImage: String
     let module: Module
+    var route: AppRoute?
     @ViewBuilder var content: Content
 
     var body: some View {
-        Button {
-            module.open()
-        } label: {
-            VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 14) {
+            Button {
+                family.open(route ?? .module(module))
+            } label: {
                 HStack(spacing: 10) {
                     TintedIcon(systemImage: systemImage, tint: module.tint, size: 30)
                     title
@@ -127,15 +211,39 @@ private struct OverviewCard<Content: View>: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                 }
-                content
-                    .font(.callout)
+                .contentShape(.rect)
             }
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-            .glassCard(interactive: true)
-            .contentShape(.rect(cornerRadius: 24))
+            .buttonStyle(.plain)
+            .accessibilityHint(Text("Opens \(Text(module.title))"))
+            content
+                .font(.callout)
+        }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .glassCard()
+    }
+}
+
+/// A row of a card that opens `route`.
+private struct OverviewRow<Label: View>: View {
+    @Environment(FamilyContext.self) private var family
+    let route: AppRoute
+    @ViewBuilder var label: Label
+    @State private var hovering = false
+
+    var body: some View {
+        Button {
+            family.open(route)
+        } label: {
+            label
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 4)
+                .padding(.horizontal, 6)
+                .background(Color.primary.opacity(hovering ? 0.06 : 0), in: .rect(cornerRadius: 8))
+                .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .accessibilityHint(Text("Opens \(Text(module.title))"))
+        .padding(.horizontal, -6)
+        .onHover { hovering = $0 }
     }
 }
 
@@ -144,30 +252,34 @@ private struct OverviewTodayCard: View {
 
     var body: some View {
         OverviewCard(title: Text("Today · \(dashboard.today.formatted())"), systemImage: "sun.max.fill",
-                     module: .calendar) {
-            VStack(alignment: .leading, spacing: 10) {
+                     module: .calendar, route: .calendarDay(dashboard.today)) {
+            VStack(alignment: .leading, spacing: 6) {
                 if dashboard.todayEvents.isEmpty {
                     Text("No appointments today.")
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(dashboard.todayEvents) { event in
-                        HStack(spacing: 10) {
-                            Image(systemName: "clock")
-                                .foregroundStyle(ModuleTint.calendar)
-                            Text(event.start ?? String(localized: "All day"))
-                                .monospacedDigit()
-                                .fontWeight(.medium)
-                                .frame(minWidth: 44, alignment: .leading)
-                            Text(event.label)
-                                .lineLimit(1)
+                        OverviewRow(route: OverviewLinks.route(for: event)) {
+                            HStack(spacing: 10) {
+                                Image(systemName: event.searchId != nil ? "stethoscope" : "clock")
+                                    .foregroundStyle(ModuleTint.calendar)
+                                Text(event.start ?? String(localized: "All day"))
+                                    .monospacedDigit()
+                                    .fontWeight(.medium)
+                                    .frame(minWidth: 44, alignment: .leading)
+                                Text(event.label)
+                                    .lineLimit(1)
+                            }
                         }
                     }
                 }
                 Divider()
                 if let gap = dashboard.calendar.nextGap {
-                    Label("Next uncovered day: \(gap.formatted())", systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                        .fontWeight(.medium)
+                    OverviewRow(route: .calendarDay(gap)) {
+                        Label("Next uncovered day: \(gap.formatted())", systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                            .fontWeight(.medium)
+                    }
                 } else {
                     Label("No uncovered days coming up.", systemImage: "checkmark.circle.fill")
                         .foregroundStyle(.green)
@@ -178,47 +290,60 @@ private struct OverviewTodayCard: View {
 }
 
 private struct OverviewMealsCard: View {
+    @Environment(FamilyContext.self) private var family
     let meals: OverviewMealsSummary
     let awayToday: [String]
 
     var body: some View {
         OverviewCard(title: Text("Meals"), systemImage: "fork.knife", module: .meals) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 10) {
-                    if let meal = meals.today {
-                        Image(systemName: "fork.knife").foregroundStyle(ModuleTint.meals)
-                        Text(meal.recipeTitle).fontWeight(.medium).lineLimit(2)
-                        if meal.isLeftover {
-                            Text("Leftovers").font(.caption).foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    OverviewRow(route: OverviewLinks.meal(meals)) {
+                        HStack(spacing: 10) {
+                            if let meal = meals.today {
+                                Image(systemName: "fork.knife").foregroundStyle(ModuleTint.meals)
+                                Text(meal.recipeTitle).fontWeight(.medium).lineLimit(2)
+                                if meal.isLeftover {
+                                    Text("Leftovers").font(.caption).foregroundStyle(.secondary)
+                                }
+                            } else if !awayToday.isEmpty {
+                                Image(systemName: "suitcase.rolling").foregroundStyle(.secondary)
+                                Text("Away · \(awayToday.joined(separator: ", "))").foregroundStyle(.secondary)
+                            } else {
+                                Image(systemName: "fork.knife").foregroundStyle(.secondary)
+                                Text("Nothing planned").foregroundStyle(.secondary)
+                            }
                         }
-                    } else if !awayToday.isEmpty {
-                        Image(systemName: "suitcase.rolling").foregroundStyle(.secondary)
-                        Text("Away · \(awayToday.joined(separator: ", "))").foregroundStyle(.secondary)
-                    } else {
-                        Image(systemName: "fork.knife").foregroundStyle(.secondary)
-                        Text("Nothing planned").foregroundStyle(.secondary)
+                    }
+                    if let meal = meals.today {
+                        Button("Cook", systemImage: "flame") { family.open(.cook(recipeID: meal.recipeId)) }
+                            .buttonStyle(.glass)
+                            .controlSize(.small)
+                            .help("Open the cook view")
                     }
                 }
                 Divider()
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Label("Shopping list", systemImage: "cart")
-                            .font(.subheadline.weight(.semibold))
-                        Spacer()
-                        if let date = meals.shopping?.shoppingDate {
-                            Text(date.formatted()).font(.caption).foregroundStyle(.secondary)
+                OverviewRow(route: OverviewLinks.shopping(meals)) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Label("Shopping list", systemImage: "cart")
+                                .font(.subheadline.weight(.semibold))
+                            Spacer()
+                            if let date = meals.shopping?.shoppingDate {
+                                Text(date.formatted()).font(.caption).foregroundStyle(.secondary)
+                            }
                         }
-                    }
-                    if let shopping = meals.shopping, shopping.total > 0 {
-                        if shopping.open == 0 {
-                            Text("Everything bought")
+                        if let shopping = meals.shopping, shopping.total > 0 {
+                            if shopping.open == 0 {
+                                Text("Everything bought")
+                            } else {
+                                Text(OverviewFormat.itemsLeft(open: shopping.open, total: shopping.total))
+                            }
+                            ProgressView(value: shopping.progress)
+                                .tint(ModuleTint.meals)
                         } else {
-                            Text("\(shopping.open) of \(shopping.total) items left to buy")
+                            Text("No shopping list yet").foregroundStyle(.secondary)
                         }
-                        ProgressView(value: shopping.progress)
-                            .tint(ModuleTint.meals)
-                    } else {
-                        Text("No shopping list yet").foregroundStyle(.secondary)
                     }
                 }
             }
@@ -231,22 +356,25 @@ private struct OverviewBirthdaysCard: View {
     let today: Day
 
     var body: some View {
-        OverviewCard(title: Text("Birthdays"), systemImage: "birthday.cake.fill", module: .calendar) {
-            VStack(alignment: .leading, spacing: 8) {
+        OverviewCard(title: Text("Birthdays"), systemImage: "birthday.cake.fill", module: .calendar,
+                     route: birthdays.first.map(OverviewLinks.route(for:))) {
+            VStack(alignment: .leading, spacing: 4) {
                 ForEach(birthdays) { birthday in
-                    HStack(spacing: 8) {
-                        Text(verbatim: "🎂")
-                        Text("\(birthday.name) turns \(birthday.age)")
-                            .lineLimit(1)
-                        Spacer(minLength: 8)
-                        if birthday.day == today {
-                            Text("Today")
-                                .fontWeight(.semibold)
-                                .foregroundStyle(Color.ohana)
-                        } else {
-                            Text(birthday.day.formatted())
-                                .monospacedDigit()
-                                .foregroundStyle(.secondary)
+                    OverviewRow(route: OverviewLinks.route(for: birthday)) {
+                        HStack(spacing: 8) {
+                            Text(verbatim: "🎂")
+                            Text("\(birthday.name) turns \(birthday.age)")
+                                .lineLimit(1)
+                            Spacer(minLength: 8)
+                            if birthday.day == today {
+                                Text("Today")
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(Color.ohana)
+                            } else {
+                                Text(birthday.day.formatted())
+                                    .monospacedDigit()
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                     }
                 }
@@ -265,9 +393,9 @@ private struct OverviewUpcomingCard: View {
                 Text("Nothing planned for the next weeks.")
                     .foregroundStyle(.secondary)
             } else {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 4) {
                     ForEach(items) { item in
-                        row(item)
+                        OverviewRow(route: OverviewLinks.route(for: item)) { row(item) }
                     }
                 }
             }
@@ -322,21 +450,25 @@ private struct OverviewFinanceCard: View {
                     Text("No transactions this month yet.")
                         .foregroundStyle(.secondary)
                 } else {
-                    HStack(alignment: .top, spacing: 12) {
-                        figure("In", OverviewFormat.money(summary.incomeCents, currency: summary.currency), color: .green)
-                        figure("Out", OverviewFormat.money(summary.expenseCents, currency: summary.currency), color: .red)
-                        figure("Balance", OverviewFormat.signedMoney(summary.netCents, currency: summary.currency),
-                               color: nil, negative: summary.netCents < 0)
+                    OverviewRow(route: .financeTransactions(categoryID: nil)) {
+                        HStack(alignment: .top, spacing: 12) {
+                            figure("In", OverviewFormat.money(summary.incomeCents, currency: summary.currency), color: .green)
+                            figure("Out", OverviewFormat.money(summary.expenseCents, currency: summary.currency), color: .red)
+                            figure("Balance", OverviewFormat.signedMoney(summary.netCents, currency: summary.currency),
+                                   color: nil, negative: summary.netCents < 0)
+                        }
                     }
                     if let top = summary.topExpense {
-                        HStack(spacing: 8) {
-                            Circle().fill(Color(overviewHex: top.color)).frame(width: 10, height: 10)
-                            Text("Most went to \(top.icon.isEmpty ? top.name : "\(top.icon) \(top.name)")")
-                                .lineLimit(1)
-                            Spacer(minLength: 8)
-                            Text(OverviewFormat.money(top.expenseCents, currency: summary.currency))
-                                .monospacedDigit()
-                                .foregroundStyle(.secondary)
+                        OverviewRow(route: OverviewLinks.topExpense(summary)) {
+                            HStack(spacing: 8) {
+                                Circle().fill(Color(overviewHex: top.color)).frame(width: 10, height: 10)
+                                Text("Most went to \(top.icon.isEmpty ? top.name : "\(top.icon) \(top.name)")")
+                                    .lineLimit(1)
+                                Spacer(minLength: 8)
+                                Text(OverviewFormat.money(top.expenseCents, currency: summary.currency))
+                                    .monospacedDigit()
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                     }
                 }
@@ -378,33 +510,37 @@ private struct OverviewSearchesCard: View {
                 Text("No searches yet: Ohana can watch Doctolib and jameda for you.")
                     .foregroundStyle(.secondary)
             } else {
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 4) {
                     ForEach(searches.prefix(6)) { search in
-                        HStack(spacing: 10) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                HStack(spacing: 6) {
-                                    Text(search.name).fontWeight(.medium).lineLimit(1)
-                                    if !search.enabled {
-                                        Text("paused")
-                                            .font(.caption2)
-                                            .glassChip()
-                                    }
-                                }
-                                subtitle(search)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
-                            }
-                            Spacer(minLength: 8)
-                            if let date = search.first?.date {
-                                Text(date.formatted(.dateTime.day().month(.abbreviated).hour().minute()))
-                                    .font(.caption.weight(.medium))
-                                    .monospacedDigit()
-                                    .foregroundStyle(ModuleTint.appointments)
-                            }
-                        }
+                        OverviewRow(route: OverviewLinks.route(for: search)) { row(search) }
                     }
                 }
+            }
+        }
+    }
+
+    private func row(_ search: OverviewSearchFind) -> some View {
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(search.name).fontWeight(.medium).lineLimit(1)
+                    if !search.enabled {
+                        Text("paused")
+                            .font(.caption2)
+                            .glassChip()
+                    }
+                }
+                subtitle(search)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 8)
+            if let date = search.first?.date {
+                Text(date.formatted(.dateTime.day().month(.abbreviated).hour().minute()))
+                    .font(.caption.weight(.medium))
+                    .monospacedDigit()
+                    .foregroundStyle(ModuleTint.appointments)
             }
         }
     }
@@ -412,7 +548,7 @@ private struct OverviewSearchesCard: View {
     private func subtitle(_ search: OverviewSearchFind) -> Text {
         if let first = search.first {
             return search.doctors > 1
-                ? Text("\(first.doctorName) and \(search.doctors - 1) more")
+                ? Text(OverviewFormat.doctorAndMore(first.doctorName, more: search.doctors - 1))
                 : Text(first.doctorName)
         }
         return search.enabled ? Text("Nothing found yet") : Text("not scheduled")

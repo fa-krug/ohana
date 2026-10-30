@@ -26,7 +26,7 @@ struct FamilyMembersView: View {
             switch sheet {
             case let .birthday(title, value, userId):
                 FamilyBirthdaySheet(title: title, birthday: value) { birthday in
-                    try await update { api in
+                    try await update(success: String(localized: "Birthday saved.")) { api in
                         try await api.perform(.patch, "/household/members/\(userId)", body: FamilyBirthdayInput(birthday: birthday))
                     }
                 }
@@ -40,13 +40,13 @@ struct FamilyMembersView: View {
                 }
             case let .editPerson(person):
                 FamilyPersonSheet(person: person) { input in
-                    try await update { api in
+                    try await update(success: String(localized: "Saved.")) { api in
                         try await api.perform(.patch, "/household/people/\(person.id)", body: input)
                     }
                 }
             case .addByEmail:
                 FamilyAddByEmailSheet { input in
-                    try await update { api in
+                    try await update(success: String(localized: "Added.")) { api in
                         try await api.perform(.post, "/household/members", body: input)
                     }
                     await app.refresh()
@@ -275,7 +275,8 @@ struct FamilyMembersView: View {
                 .buttonStyle(.borderless)
             }
             Button("Revoke", role: .destructive) {
-                remove("/household/invites/\(invite.id)", refreshApp: false)
+                remove("/household/invites/\(invite.id)", refreshApp: false,
+                       success: String(localized: "Invite link revoked."))
             }
             .buttonStyle(.borderless)
         }
@@ -296,23 +297,24 @@ struct FamilyMembersView: View {
     private func reload() async { await model.load(family.api) }
 
     /// A change from a sheet: thrown errors stay in the sheet.
-    private func update(_ action: (FamilyAPI) async throws -> Void) async throws {
+    private func update(success: String, _ action: (FamilyAPI) async throws -> Void) async throws {
         try await action(family.api)
         await reload()
         family.didChange(.family)
+        ErrorBanner.shared.success(success)
     }
 
     private func setRole(_ member: FamilyMember, _ role: FamilyRole) {
         guard role != member.role else { return }
         let api = family.api
-        model.change(family) {
+        model.change(family, success: String(localized: "Role changed.")) {
             try await api.perform(.patch, "/household/members/\(member.userId)", body: FamilyRoleInput(role: role))
         }
     }
 
-    private func remove(_ path: String, refreshApp: Bool) {
+    private func remove(_ path: String, refreshApp: Bool, success: String = String(localized: "Removed.")) {
         let api = family.api
-        model.change(family) {
+        model.change(family, success: success) {
             try await api.perform(.delete, path)
             if refreshApp { await app.refresh() }
         }

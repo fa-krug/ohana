@@ -74,7 +74,9 @@ struct FamilyHomeAddressView: View {
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)
         .confirmationDialog("Remove the home address?", isPresented: $confirmClear, titleVisibility: .visible) {
-            Button("Remove", role: .destructive) { save(FamilyHomeInput(address: "", lat: nil, lng: nil)) }
+            Button("Remove", role: .destructive) {
+                save(FamilyHomeInput(address: "", lat: nil, lng: nil), success: String(localized: "Home address removed."))
+            }
         }
     }
 
@@ -99,12 +101,12 @@ struct FamilyHomeAddressView: View {
         guard let lat = Double(suggestion.latitude), let lng = Double(suggestion.longitude) else { return }
         query = ""
         suggestions = []
-        save(FamilyHomeInput(address: suggestion.label, lat: lat, lng: lng))
+        save(FamilyHomeInput(address: suggestion.label, lat: lat, lng: lng), success: String(localized: "Home address saved."))
     }
 
-    private func save(_ input: FamilyHomeInput) {
+    private func save(_ input: FamilyHomeInput, success: String) {
         let api = family.api
-        model.change(family) {
+        model.change(family, success: success) {
             try await api.perform(.put, "/household/home", body: input)
         }
     }
