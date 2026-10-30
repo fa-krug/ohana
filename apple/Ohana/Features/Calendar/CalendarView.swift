@@ -1,9 +1,10 @@
 import SwiftUI
 
 /// The calendar (the web app's components/calendar/calendar-page.tsx): entry types per year,
-/// day entries, notes, timed events and birthdays. Phones scroll through the year's months with
-/// a glass selection bar at the bottom; iPad and Mac show the year grid (12 months × 31 days,
-/// like the web) or one month in detail, with the selection's panel underneath.
+/// day entries, notes, timed events and birthdays. A narrow calendar (phones, or a window or
+/// split view under 880 points, like the web) scrolls through the year's months with a glass
+/// selection bar at the bottom; a wide one shows the year grid (12 months × 31 days, zoomable)
+/// or one month in detail, with the selection's panel underneath.
 struct CalendarView: View {
     @Environment(FamilyContext.self) private var family
     @State private var store: CalendarStore?
@@ -31,12 +32,15 @@ enum CalendarMode: String {
 struct CalendarPlannerView: View {
     @Environment(FamilyContext.self) private var family
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(\.undoManager) private var undoManager
     @Bindable var store: CalendarStore
     @State private var actions: CalendarActions
     @AppStorage("ohana.calendar.mode") private var mode: CalendarMode = .year
+    @AppStorage(CalendarZoom.key) private var zoom = CalendarZoom.initial
     @State private var month = Day.today.month
-    @State private var scrollTarget: Int?
-    @State private var showSettings = false
+    @State private var reveal: CalendarReveal?
+    @State private var width: CGFloat?
+    @State private var monthFrames: [Int: CGRect] = [:]
     @FocusState private var focused: Bool
 
     init(store: CalendarStore) {
@@ -52,13 +56,18 @@ struct CalendarPlannerView: View {
         #endif
     }
 
+    /// The list of months instead of the year grid: by the calendar's own width.
+    private var monthList: Bool { CalendarLayoutRule.monthList(width: width, compact: compact) }
+
     private var reloadKey: [Int] { [family.revision(.calendar), family.revision(.events), family.revision(.family)] }
 
     var body: some View {
         @Bindable var actions = actions
         LoadStateView(state: loadState, retry: { await store.load() }) { _ in
-            if compact { phoneLayout } else { wideLayout }
+            if monthList { listLayout } else { wideLayout }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
         .toolbar { toolbar }
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
@@ -68,23 +77,27 @@ struct CalendarPlannerView: View {
             case let .note(days): CalendarNoteSheet(store: store, days: days)
             case let .event(draft): CalendarEventSheet(store: store, draft: draft)
             case .details: CalendarDetailsSheet(store: store, actions: actions)
+            case .repeatDays: CalendarRepeatSheet(store: store)
+            case .help: CalendarHelpSheet()
             }
         }
-        .navigationDestination(isPresented: $showSettings) { CalendarSettingsView() }
         .environment(actions)
         .modifier(CalendarToast(text: store.toast))
         .overlay(alignment: .topTrailing) { syncBadge }
+        .background { zoomShortcuts }
         .task(id: reloadKey) { await store.load(quiet: store.isLoaded) }
         .task { await store.poll() }
         .onAppear {
             let family = family
             store.notify = { area in family.didChange(area) }
+            store.undoManager = undoManager
+        }
+        .onChange(of: undoManager) { _, manager in store.undoManager = manager }
+        .onChange(of: family.pendingRoute, initial: true) {
+            if let route = family.takeRoute(for: .calendar) { open(route) }
         }
         .onChange(of: store.focus) { _, day in
-            if let day, day.year == store.year {
-                month = day.month
-                scrollTarget = day.month
-            }
+            if let day, day.year == store.year { month = day.month }
         }
     }
 
@@ -98,14 +111,36 @@ struct CalendarPlannerView: View {
         }
     }
 
-    // MARK: Phones
+    // MARK: Routes
 
-    private var phoneLayout: some View {
+    /// `.calendarDay`: the day's year and month, the day selected with its details.
+    private func open(_ route: AppRoute) {
+        guard case let .calendarDay(day) = route else { return }
+        store.show(day)
+        month = day.month
+        reveal = CalendarReveal(day)
+        if monthList { actions.showDetails() } else { actions.sheet = nil }
+    }
+
+    private func jumpToGap() {
+        if let day = store.nextGap() { reveal = CalendarReveal(day) }
+    }
+
+    /// The day to show when a year opens: the selected one, else today in its year.
+    private var startDay: Day? {
+        if let focus = store.focus, focus.year == store.year { return focus }
+        return store.year == Day.today.year ? Day.today : nil
+    }
+
+    // MARK: List of months (phones, narrow windows)
+
+    private var listLayout: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     if store.readOnly { readOnlyNote }
-                    CalendarCoveragePill(store: store)
+                    CalendarCoveragePill(store: store, onJump: { reveal = CalendarReveal($0) })
+                    let list = monthListHit
                     LazyVStack(alignment: .leading, spacing: 18) {
                         ForEach(1...12, id: \.self) { m in
                             VStack(alignment: .leading, spacing: 6) {
@@ -113,11 +148,18 @@ struct CalendarPlannerView: View {
                                     .font(.title3.bold())
                                     .foregroundStyle(m == Day.today.month && store.year == Day.today.year ? Color.accentColor : .primary)
                                 CalendarWeekdayHeader()
-                                CalendarMonthGrid(store: store, year: store.year, month: m, style: .compact, rowHeight: 54, touch: true)
+                                CalendarMonthGrid(store: store, year: store.year, month: m, style: .compact, rowHeight: Self.listRowHeight,
+                                                  touch: calendarTouchInput, list: list, onBegin: { focused = true },
+                                                  onDoubleTap: { _ in actions.editNote() })
+                                    .onGeometryChange(for: CGRect.self) {
+                                        $0.frame(in: .named(CalendarMonthList.space))
+                                    } action: { monthFrames[m] = $0 }
                             }
                             .id(m)
                         }
                     }
+                    .coordinateSpace(.named(CalendarMonthList.space))
+                    .modifier(keyboard(enabled: !compact))
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 8)
@@ -128,49 +170,68 @@ struct CalendarPlannerView: View {
             }
             .task(id: store.year) {
                 try? await Task.sleep(for: .milliseconds(80))
-                proxy.scrollTo(store.year == Day.today.year ? Day.today.month : 1, anchor: .top)
+                proxy.scrollTo(startDay?.month ?? 1, anchor: .top)
             }
-            .onChange(of: scrollTarget) { _, target in
-                guard let target else { return }
-                withAnimation { proxy.scrollTo(target, anchor: .top) }
-                scrollTarget = nil
+            .onChange(of: reveal) { _, reveal in
+                guard let reveal, reveal.day.year == store.year else { return }
+                withAnimation { proxy.scrollTo(reveal.day.month, anchor: reveal.center ? .top : nil) }
             }
         }
     }
 
-    // MARK: iPad and Mac
+    private static let listRowHeight: CGFloat = 54
+
+    /// Finds days across the months on screen, so a drag can select a range over several.
+    private var monthListHit: CalendarMonthList {
+        let frames = monthFrames
+        let year = store.year
+        let firstWeekday = Calendar.current.firstWeekday
+        return CalendarMonthList(hit: { point, clamp in
+            CalendarGridLayout.day(at: point, inMonths: frames, year: year, firstWeekday: firstWeekday,
+                                   rowHeight: Self.listRowHeight, clamp: clamp)
+        })
+    }
+
+    // MARK: Year grid and month (iPad and Mac)
 
     private var wideLayout: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(alignment: .center, spacing: 12) {
-                    CalendarTypeChips(store: store)
-                    Spacer(minLength: 0)
-                    CalendarCoveragePill(store: store)
-                }
-                if store.readOnly { readOnlyNote }
-                Group {
-                    if mode == .year {
-                        CalendarYearGrid(store: store, onBegin: { focused = true })
-                    } else {
-                        monthDetail
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack(alignment: .top, spacing: 12) {
+                        CalendarTypeChips(store: store, wrap: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        CalendarCoveragePill(store: store, onJump: { reveal = CalendarReveal($0) })
                     }
+                    if store.readOnly { readOnlyNote }
+                    Group {
+                        if mode == .year {
+                            CalendarYearGrid(store: store, reveal: reveal, onBegin: { focused = true },
+                                             onDoubleTap: { _ in actions.editNote() })
+                        } else {
+                            monthDetail
+                        }
+                    }
+                    .glassCard(cornerRadius: 22, padding: 12)
+                    .modifier(keyboard(enabled: true))
+                    CalendarSelectionPanel(store: store, actions: actions, showZoom: mode == .year)
                 }
-                .glassCard(cornerRadius: 22, padding: 12)
-                .focusable()
-                .focused($focused)
-                .focusEffectDisabled()
-                .onKeyPress(phases: .down) { handleKey($0) }
-                #if os(macOS)
-                .onCopyCommand { copyItems() }
-                .onCutCommand { cutItems() }
-                .onPasteCommand(of: [.plainText]) { _ in store.paste(text: CalendarPasteboard.string) }
-                #endif
-                CalendarSelectionPanel(store: store, actions: actions)
+                .padding()
             }
-            .padding()
+            .refreshable { await store.load() }
+            .task(id: store.year) {
+                try? await Task.sleep(for: .milliseconds(80))
+                if let day = startDay { reveal = CalendarReveal(day) }
+            }
+            .onChange(of: reveal) { _, reveal in
+                guard let reveal, reveal.day.year == store.year else { return }
+                if mode == .year {
+                    withAnimation { proxy.scrollTo(CalendarYearGrid.rowID(reveal.day.month), anchor: reveal.center ? .center : nil) }
+                } else {
+                    month = reveal.day.month
+                }
+            }
         }
-        .refreshable { await store.load() }
     }
 
     private var monthDetail: some View {
@@ -196,8 +257,9 @@ struct CalendarPlannerView: View {
             .labelStyle(.iconOnly)
             .buttonStyle(.glass)
             CalendarWeekdayHeader()
-            CalendarMonthGrid(store: store, year: store.year, month: month, style: .detail, rowHeight: 104, touch: false,
-                              onBegin: { focused = true })
+            CalendarMonthGrid(store: store, year: store.year, month: month, style: .detail, rowHeight: 104,
+                              touch: calendarTouchInput,
+                              onBegin: { focused = true }, onDoubleTap: { _ in actions.editNote() })
         }
     }
 
@@ -243,7 +305,7 @@ struct CalendarPlannerView: View {
         ToolbarItem(placement: .principal) {
             CalendarYearSwitcher(store: store)
         }
-        if !compact {
+        if !monthList {
             ToolbarItem {
                 Picker("View", selection: $mode) {
                     Label("Year", systemImage: "calendar").tag(CalendarMode.year)
@@ -257,7 +319,7 @@ struct CalendarPlannerView: View {
         if !store.readOnly {
             ToolbarItemGroup {
                 Button {
-                    store.undo()
+                    store.performUndo()
                 } label: {
                     Label("Undo", systemImage: "arrow.uturn.backward")
                 }
@@ -265,7 +327,7 @@ struct CalendarPlannerView: View {
                 .help("Undo (⌘Z)")
                 if !compact {
                     Button {
-                        store.redo()
+                        store.performRedo()
                     } label: {
                         Label("Redo", systemImage: "arrow.uturn.forward")
                     }
@@ -281,16 +343,18 @@ struct CalendarPlannerView: View {
             Menu {
                 if !store.readOnly {
                     if compact {
-                        Button("Redo", systemImage: "arrow.uturn.forward") { store.redo() }
+                        Button("Redo", systemImage: "arrow.uturn.forward") { store.performRedo() }
                             .disabled(!store.canRedo)
                     }
                     Button("Add event", systemImage: "calendar.badge.plus") { actions.addEvent() }
                     Button("Icon & note", systemImage: "face.smiling") { actions.editNote() }
+                    Button("Repeat…", systemImage: "repeat") { actions.repeatSelection() }
+                        .disabled(!store.canRepeat)
                     Divider()
                 }
                 Button("Select all", systemImage: "checkmark.circle") { store.selectAll() }
                 if !store.needsCoverTypes.isEmpty {
-                    Button("Next gap", systemImage: "arrow.right.circle") { store.nextGap() }
+                    Button("Next gap", systemImage: "arrow.right.circle") { jumpToGap() }
                 }
                 Divider()
                 Button("Copy days", systemImage: "doc.on.doc") { copy() }
@@ -302,10 +366,20 @@ struct CalendarPlannerView: View {
                         .disabled(store.selection.isEmpty)
                     Toggle("Skip weekends", isOn: $store.skipWeekends)
                 }
+                if !monthList && mode == .year {
+                    Divider()
+                    Button("Zoom in", systemImage: "plus.magnifyingglass") { zoom = CalendarZoom.step(zoom, 1) }
+                        .disabled(CalendarZoom.clamp(zoom) <= CalendarZoom.min)
+                    Button("Zoom out", systemImage: "minus.magnifyingglass") { zoom = CalendarZoom.step(zoom, -1) }
+                        .disabled(CalendarZoom.clamp(zoom) >= CalendarZoom.max)
+                }
                 Divider()
                 Button("Reload", systemImage: "arrow.clockwise") { Task { await store.load() } }
                     .keyboardShortcut("r", modifiers: .command)
-                Button("Calendar settings", systemImage: "slider.horizontal.3") { showSettings = true }
+                if compact {
+                    Button("Help & shortcuts", systemImage: "questionmark.circle") { actions.showHelp() }
+                }
+                Button("Calendar settings", systemImage: "slider.horizontal.3") { family.open(.settings(.calendar)) }
             } label: {
                 Label("More", systemImage: "ellipsis")
             }
@@ -313,7 +387,15 @@ struct CalendarPlannerView: View {
         if !compact {
             ToolbarItem {
                 Button {
-                    showSettings = true
+                    actions.showHelp()
+                } label: {
+                    Label("Help & shortcuts", systemImage: "questionmark.circle")
+                }
+                .help("Help & shortcuts (?)")
+            }
+            ToolbarItem {
+                Button {
+                    family.open(.settings(.calendar))
                 } label: {
                     Label("Calendar settings", systemImage: "slider.horizontal.3")
                 }
@@ -322,44 +404,70 @@ struct CalendarPlannerView: View {
         }
     }
 
+    /// ⌘+ / ⌘= / ⌘− / ⌘0 zoom the year grid wherever the focus is (like the web); hidden
+    /// buttons carry the shortcuts.
+    @ViewBuilder
+    private var zoomShortcuts: some View {
+        if !monthList && mode == .year {
+            Group {
+                Button("Zoom in") { zoom = CalendarZoom.step(zoom, 1) }
+                    .keyboardShortcut("+", modifiers: .command)
+                Button("Zoom in") { zoom = CalendarZoom.step(zoom, 1) }
+                    .keyboardShortcut("=", modifiers: .command)
+                Button("Zoom out") { zoom = CalendarZoom.step(zoom, -1) }
+                    .keyboardShortcut("-", modifiers: .command)
+                Button("Actual size") { zoom = CalendarZoom.step(zoom, 0) }
+                    .keyboardShortcut("0", modifiers: .command)
+            }
+            .opacity(0)
+            .frame(width: 0, height: 0)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+        }
+    }
+
     // MARK: Keyboard and clipboard
+
+    private func keyboard(enabled: Bool) -> CalendarKeyboard {
+        CalendarKeyboard(enabled: enabled, focused: $focused, handle: handleKey, copy: { store.copySelection() },
+                         cut: {
+                             let text = store.copySelection()
+                             if text != nil { store.clearSelectedDays() }
+                             return text
+                         },
+                         paste: { store.paste(text: $0) })
+    }
 
     private func copy() {
         if let text = store.copySelection() { CalendarPasteboard.copy(text) }
     }
 
-    #if os(macOS)
-    private func copyItems() -> [NSItemProvider] {
-        guard let text = store.copySelection() else { return [] }
-        return [NSItemProvider(object: text as NSString)]
-    }
-
-    private func cutItems() -> [NSItemProvider] {
-        let items = copyItems()
-        if !items.isEmpty { store.clearSelectedDays() }
-        return items
-    }
-    #endif
-
     private func handleKey(_ press: KeyPress) -> KeyPress.Result {
         let shift = press.modifiers.contains(.shift)
         let command = press.modifiers.contains(.command)
-        let week = mode == .year ? 31 : 7
+        let week = monthList || mode == .month ? 7 : 31
+        let move = { (delta: Int) in
+            if let day = store.moveFocus(delta, extend: shift) { reveal = CalendarReveal(day, center: false) }
+        }
         switch press.key {
-        case .leftArrow: store.moveFocus(-1, extend: shift)
-        case .rightArrow: store.moveFocus(1, extend: shift)
-        case .upArrow: store.moveFocus(-week, extend: shift)
-        case .downArrow: store.moveFocus(week, extend: shift)
-        case .escape: store.deselect()
+        case .leftArrow: move(-1)
+        case .rightArrow: move(1)
+        case .upArrow: move(-week)
+        case .downArrow: move(week)
+        case .escape: if !store.cancelFill() { store.deselect() }
         case .delete, .deleteForward: store.clearSelectedDays()
         case .pageUp: store.setYear(store.year - 1)
         case .pageDown: store.setYear(store.year + 1)
         default:
+            if press.characters == "?" {
+                actions.showHelp()
+                return .handled
+            }
             let key = press.characters.lowercased()
             if command {
                 switch key {
-                case "z": shift ? store.redo() : store.undo()
-                case "y": store.redo()
+                case "z": shift ? store.performRedo() : store.performUndo()
+                case "y": store.performRedo()
                 case "a": store.selectAll()
                 #if os(iOS)
                 case "c": copy()
@@ -374,7 +482,7 @@ struct CalendarPlannerView: View {
             } else if key == "n" {
                 actions.editNote()
             } else if key == "g" {
-                store.nextGap()
+                jumpToGap()
             } else if key == "e" {
                 actions.addEvent()
             } else if key == "i" || key == "\r" {
@@ -384,5 +492,38 @@ struct CalendarPlannerView: View {
             }
         }
         return .handled
+    }
+}
+
+/// The calendar's keys (arrows, 1–9, N, G, ?, …) and, on the Mac, the Edit menu's copy, cut and
+/// paste, while the grid has the focus.
+struct CalendarKeyboard: ViewModifier {
+    let enabled: Bool
+    let focused: FocusState<Bool>.Binding
+    let handle: (KeyPress) -> KeyPress.Result
+    let copy: () -> String?
+    let cut: () -> String?
+    let paste: (String?) -> Void
+
+    func body(content: Content) -> some View {
+        if enabled {
+            content
+                .focusable()
+                .focused(focused)
+                .focusEffectDisabled()
+                .onKeyPress(phases: .down) { handle($0) }
+                #if os(macOS)
+                .onCopyCommand { items(copy()) }
+                .onCutCommand { items(cut()) }
+                .onPasteCommand(of: [.plainText]) { _ in paste(CalendarPasteboard.string) }
+                #endif
+        } else {
+            content
+        }
+    }
+
+    private func items(_ text: String?) -> [NSItemProvider] {
+        guard let text else { return [] }
+        return [NSItemProvider(object: text as NSString)]
     }
 }

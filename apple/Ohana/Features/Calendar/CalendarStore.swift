@@ -74,6 +74,17 @@ final class CalendarStore {
     /// Tells the other screens what changed (FamilyContext.didChange).
     var notify: ((DataArea) -> Void)?
 
+    /// The window's undo manager (Edit → Undo, ⌘Z, shake): every step is registered with it too.
+    @ObservationIgnored weak var undoManager: UndoManager? {
+        didSet {
+            if oldValue !== undoManager { oldValue?.removeAllActions(withTarget: self) }
+        }
+    }
+
+    /// The fill handle being dragged (or the repeat sheet open): the selection it repeats and
+    /// the days it would fill.
+    private(set) var fill: CalendarFill?
+
     private var clipboard: (pattern: CalendarPattern, text: String, year: Int)?
     private var version = 0
     private var queue: [Batch] = []
@@ -274,6 +285,35 @@ final class CalendarStore {
         undoStack.append(step)
         if undoStack.count > 200 { undoStack.removeFirst() }
         redoStack = []
+        registerWithUndoManager(redo: false)
+    }
+
+    /// Mirrors a step in the undo manager: undoing it there calls `undo()`, which registers
+    /// the redo (an undo manager records what's registered while undoing as the redo).
+    private func registerWithUndoManager(redo: Bool) {
+        guard let undoManager else { return }
+        undoManager.registerUndo(withTarget: self) { store in
+            MainActor.assumeIsolated {
+                if redo { store.redo() } else { store.undo() }
+            }
+        }
+        undoManager.setActionName(String(localized: "Calendar change"))
+    }
+
+    private func clearUndo() {
+        undoStack = []
+        redoStack = []
+        undoManager?.removeAllActions(withTarget: self)
+    }
+
+    /// The toolbar's and the keyboard's undo: through the undo manager when it has the step, so
+    /// both stay in step.
+    func performUndo() {
+        if let undoManager, undoManager.canUndo, !undoStack.isEmpty { undoManager.undo() } else { undo() }
+    }
+
+    func performRedo() {
+        if let undoManager, undoManager.canRedo, !redoStack.isEmpty { undoManager.redo() } else { redo() }
     }
 
     private func applyStep(_ step: Step, before: Bool) {
@@ -288,6 +328,7 @@ final class CalendarStore {
         guard let step = undoStack.popLast() else { return showToast(String(localized: "Nothing to undo")) }
         applyStep(step, before: true)
         redoStack.append(step)
+        if undoManager?.isUndoing == true { registerWithUndoManager(redo: true) }
     }
 
     func redo() {
@@ -295,6 +336,7 @@ final class CalendarStore {
         guard let step = redoStack.popLast() else { return showToast(String(localized: "Nothing to redo")) }
         applyStep(step, before: false)
         undoStack.append(step)
+        if undoManager?.isRedoing == true { registerWithUndoManager(redo: false) }
     }
 
     var selectedDays: [Day] { selection.sorted() }
@@ -338,7 +380,7 @@ final class CalendarStore {
         let pattern = CalendarMath.pattern(entries, days: span)
         let text = CalendarMath.clipboardText(days: span, pattern: pattern, types: types)
         clipboard = (pattern, text, year)
-        showToast(String(localized: "Copied \(span.count) days"))
+        showToast(String(localized: "Copied \(CalendarText.days(span.count))"))
         return text
     }
 
@@ -369,12 +411,70 @@ final class CalendarStore {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         let (pattern, unknown) = CalendarMath.parseClipboard(text, types: types)
         if !unknown.isEmpty {
-            showToast(String(localized: "Unknown types: \(unknown.joined(separator: ", "))"))
+            showToast(unknown.count == 1
+                      ? String(localized: "Unknown type: \(unknown[0])")
+                      : String(localized: "Unknown types: \(unknown.joined(separator: ", "))"))
         }
         paste(pattern)
     }
 
+    // MARK: Fill handle
+
+    /// The selection can be repeated: days that follow each other, and the right to change them.
+    var canRepeat: Bool { !readOnly && CalendarMath.isContiguous(selectedDays) }
+
+    /// Starts dragging the fill handle; false when the selection can't be repeated.
+    @discardableResult
+    func beginFill() -> Bool {
+        guard canRepeat else { return false }
+        fill = CalendarFill(source: selectedDays)
+        return true
+    }
+
+    /// The handle is over `hover`: the days after (or before) the selection up to it, without
+    /// weekends when "Skip weekends" is on.
+    func dragFill(to hover: Day) {
+        guard var f = fill else { return }
+        let (days, backwards) = CalendarMath.fillTargets(source: f.source, hover: hover)
+        f.targets = targetDays(days)
+        f.backwards = backwards
+        fill = f
+    }
+
+    /// Esc while dragging; returns whether a fill was going on.
+    @discardableResult
+    func cancelFill() -> Bool {
+        guard fill != nil else { return false }
+        fill = nil
+        return true
+    }
+
+    /// Lets go of the handle: repeats the selection over the targets and selects all of it.
+    func endFill() {
+        guard let f = fill else { return }
+        fill = nil
+        guard !f.targets.isEmpty else { return }
+        commit(CalendarMath.fillChanges(entries, source: targetDays(f.source), targets: f.targets, backwards: f.backwards))
+        let all = (f.source + f.targets).sorted()
+        if let first = all.first, let last = all.last {
+            select(f.backwards ? last : first, f.backwards ? first : last)
+        }
+    }
+
+    /// The repeat sheet (touch screens' fill handle): repeats the selection up to `day`.
+    func repeatSelection(to day: Day) {
+        guard beginFill() else { return }
+        dragFill(to: day)
+        endFill()
+    }
+
     // MARK: Selection
+
+    /// A route to the day: its year, the day selected.
+    func show(_ day: Day) {
+        if day.year != year { setYear(day.year) }
+        select(day)
+    }
 
     func select(_ a: Day, _ b: Day? = nil, add: Bool = false) {
         if !add { selection.removeAll() }
@@ -467,8 +567,8 @@ final class CalendarStore {
         anchor = nil
         focus = nil
         // Undo steps hold type ids of their year.
-        undoStack = []
-        redoStack = []
+        clearUndo()
+        fill = nil
         version += 1
         types = []
         typeYears = nil
@@ -560,8 +660,7 @@ final class CalendarStore {
             entries[day] = rest.isEmpty ? nil : rest
         }
         if types.isEmpty { typeYears = typeYears?.filter { $0 != year } }
-        undoStack = []
-        redoStack = []
+        clearUndo()
         version += 1
         notify?(.calendar)
     }
@@ -603,4 +702,17 @@ final class CalendarStore {
         notify?(.events)
         await load(quiet: true)
     }
+}
+
+/// The fill handle's drag: the selection it repeats and the days it would fill.
+struct CalendarFill: Equatable {
+    var source: [Day]
+    var targets: [Day] = [] {
+        didSet { targetSet = Set(targets) }
+    }
+    var backwards = false
+    /// The targets as a set, for the cells' preview.
+    private(set) var targetSet: Set<Day> = []
+
+    init(source: [Day]) { self.source = source }
 }

@@ -61,7 +61,7 @@ private struct CalendarSettingsContent: View {
         } message: { type in
             let used = store.daysWith(type.id)
             if used > 0 {
-                Text("It is used on \(used) days in \(String(store.year)). This can’t be undone.")
+                Text(CalendarText.usedOn(used, year: store.year))
             }
         }
         .confirmationDialog(rotateTitle, isPresented: Binding(get: { rotating != nil }, set: { if !$0 { rotating = nil } }),
@@ -190,7 +190,7 @@ private struct CalendarSettingsContent: View {
                     .foregroundStyle(.secondary)
                 }
                 Spacer()
-                Text("\(stats.days) days · \(stats.workdays) workdays")
+                Text(verbatim: "\(CalendarText.days(stats.days)) · \(CalendarText.workdays(stats.workdays))")
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
                 if !store.readOnly {
@@ -451,7 +451,7 @@ struct CalendarTypeEditor: View {
             } message: {
                 let used = store.daysWith(type.id)
                 if used > 0 {
-                    Text("It is used on \(used) days in \(String(store.year)). This can’t be undone.")
+                    Text(CalendarText.usedOn(used, year: store.year))
                 }
             }
         }

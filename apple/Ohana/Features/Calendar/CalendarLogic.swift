@@ -262,6 +262,38 @@ enum CalendarMath {
         return out
     }
 
+    // MARK: Fill handle
+
+    /// Whether sorted days follow each other without a gap (the fill handle needs that).
+    static func isContiguous(_ sorted: [Day]) -> Bool {
+        guard let first = sorted.first, let last = sorted.last else { return false }
+        return ordinal(last) - ordinal(first) + 1 == sorted.count
+    }
+
+    /// The fill handle dragged to `hover` (the web grid's `fillTargets`): the days after the
+    /// source up to it, or before the source back to it (`backwards`); none inside the source.
+    static func fillTargets(source: [Day], hover: Day) -> (days: [Day], backwards: Bool) {
+        guard let start = source.first, let end = source.last else { return ([], false) }
+        if hover > end { return (range(add(end, 1), hover), false) }
+        if hover < start { return (range(hover, add(start, -1)), true) }
+        return ([], false)
+    }
+
+    /// The pattern to repeat over `count` days: backwards it is turned so that it ends right
+    /// before the source.
+    static func alignedPattern(_ pattern: CalendarPattern, count: Int, backwards: Bool) -> CalendarPattern {
+        let n = pattern.count
+        guard backwards, n > 1 else { return pattern }
+        let shift = (n - count % n) % n
+        return Array(pattern[shift...] + pattern[..<shift])
+    }
+
+    /// What dragging the fill handle writes: the source's pattern repeated over the targets.
+    static func fillChanges(_ entries: CalendarEntries, source: [Day], targets: [Day], backwards: Bool) -> CalendarEntries {
+        let pattern = alignedPattern(self.pattern(entries, days: source), count: targets.count, backwards: backwards)
+        return fill(targets, with: pattern)
+    }
+
     /// Clipboard text: one line per day, "YYYY-MM-DD<TAB>Type A, Type B".
     static func clipboardText(days: [Day], pattern: CalendarPattern, types: [CalendarEntryType]) -> String {
         let names = Dictionary(types.map { ($0.id, $0.name) }, uniquingKeysWith: { a, _ in a })
