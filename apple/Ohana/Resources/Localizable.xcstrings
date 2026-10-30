@@ -171,6 +171,28 @@
         }
       }
     },
+    "%lld families": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Familie"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Familien"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld found · %lld matching · %lld appointments": {
       "localizations": {
         "de": {
@@ -247,6 +269,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noch %lld von %lld Artikeln zu kaufen"
+          }
+        }
+      }
+    },
+    "%lld passkeys": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Passkey"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Passkeys"
+                }
+              }
+            }
           }
         }
       }
@@ -411,6 +455,26 @@
         }
       }
     },
+    "1 family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 Familie"
+          }
+        }
+      }
+    },
+    "1 passkey": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 Passkey"
+          }
+        }
+      }
+    },
     "1 query": {
       "localizations": {
         "de": {
@@ -427,6 +491,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ein Cron-Ausdruck hat fünf Felder (m h dom mon dow)."
+          }
+        }
+      }
+    },
+    "A family always keeps an editor.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Familie behält immer jemanden, der sie bearbeiten darf."
           }
         }
       }
@@ -457,6 +531,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Eine neue Zutat"
+          }
+        }
+      }
+    },
+    "A password is set.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Passwort ist gesetzt."
           }
         }
       }
@@ -557,6 +641,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "API-Schlüssel"
+          }
+        }
+      }
+    },
+    "API tokens": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API-Tokens"
           }
         }
       }
@@ -691,6 +785,26 @@
         }
       }
     },
+    "Add a passkey before you remove the password: an account always keeps a way to sign in.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Füge einen Passkey hinzu, bevor du das Passwort entfernst: Ein Konto behält immer einen Weg zum Anmelden."
+          }
+        }
+      }
+    },
+    "Add a passkey on the web": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passkey im Web hinzufügen"
+          }
+        }
+      }
+    },
     "Add a person": {
       "localizations": {
         "de": {
@@ -807,6 +921,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Artikel hinzufügen"
+          }
+        }
+      }
+    },
+    "Add member": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mitglied hinzufügen"
           }
         }
       }
@@ -951,12 +1075,52 @@
         }
       }
     },
+    "Admin": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Admin"
+          }
+        }
+      }
+    },
     "Administration": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Verwaltung"
+          }
+        }
+      }
+    },
+    "Administrator": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Administrator"
+          }
+        }
+      }
+    },
+    "Administrators manage the users and families of this server.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Administratoren verwalten die Benutzer und Familien dieses Servers."
+          }
+        }
+      }
+    },
+    "Administrators only": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur für Administratoren"
           }
         }
       }
@@ -1211,6 +1375,16 @@
         }
       }
     },
+    "Applies to this device only.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gilt nur für dieses Gerät."
+          }
+        }
+      }
+    },
     "Appointment found": {
       "localizations": {
         "de": {
@@ -1237,6 +1411,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Arzttermine"
+          }
+        }
+      }
+    },
+    "Apps like this one sign in with a token, and so can scripts and AI agents (\"Authorization: Bearer <token>\"). A token can do everything you can.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apps wie diese melden sich mit einem Token an, ebenso Skripte und KI-Agenten (\"Authorization: Bearer <Token>\"). Ein Token darf alles, was du darfst."
           }
         }
       }
@@ -1317,6 +1501,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Einstellungen des Assistenten"
+          }
+        }
+      }
+    },
+    "At least 8 characters. Your browsers are signed out afterwards; this device stays signed in.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mindestens 8 Zeichen. Deine Browser werden danach abgemeldet; dieses Gerät bleibt angemeldet."
           }
         }
       }
@@ -1417,6 +1611,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kontostände am %@"
+          }
+        }
+      }
+    },
+    "Being an administrator doesn’t open a family: add yourself as a member for that.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Als Administrator siehst du keine Familie von selbst: Füge dich dafür als Mitglied hinzu."
           }
         }
       }
@@ -1731,6 +1935,56 @@
         }
       }
     },
+    "Change email": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "E-Mail ändern"
+          }
+        }
+      }
+    },
+    "Change email on the web": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "E-Mail im Web ändern"
+          }
+        }
+      }
+    },
+    "Change email…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "E-Mail ändern …"
+          }
+        }
+      }
+    },
+    "Change password": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passwort ändern"
+          }
+        }
+      }
+    },
+    "Change password…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passwort ändern …"
+          }
+        }
+      }
+    },
     "Change quantity": {
       "localizations": {
         "de": {
@@ -1837,6 +2091,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Chats"
+          }
+        }
+      }
+    },
+    "Check": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prüfen"
           }
         }
       }
@@ -2161,6 +2425,26 @@
         }
       }
     },
+    "Confirm the change with your password.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bestätige die Änderung mit deinem Passwort."
+          }
+        }
+      }
+    },
+    "Connect Ohana to your server first.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbinde Ohana zuerst mit deinem Server."
+          }
+        }
+      }
+    },
     "Connect any OpenAI-compatible AI (OpenAI, OpenRouter, Mistral, Gemini, a local model …) in the settings. It can then look things up on the web and plan in your calendar and finances.": {
       "localizations": {
         "de": {
@@ -2297,6 +2581,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Chat kopieren, mit allen Tool-Ergebnissen"
+          }
+        }
+      }
+    },
+    "Copy the token now: it won’t be shown again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopiere das Token jetzt: Es wird nicht noch einmal angezeigt."
           }
         }
       }
@@ -2441,6 +2735,16 @@
         }
       }
     },
+    "Create a family, or join one with the invite link someone sent you.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lege eine Familie an oder tritt einer bei, mit dem Einladungslink, den dir jemand geschickt hat."
+          }
+        }
+      }
+    },
     "Create a meal plan and we’ll sort it out for you!": {
       "localizations": {
         "de": {
@@ -2477,6 +2781,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Suche anlegen"
+          }
+        }
+      }
+    },
+    "Create token": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Token erstellen"
+          }
+        }
+      }
+    },
+    "Create token…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Token erstellen …"
+          }
+        }
+      }
+    },
+    "Created": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Angelegt"
           }
         }
       }
@@ -2537,6 +2871,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Währung"
+          }
+        }
+      }
+    },
+    "Current email": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktuelle E-Mail"
+          }
+        }
+      }
+    },
+    "Current password": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktuelles Passwort"
           }
         }
       }
@@ -2681,6 +3035,26 @@
         }
       }
     },
+    "Delete %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ löschen"
+          }
+        }
+      }
+    },
+    "Delete %@ with everything in it?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ mit allem darin löschen?"
+          }
+        }
+      }
+    },
     "Delete %@?": {
       "localizations": {
         "de": {
@@ -2711,6 +3085,16 @@
         }
       }
     },
+    "Delete and sign out": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Löschen und abmelden"
+          }
+        }
+      }
+    },
     "Delete chat": {
       "localizations": {
         "de": {
@@ -2731,6 +3115,16 @@
         }
       }
     },
+    "Delete family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Familie löschen"
+          }
+        }
+      }
+    },
     "Delete recipe?": {
       "localizations": {
         "de": {
@@ -2747,6 +3141,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tag löschen?"
+          }
+        }
+      }
+    },
+    "Delete the account of %@?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Konto von %@ löschen?"
           }
         }
       }
@@ -2791,6 +3195,16 @@
         }
       }
     },
+    "Delete the passkey %@?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Den Passkey %@ löschen?"
+          }
+        }
+      }
+    },
     "Delete the search “%@” with its history?": {
       "localizations": {
         "de": {
@@ -2807,6 +3221,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Suche löschen?"
+          }
+        }
+      }
+    },
+    "Delete the token %@?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Token %@ löschen?"
+          }
+        }
+      }
+    },
+    "Delete this device’s token?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Token dieses Geräts löschen?"
           }
         }
       }
@@ -2857,6 +3291,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Art löschen"
+          }
+        }
+      }
+    },
+    "Delete user": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benutzer löschen"
           }
         }
       }
@@ -3191,6 +3635,16 @@
         }
       }
     },
+    "Edit user": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benutzer bearbeiten"
+          }
+        }
+      }
+    },
     "Editor": {
       "localizations": {
         "de": {
@@ -3227,6 +3681,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "E-Mail über SMTP"
+          }
+        }
+      }
+    },
+    "Email updated.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "E-Mail geändert."
           }
         }
       }
@@ -3317,6 +3781,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Alle N Minuten"
+          }
+        }
+      }
+    },
+    "Every browser signed in to your account is signed out. This device and other apps stay signed in: delete their tokens above.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jeder Browser, der bei deinem Konto angemeldet ist, wird abgemeldet. Dieses Gerät und andere Apps bleiben angemeldet: Lösche dafür oben ihre Tokens."
           }
         }
       }
@@ -3461,6 +3935,16 @@
         }
       }
     },
+    "Families": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Familien"
+          }
+        }
+      }
+    },
     "Family": {
       "localizations": {
         "de": {
@@ -3471,12 +3955,32 @@
         }
       }
     },
+    "Family deleted.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Familie gelöscht."
+          }
+        }
+      }
+    },
     "Family name": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Name der Familie"
+          }
+        }
+      }
+    },
+    "Family not found": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Familie nicht gefunden"
           }
         }
       }
@@ -3617,6 +4121,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Für andere KI-Agenten, die Ohanas API mit einem API-Token nutzen:"
+          }
+        }
+      }
+    },
+    "For scripts and AI agents: send as \"Authorization: Bearer <token>\". A token can do everything you can.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für Skripte und KI-Agenten: als \"Authorization: Bearer <Token>\" senden. Ein Token darf alles, was du darfst."
           }
         }
       }
@@ -4381,6 +4895,16 @@
         }
       }
     },
+    "Invite link or code": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einladungslink oder Code"
+          }
+        }
+      }
+    },
     "Invite links": {
       "localizations": {
         "de": {
@@ -4401,6 +4925,16 @@
         }
       }
     },
+    "It signs them out everywhere and lets them set a new password, e.g. when they forgot it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Er meldet die Person überall ab und erlaubt ein neues Passwort, z. B. wenn sie es vergessen hat."
+          }
+        }
+      }
+    },
     "Its transactions and subcategories move to “%@”.": {
       "localizations": {
         "de": {
@@ -4417,6 +4951,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ihre Buchungen bleiben erhalten, ohne Kategorie. Ihre Unterkategorien rücken auf die oberste Ebene."
+          }
+        }
+      }
+    },
+    "Join": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beitreten"
+          }
+        }
+      }
+    },
+    "Join a family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einer Familie beitreten"
+          }
+        }
+      }
+    },
+    "Join a family…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einer Familie beitreten …"
           }
         }
       }
@@ -4487,6 +5051,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Anteil bekannter Rezepte"
+          }
+        }
+      }
+    },
+    "Language": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprache"
           }
         }
       }
@@ -4787,6 +5361,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Eine neue Abo-Adresse erstellen?"
+          }
+        }
+      }
+    },
+    "Make a new setup link for %@?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neuen Einrichtungslink für %@ erstellen?"
           }
         }
       }
@@ -5121,6 +5705,16 @@
         }
       }
     },
+    "Name saved.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name gespeichert."
+          }
+        }
+      }
+    },
     "Needs cover": {
       "localizations": {
         "de": {
@@ -5141,6 +5735,16 @@
         }
       }
     },
+    "New API token": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neues API-Token"
+          }
+        }
+      }
+    },
     "New Recipe": {
       "localizations": {
         "de": {
@@ -5157,6 +5761,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Neues Konto"
+          }
+        }
+      }
+    },
+    "New accounts come with a one-time setup link (7 days): it signs the person in and asks for a passkey or a password.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Konten bekommen einen einmaligen Einrichtungslink (7 Tage): Er meldet die Person an und fragt nach einem Passkey oder Passwort."
           }
         }
       }
@@ -5187,6 +5801,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Neuer Chat"
+          }
+        }
+      }
+    },
+    "New email": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue E-Mail"
           }
         }
       }
@@ -5241,6 +5865,16 @@
         }
       }
     },
+    "New password": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neues Passwort"
+          }
+        }
+      }
+    },
     "New search": {
       "localizations": {
         "de": {
@@ -5257,6 +5891,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Neue Suche (⇧⌘N)"
+          }
+        }
+      }
+    },
+    "New setup link": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neuer Einrichtungslink"
           }
         }
       }
@@ -5297,6 +5941,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Neue Art %lld"
+          }
+        }
+      }
+    },
+    "New user": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neuer Benutzer"
           }
         }
       }
@@ -5411,6 +6065,16 @@
         }
       }
     },
+    "No API tokens.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine API-Tokens."
+          }
+        }
+      }
+    },
     "No account": {
       "localizations": {
         "de": {
@@ -5491,6 +6155,16 @@
         }
       }
     },
+    "No families found.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Familien gefunden."
+          }
+        }
+      }
+    },
     "No family yet": {
       "localizations": {
         "de": {
@@ -5541,6 +6215,16 @@
         }
       }
     },
+    "No members.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Mitglieder."
+          }
+        }
+      }
+    },
     "No notification channels yet.": {
       "localizations": {
         "de": {
@@ -5557,6 +6241,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Keine offenen Einladungslinks."
+          }
+        }
+      }
+    },
+    "No passkeys yet.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Passkeys."
+          }
+        }
+      }
+    },
+    "No password: you sign in with passkeys only.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Passwort: Du meldest dich nur mit Passkeys an."
           }
         }
       }
@@ -5741,6 +6445,16 @@
         }
       }
     },
+    "No users found.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Benutzer gefunden."
+          }
+        }
+      }
+    },
     "Nobody has set up the assistant for this family yet. Ask an editor of the family to do it in the settings.": {
       "localizations": {
         "de": {
@@ -5837,6 +6551,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nicht eingetragen."
+          }
+        }
+      }
+    },
+    "Not signed in": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht angemeldet"
           }
         }
       }
@@ -6021,6 +6745,16 @@
         }
       }
     },
+    "Ohana on this device signs in with it: you are signed out right away and pair the app again to come back.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohana meldet sich auf diesem Gerät damit an: Du wirst sofort abgemeldet und verbindest die App danach neu."
+          }
+        }
+      }
+    },
     "Ohana shows here what this shopping trip cost, from the finances’ groceries category.": {
       "localizations": {
         "de": {
@@ -6191,6 +6925,16 @@
         }
       }
     },
+    "Open the account page on the web": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kontoseite im Web öffnen"
+          }
+        }
+      }
+    },
     "Open the provider’s page": {
       "localizations": {
         "de": {
@@ -6291,6 +7035,26 @@
         }
       }
     },
+    "Other devices": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Andere Geräte"
+          }
+        }
+      }
+    },
+    "Other devices signed out.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Andere Geräte abgemeldet."
+          }
+        }
+      }
+    },
     "Out": {
       "localizations": {
         "de": {
@@ -6371,6 +7135,46 @@
         }
       }
     },
+    "Passkey": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passkey"
+          }
+        }
+      }
+    },
+    "Passkey removed.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passkey entfernt."
+          }
+        }
+      }
+    },
+    "Passkey renamed.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passkey umbenannt."
+          }
+        }
+      }
+    },
+    "Passkeys": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passkeys"
+          }
+        }
+      }
+    },
     "Passkeys, password and API tokens": {
       "localizations": {
         "de": {
@@ -6381,12 +7185,52 @@
         }
       }
     },
+    "Password": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passwort"
+          }
+        }
+      }
+    },
+    "Password removed.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passwort entfernt."
+          }
+        }
+      }
+    },
+    "Password saved. Your browsers were signed out.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passwort gespeichert. Deine Browser wurden abgemeldet."
+          }
+        }
+      }
+    },
     "Paste": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Einfügen"
+          }
+        }
+      }
+    },
+    "Paste the invite link someone in the family sent you.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Füge den Einladungslink ein, den dir jemand aus der Familie geschickt hat."
           }
         }
       }
@@ -6761,6 +7605,16 @@
         }
       }
     },
+    "Profile": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profil"
+          }
+        }
+      }
+    },
     "Program": {
       "localizations": {
         "de": {
@@ -7101,6 +7955,16 @@
         }
       }
     },
+    "Remove %@ from %@?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ aus %@ entfernen?"
+          }
+        }
+      }
+    },
     "Remove %@ from the family?": {
       "localizations": {
         "de": {
@@ -7137,6 +8001,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Heimatadresse entfernen"
+          }
+        }
+      }
+    },
+    "Remove password": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passwort entfernen"
+          }
+        }
+      }
+    },
+    "Remove password…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passwort entfernen …"
           }
         }
       }
@@ -7197,6 +8081,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Umbenennen"
+          }
+        }
+      }
+    },
+    "Rename family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Familie umbenennen"
+          }
+        }
+      }
+    },
+    "Rename passkey": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passkey umbenennen"
+          }
+        }
+      }
+    },
+    "Repeat the new password": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neues Passwort wiederholen"
           }
         }
       }
@@ -7581,6 +8495,16 @@
         }
       }
     },
+    "Search families": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Familien suchen"
+          }
+        }
+      }
+    },
     "Search ingredient…": {
       "localizations": {
         "de": {
@@ -7641,6 +8565,16 @@
         }
       }
     },
+    "Search users": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benutzer suchen"
+          }
+        }
+      }
+    },
     "Searches stop sending to it.": {
       "localizations": {
         "de": {
@@ -7667,6 +8601,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Anbraten"
+          }
+        }
+      }
+    },
+    "Section": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bereich"
           }
         }
       }
@@ -7751,6 +8695,16 @@
         }
       }
     },
+    "Send them the setup link: it works once, for 7 days, and lets them add a passkey or set a password.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schick der Person den Einrichtungslink: Er funktioniert einmal, 7 Tage lang, und lässt sie einen Passkey hinzufügen oder ein Passwort festlegen."
+          }
+        }
+      }
+    },
     "Send to": {
       "localizations": {
         "de": {
@@ -7807,6 +8761,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Portionen"
+          }
+        }
+      }
+    },
+    "Set a password": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passwort festlegen"
+          }
+        }
+      }
+    },
+    "Set a password…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passwort festlegen …"
           }
         }
       }
@@ -8061,6 +9035,16 @@
         }
       }
     },
+    "Sign in with your fingerprint, face or device PIN. A passkey belongs to your server’s web address, so new ones are added on its web page.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anmelden mit Fingerabdruck, Gesicht oder Geräte-PIN. Ein Passkey gehört zur Webadresse deines Servers, deshalb fügst du neue auf seiner Webseite hinzu."
+          }
+        }
+      }
+    },
     "Sign out": {
       "localizations": {
         "de": {
@@ -8081,12 +9065,52 @@
         }
       }
     },
+    "Sign out other devices": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Andere Geräte abmelden"
+          }
+        }
+      }
+    },
+    "Sign out the other devices?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die anderen Geräte abmelden?"
+          }
+        }
+      }
+    },
+    "Signed-in browsers": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Angemeldete Browser"
+          }
+        }
+      }
+    },
     "Signing in didn’t finish. Please try again.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Die Anmeldung wurde nicht abgeschlossen. Bitte versuche es noch einmal."
+          }
+        }
+      }
+    },
+    "Signs this device out and deletes its token.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meldet dieses Gerät ab und löscht sein Token."
           }
         }
       }
@@ -8127,6 +9151,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Schmoren"
+          }
+        }
+      }
+    },
+    "Someone with an Ohana account: the email they sign in with.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jemand mit einem Ohana-Konto: die E-Mail, mit der die Person sich anmeldet."
           }
         }
       }
@@ -8701,6 +9735,16 @@
         }
       }
     },
+    "That isn’t an invite link.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das ist kein Einladungslink."
+          }
+        }
+      }
+    },
     "The AI couldn’t sort: %@": {
       "localizations": {
         "de": {
@@ -8761,6 +9805,16 @@
         }
       }
     },
+    "The family starts without members: add them afterwards.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Familie beginnt ohne Mitglieder: Füge sie danach hinzu."
+          }
+        }
+      }
+    },
     "The feed address of this family in family-planner. Its event ids live on, so subscriptions moved over keep their events.": {
       "localizations": {
         "de": {
@@ -8797,6 +9851,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Das Intervall muss zwischen 1 und 1440 Minuten liegen."
+          }
+        }
+      }
+    },
+    "The language of notifications and of what Ohana names for you, like a new family’s calendar types.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Sprache der Benachrichtigungen und von dem, was Ohana für dich benennt, etwa die Kalenderarten einer neuen Familie."
           }
         }
       }
@@ -8857,6 +9921,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Der Name ist zu lang (max. 200)."
+          }
+        }
+      }
+    },
+    "The new account comes with a one-time setup link (7 days): it signs the person in and asks for a passkey or a password.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das neue Konto bekommt einen einmaligen Einrichtungslink (7 Tage): Er meldet die Person an und fragt nach einem Passkey oder Passwort."
+          }
+        }
+      }
+    },
+    "The passwords don’t match.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Passwörter stimmen nicht überein."
           }
         }
       }
@@ -8941,6 +10025,16 @@
         }
       }
     },
+    "Their families stay.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Familien bleiben bestehen."
+          }
+        }
+      }
+    },
     "Theme": {
       "localizations": {
         "de": {
@@ -8991,12 +10085,32 @@
         }
       }
     },
+    "This can’t be undone.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das lässt sich nicht rückgängig machen."
+          }
+        }
+      }
+    },
     "This chat belongs to %@.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Dieser Chat gehört zu %@."
+          }
+        }
+      }
+    },
+    "This device": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Gerät"
           }
         }
       }
@@ -9177,6 +10291,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Heute · %@"
+          }
+        }
+      }
+    },
+    "Token": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Token"
+          }
+        }
+      }
+    },
+    "Token created": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Token erstellt"
+          }
+        }
+      }
+    },
+    "Token deleted.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Token gelöscht."
           }
         }
       }
@@ -9531,12 +10675,72 @@
         }
       }
     },
+    "User created": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benutzer angelegt"
+          }
+        }
+      }
+    },
+    "User deleted.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benutzer gelöscht."
+          }
+        }
+      }
+    },
     "User key": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "User Key"
+          }
+        }
+      }
+    },
+    "User saved.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benutzer gespeichert."
+          }
+        }
+      }
+    },
+    "Users": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benutzer"
+          }
+        }
+      }
+    },
+    "Users and families of this server.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benutzer und Familien dieses Servers."
+          }
+        }
+      }
+    },
+    "Valid until": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gültig bis"
           }
         }
       }
@@ -9671,6 +10875,16 @@
         }
       }
     },
+    "Welcome to %@.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Willkommen bei %@."
+          }
+        }
+      }
+    },
     "What Ohana tells you": {
       "localizations": {
         "de": {
@@ -9691,12 +10905,32 @@
         }
       }
     },
+    "What it’s for": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wofür"
+          }
+        }
+      }
+    },
     "What to do in this step…": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Was in diesem Schritt zu tun ist…"
+          }
+        }
+      }
+    },
+    "Whatever uses it can’t sign in anymore.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was es benutzt, kann sich nicht mehr anmelden."
           }
         }
       }
@@ -9891,6 +11125,16 @@
         }
       }
     },
+    "You are a member of this family already.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du bist schon Mitglied dieser Familie."
+          }
+        }
+      }
+    },
     "You are a viewer in this family: you can look at everything but not change it.": {
       "localizations": {
         "de": {
@@ -9921,12 +11165,52 @@
         }
       }
     },
+    "You can’t remove your own administrator rights.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine eigenen Administratorrechte kannst du nicht entfernen."
+          }
+        }
+      }
+    },
+    "You can’t sign in with it anymore.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du kannst dich damit nicht mehr anmelden."
+          }
+        }
+      }
+    },
+    "You join as %@: your account takes their place.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du trittst als %@ bei: Dein Konto nimmt den Platz dieser Person ein."
+          }
+        }
+      }
+    },
     "You sign in on your server’s page; the app gets its own key, which you can remove on your account page.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Du meldest dich auf der Seite deines Servers an; die App bekommt einen eigenen Schlüssel, den du auf deiner Kontoseite entfernen kannst."
+          }
+        }
+      }
+    },
+    "You then sign in with passkeys only. Your browsers are signed out; this device stays signed in.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du meldest dich dann nur noch mit Passkeys an. Deine Browser werden abgemeldet; dieses Gerät bleibt angemeldet."
           }
         }
       }
@@ -9947,6 +11231,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dein Ohana-Server"
+          }
+        }
+      }
+    },
+    "Your account can’t manage this server.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Konto kann diesen Server nicht verwalten."
+          }
+        }
+      }
+    },
+    "Your account has no password, so the change is confirmed with a passkey. That works on the web page of your server.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Konto hat kein Passwort, deshalb bestätigst du die Änderung mit einem Passkey. Das geht auf der Webseite deines Servers."
           }
         }
       }
@@ -9977,6 +11281,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Deine Nachrichten und die Daten, die der Assistent ansieht, gehen an die oben eingerichtete KI-API."
+          }
+        }
+      }
+    },
+    "Your name": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Name"
           }
         }
       }
@@ -10021,6 +11335,26 @@
         }
       }
     },
+    "as editor: can change everything and add people": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "zum Bearbeiten: darf alles ändern und Leute hinzufügen"
+          }
+        }
+      }
+    },
+    "as viewer: can see everything, change nothing": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "zum Ansehen: sieht alles, ändert nichts"
+          }
+        }
+      }
+    },
     "can change everything and add people": {
       "localizations": {
         "de": {
@@ -10037,6 +11371,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "darf nur ansehen"
+          }
+        }
+      }
+    },
+    "created %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "erstellt %@"
           }
         }
       }
@@ -10081,6 +11425,16 @@
         }
       }
     },
+    "e.g. Home Assistant": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "z. B. Home Assistant"
+          }
+        }
+      }
+    },
     "e.g. Mia": {
       "localizations": {
         "de": {
@@ -10117,6 +11471,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "z. B. Wohlfühlessen für kalte Tage, in 30 Minuten fertig"
+          }
+        }
+      }
+    },
+    "e.g. iPhone": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "z. B. iPhone"
           }
         }
       }
@@ -10201,12 +11565,32 @@
         }
       }
     },
+    "hasn’t signed in yet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "noch nicht angemeldet"
+          }
+        }
+      }
+    },
     "hourly": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "stündlich"
+          }
+        }
+      }
+    },
+    "https://…/invite/…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "https://…/invite/…"
           }
         }
       }
@@ -10261,12 +11645,32 @@
         }
       }
     },
+    "last used %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "zuletzt benutzt %@"
+          }
+        }
+      }
+    },
     "never run": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "noch nie gelaufen"
+          }
+        }
+      }
+    },
+    "never used": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "nie benutzt"
           }
         }
       }
@@ -10337,6 +11741,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "im Durchschnitt"
+          }
+        }
+      }
+    },
+    "password": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passwort"
           }
         }
       }

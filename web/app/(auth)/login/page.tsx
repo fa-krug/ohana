@@ -10,7 +10,8 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   // `next`: where to go once signed in (the native app's pairing page uses it).
   const next = safeNext((await searchParams).next);
   const user = await getSession();
-  if (user) redirect(user.onboardingStep === "COMPLETED" && next ? next : homeFor(user));
-  if (!hasAnyUser(db)) redirect("/setup");
+  if (user) redirect(homeFor(user, next));
+  // A fresh install: the first account, then on to `next` (e.g. the app's pairing).
+  if (!hasAnyUser(db)) redirect(next ? `/setup?${new URLSearchParams({ next })}` : "/setup");
   return <LoginForm next={next} />;
 }

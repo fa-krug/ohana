@@ -49,12 +49,16 @@ struct FamilySwitcher: View {
     }
 }
 
-/// The family and account menu: switch family, create one, open the family's settings or the
-/// account. The sidebar header uses it with its own label; the iPhone toolbar with an icon.
+/// The family and account menu: switch family, create or join one, open the family's settings,
+/// the account or (for administrators) the administration. The sidebar header uses it with its
+/// own label; the iPhone toolbar with an icon. The visible one shows invite links the app was
+/// opened with (`InviteInbox`).
 struct FamilyMenu<MenuLabel: View>: View {
     @Environment(AppModel.self) private var app
     @State private var creating = false
     @State private var showAccount = false
+    @State private var showAdmin = false
+    @State private var joining: InviteRequest?
     let label: MenuLabel
 
     init(@ViewBuilder label: () -> MenuLabel) {
@@ -71,6 +75,7 @@ struct FamilyMenu<MenuLabel: View>: View {
             }
             .pickerStyle(.inline)
             Button("New family…", systemImage: "plus") { creating = true }
+            Button("Join a family…", systemImage: "person.badge.plus") { joining = InviteRequest() }
             Divider()
             Button("Family settings", systemImage: "gearshape") { Module.settings.open() }
             #if os(macOS)
@@ -78,11 +83,16 @@ struct FamilyMenu<MenuLabel: View>: View {
             #else
             Button("Account", systemImage: "person.crop.circle") { showAccount = true }
             #endif
+            if app.me?.isAdmin == true {
+                Button("Administration", systemImage: "person.badge.shield.checkmark") { showAdmin = true }
+            }
         } label: {
             label
         }
         .sheet(isPresented: $creating) { CreateFamilySheet().errorBanner() }
-        .sheet(isPresented: $showAccount) { NavigationStack { AccountView() }.errorBanner() }
+        .sheet(isPresented: $showAccount) { AccountView() }
+        .sheet(isPresented: $showAdmin) { AdminSheet() }
+        .inviteJoinSheet($joining)
     }
 }
 

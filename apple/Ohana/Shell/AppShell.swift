@@ -123,32 +123,52 @@ extension View {
     }
 }
 
-/// Shown when the account has no family yet.
+/// Shown when the account has no family yet: create one, or join one with an invite link
+/// (also when the app was opened with one).
 struct NoFamilyView: View {
     @Environment(AppModel.self) private var app
     @State private var creating = false
     @State private var showAccount = false
+    @State private var showAdmin = false
+    @State private var joining: InviteRequest?
 
     var body: some View {
         NavigationStack {
             ContentUnavailableView {
                 Label("No family yet", systemImage: "house")
             } description: {
-                Text("Create a family, or ask someone to invite you to theirs.")
+                Text("Create a family, or join one with the invite link someone sent you.")
             } actions: {
-                Button("Create a family") { creating = true }
-                    .buttonStyle(.glassProminent)
-                Button("Reload") { Task { await app.refresh() } }
-                    .buttonStyle(.glass)
+                GlassEffectContainer(spacing: 12) {
+                    VStack(spacing: 12) {
+                        Button("Create a family") { creating = true }
+                            .buttonStyle(.glassProminent)
+                        Button("Join a family…") { joining = InviteRequest() }
+                            .buttonStyle(.glass)
+                        Button("Reload") { Task { await app.refresh() } }
+                            .buttonStyle(.glass)
+                    }
+                }
             }
             .background { OhanaBackground() }
             .toolbar {
+                if app.me?.isAdmin == true {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button("Administration", systemImage: "person.badge.shield.checkmark") { showAdmin = true }
+                    }
+                }
                 ToolbarItem(placement: .primaryAction) {
+                    #if os(macOS)
+                    SettingsLink { Label("Account", systemImage: "person.crop.circle") }
+                    #else
                     Button("Account", systemImage: "person.crop.circle") { showAccount = true }
+                    #endif
                 }
             }
             .sheet(isPresented: $creating) { CreateFamilySheet().errorBanner() }
-            .sheet(isPresented: $showAccount) { NavigationStack { AccountView() }.errorBanner() }
+            .sheet(isPresented: $showAccount) { AccountView() }
+            .sheet(isPresented: $showAdmin) { AdminSheet() }
+            .inviteJoinSheet($joining)
         }
     }
 }

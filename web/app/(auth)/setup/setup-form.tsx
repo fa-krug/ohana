@@ -11,7 +11,7 @@ import { homeFor } from "@/lib/auth/redirect";
 import { useT } from "@/lib/i18n/provider";
 import { registerFirstUserPasswordAction } from "@/app/actions/auth";
 
-export function SetupForm() {
+export function SetupForm({ next = null }: { next?: string | null }) {
   const { t } = useT();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -25,7 +25,7 @@ export function SetupForm() {
     setError("");
     const res = await registerFirstUserPasswordAction({ email, name, password });
     setBusy(false);
-    if (res.ok) window.location.href = homeFor(res.data);
+    if (res.ok) window.location.href = homeFor(res.data, next);
     else setError(res.message || t("auth.errors.setupFailed"));
   }
 
@@ -34,7 +34,7 @@ export function SetupForm() {
     setError("");
     try {
       const user = await passkeyRegister<{ onboardingStep: string }>({ email, name });
-      window.location.href = homeFor(user);
+      window.location.href = homeFor(user, next);
     } catch (err) {
       if ((err as Error).name !== "NotAllowedError") setError((err as Error).message);
       setBusy(false);

@@ -156,7 +156,9 @@ final class AppModel {
 
     /// Opens a link into a family: `ohana://f/{familyId}/meals/recipes/{id}` or the same path on
     /// the server (`https://ohana.example/f/{id}/…`, e.g. from a notification). Switches to the
-    /// family when it is one of the account's. False for links it can't open.
+    /// family when it is one of the account's. An invite (`ohana://invite/{code}`, the server's
+    /// `/invite/{code}`) waits in `InviteInbox` for the family menu or the no-family screen to
+    /// show it. False for links it can't open.
     @discardableResult
     func open(_ url: URL) -> Bool {
         var path = url.path(percentEncoded: false)
@@ -165,6 +167,10 @@ final class AppModel {
             path = "/" + (url.host() ?? "") + path
         } else if let server = serverURL, url.host() != server.host() {
             return false
+        }
+        if let code = InviteCode.code(in: url) {
+            InviteInbox.shared.receive(code)
+            return true
         }
         guard let (familyID, route) = AppRoute.parse(webPath: path),
               let family = families.first(where: { $0.id == familyID }) else { return false }
