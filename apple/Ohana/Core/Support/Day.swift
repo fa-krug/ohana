@@ -19,7 +19,16 @@ struct Day: Hashable, Comparable, Codable, CustomStringConvertible {
         self.init(year: parts[0], month: parts[1], day: parts[2])
     }
 
-    init(_ date: Date, calendar: Calendar = .current) {
+    /// The Gregorian calendar in the user's time zone: the server's days are Gregorian whatever
+    /// calendar the device shows.
+    static var calendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        calendar.locale = .current
+        return calendar
+    }
+
+    init(_ date: Date, calendar: Calendar = Day.calendar) {
         let c = calendar.dateComponents([.year, .month, .day], from: date)
         self.init(year: c.year!, month: c.month!, day: c.day!)
     }
@@ -43,13 +52,14 @@ struct Day: Hashable, Comparable, Codable, CustomStringConvertible {
 
     /// Noon of the day in the current time zone (safe from daylight-saving edges).
     var date: Date {
-        Calendar.current.date(from: DateComponents(year: year, month: month, day: day, hour: 12))!
+        Day.calendar.date(from: DateComponents(year: year, month: month, day: day, hour: 12))!
     }
 
-    func adding(days: Int) -> Day { Day(Calendar.current.date(byAdding: .day, value: days, to: date)!) }
-    func adding(months: Int) -> Day { Day(Calendar.current.date(byAdding: .month, value: months, to: date)!) }
+    func adding(days: Int) -> Day { Day(Day.calendar.date(byAdding: .day, value: days, to: date)!) }
+    func adding(months: Int) -> Day { Day(Day.calendar.date(byAdding: .month, value: months, to: date)!) }
 
-    var weekday: Int { Calendar.current.component(.weekday, from: date) }
+    /// 1 = Sunday … 7 = Saturday.
+    var weekday: Int { Day.calendar.component(.weekday, from: date) }
 
     static func < (a: Day, b: Day) -> Bool {
         (a.year, a.month, a.day) < (b.year, b.month, b.day)
