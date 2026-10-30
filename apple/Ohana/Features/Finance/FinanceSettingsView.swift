@@ -123,7 +123,7 @@ struct FinanceSettingsForm: View {
             categories
             Section {
                 NavigationLink {
-                    FinanceBenchmarkEditor(store: store)
+                    FinanceBenchmarkEditor(store: store).assistantButton()
                 } label: {
                     LabeledContent("Statistic average") {
                         Text(store.overview?.benchmark.map { $0.label.isEmpty ? String(localized: "Set, without a source") : $0.label }

@@ -52,7 +52,7 @@ private struct CalendarSettingsContent: View {
         }
         // A type just added opens in its editor.
         .navigationDestination(item: $editing) { type in
-            CalendarTypeEditor(store: store, type: type)
+            CalendarTypeEditor(store: store, type: type).assistantButton()
         }
         .confirmationDialog(deleteTitle, isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
                             titleVisibility: .visible, presenting: deleting) { type in
@@ -181,7 +181,7 @@ private struct CalendarSettingsContent: View {
                 typeLabel(type, stats: stats)
             } else {
                 NavigationLink {
-                    CalendarTypeEditor(store: store, type: type)
+                    CalendarTypeEditor(store: store, type: type).assistantButton()
                 } label: {
                     typeLabel(type, stats: stats)
                 }

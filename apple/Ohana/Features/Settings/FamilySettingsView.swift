@@ -18,7 +18,7 @@ struct FamilySettingsView: View {
         .navigationTitle("Settings")
         .task(id: [family.revision(.family), family.revision(.settings)]) { await model.load(family.api) }
         .navigationDestination(item: $page) { page in
-            FamilySettingsPageView(page: page, model: model).id(page)
+            FamilySettingsPageView(page: page, model: model).id(page).assistantButton()
         }
         .onChange(of: family.pendingRoute, initial: true) {
             guard let route = family.takeRoute(for: .settings) else { return }
@@ -152,7 +152,7 @@ private struct FamilySettingsForm: View {
 
             Section("Household") {
                 NavigationLink {
-                    FamilySettingsPageView(page: .members, model: model)
+                    FamilySettingsPageView(page: .members, model: model).assistantButton()
                 } label: {
                     LabeledContent {
                         Text(household.members.count + household.people.count, format: .number)
@@ -161,7 +161,7 @@ private struct FamilySettingsForm: View {
                     }
                 }
                 NavigationLink {
-                    FamilySettingsPageView(page: .home, model: model)
+                    FamilySettingsPageView(page: .home, model: model).assistantButton()
                 } label: {
                     LabeledContent {
                         Text(household.home.address ?? String(localized: "Not set."))
@@ -171,7 +171,7 @@ private struct FamilySettingsForm: View {
                     }
                 }
                 NavigationLink {
-                    FamilySettingsPageView(page: .notifications, model: model)
+                    FamilySettingsPageView(page: .notifications, model: model).assistantButton()
                 } label: {
                     LabeledContent {
                         Text(household.channels.count, format: .number)
@@ -183,17 +183,17 @@ private struct FamilySettingsForm: View {
 
             Section("Modules") {
                 NavigationLink {
-                    FamilySettingsPageView(page: .calendar, model: model)
+                    FamilySettingsPageView(page: .calendar, model: model).assistantButton()
                 } label: {
                     FamilySettingsLabel(title: "Calendar", systemImage: Module.calendar.systemImage, tint: ModuleTint.calendar)
                 }
                 NavigationLink {
-                    FamilySettingsPageView(page: .finance, model: model)
+                    FamilySettingsPageView(page: .finance, model: model).assistantButton()
                 } label: {
                     FamilySettingsLabel(title: "Finance", systemImage: Module.finance.systemImage, tint: ModuleTint.finance)
                 }
                 NavigationLink {
-                    FamilySettingsPageView(page: .assistant, model: model)
+                    FamilySettingsPageView(page: .assistant, model: model).assistantButton()
                 } label: {
                     FamilySettingsLabel(title: "Assistant", systemImage: "sparkles", tint: ModuleTint.assistant)
                 }
@@ -201,7 +201,7 @@ private struct FamilySettingsForm: View {
 
             Section("Data") {
                 NavigationLink {
-                    FamilySettingsPageView(page: .data, model: model)
+                    FamilySettingsPageView(page: .data, model: model).assistantButton()
                 } label: {
                     FamilySettingsLabel(title: "Export and import", systemImage: "externaldrive.fill", tint: .teal)
                 }

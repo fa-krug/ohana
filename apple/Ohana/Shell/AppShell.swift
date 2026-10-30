@@ -17,9 +17,11 @@ struct AppShell: View {
                     Tab(item.title, systemImage: item.systemImage, value: item) {
                         NavigationStack {
                             item.root
-                                .shellToolbar(showAssistant: $showAssistant, assistantButton: item != .assistant)
+                                .shellToolbar()
                                 .demoBanner()
                         }
+                        // Not on the assistant's own page (iPad, Mac).
+                        .environment(\.shellAssistant, item == .assistant ? nil : $showAssistant)
                     }
                     // The assistant (a sheet from the toolbar) and the settings (the family menu)
                     // live in the sidebar; the iPhone's tab bar keeps the five modules.
@@ -30,8 +32,6 @@ struct AppShell: View {
             .tabViewSidebarHeader { FamilySwitcher() }
             #if os(iOS)
             .tabBarMinimizeBehavior(.onScrollDown)
-            // "Ask Ohana" floats above the iPhone's tab bar on every page.
-            .tabViewBottomAccessory { ShellQuickAsk(context: context) }
             #endif
             .inspector(isPresented: $showAssistant) {
                 // Only while shown: a hidden inspector's toolbar items would stay in the window's.
@@ -114,70 +114,72 @@ extension Module {
     func open() { NotificationCenter.default.post(name: .openModule, object: self) }
 }
 
+extension EnvironmentValues {
+    /// The shell's assistant toggle, inside a module's navigation stack (nil elsewhere: sheets
+    /// of their own, the assistant's own page).
+    @Entry var shellAssistant: Binding<Bool>?
+}
+
 /// The toolbar every module page gets from the shell: the family menu (on iPhone, where there is
 /// no sidebar) and the assistant toggle.
 struct ShellToolbar: ViewModifier {
-    @Binding var showAssistant: Bool
-    /// False on the assistant's own page.
-    var assistantButton = true
     @Environment(\.horizontalSizeClass) private var sizeClass
 
     func body(content: Content) -> some View {
-        content.toolbar {
-            #if os(iOS)
-            if sizeClass == .compact {
-                ToolbarItem(placement: .topBarLeading) { FamilyMenu() }
-            }
-            #endif
-            if assistantButton {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    showAssistant.toggle()
-                } label: {
-                    Label("Assistant", systemImage: "sparkles")
+        content
+            .toolbar {
+                #if os(iOS)
+                if sizeClass == .compact {
+                    ToolbarItem(placement: .topBarLeading) { FamilyMenu() }
                 }
-                .help("Assistant (⌘J)")
+                #endif
             }
-            }
-            #if os(iOS)
-            ToolbarSpacer(.fixed, placement: .primaryAction)
-            #endif
+            .assistantButton()
+    }
+}
+
+/// The assistant toggle at the top right. The shell gives it to the module roots; a page pushed
+/// onto a module's stack adds it itself (a pushed page has its own toolbar).
+struct AssistantButton: ViewModifier {
+    @Environment(\.shellAssistant) private var showAssistant
+
+    func body(content: Content) -> some View {
+        // From an overlay: toolbar items line up in view order, so the page's own buttons come
+        // first and the assistant's is the last at the top right.
+        content.overlay {
+            Color.clear
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+                .toolbar {
+                    if let showAssistant {
+                        #if os(iOS)
+                        ToolbarSpacer(.fixed, placement: .primaryAction)
+                        #endif
+                        ToolbarItem(placement: .primaryAction) { button(showAssistant) }
+                    }
+                }
         }
+    }
+
+    private func button(_ showAssistant: Binding<Bool>) -> some View {
+        Button {
+            showAssistant.wrappedValue.toggle()
+        } label: {
+            Label("Assistant", systemImage: "sparkles")
+        }
+        .help("Assistant (⌘J)")
     }
 }
 
 extension View {
-    func shellToolbar(showAssistant: Binding<Bool>, assistantButton: Bool = true) -> some View {
-        modifier(ShellToolbar(showAssistant: showAssistant, assistantButton: assistantButton))
+    func shellToolbar() -> some View {
+        modifier(ShellToolbar())
+    }
+
+    func assistantButton() -> some View {
+        modifier(AssistantButton())
     }
 }
-
-/// The "Ask Ohana" bar above the iPhone's tab bar: one tap to a new chat, ready to type.
-#if os(iOS)
-struct ShellQuickAsk: View {
-    let context: FamilyContext
-    @Environment(\.tabViewBottomAccessoryPlacement) private var placement
-
-    var body: some View {
-        Button {
-            context.ask(newChat: true)
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: "sparkles")
-                    .foregroundStyle(ModuleTint.assistant)
-                Text(placement == .inline ? "Ask" : "Ask Ohana…")
-                    .foregroundStyle(.secondary)
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, 16)
-            .frame(maxHeight: .infinity)
-            .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Ask the assistant")
-    }
-}
-#endif
 
 /// Shown when the account has no family yet: create one, or join one with an invite link
 /// (also when the app was opened with one).
