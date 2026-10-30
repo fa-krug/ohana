@@ -1,18 +1,24 @@
 #!/usr/bin/env python3
 """Builds Ohana/Resources/Localizable.xcstrings from the module translations.
 
-Usage: scripts/merge-localizations.py [DERIVED_DATA]
+Usage: scripts/merge-localizations.py [--check] [DERIVED_DATA]
 
 Localization/*.de.json map String Catalog keys (the English literal, interpolations as %@ /
 %lld / %lf) to German. With DERIVED_DATA (the -derivedDataPath of a build), the keys the
 compiler extracted (*.stringsdata) are added too, and the script lists those without a German
-translation.
+translation. --check writes nothing and fails when a key has no German or the catalog isn't
+up to date (CI).
+
+A value is a string, or for plurals an object of plural categories, e.g.
+{"one": "%lld day", "other": "%lld days"}.
 """
 import glob
 import json
 import os
 import sys
 
+CHECK = "--check" in sys.argv
+ARGS = [a for a in sys.argv[1:] if a != "--check"]
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CATALOG = os.path.join(ROOT, "Ohana", "Resources", "Localizable.xcstrings")
 
@@ -26,8 +32,8 @@ for path in sorted(glob.glob(os.path.join(ROOT, "Localization", "*.de.json"))):
             translations[key] = value
 
 keys = set()
-if len(sys.argv) > 1:
-    for path in glob.glob(os.path.join(sys.argv[1], "**", "*.stringsdata"), recursive=True):
+if ARGS:
+    for path in glob.glob(os.path.join(ARGS[0], "**", "*.stringsdata"), recursive=True):
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
         for entry in data.get("tables", {}).get("Localizable", []):
@@ -44,10 +50,22 @@ strings = {}
 for key in sorted(keys | set(translations)):
     entry = {}
     if key in translations:
-        entry["localizations"] = {"de": {"stringUnit": {"state": "translated", "value": translations[key]}}}
+        value = translations[key]
+        if isinstance(value, dict):
+            plural = {k: {"stringUnit": {"state": "translated", "value": v}} for k, v in value.items()}
+            entry["localizations"] = {"de": {"variations": {"plural": plural}}}
+        else:
+            entry["localizations"] = {"de": {"stringUnit": {"state": "translated", "value": value}}}
     strings[key] = entry
 
+text = json.dumps({"sourceLanguage": "en", "strings": strings, "version": "1.0"}, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+if CHECK:
+    with open(CATALOG, encoding="utf-8") as f:
+        current = f.read()
+    problems = (len(missing) if ARGS else 0) + (current != text)
+    if current != text:
+        print("Localizable.xcstrings is out of date: run scripts/merge-localizations.py", file=sys.stderr)
+    sys.exit(1 if problems else 0)
 with open(CATALOG, "w", encoding="utf-8") as f:
-    json.dump({"sourceLanguage": "en", "strings": strings, "version": "1.0"}, f, ensure_ascii=False, indent=2, sort_keys=True)
-    f.write("\n")
+    f.write(text)
 print(f"wrote {CATALOG}", file=sys.stderr)

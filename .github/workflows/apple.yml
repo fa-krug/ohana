@@ -1,0 +1,44 @@
+name: Apple app
+
+# The native app in apple/: unit tests on macOS, a build for iOS, and the German strings.
+# Only the web app deploys (ci.yml); the app ships through Xcode / App Store Connect.
+on:
+  push:
+    branches: [main]
+    paths: ['apple/**', '.github/workflows/apple.yml']
+  pull_request:
+    branches: [main]
+    paths: ['apple/**', '.github/workflows/apple.yml']
+
+jobs:
+  test:
+    name: Build & Test
+    runs-on: macos-26
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: apple
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate the project
+        run: xcodegen generate
+      - name: Unit tests (macOS)
+        run: |
+          set -o pipefail
+          xcodebuild test -scheme Ohana-macOS -destination 'platform=macOS' \
+            -derivedDataPath build/dd-mac \
+            CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= CODE_SIGN_ENTITLEMENTS= \
+            | tail -n 200
+      - name: Build (iOS)
+        run: |
+          set -o pipefail
+          xcodebuild build -scheme Ohana -destination 'generic/platform=iOS' \
+            -derivedDataPath build/dd-ios CODE_SIGNING_ALLOWED=NO \
+            | tail -n 50
+      - name: German strings complete and catalog up to date
+        run: python3 scripts/merge-localizations.py --check build/dd-ios

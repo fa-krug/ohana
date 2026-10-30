@@ -6,14 +6,13 @@ device: every screen reads and writes the server's API with the device's API tok
 
 ## Requirements
 
-Xcode 27 (iOS 27 / macOS 27 SDKs) and [XcodeGen](https://github.com/yonaskolb/XcodeGen):
+Xcode 26 or newer (built here with Xcode 27) and [XcodeGen](https://github.com/yonaskolb/XcodeGen):
 
 ```bash
 brew install xcodegen
 ```
 
-The iPhone/iPad app needs iOS 27; the Mac app runs from macOS 26 (Tahoe, the first release with
-Liquid Glass).
+The app runs on iOS/iPadOS 26 and macOS 26 (the first releases with Liquid Glass) and later.
 
 ## Setup
 

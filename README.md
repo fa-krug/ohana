@@ -297,7 +297,7 @@ Tabs, kept in the address (`?tab=`): *General* (name, members, invite links), *H
 
 ## The iPhone, iPad and Mac app
 
-[`apple/`](apple) is a native SwiftUI app (iOS 27, macOS 26 and later) with the same modules:
+[`apple/`](apple) is a native SwiftUI app (iOS 26, macOS 26 and later) with the same modules:
 the overview, calendar, finance, meals, appointments, the assistant (an inspector on the
 right, `⌘J`; a sheet on iPhone) and the family's settings. It keeps no data of its own: every
 screen reads and writes the server's API. To sign in, enter the server's address: the app

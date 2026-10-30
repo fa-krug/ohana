@@ -286,7 +286,7 @@ npm run import-legacy -- --family-planner dump.sql --cookless cookless.db --cook
   Tests check that both files have the same keys and that every literal `t("…")` key exists.
 
 - **Native app (`apple/`):** SwiftUI, one source tree `apple/Ohana/` for two XcodeGen targets
-  (`Ohana` iOS 27, `Ohana-macOS` macOS 26; `project.yml`, the `.xcodeproj` is generated and not
+  (`Ohana` iOS 26, `Ohana-macOS` macOS 26; `project.yml`, the `.xcodeproj` is generated and not
   committed: `cd apple && xcodegen generate`). Pairing: the app opens `/device/pair?state=…&deviceName=…`
   (`app/(auth)/device/pair`, `lib/auth/device-pairing.ts`) in `ASWebAuthenticationSession`;
   signed out, the page sends the user to `/login?next=…` (`safeNext`: paths of this site only);

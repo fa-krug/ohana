@@ -2,10 +2,10 @@ name: Ohana
 
 options:
   bundleIdPrefix: de.fa-krug
-  # Built with the 27 SDKs. The Mac target runs from macOS 26 (Tahoe, the first with Liquid
-  # Glass): APIs newer than 26 need `if #available(macOS 27, *)` there.
+  # Runs from iOS 26 / macOS 26 (the first releases with Liquid Glass), built with the newest
+  # SDKs: APIs newer than 26 need `if #available(iOS 27, macOS 27, *)`.
   deploymentTarget:
-    iOS: "27.0"
+    iOS: "26.0"
     macOS: "26.0"
   xcodeVersion: "27.0"
   generateEmptyDirectories: true
