@@ -20,7 +20,8 @@ struct AppointmentSearchEditor: View {
     @State private var locationText: String
     @State private var specialityText: String
     @State private var jamedaText: String
-    private let originalTexts: [String]
+    /// The fields' texts Cancel compares with (typing without picking changes only these).
+    @State private var originalTexts: [String]
     @State private var schedule: AppointmentSchedule
     /// The plain choice to go back to when cron is switched off again.
     @State private var lastPlainSchedule: AppointmentSchedule
@@ -44,7 +45,7 @@ struct AppointmentSearchEditor: View {
         _locationText = State(initialValue: location)
         _specialityText = State(initialValue: speciality)
         _jamedaText = State(initialValue: jameda)
-        originalTexts = [location, speciality, jameda]
+        _originalTexts = State(initialValue: [location, speciality, jameda])
         let schedule = AppointmentLogic.schedule(of: input)
         _schedule = State(initialValue: schedule)
         _lastPlainSchedule = State(initialValue: schedule == .cron ? .every30Minutes : schedule)
@@ -120,6 +121,7 @@ struct AppointmentSearchEditor: View {
                 original.latitude = String(home.lat)
                 original.longitude = String(home.lng)
                 original.locationLabel = home.address
+                originalTexts[0] = home.address
                 if input.latitude.isEmpty, locationText.isEmpty {
                     input.latitude = original.latitude
                     input.longitude = original.longitude
