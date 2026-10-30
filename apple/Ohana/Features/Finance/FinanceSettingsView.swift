@@ -42,6 +42,7 @@ struct FinanceSettingsForm: View {
     @State private var sheet: FinanceSettingsSheet?
     @State private var deletingCategory: FinanceCategory?
     @State private var deletingAccount: FinanceAccount?
+    @State private var deletingMapping: String?
     @State private var clearing = false
 
     static let currencies = ["EUR", "USD", "GBP", "CHF", "SEK", "NOK", "DKK", "PLN", "CZK", "HUF", "JPY", "CAD", "AUD"]
@@ -88,6 +89,13 @@ struct FinanceSettingsForm: View {
             Button("Delete", role: .destructive) { Task { await store.deleteAccount(a.id) } }
         } message: { _ in
             Text("All its transactions are deleted as well. This can’t be undone.")
+        }
+        .confirmationDialog("Delete this bank format?",
+                            isPresented: Binding { deletingMapping != nil } set: { if !$0 { deletingMapping = nil } },
+                            titleVisibility: .visible, presenting: deletingMapping) { signature in
+            Button("Delete", role: .destructive) { Task { await store.deleteMapping(signature) } }
+        } message: { _ in
+            Text("The next import of this bank’s files asks again how their columns map.")
         }
         .confirmationDialog("Delete all finance data?", isPresented: $clearing, titleVisibility: .visible) {
             Button("Delete all finance data", role: .destructive) { Task { await store.clearAll() } }
@@ -180,9 +188,11 @@ struct FinanceSettingsForm: View {
                             .monospacedDigit()
                             .foregroundStyle(a.balanceCents < 0 ? .red : .secondary)
                     }
+                    .frame(minHeight: 44)
                     .contentShape(.rect)
                 }
                 .buttonStyle(.plain)
+                .accessibilityElement(children: .combine)
                 .contextMenu {
                     if store.canEdit {
                         Button("Move up", systemImage: "arrow.up") { Task { await store.moveAccount(a.id, by: -1) } }
@@ -246,9 +256,23 @@ struct FinanceSettingsForm: View {
                 }
             }
             .padding(.leading, CGFloat(min(node.depth, 6)) * 18)
+            .frame(minHeight: 44)
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
+        // VoiceOver hears where a subcategory sits (sighted people see the indentation), and
+        // reaches the context menu's moves as actions.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(c.label))
+        .accessibilityValue(Text(node.depth == 0 ? c.kind.title
+                                 : String(localized: "Subcategory of \(store.tree.parent(of: c.id)?.label ?? "")")))
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction(named: Text("Move up")) {
+            if store.canEdit && index > 0 { Task { await store.moveCategory(c.id, by: -1) } }
+        }
+        .accessibilityAction(named: Text("Move down")) {
+            if store.canEdit && index < siblings.count - 1 { Task { await store.moveCategory(c.id, by: 1) } }
+        }
         .contextMenu {
             if store.canEdit {
                 Button("Add subcategory", systemImage: "plus") { sheet = .newCategory(parent: c) }
@@ -291,11 +315,15 @@ struct FinanceSettingsForm: View {
                         .lineLimit(2)
                     Spacer()
                     Button {
-                        Task { await store.deleteMapping(m.signature) }
+                        deletingMapping = m.signature
                     } label: {
-                        Label("Delete", systemImage: "trash").labelStyle(.iconOnly)
+                        Label("Delete", systemImage: "trash")
+                            .labelStyle(.iconOnly)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(.rect)
                     }
                     .buttonStyle(.borderless)
+                    .help("Delete this bank format")
                 }
             }
         } header: {
@@ -308,6 +336,45 @@ struct FinanceSettingsForm: View {
 
 // MARK: Editors
 
+/// What an account or category editor holds, to tell unsaved changes.
+private struct FinanceEditorSnapshot: Equatable {
+    var name: String
+    var icon: String
+    var color: String
+    var rest: [String?]
+}
+
+/// The toolbar of the account and category editors: Cancel (asking with changes) and Save, or
+/// Done for viewers.
+private struct FinanceEditorToolbar: ToolbarContent {
+    let canEdit: Bool
+    let hasChanges: Bool
+    let canSave: Bool
+    let save: () -> Void
+
+    var body: some ToolbarContent {
+        if canEdit {
+            ToolbarItem(placement: .cancellationAction) { CancelButton(hasChanges: hasChanges) }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save", action: save)
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(!canSave)
+            }
+        } else {
+            ToolbarItem(placement: .confirmationAction) { FinanceDoneButton() }
+        }
+    }
+}
+
+/// Closes a sheet a viewer only looks at.
+private struct FinanceDoneButton: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        Button("Done") { dismiss() }.keyboardShortcut(.defaultAction)
+    }
+}
+
 /// An account's name, icon, color and opening balance.
 struct FinanceAccountEditor: View {
     @Bindable var store: FinanceStore
@@ -317,8 +384,19 @@ struct FinanceAccountEditor: View {
     @State private var icon = ""
     @State private var color = Color.blue
     @State private var opening = ""
-    @State private var problem: String?
+    @State private var original: FinanceEditorSnapshot?
     @State private var busy = false
+
+    private var snapshot: FinanceEditorSnapshot {
+        FinanceEditorSnapshot(name: name, icon: icon, color: FinanceColor.hex(color), rest: [opening])
+    }
+
+    private var hasChanges: Bool { store.canEdit && original != nil && snapshot != original }
+    private var nameMissing: Bool { name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    /// The opening balance in cents (empty is 0); nil while it isn't a number.
+    private var openingCents: Int? {
+        opening.trimmingCharacters(in: .whitespaces).isEmpty ? 0 : FinanceMoney.parse(opening)
+    }
 
     var body: some View {
         NavigationStack {
@@ -327,6 +405,8 @@ struct FinanceAccountEditor: View {
                     TextField("Name", text: $name)
                     TextField("Icon (an emoji)", text: $icon)
                     ColorPicker("Color", selection: $color, supportsOpacity: false)
+                } footer: {
+                    if nameMissing { Text("Enter a name.").foregroundStyle(.red) }
                 }
                 .disabled(!store.canEdit)
                 Section {
@@ -344,8 +424,11 @@ struct FinanceAccountEditor: View {
                     if let account {
                         LabeledContent("Balance", value: store.money(account.balanceCents))
                     }
+                } footer: {
+                    if openingCents == nil {
+                        Text("Enter an amount, e.g. \(FinanceMoney.input(1250))").foregroundStyle(.red)
+                    }
                 }
-                if let problem { Section { Text(problem).foregroundStyle(.red) } }
             }
             .formStyle(.grouped)
             .navigationTitle(account == nil ? String(localized: "New account") : String(localized: "Account"))
@@ -353,43 +436,44 @@ struct FinanceAccountEditor: View {
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button(store.canEdit ? String(localized: "Cancel") : String(localized: "Done")) { dismiss() } }
-                if store.canEdit {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Save") { Task { await save() } }.disabled(busy)
-                    }
-                }
+                FinanceEditorToolbar(canEdit: store.canEdit, hasChanges: hasChanges,
+                                     canSave: !busy && !nameMissing && openingCents != nil) { Task { await save() } }
             }
         }
+        .errorBanner()
+        .discardGuard(hasChanges: hasChanges)
         .presentationDetents([.medium, .large])
         .financeSheetFrame(minWidth: 400, minHeight: 360)
         .onAppear {
+            guard original == nil else { return }
             name = account?.name ?? String(localized: "Account \(store.accounts.count + 1)")
             icon = account?.icon ?? ""
             color = FinanceColor.color(account?.color ?? FinanceColor.next(used: store.accounts.map(\.color)))
             opening = account.map { FinanceMoney.signedInput($0.openingCents) } ?? ""
+            original = snapshot
         }
     }
 
     private func save() async {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { problem = String(localized: "Enter a name."); return }
-        let cents = opening.trimmingCharacters(in: .whitespaces).isEmpty ? 0 : FinanceMoney.parse(opening)
-        guard let cents else { problem = String(localized: "Enter an amount, e.g. \(FinanceMoney.input(1250))"); return }
+        guard !trimmed.isEmpty, let cents = openingCents else { return }
         let hex = FinanceColor.hex(color)
         let iconText = String(icon.trimmingCharacters(in: .whitespaces).prefix(8))
         busy = true
+        defer { busy = false }
         if let account {
             var patch: [String: JSONValue] = [:]
             if trimmed != account.name { patch["name"] = .string(trimmed) }
             if iconText != account.icon { patch["icon"] = .string(iconText) }
             if hex != account.color.lowercased() { patch["color"] = .string(hex) }
             if cents != account.openingCents { patch["openingCents"] = FinanceJSON.int(cents) }
-            if !patch.isEmpty { await store.updateAccount(account.id, patch) }
+            // A failed save keeps the sheet open; its banner says why.
+            if !patch.isEmpty {
+                guard await store.updateAccount(account.id, patch) else { return }
+            }
         } else {
-            await store.addAccount(name: trimmed, color: hex, icon: iconText, openingCents: cents)
+            guard await store.addAccount(name: trimmed, color: hex, icon: iconText, openingCents: cents) != nil else { return }
         }
-        busy = false
         dismiss()
     }
 }
@@ -405,8 +489,15 @@ struct FinanceCategoryEditor: View {
     @State private var color = Color.blue
     @State private var kind = FinanceCategoryKind.expense
     @State private var parentId: String?
-    @State private var problem: String?
+    @State private var original: FinanceEditorSnapshot?
     @State private var busy = false
+
+    private var snapshot: FinanceEditorSnapshot {
+        FinanceEditorSnapshot(name: name, icon: icon, color: FinanceColor.hex(color), rest: [kind.rawValue, parentId])
+    }
+
+    private var hasChanges: Bool { store.canEdit && original != nil && snapshot != original }
+    private var nameMissing: Bool { name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 
     var body: some View {
         NavigationStack {
@@ -415,6 +506,8 @@ struct FinanceCategoryEditor: View {
                     TextField("Name", text: $name)
                     TextField("Icon (an emoji)", text: $icon)
                     ColorPicker("Color", selection: $color, supportsOpacity: false)
+                } footer: {
+                    if nameMissing { Text("Enter a name.").foregroundStyle(.red) }
                 }
                 Section {
                     Picker("Parent", selection: $parentId) {
@@ -433,7 +526,6 @@ struct FinanceCategoryEditor: View {
                 } footer: {
                     Text("A subcategory has the kind of its top-level category.")
                 }
-                if let problem { Section { Text(problem).foregroundStyle(.red) } }
             }
             .disabled(!store.canEdit)
             .formStyle(.grouped)
@@ -442,17 +534,17 @@ struct FinanceCategoryEditor: View {
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button(store.canEdit ? String(localized: "Cancel") : String(localized: "Done")) { dismiss() } }
-                if store.canEdit {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Save") { Task { await save() } }.disabled(busy)
-                    }
-                }
+                FinanceEditorToolbar(canEdit: store.canEdit, hasChanges: hasChanges,
+                                     canSave: !busy && !nameMissing) { Task { await save() } }
             }
         }
+        .errorBanner()
+        .discardGuard(hasChanges: hasChanges)
         .presentationDetents([.medium, .large])
         .financeSheetFrame(minWidth: 400, minHeight: 380)
         .onAppear {
+            guard original == nil else { return }
+            defer { original = snapshot }
             if let category {
                 name = category.name
                 icon = category.icon
@@ -470,10 +562,11 @@ struct FinanceCategoryEditor: View {
 
     private func save() async {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { problem = String(localized: "Enter a name."); return }
+        guard !trimmed.isEmpty else { return }
         let hex = FinanceColor.hex(color)
         let iconText = String(icon.trimmingCharacters(in: .whitespaces).prefix(8))
         busy = true
+        defer { busy = false }
         if let category {
             var patch: [String: JSONValue] = [:]
             if trimmed != category.name { patch["name"] = .string(trimmed) }
@@ -481,11 +574,14 @@ struct FinanceCategoryEditor: View {
             if hex != category.color.lowercased() { patch["color"] = .string(hex) }
             if parentId != category.parentId { patch["parentId"] = FinanceJSON.string(parentId) }
             if parentId == nil && kind != category.kind { patch["kind"] = .string(kind.rawValue) }
-            if !patch.isEmpty { await store.updateCategory(category.id, patch) }
+            // A failed save keeps the sheet open; its banner says why.
+            if !patch.isEmpty {
+                guard await store.updateCategory(category.id, patch) else { return }
+            }
         } else {
-            await store.addCategory(name: trimmed, parent: store.category(parentId), kind: kind, color: hex, icon: iconText)
+            guard await store.addCategory(name: trimmed, parent: store.category(parentId), kind: kind, color: hex, icon: iconText) != nil
+            else { return }
         }
-        busy = false
         dismiss()
     }
 }
@@ -500,6 +596,7 @@ struct FinanceBenchmarkEditor: View {
     @State private var expense = FinanceRangeDraft()
     @State private var categories: [String: FinanceRangeDraft] = [:]
     @State private var busy = false
+    @State private var removing = false
     @State private var loaded: FinanceBenchmark??
 
     var body: some View {
@@ -538,14 +635,8 @@ struct FinanceBenchmarkEditor: View {
                     }
                     .disabled(busy || draft == nil)
                     if saved != nil {
-                        Button("Remove", systemImage: "trash", role: .destructive) {
-                            Task {
-                                busy = true
-                                await store.setBenchmark(nil)
-                                busy = false
-                            }
-                        }
-                        .disabled(busy)
+                        Button("Remove", systemImage: "trash", role: .destructive) { removing = true }
+                            .disabled(busy)
                     }
                 }
             }
@@ -553,6 +644,17 @@ struct FinanceBenchmarkEditor: View {
         .formStyle(.grouped)
         .disabled(!store.canEdit)
         .navigationTitle("Statistic average")
+        .confirmationDialog("Remove the statistic average?", isPresented: $removing, titleVisibility: .visible) {
+            Button("Remove", role: .destructive) {
+                Task {
+                    busy = true
+                    await store.setBenchmark(nil)
+                    busy = false
+                }
+            }
+        } message: {
+            Text("The overview stops comparing with it; its figures are gone.")
+        }
         .onAppear { fill(saved) }
         .onChange(of: saved) { _, value in fill(value) }
     }

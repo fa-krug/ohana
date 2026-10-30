@@ -24,7 +24,9 @@ struct FinanceFilter: Hashable {
     var account = ""
     var kind = Kind.all
 
-    var isActive: Bool { !category.isEmpty || !account.isEmpty || kind != .all }
+    var isActive: Bool { activeCount > 0 }
+    /// How many of account, category and kind narrow the list (the filter menu's badge).
+    var activeCount: Int { [!category.isEmpty, !account.isEmpty, kind != .all].filter { $0 }.count }
 }
 
 /// The accounts' balances (by id) at the end of the day `at`.
@@ -353,6 +355,16 @@ final class FinanceStore {
     }
 
     func step(_ step: Int) async { await setPeriod(period.stepped(step)) }
+
+    /// The month or year with today in it (all time becomes this month).
+    func goToToday() async {
+        let now = FinancePeriod.current()
+        await setPeriod(FinancePeriod(mode: period.mode == .all ? .month : period.mode, year: now.year, month: now.month))
+    }
+
+    func clearFilters() async {
+        await setFilter { $0.category = ""; $0.account = ""; $0.kind = .all }
+    }
 
     func setFilter(_ change: (inout FinanceFilter) -> Void) async {
         var next = filter
@@ -714,11 +726,14 @@ final class FinanceStore {
         }
     }
 
-    /// Changes any of name, color, icon, kind, parentId (`.null`: top level), position.
-    func updateCategory(_ id: String, _ patch: [String: JSONValue]) async {
-        await withOverview {
-            let _: FinanceCategory = try await api.send(.patch, "/finance/categories/\(id)", body: JSONValue.object(patch))
+    /// Changes any of name, color, icon, kind, parentId (`.null`: top level), position; false
+    /// when it failed (the banner says why).
+    @discardableResult
+    func updateCategory(_ id: String, _ patch: [String: JSONValue]) async -> Bool {
+        let saved: FinanceCategory? = await withOverview {
+            try await api.send(.patch, "/finance/categories/\(id)", body: JSONValue.object(patch))
         }
+        return saved != nil
     }
 
     /// Moves the category up or down among its siblings.
@@ -760,11 +775,13 @@ final class FinanceStore {
         }
     }
 
-    /// Changes any of name, color, icon, openingCents, position.
-    func updateAccount(_ id: String, _ patch: [String: JSONValue]) async {
-        await withOverview {
-            let _: FinanceAccount = try await api.send(.patch, "/finance/accounts/\(id)", body: JSONValue.object(patch))
+    /// Changes any of name, color, icon, openingCents, position; false when it failed.
+    @discardableResult
+    func updateAccount(_ id: String, _ patch: [String: JSONValue]) async -> Bool {
+        let saved: FinanceAccount? = await withOverview {
+            try await api.send(.patch, "/finance/accounts/\(id)", body: JSONValue.object(patch))
         }
+        return saved != nil
     }
 
     /// Swaps the account with its neighbor.
@@ -791,7 +808,7 @@ final class FinanceStore {
 
     /// Deletes all transactions, accounts, categories and settings; there is no undo.
     func clearAll() async {
-        let done = await withOverview {
+        let done: Void? = await withOverview {
             overview = try await api.send(.delete, "/finance", as: FinanceOverview.self)
         }
         if done != nil { show(String(localized: "All finance data deleted")) }
