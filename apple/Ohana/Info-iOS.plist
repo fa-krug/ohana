@@ -38,8 +38,12 @@
 	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>Ohana uses the camera for recipe pictures.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Ohana listens when you dictate a message to the assistant.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Ohana uses your photos for recipe pictures.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Ohana turns what you dictate to the assistant into text.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

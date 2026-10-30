@@ -69,6 +69,8 @@ targets:
           NSAllowsLocalNetworking: true
         NSPhotoLibraryUsageDescription: "Ohana uses your photos for recipe pictures."
         NSCameraUsageDescription: "Ohana uses the camera for recipe pictures."
+        NSMicrophoneUsageDescription: "Ohana listens when you dictate a message to the assistant."
+        NSSpeechRecognitionUsageDescription: "Ohana turns what you dictate to the assistant into text."
         CFBundleURLTypes:
           - CFBundleURLName: de.fa-krug.Ohana.pairing
             CFBundleURLSchemes: [ohana]

@@ -16,7 +16,7 @@ struct AppShell: View {
                     Tab(item.title, systemImage: item.systemImage, value: item) {
                         NavigationStack {
                             item.root
-                                .shellToolbar(showAssistant: $showAssistant)
+                                .shellToolbar(showAssistant: $showAssistant, assistantButton: item != .assistant)
                         }
                     }
                     // The assistant (a sheet from the toolbar) and the settings (the family menu)
@@ -63,7 +63,10 @@ struct AppShell: View {
                 #if os(iOS)
                 // The iPhone has no assistant tab: its page opens as the panel.
                 if route.module == .assistant, sizeClass == .compact {
-                    _ = context.takeRoute(for: .assistant)
+                    if case let .assistantChat(id?) = context.takeRoute(for: .assistant) {
+                        let store = AssistantChatStore.shared(for: context.api)
+                        Task { await store.open(id) }
+                    }
                     showAssistant = true
                     return
                 }
@@ -108,6 +111,8 @@ extension Module {
 /// no sidebar) and the assistant toggle.
 struct ShellToolbar: ViewModifier {
     @Binding var showAssistant: Bool
+    /// False on the assistant's own page.
+    var assistantButton = true
     @Environment(\.horizontalSizeClass) private var sizeClass
 
     func body(content: Content) -> some View {
@@ -117,6 +122,7 @@ struct ShellToolbar: ViewModifier {
                 ToolbarItem(placement: .topBarLeading) { FamilyMenu() }
             }
             #endif
+            if assistantButton {
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     showAssistant.toggle()
@@ -124,6 +130,7 @@ struct ShellToolbar: ViewModifier {
                     Label("Assistant", systemImage: "sparkles")
                 }
                 .help("Assistant (⌘J)")
+            }
             }
             #if os(iOS)
             ToolbarSpacer(.fixed, placement: .primaryAction)
@@ -133,8 +140,8 @@ struct ShellToolbar: ViewModifier {
 }
 
 extension View {
-    func shellToolbar(showAssistant: Binding<Bool>) -> some View {
-        modifier(ShellToolbar(showAssistant: showAssistant))
+    func shellToolbar(showAssistant: Binding<Bool>, assistantButton: Bool = true) -> some View {
+        modifier(ShellToolbar(showAssistant: showAssistant, assistantButton: assistantButton))
     }
 }
 
