@@ -207,7 +207,7 @@ enum AssistantToolLabels {
             }
             if !queries.isEmpty {
                 let n = queries.count
-                parts.append(n == 1 ? String(localized: "1 query") : String(localized: "\(n) queries"))
+                parts.append(String(AttributedString(localized: "^[\(n) query](inflect: true)").characters))
             }
         case "change_entries":
             let types = unique(ops.flatMap { o in
@@ -222,7 +222,7 @@ enum AssistantToolLabels {
             let n = ops.reduce(0) { sum, o in
                 sum + (str(o["action"]) == "delete" ? (o["ids"]?.arrayValue?.count ?? 1) : 1)
             }
-            if n > 0 { parts.append(n == 1 ? String(localized: "1 change") : String(localized: "\(n) changes")) }
+            if n > 0 { parts.append(String(AttributedString(localized: "^[\(n) change](inflect: true)").characters)) }
         case "manage_entry_types":
             if str(a["action"]) == "copy_year" {
                 parts.append("\(number(a["from"])) → \(number(a["to"]))")

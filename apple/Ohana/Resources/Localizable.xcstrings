@@ -175,16 +175,6 @@
         }
       }
     },
-    "%lld changes": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld Änderungen"
-          }
-        }
-      }
-    },
     "%lld days": {
       "localizations": {
         "de": {
@@ -341,16 +331,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noch %lld von %lld Artikeln zu kaufen"
-          }
-        }
-      }
-    },
-    "%lld queries": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld Abfragen"
           }
         }
       }
@@ -613,26 +593,6 @@
           "stringUnit": {
             "state": "translated",
             "value": ", %lld nicht lesbar"
-          }
-        }
-      }
-    },
-    "1 change": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 Änderung"
-          }
-        }
-      }
-    },
-    "1 query": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 Abfrage"
           }
         }
       }
@@ -1627,12 +1587,24 @@
         }
       }
     },
-    "At most %lld attachments per message.": {
+    "At most ^[%lld attachment](inflect: true) per message.": {
       "localizations": {
         "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Höchstens %lld Anhänge pro Nachricht."
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Höchstens %lld Anhang pro Nachricht."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Höchstens %lld Anhänge pro Nachricht."
+                }
+              }
+            }
           }
         }
       }
@@ -3337,6 +3309,26 @@
         }
       }
     },
+    "Dictate": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diktieren"
+          }
+        }
+      }
+    },
+    "Dictation isn’t available right now.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diktieren ist gerade nicht möglich."
+          }
+        }
+      }
+    },
     "Dietary": {
       "localizations": {
         "de": {
@@ -3423,6 +3415,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Auswahl beenden"
+          }
+        }
+      }
+    },
+    "Drop files to attach": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dateien zum Anhängen hier ablegen"
           }
         }
       }
@@ -4607,6 +4609,16 @@
         }
       }
     },
+    "Image": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bild"
+          }
+        }
+      }
+    },
     "Image model": {
       "localizations": {
         "de": {
@@ -5205,6 +5217,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Liste"
+          }
+        }
+      }
+    },
+    "Listening…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hört zu…"
           }
         }
       }
@@ -6571,6 +6593,16 @@
         }
       }
     },
+    "Ohana may not use the microphone or speech recognition. You can allow it in the Settings app.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohana darf das Mikrofon oder die Spracherkennung nicht nutzen. Du kannst es in der Einstellungen-App erlauben."
+          }
+        }
+      }
+    },
     "Ohana shows here what this shopping trip cost, from the finances’ groceries category.": {
       "localizations": {
         "de": {
@@ -6697,6 +6729,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Öffnen"
+          }
+        }
+      }
+    },
+    "Open as a page": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Als Seite öffnen"
           }
         }
       }
@@ -6967,6 +7009,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Einfügen"
+          }
+        }
+      }
+    },
+    "Paste image": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bild einfügen"
           }
         }
       }
@@ -7991,6 +8043,26 @@
         }
       }
     },
+    "Return sends, Option-Return starts a new line. Paste (⌘V) or drop screenshots and files.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Return sendet, Wahl-Return beginnt eine neue Zeile. Screenshots und Dateien einfügen (⌘V) oder hier ablegen."
+          }
+        }
+      }
+    },
+    "Return sends. Attach, paste or drop screenshots and files.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Return sendet. Screenshots und Dateien anhängen, einfügen oder hier ablegen."
+          }
+        }
+      }
+    },
     "Revoke": {
       "localizations": {
         "de": {
@@ -8801,6 +8873,16 @@
         }
       }
     },
+    "Show": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anzeigen"
+          }
+        }
+      }
+    },
     "Show again": {
       "localizations": {
         "de": {
@@ -8867,6 +8949,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Die Liste, wie sie zuletzt geladen wurde."
+          }
+        }
+      }
+    },
+    "Shows it in the app": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeigt es in der App"
           }
         }
       }
@@ -9311,6 +9403,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Stopp"
+          }
+        }
+      }
+    },
+    "Stop dictation": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diktieren beenden"
           }
         }
       }
@@ -9821,6 +9923,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Design"
+          }
+        }
+      }
+    },
+    "There is no picture on the clipboard.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In der Zwischenablage ist kein Bild."
           }
         }
       }
@@ -10937,6 +11049,28 @@
         }
       }
     },
+    "^[%lld change](inflect: true)": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Änderung"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Änderungen"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "^[%lld month](inflect: true)": {
       "localizations": {
         "de": {
@@ -10996,6 +11130,28 @@
                 "stringUnit": {
                   "state": "translated",
                   "value": "%lld neue Buchungen"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "^[%lld query](inflect: true)": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Abfrage"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Abfragen"
                 }
               }
             }
@@ -11655,6 +11811,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "—"
+          }
+        }
+      }
+    },
+    "“%@” is long: only the first 50,000 characters are sent.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ ist lang: Nur die ersten 50.000 Zeichen werden gesendet."
           }
         }
       }

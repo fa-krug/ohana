@@ -59,6 +59,13 @@ final class AssistantChatStore {
     @ObservationIgnored private var seen = Set<String>()
     @ObservationIgnored private var following: Task<Void, Never>?
     @ObservationIgnored private var followID = 0
+    /// How many views show the store (the panel and the page may both); the last one to go
+    /// stops following.
+    @ObservationIgnored private var viewers = 0
+    /// The latest chat was opened once (the panel opens on it rather than on an empty chat).
+    @ObservationIgnored private var restoredLatest = false
+    /// Grows with every chat the user opens or starts.
+    @ObservationIgnored private var picks = 0
 
     init(api: FamilyAPI) {
         self.api = api
@@ -121,6 +128,7 @@ final class AssistantChatStore {
     }
 
     func newChat() {
+        picks += 1
         unfollow()
         currentID = nil
         current = nil
@@ -130,6 +138,7 @@ final class AssistantChatStore {
     /// Opens a chat (a running turn goes on either way).
     func open(_ id: String) async {
         if id == currentID, current != nil { return }
+        picks += 1
         unfollow()
         currentID = id
         current = nil
@@ -340,6 +349,39 @@ final class AssistantChatStore {
         following = nil
     }
 
+    /// A view shows the store (`onAppear`).
+    func addViewer() { viewers += 1 }
+
+    /// A view showing the store went away; the last one stops following (the turn goes on on
+    /// the server).
+    func removeViewer() {
+        viewers = max(0, viewers - 1)
+        if viewers == 0 { unfollow() }
+    }
+
+    /// The first time the assistant shows in a session, it opens on the latest chat if that was
+    /// active in the last `within` (or still runs), so the conversation goes on where it was.
+    func restoreLatest(within: TimeInterval = 12 * 3600, now: Date = .now) async {
+        guard !restoredLatest else { return }
+        restoredLatest = true
+        let before = picks
+        if !chatsLoaded { await loadChats() }
+        // Meanwhile the user picked a chat or asked for a new one.
+        guard picks == before, current == nil, currentID == nil, let latest = chats.first,
+              latest.isRunning || (latest.updatedDate.map { now.timeIntervalSince($0) < within } ?? false)
+        else { return }
+        await open(latest.id)
+    }
+
+    /// Starts a new chat unless the open one is still empty (no duplicates of empty chats).
+    func newChatUnlessEmpty() {
+        restoredLatest = true
+        if currentID != nil || !isEmptyChat { newChat() } else { picks += 1 }
+    }
+
+    /// The open chat has nothing in it yet.
+    var isEmptyChat: Bool { current?.items.isEmpty ?? true }
+
     /// Follows a chat until no turn runs in it: with `first` (a message being sent), then with
     /// follow requests from what this device has. The server runs the turn either way, so a
     /// stream that breaks off is simply asked for again.
@@ -525,6 +567,7 @@ final class AssistantChatStore {
                 current?.items[index] = .change(done)
             }
             onChange(AssistantChangeAreas.areas(change: change.change, undo: change.undo))
+            ErrorBanner.shared.success(String(localized: "Undone"))
         } catch {
             ErrorBanner.shared.show(String(localized: "Couldn’t undo: \(error.localizedDescription)"))
             return

@@ -105,14 +105,16 @@ enum AssistantMarkdownBlock: Equatable {
         return blocks
     }
 
-    /// Inline Markdown (bold, italics, code, links); links only for http(s).
+    /// Inline Markdown (bold, italics, code, links); links only for http(s) and the app's own pages.
     static func inline(_ text: String) -> AttributedString {
         let options = AttributedString.MarkdownParsingOptions(
             interpretedSyntax: .inlineOnlyPreservingWhitespace, failurePolicy: .returnPartiallyParsedIfPossible
         )
         guard var s = try? AttributedString(markdown: text, options: options) else { return AttributedString(text) }
         for run in s.runs {
-            if let link = run.link, !["http", "https"].contains(link.scheme?.lowercased() ?? "") {
+            // The app's own pages (/f/{id}/…, e.g. a recipe the assistant saved) open in the app.
+            if let link = run.link, !["http", "https"].contains(link.scheme?.lowercased() ?? ""),
+               !(link.scheme == nil && link.path.hasPrefix("/f/")) {
                 s[run.range].link = nil
             }
         }

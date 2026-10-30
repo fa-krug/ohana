@@ -2,8 +2,11 @@ import SwiftUI
 
 /// One item of the chat: a message, a tool call, a change with undo, a question, a note.
 struct AssistantItemView: View {
+    @Environment(FamilyContext.self) private var family
     let item: AssistantItem
     let store: AssistantChatStore
+    /// Opens a place of the app a tool call names.
+    var open: (AppRoute) -> Void = { _ in }
 
     var body: some View {
         switch item {
@@ -13,7 +16,7 @@ struct AssistantItemView: View {
             AssistantMarkdownView(text: text)
                 .padding(.horizontal, 4)
         case let .tool(tool):
-            AssistantToolRow(tool: tool)
+            AssistantToolRow(tool: tool, route: AssistantToolLinks.route(tool, familyID: family.family.id), open: open)
         case let .change(change):
             AssistantChangeRow(change: change) {
                 await store.undo(change.id)
@@ -143,16 +146,38 @@ struct AssistantSentAttachment: View {
 /// A tool call: what it does, what it is about, and how it went.
 struct AssistantToolRow: View {
     let tool: AssistantToolCall
+    /// Where the app shows what the call was about (a tap opens it).
+    var route: AppRoute?
+    var open: (AppRoute) -> Void = { _ in }
 
     var body: some View {
+        if let route {
+            Button {
+                open(route)
+            } label: {
+                row(linked: true)
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint(Text("Shows it in the app"))
+        } else {
+            row(linked: false)
+        }
+    }
+
+    private func row(linked: Bool) -> some View {
         let label = AssistantToolLabels.label(tool)
         let detail = AssistantToolLabels.detail(tool)
-        HStack(spacing: 8) {
+        return HStack(spacing: 8) {
             Image(systemName: AssistantToolLabels.icon(tool.name))
                 .frame(width: 16)
-            Text(Self.line(label, detail))
+            Text(Self.line(label, detail, linked: linked))
                 .lineLimit(1)
                 .truncationMode(.tail)
+            if linked {
+                Image(systemName: "arrow.up.forward")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(ModuleTint.assistant)
+            }
             Spacer(minLength: 0)
             switch tool.status {
             case "running": ProgressView().controlSize(.mini)
@@ -163,17 +188,18 @@ struct AssistantToolRow: View {
         .font(.caption)
         .foregroundStyle(.secondary)
         .padding(.horizontal, 4)
+        .contentShape(.rect)
         .help(Text(verbatim: [label, detail, tool.interrupted ? String(localized: "Interrupted") : tool.summary ?? ""]
             .filter { !$0.isEmpty }.joined(separator: "\n")))
         .accessibilityElement(children: .combine)
     }
 
     /// The label, then the detail a little fainter.
-    static func line(_ label: String, _ detail: String) -> AttributedString {
+    static func line(_ label: String, _ detail: String, linked: Bool = false) -> AttributedString {
         var s = AttributedString(label)
         if !detail.isEmpty {
             var d = AttributedString(" · " + detail)
-            d.foregroundColor = .secondary.opacity(0.7)
+            d.foregroundColor = linked ? ModuleTint.assistant : .secondary.opacity(0.7)
             s += d
         }
         return s
