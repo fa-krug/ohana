@@ -236,7 +236,7 @@ struct FamilyInviteLinkSheet: View {
                     .font(.callout.monospaced())
                     .multilineTextAlignment(.center)
                     .textSelection(.enabled)
-                    .glassCard(cornerRadius: 16, padding: 12)
+                    .contentCard(cornerRadius: 16, padding: 12)
                 Text("The link lets someone join the family, with a new account or their existing one. Valid for 7 days, once.")
                     .font(.caption)
                     .foregroundStyle(.secondary)

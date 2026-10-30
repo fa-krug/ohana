@@ -122,7 +122,7 @@ struct MealsRecipeDetailView: View {
                 actions(recipe)
                 servingsCard(detail, portions: portions)
                 if !detail.ingredients.isEmpty {
-                    GlassSection("Ingredients", systemImage: "carrot", tint: ModuleTint.meals) {
+                    CardSection("Ingredients", systemImage: "carrot", tint: ModuleTint.meals) {
                         ForEach(recipe.lines(servings: portions)) { line in
                             RecipeIngredientLineView(line: line)
                         }
@@ -198,7 +198,7 @@ struct MealsRecipeDetailView: View {
             }
             .fixedSize()
         }
-        .glassCard(cornerRadius: 22, padding: 14)
+        .contentCard(cornerRadius: 22, padding: 14)
         .animation(.snappy, value: portions)
     }
 
@@ -206,7 +206,7 @@ struct MealsRecipeDetailView: View {
     private func stepsSection(_ recipe: RecipeResolved, _ method: RecipeCookMethod, portions: Int) -> some View {
         let steps = recipe.steps(method)
         if !steps.isEmpty {
-            GlassSection(method == .manual ? LocalizedStringKey("By Hand") : LocalizedStringKey("Machine"),
+            CardSection(method == .manual ? LocalizedStringKey("By Hand") : LocalizedStringKey("Machine"),
                          systemImage: method == .manual ? "hand.raised" : "gearshape.2", tint: ModuleTint.meals) {
                 ForEach(Array(steps.enumerated()), id: \.element.id) { index, step in
                     HStack(alignment: .top, spacing: 12) {

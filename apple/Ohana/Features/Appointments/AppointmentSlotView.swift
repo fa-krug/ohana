@@ -69,16 +69,16 @@ struct AppointmentSlotView: View {
             HStack(spacing: 6) {
                 Text(slot.isNextSlot ? "Next available appointment" : "Bookable appointment")
                     .font(.caption.weight(.medium))
-                    .glassChip()
+                    .chip()
                 Text(verbatim: slot.sourceName)
                     .font(.caption.weight(.medium))
-                    .glassChip(tint: ModuleTint.appointments)
+                    .chip(tint: ModuleTint.appointments)
             }
             Text(detail.searchName)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
-        .glassCard()
+        .contentCard()
     }
 
     private func map(_ detail: AppointmentSlotDetail, _ c: (lat: Double, lng: Double)) -> some View {
@@ -130,7 +130,7 @@ struct AppointmentSlotView: View {
             }
         }
         .font(.subheadline)
-        .glassCard()
+        .contentCard()
     }
 
     private func fact(_ label: LocalizedStringKey, _ value: String) -> some View {
@@ -165,7 +165,7 @@ struct AppointmentSlotView: View {
                 }
             }
         }
-        .glassCard(tint: .green)
+        .contentCard(tint: .green)
     }
 
     private func actions(_ detail: AppointmentSlotDetail) -> some View {

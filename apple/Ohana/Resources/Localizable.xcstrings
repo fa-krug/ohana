@@ -3933,6 +3933,26 @@
         }
       }
     },
+    "Discard Changes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Änderungen verwerfen"
+          }
+        }
+      }
+    },
+    "Discard your changes?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Änderungen verwerfen?"
+          }
+        }
+      }
+    },
     "Dismiss": {
       "localizations": {
         "de": {
@@ -5857,6 +5877,16 @@
         }
       }
     },
+    "Keep Editing": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weiter bearbeiten"
+          }
+        }
+      }
+    },
     "Keyboard": {
       "localizations": {
         "de": {
@@ -6637,6 +6667,16 @@
         }
       }
     },
+    "New": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neu"
+          }
+        }
+      }
+    },
     "New API token": {
       "localizations": {
         "de": {
@@ -6653,6 +6693,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Neues Rezept"
+          }
+        }
+      }
+    },
+    "New Window": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neues Fenster"
           }
         }
       }

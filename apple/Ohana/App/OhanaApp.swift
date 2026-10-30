@@ -7,8 +7,11 @@ struct OhanaApp: App {
     @AppStorage("menuBarAssistant") private var menuBarAssistant = true
     #endif
 
+    /// The main window's scene id (File ▸ New Window).
+    static let mainWindow = "main"
+
     var body: some Scene {
-        WindowGroup {
+        WindowGroup(id: Self.mainWindow) {
             RootView()
                 .environment(app)
                 .tint(.ohana)

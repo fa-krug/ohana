@@ -212,7 +212,7 @@ struct CalendarPlannerView: View {
                             monthDetail
                         }
                     }
-                    .glassCard(cornerRadius: 22, padding: 12)
+                    .contentCard(cornerRadius: 22, padding: 12)
                     .modifier(keyboard(enabled: true))
                     CalendarSelectionPanel(store: store, actions: actions, showZoom: mode == .year)
                 }
@@ -281,13 +281,13 @@ struct CalendarPlannerView: View {
             Label("Saving…", systemImage: "arrow.triangle.2.circlepath")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .glassChip()
+                .chip()
                 .padding(8)
         case .retrying:
             Label("Offline – retrying", systemImage: "wifi.slash")
                 .font(.caption)
                 .foregroundStyle(.red)
-                .glassChip(tint: .red)
+                .chip(tint: .red)
                 .padding(8)
         }
     }
@@ -295,7 +295,7 @@ struct CalendarPlannerView: View {
     private var readOnlyNote: some View {
         Label("You are a viewer in this family: you can look at the calendar but not change it.", systemImage: "eye")
             .font(.subheadline)
-            .glassCard(cornerRadius: 16, padding: 12, tint: ModuleTint.calendar)
+            .contentCard(cornerRadius: 16, padding: 12, tint: ModuleTint.calendar)
     }
 
     // MARK: Toolbar

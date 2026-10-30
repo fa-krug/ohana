@@ -97,7 +97,7 @@ struct MealPlanView: View {
                         } actions: {
                             if family.canEdit { nextButton }
                         }
-                        .glassCard()
+                        .contentCard()
                     }
                     if !plan.pastIterations.isEmpty {
                         Text("Previous plans")
@@ -161,7 +161,7 @@ struct MealPlanView: View {
             Spacer(minLength: 8)
             nextButton
         }
-        .glassCard(tint: ModuleTint.meals)
+        .contentCard(tint: ModuleTint.meals)
     }
 
     private var nextButton: some View {
@@ -282,7 +282,7 @@ struct MealPlanIterationCard: View {
                 }
             }
         }
-        .glassCard()
+        .contentCard()
         .opacity(archived ? 0.85 : 1)
     }
 
@@ -346,7 +346,7 @@ struct MealPlanDayRowView: View {
                     Label("\(list.itemCount) items to grab", systemImage: "cart.fill")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.blue)
-                        .glassChip(tint: .blue, interactive: true)
+                        .chip(tint: .blue)
                 }
                 .buttonStyle(.plain)
             }

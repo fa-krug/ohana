@@ -177,7 +177,7 @@ struct CalendarSelectionPanel: View {
                 CalendarSelectionDetails(store: store, actions: actions)
             }
         }
-        .glassCard(cornerRadius: 22, padding: 14)
+        .contentCard(cornerRadius: 22, padding: 14)
     }
 }
 

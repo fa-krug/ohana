@@ -67,14 +67,50 @@ struct ShellFocus {
     var ask: () -> Void = {}
 }
 
+/// The visible module's "New …" (File ▸ New …, ⌘N). A module sets it with
+/// `.focusedSceneValue(\.newItem, NewItemAction(title: "New Recipe") { … })`.
+struct NewItemAction {
+    var title: LocalizedStringKey
+    var action: () -> Void
+}
+
+/// The visible module's own menu in the menu bar (and the iPad's ⌘-hold shortcut list): its
+/// commands as buttons, with ⌘-shortcuts where they have one. A module sets it with
+/// `.focusedSceneValue(\.moduleMenu, ModuleMenu(title: "Calendar") { Button(…) … })`.
+struct ModuleMenu {
+    var title: LocalizedStringKey
+    var content: () -> AnyView
+
+    init<Content: View>(title: LocalizedStringKey, @ViewBuilder content: @escaping () -> Content) {
+        self.title = title
+        self.content = { AnyView(content()) }
+    }
+}
+
 extension FocusedValues {
     @Entry var shell: ShellFocus?
+    @Entry var newItem: NewItemAction?
+    @Entry var moduleMenu: ModuleMenu?
 }
 
 struct ShellCommands: Commands {
     @FocusedValue(\.shell) private var shell
+    @FocusedValue(\.newItem) private var newItem
+    @FocusedValue(\.moduleMenu) private var moduleMenu
+    @Environment(\.openWindow) private var openWindow
 
     var body: some Commands {
+        SidebarCommands()
+        CommandGroup(replacing: .newItem) {
+            Button(newItem?.title ?? "New") { newItem?.action() }
+                .keyboardShortcut("n", modifiers: .command)
+                .disabled(newItem == nil)
+            Button("New Window") { openWindow(id: OhanaApp.mainWindow) }
+                .keyboardShortcut("n", modifiers: [.command, .option])
+        }
+        if let moduleMenu {
+            CommandMenu(moduleMenu.title) { moduleMenu.content() }
+        }
         CommandMenu("Go") {
             ForEach(Module.allCases) { module in
                 Button(module.title) { shell?.module.wrappedValue = module }

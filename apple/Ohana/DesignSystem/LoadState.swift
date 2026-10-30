@@ -86,11 +86,25 @@ final class ErrorBanner {
     private func present(_ text: String, success: Bool) {
         message = text
         isSuccess = success
+        // VoiceOver reads it out; errors get a higher priority than confirmations.
+        var announcement = AttributedString(text)
+        announcement.accessibilitySpeechAnnouncementPriority = success ? .default : .high
+        AccessibilityNotification.Announcement(announcement).post()
         hideTask?.cancel()
+        // Errors stay until dismissed while VoiceOver runs, and longer than confirmations.
+        if !success, Self.voiceOverRunning { return }
         hideTask = Task {
-            try? await Task.sleep(for: .seconds(5))
+            try? await Task.sleep(for: .seconds(success ? 4 : 8))
             if !Task.isCancelled { message = nil }
         }
+    }
+
+    private static var voiceOverRunning: Bool {
+        #if os(iOS)
+        UIAccessibility.isVoiceOverRunning
+        #else
+        NSWorkspace.shared.isVoiceOverEnabled
+        #endif
     }
 
     func dismiss() { message = nil }

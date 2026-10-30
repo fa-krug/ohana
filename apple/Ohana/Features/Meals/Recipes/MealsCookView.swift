@@ -117,7 +117,7 @@ private struct RecipeCookSession: View {
                         .pickerStyle(.segmented)
                     }
                 }
-                .glassCard(cornerRadius: 24, padding: 18)
+                .contentCard(cornerRadius: 24, padding: 18)
                 .frame(maxWidth: 480)
                 if steps.isEmpty {
                     Text("This recipe has no steps yet.").foregroundStyle(.secondary)

@@ -82,7 +82,7 @@ struct FinanceComparisonCard: View {
     }
 
     var body: some View {
-        GlassSection("Comparison", systemImage: "arrow.left.arrow.right", tint: ModuleTint.finance) {
+        CardSection("Comparison", systemImage: "arrow.left.arrow.right", tint: ModuleTint.finance) {
             Text("all per month").font(.caption).foregroundStyle(.secondary)
         } content: {
             if let comparisons = store.comparisons {
@@ -222,7 +222,7 @@ struct FinanceBenchmarkCard: View {
     var body: some View {
         if let benchmark = store.overview?.benchmark, let comparisons = store.comparisons, let first = comparisons.first {
             let rows = rows(benchmark, first)
-            GlassSection("Statistic average", systemImage: "chart.bar.xaxis", tint: ModuleTint.finance) {
+            CardSection("Statistic average", systemImage: "chart.bar.xaxis", tint: ModuleTint.finance) {
                 Text("all per month").font(.caption).foregroundStyle(.secondary)
             } content: {
                 let basis = first.months > 0
@@ -369,7 +369,7 @@ struct FinanceMonthlyChart: View {
 
     var body: some View {
         let months = Self.months(summary, period: store.period)
-        GlassSection("Per month", systemImage: "chart.bar", tint: ModuleTint.finance) {
+        CardSection("Per month", systemImage: "chart.bar", tint: ModuleTint.finance) {
             chart(months)
             DisclosureGroup("As table", isExpanded: $asTable) {
                 // Phones: scrolls sideways when the amounts don't fit.
@@ -535,7 +535,7 @@ struct FinanceCategoryBreakdown: View {
     var body: some View {
         let rows = Self.rows(summary, tree: store.tree, income: income)
         let total = rows.reduce(0) { $0 + $1.cents }
-        GlassSection("By category", systemImage: "chart.pie", tint: ModuleTint.finance) {
+        CardSection("By category", systemImage: "chart.pie", tint: ModuleTint.finance) {
             Picker("Kind", selection: $income) {
                 Text("Expenses").tag(false)
                 Text("Income").tag(true)

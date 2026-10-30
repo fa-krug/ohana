@@ -236,7 +236,7 @@ struct AccountSecretSheet: View {
                         .font(.callout.monospaced())
                         .multilineTextAlignment(.center)
                         .textSelection(.enabled)
-                        .glassCard(cornerRadius: 16, padding: 12)
+                        .contentCard(cornerRadius: 16, padding: 12)
                     Text(message)
                         .font(.callout)
                         .foregroundStyle(.secondary)

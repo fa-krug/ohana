@@ -16,23 +16,22 @@ enum ModuleTint {
     static let settings = Color.gray
 }
 
-/// The soft backdrop behind the app's pages: it gives the Liquid Glass surfaces something to
-/// refract. Adapts to light and dark.
+/// The backdrop behind the app's pages: the system's grouped background with a faint wash of
+/// the module's color at the top. Adapts to light, dark and Increase Contrast (no wash then).
 struct OhanaBackground: View {
     var tint: Color = .ohana
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.colorSchemeContrast) private var contrast
 
     var body: some View {
         ZStack {
-            Color(white: scheme == .dark ? 0.06 : 0.97)
-            LinearGradient(
-                colors: [tint.opacity(scheme == .dark ? 0.28 : 0.18), .clear],
-                startPoint: .topLeading, endPoint: .center
-            )
-            RadialGradient(
-                colors: [Color.ohana.opacity(scheme == .dark ? 0.18 : 0.10), .clear],
-                center: .bottomTrailing, startRadius: 20, endRadius: 600
-            )
+            Color.pageBackground
+            if contrast == .standard {
+                LinearGradient(
+                    colors: [tint.opacity(scheme == .dark ? 0.16 : 0.10), .clear],
+                    startPoint: .top, endPoint: .center
+                )
+            }
         }
         .ignoresSafeArea()
     }

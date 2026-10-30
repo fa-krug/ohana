@@ -219,7 +219,7 @@ private struct OverviewCard<Content: View>: View {
                 .font(.callout)
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .glassCard()
+        .contentCard()
     }
 }
 
@@ -527,7 +527,7 @@ private struct OverviewSearchesCard: View {
                     if !search.enabled {
                         Text("paused")
                             .font(.caption2)
-                            .glassChip()
+                            .chip()
                     }
                 }
                 subtitle(search)

@@ -148,14 +148,14 @@ struct AppointmentSearchDetailView: View {
                     .help("Run now (⌘R)")
             }
         }
-        .glassCard()
+        .contentCard()
     }
 
     // MARK: Results by day
 
     @ViewBuilder private func results(_ detail: AppointmentSearchDetail) -> some View {
         let search = detail.search
-        GlassSection("Earliest appointment per doctor", systemImage: "calendar.badge.clock", tint: ModuleTint.appointments) {
+        CardSection("Earliest appointment per doctor", systemImage: "calendar.badge.clock", tint: ModuleTint.appointments) {
             if search.doctors.isEmpty {
                 Text(search.latestRun == nil ? "Not run yet: results appear after the first run." : "No bookable appointments in the latest run.")
                     .font(.subheadline)
@@ -199,7 +199,7 @@ struct AppointmentSearchDetailView: View {
     // MARK: Ignore list
 
     private func ignored(_ search: AppointmentSearch) -> some View {
-        GlassSection("Ignore list", systemImage: "eye.slash") {
+        CardSection("Ignore list", systemImage: "eye.slash") {
             Text("Doctors (with their reason for the visit) this search skips. Ignore one from its appointment page.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -299,6 +299,6 @@ struct AppointmentHistoryView: View {
                 .buttonStyle(.plain)
             }
         }
-        .glassCard()
+        .contentCard()
     }
 }

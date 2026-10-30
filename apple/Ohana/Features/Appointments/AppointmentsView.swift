@@ -130,7 +130,7 @@ struct AppointmentsView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .glassCard()
+        .contentCard()
     }
 
     @ViewBuilder private func menu(for search: AppointmentSearch) -> some View {
@@ -157,7 +157,7 @@ struct AppointmentsView: View {
     // MARK: Booked appointments (booked-list.tsx)
 
     private func bookedSection(_ events: [AppointmentEvent]) -> some View {
-        GlassSection("Booked appointments", systemImage: "calendar.badge.checkmark", tint: ModuleTint.appointments) {
+        CardSection("Booked appointments", systemImage: "calendar.badge.checkmark", tint: ModuleTint.appointments) {
             Button("Calendar", systemImage: "calendar") { family.open(.module(.calendar)) }
                 .font(.subheadline)
                 .buttonStyle(.glass)
@@ -294,7 +294,7 @@ struct AppointmentSearchCard: View {
                 AppointmentRunNowButton(search: search, reload: reload)
             }
         }
-        .glassCard(tint: search.hasError ? .red : nil)
+        .contentCard(tint: search.hasError ? .red : nil)
     }
 
     private var header: some View {

@@ -187,7 +187,7 @@ struct FinanceStatTiles: View {
                 Text(hint).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
             }
         }
-        .glassCard(cornerRadius: 18, padding: 12)
+        .contentCard(cornerRadius: 18, padding: 12)
     }
 }
 

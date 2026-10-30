@@ -456,7 +456,7 @@ struct CalendarSelectionDetails: View {
                 Text(CalendarText.birthday(b))
             }
         }
-        .glassCard(cornerRadius: 18, padding: 12)
+        .contentCard(cornerRadius: 18, padding: 12)
     }
 
     /// The appointment search an event was booked from (the details sheet closes first).
