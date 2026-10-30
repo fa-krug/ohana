@@ -1241,6 +1241,36 @@
         }
       }
     },
+    "Ask": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fragen"
+          }
+        }
+      }
+    },
+    "Ask Ohana": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohana fragen"
+          }
+        }
+      }
+    },
+    "Ask Ohana…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohana fragen …"
+          }
+        }
+      }
+    },
     "Ask me anything about your family’s plans, for example:": {
       "localizations": {
         "de": {
@@ -1261,12 +1291,32 @@
         }
       }
     },
+    "Ask the assistant": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Den Assistenten fragen"
+          }
+        }
+      }
+    },
     "Asking a question": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Stellt eine Frage"
+          }
+        }
+      }
+    },
+    "Asks the family assistant in Ohana.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fragt den Familienassistenten in Ohana."
           }
         }
       }
@@ -6831,6 +6881,16 @@
         }
       }
     },
+    "Question": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frage"
+          }
+        }
+      }
+    },
     "Queued": {
       "localizations": {
         "de": {
@@ -9687,6 +9747,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Was bewirken die Rollen?"
+          }
+        }
+      }
+    },
+    "What do you want to ask?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was möchtest du fragen?"
           }
         }
       }

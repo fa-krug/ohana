@@ -63,6 +63,8 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
 struct ShellFocus {
     var module: Binding<Module>
     var assistant: Binding<Bool>
+    /// Opens the assistant on a new chat, ready to type.
+    var ask: () -> Void = {}
 }
 
 extension FocusedValues {
@@ -81,6 +83,8 @@ struct ShellCommands: Commands {
             Divider()
             Button("Assistant panel") { shell?.assistant.wrappedValue.toggle() }
                 .keyboardShortcut("j", modifiers: .command)
+            Button("Ask the assistant") { shell?.ask() }
+                .keyboardShortcut("j", modifiers: [.command, .shift])
         }
     }
 }
