@@ -1,0 +1,314 @@
+{
+ "recipe": {
+  "id": "recipe-salmon",
+  "title": "Lemon salmon with potatoes",
+  "description": "Oven-baked salmon with lemon and herbs, new potatoes and green beans.",
+  "listType": "KNOWN",
+  "defaultServings": 4,
+  "prepTimeMinutes": 15,
+  "cookTimeMinutes": 30,
+  "leftoverDays": null,
+  "image": "",
+  "createdAt": "{{time:-86400}}",
+  "updatedAt": "{{time:-28800}}",
+  "tags": [
+   {
+    "id": "tag-fish",
+    "category": "PROTEIN",
+    "nameEn": "Fish",
+    "nameDe": "Fisch"
+   },
+   {
+    "id": "tag-mediterranean",
+    "category": "CUISINE",
+    "nameEn": "Mediterranean",
+    "nameDe": "Mediterran"
+   },
+   {
+    "id": "tag-quick-weeknight",
+    "category": "MEAL_TYPE",
+    "nameEn": "Quick Weeknight",
+    "nameDe": "Schnelles Abendessen"
+   }
+  ],
+  "ingredients": [
+   {
+    "id": 500,
+    "ingredientId": 39,
+    "quantity": "600",
+    "unitId": 1,
+    "order": 0
+   },
+   {
+    "id": 501,
+    "ingredientId": 4,
+    "quantity": "1",
+    "unitId": 2,
+    "order": 1
+   },
+   {
+    "id": 502,
+    "ingredientId": 24,
+    "quantity": "400",
+    "unitId": 1,
+    "order": 2
+   },
+   {
+    "id": 503,
+    "ingredientId": 11,
+    "quantity": "2",
+    "unitId": 5,
+    "order": 3
+   },
+   {
+    "id": 504,
+    "ingredientId": 2,
+    "quantity": "2",
+    "unitId": 5,
+    "order": 4
+   },
+   {
+    "id": 505,
+    "ingredientId": 22,
+    "quantity": "10",
+    "unitId": 1,
+    "order": 5
+   },
+   {
+    "id": 506,
+    "ingredientId": 26,
+    "quantity": "30",
+    "unitId": 1,
+    "order": 6
+   },
+   {
+    "id": 507,
+    "ingredientId": 46,
+    "quantity": "2",
+    "unitId": 6,
+    "order": 7
+   },
+   {
+    "id": 508,
+    "ingredientId": 47,
+    "quantity": "1",
+    "unitId": 7,
+    "order": 8
+   },
+   {
+    "id": 509,
+    "ingredientId": 48,
+    "quantity": "1",
+    "unitId": 8,
+    "order": 9
+   }
+  ],
+  "manualSteps": [
+   {
+    "id": 551,
+    "method": "MANUAL",
+    "stepNumber": 1,
+    "instruction": "Heat the oven to 200 °C. Boil the potatoes in salted water for 20 minutes.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 501,
+      "quantity": "1"
+     },
+     {
+      "recipeIngredientId": 508,
+      "quantity": "1"
+     }
+    ]
+   },
+   {
+    "id": 552,
+    "method": "MANUAL",
+    "stepNumber": 2,
+    "instruction": "Put the salmon in a baking dish, drizzle with oil, add lemon slices and garlic, season and bake for 15 minutes.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 500,
+      "quantity": "600"
+     },
+     {
+      "recipeIngredientId": 507,
+      "quantity": "2"
+     },
+     {
+      "recipeIngredientId": 503,
+      "quantity": "1"
+     },
+     {
+      "recipeIngredientId": 504,
+      "quantity": "2"
+     },
+     {
+      "recipeIngredientId": 509,
+      "quantity": "1"
+     }
+    ]
+   },
+   {
+    "id": 553,
+    "method": "MANUAL",
+    "stepNumber": 3,
+    "instruction": "Cook the green beans for 6 minutes, then toss with the butter.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 502,
+      "quantity": "400"
+     },
+     {
+      "recipeIngredientId": 506,
+      "quantity": "30"
+     }
+    ]
+   },
+   {
+    "id": 554,
+    "method": "MANUAL",
+    "stepNumber": 4,
+    "instruction": "Sprinkle with parsley and serve with the rest of the lemon.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 505,
+      "quantity": "10"
+     },
+     {
+      "recipeIngredientId": 503,
+      "quantity": "1"
+     }
+    ]
+   }
+  ],
+  "machineSteps": []
+ },
+ "ingredients": [
+  {
+   "id": 2,
+   "nameEn": "garlic",
+   "nameDe": "Knoblauch",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 4,
+   "nameEn": "potato",
+   "nameDe": "Kartoffel",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 11,
+   "nameEn": "lemon",
+   "nameDe": "Zitrone",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 22,
+   "nameEn": "fresh parsley",
+   "nameDe": "Frische Petersilie",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 24,
+   "nameEn": "green beans",
+   "nameDe": "Grüne Bohnen",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 26,
+   "nameEn": "butter",
+   "nameDe": "Butter",
+   "category": "DAIRY"
+  },
+  {
+   "id": 39,
+   "nameEn": "salmon fillet",
+   "nameDe": "Lachsfilet",
+   "category": "MEAT"
+  },
+  {
+   "id": 46,
+   "nameEn": "olive oil",
+   "nameDe": "Olivenöl",
+   "category": "PANTRY"
+  },
+  {
+   "id": 47,
+   "nameEn": "salt",
+   "nameDe": "Salz",
+   "category": "PANTRY"
+  },
+  {
+   "id": 48,
+   "nameEn": "black pepper",
+   "nameDe": "Schwarzer Pfeffer",
+   "category": "PANTRY"
+  }
+ ],
+ "units": [
+  {
+   "id": 1,
+   "nameEn": "gram",
+   "nameDe": "Gramm",
+   "abbreviation": "g"
+  },
+  {
+   "id": 2,
+   "nameEn": "kilogram",
+   "nameDe": "Kilogramm",
+   "abbreviation": "kg"
+  },
+  {
+   "id": 5,
+   "nameEn": "piece",
+   "nameDe": "Stück",
+   "abbreviation": "Stk"
+  },
+  {
+   "id": 6,
+   "nameEn": "tablespoon",
+   "nameDe": "Esslöffel",
+   "abbreviation": "EL"
+  },
+  {
+   "id": 7,
+   "nameEn": "teaspoon",
+   "nameDe": "Teelöffel",
+   "abbreviation": "TL"
+  },
+  {
+   "id": 8,
+   "nameEn": "pinch",
+   "nameDe": "Prise",
+   "abbreviation": "Prise"
+  }
+ ]
+}

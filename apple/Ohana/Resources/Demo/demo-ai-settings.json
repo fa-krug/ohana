@@ -1,0 +1,7 @@
+{
+  "configured": true,
+  "canEdit": false,
+  "model": "gpt-4.1-mini",
+  "allowWrites": false,
+  "serverReady": true
+}

@@ -37,11 +37,11 @@ struct DevicePairingTests {
     }
 
     @Test func saysWhatIsWrongWithTheAddress() {
-        #expect(WelcomeView.problem("") == nil)
-        #expect(WelcomeView.problem("ohana.example.com") == nil)
-        #expect(WelcomeView.problem("https://ohana.example/invite/abc") == nil)
-        #expect(WelcomeView.problem("ohana example") == "An address has no spaces, like ohana.example.com.")
-        #expect(WelcomeView.problem("ftp://ohana.example") == "That isn’t a web address. It looks like ohana.example.com.")
+        #expect(ConnectServerView.problem("") == nil)
+        #expect(ConnectServerView.problem("ohana.example.com") == nil)
+        #expect(ConnectServerView.problem("https://ohana.example/invite/abc") == nil)
+        #expect(ConnectServerView.problem("ohana example") == "An address has no spaces, like ohana.example.com.")
+        #expect(ConnectServerView.problem("ftp://ohana.example") == "That isn’t a web address. It looks like ohana.example.com.")
     }
 
     @Test func buildsThePairingURL() throws {

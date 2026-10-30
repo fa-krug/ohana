@@ -68,5 +68,18 @@
   "You sign in on your server’s page; the app gets its own key, which you can remove on your account page.": "Du meldest dich auf der Seite deines Servers an; die App bekommt einen eigenen Schlüssel, den du auf deiner Kontoseite entfernen kannst.",
   "Your Ohana address": "Deine Ohana-Adresse",
   "Your session has ended, sign in again.": "Deine Sitzung ist abgelaufen, melde dich erneut an.",
-  "You’ve been invited to a family. Sign in to your Ohana to join it.": "Du wurdest in eine Familie eingeladen. Melde dich bei deinem Ohana an, um beizutreten."
+  "You’ve been invited to a family. Sign in to your Ohana to join it.": "Du wurdest in eine Familie eingeladen. Melde dich bei deinem Ohana an, um beizutreten.",
+  "Connect your Ohana": "Verbinde dein Ohana",
+  "Until then the app shows a demo family. Sign in to your server to see your own calendar, finances, meals and appointments.": "Bis dahin zeigt die App eine Demo-Familie. Melde dich bei deinem Server an, um deinen eigenen Kalender, deine Finanzen, Essen und Arzttermine zu sehen.",
+  "Syncing with %@…": "Abgleich mit %@ …",
+  "Loading the demo…": "Die Demo wird geladen …",
+  "Your families and their data are on the way.": "Deine Familien und ihre Daten werden geladen.",
+  "This device is no longer connected to a server. Until you connect one, Ohana shows a demo family.": "Dieses Gerät ist mit keinem Server mehr verbunden. Bis du einen verbindest, zeigt Ohana eine Demo-Familie.",
+  "Demo data": "Demodaten",
+  "Connect your Ohana server to see your own family.": "Verbinde deinen Ohana-Server, um deine eigene Familie zu sehen.",
+  "Connect": "Verbinden",
+  "Connect your Ohana server": "Deinen Ohana-Server verbinden",
+  "Connect your Ohana…": "Dein Ohana verbinden …",
+  "Sign out and show the demo": "Abmelden und Demo zeigen",
+  "This is demo data. Connect your Ohana server to make changes.": "Das sind Demodaten. Verbinde deinen Ohana-Server, um etwas zu ändern."
 }

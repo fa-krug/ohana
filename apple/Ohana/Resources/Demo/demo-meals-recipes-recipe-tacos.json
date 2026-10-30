@@ -1,0 +1,319 @@
+{
+ "recipe": {
+  "id": "recipe-tacos",
+  "title": "Fish tacos",
+  "description": "Crispy spiced fish in warm tortillas with crunchy cabbage, avocado and lime crema.",
+  "listType": "TO_TRY",
+  "defaultServings": 4,
+  "prepTimeMinutes": 20,
+  "cookTimeMinutes": 10,
+  "leftoverDays": null,
+  "image": "",
+  "createdAt": "{{time:-10080}}",
+  "updatedAt": "{{time:-3360}}",
+  "tags": [
+   {
+    "id": "tag-fish",
+    "category": "PROTEIN",
+    "nameEn": "Fish",
+    "nameDe": "Fisch"
+   },
+   {
+    "id": "tag-mexican",
+    "category": "CUISINE",
+    "nameEn": "Mexican",
+    "nameDe": "Mexikanisch"
+   },
+   {
+    "id": "tag-quick-weeknight",
+    "category": "MEAL_TYPE",
+    "nameEn": "Quick Weeknight",
+    "nameDe": "Schnelles Abendessen"
+   }
+  ],
+  "ingredients": [
+   {
+    "id": 700,
+    "ingredientId": 87,
+    "quantity": "500",
+    "unitId": 1,
+    "order": 0
+   },
+   {
+    "id": 701,
+    "ingredientId": 68,
+    "quantity": "8",
+    "unitId": 5,
+    "order": 1
+   },
+   {
+    "id": 702,
+    "ingredientId": 88,
+    "quantity": "250",
+    "unitId": 1,
+    "order": 2
+   },
+   {
+    "id": 703,
+    "ingredientId": 15,
+    "quantity": "2",
+    "unitId": 5,
+    "order": 3
+   },
+   {
+    "id": 704,
+    "ingredientId": 89,
+    "quantity": "2",
+    "unitId": 5,
+    "order": 4
+   },
+   {
+    "id": 705,
+    "ingredientId": 90,
+    "quantity": "150",
+    "unitId": 1,
+    "order": 5
+   },
+   {
+    "id": 706,
+    "ingredientId": 23,
+    "quantity": "200",
+    "unitId": 1,
+    "order": 6
+   },
+   {
+    "id": 707,
+    "ingredientId": 57,
+    "quantity": "1",
+    "unitId": 7,
+    "order": 7
+   },
+   {
+    "id": 708,
+    "ingredientId": 58,
+    "quantity": "1",
+    "unitId": 7,
+    "order": 8
+   },
+   {
+    "id": 709,
+    "ingredientId": 46,
+    "quantity": "2",
+    "unitId": 6,
+    "order": 9
+   },
+   {
+    "id": 710,
+    "ingredientId": 47,
+    "quantity": "1",
+    "unitId": 7,
+    "order": 10
+   }
+  ],
+  "manualSteps": [
+   {
+    "id": 751,
+    "method": "MANUAL",
+    "stepNumber": 1,
+    "instruction": "Shred the cabbage, slice the avocado and halve the tomatoes.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 702,
+      "quantity": "250"
+     },
+     {
+      "recipeIngredientId": 703,
+      "quantity": "2"
+     },
+     {
+      "recipeIngredientId": 706,
+      "quantity": "200"
+     }
+    ]
+   },
+   {
+    "id": 752,
+    "method": "MANUAL",
+    "stepNumber": 2,
+    "instruction": "Mix the sour cream with the juice of one lime and a pinch of salt.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 705,
+      "quantity": "150"
+     },
+     {
+      "recipeIngredientId": 704,
+      "quantity": "1"
+     }
+    ]
+   },
+   {
+    "id": 753,
+    "method": "MANUAL",
+    "stepNumber": 3,
+    "instruction": "Rub the fish with paprika, cumin and salt and fry in the oil for 3 minutes per side.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 700,
+      "quantity": "500"
+     },
+     {
+      "recipeIngredientId": 707,
+      "quantity": "1"
+     },
+     {
+      "recipeIngredientId": 708,
+      "quantity": "1"
+     },
+     {
+      "recipeIngredientId": 709,
+      "quantity": "2"
+     },
+     {
+      "recipeIngredientId": 710,
+      "quantity": "1"
+     }
+    ]
+   },
+   {
+    "id": 754,
+    "method": "MANUAL",
+    "stepNumber": 4,
+    "instruction": "Warm the tortillas, fill with fish and vegetables, add the crema and serve with lime wedges.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 701,
+      "quantity": "8"
+     },
+     {
+      "recipeIngredientId": 704,
+      "quantity": "1"
+     }
+    ]
+   }
+  ],
+  "machineSteps": []
+ },
+ "ingredients": [
+  {
+   "id": 15,
+   "nameEn": "avocado",
+   "nameDe": "Avocado",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 23,
+   "nameEn": "cherry tomato",
+   "nameDe": "Kirschtomate",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 46,
+   "nameEn": "olive oil",
+   "nameDe": "Olivenöl",
+   "category": "PANTRY"
+  },
+  {
+   "id": 47,
+   "nameEn": "salt",
+   "nameDe": "Salz",
+   "category": "PANTRY"
+  },
+  {
+   "id": 57,
+   "nameEn": "paprika powder",
+   "nameDe": "Paprikapulver",
+   "category": "PANTRY"
+  },
+  {
+   "id": 58,
+   "nameEn": "cumin",
+   "nameDe": "Kreuzkümmel",
+   "category": "PANTRY"
+  },
+  {
+   "id": 68,
+   "nameEn": "tortilla wraps",
+   "nameDe": "Tortilla-Wraps",
+   "category": "PANTRY"
+  },
+  {
+   "id": 87,
+   "nameEn": "cod fillet",
+   "nameDe": "Kabeljaufilet",
+   "category": "MEAT"
+  },
+  {
+   "id": 88,
+   "nameEn": "red cabbage",
+   "nameDe": "Rotkohl",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 89,
+   "nameEn": "lime",
+   "nameDe": "Limette",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 90,
+   "nameEn": "sour cream",
+   "nameDe": "Schmand",
+   "category": "DAIRY"
+  }
+ ],
+ "units": [
+  {
+   "id": 1,
+   "nameEn": "gram",
+   "nameDe": "Gramm",
+   "abbreviation": "g"
+  },
+  {
+   "id": 5,
+   "nameEn": "piece",
+   "nameDe": "Stück",
+   "abbreviation": "Stk"
+  },
+  {
+   "id": 6,
+   "nameEn": "tablespoon",
+   "nameDe": "Esslöffel",
+   "abbreviation": "EL"
+  },
+  {
+   "id": 7,
+   "nameEn": "teaspoon",
+   "nameDe": "Teelöffel",
+   "abbreviation": "TL"
+  }
+ ]
+}

@@ -1,0 +1,52 @@
+{
+  "runs": [
+    {
+      "run": {
+        "id": "run-derm-2",
+        "status": "OK",
+        "startedAt": "{{time:-12990}}",
+        "finishedAt": "{{time:-12989}}",
+        "errorMessage": "",
+        "doctorsFound": 8,
+        "doctorsMatched": 1,
+        "slotsFound": 2,
+        "notified": true,
+        "triggeredBy": "SCHEDULE"
+      },
+      "doctors": [
+        {
+          "resultId": 201,
+          "doctorName": "Dr. med. Hannah Vogt",
+          "doctorSubtitle": "Fachärztin für Haut- und Geschlechtskrankheiten",
+          "speciality": "Hautarzt",
+          "practiceName": "Hautarztpraxis am Hackeschen Markt",
+          "motiveLabel": "Hautkrebs-Screening",
+          "bookingUrl": "https://www.jameda.de/hannah-vogt/hautaerztin-dermatologin/berlin",
+          "slot": "{{slot:41:11:20}}",
+          "isNextSlot": false,
+          "practiceAddress": "Rosenthaler Straße 40",
+          "practiceCity": "Berlin",
+          "practiceZipcode": "10178",
+          "practiceLatitude": "52.5254",
+          "practiceLongitude": "13.4022",
+          "source": "jameda"
+        }
+      ]
+    },
+    {
+      "run": {
+        "id": "run-derm-1",
+        "status": "NO_AVAILABILITY",
+        "startedAt": "{{time:-13050}}",
+        "finishedAt": "{{time:-13049}}",
+        "errorMessage": "",
+        "doctorsFound": 7,
+        "doctorsMatched": 0,
+        "slotsFound": 0,
+        "notified": false,
+        "triggeredBy": "MANUAL"
+      },
+      "doctors": []
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "name": "Parker family",
+  "role": "viewer",
+  "selfId": "demo-user",
+  "members": [
+    {
+      "userId": "demo-anna",
+      "email": "anna.parker@example.com",
+      "name": "Anna Parker",
+      "role": "editor",
+      "birthday": "1989-05-20",
+      "joinedAt": "2024-02-11T18:20:00.000Z"
+    },
+    {
+      "userId": "demo-user",
+      "email": "ben.parker@example.com",
+      "name": "Ben Parker",
+      "role": "viewer",
+      "birthday": "1987-09-03",
+      "joinedAt": "2024-02-12T07:45:00.000Z"
+    }
+  ],
+  "people": [
+    { "id": "person-grandma-rose", "name": "Grandma Rose", "birthday": "{{anniversary:10:1952}}" },
+    { "id": "person-leo", "name": "Leo", "birthday": "2021-07-02" },
+    { "id": "person-mia", "name": "Mia", "birthday": "2018-03-14" }
+  ],
+  "invites": [],
+  "home": { "address": "Lindenstraße 12, 10115 Berlin", "lat": 52.5306, "lng": 13.3846 },
+  "channels": [
+    {
+      "id": "channel-telegram",
+      "name": "Family chat",
+      "provider": "TELEGRAM",
+      "target": "-1001846203517",
+      "enabled": true,
+      "hasToken": true,
+      "smtpHost": "",
+      "smtpPort": 465,
+      "smtpUsername": "",
+      "smtpFrom": ""
+    },
+    {
+      "id": "channel-email",
+      "name": "Anna's email",
+      "provider": "EMAIL",
+      "target": "anna.parker@example.com",
+      "enabled": true,
+      "hasToken": true,
+      "smtpHost": "smtp.example.com",
+      "smtpPort": 465,
+      "smtpUsername": "anna.parker@example.com",
+      "smtpFrom": "Ohana <anna.parker@example.com>"
+    }
+  ],
+  "events": [
+    { "event": "appointment_found", "enabled": true, "channelIds": null, "hasChannels": false },
+    { "event": "coverage_gap", "enabled": true, "channelIds": ["channel-telegram"], "hasChannels": true },
+    { "event": "shopping_reminder", "enabled": true, "channelIds": null, "hasChannels": true },
+    { "event": "assistant_turn_finished", "enabled": false, "channelIds": null, "hasChannels": true }
+  ]
+}

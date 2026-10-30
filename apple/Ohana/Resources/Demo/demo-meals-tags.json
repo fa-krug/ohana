@@ -1,0 +1,148 @@
+{
+ "tags": [
+  {
+   "id": "tag-vegan",
+   "category": "DIETARY",
+   "nameEn": "Vegan",
+   "nameDe": "Vegan"
+  },
+  {
+   "id": "tag-vegetarian",
+   "category": "DIETARY",
+   "nameEn": "Vegetarian",
+   "nameDe": "Vegetarisch"
+  },
+  {
+   "id": "tag-gluten-free",
+   "category": "DIETARY",
+   "nameEn": "Gluten-Free",
+   "nameDe": "Glutenfrei"
+  },
+  {
+   "id": "tag-dairy-free",
+   "category": "DIETARY",
+   "nameEn": "Dairy-Free",
+   "nameDe": "Laktosefrei"
+  },
+  {
+   "id": "tag-low-carb",
+   "category": "DIETARY",
+   "nameEn": "Low-Carb",
+   "nameDe": "Low-Carb"
+  },
+  {
+   "id": "tag-nut-free",
+   "category": "DIETARY",
+   "nameEn": "Nut-Free",
+   "nameDe": "Nussfrei"
+  },
+  {
+   "id": "tag-beef",
+   "category": "PROTEIN",
+   "nameEn": "Beef",
+   "nameDe": "Rind"
+  },
+  {
+   "id": "tag-chicken",
+   "category": "PROTEIN",
+   "nameEn": "Chicken",
+   "nameDe": "Hähnchen"
+  },
+  {
+   "id": "tag-fish",
+   "category": "PROTEIN",
+   "nameEn": "Fish",
+   "nameDe": "Fisch"
+  },
+  {
+   "id": "tag-egg",
+   "category": "PROTEIN",
+   "nameEn": "Egg",
+   "nameDe": "Ei"
+  },
+  {
+   "id": "tag-tofu",
+   "category": "PROTEIN",
+   "nameEn": "Tofu",
+   "nameDe": "Tofu"
+  },
+  {
+   "id": "tag-italian",
+   "category": "CUISINE",
+   "nameEn": "Italian",
+   "nameDe": "Italienisch"
+  },
+  {
+   "id": "tag-asian",
+   "category": "CUISINE",
+   "nameEn": "Asian",
+   "nameDe": "Asiatisch"
+  },
+  {
+   "id": "tag-mexican",
+   "category": "CUISINE",
+   "nameEn": "Mexican",
+   "nameDe": "Mexikanisch"
+  },
+  {
+   "id": "tag-indian",
+   "category": "CUISINE",
+   "nameEn": "Indian",
+   "nameDe": "Indisch"
+  },
+  {
+   "id": "tag-mediterranean",
+   "category": "CUISINE",
+   "nameEn": "Mediterranean",
+   "nameDe": "Mediterran"
+  },
+  {
+   "id": "tag-german",
+   "category": "CUISINE",
+   "nameEn": "German",
+   "nameDe": "Deutsch"
+  },
+  {
+   "id": "tag-american",
+   "category": "CUISINE",
+   "nameEn": "American",
+   "nameDe": "Amerikanisch"
+  },
+  {
+   "id": "tag-quick-weeknight",
+   "category": "MEAL_TYPE",
+   "nameEn": "Quick Weeknight",
+   "nameDe": "Schnelles Abendessen"
+  },
+  {
+   "id": "tag-one-pot",
+   "category": "MEAL_TYPE",
+   "nameEn": "One-Pot",
+   "nameDe": "Eintopf"
+  },
+  {
+   "id": "tag-comfort-food",
+   "category": "MEAL_TYPE",
+   "nameEn": "Comfort Food",
+   "nameDe": "Comfort Food"
+  },
+  {
+   "id": "tag-simple",
+   "category": "MEAL_TYPE",
+   "nameEn": "Simple",
+   "nameDe": "Einfach"
+  },
+  {
+   "id": "tag-elaborate",
+   "category": "MEAL_TYPE",
+   "nameEn": "Elaborate",
+   "nameDe": "Aufwändig"
+  },
+  {
+   "id": "tag-salad",
+   "category": "MEAL_TYPE",
+   "nameEn": "Salad",
+   "nameDe": "Salat"
+  }
+ ]
+}

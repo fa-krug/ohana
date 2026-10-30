@@ -1,0 +1,34 @@
+{
+  "chats": [
+    {
+      "id": "chat-dinner",
+      "title": "What's for dinner this week?",
+      "status": "idle",
+      "activity": null,
+      "usage": { "used": 4210, "max": 128000 },
+      "page": "meals",
+      "queued": [],
+      "updatedAt": "{{time:-45}}"
+    },
+    {
+      "id": "chat-pediatrician",
+      "title": "When is Mia's check-up?",
+      "status": "idle",
+      "activity": null,
+      "usage": { "used": 3380, "max": 128000 },
+      "page": "appointments",
+      "queued": [],
+      "updatedAt": "{{time:-1530}}"
+    },
+    {
+      "id": "chat-groceries",
+      "title": "Groceries this month",
+      "status": "idle",
+      "activity": null,
+      "usage": { "used": 3950, "max": 128000 },
+      "page": "finance",
+      "queued": [],
+      "updatedAt": "{{time:-4380}}"
+    }
+  ]
+}

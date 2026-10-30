@@ -1,0 +1,87 @@
+{
+  "searches": [
+    {
+      "id": "search-pediatrician",
+      "name": "Pediatrician for Mia",
+      "sources": "doctolib",
+      "specialitySlug": "kinderarzt",
+      "specialityLabel": "Kinderarzt",
+      "jamedaSpecialitySlug": "",
+      "jamedaSpecialityLabel": "",
+      "jamedaSpecialityType": "leistung",
+      "jamedaInsuranceType": "",
+      "jamedaKidsFriendly": false,
+      "jamedaVideo": "any",
+      "locationLabel": "10115 Berlin",
+      "latitude": "52.5326",
+      "longitude": "13.3878",
+      "insuranceSector": "public",
+      "dayLimit": 21,
+      "maxPages": 3,
+      "enabled": true,
+      "scheduleType": "MINUTES",
+      "scheduleMinutes": 30,
+      "cron": "",
+      "notifyOnlyEarlier": false,
+      "lastRunAt": "{{time:-11}}",
+      "lastStatus": "OK",
+      "nextRunAt": "{{time:18}}",
+      "runRequested": false,
+      "channelIds": [],
+      "ignored": [
+        {
+          "id": 1,
+          "doctorName": "Dr. med. Martin Krause",
+          "motiveLabel": "Akutsprechstunde",
+          "providerSlug": "martin-krause-berlin",
+          "motiveId": 4412
+        }
+      ]
+    },
+    {
+      "id": "search-dermatologist",
+      "name": "Dermatologist",
+      "sources": "both",
+      "specialitySlug": "hautarzt",
+      "specialityLabel": "Hautarzt",
+      "jamedaSpecialitySlug": "hautarzt",
+      "jamedaSpecialityLabel": "Hautarzt",
+      "jamedaSpecialityType": "specialization",
+      "jamedaInsuranceType": "",
+      "jamedaKidsFriendly": false,
+      "jamedaVideo": "any",
+      "locationLabel": "10115 Berlin",
+      "latitude": "52.5326",
+      "longitude": "13.3878",
+      "insuranceSector": "public",
+      "dayLimit": 60,
+      "maxPages": 3,
+      "enabled": false,
+      "scheduleType": "HOURLY",
+      "scheduleMinutes": null,
+      "cron": "",
+      "notifyOnlyEarlier": true,
+      "lastRunAt": "{{time:-12989}}",
+      "lastStatus": "OK",
+      "nextRunAt": null,
+      "runRequested": false,
+      "channelIds": [],
+      "ignored": []
+    }
+  ],
+  "booked": [
+    {
+      "id": "event-pediatrician",
+      "date": "{{day:3}}",
+      "start": "08:30",
+      "end": "09:00",
+      "title": "Pediatrician check-up",
+      "location": "Kinderarztpraxis Dr. Weber",
+      "person": "Mia",
+      "note": "Vorsorgeuntersuchung U10",
+      "url": "https://www.doctolib.de/kinderarzt/berlin/katharina-weber",
+      "source": "appointment",
+      "searchId": "search-pediatrician"
+    }
+  ]
+}

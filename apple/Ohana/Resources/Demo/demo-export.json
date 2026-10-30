@@ -1,0 +1,294 @@
+{
+  "format": "family-planner",
+  "version": 2,
+  "exportedAt": "{{time:0}}",
+  "name": "Parker family",
+  "types": [
+    {
+      "id": "vacation",
+      "year": {{year:0}},
+      "name": "Vacation",
+      "color": "#22c55e",
+      "role": "covers",
+      "position": 0,
+      "away": true
+    },
+    {
+      "id": "school",
+      "year": {{year:0}},
+      "name": "School holidays",
+      "color": "#3b82f6",
+      "role": "day_off",
+      "position": 1,
+      "away": false
+    },
+    {
+      "id": "grandma",
+      "year": {{year:0}},
+      "name": "Grandma visits",
+      "color": "#f97316",
+      "role": "covers",
+      "position": 2,
+      "away": false
+    }
+  ],
+  "entries": {
+    "{{day:12}}": [
+      "vacation"
+    ],
+    "{{day:13}}": [
+      "vacation"
+    ],
+    "{{day:14}}": [
+      "vacation"
+    ],
+    "{{day:15}}": [
+      "vacation"
+    ],
+    "{{day:16}}": [
+      "vacation"
+    ],
+    "{{day:17}}": [
+      "vacation"
+    ],
+    "{{day:18}}": [
+      "vacation"
+    ],
+    "{{day:19}}": [
+      "vacation"
+    ],
+    "{{day:24}}": [
+      "grandma"
+    ],
+    "{{day:25}}": [
+      "grandma"
+    ],
+    "{{day:26}}": [
+      "grandma"
+    ]
+  },
+  "notes": {
+    "{{day:12}}": {
+      "icon": "✈️",
+      "comment": "Flight to Lisbon 07:10"
+    },
+    "{{day:24}}": {
+      "icon": "🚆",
+      "comment": "Pick Grandma up at Hauptbahnhof"
+    }
+  },
+  "finance": {
+    "currency": "EUR",
+    "categories": [
+      {
+        "id": "cat-salary",
+        "name": "Salary",
+        "color": "#16a34a",
+        "icon": "💼",
+        "kind": "income",
+        "position": 0,
+        "parentId": null
+      },
+      {
+        "id": "cat-groceries",
+        "name": "Groceries",
+        "color": "#22c55e",
+        "icon": "🛒",
+        "kind": "expense",
+        "position": 1,
+        "parentId": null
+      },
+      {
+        "id": "cat-rent",
+        "name": "Rent",
+        "color": "#6366f1",
+        "icon": "🏠",
+        "kind": "expense",
+        "position": 2,
+        "parentId": null
+      },
+      {
+        "id": "cat-kids",
+        "name": "Kids",
+        "color": "#ec4899",
+        "icon": "🧸",
+        "kind": "expense",
+        "position": 3,
+        "parentId": null
+      },
+      {
+        "id": "cat-transport",
+        "name": "Transport",
+        "color": "#0ea5e9",
+        "icon": "🚌",
+        "kind": "expense",
+        "position": 4,
+        "parentId": null
+      },
+      {
+        "id": "cat-leisure",
+        "name": "Leisure",
+        "color": "#f59e0b",
+        "icon": "🎟️",
+        "kind": "expense",
+        "position": 5,
+        "parentId": null
+      }
+    ],
+    "accounts": [
+      {
+        "id": "acc-checking",
+        "name": "Checking",
+        "color": "#3b82f6",
+        "icon": "💳",
+        "openingCents": 250000,
+        "position": 0
+      },
+      {
+        "id": "acc-savings",
+        "name": "Savings",
+        "color": "#16a34a",
+        "icon": "🏦",
+        "openingCents": 900000,
+        "position": 1
+      }
+    ],
+    "transactions": [
+      {
+        "id": "tx-1",
+        "date": "{{day:-2}}",
+        "amountCents": -8640,
+        "payee": "Edeka",
+        "description": "",
+        "categoryId": "cat-groceries",
+        "accountId": "acc-checking",
+        "transferId": null,
+        "splitOf": null,
+        "split": null,
+        "note": "",
+        "imported": false,
+        "importHash": null
+      },
+      {
+        "id": "tx-2",
+        "date": "{{day:-9}}",
+        "amountCents": -12455,
+        "payee": "Edeka",
+        "description": "",
+        "categoryId": "cat-groceries",
+        "accountId": "acc-checking",
+        "transferId": null,
+        "splitOf": null,
+        "split": null,
+        "note": "",
+        "imported": false,
+        "importHash": null
+      },
+      {
+        "id": "tx-3",
+        "date": "{{day:-16}}",
+        "amountCents": -9870,
+        "payee": "Edeka",
+        "description": "",
+        "categoryId": "cat-groceries",
+        "accountId": "acc-checking",
+        "transferId": null,
+        "splitOf": null,
+        "split": null,
+        "note": "",
+        "imported": false,
+        "importHash": null
+      },
+      {
+        "id": "tx-4",
+        "date": "{{day:-23}}",
+        "amountCents": -11320,
+        "payee": "Edeka",
+        "description": "",
+        "categoryId": "cat-groceries",
+        "accountId": "acc-checking",
+        "transferId": null,
+        "splitOf": null,
+        "split": null,
+        "note": "",
+        "imported": false,
+        "importHash": null
+      },
+      {
+        "id": "tx-5",
+        "date": "{{day:-27}}",
+        "amountCents": 420000,
+        "payee": "Acme GmbH",
+        "description": "Salary",
+        "categoryId": "cat-salary",
+        "accountId": "acc-checking",
+        "transferId": null,
+        "splitOf": null,
+        "split": null,
+        "note": "",
+        "imported": false,
+        "importHash": null
+      },
+      {
+        "id": "tx-6",
+        "date": "{{day:-26}}",
+        "amountCents": -145000,
+        "payee": "Hausverwaltung Müller",
+        "description": "Rent",
+        "categoryId": "cat-rent",
+        "accountId": "acc-checking",
+        "transferId": null,
+        "splitOf": null,
+        "split": null,
+        "note": "",
+        "imported": false,
+        "importHash": null
+      },
+      {
+        "id": "tx-7",
+        "date": "{{day:-20}}",
+        "amountCents": -4900,
+        "payee": "BVG",
+        "description": "Monthly ticket",
+        "categoryId": "cat-transport",
+        "accountId": "acc-checking",
+        "transferId": null,
+        "splitOf": null,
+        "split": null,
+        "note": "",
+        "imported": false,
+        "importHash": null
+      },
+      {
+        "id": "tx-8",
+        "date": "{{day:-13}}",
+        "amountCents": -6500,
+        "payee": "Musikschule Mitte",
+        "description": "Piano lessons",
+        "categoryId": "cat-kids",
+        "accountId": "acc-checking",
+        "transferId": null,
+        "splitOf": null,
+        "split": null,
+        "note": "",
+        "imported": false,
+        "importHash": null
+      },
+      {
+        "id": "tx-9",
+        "date": "{{day:-6}}",
+        "amountCents": -3480,
+        "payee": "Kino International",
+        "description": "",
+        "categoryId": "cat-leisure",
+        "accountId": "acc-checking",
+        "transferId": null,
+        "splitOf": null,
+        "split": null,
+        "note": "",
+        "imported": false,
+        "importHash": null
+      }
+    ]
+  }
+}

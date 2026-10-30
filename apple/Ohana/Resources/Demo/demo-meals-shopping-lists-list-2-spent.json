@@ -1,0 +1,13 @@
+{
+ "currency": "EUR",
+ "category": {
+  "id": "groceries",
+  "name": "Groceries",
+  "icon": "🛒",
+  "color": "#f97316"
+ },
+ "from": "{{day:3}}",
+ "to": "{{day:5}}",
+ "transactions": [],
+ "totalCents": 0
+}

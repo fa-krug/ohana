@@ -1,0 +1,29 @@
+{
+ "lists": [
+  {
+   "id": "list-2",
+   "iterationId": "iteration-2",
+   "iterationStatus": "ACTIVE",
+   "shoppingDate": "{{day:4}}",
+   "itemCount": 19,
+   "checkedCount": 0
+  },
+  {
+   "id": "list-1",
+   "iterationId": "iteration-2",
+   "iterationStatus": "ACTIVE",
+   "shoppingDate": "{{day:1}}",
+   "itemCount": 12,
+   "checkedCount": 4
+  },
+  {
+   "id": "list-0",
+   "iterationId": "iteration-1",
+   "iterationStatus": "ARCHIVED",
+   "shoppingDate": "{{day:-3}}",
+   "itemCount": 19,
+   "checkedCount": 19
+  }
+ ],
+ "latest": null
+}

@@ -15,6 +15,8 @@ final class APIClient {
     let baseURL: URL
     private let token: String?
     private let session: URLSession
+    /// The demo's stand-in for the server (`init(demo:)`); nil for a server.
+    private let demo: DemoServer?
     var onUnauthorized: (() -> Void)?
 
     static let decoder = JSONDecoder()
@@ -28,7 +30,18 @@ final class APIClient {
         self.baseURL = baseURL
         self.token = token
         self.session = session
+        demo = nil
     }
+
+    /// A client of the demo: answers from `DemoServer`, without a network.
+    init(demo: DemoServer) {
+        baseURL = DemoServer.baseURL
+        token = nil
+        session = .shared
+        self.demo = demo
+    }
+
+    var isDemo: Bool { demo != nil }
 
     /// The URL of a server path, e.g. `/api/v1/me` or `/api/images/recipes/x.webp`.
     func url(_ path: String, query: [String: String?] = [:]) -> URL {
@@ -66,6 +79,11 @@ final class APIClient {
 
     /// Sends a request and returns the body of a 2xx answer; throws `APIError` otherwise.
     func data(for req: URLRequest) async throws -> (Data, HTTPURLResponse) {
+        if let demo {
+            let (data, http) = demo.respond(to: req)
+            try check(http, data: data)
+            return (data, http)
+        }
         let data: Data, response: URLResponse
         do {
             (data, response) = try await session.data(for: req)
@@ -122,6 +140,14 @@ final class APIClient {
 
     /// The lines of a streamed answer (NDJSON or server-sent events), as they arrive.
     func lines(_ req: URLRequest) async throws -> AsyncThrowingStream<String, any Error> {
+        if demo != nil {
+            let (data, _) = try await data(for: req)
+            let lines = String(decoding: data, as: UTF8.self).split(separator: "\n", omittingEmptySubsequences: false)
+            return AsyncThrowingStream { continuation in
+                for line in lines { continuation.yield(String(line)) }
+                continuation.finish()
+            }
+        }
         let (bytes, response): (URLSession.AsyncBytes, URLResponse)
         do {
             (bytes, response) = try await session.bytes(for: req)

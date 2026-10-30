@@ -2,7 +2,8 @@
 
 A native SwiftUI client for the Ohana server in [`../web`](../web): the same families, calendar,
 finances, meals, appointments and assistant, with Liquid Glass. There is no data of its own on the
-device: every screen reads and writes the server's API with the device's API token.
+device: every screen reads and writes the server's API with the device's API token (or, before a
+server is connected, a read-only demo).
 
 ## Requirements
 
@@ -26,9 +27,17 @@ Two schemes, one per platform, over one `Ohana/` source tree: **Ohana** (iOS/iPa
 **Ohana-macOS** (a native Mac app, not Catalyst). `Ohana.xcodeproj` is generated and not
 committed: run `xcodegen generate` again after adding or removing files.
 
-## Signing in
+## Demo and signing in
 
-Enter the server's address — or paste any link of the server, an invite link too
+Without a server the app shows a demo family (`Core/Demo/`): `APIClient(demo:)` answers the API
+from the JSON templates in `Ohana/Resources/Demo` (`demo-<path>.json`, dates relative to today;
+handlers in `Demo+<Module>.swift` for routes that depend on the query). The demo account is a
+viewer, so the screens hide editing, and any change is refused with a note to connect a server.
+A banner above every module, the family menu and the account screen connect one. While the app
+switches between the demo and a server (after pairing, after signing out or a revoked token) a
+loading screen covers it until the account and families are loaded.
+
+To connect, enter the server's address — or paste any link of the server, an invite link too
 (`ServerLink` in `Core/Auth/DevicePairing.swift`: the server and the invite code are taken from
 it); an https link of the server opened while signed out starts this by itself. The app opens the server's `/device/pair` page in the system browser
 sheet, where you sign in as on the web (passkeys work) and confirm. The page hands the app an API
@@ -43,14 +52,14 @@ Ohana/
   App/            OhanaApp (scenes, commands), AppModel (server, token, account, families,
                   FamilyContext: the family's API and change signals)
   Core/           APIClient + FamilyAPI (JSON over /api/v1), APIError, JSONValue, Keychain,
-                  DevicePairing, account models, Day / Money helpers
+                  DevicePairing, DemoServer (the demo), account models, Day / Money helpers
   DesignSystem/   Content surfaces (contentCard, CardSection, chip, TintedIcon), OhanaBackground,
                   LoadState / LoadStateView, ErrorBanner, CancelButton / discardGuard, RemoteImage
-  Shell/          RootView, WelcomeView (pairing), AppShell (sidebar-adaptable TabView, family
-                  switcher, assistant inspector ⌘J), AccountView
+  Shell/          RootView, LoadingScreen, ConnectServerView (pairing), DemoBanner, AppShell
+                  (sidebar-adaptable TabView, family switcher, assistant inspector ⌘J), AccountView
   Features/       One folder per module: Overview, Calendar, Finance, Meals, Appointments,
                   Assistant, Settings
-  Resources/      Assets (app icon, accent color), Localizable.xcstrings (en + de)
+  Resources/      Assets (app icon, accent color), Localizable.xcstrings (en + de), Demo (demo data)
 OhanaTests/       Swift Testing unit tests
 ```
 

@@ -1,0 +1,15 @@
+{
+  "user": {
+    "id": "demo-user",
+    "email": "ben.parker@example.com",
+    "name": "Ben Parker",
+    "preferredLanguage": "en",
+    "onboardingStep": "COMPLETED",
+    "isAdmin": false,
+    "hasPassword": true,
+    "hasPasskey": false
+  },
+  "families": [
+    { "id": "demo", "name": "Parker family", "role": "viewer", "memberCount": 2 }
+  ]
+}

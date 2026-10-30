@@ -44,3 +44,17 @@ extension View {
             .scrollContentBackground(.hidden)
     }
 }
+
+/// The app's mark: a house on the Ohana gradient (the connect sheet, the loading screen).
+struct OhanaLogo: View {
+    var size: CGFloat
+
+    var body: some View {
+        Image(systemName: "house.fill")
+            .font(.system(size: size * 0.46, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(width: size, height: size)
+            .background(Color.ohana.gradient, in: .rect(cornerRadius: size * 0.27))
+            .accessibilityHidden(true)
+    }
+}

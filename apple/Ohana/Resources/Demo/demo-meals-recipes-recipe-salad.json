@@ -1,0 +1,295 @@
+{
+ "recipe": {
+  "id": "recipe-salad",
+  "title": "Greek salad",
+  "description": "Tomatoes, cucumber, peppers, olives and a block of feta. Summer on a plate.",
+  "listType": "KNOWN",
+  "defaultServings": 4,
+  "prepTimeMinutes": 15,
+  "cookTimeMinutes": null,
+  "leftoverDays": null,
+  "image": "",
+  "createdAt": "{{time:-43200}}",
+  "updatedAt": "{{time:-14400}}",
+  "tags": [
+   {
+    "id": "tag-vegetarian",
+    "category": "DIETARY",
+    "nameEn": "Vegetarian",
+    "nameDe": "Vegetarisch"
+   },
+   {
+    "id": "tag-mediterranean",
+    "category": "CUISINE",
+    "nameEn": "Mediterranean",
+    "nameDe": "Mediterran"
+   },
+   {
+    "id": "tag-salad",
+    "category": "MEAL_TYPE",
+    "nameEn": "Salad",
+    "nameDe": "Salat"
+   },
+   {
+    "id": "tag-simple",
+    "category": "MEAL_TYPE",
+    "nameEn": "Simple",
+    "nameDe": "Einfach"
+   }
+  ],
+  "ingredients": [
+   {
+    "id": 800,
+    "ingredientId": 3,
+    "quantity": "4",
+    "unitId": 5,
+    "order": 0
+   },
+   {
+    "id": 801,
+    "ingredientId": 13,
+    "quantity": "1",
+    "unitId": 5,
+    "order": 1
+   },
+   {
+    "id": 802,
+    "ingredientId": 6,
+    "quantity": "1",
+    "unitId": 5,
+    "order": 2
+   },
+   {
+    "id": 803,
+    "ingredientId": 91,
+    "quantity": "1",
+    "unitId": 5,
+    "order": 3
+   },
+   {
+    "id": 804,
+    "ingredientId": 92,
+    "quantity": "100",
+    "unitId": 1,
+    "order": 4
+   },
+   {
+    "id": 805,
+    "ingredientId": 35,
+    "quantity": "200",
+    "unitId": 1,
+    "order": 5
+   },
+   {
+    "id": 806,
+    "ingredientId": 46,
+    "quantity": "4",
+    "unitId": 6,
+    "order": 6
+   },
+   {
+    "id": 807,
+    "ingredientId": 62,
+    "quantity": "1",
+    "unitId": 6,
+    "order": 7
+   },
+   {
+    "id": 808,
+    "ingredientId": 59,
+    "quantity": "1",
+    "unitId": 7,
+    "order": 8
+   },
+   {
+    "id": 809,
+    "ingredientId": 47,
+    "quantity": "1",
+    "unitId": 8,
+    "order": 9
+   }
+  ],
+  "manualSteps": [
+   {
+    "id": 851,
+    "method": "MANUAL",
+    "stepNumber": 1,
+    "instruction": "Cut the tomatoes, cucumber and pepper into chunks and slice the onion thinly.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 800,
+      "quantity": "4"
+     },
+     {
+      "recipeIngredientId": 801,
+      "quantity": "1"
+     },
+     {
+      "recipeIngredientId": 802,
+      "quantity": "1"
+     },
+     {
+      "recipeIngredientId": 803,
+      "quantity": "1"
+     }
+    ]
+   },
+   {
+    "id": 852,
+    "method": "MANUAL",
+    "stepNumber": 2,
+    "instruction": "Add the olives, dress with oil, vinegar and salt.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 804,
+      "quantity": "100"
+     },
+     {
+      "recipeIngredientId": 806,
+      "quantity": "4"
+     },
+     {
+      "recipeIngredientId": 807,
+      "quantity": "1"
+     },
+     {
+      "recipeIngredientId": 809,
+      "quantity": "1"
+     }
+    ]
+   },
+   {
+    "id": 853,
+    "method": "MANUAL",
+    "stepNumber": 3,
+    "instruction": "Lay the feta on top and sprinkle with oregano.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 805,
+      "quantity": "200"
+     },
+     {
+      "recipeIngredientId": 808,
+      "quantity": "1"
+     }
+    ]
+   }
+  ],
+  "machineSteps": []
+ },
+ "ingredients": [
+  {
+   "id": 3,
+   "nameEn": "tomato",
+   "nameDe": "Tomate",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 6,
+   "nameEn": "bell pepper",
+   "nameDe": "Paprika",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 13,
+   "nameEn": "cucumber",
+   "nameDe": "Gurke",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 35,
+   "nameEn": "feta",
+   "nameDe": "Feta",
+   "category": "DAIRY"
+  },
+  {
+   "id": 46,
+   "nameEn": "olive oil",
+   "nameDe": "Olivenöl",
+   "category": "PANTRY"
+  },
+  {
+   "id": 47,
+   "nameEn": "salt",
+   "nameDe": "Salz",
+   "category": "PANTRY"
+  },
+  {
+   "id": 59,
+   "nameEn": "oregano",
+   "nameDe": "Oregano",
+   "category": "PANTRY"
+  },
+  {
+   "id": 62,
+   "nameEn": "vinegar",
+   "nameDe": "Essig",
+   "category": "PANTRY"
+  },
+  {
+   "id": 91,
+   "nameEn": "red onion",
+   "nameDe": "Rote Zwiebel",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 92,
+   "nameEn": "kalamata olives",
+   "nameDe": "Kalamata-Oliven",
+   "category": "PANTRY"
+  }
+ ],
+ "units": [
+  {
+   "id": 1,
+   "nameEn": "gram",
+   "nameDe": "Gramm",
+   "abbreviation": "g"
+  },
+  {
+   "id": 5,
+   "nameEn": "piece",
+   "nameDe": "Stück",
+   "abbreviation": "Stk"
+  },
+  {
+   "id": 6,
+   "nameEn": "tablespoon",
+   "nameDe": "Esslöffel",
+   "abbreviation": "EL"
+  },
+  {
+   "id": 7,
+   "nameEn": "teaspoon",
+   "nameDe": "Teelöffel",
+   "abbreviation": "TL"
+  },
+  {
+   "id": 8,
+   "nameEn": "pinch",
+   "nameDe": "Prise",
+   "abbreviation": "Prise"
+  }
+ ]
+}

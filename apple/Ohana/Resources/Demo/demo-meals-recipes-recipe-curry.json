@@ -1,0 +1,344 @@
+{
+ "recipe": {
+  "id": "recipe-curry",
+  "title": "Chickpea curry",
+  "description": "A mild coconut curry with chickpeas and spinach, served with rice. The kids' favourite.",
+  "listType": "KNOWN",
+  "defaultServings": 4,
+  "prepTimeMinutes": 10,
+  "cookTimeMinutes": 25,
+  "leftoverDays": 1,
+  "image": "",
+  "createdAt": "{{time:-288000}}",
+  "updatedAt": "{{time:-96000}}",
+  "tags": [
+   {
+    "id": "tag-vegan",
+    "category": "DIETARY",
+    "nameEn": "Vegan",
+    "nameDe": "Vegan"
+   },
+   {
+    "id": "tag-indian",
+    "category": "CUISINE",
+    "nameEn": "Indian",
+    "nameDe": "Indisch"
+   },
+   {
+    "id": "tag-one-pot",
+    "category": "MEAL_TYPE",
+    "nameEn": "One-Pot",
+    "nameDe": "Eintopf"
+   },
+   {
+    "id": "tag-quick-weeknight",
+    "category": "MEAL_TYPE",
+    "nameEn": "Quick Weeknight",
+    "nameDe": "Schnelles Abendessen"
+   }
+  ],
+  "ingredients": [
+   {
+    "id": 200,
+    "ingredientId": 1,
+    "quantity": "1",
+    "unitId": 5,
+    "order": 0
+   },
+   {
+    "id": 201,
+    "ingredientId": 2,
+    "quantity": "3",
+    "unitId": 5,
+    "order": 1
+   },
+   {
+    "id": 202,
+    "ingredientId": 12,
+    "quantity": "20",
+    "unitId": 1,
+    "order": 2
+   },
+   {
+    "id": 203,
+    "ingredientId": 65,
+    "quantity": "2",
+    "unitId": 6,
+    "order": 3
+   },
+   {
+    "id": 204,
+    "ingredientId": 58,
+    "quantity": "1",
+    "unitId": 7,
+    "order": 4
+   },
+   {
+    "id": 205,
+    "ingredientId": 73,
+    "quantity": "800",
+    "unitId": 1,
+    "order": 5
+   },
+   {
+    "id": 206,
+    "ingredientId": 64,
+    "quantity": "400",
+    "unitId": 3,
+    "order": 6
+   },
+   {
+    "id": 207,
+    "ingredientId": 55,
+    "quantity": "400",
+    "unitId": 1,
+    "order": 7
+   },
+   {
+    "id": 208,
+    "ingredientId": 9,
+    "quantity": "150",
+    "unitId": 1,
+    "order": 8
+   },
+   {
+    "id": 209,
+    "ingredientId": 50,
+    "quantity": "300",
+    "unitId": 1,
+    "order": 9
+   },
+   {
+    "id": 210,
+    "ingredientId": 46,
+    "quantity": "2",
+    "unitId": 6,
+    "order": 10
+   },
+   {
+    "id": 211,
+    "ingredientId": 47,
+    "quantity": "1",
+    "unitId": 7,
+    "order": 11
+   }
+  ],
+  "manualSteps": [
+   {
+    "id": 251,
+    "method": "MANUAL",
+    "stepNumber": 1,
+    "instruction": "Put the rice on to cook. Chop the onion, garlic and ginger.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 209,
+      "quantity": "300"
+     },
+     {
+      "recipeIngredientId": 200,
+      "quantity": "1"
+     },
+     {
+      "recipeIngredientId": 201,
+      "quantity": "3"
+     },
+     {
+      "recipeIngredientId": 202,
+      "quantity": "20"
+     }
+    ]
+   },
+   {
+    "id": 252,
+    "method": "MANUAL",
+    "stepNumber": 2,
+    "instruction": "Fry the onion in the oil for 5 minutes, then add garlic, ginger, curry powder and cumin for 1 minute.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 210,
+      "quantity": "2"
+     },
+     {
+      "recipeIngredientId": 203,
+      "quantity": "2"
+     },
+     {
+      "recipeIngredientId": 204,
+      "quantity": "1"
+     }
+    ]
+   },
+   {
+    "id": 253,
+    "method": "MANUAL",
+    "stepNumber": 3,
+    "instruction": "Add the drained chickpeas, tomatoes and coconut milk and simmer for 15 minutes.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 205,
+      "quantity": "800"
+     },
+     {
+      "recipeIngredientId": 207,
+      "quantity": "400"
+     },
+     {
+      "recipeIngredientId": 206,
+      "quantity": "400"
+     }
+    ]
+   },
+   {
+    "id": 254,
+    "method": "MANUAL",
+    "stepNumber": 4,
+    "instruction": "Stir in the spinach until it wilts, season with salt and serve with the rice.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 208,
+      "quantity": "150"
+     },
+     {
+      "recipeIngredientId": 211,
+      "quantity": "1"
+     }
+    ]
+   }
+  ],
+  "machineSteps": []
+ },
+ "ingredients": [
+  {
+   "id": 1,
+   "nameEn": "onion",
+   "nameDe": "Zwiebel",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 2,
+   "nameEn": "garlic",
+   "nameDe": "Knoblauch",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 9,
+   "nameEn": "spinach",
+   "nameDe": "Spinat",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 12,
+   "nameEn": "ginger",
+   "nameDe": "Ingwer",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 46,
+   "nameEn": "olive oil",
+   "nameDe": "Olivenöl",
+   "category": "PANTRY"
+  },
+  {
+   "id": 47,
+   "nameEn": "salt",
+   "nameDe": "Salz",
+   "category": "PANTRY"
+  },
+  {
+   "id": 50,
+   "nameEn": "rice",
+   "nameDe": "Reis",
+   "category": "PANTRY"
+  },
+  {
+   "id": 55,
+   "nameEn": "canned tomatoes",
+   "nameDe": "Dosentomaten",
+   "category": "PANTRY"
+  },
+  {
+   "id": 58,
+   "nameEn": "cumin",
+   "nameDe": "Kreuzkümmel",
+   "category": "PANTRY"
+  },
+  {
+   "id": 64,
+   "nameEn": "coconut milk",
+   "nameDe": "Kokosmilch",
+   "category": "PANTRY"
+  },
+  {
+   "id": 65,
+   "nameEn": "curry powder",
+   "nameDe": "Currypulver",
+   "category": "PANTRY"
+  },
+  {
+   "id": 73,
+   "nameEn": "chickpeas",
+   "nameDe": "Kichererbsen",
+   "category": "PANTRY"
+  }
+ ],
+ "units": [
+  {
+   "id": 1,
+   "nameEn": "gram",
+   "nameDe": "Gramm",
+   "abbreviation": "g"
+  },
+  {
+   "id": 3,
+   "nameEn": "milliliter",
+   "nameDe": "Milliliter",
+   "abbreviation": "ml"
+  },
+  {
+   "id": 5,
+   "nameEn": "piece",
+   "nameDe": "Stück",
+   "abbreviation": "Stk"
+  },
+  {
+   "id": 6,
+   "nameEn": "tablespoon",
+   "nameDe": "Esslöffel",
+   "abbreviation": "EL"
+  },
+  {
+   "id": 7,
+   "nameEn": "teaspoon",
+   "nameDe": "Teelöffel",
+   "abbreviation": "TL"
+  }
+ ]
+}

@@ -1,0 +1,113 @@
+{
+  "today": "{{day:0}}",
+  "calendar": {
+    "nextGap": null,
+    "upcoming": [
+      { "name": "Vacation", "color": "#22c55e", "from": "{{day:12}}", "to": "{{day:19}}" },
+      { "name": "Grandma visits", "color": "#f97316", "from": "{{day:24}}", "to": "{{day:26}}" }
+    ]
+  },
+  "awayToday": [],
+  "todayEvents": [
+    {
+      "id": "event-dentist",
+      "date": "{{day:0}}",
+      "start": "10:00",
+      "end": "10:30",
+      "title": "Dentist",
+      "location": "Zahnarztpraxis am Rosenthaler Platz",
+      "person": "Ben",
+      "note": "",
+      "url": "",
+      "source": "manual",
+      "searchId": null
+    }
+  ],
+  "upcoming": [
+    {
+      "kind": "event",
+      "date": "{{day:1}}",
+      "event": {
+        "id": "event-swim",
+        "date": "{{day:1}}",
+        "start": "16:00",
+        "end": "17:00",
+        "title": "Swimming lesson",
+        "location": "Stadtbad Mitte",
+        "person": "Leo",
+        "note": "Bring the goggles",
+        "url": "",
+        "source": "manual",
+        "searchId": null
+      }
+    },
+    {
+      "kind": "event",
+      "date": "{{day:3}}",
+      "event": {
+        "id": "event-pediatrician",
+        "date": "{{day:3}}",
+        "start": "08:30",
+        "end": "09:00",
+        "title": "Pediatrician check-up",
+        "location": "Kinderarztpraxis Dr. Weber",
+        "person": "Mia",
+        "note": "",
+        "url": "",
+        "source": "appointment",
+        "searchId": "search-pediatrician"
+      }
+    },
+    {
+      "kind": "event",
+      "date": "{{day:6}}",
+      "event": {
+        "id": "event-parents-evening",
+        "date": "{{day:6}}",
+        "start": "19:00",
+        "end": null,
+        "title": "Parents' evening",
+        "location": "Grundschule am Park",
+        "person": "",
+        "note": "",
+        "url": "",
+        "source": "manual",
+        "searchId": null
+      }
+    },
+    { "kind": "entry", "date": "{{day:12}}", "to": "{{day:19}}", "name": "Vacation", "color": "#22c55e" },
+    { "kind": "entry", "date": "{{day:24}}", "to": "{{day:26}}", "name": "Grandma visits", "color": "#f97316" }
+  ],
+  "meals": {
+    "today": { "recipeId": "recipe-lasagne", "recipeTitle": "Vegetable lasagne", "isLeftover": false },
+    "shopping": { "id": "list-1", "shoppingDate": "{{day:1}}", "open": 8, "total": 12 }
+  },
+  "finance": {
+    "currency": "EUR",
+    "month": "{{month:0}}",
+    "incomeCents": 445000,
+    "expenseCents": 168240,
+    "count": 21,
+    "topExpense": { "categoryId": "cat-groceries", "name": "Groceries", "icon": "🛒", "color": "#22c55e", "expenseCents": 61240 },
+    "balanceCents": 1284763
+  },
+  "searches": [
+    {
+      "id": "search-pediatrician",
+      "name": "Pediatrician for Mia",
+      "enabled": true,
+      "lastStatus": "OK",
+      "first": { "resultId": 101, "doctorName": "Dr. Katrin Weber", "slot": "{{day:2}}T09:15:00.000Z" },
+      "doctors": 3
+    },
+    {
+      "id": "search-dermatologist",
+      "name": "Dermatologist",
+      "enabled": false,
+      "lastStatus": "NO_AVAILABILITY",
+      "first": null,
+      "doctors": 0
+    }
+  ],
+  "birthdays": []
+}

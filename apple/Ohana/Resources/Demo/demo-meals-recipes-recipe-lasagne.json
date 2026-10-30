@@ -1,0 +1,414 @@
+{
+ "recipe": {
+  "id": "recipe-lasagne",
+  "title": "Vegetable lasagne",
+  "description": "Layers of tomato vegetable sauce, creamy ricotta and melted mozzarella. Makes enough for a second lunch.",
+  "listType": "KNOWN",
+  "defaultServings": 4,
+  "prepTimeMinutes": 30,
+  "cookTimeMinutes": 45,
+  "leftoverDays": 1,
+  "image": "",
+  "createdAt": "{{time:-172800}}",
+  "updatedAt": "{{time:-57600}}",
+  "tags": [
+   {
+    "id": "tag-vegetarian",
+    "category": "DIETARY",
+    "nameEn": "Vegetarian",
+    "nameDe": "Vegetarisch"
+   },
+   {
+    "id": "tag-italian",
+    "category": "CUISINE",
+    "nameEn": "Italian",
+    "nameDe": "Italienisch"
+   },
+   {
+    "id": "tag-comfort-food",
+    "category": "MEAL_TYPE",
+    "nameEn": "Comfort Food",
+    "nameDe": "Comfort Food"
+   }
+  ],
+  "ingredients": [
+   {
+    "id": 100,
+    "ingredientId": 82,
+    "quantity": "250",
+    "unitId": 1,
+    "order": 0
+   },
+   {
+    "id": 101,
+    "ingredientId": 7,
+    "quantity": "2",
+    "unitId": 5,
+    "order": 1
+   },
+   {
+    "id": 102,
+    "ingredientId": 5,
+    "quantity": "2",
+    "unitId": 5,
+    "order": 2
+   },
+   {
+    "id": 103,
+    "ingredientId": 6,
+    "quantity": "1",
+    "unitId": 5,
+    "order": 3
+   },
+   {
+    "id": 104,
+    "ingredientId": 1,
+    "quantity": "1",
+    "unitId": 5,
+    "order": 4
+   },
+   {
+    "id": 105,
+    "ingredientId": 2,
+    "quantity": "2",
+    "unitId": 5,
+    "order": 5
+   },
+   {
+    "id": 106,
+    "ingredientId": 55,
+    "quantity": "800",
+    "unitId": 1,
+    "order": 6
+   },
+   {
+    "id": 107,
+    "ingredientId": 54,
+    "quantity": "2",
+    "unitId": 6,
+    "order": 7
+   },
+   {
+    "id": 108,
+    "ingredientId": 83,
+    "quantity": "250",
+    "unitId": 1,
+    "order": 8
+   },
+   {
+    "id": 109,
+    "ingredientId": 30,
+    "quantity": "250",
+    "unitId": 1,
+    "order": 9
+   },
+   {
+    "id": 110,
+    "ingredientId": 29,
+    "quantity": "50",
+    "unitId": 1,
+    "order": 10
+   },
+   {
+    "id": 111,
+    "ingredientId": 46,
+    "quantity": "2",
+    "unitId": 6,
+    "order": 11
+   },
+   {
+    "id": 112,
+    "ingredientId": 59,
+    "quantity": "1",
+    "unitId": 7,
+    "order": 12
+   },
+   {
+    "id": 113,
+    "ingredientId": 47,
+    "quantity": "1",
+    "unitId": 7,
+    "order": 13
+   }
+  ],
+  "manualSteps": [
+   {
+    "id": 151,
+    "method": "MANUAL",
+    "stepNumber": 1,
+    "instruction": "Dice the zucchini, carrots and bell pepper; chop the onion and garlic.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 101,
+      "quantity": "2"
+     },
+     {
+      "recipeIngredientId": 102,
+      "quantity": "2"
+     },
+     {
+      "recipeIngredientId": 103,
+      "quantity": "1"
+     },
+     {
+      "recipeIngredientId": 104,
+      "quantity": "1"
+     },
+     {
+      "recipeIngredientId": 105,
+      "quantity": "2"
+     }
+    ]
+   },
+   {
+    "id": 152,
+    "method": "MANUAL",
+    "stepNumber": 2,
+    "instruction": "Heat the oil in a large pan and soften the onion and garlic for 3 minutes. Add the vegetables and fry for 8 minutes.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 111,
+      "quantity": "2"
+     }
+    ]
+   },
+   {
+    "id": 153,
+    "method": "MANUAL",
+    "stepNumber": 3,
+    "instruction": "Stir in the tomatoes, tomato paste and oregano. Simmer for 15 minutes and season with salt.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 106,
+      "quantity": "800"
+     },
+     {
+      "recipeIngredientId": 107,
+      "quantity": "2"
+     },
+     {
+      "recipeIngredientId": 112,
+      "quantity": "1"
+     },
+     {
+      "recipeIngredientId": 113,
+      "quantity": "1"
+     }
+    ]
+   },
+   {
+    "id": 154,
+    "method": "MANUAL",
+    "stepNumber": 4,
+    "instruction": "Mix the ricotta with half of the parmesan. Heat the oven to 180 °C.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 108,
+      "quantity": "250"
+     },
+     {
+      "recipeIngredientId": 110,
+      "quantity": "25"
+     }
+    ]
+   },
+   {
+    "id": 155,
+    "method": "MANUAL",
+    "stepNumber": 5,
+    "instruction": "Layer sauce, lasagne sheets and ricotta in a baking dish, three times, ending with sauce.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 100,
+      "quantity": "250"
+     }
+    ]
+   },
+   {
+    "id": 156,
+    "method": "MANUAL",
+    "stepNumber": 6,
+    "instruction": "Top with the torn mozzarella and the rest of the parmesan and bake for 40 minutes until golden.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": [
+     {
+      "recipeIngredientId": 109,
+      "quantity": "250"
+     },
+     {
+      "recipeIngredientId": 110,
+      "quantity": "25"
+     }
+    ]
+   },
+   {
+    "id": 157,
+    "method": "MANUAL",
+    "stepNumber": 7,
+    "instruction": "Let it rest for 10 minutes before cutting.",
+    "programType": "",
+    "temperature": null,
+    "durationSeconds": null,
+    "speed": null,
+    "turbo": false,
+    "direction": "",
+    "weightGrams": null,
+    "ingredients": []
+   }
+  ],
+  "machineSteps": []
+ },
+ "ingredients": [
+  {
+   "id": 1,
+   "nameEn": "onion",
+   "nameDe": "Zwiebel",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 2,
+   "nameEn": "garlic",
+   "nameDe": "Knoblauch",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 5,
+   "nameEn": "carrot",
+   "nameDe": "Karotte",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 6,
+   "nameEn": "bell pepper",
+   "nameDe": "Paprika",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 7,
+   "nameEn": "zucchini",
+   "nameDe": "Zucchini",
+   "category": "PRODUCE"
+  },
+  {
+   "id": 29,
+   "nameEn": "parmesan",
+   "nameDe": "Parmesan",
+   "category": "DAIRY"
+  },
+  {
+   "id": 30,
+   "nameEn": "mozzarella",
+   "nameDe": "Mozzarella",
+   "category": "DAIRY"
+  },
+  {
+   "id": 46,
+   "nameEn": "olive oil",
+   "nameDe": "Olivenöl",
+   "category": "PANTRY"
+  },
+  {
+   "id": 47,
+   "nameEn": "salt",
+   "nameDe": "Salz",
+   "category": "PANTRY"
+  },
+  {
+   "id": 54,
+   "nameEn": "tomato paste",
+   "nameDe": "Tomatenmark",
+   "category": "PANTRY"
+  },
+  {
+   "id": 55,
+   "nameEn": "canned tomatoes",
+   "nameDe": "Dosentomaten",
+   "category": "PANTRY"
+  },
+  {
+   "id": 59,
+   "nameEn": "oregano",
+   "nameDe": "Oregano",
+   "category": "PANTRY"
+  },
+  {
+   "id": 82,
+   "nameEn": "lasagne sheets",
+   "nameDe": "Lasagneplatten",
+   "category": "PANTRY"
+  },
+  {
+   "id": 83,
+   "nameEn": "ricotta",
+   "nameDe": "Ricotta",
+   "category": "DAIRY"
+  }
+ ],
+ "units": [
+  {
+   "id": 1,
+   "nameEn": "gram",
+   "nameDe": "Gramm",
+   "abbreviation": "g"
+  },
+  {
+   "id": 5,
+   "nameEn": "piece",
+   "nameDe": "Stück",
+   "abbreviation": "Stk"
+  },
+  {
+   "id": 6,
+   "nameEn": "tablespoon",
+   "nameDe": "Esslöffel",
+   "abbreviation": "EL"
+  },
+  {
+   "id": 7,
+   "nameEn": "teaspoon",
+   "nameDe": "Teelöffel",
+   "abbreviation": "TL"
+  }
+ ]
+}

@@ -1,0 +1,29 @@
+{
+  "chat": {
+    "id": "chat-groceries",
+    "title": "Groceries this month",
+    "status": "idle",
+    "activity": null,
+    "usage": { "used": 3950, "max": 128000 },
+    "page": "finance",
+    "queued": [],
+    "updatedAt": "{{time:-4380}}"
+  },
+  "rev": 3,
+  "items": [
+    { "kind": "user", "text": "How much have we spent on groceries this month?" },
+    {
+      "kind": "tool",
+      "id": "call-groceries-summary",
+      "name": "finance_summary",
+      "args": { "from": "{{month:0}}-01", "to": "{{day:-3}}" },
+      "status": "ok",
+      "summary": "Summed up the month",
+      "result": "{\"currency\":\"EUR\",\"categories\":[{\"name\":\"Groceries\",\"expense\":-386.4,\"count\":5}"
+    },
+    {
+      "kind": "assistant",
+      "text": "So far this month you've spent about **€386** on groceries across 5 shopping trips – roughly €77 per trip.\n\nIf you'd like, I can compare it with the last few months or list the individual purchases."
+    }
+  ]
+}

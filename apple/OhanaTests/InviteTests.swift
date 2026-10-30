@@ -62,7 +62,7 @@ struct InviteTests {
         #expect(app.takePendingServer()?.absoluteString == "https://ohana.example")
         #expect(InviteInbox.shared.code == nil)
 
-        // The app's own invite link has no server: the code waits, the welcome screen asks.
+        // The app’s own invite link has no server: the code waits, the connect sheet asks.
         #expect(app.open(URL(string: "ohana://invite/xyz")!))
         #expect(InviteInbox.shared.take() == "xyz")
         #expect(app.takePendingServer() == nil)

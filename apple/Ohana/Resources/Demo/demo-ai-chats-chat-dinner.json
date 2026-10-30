@@ -1,0 +1,34 @@
+{
+  "chat": {
+    "id": "chat-dinner",
+    "title": "What's for dinner this week?",
+    "status": "idle",
+    "activity": null,
+    "usage": { "used": 4210, "max": 128000 },
+    "page": "meals",
+    "queued": [],
+    "updatedAt": "{{time:-45}}"
+  },
+  "rev": 6,
+  "items": [
+    { "kind": "user", "text": "What's for dinner this week?" },
+    {
+      "kind": "tool",
+      "id": "call-dinner-plan",
+      "name": "get_meal_plan",
+      "args": { "from": "{{day:0}}", "to": "{{day:6}}" },
+      "status": "ok",
+      "summary": "7 days planned",
+      "result": "{\"days\":[{\"date\":\"{{day:0}}\",\"recipe\":\"Vegetable lasagne\"},{\"date\":\"{{day:1}}\",\"recipe\":\"Fish tacos\"}"
+    },
+    {
+      "kind": "assistant",
+      "text": "Here's the plan for the coming week:\n\n- **Today:** Vegetable lasagne\n- **Tomorrow:** Fish tacos – quick, since Leo has his swimming lesson at 16:00\n- **Then:** Chickpea curry, Tomato soup, Lemon salmon with potatoes, Mushroom risotto and Greek salad\n\nThe shopping list for tomorrow already has what you need for the tacos and the curry."
+    },
+    { "kind": "user", "text": "Which one is the quickest?" },
+    {
+      "kind": "assistant",
+      "text": "The **Greek salad** – about 15 minutes and nothing to cook. The **Fish tacos** come next with roughly 25 minutes. The lasagne takes the longest (about an hour, most of it in the oven), so it's a good fit for today."
+    }
+  ]
+}
