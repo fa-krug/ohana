@@ -11,6 +11,9 @@ import { handleFamilyApp } from "@/lib/families/app-routes";
 import { handleMealsApp } from "@/lib/meals/app-routes";
 import { handleMealPlanApp } from "@/lib/meals/app-routes-plan";
 import { handleAppointmentsApp } from "@/lib/appointments/app-routes";
+import { handleCalendarApp } from "@/lib/calendar/app-routes";
+import { handleFinanceApp } from "@/lib/finance/app-routes";
+import { handleAssistantApp } from "@/lib/assistant/app-routes";
 
 export const dynamic = "force-dynamic";
 
@@ -24,15 +27,18 @@ export const dynamic = "force-dynamic";
 const handler = createFamilyApi(
   [
     handleFamilyApp,
+    handleCalendarApp,
     handleFamily,
     handleCalendar,
     handleEvents,
+    handleFinanceApp,
     handleFinance,
     handleMealsApp,
     handleMealPlanApp,
     handleMeals,
     handleAppointmentsApp,
     handleAppointments,
+    handleAssistantApp,
     handleAi(defaultAiEnv(db)),
   ],
   { db },
