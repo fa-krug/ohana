@@ -2,7 +2,8 @@ import MapKit
 import SwiftUI
 
 /// One slot (slot-detail.tsx): the doctor, time, practice and address on a map, the distance
-/// from home; book on the provider's page, mark as booked (a calendar event), ignore.
+/// from home; book on the provider's page, mark as booked (a calendar event), ignore. Its
+/// commands are in the Appointments menu too while it's on screen.
 struct AppointmentSlotView: View {
     @Environment(FamilyContext.self) private var family
     @Environment(\.dismiss) private var dismiss
@@ -12,6 +13,8 @@ struct AppointmentSlotView: View {
     @State private var state: LoadState<AppointmentSlotDetail> = .idle
     @State private var booking = false
     @State private var confirmRemove = false
+    /// On screen (not covered by a pushed page): only then it sets the module menu.
+    @State private var onScreen = false
 
     var body: some View {
         LoadStateView(state: state, retry: load) { detail in
@@ -39,12 +42,16 @@ struct AppointmentSlotView: View {
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .task(id: [family.revision(.appointments), family.revision(.events)]) { await load() }
+        .onAppear { onScreen = true }
+        .onDisappear { onScreen = false }
+        .focusedSceneValue(\.moduleMenu, onScreen ? state.value.map(menu) : nil)
         .sheet(isPresented: $booking) {
             if let detail = state.value {
                 AppointmentBookSheet(detail: detail) { await load() }
             }
         }
-        .confirmationDialog("Remove the appointment?", isPresented: $confirmRemove) {
+        .confirmationDialog(Text("Remove the appointment with \(state.value?.slot.doctorName ?? "")?"),
+                            isPresented: $confirmRemove, titleVisibility: .visible) {
             Button("Remove", role: .destructive) {
                 guard let eventID = state.value?.booking?.eventId else { return }
                 perform { try await AppointmentActions.removeBooking(family, eventID) }
@@ -58,6 +65,28 @@ struct AppointmentSlotView: View {
         await LoadState.run($state) { try await family.api.get("/appointments/searches/\(searchID)/slots/\(resultID)") }
     }
 
+    /// The Appointments menu: the page's actions, Mark as Booked with ⌘B.
+    private func menu(_ detail: AppointmentSlotDetail) -> ModuleMenu {
+        ModuleMenu(title: "Appointments") {
+            if let url = detail.slot.bookingURL {
+                Button("Book on \(detail.slot.sourceName)") { openURL(url) }
+            }
+            if family.canEdit {
+                Button("Mark as Booked…") { booking = true }
+                    .keyboardShortcut("b", modifiers: .command)
+                    .disabled(detail.booking != nil)
+                Button("Ignore This Doctor") { ignore(detail.slot) }
+            }
+        }
+    }
+
+    private func ignore(_ slot: AppointmentDoctorSlot) {
+        perform {
+            try await AppointmentActions.ignore(family, resultID: slot.resultId)
+            dismiss()
+        }
+    }
+
     private func header(_ detail: AppointmentSlotDetail) -> some View {
         let slot = detail.slot
         return VStack(alignment: .leading, spacing: 8) {
@@ -66,19 +95,24 @@ struct AppointmentSlotView: View {
             Text(AppointmentLogic.formatSlot(slot.slot, full: true))
                 .font(.headline)
                 .foregroundStyle(ModuleTint.appointments)
-            HStack(spacing: 6) {
-                Text(slot.isNextSlot ? "Next available appointment" : "Bookable appointment")
-                    .font(.caption.weight(.medium))
-                    .chip()
-                Text(verbatim: slot.sourceName)
-                    .font(.caption.weight(.medium))
-                    .chip(tint: ModuleTint.appointments)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 6) { headerChips(slot) }
+                VStack(alignment: .leading, spacing: 6) { headerChips(slot) }
             }
             Text(detail.searchName)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
         .contentCard()
+    }
+
+    @ViewBuilder private func headerChips(_ slot: AppointmentDoctorSlot) -> some View {
+        Text(slot.isNextSlot ? "Next available appointment" : "Bookable appointment")
+            .font(.caption.weight(.medium))
+            .chip()
+        Text(verbatim: slot.sourceName)
+            .font(.caption.weight(.medium))
+            .chip(tint: ModuleTint.appointments)
     }
 
     private func map(_ detail: AppointmentSlotDetail, _ c: (lat: Double, lng: Double)) -> some View {
@@ -97,6 +131,7 @@ struct AppointmentSlotView: View {
         .frame(height: 240)
         .clipShape(.rect(cornerRadius: 24))
         .overlay(alignment: .bottomTrailing) {
+            // Floats over the map: glass is right here.
             Button("Open in Maps", systemImage: "map") {
                 openURL(AppointmentLogic.mapsURL(lat: c.lat, lng: c.lng, name: name))
             }
@@ -158,10 +193,10 @@ struct AppointmentSlotView: View {
                 Button("Calendar", systemImage: "calendar") {
                     family.open(AppointmentLogic.calendarRoute(date: booked.date))
                 }
-                    .buttonStyle(.glass)
+                .buttonStyle(.bordered)
                 if family.canEdit {
                     Button("Remove", systemImage: "trash", role: .destructive) { confirmRemove = true }
-                        .buttonStyle(.glass)
+                        .buttonStyle(.bordered)
                 }
             }
         }
@@ -170,39 +205,32 @@ struct AppointmentSlotView: View {
 
     private func actions(_ detail: AppointmentSlotDetail) -> some View {
         let slot = detail.slot
-        return GlassEffectContainer(spacing: 12) {
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 12) { actionButtons(detail, slot) }
-                VStack(alignment: .leading, spacing: 12) { actionButtons(detail, slot) }
-            }
+        return ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) { actionButtons(detail, slot) }
+            VStack(alignment: .leading, spacing: 12) { actionButtons(detail, slot) }
         }
+        .controlSize(.large)
     }
 
     @ViewBuilder private func actionButtons(_ detail: AppointmentSlotDetail, _ slot: AppointmentDoctorSlot) -> some View {
         if let url = slot.bookingURL {
             Button("Book", systemImage: "arrow.up.right.square") { openURL(url) }
-                .buttonStyle(.glassProminent)
+                .buttonStyle(.borderedProminent)
                 .help("Open the provider’s page")
         }
         Button("Search on Google", systemImage: "magnifyingglass") {
             openURL(AppointmentLogic.googleSearchURL([slot.doctorName, slot.doctorSubtitle, slot.address]))
         }
-        .buttonStyle(.glass)
+        .buttonStyle(.bordered)
         if detail.booking == nil && family.canEdit {
             Button("Mark as booked", systemImage: "calendar.badge.checkmark") { booking = true }
-                .buttonStyle(.glass)
-                .keyboardShortcut("b", modifiers: .command)
+                .buttonStyle(.bordered)
                 .help("Mark as booked (⌘B)")
         }
         if family.canEdit {
-            Button("Ignore", systemImage: "eye.slash") {
-                perform {
-                    try await AppointmentActions.ignore(family, resultID: slot.resultId)
-                    dismiss()
-                }
-            }
-            .buttonStyle(.glass)
-            .help("Skip this doctor with this reason for the visit in this search from now on")
+            Button("Ignore", systemImage: "eye.slash") { ignore(slot) }
+                .buttonStyle(.bordered)
+                .help("Skip this doctor with this reason for the visit in this search from now on")
         }
     }
 }
@@ -223,15 +251,25 @@ struct AppointmentBookSheet: View {
     @State private var note = ""
     @State private var stop: Bool
     @State private var saving = false
+    private let slotDate: Date
 
     init(detail: AppointmentSlotDetail, saved: @escaping () async -> Void) {
         self.detail = detail
         self.saved = saved
         let slotDate = detail.slot.date ?? Date()
+        self.slotDate = slotDate
         _day = State(initialValue: slotDate)
         _start = State(initialValue: slotDate)
         _end = State(initialValue: slotDate.addingTimeInterval(30 * 60))
         _stop = State(initialValue: detail.searchEnabled)
+    }
+
+    private var hasChanges: Bool {
+        day != slotDate || start != slotDate || hasEnd || !person.isEmpty || !note.isEmpty || stop != detail.searchEnabled
+    }
+
+    private var endBeforeStart: Bool {
+        hasEnd && AppointmentLogic.timeString(end) < AppointmentLogic.timeString(start)
     }
 
     var body: some View {
@@ -245,7 +283,12 @@ struct AppointmentBookSheet: View {
                         DatePicker("Until", selection: $end, displayedComponents: .hourAndMinute)
                     }
                 } footer: {
-                    Text("Book it on the practice’s page first. Ohana then shows it in the calendar (and in the calendar feed, if you subscribed with booked appointments).")
+                    if endBeforeStart {
+                        Label("The end is before the start.", systemImage: "exclamationmark.circle.fill")
+                            .foregroundStyle(.red)
+                    } else {
+                        Text("Book it on the practice’s page first. Ohana then shows it in the calendar (and in the calendar feed, if you subscribed with booked appointments).")
+                    }
                 }
                 Section("For whom") {
                     TextField("For whom", text: $person, prompt: Text("e.g. Mia"))
@@ -278,14 +321,17 @@ struct AppointmentBookSheet: View {
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    CancelButton(hasChanges: hasChanges)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Add to calendar") { save() }
-                        .disabled(saving || (hasEnd && AppointmentLogic.timeString(end) < AppointmentLogic.timeString(start)))
+                        .keyboardShortcut(.defaultAction)
+                        .disabled(saving || endBeforeStart)
                 }
             }
         }
+        .discardGuard(hasChanges: hasChanges)
+        .errorBanner()
         .presentationDetents([.large])
         #if os(macOS)
         .frame(minWidth: 460, minHeight: 520)
@@ -327,25 +373,28 @@ struct AppointmentChips: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            GlassEffectContainer(spacing: 8) {
-                HStack(spacing: 8) {
-                    ForEach(names, id: \.self) { name in
-                        let on = selected == name
-                        Button {
-                            selected = on ? "" : name
-                        } label: {
+            HStack(spacing: 8) {
+                ForEach(names, id: \.self) { name in
+                    let on = selected == name
+                    Button {
+                        selected = on ? "" : name
+                    } label: {
+                        // Selected shows as a check and bold, not by color alone.
+                        Label {
                             Text(verbatim: name)
-                                .font(.subheadline)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
+                        } icon: {
+                            if on { Image(systemName: "checkmark") }
                         }
-                        .buttonStyle(.plain)
-                        .glassEffect(on ? .regular.tint(ModuleTint.appointments.opacity(0.5)).interactive() : .regular.interactive(), in: .capsule)
-                        .accessibilityAddTraits(on ? .isSelected : [])
+                        .font(.subheadline.weight(on ? .semibold : .regular))
+                        .foregroundStyle(on ? ModuleTint.appointments : .primary)
+                        .chip(tint: on ? ModuleTint.appointments : nil)
+                        .rowHitTarget()
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(on ? .isSelected : [])
                 }
-                .padding(.vertical, 4)
             }
+            .padding(.vertical, 4)
         }
     }
 }
