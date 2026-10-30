@@ -201,6 +201,7 @@ struct CalendarYearGrid: View {
     var onDoubleTap: (Day) -> Void = { _ in }
     @AppStorage("ohana.calendar.showWeekdays") private var alwaysWeekdays = false
     @AppStorage(CalendarZoom.key) private var zoom = CalendarZoom.initial
+    @Environment(\.calendarGridFocused) private var gridFocused
     @State private var width: CGFloat = 900
     @State private var position = ScrollPosition(edge: .leading)
     @State private var offset: CGFloat = 0
@@ -288,7 +289,8 @@ struct CalendarYearGrid: View {
         let showWeekday = alwaysWeekdays || zoomed <= CalendarZoom.showWeekdays || cellWidth >= 30
         let iconSize = min(max(layout.rowHeight * 0.42, 12), 32)
         let hit: (CGPoint, Bool) -> Day? = { layout.day(at: $0, year: year, clamp: $1) }
-        let last = store.canRepeat ? store.selectedDays.last : nil
+        let last = store.canRepeat ? store.selection.max() : nil
+        let context = store.cellContext(gridFocused: gridFocused)
         return VStack(spacing: 0) {
             HStack(spacing: 0) {
                 ForEach(1...31, id: \.self) { d in
@@ -307,11 +309,13 @@ struct CalendarYearGrid: View {
                 HStack(spacing: 0) {
                     ForEach(1...31, id: \.self) { d in
                         if CalendarMath.isValid(year: year, month: month, day: d) {
-                            CalendarDayCell(store: store, day: Day(year: year, month: month, day: d), style: .year,
+                            let day = Day(year: year, month: month, day: d)
+                            CalendarDayCell(store: store, day: day, info: store.cell(day, context), style: .year,
                                             showWeekday: showWeekday, iconSize: iconSize)
+                                .equatable()
                                 .padding(1)
                                 .frame(width: cellWidth, height: layout.rowHeight)
-                                .modifier(CalendarCellMenu(store: store, day: Day(year: year, month: month, day: d)))
+                                .modifier(CalendarCellMenu(store: store, day: day))
                         } else {
                             Color.clear.frame(width: cellWidth, height: layout.rowHeight)
                         }
@@ -379,6 +383,7 @@ struct CalendarMonthGrid: View {
     var list: CalendarMonthList?
     var onBegin: () -> Void = {}
     var onDoubleTap: (Day) -> Void = { _ in }
+    @Environment(\.calendarGridFocused) private var gridFocused
     @State private var width: CGFloat = 350
     /// How high a month view's row is at least: its day number and note icon, with Dynamic Type.
     @ScaledMetric(relativeTo: .subheadline) private var minRow: CGFloat = 30
@@ -390,17 +395,20 @@ struct CalendarMonthGrid: View {
         let own = "calendar-month-\(year)-\(month)"
         let space = list?.space ?? own
         let hit: (CGPoint, Bool) -> Day? = list?.hit ?? { layout.day(at: $0, clamp: $1) }
-        let last = store.canRepeat ? store.selectedDays.last : nil
+        let last = store.canRepeat ? store.selection.max() : nil
         let handle = last.flatMap { $0.year == year && $0.month == month ? layout.frame(of: $0) : nil }
+        let context = store.cellContext(gridFocused: gridFocused)
         VStack(spacing: spacing) {
             ForEach(Array(layout.weeks.enumerated()), id: \.offset) { _, week in
                 HStack(spacing: spacing) {
                     ForEach(0..<7, id: \.self) { col in
                         if let n = week[col] {
-                            CalendarDayCell(store: store, day: Day(year: year, month: month, day: n), style: style)
+                            let day = Day(year: year, month: month, day: n)
+                            CalendarDayCell(store: store, day: day, info: store.cell(day, context), style: style)
+                                .equatable()
                                 .padding(style == .detail ? 2 : 0)
                                 .frame(width: layout.cellWidth, height: row)
-                                .modifier(CalendarCellMenu(store: store, day: Day(year: year, month: month, day: n)))
+                                .modifier(CalendarCellMenu(store: store, day: day))
                         } else {
                             Color.clear.frame(width: layout.cellWidth, height: row)
                         }
@@ -454,34 +462,43 @@ struct CalendarWeekdayHeader: View {
 struct CalendarCellMenu: ViewModifier {
     let store: CalendarStore
     let day: Day
-    @Environment(CalendarActions.self) private var actions: CalendarActions?
     @Environment(\.horizontalSizeClass) private var sizeClass
 
     func body(content: Content) -> some View {
         if sizeClass == .compact {
             content
         } else {
-            content.contextMenu {
-                if let actions {
-                    Button("Details…", systemImage: "info.circle") {
-                        if !store.selection.contains(day) { store.select(day) }
-                        actions.showDetails()
-                    }
-                    if !store.readOnly {
-                        Button("Icon & note…", systemImage: "face.smiling") {
-                            if !store.selection.contains(day) { store.select(day) }
-                            actions.editNote()
-                        }
-                        Button("Add event…", systemImage: "calendar.badge.plus") { actions.addEvent(on: day) }
-                        if store.canRepeat && store.selection.contains(day) {
-                            Button("Repeat…", systemImage: "repeat") { actions.repeatSelection() }
-                        }
-                        Divider()
-                        Button("Clear", systemImage: "eraser") {
-                            if !store.selection.contains(day) { store.select(day) }
-                            store.clearSelectedDays()
-                        }
-                    }
+            content.contextMenu { CalendarCellMenuItems(store: store, day: day) }
+        }
+    }
+}
+
+/// The menu's items, a view of their own: what they read of the store (the selection) redraws
+/// them, not every day of the grid.
+private struct CalendarCellMenuItems: View {
+    let store: CalendarStore
+    let day: Day
+    @Environment(CalendarActions.self) private var actions: CalendarActions?
+
+    var body: some View {
+        if let actions {
+            Button("Details…", systemImage: "info.circle") {
+                if !store.selection.contains(day) { store.select(day) }
+                actions.showDetails()
+            }
+            if !store.readOnly {
+                Button("Icon & note…", systemImage: "face.smiling") {
+                    if !store.selection.contains(day) { store.select(day) }
+                    actions.editNote()
+                }
+                Button("Add event…", systemImage: "calendar.badge.plus") { actions.addEvent(on: day) }
+                if store.canRepeat && store.selection.contains(day) {
+                    Button("Repeat…", systemImage: "repeat") { actions.repeatSelection() }
+                }
+                Divider()
+                Button("Clear", systemImage: "eraser") {
+                    if !store.selection.contains(day) { store.select(day) }
+                    store.clearSelectedDays()
                 }
             }
         }

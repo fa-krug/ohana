@@ -41,7 +41,7 @@ struct CalendarPlannerView: View {
     @State private var month = Day.today.month
     @State private var reveal: CalendarReveal?
     @State private var width: CGFloat?
-    @State private var monthFrames: [Int: CGRect] = [:]
+    @State private var monthFrames = CalendarMonthFrames()
     @FocusState private var focused: Bool
     @ScaledMetric(relativeTo: .caption2) private var detailRowHeight: CGFloat = 104
 
@@ -107,9 +107,7 @@ struct CalendarPlannerView: View {
         .onChange(of: family.pendingRoute, initial: true) {
             if let route = family.takeRoute(for: .calendar) { open(route) }
         }
-        .onChange(of: store.focus) { _, day in
-            if let day, day.year == store.year { month = day.month }
-        }
+        .background { CalendarFocusedMonth(store: store, month: $month) }
     }
 
     private var loadState: LoadState<Bool> {
@@ -182,7 +180,7 @@ struct CalendarPlannerView: View {
                                                   onBegin: { focused = true }, onDoubleTap: { _ in actions.editNote() })
                                     .onGeometryChange(for: CGRect.self) {
                                         $0.frame(in: .named(CalendarMonthList.space))
-                                    } action: { monthFrames[m] = $0 }
+                                    } action: { monthFrames.frames[m] = $0 }
                             }
                             .padding(.horizontal, 8)
                             .padding(.bottom, 6)
@@ -232,7 +230,7 @@ struct CalendarPlannerView: View {
         let year = store.year
         let firstWeekday = Calendar.current.firstWeekday
         return CalendarMonthList(hit: { point, clamp in
-            CalendarGridLayout.day(at: point, inMonths: frames, year: year, firstWeekday: firstWeekday,
+            CalendarGridLayout.day(at: point, inMonths: frames.frames, year: year, firstWeekday: firstWeekday,
                                    spacing: Self.monthSpacing, clamp: clamp)
         })
     }
@@ -385,45 +383,7 @@ struct CalendarPlannerView: View {
         }
         ToolbarItem {
             Menu {
-                if !store.readOnly {
-                    if compact {
-                        Button("Redo", systemImage: "arrow.uturn.forward") { store.performRedo() }
-                            .disabled(!store.canRedo)
-                    }
-                    Button("Add event", systemImage: "calendar.badge.plus") { actions.addEvent() }
-                    Button("Icon & note", systemImage: "face.smiling") { actions.editNote() }
-                    Button("Repeat…", systemImage: "repeat") { actions.repeatSelection() }
-                        .disabled(!store.canRepeat)
-                    Divider()
-                }
-                Button("Select all", systemImage: "checkmark.circle") { store.selectAll() }
-                if !store.needsCoverTypes.isEmpty {
-                    Button("Next gap", systemImage: "arrow.right.circle") { jumpToGap() }
-                }
-                Divider()
-                Button("Copy days", systemImage: "doc.on.doc") { copy() }
-                    .disabled(store.selection.isEmpty)
-                if !store.readOnly {
-                    Button("Cut days", systemImage: "scissors") { copy(); store.clearSelectedDays() }
-                        .disabled(store.selection.isEmpty)
-                    Button("Paste", systemImage: "doc.on.clipboard") { store.paste(text: CalendarPasteboard.string) }
-                        .disabled(store.selection.isEmpty)
-                    Toggle("Skip weekends", isOn: $store.skipWeekends)
-                }
-                if !monthList && mode == .year {
-                    Divider()
-                    Button("Zoom in", systemImage: "plus.magnifyingglass") { zoom = CalendarZoom.step(zoom, 1) }
-                        .disabled(CalendarZoom.clamp(zoom) <= CalendarZoom.min)
-                    Button("Zoom out", systemImage: "minus.magnifyingglass") { zoom = CalendarZoom.step(zoom, -1) }
-                        .disabled(CalendarZoom.clamp(zoom) >= CalendarZoom.max)
-                }
-                Divider()
-                Button("Reload", systemImage: "arrow.clockwise") { Task { await store.load() } }
-                    .keyboardShortcut("r", modifiers: .command)
-                if compact {
-                    Button("Help & shortcuts", systemImage: "questionmark.circle") { actions.showHelp() }
-                }
-                Button("Calendar settings", systemImage: "slider.horizontal.3") { family.open(.settings(.calendar)) }
+                CalendarDeferred { moreMenu }
             } label: {
                 Label("More", systemImage: "ellipsis")
             }
@@ -446,6 +406,52 @@ struct CalendarPlannerView: View {
                 .help("Entry types and the calendar feed")
             }
         }
+    }
+
+    /// The toolbar's More menu. Its items read the selection, so they are built in a view of
+    /// their own (`CalendarDeferred`): built with the toolbar, every change of the selection
+    /// would redraw the whole calendar.
+    @ViewBuilder
+    private var moreMenu: some View {
+        if !store.readOnly {
+            if compact {
+                Button("Redo", systemImage: "arrow.uturn.forward") { store.performRedo() }
+                    .disabled(!store.canRedo)
+            }
+            Button("Add event", systemImage: "calendar.badge.plus") { actions.addEvent() }
+            Button("Icon & note", systemImage: "face.smiling") { actions.editNote() }
+            Button("Repeat…", systemImage: "repeat") { actions.repeatSelection() }
+                .disabled(!store.canRepeat)
+            Divider()
+        }
+        Button("Select all", systemImage: "checkmark.circle") { store.selectAll() }
+        if !store.needsCoverTypes.isEmpty {
+            Button("Next gap", systemImage: "arrow.right.circle") { jumpToGap() }
+        }
+        Divider()
+        Button("Copy days", systemImage: "doc.on.doc") { copy() }
+            .disabled(store.selection.isEmpty)
+        if !store.readOnly {
+            Button("Cut days", systemImage: "scissors") { copy(); store.clearSelectedDays() }
+                .disabled(store.selection.isEmpty)
+            Button("Paste", systemImage: "doc.on.clipboard") { store.paste(text: CalendarPasteboard.string) }
+                .disabled(store.selection.isEmpty)
+            Toggle("Skip weekends", isOn: $store.skipWeekends)
+        }
+        if !monthList && mode == .year {
+            Divider()
+            Button("Zoom in", systemImage: "plus.magnifyingglass") { zoom = CalendarZoom.step(zoom, 1) }
+                .disabled(CalendarZoom.clamp(zoom) <= CalendarZoom.min)
+            Button("Zoom out", systemImage: "minus.magnifyingglass") { zoom = CalendarZoom.step(zoom, -1) }
+                .disabled(CalendarZoom.clamp(zoom) >= CalendarZoom.max)
+        }
+        Divider()
+        Button("Reload", systemImage: "arrow.clockwise") { Task { await store.load() } }
+            .keyboardShortcut("r", modifiers: .command)
+        if compact {
+            Button("Help & shortcuts", systemImage: "questionmark.circle") { actions.showHelp() }
+        }
+        Button("Calendar settings", systemImage: "slider.horizontal.3") { family.open(.settings(.calendar)) }
     }
 
     private var canZoom: Bool { !monthList && mode == .year }
@@ -582,6 +588,32 @@ struct CalendarPlannerView: View {
         }
         return .handled
     }
+}
+
+/// Builds its content in a body of its own, so what the content reads of the store redraws
+/// only it.
+private struct CalendarDeferred<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+    var body: some View { content() }
+}
+
+/// The month view follows the focused day. A view of its own: the focus changes with every
+/// click and arrow key, and watched by the calendar it would redraw all of it each time.
+private struct CalendarFocusedMonth: View {
+    let store: CalendarStore
+    @Binding var month: Int
+
+    var body: some View {
+        Color.clear.onChange(of: store.focus) { _, day in
+            if let day, day.year == store.year { month = day.month }
+        }
+    }
+}
+
+/// Where the months of the list are, for the drag across them: the gesture reads it, so
+/// updating it doesn't redraw the calendar.
+final class CalendarMonthFrames {
+    var frames: [Int: CGRect] = [:]
 }
 
 /// The calendar's keys (arrows, 1–9, N, G, ?, …) and, on the Mac, the Edit menu's copy, cut,

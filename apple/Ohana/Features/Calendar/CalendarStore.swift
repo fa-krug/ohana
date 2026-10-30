@@ -120,6 +120,32 @@ final class CalendarStore {
         CalendarMath.isGap(day, entries[day], roles: CalendarMath.roles(types))
     }
 
+    /// What a grid needs for all of its days, worked out once per redraw of the grid.
+    func cellContext(gridFocused: Bool) -> CalendarCellContext {
+        var common: Set<String>?
+        for day in selection {
+            let ids = Set(entries[day] ?? [])
+            common = common.map { $0.intersection(ids) } ?? ids
+            if common?.isEmpty == true { break }
+        }
+        return CalendarCellContext(roles: CalendarMath.roles(types), today: .today,
+                                   focus: gridFocused ? focus : nil, selectionTypes: common ?? [])
+    }
+
+    /// A day's cell as values: the cells don't read the store themselves, so a change redraws
+    /// only the days it touches, not the whole year.
+    func cell(_ day: Day, _ context: CalendarCellContext) -> CalendarDayCell.Info {
+        let dayTypes = types(on: day)
+        let selected = selection.contains(day)
+        return CalendarDayCell.Info(
+            types: dayTypes, note: notes[day], events: events[day] ?? [], birthdays: birthdays[day] ?? [],
+            selected: selected, preview: fill?.targetSet.contains(day) ?? false, focused: context.focus == day,
+            isToday: day == context.today, gap: CalendarMath.isGap(day, entries[day], roles: context.roles),
+            onTypes: selected ? context.selectionTypes : Set(dayTypes.map(\.id)),
+            allTypes: types, readOnly: readOnly
+        )
+    }
+
     var stats: [String: CalendarTypeStats] { CalendarMath.stats(entries, types: types, year: year) }
     var gapDays: [Day] { CalendarMath.gapDays(entries, types: types, year: year) }
     var needsCoverTypes: [CalendarEntryType] { types.filter { $0.role == .needsCover } }
@@ -136,20 +162,26 @@ final class CalendarStore {
 
     // MARK: Loading and saving
 
+    /// Takes a loaded state. Only what changed is assigned: polling brings the same state every
+    /// 15 seconds, and an equal value would still redraw everything that reads it.
     func apply(_ state: CalendarState) {
-        family = state.family
-        readOnly = readOnly || state.family.readOnly
-        types = state.types
+        update(\.family, state.family)
+        update(\.readOnly, readOnly || state.family.readOnly)
+        update(\.types, state.types
             .filter { $0.year == nil || $0.year == year }
             .enumerated()
             .sorted { ($0.element.position ?? $0.offset, $0.offset) < ($1.element.position ?? $1.offset, $1.offset) }
-            .map(\.element)
-        typeYears = state.typeYears
-        entries = Self.byDay(state.entries)
-        notes = Self.byDay(state.notes ?? [:])
-        events = Self.byDay(state.events ?? [:])
-        birthdays = Self.byDay(state.birthdays ?? [:])
-        phase = .loaded
+            .map(\.element))
+        update(\.typeYears, state.typeYears)
+        update(\.entries, Self.byDay(state.entries))
+        update(\.notes, Self.byDay(state.notes ?? [:]))
+        update(\.events, Self.byDay(state.events ?? [:]))
+        update(\.birthdays, Self.byDay(state.birthdays ?? [:]))
+        update(\.phase, .loaded)
+    }
+
+    private func update<V: Equatable>(_ path: ReferenceWritableKeyPath<CalendarStore, V>, _ value: V) {
+        if self[keyPath: path] != value { self[keyPath: path] = value }
     }
 
     static func byDay<V>(_ map: [String: V]) -> [Day: V] {
@@ -446,7 +478,7 @@ final class CalendarStore {
         let (days, backwards) = CalendarMath.fillTargets(source: f.source, hover: hover)
         f.targets = targetDays(days)
         f.backwards = backwards
-        fill = f
+        update(\.fill, f)
     }
 
     /// Esc while dragging; returns whether a fill was going on.
@@ -485,16 +517,16 @@ final class CalendarStore {
     }
 
     func select(_ a: Day, _ b: Day? = nil, add: Bool = false) {
-        if !add { selection.removeAll() }
-        for d in CalendarMath.range(a, b ?? a) where d.year == year { selection.insert(d) }
-        anchor = a
-        focus = b ?? a
+        var next = add ? selection : []
+        for d in CalendarMath.range(a, b ?? a) where d.year == year { next.insert(d) }
+        setSelection(next, anchor: a, focus: b ?? a)
     }
 
+    /// A drag sets the same selection many times a second: only a different one is assigned.
     func setSelection(_ days: Set<Day>, anchor: Day?, focus: Day?) {
-        selection = days.filter { $0.year == year }
-        self.anchor = anchor
-        self.focus = focus
+        update(\.selection, days.filter { $0.year == year })
+        update(\.anchor, anchor)
+        update(\.focus, focus)
     }
 
     /// Adds a day to the selection, or removes it if it is selected.
@@ -525,9 +557,9 @@ final class CalendarStore {
     }
 
     func deselect() {
-        selection.removeAll()
-        multiSelect = false
-        rangeMode = false
+        update(\.selection, [])
+        update(\.multiSelect, false)
+        update(\.rangeMode, false)
     }
 
     func selectAll() {
@@ -548,7 +580,7 @@ final class CalendarStore {
         }
         guard next.year == year else { return nil }
         if extend { select(anchor ?? from, next) } else { select(next) }
-        focus = next
+        update(\.focus, next)
         return next
     }
 

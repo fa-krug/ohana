@@ -11,37 +11,75 @@ extension EnvironmentValues {
     @Entry var calendarGridFocused = false
 }
 
+/// What the cells of one grid share, from the store once per redraw of the grid.
+struct CalendarCellContext {
+    let roles: [String: CalendarRole]
+    let today: Day
+    /// The focused day while the grid has the keyboard focus.
+    let focus: Day?
+    /// The types every selected day has (the chips that show as on).
+    let selectionTypes: Set<String>
+}
+
 /// One day of a grid: filled with its types' colors, with marks for its note, events and
 /// birthdays, today, the selection and coverage gaps (the web grid's cell). `.month` is the web's
 /// month view (phones, narrow windows), `.year` the 12 × 31 grid, `.detail` the month in detail.
-struct CalendarDayCell: View {
+/// The grid hands it its values (`CalendarStore.cell`) instead of the cell reading the store:
+/// a year has 365 of them, and a cell that read the store would redraw on every change of the
+/// selection. Equal values skip the redraw (`.equatable()`).
+struct CalendarDayCell: View, Equatable {
     enum Style { case year, month, detail }
 
+    /// What the day shows.
+    struct Info: Equatable {
+        var types: [CalendarEntryType] = []
+        var note: CalendarNote?
+        var events: [CalendarEvent] = []
+        var birthdays: [CalendarBirthday] = []
+        var selected = false
+        /// The fill handle would fill it.
+        var preview = false
+        var focused = false
+        var isToday = false
+        var gap = false
+        /// The types VoiceOver's actions offer to remove: the selection's when it is selected, else its own.
+        var onTypes: Set<String> = []
+        /// The year's types, for VoiceOver's actions.
+        var allTypes: [CalendarEntryType] = []
+        var readOnly = true
+    }
+
+    /// For the actions (VoiceOver's, run later); the body doesn't read it.
     let store: CalendarStore
     let day: Day
+    let info: Info
     let style: Style
     var showWeekday = false
     /// The year grid's note icon grows with the zoom.
     var iconSize: CGFloat = 12
 
     @Environment(CalendarActions.self) private var actions: CalendarActions?
-    @Environment(\.calendarGridFocused) private var gridFocused
     @Environment(\.dynamicTypeSize) private var typeSize
     @ScaledMetric(relativeTo: .caption2) private var yearLetter: CGFloat = 8
     @ScaledMetric(relativeTo: .caption2) private var yearMark: CGFloat = 5
     @ScaledMetric(relativeTo: .caption2) private var yearCake: CGFloat = 8
 
+    static func == (a: Self, b: Self) -> Bool {
+        a.store === b.store && a.day == b.day && a.info == b.info && a.style == b.style
+            && a.showWeekday == b.showWeekday && a.iconSize == b.iconSize
+    }
+
     var body: some View {
-        let types = store.types(on: day)
-        let note = store.notes[day]
-        let events = store.events[day] ?? []
-        let birthdays = store.birthdays[day] ?? []
-        let selected = store.selection.contains(day)
-        let preview = store.fill?.targetSet.contains(day) ?? false
-        let focused = gridFocused && store.focus == day
-        let isToday = day == Day.today
+        let types = info.types
+        let note = info.note
+        let events = info.events
+        let birthdays = info.birthdays
+        let selected = info.selected
+        let preview = info.preview
+        let focused = info.focused
+        let isToday = info.isToday
         let weekend = CalendarMath.isWeekend(day)
-        let gap = store.isGap(day)
+        let gap = info.gap
         let filled = !types.isEmpty && style != .detail
         let ink: Color = filled ? (CalendarMath.prefersDarkText(on: types[0].color) ? .black : .white) : .primary
         let radius: CGFloat = style == .year ? 4 : (style == .month ? 9 : 8)
@@ -83,7 +121,7 @@ struct CalendarDayCell: View {
         .accessibilityLabel(Self.accessibilityText(day: day, types: types, note: note, events: events,
                                                    birthdays: birthdays, gap: gap))
         .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
-        .modifier(CalendarDayAccessibilityActions(store: store, actions: actions, day: day, events: events))
+        .modifier(CalendarDayAccessibilityActions(store: store, actions: actions, day: day, info: info))
         #if os(macOS)
         // The web grid's tooltip: the day, its types, note, events and birthdays.
         .help(tooltip(types: types, note: note, events: events, birthdays: birthdays))
@@ -266,10 +304,10 @@ private struct CalendarDayAccessibilityActions: ViewModifier {
     let store: CalendarStore
     let actions: CalendarActions?
     let day: Day
-    let events: [CalendarEvent]
+    let info: CalendarDayCell.Info
 
     func body(content: Content) -> some View {
-        let selected = store.selection.contains(day)
+        let selected = info.selected
         content
             .accessibilityAction { change { store.tap(day) } }
             .accessibilityAction(named: selected ? Text("Remove from selection") : Text("Add to selection")) {
@@ -279,9 +317,9 @@ private struct CalendarDayAccessibilityActions: ViewModifier {
                 change { store.tap(day, extend: true) }
             }
             .accessibilityActions {
-                if !store.readOnly {
-                    ForEach(store.types) { type in
-                        let on = selected ? store.selectionHas(type.id) : store.types(on: day).contains(type)
+                if !info.readOnly {
+                    ForEach(info.allTypes) { type in
+                        let on = info.onTypes.contains(type.id)
                         Button(on ? String(localized: "Remove \(type.name)") : String(localized: "Add \(type.name)")) {
                             onDay { store.toggleOnSelection(type.id) }
                         }
@@ -289,7 +327,7 @@ private struct CalendarDayAccessibilityActions: ViewModifier {
                     Button("Edit note") { onDay { actions?.editNote() } }
                     Button("Add event") { actions?.addEvent(on: day) }
                 }
-                ForEach(events) { event in
+                ForEach(info.events) { event in
                     Button(String(localized: "Open event \(event.line)")) {
                         if !store.readOnly { actions?.editEvent(event) } else { onDay { actions?.showDetails() } }
                     }

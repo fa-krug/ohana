@@ -1,5 +1,6 @@
 import CoreGraphics
 import Foundation
+import Observation
 import Testing
 @testable import Ohana
 
@@ -219,6 +220,61 @@ struct CalendarAccessibilityTests {
         #expect(CalendarText.selectionAnnouncement(0) == "No days selected")
         #expect(CalendarText.selectionAnnouncement(1) == "1 day selected")
         #expect(CalendarText.selectionAnnouncement(5) == "5 days selected")
+    }
+}
+
+/// The grids hand each cell its values, and the store changes only what really changed: a
+/// cell redraws when its own day changes, not on every change anywhere in the year.
+struct CalendarCellTests {
+    private func state() -> CalendarState {
+        let family = CalendarFamilyInfo(id: "f1", feedId: "feed", legacyId: nil, name: "Family", access: "editor",
+                                        readOnly: false, updatedAt: nil)
+        return CalendarState(
+            family: family,
+            types: [CalendarEntryType(id: "kita", year: 2026, name: "Kita", color: "#f59e0b", role: .needsCover),
+                    CalendarEntryType(id: "vac", year: 2026, name: "Vacation", color: "#3b82f6", role: .covers)],
+            typeYears: [2026],
+            entries: ["2026-03-02": ["kita"], "2026-03-03": ["kita", "vac"]],
+            notes: ["2026-03-02": CalendarNote(icon: "🎈", comment: "")],
+            events: nil, birthdays: nil
+        )
+    }
+
+    @Test func givesEachDayItsValues() {
+        let s = editableStore()
+        s.apply(state())
+        s.select(d("2026-03-02"), d("2026-03-03"))
+        let context = s.cellContext(gridFocused: true)
+        // Both selected days have Kita, only one Vacation.
+        #expect(context.selectionTypes == ["kita"])
+        let monday = s.cell(d("2026-03-02"), context)
+        #expect(monday.types.map(\.id) == ["kita"])
+        #expect(monday.note?.icon == "🎈")
+        #expect(monday.selected && monday.gap && !monday.focused)
+        #expect(monday.onTypes == ["kita"])
+        let tuesday = s.cell(d("2026-03-03"), context)
+        #expect(tuesday.focused && !tuesday.gap)
+        let other = s.cell(d("2026-03-04"), context)
+        #expect(!other.selected && other.types.isEmpty && other.onTypes.isEmpty)
+        // Without the keyboard focus no day shows the outline.
+        #expect(!s.cell(d("2026-03-03"), s.cellContext(gridFocused: false)).focused)
+    }
+
+    @Test func changesNothingForTheSameState() {
+        let s = editableStore()
+        s.apply(state())
+        s.select(d("2026-03-02"))
+        // onChange runs synchronously, in the change itself.
+        nonisolated(unsafe) var changed = false
+        withObservationTracking {
+            _ = (s.entries, s.types, s.notes, s.events, s.selection, s.focus)
+        } onChange: { changed = true }
+        // A poll that brings the same calendar, a drag that stays on the same day.
+        s.apply(state())
+        s.setSelection([d("2026-03-02")], anchor: d("2026-03-02"), focus: d("2026-03-02"))
+        #expect(!changed)
+        s.select(d("2026-03-03"))
+        #expect(changed)
     }
 }
 
