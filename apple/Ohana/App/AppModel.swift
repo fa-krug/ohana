@@ -24,6 +24,10 @@ final class AppModel {
     private(set) var families: [FamilySummary] = []
     private(set) var client: APIClient?
 
+    /// The server of a link opened while signed out (an invite link, a page of the server): the
+    /// welcome screen takes it (`takePendingServer`) and starts signing in.
+    private(set) var pendingServer: URL?
+
     /// The family on screen; remembered per device.
     var selectedFamilyID: String? {
         didSet { UserDefaults.standard.set(selectedFamilyID, forKey: Keys.family) }
@@ -70,6 +74,9 @@ final class AppModel {
         selectedFamilyID = families.first?.id
         phase = .ready
     }
+
+    /// For previews and tests: signed out (the welcome screen), not touching the Keychain.
+    init(signedOutPreview: Void) {}
 
     func context(for family: FamilySummary) -> FamilyContext? {
         guard let client else { return nil }
@@ -138,6 +145,12 @@ final class AppModel {
         phase = .signedOut
     }
 
+    /// The server a link brought while signed out, once.
+    func takePendingServer() -> URL? {
+        defer { pendingServer = nil }
+        return pendingServer
+    }
+
     /// What the server calls this device, shown in the account's token list.
     static var deviceName: String {
         #if os(macOS)
@@ -158,9 +171,11 @@ final class AppModel {
     /// the server (`https://ohana.example/f/{id}/…`, e.g. from a notification). Switches to the
     /// family when it is one of the account's. An invite (`ohana://invite/{code}`, the server's
     /// `/invite/{code}`) waits in `InviteInbox` for the family menu or the no-family screen to
-    /// show it. False for links it can't open.
+    /// show it. Signed out, a server's link (an invite, any page) leads to signing in there
+    /// (`openSignedOut`). False for links it can't open.
     @discardableResult
     func open(_ url: URL) -> Bool {
+        if phase == .signedOut { return openSignedOut(url) }
         var path = url.path(percentEncoded: false)
         if url.scheme == DevicePairing.callbackScheme {
             // ohana://f/{id}/…: "f" is the host.
@@ -177,6 +192,21 @@ final class AppModel {
               let family = families.first(where: { $0.id == familyID }) else { return false }
         selectedFamilyID = family.id
         context(for: family)?.open(route)
+        return true
+    }
+
+    /// Signed out: a server's link names the server, so the welcome screen signs in there right
+    /// away (`pendingServer`); an invite's code waits in `InviteInbox` to be joined once signed
+    /// in. `ohana://invite/{code}` carries no server: the welcome screen asks for it.
+    private func openSignedOut(_ url: URL) -> Bool {
+        if url.scheme == DevicePairing.callbackScheme {
+            guard let code = InviteCode.code(in: url) else { return false }
+            InviteInbox.shared.receive(code)
+            return true
+        }
+        guard let link = ServerLink(url: url) else { return false }
+        if let code = link.inviteCode { InviteInbox.shared.receive(code) }
+        pendingServer = link.server
         return true
     }
 }
