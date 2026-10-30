@@ -32,9 +32,9 @@ struct AppointmentsView: View {
         .focusedSceneValue(\.newItem, family.canEdit ? NewItemAction(title: "New Search") { creating = true } : nil)
         .task(id: [family.revision(.appointments), family.revision(.events)]) { await load() }
         .appointmentPolling(busy: state.value?.searches.contains(where: \.isBusy) ?? false) { await load() }
-        .navigationDestination(for: AppointmentRoute.self) { AppointmentRouteView(route: $0) }
+        .navigationDestination(for: AppointmentRoute.self) { AppointmentRouteView(route: $0).assistantButton() }
         // `.id`: another route replaces the pushed page with a fresh one.
-        .navigationDestination(item: $pushed) { AppointmentRouteView(route: $0).id($0) }
+        .navigationDestination(item: $pushed) { AppointmentRouteView(route: $0).id($0).assistantButton() }
         .onChange(of: family.pendingRoute, initial: true) {
             guard let route = family.takeRoute(for: .appointments) else { return }
             switch AppointmentRoute.from(route) {

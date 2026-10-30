@@ -149,7 +149,7 @@ struct RecipeListView: View {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: width, maximum: width * 1.7), spacing: 16)], spacing: 16) {
                 ForEach(visible) { recipe in
                     NavigationLink {
-                        MealsRecipeDetailView(recipeID: recipe.id)
+                        MealsRecipeDetailView(recipeID: recipe.id).assistantButton()
                     } label: {
                         RecipeCard(recipe: recipe)
                     }
