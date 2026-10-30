@@ -42,10 +42,7 @@ struct AssistantItemView: View {
             }
             .font(.callout)
             .foregroundStyle(.red)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .glassEffect(.regular.tint(.red.opacity(0.12)), in: .rect(cornerRadius: 14))
+            .contentCard(cornerRadius: 14, padding: 10, tint: .red)
         case .unknown:
             EmptyView()
         }
@@ -122,6 +119,7 @@ struct AssistantSentAttachment: View {
                                 }
                             }
                     }
+                    .errorBanner()
                     .frame(minWidth: 320, minHeight: 320)
                 }
             } else {
@@ -180,9 +178,15 @@ struct AssistantToolRow: View {
             }
             Spacer(minLength: 0)
             switch tool.status {
-            case "running": ProgressView().controlSize(.mini)
-            case "ok": Image(systemName: "checkmark").font(.caption2.bold())
-            default: Image(systemName: "exclamationmark.circle").foregroundStyle(.red)
+            case "running":
+                ProgressView().controlSize(.mini)
+                    .accessibilityLabel(Text("Running"))
+            case "ok":
+                Image(systemName: "checkmark").font(.caption2.bold())
+                    .accessibilityLabel(Text("Done"))
+            default:
+                Image(systemName: "exclamationmark.circle").foregroundStyle(.red)
+                    .accessibilityLabel(Text("Failed"))
             }
         }
         .font(.caption)
@@ -216,6 +220,7 @@ struct AssistantChangeRow: View {
         HStack(spacing: 10) {
             Image(systemName: "checkmark.circle.fill")
                 .foregroundStyle(.green)
+                .accessibilityHidden(true)
             Text(verbatim: change.summary)
                 .strikethrough(change.undone)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -232,16 +237,15 @@ struct AssistantChangeRow: View {
                 } label: {
                     Label("Undo", systemImage: "arrow.uturn.backward")
                 }
-                .buttonStyle(.glass)
+                .buttonStyle(.bordered)
                 .controlSize(.small)
                 .disabled(undoing)
+                .accessibilityLabel(Text("Undo: \(change.summary)"))
             }
         }
         .font(.callout)
         .opacity(change.undone ? 0.6 : 1)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .glassEffect(.regular, in: .rect(cornerRadius: 14))
+        .contentCard(cornerRadius: 14, padding: 10)
     }
 }
 
@@ -281,18 +285,26 @@ struct AssistantQuestionCard: View {
                               ? (question.multiple ? "checkmark.square.fill" : "largecircle.fill.circle")
                               : (question.multiple ? "square" : "circle"))
                             .foregroundStyle(on ? ModuleTint.assistant : .secondary)
+                            .accessibilityHidden(true)
                         Text(verbatim: option)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .multilineTextAlignment(.leading)
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 8)
+                    .frame(minHeight: 44)
                     .contentShape(.rect)
                     .background(on ? ModuleTint.assistant.opacity(0.12) : .clear, in: .rect(cornerRadius: 10))
                 }
                 .buttonStyle(.plain)
                 .disabled(!active)
                 .opacity(!open && !on ? 0.6 : 1)
+                // The ticked box and filled circle say it only to the eye.
+                .accessibilityLabel(Text(verbatim: option))
+                .accessibilityAddTraits(on ? .isSelected : [])
+                .accessibilityHint(open
+                                   ? (question.multiple ? Text("Ticks or unticks it") : Text("Answers with it"))
+                                   : Text(verbatim: ""))
             }
             if open {
                 HStack(spacing: 8) {
@@ -301,7 +313,7 @@ struct AssistantQuestionCard: View {
                         .onSubmit(submit)
                         .disabled(!active)
                     Button("Answer", action: submit)
-                        .buttonStyle(.glassProminent)
+                        .buttonStyle(.borderedProminent)
                         .tint(ModuleTint.assistant)
                         .disabled(!active || (text.trimmingCharacters(in: .whitespaces).isEmpty
                                               && !(question.multiple && !picked.isEmpty)))
@@ -314,8 +326,7 @@ struct AssistantQuestionCard: View {
                 Text("Not answered").font(.caption).foregroundStyle(.secondary)
             }
         }
-        .padding(12)
-        .glassEffect(.regular, in: .rect(cornerRadius: 18))
+        .contentCard(cornerRadius: 18, padding: 12)
     }
 
     private func submit() {
@@ -344,6 +355,10 @@ struct AssistantQueuedRow: View {
                         Task { await store.unqueue(entry.id) }
                     } label: {
                         Image(systemName: "xmark.circle.fill")
+                            // A finger-sized target around the small icon, without growing the row.
+                            .padding(12)
+                            .contentShape(.rect)
+                            .padding(-12)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(Text("Take back this message"))

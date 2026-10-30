@@ -95,6 +95,10 @@ struct AssistantPendingChip: View {
                 Image(systemName: "xmark.circle.fill")
                     .symbolRenderingMode(.palette)
                     .foregroundStyle(.white, .black.opacity(0.6))
+                    // A finger-sized target around the small icon, without moving it.
+                    .padding(12)
+                    .contentShape(.rect)
+                    .padding(-12)
             }
             .buttonStyle(.plain)
             .offset(x: 6, y: -6)

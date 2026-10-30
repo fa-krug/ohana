@@ -1,19 +1,23 @@
 import SwiftUI
 
 /// Settings → Assistant (web: components/assistant/ai-settings.tsx): the family's
-/// OpenAI-compatible endpoint (URL, key, model from its list, context window, a test), the
-/// model for recipe photos, the web search, and whether the assistant may change things.
-/// Editors only; viewers see who can set it up. Keys are write-only: the server only says that
-/// one is stored (and its last four characters); a blank field keeps it.
+/// OpenAI-compatible AI (provider, key, model; the URL and context window under Advanced; a
+/// test), the model for recipe photos, the web search, and whether the assistant may change
+/// things. Editors only; viewers see who can set it up. Keys are write-only: the server only
+/// says that one is stored (and its last four characters); a blank field keeps it.
 struct AssistantSettingsView: View {
+    /// Shown as a sheet (from the chat): Cancel asks before unsaved changes are dropped.
+    var inSheet = false
     @Environment(FamilyContext.self) private var family
+    @Environment(\.dismiss) private var dismiss
     @State private var state: LoadState<AssistantSettings> = .idle
+    @State private var hasChanges = false
 
     var body: some View {
         Group {
             if family.canEdit {
                 LoadStateView(state: state, retry: load) { settings in
-                    AssistantSettingsForm(settings: settings) { state = .loaded($0) }
+                    AssistantSettingsForm(settings: settings, hasChanges: $hasChanges) { state = .loaded($0) }
                 }
             } else {
                 AssistantSettingsViewerView()
@@ -21,6 +25,18 @@ struct AssistantSettingsView: View {
         }
         .ohanaBackground(ModuleTint.assistant)
         .navigationTitle("Assistant")
+        .toolbar {
+            if inSheet {
+                ToolbarItem(placement: .cancellationAction) {
+                    if hasChanges {
+                        CancelButton(hasChanges: true)
+                    } else {
+                        Button("Done") { dismiss() }
+                    }
+                }
+            }
+        }
+        .discardGuard(hasChanges: inSheet && hasChanges)
         .task(id: family.revision(.settings)) {
             if family.canEdit { await load() }
         }
@@ -59,6 +75,7 @@ private struct AssistantSettingsViewerView: View {
 private struct AssistantSettingsForm: View {
     @Environment(FamilyContext.self) private var family
     let settings: AssistantSettings
+    @Binding var hasChanges: Bool
     let saved: (AssistantSettings) -> Void
 
     @State private var baseUrl = ""
@@ -73,17 +90,12 @@ private struct AssistantSettingsForm: View {
     @State private var busy: Busy?
     @State private var test: (ok: Bool, text: String)?
     @State private var applied: AssistantSettings?
+    /// "Other" picked as the provider: the API URL is typed under Advanced.
+    @State private var customProvider = false
+    @State private var showAdvanced = false
+    @State private var confirmRemoveKey = false
 
     private enum Busy { case save, models, test }
-
-    static let presets: [(String, String)] = [
-        ("OpenAI", "https://api.openai.com/v1"),
-        ("OpenRouter", "https://openrouter.ai/api/v1"),
-        ("Mistral", "https://api.mistral.ai/v1"),
-        ("Groq", "https://api.groq.com/openai/v1"),
-        ("Gemini", "https://generativelanguage.googleapis.com/v1beta/openai"),
-        ("Ollama", "http://localhost:11434/v1"),
-    ]
 
     private var dirty: Bool {
         baseUrl != (settings.baseUrl ?? "")
@@ -98,25 +110,15 @@ private struct AssistantSettingsForm: View {
     var body: some View {
         Form {
             endpointSection
+            advancedSection
             Section {
-                HStack {
-                    Button {
-                        Task { await save() }
-                    } label: {
-                        if busy == .save { ProgressView().controlSize(.small) } else { Text("Save") }
-                    }
-                    .buttonStyle(.glassProminent)
-                    .tint(ModuleTint.assistant)
-                    .disabled(busy != nil || !dirty)
-                    .keyboardShortcut("s", modifiers: .command)
-                    Button {
-                        Task { await runTest() }
-                    } label: {
-                        if busy == .test { ProgressView().controlSize(.small) } else { Text("Test") }
-                    }
-                    .buttonStyle(.glass)
-                    .disabled(busy != nil || !settings.configured || dirty)
+                Button {
+                    Task { await runTest() }
+                } label: {
+                    if busy == .test { ProgressView().controlSize(.small) } else { Text("Test") }
                 }
+                .buttonStyle(.bordered)
+                .disabled(busy != nil || !settings.configured || dirty)
                 if let test {
                     Label {
                         Text(verbatim: test.text)
@@ -132,42 +134,65 @@ private struct AssistantSettingsForm: View {
             permissionsSection
         }
         .formStyle(.grouped)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button {
+                    Task { await save() }
+                } label: {
+                    if busy == .save { ProgressView().controlSize(.small) } else { Text("Save") }
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(busy != nil || !dirty)
+            }
+        }
         .onAppear { apply(settings) }
         .onChange(of: settings) { apply(settings) }
+        .onChange(of: dirty, initial: true) { hasChanges = dirty }
+        .confirmationDialog("Remove the API key?", isPresented: $confirmRemoveKey, titleVisibility: .visible) {
+            Button("Remove Key", role: .destructive) {
+                Task { await save(.init(apiKey: "")) }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The assistant stops working for everyone in the family until a new key is saved.")
+        }
+    }
+
+    /// The provider picked: a preset, "other", or "" for none yet.
+    private var provider: Binding<String> {
+        Binding {
+            customProvider ? AssistantProviders.other : AssistantProviders.provider(for: baseUrl)
+        } set: { name in
+            if let url = AssistantProviders.url(of: name) {
+                customProvider = false
+                baseUrl = url
+            } else if name == AssistantProviders.other {
+                if AssistantProviders.url(of: AssistantProviders.provider(for: baseUrl)) != nil { baseUrl = "" }
+                customProvider = true
+                showAdvanced = true
+            }
+        }
     }
 
     // MARK: Sections
 
     private var endpointSection: some View {
         Section {
-            TextField("API URL", text: $baseUrl, prompt: Text(verbatim: "https://api.openai.com/v1"))
-                .autocorrectionDisabled()
-                #if os(iOS)
-                .textInputAutocapitalization(.never)
-                .keyboardType(.URL)
-                #endif
-                .onChange(of: baseUrl) { models = nil }
-            ScrollView(.horizontal, showsIndicators: false) {
-                GlassEffectContainer(spacing: 6) {
-                    HStack(spacing: 6) {
-                        ForEach(Self.presets, id: \.0) { name, url in
-                            Button { baseUrl = url } label: { Text(verbatim: name) }
-                                .buttonStyle(.glass)
-                                .controlSize(.small)
-                        }
-                    }
-                    .padding(.vertical, 2)
+            Picker("Provider", selection: provider) {
+                if provider.wrappedValue.isEmpty { Text("Choose…").tag("") }
+                ForEach(AssistantProviders.presets, id: \.name) { preset in
+                    Text(verbatim: preset.name).tag(preset.name)
                 }
+                Text("Other (OpenAI-compatible)").tag(AssistantProviders.other)
             }
+            .onChange(of: baseUrl) { models = nil }
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     SecureField("API key", text: $apiKey,
                                 prompt: Text(verbatim: settings.hasKey == true ? "••••••••\(settings.keyHint ?? "")" : "sk-…"))
                     if settings.hasKey == true {
-                        Button("Remove", role: .destructive) {
-                            Task { await save(.init(apiKey: "")) }
-                        }
-                        .disabled(busy != nil)
+                        Button("Remove", role: .destructive) { confirmRemoveKey = true }
+                            .disabled(busy != nil)
                     }
                 }
                 Group {
@@ -205,7 +230,7 @@ private struct AssistantSettingsForm: View {
                             Label("Load models", systemImage: "arrow.clockwise")
                         }
                     }
-                    .buttonStyle(.glass)
+                    .buttonStyle(.bordered)
                     .controlSize(.small)
                     .disabled(baseUrl.isEmpty || busy != nil)
                 }
@@ -213,21 +238,40 @@ private struct AssistantSettingsForm: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            VStack(alignment: .leading, spacing: 6) {
-                TextField("Context window (tokens)", text: $contextWindow, prompt: Text(verbatim: "128000"))
-                    #if os(iOS)
-                    .keyboardType(.numberPad)
-                    #endif
-                Text("How many tokens the model takes at once. Empty: from the API’s model list if it says, else 128,000. Long chats are condensed before it is full.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
         } header: {
             Text("AI model")
         } footer: {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Any API that speaks OpenAI’s chat format with tool calls. Everyone in the family uses this setup.")
-                Text("Including the version, e.g. …/v1. A model on your home network works only if the server allows it (AI_ALLOW_PRIVATE_ENDPOINT).")
+            Text("Pick the AI service you have an account with and paste its key. Everyone in the family uses this setup.")
+        }
+    }
+
+    /// What only some need: another service's address, a model's context window.
+    private var advancedSection: some View {
+        Section {
+            DisclosureGroup("Advanced", isExpanded: $showAdvanced) {
+                VStack(alignment: .leading, spacing: 6) {
+                    TextField("API URL", text: $baseUrl, prompt: Text(verbatim: "https://api.openai.com/v1"))
+                        .autocorrectionDisabled()
+                        #if os(iOS)
+                        .textInputAutocapitalization(.never)
+                        .keyboardType(.URL)
+                        #endif
+                    Group {
+                        Text("Any API that speaks OpenAI’s chat format with tool calls.")
+                        Text("Including the version, e.g. …/v1. A model on your home network works only if the server allows it (AI_ALLOW_PRIVATE_ENDPOINT).")
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    TextField("Context window (tokens)", text: $contextWindow, prompt: Text(verbatim: "128000"))
+                        #if os(iOS)
+                        .keyboardType(.numberPad)
+                        #endif
+                    Text("How many tokens the model takes at once. Empty: from the API’s model list if it says, else 128,000. Long chats are condensed before it is full.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
     }
@@ -319,6 +363,7 @@ private struct AssistantSettingsForm: View {
         guard applied != s else { return }
         applied = s
         baseUrl = s.baseUrl ?? ""
+        customProvider = AssistantProviders.provider(for: baseUrl) == AssistantProviders.other
         model = s.model
         imageModel = s.imageModel ?? ""
         contextWindow = (s.contextWindow ?? 0) > 0 ? String(s.contextWindow ?? 0) : ""
@@ -385,5 +430,33 @@ private struct AssistantSettingsForm: View {
     static func unique(_ list: [String]) -> [String] {
         var seen = Set<String>()
         return list.filter { seen.insert($0).inserted }
+    }
+}
+
+/// The AI services the settings offer by name (their OpenAI-compatible endpoints); any other is
+/// "other", with its URL typed under Advanced.
+enum AssistantProviders {
+    static let presets: [(name: String, url: String)] = [
+        ("OpenAI", "https://api.openai.com/v1"),
+        ("OpenRouter", "https://openrouter.ai/api/v1"),
+        ("Mistral", "https://api.mistral.ai/v1"),
+        ("Groq", "https://api.groq.com/openai/v1"),
+        ("Gemini", "https://generativelanguage.googleapis.com/v1beta/openai"),
+        ("Ollama", "http://localhost:11434/v1"),
+    ]
+
+    static let other = "other"
+
+    /// The preset an API URL belongs to (a trailing slash doesn't matter), "other" for any
+    /// other URL, "" for none.
+    static func provider(for url: String) -> String {
+        var trimmed = url.trimmingCharacters(in: .whitespaces)
+        while trimmed.hasSuffix("/") { trimmed.removeLast() }
+        if trimmed.isEmpty { return "" }
+        return presets.first { $0.url.caseInsensitiveCompare(trimmed) == .orderedSame }?.name ?? other
+    }
+
+    static func url(of provider: String) -> String? {
+        presets.first { $0.name == provider }?.url
     }
 }

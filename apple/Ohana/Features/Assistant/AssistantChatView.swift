@@ -18,6 +18,7 @@ struct AssistantChatView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusedValue(\.shell) private var shell
     let store: AssistantChatStore
     let mode: AssistantChatMode
@@ -28,6 +29,7 @@ struct AssistantChatView: View {
     var takesRequests = true
 
     @State private var text = ""
+    @State private var selection: TextSelection?
     @State private var attachments: [AssistantPendingAttachment] = []
     @State private var preparing = 0
     @State private var showChats = false
@@ -37,6 +39,11 @@ struct AssistantChatView: View {
     @State private var photos: [PhotosPickerItem] = []
     @State private var dictation = AssistantDictation()
     @FocusState private var composerFocused: Bool
+    @State private var scroll = ScrollPosition(edge: .bottom)
+    /// New content scrolls into view while this is on: the user is at the end of the chat (or
+    /// went back there). Scrolling up turns it off, so an answer can be read while it streams.
+    @State private var following = true
+    @State private var scrollPhase: ScrollPhase = .idle
     #if os(macOS)
     @State private var pasteMonitor: Any?
     #endif
@@ -102,12 +109,7 @@ struct AssistantChatView: View {
             }
             .sheet(isPresented: $showSettings, onDismiss: { Task { await store.loadSettings() } }) {
                 NavigationStack {
-                    AssistantSettingsView()
-                        .toolbar {
-                            ToolbarItem(placement: .cancellationAction) {
-                                Button("Done") { showSettings = false }
-                            }
-                        }
+                    AssistantSettingsView(inSheet: true)
                 }
                 .environment(family)
                 .errorBanner()
@@ -123,6 +125,24 @@ struct AssistantChatView: View {
                 photos = []
                 attach(items)
             }
+            .modifier(AssistantPageCommands(enabled: mode == .page, menu: moduleMenu) { newChat() })
+    }
+
+    /// The page's menu (the Mac's menu bar, the iPad's ⌘-hold list).
+    private var moduleMenu: ModuleMenu {
+        ModuleMenu(title: "Assistant") {
+            Button("Stop", systemImage: "stop.fill") { Task { await store.stop() } }
+                .keyboardShortcut(".", modifiers: .command)
+                .disabled(!store.busy)
+            Button("Copy the chat, with all tool results", systemImage: "doc.on.doc") {
+                copy(store.current?.items ?? [])
+            }
+            .disabled(store.current?.items.isEmpty ?? true)
+            if family.canEdit {
+                Divider()
+                Button("Assistant settings…", systemImage: "gearshape") { showSettings = true }
+            }
+        }
     }
 
     /// The store tells this family's screens what changed.
@@ -204,8 +224,9 @@ struct AssistantChatView: View {
         }
         ToolbarItem(placement: .primaryAction) {
             Menu {
+                // No shortcut: on the page ⌘N is File ▸ New Chat; beside a module ⌘N is that
+                // module's, and ⇧⌘J (Go ▸ Ask the assistant) starts a new chat.
                 Button("New chat", systemImage: "square.and.pencil") { newChat() }
-                    .keyboardShortcut("n", modifiers: [.command, .shift])
                 Button("Copy the chat, with all tool results", systemImage: "doc.on.doc") {
                     copy(store.current?.items ?? [])
                 }
@@ -237,6 +258,7 @@ struct AssistantChatView: View {
         store.newChat()
         text = ""
         attachments = []
+        following = true
         composerFocused = true
     }
 
@@ -289,54 +311,78 @@ struct AssistantChatView: View {
         (store.current?.items ?? []).enumerated().filter { $0.element.isVisible }.map { ($0.offset, $0.element) }
     }
 
-    /// Changes whenever the chat grows, so it scrolls along.
-    private var scrollKey: Int {
-        var hasher = Hasher()
-        hasher.combine(store.current?.items.count)
-        if case let .assistant(text)? = store.current?.items.last { hasher.combine(text.count) }
-        hasher.combine(store.current?.queued.count)
-        hasher.combine(store.busy)
-        return hasher.finalize()
-    }
-
     private var conversation: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    // On the page a chat isn't tied to the page it's read on.
-                    if mode == .panel, let page = store.current?.page, page != here {
-                        elsewhere(page: page)
-                    }
-                    if store.current?.items.isEmpty ?? true {
-                        suggestions
-                    }
-                    let items = visibleItems
-                    ForEach(Array(items.enumerated()), id: \.element.offset) { index, entry in
-                        AssistantItemView(item: entry.item, store: store, open: open)
-                            .contextMenu { itemMenu(items: items, index: index) }
-                    }
-                    if store.busy {
-                        AssistantActivityLine(store: store)
-                    }
-                    ForEach(store.current?.queued ?? []) { entry in
-                        AssistantQueuedRow(entry: entry, store: store)
-                    }
-                    Color.clear.frame(height: 1).id("bottom")
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                // On the page a chat isn't tied to the page it's read on.
+                if mode == .panel, let page = store.current?.page, page != here {
+                    elsewhere(page: page)
                 }
-                .frame(maxWidth: 760)
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+                if store.current?.items.isEmpty ?? true {
+                    suggestions
+                }
+                let items = visibleItems
+                ForEach(Array(items.enumerated()), id: \.element.offset) { index, entry in
+                    AssistantItemView(item: entry.item, store: store, open: open)
+                        .contextMenu { itemMenu(items: items, index: index) }
+                }
+                if store.busy {
+                    AssistantActivityLine(store: store)
+                }
+                ForEach(store.current?.queued ?? []) { entry in
+                    AssistantQueuedRow(entry: entry, store: store)
+                }
             }
-            .defaultScrollAnchor(.bottom)
-            .scrollDismissesKeyboard(.interactively)
-            .onChange(of: scrollKey) {
-                withAnimation(.smooth) { proxy.scrollTo("bottom", anchor: .bottom) }
-            }
-            .onChange(of: store.currentID) {
-                proxy.scrollTo("bottom", anchor: .bottom)
+            .frame(maxWidth: 760)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+        .scrollPosition($scroll)
+        .defaultScrollAnchor(.bottom, for: .initialOffset)
+        .scrollDismissesKeyboard(.interactively)
+        .onScrollPhaseChange { _, phase in scrollPhase = phase }
+        .onScrollGeometryChange(for: AssistantScrollFollow.Metrics.self) { geometry in
+            AssistantScrollFollow.Metrics(geometry)
+        } action: { old, new in
+            following = AssistantScrollFollow.follows(following, from: old, to: new)
+            // The answer grew (or the keyboard came up): keep its end in view.
+            if AssistantScrollFollow.shouldPin(following: following, metrics: new, scrolling: scrollPhase.isScrolling) {
+                scroll.scrollTo(edge: .bottom)
             }
         }
+        .onChange(of: store.currentID) {
+            following = true
+            scroll.scrollTo(edge: .bottom)
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if !following { jumpToLatest }
+        }
+        .animation(reduceMotion ? nil : .snappy, value: following)
+    }
+
+    /// Floats over the chat while the user reads further up.
+    private var jumpToLatest: some View {
+        Button {
+            scrollToLatest()
+        } label: {
+            Label("Jump to latest", systemImage: "arrow.down")
+                .labelStyle(.iconOnly)
+                .font(.body.weight(.semibold))
+                .frame(width: 22, height: 22)
+        }
+        .buttonStyle(.glass)
+        .buttonBorderShape(.circle)
+        .controlSize(.large)
+        .help(Text("Jump to latest"))
+        .padding(16)
+        .transition(.scale.combined(with: .opacity))
+    }
+
+    /// Back to the end of the chat, following it again (animated unless Reduce Motion is on).
+    private func scrollToLatest() {
+        following = true
+        withAnimation(reduceMotion ? nil : .smooth) { scroll.scrollTo(edge: .bottom) }
     }
 
     /// Copy: the message, or a whole answer (everything since the user's last message) with the
@@ -372,13 +418,11 @@ struct AssistantChatView: View {
             Button("Move to \(AssistantPages.name(here))") {
                 Task { await store.moveHere() }
             }
-            .buttonStyle(.glass)
+            .buttonStyle(.bordered)
             .controlSize(.small)
             .disabled(store.current?.id.isEmpty ?? true)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .glassEffect(.regular, in: .rect(cornerRadius: 14))
+        .contentCard(cornerRadius: 14, padding: 10)
     }
 
     private var suggestions: some View {
@@ -389,19 +433,20 @@ struct AssistantChatView: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            // An example goes into the composer, to read (and change) before it's sent: the
+            // assistant may change things.
             ForEach(AssistantPages.examples(store.current?.page ?? here), id: \.self) { example in
                 Button {
-                    send(example)
+                    text = example
+                    composerFocused = true
                 } label: {
                     Text(verbatim: example)
                         .multilineTextAlignment(.leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
+                        .contentCard(cornerRadius: 16, padding: 12)
                         .contentShape(.rect)
                 }
                 .buttonStyle(.plain)
-                .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 16))
+                .accessibilityHint(Text("Puts it in the message field"))
             }
         }
         .padding(.top, 8)
@@ -455,7 +500,8 @@ struct AssistantChatView: View {
                         .buttonStyle(.glass)
                         .buttonBorderShape(.circle)
                         .controlSize(.large)
-                        .keyboardShortcut(".", modifiers: .command)
+                        // On the page, Assistant ▸ Stop has it.
+                        .keyboardShortcut(mode == .page ? nil : KeyboardShortcut(".", modifiers: .command))
                         .accessibilityLabel(Text("Stop"))
                         .help(Text("Stop"))
                     }
@@ -523,20 +569,27 @@ struct AssistantChatView: View {
     }
 
     private var field: some View {
-        TextField(placeholder, text: $text, axis: .vertical)
+        TextField(placeholder, text: $text, selection: $selection, axis: .vertical)
             .textFieldStyle(.plain)
             .lineLimit(1...6)
             .focused($composerFocused)
-            .submitLabel(.send)
-            .onSubmit { send() }
-            #if os(iOS)
-            // Return sends (a multi-line field would put in a line break instead).
-            .onChange(of: text) { before, after in
-                if after == before + "\n", !dictation.isListening {
-                    text = before
+            // The on-screen keyboard's Return puts in a line break and the Send button sends
+            // (as in Messages); a hardware keyboard's Return sends. Only hardware keys get here.
+            .onKeyPress(.return, phases: .down) { press in
+                switch AssistantReturnKey.action(for: press.modifiers) {
+                case .send:
                     send()
+                    return .handled
+                case .lineBreak:
+                    (text, selection) = AssistantReturnKey.insertingLineBreak(into: text, at: selection)
+                    return .handled
+                case .system:
+                    return .ignored
                 }
             }
+            #if os(macOS)
+            .onSubmit { send() }
+            #else
             .modifier(AssistantImagePaste(enabled: store.ready) { attach(pasted: $0) })
             #endif
             .disabled(!store.ready)
@@ -589,16 +642,17 @@ struct AssistantChatView: View {
         return store.busy ? "Next message – sent once this answer is done…" : "Ask me anything…"
     }
 
-    private func send(_ value: String? = nil) {
+    private func send() {
         #if os(iOS)
         dictation.stop()
         #endif
-        let message = value ?? text
+        let message = text
         guard !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !attachments.isEmpty,
               canSend else { return }
         let files = attachments
         text = ""
         attachments = []
+        scrollToLatest()
         Task {
             do {
                 try await store.send(message, attachments: files.map(\.outgoing))
@@ -707,6 +761,24 @@ struct AssistantChatView: View {
     #endif
 }
 
+/// File ▸ New Chat (⌘N) and the Assistant menu, on the assistant's page only: the panel beside
+/// another module leaves both to that module (it doesn't even set them empty).
+private struct AssistantPageCommands: ViewModifier {
+    let enabled: Bool
+    let menu: ModuleMenu
+    let newChat: () -> Void
+
+    func body(content: Content) -> some View {
+        if enabled {
+            content
+                .focusedSceneValue(\.newItem, NewItemAction(title: "New Chat", action: newChat))
+                .focusedSceneValue(\.moduleMenu, menu)
+        } else {
+            content
+        }
+    }
+}
+
 /// ⌘V with pictures on the clipboard attaches them (iOS 27 and later; the text field pastes
 /// text as usual).
 private struct AssistantImagePaste: ViewModifier {
@@ -735,11 +807,92 @@ private struct AssistantImagePaste: ViewModifier {
 enum AssistantKeyboardHint {
     static func text(regularWidth: Bool) -> String? {
         #if os(macOS)
-        String(localized: "Return sends, Option-Return starts a new line. Paste (⌘V) or drop screenshots and files.")
+        String(localized: "Return sends, Shift-Return starts a new line. Paste (⌘V) or drop screenshots and files.")
         #else
         regularWidth
-            ? String(localized: "Return sends. Attach, paste or drop screenshots and files.")
+            ? String(localized: "With a keyboard, Return sends and Shift-Return starts a new line. Attach, paste or drop screenshots and files.")
             : nil
         #endif
+    }
+}
+
+/// What Return does in the composer. Only a hardware keyboard's Return gets here (iPad, Mac); the
+/// on-screen keyboard's puts in a line break as in Messages, and the Send button sends.
+enum AssistantReturnKey {
+    enum Action: Equatable {
+        case send
+        /// The composer puts the line break in itself (the Mac's field would end editing instead).
+        case lineBreak
+        /// Left to the system: ⌘↩ is the Send button's, and the iPad's field puts in a line break
+        /// for Shift- and Option-Return by itself.
+        case system
+    }
+
+    static func action(for modifiers: EventModifiers, mac: Bool = isMac) -> Action {
+        let held = modifiers.intersection([.shift, .option, .command, .control])
+        if held.isEmpty { return .send }
+        if held.contains(.command) || held.contains(.control) { return .system }
+        return mac ? .lineBreak : .system
+    }
+
+    private static var isMac: Bool {
+        #if os(macOS)
+        true
+        #else
+        false
+        #endif
+    }
+
+    /// `text` with a line break in place of the selection (at the end without one), and the
+    /// cursor after it. A selection older than the text (dictation changed it) is clamped.
+    static func insertingLineBreak(into text: String, at selection: TextSelection?) -> (String, TextSelection) {
+        let count = text.utf16.count
+        var lower = count, upper = count
+        if case let .selection(range)? = selection?.indices {
+            // Clamped before measuring: an index past the end would trap.
+            lower = min(range.lowerBound, text.endIndex).utf16Offset(in: text)
+            upper = max(min(range.upperBound, text.endIndex).utf16Offset(in: text), lower)
+        }
+        let start = String.Index(utf16Offset: lower, in: text)
+        let end = String.Index(utf16Offset: upper, in: text)
+        let result = text.replacingCharacters(in: start..<end, with: "\n")
+        return (result, TextSelection(insertionPoint: String.Index(utf16Offset: lower + 1, in: result)))
+    }
+}
+
+/// When the chat scrolls along with new content: while the user is at (or near) its end. Once
+/// they scroll up it stays where they read, until they scroll back down or jump to the latest.
+enum AssistantScrollFollow {
+    /// Closer than this to the end counts as at the end.
+    static let threshold: CGFloat = 48
+
+    struct Metrics: Equatable {
+        /// The vertical content offset, and the largest it can be (the end of the chat).
+        var offset: CGFloat
+        var maxOffset: CGFloat
+
+        var distanceFromBottom: CGFloat { max(0, maxOffset - offset) }
+        var isAtBottom: Bool { distanceFromBottom <= AssistantScrollFollow.threshold }
+    }
+
+    /// After the scroll view changed: still following? A move up while the end didn't move up
+    /// too (the content didn't shrink, the view didn't grow) is the user scrolling away.
+    static func follows(_ following: Bool, from old: Metrics, to new: Metrics) -> Bool {
+        if new.isAtBottom { return true }
+        if new.offset < old.offset - 0.5, new.maxOffset >= old.maxOffset - 0.5 { return false }
+        return following
+    }
+
+    /// Whether to scroll to the end now: following, not there, and nobody (neither the user nor
+    /// an animation) is scrolling.
+    static func shouldPin(following: Bool, metrics: Metrics, scrolling: Bool) -> Bool {
+        following && !scrolling && metrics.distanceFromBottom > 0.5
+    }
+}
+
+extension AssistantScrollFollow.Metrics {
+    init(_ geometry: ScrollGeometry) {
+        offset = geometry.contentOffset.y
+        maxOffset = geometry.contentSize.height + geometry.contentInsets.bottom - geometry.containerSize.height
     }
 }
