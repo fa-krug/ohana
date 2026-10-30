@@ -309,9 +309,10 @@ npm run import-legacy -- --family-planner dump.sql --cookless cookless.db --cook
   `App/AppModel.swift` (server, token in the Keychain, `/api/v1/me`, selected family,
   `FamilyContext`: `FamilyAPI` + `didChange`/`revision` signals between modules),
   `Core/API/APIClient.swift` (errors `{error}` / `{message}` → `APIError`, 401 signs out),
-  `Shell/` (sidebar-adaptable `TabView`, family switcher, assistant `.inspector` ⌘J — a sheet on
-  iPhone — toggled by the ✨ button at the top right of every page: module roots get it from
-  `shellToolbar()`, a page pushed onto a module's stack adds `.assistantButton()` —, and its own
+  `Shell/` (sidebar-adaptable `TabView`, family switcher, assistant `.inspector` ⌘J (a `.sheet` on
+  iPhone: an inspector there breaks the tabs' navigation bars), toggled by the ✨ button at the top
+  right of every page: module roots get it from `shellToolbar()`, a page pushed onto a module's
+  stack adds `.assistantButton()`; and its own
   page, `AppRoute`: `family.open(.recipe(id:))` etc. switches to the module, whose root takes it
   with `family.takeRoute(for:)`; web paths `/f/{id}/…` and `ohana://f/{id}/…` map onto routes),
   `DesignSystem/` (solid content cards — Liquid Glass only on bars and floating controls —, error banner, `CancelButton`/`discardGuard`; the module sets `newItem`/`moduleMenu` focused values for File ▸ New and its menu), `Features/<Module>/` (plus `Account/`, `Admin/`).

@@ -33,14 +33,7 @@ struct AppShell: View {
             #if os(iOS)
             .tabBarMinimizeBehavior(.onScrollDown)
             #endif
-            .inspector(isPresented: $showAssistant) {
-                // Only while shown: a hidden inspector's toolbar items would stay in the window's.
-                if showAssistant {
-                    AssistantPanel()
-                        .errorBannerWhenCompact()
-                        .inspectorColumnWidth(min: 320, ideal: 400, max: 560)
-                }
-            }
+            .modifier(AssistantPresentation(isPresented: $showAssistant))
             .environment(context)
             .id(family.id)
             .focusedSceneValue(\.shell, ShellFocus(module: $module, assistant: $showAssistant) {
@@ -118,6 +111,38 @@ extension EnvironmentValues {
     /// The shell's assistant toggle, inside a module's navigation stack (nil elsewhere: sheets
     /// of their own, the assistant's own page).
     @Entry var shellAssistant: Binding<Bool>?
+}
+
+/// The assistant beside the modules: an inspector (iPad, Mac), a sheet on iPhone. Not an
+/// inspector there too: around the tab view, even closed, it puts the tabs' navigation bars
+/// under the status bar.
+private struct AssistantPresentation: ViewModifier {
+    @Binding var isPresented: Bool
+
+    func body(content: Content) -> some View {
+        #if os(iOS)
+        if UIDevice.current.userInterfaceIdiom == .phone {
+            content.sheet(isPresented: $isPresented) {
+                AssistantPanel().errorBannerWhenCompact()
+            }
+        } else {
+            inspector(content)
+        }
+        #else
+        inspector(content)
+        #endif
+    }
+
+    private func inspector(_ content: Content) -> some View {
+        content.inspector(isPresented: $isPresented) {
+            // Only while shown: a hidden inspector's toolbar items would stay in the window's.
+            if isPresented {
+                AssistantPanel()
+                    .errorBannerWhenCompact()
+                    .inspectorColumnWidth(min: 320, ideal: 400, max: 560)
+            }
+        }
+    }
 }
 
 /// The toolbar every module page gets from the shell: the family menu (on iPhone, where there is
