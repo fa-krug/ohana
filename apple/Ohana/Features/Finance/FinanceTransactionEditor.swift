@@ -13,6 +13,62 @@ enum FinanceEditTarget: Identifiable {
     }
 }
 
+/// The editor's fields as typed: compared with how they started to tell unsaved changes.
+struct FinanceTransactionDraft: Equatable {
+    var income = false
+    var amount = ""
+    var date = Date()
+    var payee = ""
+    var description = ""
+    var categoryId: String?
+    var accountId: String?
+    var note = ""
+
+    init() {}
+
+    init(_ t: FinanceTransaction) {
+        income = t.amountCents > 0
+        amount = FinanceMoney.input(t.amountCents)
+        date = t.day?.date ?? Date()
+        payee = t.payee
+        description = t.description
+        categoryId = t.categoryId
+        accountId = t.accountId
+        note = t.note
+    }
+
+    /// The amount in cents, signed by the kind; nil unless it is a number other than 0.
+    var cents: Int? {
+        guard let cents = FinanceMoney.parse(amount), cents != 0 else { return nil }
+        return income ? abs(cents) : -abs(cents)
+    }
+
+    /// Typed, but not an amount (an empty field just keeps Save off).
+    var amountInvalid: Bool {
+        !amount.trimmingCharacters(in: .whitespaces).isEmpty && cents == nil
+    }
+
+    var fields: FinanceOp.Fields? {
+        guard let cents else { return nil }
+        return FinanceOp.Fields(
+            date: Day(date).description,
+            amountCents: cents,
+            payee: payee.trimmingCharacters(in: .whitespacesAndNewlines),
+            description: description.trimmingCharacters(in: .whitespacesAndNewlines),
+            categoryId: categoryId,
+            accountId: accountId,
+            note: note.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
+    }
+
+    /// The same day counts as the same date (the picker keeps the time of day it was given).
+    static func == (a: Self, b: Self) -> Bool {
+        a.income == b.income && a.amount == b.amount && Day(a.date) == Day(b.date) && a.payee == b.payee
+            && a.description == b.description && a.categoryId == b.categoryId && a.accountId == b.accountId
+            && a.note == b.note
+    }
+}
+
 /// Adds a transaction, or edits one (transaction-dialog.tsx); viewers see it read-only.
 struct FinanceTransactionEditor: View {
     @Bindable var store: FinanceStore
@@ -20,15 +76,9 @@ struct FinanceTransactionEditor: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(FamilyContext.self) private var family
 
-    @State private var income = false
-    @State private var amount = ""
-    @State private var date = Date()
-    @State private var payee = ""
-    @State private var description = ""
-    @State private var categoryId: String?
-    @State private var accountId: String?
-    @State private var note = ""
-    @State private var problem: String?
+    @State private var draft = FinanceTransactionDraft()
+    @State private var original = FinanceTransactionDraft()
+    @State private var filled = false
     @State private var busy = false
     @State private var confirmDelete = false
     @FocusState private var amountFocused: Bool
@@ -36,6 +86,8 @@ struct FinanceTransactionEditor: View {
     private var existing: FinanceTransaction? {
         if case let .existing(t) = target { t } else { nil }
     }
+
+    private var hasChanges: Bool { store.canEdit && draft != original }
 
     var body: some View {
         NavigationStack {
@@ -58,6 +110,8 @@ struct FinanceTransactionEditor: View {
                 }
             }
         }
+        .errorBanner()
+        .discardGuard(hasChanges: hasChanges)
         .presentationDetents([.large])
         .financeSheetFrame(minWidth: 420, minHeight: 520)
         .onAppear(perform: fill)
@@ -65,14 +119,17 @@ struct FinanceTransactionEditor: View {
 
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
-        ToolbarItem(placement: .cancellationAction) {
-            Button(store.canEdit ? String(localized: "Cancel") : String(localized: "Done")) { dismiss() }
-        }
         if store.canEdit {
+            ToolbarItem(placement: .cancellationAction) { CancelButton(hasChanges: hasChanges) }
             ToolbarItem(placement: .confirmationAction) {
                 Button("Save") { Task { await save() } }
-                    .disabled(busy)
-                    .keyboardShortcut("s", modifiers: .command)
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(busy || draft.fields == nil)
+            }
+        } else {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Done") { dismiss() }
+                    .keyboardShortcut(.defaultAction)
             }
         }
     }
@@ -80,18 +137,18 @@ struct FinanceTransactionEditor: View {
     @ViewBuilder
     private var editForm: some View {
         Section {
-            Picker("Kind", selection: $income) {
+            Picker("Kind", selection: $draft.income) {
                 Text("Expense").tag(false)
                 Text("Income").tag(true)
             }
             .pickerStyle(.segmented)
             .labelsHidden()
-            .onChange(of: income) {
+            .onChange(of: draft.income) {
                 // A category of the other kind doesn't fit any more.
-                if let c = store.category(categoryId), !FinanceCategoryTree.fits(c, income: income) { categoryId = nil }
+                if let c = store.category(draft.categoryId), !FinanceCategoryTree.fits(c, income: draft.income) { draft.categoryId = nil }
             }
             LabeledContent {
-                TextField("Amount", text: $amount, prompt: Text(FinanceMoney.placeholder))
+                TextField("Amount", text: $draft.amount, prompt: Text(FinanceMoney.placeholder))
                     .multilineTextAlignment(.trailing)
                     .font(.title3.monospacedDigit())
                     .focused($amountFocused)
@@ -101,35 +158,36 @@ struct FinanceTransactionEditor: View {
             } label: {
                 Text("Amount (\(store.currency))")
             }
-            DatePicker("Date", selection: $date, displayedComponents: .date)
+            DatePicker("Date", selection: $draft.date, displayedComponents: .date)
+        } footer: {
+            if draft.amountInvalid {
+                Text("Enter an amount, e.g. \(FinanceMoney.input(1250))").foregroundStyle(.red)
+            }
         }
         Section {
-            TextField(income ? String(localized: "From") : String(localized: "Payee"), text: $payee)
-            TextField("Description", text: $description)
+            TextField(draft.income ? String(localized: "From") : String(localized: "Payee"), text: $draft.payee)
+            TextField("Description", text: $draft.description)
         }
         Section {
             NavigationLink {
-                FinanceCategoryPickerList(tree: store.tree, selection: $categoryId,
-                                          fits: { FinanceCategoryTree.fits($0, income: income) })
+                FinanceCategoryPickerList(tree: store.tree, selection: $draft.categoryId,
+                                          fits: { FinanceCategoryTree.fits($0, income: draft.income) })
             } label: {
-                LabeledContent("Category") { FinanceCategoryLabel(category: store.category(categoryId)) }
+                LabeledContent("Category") { FinanceCategoryLabel(category: store.category(draft.categoryId)) }
             }
-            if !store.accounts.isEmpty || accountId != nil {
-                Picker("Account", selection: $accountId) {
+            if !store.accounts.isEmpty || draft.accountId != nil {
+                Picker("Account", selection: $draft.accountId) {
                     Text("Without account").tag(String?.none)
                     ForEach(store.accounts) { Text($0.label).tag(Optional($0.id)) }
                 }
             }
         }
         Section("Note") {
-            TextField("Note", text: $note, axis: .vertical)
+            TextField("Note", text: $draft.note, axis: .vertical)
                 .lineLimit(2...6)
                 .labelsHidden()
         }
         if let existing { links(existing) }
-        if let problem {
-            Section { Text(problem).foregroundStyle(.red) }
-        }
         if existing != nil {
             Section {
                 Button("Delete transaction", systemImage: "trash", role: .destructive) { confirmDelete = true }
@@ -178,37 +236,21 @@ struct FinanceTransactionEditor: View {
     }
 
     private func fill() {
+        guard !filled else { return }
+        filled = true
         if let t = existing {
-            income = t.amountCents > 0
-            amount = FinanceMoney.input(t.amountCents)
-            date = t.day?.date ?? Date()
-            payee = t.payee
-            description = t.description
-            categoryId = t.categoryId
-            accountId = t.accountId
-            note = t.note
+            draft = FinanceTransactionDraft(t)
         } else {
             // A new one goes to the account the list shows, else the first one.
             let shown = store.filter.account
-            accountId = !shown.isEmpty && shown != "none" ? shown : store.accounts.first?.id
+            draft.accountId = !shown.isEmpty && shown != "none" ? shown : store.accounts.first?.id
             amountFocused = true
         }
+        original = draft
     }
 
     private func save() async {
-        guard let cents = FinanceMoney.parse(amount), cents != 0 else {
-            problem = String(localized: "Enter an amount, e.g. \(FinanceMoney.input(1250))")
-            return
-        }
-        let fields = FinanceOp.Fields(
-            date: Day(date).description,
-            amountCents: income ? abs(cents) : -abs(cents),
-            payee: payee.trimmingCharacters(in: .whitespacesAndNewlines),
-            description: description.trimmingCharacters(in: .whitespacesAndNewlines),
-            categoryId: categoryId,
-            accountId: accountId,
-            note: note.trimmingCharacters(in: .whitespacesAndNewlines)
-        )
+        guard let fields = draft.fields else { return }
         busy = true
         let op = existing.map { FinanceOp.update($0.id, fields) } ?? FinanceOp.add(fields)
         let ok = await store.change([op], message: existing == nil ? String(localized: "Transaction added") : String(localized: "Saved"))

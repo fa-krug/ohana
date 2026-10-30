@@ -34,7 +34,8 @@ struct FinanceTransferSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                // Ticks are suggestions, not work to keep: Cancel closes without asking.
+                ToolbarItem(placement: .cancellationAction) { CancelButton(hasChanges: false) }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Combine \(checked.count)") {
                         Task {
@@ -44,11 +45,13 @@ struct FinanceTransferSheet: View {
                             busy = false
                         }
                     }
+                    .keyboardShortcut(.defaultAction)
                     .disabled(busy || checked.isEmpty)
                 }
             }
             .task { await load() }
         }
+        .errorBanner()
         .presentationDetents([.medium, .large])
         .financeSheetFrame(minWidth: 460, minHeight: 420)
     }
@@ -74,6 +77,7 @@ struct FinanceTransferSheet: View {
                 Image(systemName: on ? "checkmark.circle.fill" : "circle")
                     .foregroundStyle(on ? ModuleTint.finance : .secondary)
                     .font(.title3)
+                    .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title).lineLimit(1)
                     Text(verbatim: "\(pair.out.date == pair.incoming.date ? day(pair.out) : "\(day(pair.out)) – \(day(pair.incoming))") · \(account(pair.out)) → \(account(pair.incoming))")
@@ -85,8 +89,11 @@ struct FinanceTransferSheet: View {
                 Text(store.money(pair.incoming.amountCents))
                     .font(.body.weight(.semibold).monospacedDigit())
             }
+            .frame(minHeight: 44)
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(on ? .isSelected : [])
     }
 }

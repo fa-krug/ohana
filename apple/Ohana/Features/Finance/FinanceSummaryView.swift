@@ -6,10 +6,13 @@ import SwiftUI
 /// money went.
 struct FinanceSummaryView: View {
     @Bindable var store: FinanceStore
+    /// iPhone: the period scrolls with the overview instead of floating above it.
+    var showsPeriod = false
 
     var body: some View {
         ScrollView {
-            Group {
+            VStack(spacing: 16) {
+                if showsPeriod { FinancePeriodBar(store: store, floating: false) }
                 if let summary = store.summary {
                     content(summary)
                 } else {
@@ -183,13 +186,17 @@ struct FinanceComparisonCard: View {
                     .font(row.strong || first ? .subheadline.weight(.semibold).monospacedDigit() : .subheadline.monospacedDigit())
                     .foregroundStyle(row.id == "net" && value < 0 ? .red : first || row.strong ? .primary : .secondary)
                 if !first, let delta = delta(row, base: current, value: value) {
+                    // Better or worse is the color; VoiceOver says it in words.
                     Text(delta.0).font(.caption2).foregroundStyle(delta.1 ? .green : .red)
                         .help(Text("\(firstTitle): \(store.money((current ?? 0) - value, sign: true, whole: true)) per month"))
+                        .accessibilityValue(delta.1 ? Text("better") : Text("worse"))
                 }
             } else {
                 Text(verbatim: "—").foregroundStyle(.secondary)
+                    .accessibilityLabel(Text("no value"))
             }
         }
+        .accessibilityElement(children: .combine)
     }
 
     /// How the first column differs from this one, in percent of this one; and whether that is good.
@@ -417,14 +424,19 @@ struct FinanceMonthlyChart: View {
         return Group {
             Chart {
                 ForEach(months) { m in
+                    let month = FinanceDates.monthDate(m.month).formatted(.dateTime.month(.wide).year())
                     BarMark(x: .value("Month", FinanceDates.monthDate(m.month), unit: .month),
                             y: .value("Amount", Double(m.incomeCents) / 100))
                         .foregroundStyle(by: .value("Kind", income))
                         .position(by: .value("Kind", income))
+                        .accessibilityLabel(Text(verbatim: "\(month), \(income)"))
+                        .accessibilityValue(Text(store.money(m.incomeCents)))
                     BarMark(x: .value("Month", FinanceDates.monthDate(m.month), unit: .month),
                             y: .value("Amount", Double(m.expenseCents) / 100))
                         .foregroundStyle(by: .value("Kind", expenses))
                         .position(by: .value("Kind", expenses))
+                        .accessibilityLabel(Text(verbatim: "\(month), \(expenses)"))
+                        .accessibilityValue(Text(store.money(m.expenseCents)))
                 }
                 if let month = selectedMonth(months) {
                     RuleMark(x: .value("Month", FinanceDates.monthDate(month.month), unit: .month))
@@ -472,8 +484,9 @@ struct FinanceMonthlyChart: View {
         }
         .font(.caption.monospacedDigit())
         .padding(10)
-        .frame(width: 200)
-        .glassEffect(.regular, in: .rect(cornerRadius: 12))
+        .frame(minWidth: 200)
+        .background(Color.cardBackground, in: .rect(cornerRadius: 12))
+        .shadow(color: .black.opacity(0.15), radius: 6, y: 2)
     }
 }
 
@@ -566,6 +579,8 @@ struct FinanceCategoryBreakdown: View {
             SectorMark(angle: .value("Amount", row.cents), innerRadius: .ratio(0.62), angularInset: 1.5)
                 .cornerRadius(3)
                 .foregroundStyle(row.color.map(FinanceColor.color) ?? Color.secondary.opacity(0.4))
+                .accessibilityLabel(Text(row.label))
+                .accessibilityValue(Text(verbatim: "\(store.money(row.cents)), \(total > 0 ? Int((Double(row.cents) / Double(total) * 100).rounded()) : 0) %"))
         }
         .chartBackground { _ in
             VStack(spacing: 0) {
@@ -622,14 +637,16 @@ struct FinanceBreakdownRowView: View {
                 Spacer()
                 Text(store.money(row.cents)).font(.subheadline.monospacedDigit())
                 Text(verbatim: "\(share) %").font(.caption.monospacedDigit()).foregroundStyle(.secondary)
-                    .frame(width: 40, alignment: .trailing)
+                    .frame(minWidth: 40, alignment: .trailing)
             }
+            .accessibilityElement(children: .combine)
             GeometryReader { geo in
                 Capsule()
                     .fill((row.color.map(FinanceColor.color) ?? .secondary).opacity(row.depth > 0 ? 0.55 : 0.9))
                     .frame(width: Swift.max(3, geo.size.width * CGFloat(row.cents) / CGFloat(Swift.max(max, 1))), height: 6)
             }
             .frame(height: 6)
+            .accessibilityHidden(true)
         }
         .padding(.leading, CGFloat(min(row.depth, 6)) * 12)
     }

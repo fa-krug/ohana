@@ -1,16 +1,61 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Imports a bank statement (import-dialog.tsx): pick the file, check how its columns map
-/// (with a preview), then see what is new and what was imported before, and import the new
-/// rows into an account. Mappings are remembered per bank (by the file's header), with the
-/// account and whether transfers and split bookings are combined.
+/// A bank statement picked or dropped on the finance page: its name and bytes.
+nonisolated struct FinanceImportFile: Identifiable, Transferable, Sendable {
+    let id = UUID()
+    var name: String
+    var data: Data
+
+    /// What the file picker offers and a drop takes.
+    static let contentTypes: [UTType] = [.commaSeparatedText, .tabSeparatedText, .plainText, .text]
+
+    init(name: String, data: Data) {
+        self.name = name
+        self.data = data
+    }
+
+    /// Reads a file the picker handed out (security-scoped) or a dropped copy.
+    init(url: URL) throws {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        self.init(name: url.lastPathComponent, data: try Data(contentsOf: url))
+    }
+
+    static var transferRepresentation: some TransferRepresentation {
+        FileRepresentation(importedContentType: .commaSeparatedText) { try FinanceImportFile(url: $0.file) }
+        FileRepresentation(importedContentType: .tabSeparatedText) { try FinanceImportFile(url: $0.file) }
+        FileRepresentation(importedContentType: .plainText) { try FinanceImportFile(url: $0.file) }
+    }
+}
+
+/// Where an import starts once its file is read.
+enum FinanceImportStep: Equatable {
+    case file, map, review
+
+    /// The bank's saved mapping, when one was saved for the file's header row.
+    static func savedMapping(for guess: FinanceCSVMapping, in saved: [FinanceCSVMapping]) -> FinanceCSVMapping? {
+        guard !guess.signature.isEmpty else { return nil }
+        return saved.first { $0.signature == guess.signature }
+    }
+
+    /// Straight to the review when a saved mapping reads rows from the file; else the mapping
+    /// has to be checked first.
+    static func first(saved: FinanceCSVMapping?, readableRows: Int) -> FinanceImportStep {
+        saved != nil && readableRows > 0 ? .review : .map
+    }
+}
+
+/// Imports a bank statement (import-dialog.tsx): check how the file's columns map (with a
+/// preview), then see what is new and what was imported before, and import the new rows into
+/// an account. Mappings are remembered per bank (by the file's header), with the account and
+/// whether transfers and split bookings are combined; a file of a known bank skips straight to
+/// the review.
 struct FinanceImportSheet: View {
     @Bindable var store: FinanceStore
+    let file: FinanceImportFile
     @Environment(\.dismiss) private var dismiss
     @Environment(FamilyContext.self) private var family
-
-    private enum Step { case file, map, review }
 
     private struct Parsed {
         var header: [String] = []
@@ -19,10 +64,14 @@ struct FinanceImportSheet: View {
         var errors = 0
     }
 
-    @State private var step = Step.file
+    @State private var step = FinanceImportStep.file
+    @State private var loaded = false
     @State private var data: Data?
     @State private var fileName = ""
     @State private var mapping: FinanceCSVMapping?
+    /// The mapping as the file brought it (saved or guessed): changes to it are work to keep.
+    @State private var original: FinanceCSVMapping?
+    @State private var usedSaved = false
     @State private var parsed = Parsed()
     @State private var accountId: String?
     @State private var auto = true
@@ -34,6 +83,8 @@ struct FinanceImportSheet: View {
     @State private var picking = false
     @State private var busy = false
     @State private var problem: String?
+
+    private var hasChanges: Bool { mapping != original }
 
     var body: some View {
         NavigationStack {
@@ -53,56 +104,67 @@ struct FinanceImportSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar { toolbar }
-            .fileImporter(isPresented: $picking, allowedContentTypes: [.commaSeparatedText, .tabSeparatedText, .plainText, .text]) { result in
-                switch result {
-                case let .success(url): pick(url)
-                case let .failure(error): problem = error.localizedDescription
+            .fileImporter(isPresented: $picking, allowedContentTypes: FinanceImportFile.contentTypes) { result in
+                do {
+                    let file = try FinanceImportFile(url: result.get())
+                    Task { await load(file) }
+                } catch {
+                    problem = error.localizedDescription
                 }
             }
             .onChange(of: mapping) { reparse() }
+            .task {
+                guard !loaded else { return }
+                loaded = true
+                await load(file)
+            }
         }
+        .errorBanner()
+        .discardGuard(hasChanges: hasChanges)
         .presentationDetents([.large])
         .financeSheetFrame(minWidth: 560, minHeight: 620)
     }
 
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
-        ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-        switch step {
-        case .file:
-            ToolbarItem(placement: .confirmationAction) { EmptyView() }
-        case .map:
-            ToolbarItem(placement: .confirmationAction) {
+        ToolbarItem(placement: .cancellationAction) { CancelButton(hasChanges: hasChanges) }
+        ToolbarItem(placement: .confirmationAction) {
+            switch step {
+            case .file:
+                EmptyView()
+            case .map:
                 Button("Next") { Task { await check() } }
+                    .keyboardShortcut(.defaultAction)
                     .disabled(busy || parsed.ok.isEmpty)
-            }
-        case .review:
-            ToolbarItem(placement: .confirmationAction) {
+            case .review:
                 Button("Import \(parsed.ok.count - duplicates.count)") { Task { await run() } }
+                    .keyboardShortcut(.defaultAction)
                     .disabled(busy || parsed.ok.count == duplicates.count)
-            }
-            ToolbarItem(placement: .navigation) {
-                Button("Back") { step = .map }
             }
         }
     }
 
     // MARK: Steps
 
+    /// Only when the file couldn't be read: another one.
     @ViewBuilder
     private var fileStep: some View {
-        Section {
-            Text("Export the transactions from your online banking as a CSV file and pick it here. Rows imported before are skipped.")
-                .foregroundStyle(.secondary)
-            Button {
-                picking = true
-            } label: {
-                Label("Choose CSV file", systemImage: "doc.badge.plus")
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
+        if loaded && !busy {
+            Section {
+                Text("Export the transactions from your online banking as a CSV file and pick it here. Rows imported before are skipped.")
+                    .foregroundStyle(.secondary)
+                Button {
+                    picking = true
+                } label: {
+                    Label("Choose CSV file", systemImage: "doc.badge.plus")
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(ModuleTint.finance)
             }
-            .buttonStyle(.glassProminent)
-            .tint(ModuleTint.finance)
+        } else {
+            Section { ProgressView().frame(maxWidth: .infinity) }
         }
     }
 
@@ -164,12 +226,22 @@ struct FinanceImportSheet: View {
             } footer: {
                 Text(verbatim: FinanceText.inflected("^[\(parsed.ok.count) row](inflect: true) read")
                      + (parsed.errors > 0 ? String(localized: ", \(parsed.errors) couldn’t be read") : ""))
+                    .foregroundStyle(parsed.ok.isEmpty ? .red : .secondary)
             }
         }
     }
 
     @ViewBuilder
     private var reviewStep: some View {
+        Section {
+            LabeledContent("File", value: fileName)
+            Button("Change mapping", systemImage: "tablecells") { step = .map }
+                .disabled(busy)
+        } footer: {
+            if usedSaved && !hasChanges {
+                Text("Read with the format saved for this bank.")
+            }
+        }
         Section {
             Label("^[\(parsed.ok.count - duplicates.count) new transaction](inflect: true)", systemImage: "plus.circle")
                 .font(.headline)
@@ -265,32 +337,40 @@ struct FinanceImportSheet: View {
             .strikethrough(dupe)
             .opacity(dupe ? 0.5 : 1)
             .help(dupe ? Text("Imported before") : Text(verbatim: ""))
+            .accessibilityElement(children: .combine)
+            .accessibilityValue(dupe ? Text("Imported before") : Text(verbatim: ""))
         }
     }
 
     // MARK: Work
 
-    private func pick(_ url: URL) {
+    /// Reads the file and maps it; a bank seen before goes straight to the review.
+    private func load(_ file: FinanceImportFile) async {
         problem = nil
-        let scoped = url.startAccessingSecurityScopedResource()
-        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         do {
-            let bytes = try Data(contentsOf: url)
-            let (text, encoding) = try FinanceCSV.decode(bytes)
+            let (text, encoding) = try FinanceCSV.decode(file.data)
             let guess = FinanceCSV.guessMapping(text, encoding: encoding)
-            // The same bank as before: use its saved mapping.
-            let saved = store.overview?.mappings.first { !$0.signature.isEmpty && $0.signature == guess.signature }
-            data = bytes
-            fileName = url.lastPathComponent
+            let saved = FinanceImportStep.savedMapping(for: guess, in: store.overview?.mappings ?? [])
+            data = file.data
+            fileName = file.name
             // Its account as last time, else the one the list shows.
             let known = { (id: String?) in id.flatMap { store.account($0)?.id } }
             accountId = known(saved?.accountId) ?? known(store.filter.account)
             auto = saved?.autoTransfers ?? true
+            usedSaved = saved != nil
             mapping = saved ?? guess
+            original = mapping
             reparse()
-            step = .map
+            if FinanceImportStep.first(saved: saved, readableRows: parsed.ok.count) == .review {
+                await check()
+                // The dry run failed (its problem shows): check the mapping by hand.
+                if step != .review { step = .map }
+            } else {
+                step = .map
+            }
         } catch {
             problem = error.localizedDescription
+            step = .file
         }
     }
 
