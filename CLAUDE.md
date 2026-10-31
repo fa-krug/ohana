@@ -329,6 +329,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   run against the real verification. Nothing in tests touches the network (fake clients,
   injected `send` / sources).
 - Keep env names clear of Vite/Vitest's: the public URL is `APP_URL` (Vitest sets `BASE_URL`).
-- Deploy: pushing to `main` builds `ghcr.io/fa-krug/ohana:main` and redeploys fa-krug's server;
-  a tag `v*` publishes a release for self-hosters (see the `deploy` skill and
-  docs/self-hosting.md).
+- Deploy: every push to `main` is a release: CI publishes `ghcr.io/fa-krug/ohana:latest`
+  (+ `:main`, `:sha-<7>`) and redeploys fa-krug's server; no release tags (see the `deploy`
+  skill and docs/self-hosting.md). `version` in `server/package.json` is only bumped for a
+  notable change; the image reports `<version>+<commit>`.
