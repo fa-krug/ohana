@@ -35,10 +35,13 @@ enum CalendarZoom {
 
 /// Which layout the calendar uses.
 enum CalendarLayoutRule {
+    /// What the year grid's card and the page's padding take of the calendar's width.
+    static let yearGridInset: CGFloat = 2 * 16 + 2 * 12
+
     /// Narrower than this, the calendar shows the year as a list of months instead of the
-    /// 12 × 31 grid: its own width, not the screen's (the sidebar and the assistant take their
-    /// share), like the web's `MONTH_VIEW_BELOW`.
-    static let monthListBelow: CGFloat = 880
+    /// 12 × 31 grid: where the grid's 31 days get too narrow for their weekday letters. By its
+    /// own width, not the screen's (the sidebar and the assistant take their share).
+    static let monthListBelow: CGFloat = yearGridInset + 40 + 31 * CalendarYearGrid.weekdayCellWidth
 
     static func monthList(width: CGFloat?, compact: Bool) -> Bool {
         if compact { return true }

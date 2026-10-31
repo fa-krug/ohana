@@ -2,7 +2,7 @@ import SwiftUI
 
 /// The calendar (the web app's components/calendar/calendar-page.tsx): entry types per year,
 /// day entries, notes, timed events and birthdays. A narrow calendar (phones, or a window or
-/// split view under 880 points, like the web) scrolls through the year's months like the web's
+/// split view too narrow for the year grid's weekday letters) scrolls through the year's months like the web's
 /// month view; a wide one shows the year grid (12 months × 31 days, zoomable) or one month in
 /// detail, with the selected days' details underneath. On every size the selection's actions
 /// and the type chips float in a glass bar at the bottom.
