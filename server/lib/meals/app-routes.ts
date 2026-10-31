@@ -41,6 +41,7 @@ import { moveRecipe } from "./recipes/mutations";
 import { createTag, deleteTag, resetTags, updateTag } from "./recipes/tags";
 import { upsertRecipe } from "./recipes/upsert";
 import { bulkCreateSchema } from "./schemas/generate";
+import { moduleEnabled } from "@/lib/server-info";
 
 const tagNames = { nameEn: z.string().trim().max(80), nameDe: z.string().trim().max(80) };
 const createTagSchema = z.object({ category: z.string(), ...tagNames });
@@ -149,6 +150,7 @@ export function createMealsApp(options: MealsAppOptions = {}) {
       }
       if (action === "generate" && m === "POST") {
         return write(ctx, async (familyId) => {
+          if (!moduleEnabled("assistant")) throw new HttpError(404, "The assistant is turned off on this server");
           const env = aiEnv(ctx.db);
           const model = await familyModel(env, familyId);
           if (!model?.imageModel) throw new HttpError(400, "No image model is set (Settings → AI)");

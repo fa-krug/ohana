@@ -1,5 +1,6 @@
 // Delivery to one channel — port of findmyappointment's senders (Pushbullet, Pushover,
-// Telegram, email over SMTP). Network code, not unit-tested.
+// Telegram, email over SMTP), plus ntfy (self-hostable push). Network code; only the ntfy
+// request is built by a tested function.
 
 import nodemailer from "nodemailer";
 import { timeoutSignal } from "@/lib/appointments/http";
@@ -57,6 +58,24 @@ async function sendTelegram(c: Channel, msg: Message): Promise<void> {
   if (!res.ok) throw new Error(`telegram ${res.status}`);
 }
 
+/** The request that publishes a message to an ntfy topic (JSON publishing isn't used: it needs
+ *  the server's root URL and the topic apart, a topic URL is simpler to configure). */
+export function ntfyRequest(c: Channel, msg: Message): { url: string; init: RequestInit } {
+  const headers: Record<string, string> = { "Content-Type": "text/plain; charset=utf-8" };
+  // Header values must be ISO-8859-1: ntfy decodes RFC 2047 encoded words, so the title can
+  // carry umlauts and emoji.
+  headers.Title = /^[\x20-\x7e]*$/.test(msg.title) ? msg.title : `=?UTF-8?B?${Buffer.from(msg.title, "utf8").toString("base64")}?=`;
+  if (msg.url) headers.Click = msg.url;
+  if (c.token) headers.Authorization = `Bearer ${c.token}`;
+  return { url: c.target, init: { method: "POST", headers, body: msg.body || msg.title } };
+}
+
+async function sendNtfy(c: Channel, msg: Message): Promise<void> {
+  const { url, init } = ntfyRequest(c, msg);
+  const res = await fetch(url, { ...init, signal: timeoutSignal() });
+  if (!res.ok) throw new Error(`ntfy ${res.status}`);
+}
+
 function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
@@ -93,6 +112,7 @@ const SENDERS: Record<string, (c: Channel, msg: Message) => Promise<void>> = {
   PUSHOVER: sendPushover,
   TELEGRAM: sendTelegram,
   EMAIL: sendEmail,
+  NTFY: sendNtfy,
 };
 
 /** Sends to one channel; throws on failure. */

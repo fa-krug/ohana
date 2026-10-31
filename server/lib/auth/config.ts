@@ -25,17 +25,48 @@ export function getRpName(): string {
   return process.env.WEBAUTHN_RP_NAME ?? "Ohana";
 }
 
-export function getAllowedRpIds(): string[] {
-  return splitEnv(process.env.WEBAUTHN_RP_ID, ["localhost"]);
+/** APP_URL without a trailing slash, or null when it isn't set. */
+function appUrlEnv(): string | null {
+  const raw = process.env.APP_URL?.trim();
+  return raw ? raw.replace(/\/+$/, "") : null;
 }
 
+/** WEBAUTHN_RP_ID (comma list), else APP_URL's host name, else localhost. */
+export function getAllowedRpIds(): string[] {
+  const app = appUrlEnv();
+  let fallback = ["localhost"];
+  if (app) {
+    try {
+      fallback = [new URL(app).hostname];
+    } catch {
+      // an invalid APP_URL: keep localhost
+    }
+  }
+  return splitEnv(process.env.WEBAUTHN_RP_ID, fallback);
+}
+
+/** WEBAUTHN_ORIGIN (comma list), else APP_URL's origin, else http://localhost:3000. */
 export function getAllowedOrigins(): string[] {
-  return splitEnv(process.env.WEBAUTHN_ORIGIN, ["http://localhost:3000"]);
+  const app = appUrlEnv();
+  let fallback = ["http://localhost:3000"];
+  if (app) {
+    try {
+      fallback = [new URL(app).origin];
+    } catch {
+      // an invalid APP_URL: keep the default
+    }
+  }
+  return splitEnv(process.env.WEBAUTHN_ORIGIN, fallback);
 }
 
 /** The app's public URL, for links shown to users (setup links, invites). */
 export function getAppUrl(): string {
-  return (process.env.APP_URL ?? getAllowedOrigins()[0]).replace(/\/+$/, "");
+  return (appUrlEnv() ?? getAllowedOrigins()[0]).replace(/\/+$/, "");
+}
+
+/** Cookies are `Secure` when the server is reached over HTTPS (APP_URL). */
+export function cookieSecure(): boolean {
+  return getAppUrl().startsWith("https://");
 }
 
 /** Host without port if allowed, else the first allowed id. */

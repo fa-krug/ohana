@@ -9,7 +9,7 @@ import { notificationChannels } from "@/lib/db/schema";
 import { AuthError } from "@/lib/auth/errors";
 import { type Actor, requireRole } from "@/lib/families/roles";
 import { getSecretBox } from "@/lib/secrets";
-import { type ChannelInput, missingChannelFields } from "./schema";
+import { type ChannelInput, missingChannelFields, validNtfyTopicUrl } from "./schema";
 import type { Channel } from "./send";
 
 export type ChannelRow = typeof notificationChannels.$inferSelect;
@@ -45,6 +45,9 @@ export function toChannelDto(c: ChannelRow): ChannelDto {
 function validate(input: ChannelInput): void {
   const missing = missingChannelFields(input);
   if (missing.length > 0) throw new AuthError(400, `${missing[0]} is required for ${input.provider}.`);
+  if (input.provider === "NTFY" && !validNtfyTopicUrl(input.target)) {
+    throw new AuthError(400, "The ntfy topic URL must be an http(s) address with a topic, e.g. https://ntfy.sh/your-topic.");
+  }
 }
 
 export function getChannelRow(db: Db, familyId: string, channelId: string): ChannelRow {

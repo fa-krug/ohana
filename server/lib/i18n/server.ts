@@ -1,4 +1,4 @@
-import { cookies, headers } from "next/headers";
+import { cookies, headers } from "@/lib/http/request-context";
 import { getSession } from "@/lib/auth/session";
 import { pickLocale } from "./locale";
 import { getDictionary } from "./dictionary";
@@ -7,8 +7,8 @@ import type { Locale } from "./config";
 
 export async function resolveLocale(): Promise<Locale> {
   const user = await getSession();
-  const cookieLang = (await cookies()).get("lang")?.value;
-  const accept = (await headers()).get("accept-language")?.split(",")[0];
+  const cookieLang = cookies().get("lang")?.value;
+  const accept = headers().get("accept-language")?.split(",")[0];
   return pickLocale([user?.preferredLanguage, cookieLang, accept]);
 }
 

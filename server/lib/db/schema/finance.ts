@@ -15,7 +15,7 @@ export const finSettings = sqliteTable("fin_settings", {
     .primaryKey()
     .references(() => families.id, { onDelete: "cascade" }),
   currency: text("currency").notNull().default("EUR"), // ISO 4217
-  /** JSON array of CSV mappings (lib/finance/csv.ts CsvMapping), newest first. */
+  /** JSON array of CSV mappings (the app's CSV import formats), newest first. */
   csvMappings: text("csv_mappings").notNull().default("[]"),
   /** JSON Benchmark, or null when not set. */
   benchmark: text("benchmark"),

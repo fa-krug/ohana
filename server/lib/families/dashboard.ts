@@ -13,6 +13,7 @@ import { awayDays } from "@/lib/meals/meal-plan/away";
 import { listSearchesWithLatest } from "@/lib/appointments/serialize";
 import { type BirthdayDay, birthdaysIn } from "./birthdays";
 import { familyNames } from "./people";
+import { moduleEnabled } from "@/lib/server-info";
 
 /** One line of "coming up": a run of a calendar type, or a timed event. */
 export type UpcomingItem =
@@ -70,7 +71,7 @@ export async function familyDashboard(
       (a.kind === "event" && b.kind === "event" ? (a.event.start ?? "").localeCompare(b.event.start ?? "") : 0) ||
       (a.kind === b.kind ? 0 : a.kind === "event" ? 1 : -1),
   );
-  const searches = listSearchesWithLatest(db, familyId).map((s) => ({
+  const searches = (moduleEnabled("appointments") ? listSearchesWithLatest(db, familyId) : []).map((s) => ({
     id: s.id,
     name: s.name,
     enabled: s.enabled,

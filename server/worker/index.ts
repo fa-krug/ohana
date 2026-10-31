@@ -1,5 +1,5 @@
-// The worker process: everything that runs in the background, apart from the web server,
-// so that a slow job never blocks a page. Same image as the web app, started with
+// The worker process: everything that runs in the background, apart from the HTTP server,
+// so that a slow job never blocks a request. Same image as the server, started with
 // `docker-entrypoint.sh worker`. Today: cleanup, the nightly backup and the appointment
 // searches (every APPT_TICK_SECONDS), the daily notifications (coverage, shopping reminder)
 // and the assistant's chat turns (looked for every ASSISTANT_TICK_MS, a cheap indexed query).
@@ -12,6 +12,7 @@ import { ChatRunner } from "../lib/assistant/runner";
 import { defaultAiEnv } from "../lib/assistant/routes";
 import { migrationsApplied } from "../lib/maintenance/migrations";
 import { dailyNotifications } from "../lib/notifications/daily";
+import { enabledModules, moduleEnabled } from "../lib/server-info";
 
 const TICK_MS = Number(process.env.WORKER_TICK_SECONDS ?? 60) * 1000;
 const BACKUP_DIR = process.env.BACKUP_DIR ?? "./data/backups";
@@ -56,17 +57,21 @@ async function tick(now: Date): Promise<void> {
 async function main(): Promise<void> {
   await waitForMigrations();
   console.log(`[worker] started, tick every ${TICK_MS / 1000}s, backups in ${BACKUP_DIR} (keep ${BACKUP_KEEP})`);
+  console.log(`[worker] modules: ${enabledModules().join(", ")}`);
+  // Modules turned off (DISABLED_MODULES) have no background work.
+  const runSearches = moduleEnabled("appointments");
+  const runChats = moduleEnabled("assistant");
   // Appointment searches run on their own, faster loop; runs are started, not awaited.
   const searches = new SearchRunner(db);
-  searches.start(new Date());
+  if (runSearches) searches.start(new Date());
   // Assistant turns: claimed through the database, run without awaiting.
   const chats = new ChatRunner(defaultAiEnv(db));
   let lastTick = 0;
   let lastSearches = 0;
   while (!stopping) {
     const now = new Date();
-    chats.tick(now);
-    if (now.getTime() - lastSearches >= APPT_TICK_MS) {
+    if (runChats) chats.tick(now);
+    if (runSearches && now.getTime() - lastSearches >= APPT_TICK_MS) {
       lastSearches = now.getTime();
       searches.tick(now);
     }

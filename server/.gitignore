@@ -6,9 +6,6 @@
 # testing
 /coverage
 
-# next.js
-/.next/
-/out/
 
 # production
 /build
@@ -29,4 +26,6 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
+
+# the sign-in pages script, built by scripts/build-client.ts
+/public/assets/auth.js

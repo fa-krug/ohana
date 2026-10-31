@@ -15,7 +15,7 @@ function sources(dir: string): string[] {
 describe("i18n keys", () => {
   it("every literal t(\"…\") key used in the app exists", () => {
     const missing: string[] = [];
-    for (const file of [...sources("app"), ...sources("components"), ...sources("lib")]) {
+    for (const file of [...sources("http"), ...sources("lib")]) {
       const text = readFileSync(file, "utf8");
       for (const m of text.matchAll(/\bt\("([a-zA-Z0-9_.]+)"(, \{[^}]*count)?/g)) {
         const key = m[1];

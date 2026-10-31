@@ -13,6 +13,7 @@ import { eventTools } from "./events";
 import { generalTools } from "./general";
 import { mealTools } from "./meals";
 import { webTools } from "./web";
+import { type ModuleName, moduleEnabled } from "@/lib/server-info";
 
 export * from "./common";
 
@@ -26,10 +27,24 @@ export const TOOLS: Record<string, Tool> = {
   ...webTools,
 };
 
-/** The tools for a chat: without writes if they're off, without search if it isn't set up. */
+/** The module a tool belongs to, for servers that turn modules off (general tools: none). */
+const TOOL_MODULE: Record<string, ModuleName> = Object.fromEntries([
+  ...Object.keys(financeTools).map((n) => [n, "finance"]),
+  ...Object.keys(mealTools).map((n) => [n, "meals"]),
+  ...Object.keys(appointmentTools).map((n) => [n, "appointments"]),
+]);
+
+/** Whether a tool's module is on (DISABLED_MODULES). */
+export function toolEnabled(name: string): boolean {
+  const m = TOOL_MODULE[name];
+  return !m || moduleEnabled(m);
+}
+
+/** The tools for a chat: without writes if they're off, without search if it isn't set up, and
+ *  without those of modules the server turned off. */
 export function toolsFor(opts: { writes: boolean; search: boolean }): ToolSpec[] {
   return Object.values(TOOLS)
-    .filter((t) => (opts.writes || !t.write) && (opts.search || !t.needsSearch))
+    .filter((t) => (opts.writes || !t.write) && (opts.search || !t.needsSearch) && toolEnabled(t.spec.name))
     .map((t) => ({ type: "function", function: t.spec }));
 }
 

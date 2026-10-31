@@ -20,6 +20,7 @@ import type { Sender } from "./index";
 import { familyLocale, translator } from "./locale";
 import { notifyEvent, readState, writeState } from "./prefs";
 import { formatQuantity } from "@/lib/meals/display/format";
+import { moduleEnabled } from "@/lib/server-info";
 
 export const COVERAGE_DAYS = 14;
 const MAX_ITEMS = 30;
@@ -177,7 +178,7 @@ export async function dailyNotifications(db: Db, now: Date): Promise<void> {
   for (const { id } of db.select({ id: families.id }).from(families).all()) {
     try {
       if (hour >= NOTIFY_HOUR) await checkCoverage(db, id, now);
-      if (hour >= SHOPPING_REMINDER_HOUR) await remindShopping(db, id, now);
+      if (hour >= SHOPPING_REMINDER_HOUR && moduleEnabled("meals")) await remindShopping(db, id, now);
     } catch (e) {
       console.error(`[notifications] daily check of family ${id} failed:`, e);
     }
