@@ -1,7 +1,7 @@
 import Foundation
 
-// The meals' recipe shapes as the server sends them (web/lib/meals/queries/recipes.ts,
-// web/lib/meals/app-routes.ts, web/lib/meals/ai/recipes.ts). Field names match the JSON.
+// The meals' recipe shapes as the server sends them (server/lib/meals/queries/recipes.ts,
+// server/lib/meals/app-routes.ts, server/lib/meals/ai/recipes.ts). Field names match the JSON.
 
 /// "KNOWN" (Favourites) or "TO_TRY" (Want to try).
 enum RecipeListType: String, Codable, CaseIterable, Identifiable, Hashable {
@@ -191,7 +191,7 @@ struct RecipeMoveResponse: Codable { let listType: String }
 struct RecipeImageResponse: Codable { let image: String }
 struct RecipeBulkResponse: Codable { let createdIds: [String] }
 
-// MARK: Saving (UpsertRecipeInput, web/lib/meals/recipes/upsert.ts)
+// MARK: Saving (UpsertRecipeInput, server/lib/meals/recipes/upsert.ts)
 
 struct RecipeUpsertInput: Codable, Equatable {
     var title: String
@@ -286,7 +286,7 @@ struct RecipeTagInput: Codable {
     var nameDe: String
 }
 
-// MARK: AI generation (POST /recipes/generate, an NDJSON stream; web/lib/meals/ai/stream.ts)
+// MARK: AI generation (POST /recipes/generate, an NDJSON stream; server/lib/meals/ai/stream.ts)
 
 struct RecipeGenerateRequest: Codable {
     var count: Int
@@ -390,7 +390,7 @@ enum RecipeGenerateEvent: Decodable, Equatable {
     }
 }
 
-/// BulkRecipeInput (web/lib/meals/recipes/bulk-create.ts): what saving the picks sends.
+/// BulkRecipeInput (server/lib/meals/recipes/bulk-create.ts): what saving the picks sends.
 struct RecipeBulkInput: Codable, Equatable {
     var recipes: [Recipe]
 

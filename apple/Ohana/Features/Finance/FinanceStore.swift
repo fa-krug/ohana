@@ -241,10 +241,13 @@ final class FinanceStore {
         }
     }
 
-    /// The assistant's status and the shopping links: nice to have, so failures stay quiet.
+    /// The assistant's status and the shopping links: nice to have, so failures stay quiet. Not
+    /// asked for a module the server has off.
     private func loadExtras() async {
-        if let status = try? await api.get("/ai/settings", as: FinanceAIStatus.self) { aiConfigured = status.configured }
-        if let links = try? await api.get("/finance/shopping-links", as: FinanceShoppingLinks.self) { shoppingLinks = links }
+        if family.isEnabled(.assistant),
+           let status = try? await api.get("/ai/settings", as: FinanceAIStatus.self) { aiConfigured = status.configured }
+        if family.isEnabled(.meals),
+           let links = try? await api.get("/finance/shopping-links", as: FinanceShoppingLinks.self) { shoppingLinks = links }
     }
 
     func loadList() async {

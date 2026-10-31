@@ -118,7 +118,8 @@ struct FinanceSettingsForm: View {
                 }
                 .disabled(!store.canEdit)
             }
-            groceries
+            // The groceries category is for the shopping lists (meals).
+            if family.isEnabled(.meals) { groceries }
             accounts
             categories
             Section {

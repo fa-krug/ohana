@@ -14,6 +14,7 @@
   "A family keeps your calendar, finances, meals and appointments together. You can invite the others afterwards.": "Eine Familie hält euren Kalender, eure Finanzen, das Essen und die Arzttermine zusammen. Die anderen kannst du danach einladen.",
   "A family needs a name.": "Eine Familie braucht einen Namen.",
   "A token is stored; leave the field empty to keep it.": "Ein Token ist gespeichert; lass das Feld leer, um ihn zu behalten.",
+  "Access token (optional)": "Access-Token (optional)",
   "Access token / API key": "Access-Token / API-Schlüssel",
   "Actions for %@": "Aktionen für %@",
   "Active": "Aktiv",
@@ -136,6 +137,7 @@
   "Plan next week's meals": "Plane das Essen für nächste Woche",
   "Port": "Port",
   "Pushbullet, Pushover, Telegram or email over SMTP.": "Pushbullet, Pushover, Telegram oder E-Mail über SMTP.",
+  "Pushbullet, Pushover, Telegram, ntfy or email over SMTP.": "Pushbullet, Pushover, Telegram, ntfy oder E-Mail über SMTP.",
   "Recipient email": "Empfänger-E-Mail",
   "Remove": "Entfernen",
   "Remove %@ from the family?": "%@ aus der Familie entfernen?",
@@ -180,6 +182,7 @@
   "Today": "Heute",
   "Today · %@": "Heute · %@",
   "Tokens and passwords are stored encrypted.": "Tokens und Passwörter werden verschlüsselt gespeichert.",
+  "Topic URL": "Topic-URL",
   "User key": "User Key",
   "Viewer": "Ansehen",
   "Welcome to %@": "Willkommen bei %@",
@@ -201,6 +204,7 @@
   "e.g. The Krugs": "z. B. Familie Krug",
   "for %@": "für %@",
   "not scheduled": "nicht geplant",
+  "ntfy is push notifications you can host yourself, with an app for iPhone and iPad. The topic URL is the topic’s full address on ntfy.sh or your own ntfy server; the token is only needed for a protected topic.": "ntfy sind Push-Benachrichtigungen, die du selbst hosten kannst, mit einer App für iPhone und iPad. Die Topic-URL ist die vollständige Adresse des Topics auf ntfy.sh oder deinem eigenen ntfy-Server; das Token brauchst du nur für ein geschütztes Topic.",
   "paused": "pausiert",
   "valid until %@": "gültig bis %@"
 }

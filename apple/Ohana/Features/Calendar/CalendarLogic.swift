@@ -1,6 +1,6 @@
 import Foundation
 
-// Pure calendar logic, ported from web/lib/calendar/core.ts. Days are `Day`s; entries are
+// Pure calendar logic, ported from server/lib/calendar/core.ts. Days are `Day`s; entries are
 // [Day: type ids], notes [Day: note]. Weekdays and day arithmetic are proleptic Gregorian
 // (like the server's UTC dates), independent of the device's calendar settings.
 

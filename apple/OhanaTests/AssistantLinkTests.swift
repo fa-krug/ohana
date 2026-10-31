@@ -5,7 +5,7 @@ import AppKit
 import Testing
 @testable import Ohana
 
-/// What a tool call links to (result shapes of web/lib/assistant/tools/*).
+/// What a tool call links to (result shapes of server/lib/assistant/tools/*).
 struct AssistantToolLinkTests {
     private func tool(_ name: String, args: [String: JSONValue] = [:], result: String? = nil,
                       status: String = "ok") -> AssistantToolCall {

@@ -3,7 +3,7 @@ import Testing
 @testable import Ohana
 
 struct ShoppingTests {
-    /// GET /meals/shopping as web/lib/meals/app-routes-plan.ts answers it.
+    /// GET /meals/shopping as server/lib/meals/app-routes-plan.ts answers it.
     static let overviewJSON = """
     {"lists":[{"id":"l2","iterationId":"it","iterationStatus":"ACTIVE","shoppingDate":"2026-11-05","itemCount":3,"checkedCount":0},{"id":"l1","iterationId":"it","iterationStatus":"ACTIVE","shoppingDate":"2026-11-02","itemCount":4,"checkedCount":1}],"latest":{"id":"l1","shoppingDate":"2026-11-02","createdAt":"2026-10-30T02:44:46.000Z","items":[{"id":"a","ingredientName":"Tomato","category":"PRODUCE","quantity":"100","unitAbbreviation":"g","isChecked":true},{"id":"b","ingredientName":"Zucchini","category":"PRODUCE","quantity":"2.5","unitAbbreviation":"Stk","isChecked":false},{"id":"c","ingredientName":"Milk","category":"DAIRY","quantity":"1","unitAbbreviation":"l","isChecked":false},{"id":"d","ingredientName":"Saffron","category":"SPICES","quantity":"0.333","unitAbbreviation":"g","isChecked":false}]}}
     """

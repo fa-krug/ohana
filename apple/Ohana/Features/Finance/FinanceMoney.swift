@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-/// Money as integer cents (web/lib/finance/money.ts): formatting, and parsing what people type
+/// Money as integer cents (server/lib/finance/money.ts): formatting, and parsing what people type
 /// or what a bank exports ("12,50", "-1.234,56", "(45.00)").
 enum FinanceMoney {
     /// `sign`: a "+" on income too; `whole`: no cents (averages per month).

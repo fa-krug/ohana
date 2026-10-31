@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import Ohana
 
-/// The recipe screens' data: decoding what web/lib/meals/app-routes.ts sends, and the logic
+/// The recipe screens' data: decoding what server/lib/meals/app-routes.ts sends, and the logic
 /// ported from the web (scaling, quantities, machine programs, the form's payload, Markdown).
 struct MealsRecipeDecodingTests {
     static let detailJSON = """

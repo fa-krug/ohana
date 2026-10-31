@@ -1,7 +1,7 @@
 import Foundation
 
 // The assistant's API types (web/components/assistant/api.ts and chat-store.ts, server side
-// web/lib/assistant/{routes.ts,chat-routes.ts,chats.ts}).
+// server/lib/assistant/{routes.ts,chat-routes.ts,chats.ts}).
 
 // MARK: Settings
 

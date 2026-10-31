@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import Ohana
 
-/// The JSON of web/lib/calendar (family-routes.ts familyState, vacation.ts publicType,
+/// The JSON of server/lib/calendar (family-routes.ts familyState, vacation.ts publicType,
 /// events.ts publicEvent) as the server writes it.
 struct CalendarDecodingTests {
     @Test func decodesTheFamilyState() throws {

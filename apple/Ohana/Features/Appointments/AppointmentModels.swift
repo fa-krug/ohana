@@ -1,7 +1,7 @@
 import Foundation
 
-// The appointments module's data as the server sends it (web/lib/appointments/serialize.ts,
-// web/lib/appointments/app-routes.ts, web/lib/calendar/events.ts `PublicEvent`).
+// The appointments module's data as the server sends it (server/lib/appointments/serialize.ts,
+// server/lib/appointments/app-routes.ts, server/lib/calendar/events.ts `PublicEvent`).
 
 /// One doctor's earliest slot of a run (`DoctorSlot`).
 struct AppointmentDoctorSlot: Codable, Hashable, Identifiable {
@@ -245,7 +245,7 @@ struct AppointmentJamedaTerm: Codable, Hashable, Identifiable {
     var id: String { "\(type)/\(slug)" }
 }
 
-/// What saves a search (`SearchInput` of web/lib/appointments/schema.ts): POST
+/// What saves a search (`SearchInput` of server/lib/appointments/schema.ts): POST
 /// /appointments/searches, PATCH /appointments/searches/{id}.
 struct AppointmentSearchInput: Codable, Hashable {
     var name = ""

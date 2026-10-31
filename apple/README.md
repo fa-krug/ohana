@@ -1,9 +1,10 @@
 # Ohana for iPhone, iPad and Mac
 
-A native SwiftUI client for the Ohana server in [`../web`](../web): the same families, calendar,
-finances, meals, appointments and assistant, with Liquid Glass. There is no data of its own on the
-device: every screen reads and writes the server's API with the device's API token (or, before a
-server is connected, a read-only demo).
+The SwiftUI app for the self-hosted Ohana server in [`../server`](../server), and its only client
+(the server has no web UI, only its sign-in and account pages): families, calendar, finances,
+meals, appointments and assistant, with Liquid Glass. There is no data of its own on the device:
+every screen reads and writes the server's API with the device's API token (or, before a server
+is connected, a read-only demo).
 
 ## Requirements
 
@@ -39,11 +40,20 @@ loading screen covers it until the account and families are loaded.
 
 To connect, enter the server's address — or paste any link of the server, an invite link too
 (`ServerLink` in `Core/Auth/DevicePairing.swift`: the server and the invite code are taken from
-it); an https link of the server opened while signed out starts this by itself. The app opens the server's `/device/pair` page in the system browser
-sheet, where you sign in as on the web (passkeys work) and confirm. The page hands the app an API
-token (`ohana://auth-callback`), kept in the Keychain. It shows on the web account page as
-"<device> (app)" and can be removed there; "Sign out" in the app deletes it too. For a local
-server, `http://localhost:3000` works (local networking is allowed in ATS).
+it); an https link of the server opened while signed out starts this by itself. First the app asks
+`GET /api/v1/server` (public: version, API version, enabled modules) and refuses a server older
+than it needs (`ServerInfo.requiredAPIVersion`; a 404 is an older server); it asks again at every
+launch and hides the modules the server turned off. Then it opens the server's `/device/pair`
+page in the system browser sheet, where you sign in (passkeys work) and confirm. The page hands
+the app an API token (`ohana://auth-callback`), kept in the Keychain. It shows under Settings →
+Account → Signed-in devices as "<device> (app)" and can be removed there; "Sign out" in the app
+deletes it too. For a local server, `http://localhost:3000` works (local networking is allowed in
+ATS).
+
+Adding a passkey, and changing the email of an account without a password, need the server's own
+domain: the account page opens `{server}/account?state=…` in the same browser sheet
+(`ServerAccountPage` in `Core/Auth/`), which calls back `ohana://account-callback?state=…`
+(`&changed=passkey|email`) and the account reloads.
 
 ## Layout
 
@@ -52,7 +62,8 @@ Ohana/
   App/            OhanaApp (scenes, commands), AppModel (server, token, account, families,
                   FamilyContext: the family's API and change signals)
   Core/           APIClient + FamilyAPI (JSON over /api/v1), APIError, JSONValue, Keychain,
-                  DevicePairing, DemoServer (the demo), account models, Day / Money helpers
+                  DevicePairing, ServerAccountPage, ServerInfo (version, modules), DemoServer
+                  (the demo), account models, Day / Money helpers
   DesignSystem/   Content surfaces (contentCard, CardSection, chip, TintedIcon), OhanaBackground,
                   LoadState / LoadStateView, ErrorBanner, CancelButton / discardGuard, RemoteImage
   Shell/          RootView, LoadingScreen, ConnectServerView (pairing), DemoBanner, AppShell
@@ -72,7 +83,7 @@ xcodebuild -scheme Ohana-macOS -destination 'platform=macOS' test
 ```
 
 In Debug builds, `-OHANA_DEV_SERVER http://localhost:3000 -OHANA_DEV_TOKEN ohana_…` (an API
-token from the web account page) signs in without pairing, and `-OHANA_DEV_MODULE calendar` /
+token from Settings → Account → API tokens) signs in without pairing, and `-OHANA_DEV_MODULE calendar` /
 `-OHANA_DEV_ASSISTANT YES` open a module or the assistant at launch, `-OHANA_DEV_URL ohana://f/…`
 opens a link (Xcode: scheme → Run →
 Arguments). The test schemes run in English, since the tests compare English strings.

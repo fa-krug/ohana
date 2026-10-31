@@ -1,7 +1,7 @@
 import Foundation
 
-// The meal plan as the server sends it: GET /meals/plan (web/lib/meals/app-routes-plan.ts,
-// `getMealPlanView` in web/lib/meals/queries/meal-plan.ts, `awayDays`, `listTags`).
+// The meal plan as the server sends it: GET /meals/plan (server/lib/meals/app-routes-plan.ts,
+// `getMealPlanView` in server/lib/meals/queries/meal-plan.ts, `awayDays`, `listTags`).
 
 /// GET /meals/plan
 struct MealPlanResponse: Codable {
@@ -114,7 +114,7 @@ struct MealPlanSwapInput: Codable {
     let recipeId: String
 }
 
-/// A page of GET /recipes (web/lib/meals/queries/recipes.ts `RecipeListResult`), for swapping.
+/// A page of GET /recipes (server/lib/meals/queries/recipes.ts `RecipeListResult`), for swapping.
 struct MealPlanRecipePage: Codable {
     let items: [MealPlanRecipeOption]
     let totalCount: Int

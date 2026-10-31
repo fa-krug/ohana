@@ -1,11 +1,13 @@
+import AuthenticationServices
 import SwiftUI
 
-/// The account on this device (the web's /account): profile and language, email, password,
-/// passkeys, the signed-in devices and browsers, signing out, and (under Advanced, a page of its
-/// own) API tokens for scripts. A page of the settings (`AccountPageView`); a sheet while the
-/// account has no family yet, with the device's settings then. Adding a passkey stays on the
-/// web: a passkey belongs to the server's own domain. In the demo it offers to connect a server
-/// instead.
+/// The account on this device: profile and language, email, password, passkeys, the signed-in
+/// devices and browsers, signing out, and (under Advanced, a page of its own) API tokens for
+/// scripts. A page of the settings (`AccountPageView`); a sheet while the account has no family
+/// yet, with the device's settings then. Adding a passkey (and changing the email of an account
+/// without a password) happens on the server's account page in a browser sheet
+/// (`ServerAccountPage`): a passkey belongs to the server's own domain. In the demo it offers to
+/// connect a server instead.
 struct AccountView: View {
     @AppStorage("appearance") private var appearance = Appearance.system
 
@@ -76,7 +78,7 @@ private struct AccountForm: View {
     /// In a sheet (no family yet, so no settings page): a Done button and the device's settings.
     var inSheet = false
     @Environment(AppModel.self) private var app
-    @Environment(\.openURL) private var openURL
+    @Environment(\.webAuthenticationSession) private var webAuthenticationSession
     @Environment(\.dismiss) private var dismiss
 
     @State private var state: LoadState<AccountOverview> = .idle
@@ -85,6 +87,8 @@ private struct AccountForm: View {
     @State private var confirmation: AccountConfirmation?
     @State private var confirmSignOut = false
     @State private var connecting = false
+    /// The server's account page is open (`openAccountPage`).
+    @State private var accountPageOpen = false
     @FocusState private var nameFocused: Bool
 
     private var user: UserAccount? { state.value?.user ?? app.me }
@@ -112,7 +116,6 @@ private struct AccountForm: View {
                     Section {
                         Label(message, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.red)
                         Button("Try again") { Task { await load() } }
-                        webLink("Open the account page on the web", systemImage: "safari")
                     }
                 } else {
                     Section { ProgressView().frame(maxWidth: .infinity) }
@@ -185,6 +188,9 @@ private struct AccountForm: View {
             if let server = app.serverURL {
                 LabeledContent("Server", value: server.host() ?? server.absoluteString)
             }
+            if let version = app.serverInfo?.version, !version.isEmpty {
+                LabeledContent("Server version", value: version)
+            }
         }
     }
 
@@ -222,13 +228,14 @@ private struct AccountForm: View {
             if AccountRules.canChangeEmailHere(user) {
                 Button("Change email…", systemImage: "envelope") { sheet = .email(user.email) }
             } else {
-                webLink("Change email on the web", systemImage: "safari")
+                Button("Change with a passkey…", systemImage: "person.badge.key") { openAccountPage() }
+                    .disabled(accountPageOpen)
             }
         } header: {
             Text("Email")
         } footer: {
             if !AccountRules.canChangeEmailHere(user) {
-                Text("Your account has no password, so the change is confirmed with a passkey. That works on the web page of your server.")
+                Text("Your account has no password, so the change is confirmed with a passkey, in a secure browser sheet of your server.")
             }
         }
     }
@@ -286,11 +293,12 @@ private struct AccountForm: View {
             ForEach(overview.passkeys) { passkey in
                 passkeyRow(passkey, canDelete: AccountRules.canDeletePasskey(overview))
             }
-            webLink("Add a passkey on the web", systemImage: "plus")
+            Button("Add passkey", systemImage: "plus") { openAccountPage() }
+                .disabled(accountPageOpen)
         } header: {
             Text("Passkeys")
         } footer: {
-            Text("Sign in with your fingerprint, face or device PIN. A passkey belongs to your server’s web address, so new ones are added on its web page.")
+            Text("Sign in with your fingerprint, face or device PIN. A passkey belongs to your server’s address, so passkeys are added in a secure browser sheet of your server.")
         }
     }
 
@@ -332,13 +340,14 @@ private struct AccountForm: View {
         .disabled(!canDelete)
     }
 
-    /// The Ohana apps signed in to the account (their tokens), and the browsers signed in on the web.
+    /// The Ohana apps signed in to the account (their tokens), and the browsers signed in to the
+    /// server's pages (sign-in, the account page).
     private func devicesSection(_ overview: AccountOverview) -> some View {
         Section {
             ForEach(AccountRules.deviceTokens(overview.tokens)) { token in
                 deviceRow(token)
             }
-            LabeledContent("Browsers signed in on the web", value: overview.sessions.formatted())
+            LabeledContent("Browsers signed in", value: overview.sessions.formatted())
             Button("Sign out all browsers", systemImage: "rectangle.portrait.and.arrow.right") {
                 confirmation = AccountConfirmation(
                     title: String(localized: "Sign out all browsers?"),
@@ -450,11 +459,38 @@ private struct AccountForm: View {
         }
     }
 
-    private func webLink(_ title: LocalizedStringKey, systemImage: String) -> some View {
-        Button {
-            if let url = app.webURL("/account") { openURL(url) }
-        } label: {
-            Label(title, systemImage: systemImage)
+    /// Opens the server's account page in a browser sheet (adding a passkey, changing the email
+    /// with one); back from it, however it ended, the account reloads.
+    private func openAccountPage() {
+        guard let server = app.serverURL, !accountPageOpen else { return }
+        accountPageOpen = true
+        Task {
+            let attempt = DevicePairing.Attempt()
+            do {
+                let callback = try await webAuthenticationSession.authenticate(
+                    using: ServerAccountPage.url(server: server, attempt: attempt),
+                    callback: .customScheme(DevicePairing.callbackScheme),
+                    preferredBrowserSession: .shared,
+                    additionalHeaderFields: [:]
+                )
+                switch ServerAccountPage.outcome(of: callback, attempt: attempt) {
+                case let .finished(changed):
+                    switch changed {
+                    case .passkey?: ErrorBanner.shared.success(String(localized: "Passkey added."))
+                    case .email?: ErrorBanner.shared.success(String(localized: "Email updated."))
+                    case nil: break
+                    }
+                case .stateMismatch, .malformed:
+                    ErrorBanner.shared.show(String(localized: "The account page didn’t finish. Please try again."))
+                }
+            } catch let authError as ASWebAuthenticationSessionError where authError.code == .canceledLogin {
+            } catch is CancellationError {
+            } catch {
+                ErrorBanner.shared.show(error)
+            }
+            accountPageOpen = false
+            await load()
+            await app.refresh()
         }
     }
     // MARK: Sheets
@@ -614,10 +650,12 @@ enum Appearance: String, CaseIterable, Identifiable {
     }
 }
 
-/// The settings of this device: the theme and (on the Mac) the menu bar assistant.
+/// The settings of this device: the theme and (on the Mac, when the server has the assistant)
+/// the menu bar assistant.
 struct DeviceSettingsSection: View {
     @AppStorage("appearance") private var appearance = Appearance.system
     #if os(macOS)
+    @Environment(AppModel.self) private var app
     @AppStorage("menuBarAssistant") private var menuBarAssistant = true
     #endif
 
@@ -627,7 +665,9 @@ struct DeviceSettingsSection: View {
                 ForEach(Appearance.allCases) { Text($0.title).tag($0) }
             }
             #if os(macOS)
-            Toggle("Show the assistant in the menu bar", isOn: $menuBarAssistant)
+            if app.isEnabled(.assistant) {
+                Toggle("Show the assistant in the menu bar", isOn: $menuBarAssistant)
+            }
             #endif
         } header: {
             Text("This device")

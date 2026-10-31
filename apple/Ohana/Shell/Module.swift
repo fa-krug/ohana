@@ -66,6 +66,8 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
 struct ShellFocus {
     var module: Binding<Module>
     var assistant: Binding<Bool>
+    /// The modules the server has on, in `Module.allCases` order (the Go menu's).
+    var modules: [Module] = Module.allCases
     /// Opens the assistant on a new chat, ready to type.
     var ask: () -> Void = {}
 }
@@ -115,15 +117,18 @@ struct ShellCommands: Commands {
             CommandMenu(moduleMenu.title) { moduleMenu.content() }
         }
         CommandMenu("Go") {
-            ForEach(Module.allCases) { module in
+            // The modules the server has on; each keeps its ⌘-number.
+            ForEach(shell?.modules ?? Module.allCases) { module in
                 Button(module.title) { shell?.module.wrappedValue = module }
                     .keyboardShortcut(module.shortcut, modifiers: .command)
             }
-            Divider()
-            Button("Assistant panel") { shell?.assistant.wrappedValue.toggle() }
-                .keyboardShortcut("j", modifiers: .command)
-            Button("Ask the assistant") { shell?.ask() }
-                .keyboardShortcut("j", modifiers: [.command, .shift])
+            if shell?.modules.contains(.assistant) ?? true {
+                Divider()
+                Button("Assistant panel") { shell?.assistant.wrappedValue.toggle() }
+                    .keyboardShortcut("j", modifiers: .command)
+                Button("Ask the assistant") { shell?.ask() }
+                    .keyboardShortcut("j", modifiers: [.command, .shift])
+            }
         }
         // The settings (the account's among them) are a page of the sidebar, not a window.
         CommandGroup(replacing: .appSettings) {

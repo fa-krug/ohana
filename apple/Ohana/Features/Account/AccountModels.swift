@@ -6,18 +6,18 @@ import UIKit
 import AppKit
 #endif
 
-// The account routes (web/lib/auth/app-routes.ts, /api/v1/me/...).
+// The account routes (server/lib/auth/app-routes.ts, /api/v1/me/...).
 
 /// GET /api/v1/me/account: everything the account screen shows.
 struct AccountOverview: Codable, Hashable {
     let user: UserAccount
     let passkeys: [AccountPasskey]
     let tokens: [AccountToken]
-    /// Browsers signed in to the account (web sessions).
+    /// Browsers signed in to the account (sessions of the server's pages).
     let sessions: Int
 }
 
-/// A passkey (web/lib/auth/passkey-management.ts `PasskeyDto`).
+/// A passkey (server/lib/auth/passkey-management.ts `PasskeyDto`).
 struct AccountPasskey: Codable, Hashable, Identifiable {
     let id: String
     let deviceName: String
@@ -118,7 +118,8 @@ enum AccountRules {
         overview.user.hasPassword || overview.passkeys.count > 1
     }
 
-    /// The email is changed with the password; without one, with a passkey on the web.
+    /// The email is changed with the password; without one, with a passkey on the server's
+    /// account page (`ServerAccountPage`).
     static func canChangeEmailHere(_ user: UserAccount) -> Bool {
         user.hasPassword
     }
@@ -128,7 +129,7 @@ enum AccountRules {
         tokens.filter(\.current) + tokens.filter { !$0.current }
     }
 
-    /// The suffix pairing gives a device's token (web/lib/auth/device-pairing.ts): "<device> (app)",
+    /// The suffix pairing gives a device's token (server/lib/auth/device-pairing.ts): "<device> (app)",
     /// or "Ohana app" without a device name.
     private static let deviceSuffix = " (app)"
     private static let unnamedDevice = "Ohana app"

@@ -1,6 +1,6 @@
 import Foundation
 
-/// Pairing with a server (web/lib/auth/device-pairing.ts): the app opens
+/// Pairing with a server (server/lib/auth/device-pairing.ts): the app opens
 /// `{server}/device/pair?state=…&deviceName=…` in a browser sheet; the user signs in there
 /// (passkeys work: it's the system browser) and confirms, and the page calls back
 /// `ohana://auth-callback?token=…&state=…`. `state` is a secret the app made up and never stored,
@@ -52,13 +52,14 @@ enum DevicePairing {
 
 /// What someone types or pastes as their server: a bare host (`ohana.example.com`), the address
 /// from the browser, any page of it (`https://ohana.example/f/abc/calendar`) or an invite link
-/// (`https://ohana.example/invite/{code}`). The server is everything before the web app's own
+/// (`https://ohana.example/invite/{code}`). The server is everything before the server's own
 /// paths (so a server under a sub-path keeps it); an invite link brings its code along.
 struct ServerLink: Equatable {
     let server: URL
     let inviteCode: String?
 
-    /// The first path segments of the web app's pages (web/app): where the server's own path ends.
+    /// The first path segments of the server's pages and routes (the sign-in pages, the account
+    /// page, `/f/…` links, the API, and those of older servers): where the server's own path ends.
     private static let appSegments: Set<String> = [
         "f", "account", "admin", "families", "invite", "login", "setup", "setup-link", "device",
         "onboarding", "set-language", "api",

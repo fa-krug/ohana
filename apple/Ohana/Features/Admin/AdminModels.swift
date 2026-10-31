@@ -1,9 +1,9 @@
 import Foundation
 import SwiftUI
 
-// The administration routes (web/lib/admin/app-routes.ts, /api/v1/admin/...).
+// The administration routes (server/lib/admin/app-routes.ts, /api/v1/admin/...).
 
-/// An account (web/lib/admin/users.ts `AdminUserDto`).
+/// An account (server/lib/admin/users.ts `AdminUserDto`).
 struct AdminUser: Codable, Hashable, Identifiable {
     let id: String
     let email: String
@@ -37,7 +37,7 @@ struct AdminSetupLink: Codable, Hashable {
     let expiresAt: String
 }
 
-/// A family with its members (web/lib/admin/families.ts `AdminFamilyDto`).
+/// A family with its members (server/lib/admin/families.ts `AdminFamilyDto`).
 struct AdminFamily: Codable, Hashable, Identifiable {
     let id: String
     let name: String

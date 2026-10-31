@@ -25,7 +25,7 @@ extension DemoServer {
     }
 
     /// GET /meals/recipes `?list&q&sort&locale&tags&offset&limit` → {items, totalCount}, like
-    /// web/lib/meals/queries/recipes.ts `listRecipes`.
+    /// server/lib/meals/queries/recipes.ts `listRecipes`.
     private static func recipePage(_ request: Request) -> JSONValue? {
         guard var items = request.json("meals-recipes")?["items"]?.arrayValue else { return nil }
         let q = request.query
