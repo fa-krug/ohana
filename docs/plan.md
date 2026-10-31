@@ -188,6 +188,45 @@ empty Ohana database. It has a **dry run** that only reports what it would do.
 | 5  | Appointments ✅    | Doctolib + jameda searches, worker scheduling, slot detail, notification channels; assistant tools for appointments                        |
 | 6  | Import + cut-over  | `import-legacy.ts` with dry run, a rehearsal on a copy, then the real import; old apps shut down, Supabase set read-only, old repos archived |
 | 7  | Connections ✅     | The cross-module features above, the assistant's tools everywhere (item 4) with phase 3 part B |
+| 8  | Headless, open source | No web UI: the native app is the client; a lean server (Hono) with only the sign-in pages; self-hosting docs, GHCR images, AGPL / MPL (see Phase 8) |
+
+### Phase 8: headless, open source, self-hosted
+
+Ohana is not sold. It is an open-source app the family runs on its own server; the native app
+(`apple/`) is the only client. Decisions:
+
+| Topic | Decision |
+| ----- | -------- |
+| Web UI | **Removed.** No module pages, no client stores, no server actions, no service worker. Only the pages that need the server's own domain stay: sign-in, first-run setup, setup links, invites, onboarding, pairing the app, and a small account page for passkeys and the email (the app opens it in `ASWebAuthenticationSession`, as for pairing; a self-hosted server's domain can't be an associated domain of an App Store app). |
+| Server | **Hono** on `@hono/node-server` instead of Next.js; `web/` becomes `server/`. Pages are server-rendered with `hono/jsx`, one small browser script (`client/`, bundled by esbuild) does the WebAuthn ceremonies and the forms; plain CSS, no Tailwind. Run with `tsx`, like the worker. |
+| Links | Notification links keep `/f/{id}/…`; the server answers them with a page that opens `ohana://f/{id}/…` (no universal links, see above). |
+| Compatibility | `GET /api/v1/server` (public): name, version, API version, enabled modules. The app refuses a server with an API version older than it needs, and hides turned-off modules. Changes to the API add, they don't remove. |
+| Modules | `DISABLED_MODULES` (comma list of `finance`, `meals`, `appointments`, `assistant`; the calendar is always on): their routes answer 404, the worker skips their jobs, the assistant loses their tools. |
+| Push | A new channel **ntfy** (topic URL, optional access token): self-hostable push with an iOS app. A server can't use APNs without the developer's key, so no relay. |
+| API description | `docs/openapi.yaml` (OpenAPI 3.1), written by hand from the route modules. |
+| License | Server (`server/`) **AGPL-3.0**, app (`apple/`) **MPL-2.0** (fits App Store distribution). |
+| Images | **GHCR** only: `ghcr.io/fa-krug/ohana`, `latest` from `main`, versions from tags `v*`. |
+| Import | The one-time import of the old apps is done and removed (`lib/import`, `import-legacy`, fixtures). |
+
+Steps:
+
+1. Delete `app/(app)`, `components/` (but what the sign-in pages need), the server actions,
+   `lib/offline`, `public/sw.js` (replaced by one that unregisters itself) and the lib files only
+   the UI used; their tests and dependencies with them. Locale files keep only the keys the
+   server uses.
+2. Port the API routes (`app/api/**/route.ts`) and the sign-in pages to Hono (`server/http/`);
+   the session and ceremony cookies and the locale read the request through an
+   `AsyncLocalStorage` context instead of `next/headers`. Server actions the sign-in pages used
+   become JSON routes under `/api/auth/…`.
+3. Add the account page (`/account`: add a passkey, change the email with the password or a
+   passkey), the landing page after sign-in (`/`: signed in as …, open the app, sign out), and
+   `/f/*` → `ohana://f/*`.
+4. `GET /api/v1/server`, `DISABLED_MODULES`, the ntfy channel (server and app).
+5. App: version check, hidden modules, ntfy, the account page instead of "on the web page".
+6. Remove the legacy import.
+7. Open source: LICENSE files, CONTRIBUTING, SECURITY, a self-hosting guide (compose file,
+   `.env.example`, reverse proxy, HTTPS for passkeys, backups, local AI with Ollama), GHCR
+   publishing, `docs/openapi.yaml`.
 
 ### Phase 7 notes (connections)
 
