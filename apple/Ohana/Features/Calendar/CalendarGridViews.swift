@@ -78,36 +78,81 @@ struct CalendarTouchSelection: ViewModifier {
     @State private var start: Day?
     @State private var base: Set<Day> = []
     @State private var pressed = 0
+    @State private var current: Day?
+    @State private var pressEnded = Date.distantPast
 
     func body(content: Content) -> some View {
         content
             .contentShape(.rect)
             .onTapGesture(coordinateSpace: .named(space)) { location in
+                // The lift that ends a long press isn't a tap as well.
+                guard start == nil, Date().timeIntervalSince(pressEnded) > 0.1 else { return }
                 if let day = hit(location, false) {
                     onBegin()
                     let modifiers = CalendarModifiers.current
                     store.tap(day, extend: modifiers.contains(.shift), toggle: modifiers.contains(.command))
                 }
             }
-            .gesture(
-                LongPressGesture(minimumDuration: 0.35)
-                    .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named(space)))
-                    .onChanged { value in
-                        guard case let .second(true, drag?) = value else { return }
-                        if start == nil {
-                            guard let day = hit(drag.startLocation, false) else { return }
-                            start = day
-                            base = store.multiSelect || CalendarModifiers.current.contains(.command) ? store.selection : []
-                            pressed += 1
-                        }
-                        guard let start, let current = hit(drag.location, true) else { return }
-                        store.setSelection(base.union(CalendarMath.range(start, current)), anchor: start, focus: current)
-                    }
-                    .onEnded { _ in start = nil }
-            )
+            #if os(iOS)
+            // UIKit's long press, not SwiftUI's `LongPressGesture` sequenced before a
+            // `DragGesture`: that one holds every touch (since iOS 18), and the scroll view
+            // around the grid didn't scroll at all. A swipe fails this one and scrolls.
+            .gesture(CalendarLongPressDrag(space: space, began: began, moved: moved, ended: ended))
+            #endif
             .sensoryFeedback(.selection, trigger: pressed)
+            // A tick for every day the finger moves on to (the press itself has its own).
+            .sensoryFeedback(.selection, trigger: current) { old, new in old != nil && new != nil }
+    }
+
+    private func began(_ location: CGPoint) {
+        guard let day = hit(location, false) else { return }
+        start = day
+        base = store.multiSelect || CalendarModifiers.current.contains(.command) ? store.selection : []
+        pressed += 1
+        store.dragging = true
+        onBegin()
+        moved(location)
+    }
+
+    private func moved(_ location: CGPoint) {
+        guard let start, let day = hit(location, true) else { return }
+        current = day
+        store.setSelection(base.union(CalendarMath.range(start, day)), anchor: start, focus: day)
+    }
+
+    private func ended() {
+        start = nil
+        current = nil
+        store.dragging = false
+        pressEnded = Date()
     }
 }
+
+#if os(iOS)
+/// Long-press, then drag: where the finger is (in the coordinate space `space`) when the press
+/// is recognized and while it moves.
+struct CalendarLongPressDrag: UIGestureRecognizerRepresentable {
+    let space: String
+    let began: (CGPoint) -> Void
+    let moved: (CGPoint) -> Void
+    let ended: () -> Void
+
+    func makeUIGestureRecognizer(context: Context) -> UILongPressGestureRecognizer {
+        let recognizer = UILongPressGestureRecognizer()
+        recognizer.minimumPressDuration = 0.35
+        return recognizer
+    }
+
+    func handleUIGestureRecognizerAction(_ recognizer: UILongPressGestureRecognizer, context: Context) {
+        switch recognizer.state {
+        case .began: began(context.converter.location(in: .named(space)))
+        case .changed: moved(context.converter.location(in: .named(space)))
+        case .ended, .cancelled, .failed: ended()
+        default: break
+        }
+    }
+}
+#endif
 
 /// Picks the touch or pointer selection gestures.
 struct CalendarSelectionStyle: ViewModifier {
