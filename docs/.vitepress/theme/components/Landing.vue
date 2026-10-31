@@ -396,32 +396,53 @@ const faqs = [
       </div>
     </section>
 
-    <!-- Get started -->
-    <section class="container start">
-      <div class="start-copy">
-        <p class="kicker">Get started</p>
-        <h2>Up and running in ten minutes</h2>
-        <ol class="steps">
-          <li><b>Start the server</b><span>Two files and one command on any machine with Docker.</span></li>
-          <li><b>Create your account</b><span>Open your server's address and set up the administrator.</span></li>
-          <li><b>Connect the app</b><span>Enter the address in the app, sign in, invite the family.</span></li>
-        </ol>
-        <div class="cta-row">
-          <a class="btn btn-primary" href="/quickstart">Follow the quick start</a>
-          <a class="btn btn-ghost" href="/introduction">Learn more</a>
+    <!-- How it works -->
+    <section class="container how">
+      <div class="section-head">
+        <p class="kicker">How it works</p>
+        <h2>Set it up once, use it every day</h2>
+        <p>One person in the family gets Ohana running. Everyone else just installs the app.</p>
+      </div>
+      <div class="how-steps">
+        <div class="how-step">
+          <span class="how-num">1</span>
+          <h3>Set it up at home</h3>
+          <p>Whoever in the family likes tinkering puts Ohana on a small computer at home, like a Raspberry Pi. It takes about ten minutes.</p>
+          <div class="how-visual">
+            <div class="device">
+              <span class="device-icon"><svg viewBox="0 0 24 24" class="icon"><path v-for="d in icons.server" :key="d" :d="d" /></svg></span>
+              <div><b>Ohana at home</b><small>Raspberry Pi</small></div>
+              <span class="chip live"><i />Running</span>
+            </div>
+          </div>
+        </div>
+        <div class="how-step">
+          <span class="how-num">2</span>
+          <h3>Invite your family</h3>
+          <p>Send everyone an invite link. They install the app on their iPhone, iPad or Mac, tap the link and they're in.</p>
+          <div class="how-visual">
+            <div class="invite">
+              <img src="/icon.svg" alt="" width="36" height="36" />
+              <div><b>Join “The Millers”</b><small>Anna invited you to Ohana</small></div>
+              <span class="invite-btn">Join</span>
+            </div>
+          </div>
+        </div>
+        <div class="how-step">
+          <span class="how-num">3</span>
+          <h3>Plan together</h3>
+          <p>Everyone works from the same calendar, meal plan and shopping list, each on their own iPhone, iPad or Mac.</p>
+          <div class="how-visual">
+            <div class="together">
+              <div class="avatars"><span style="background:#0d9488">A</span><span style="background:#f97316">T</span><span style="background:#8b5cf6">E</span><span style="background:#0ea5e9">N</span></div>
+              <div><b>Tom checked off 3 items</b><small>Shopping list · just now</small></div>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="terminal" aria-label="Commands to start Ohana">
-        <div class="term-bar"><i /><i /><i /><span>~/ohana</span></div>
-<pre><code><span class="c"># get the two files</span>
-<span class="p">$</span> curl -O https://raw.githubusercontent.com/fa-krug/ohana/main/docker-compose.yml
-<span class="p">$</span> curl -o .env https://raw.githubusercontent.com/fa-krug/ohana/main/.env.example
-
-<span class="c"># set APP_URL and AUTH_SECRET in .env, then</span>
-<span class="p">$</span> docker compose up -d
-<span class="ok">✔ Container ohana          Healthy</span>
-<span class="ok">✔ Container ohana-worker   Started</span></code></pre>
-      </div>
+      <p class="how-note">
+        Setting it up? The <a href="/quickstart">quick start</a> walks you through it step by step.
+      </p>
     </section>
 
     <!-- FAQ -->
@@ -720,23 +741,26 @@ h1 { font-size: clamp(42px, 6.2vw, 70px); line-height: 1.04; font-weight: 800; m
 .privacy-points p { color: #b5ece4; font-size: 14.5px; line-height: 1.55; }
 .p-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 11px; background: rgba(255, 255, 255, 0.12); color: #5eead4; font-size: 20px; }
 
-/* Get started */
-.start { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 56px; align-items: center; padding-top: 112px; padding-bottom: 112px; }
-.steps { list-style: none; padding: 0; margin: 26px 0 0; counter-reset: step; display: grid; gap: 18px; }
-.steps li { counter-increment: step; position: relative; padding-left: 52px; }
-.steps li::before {
-  content: counter(step); position: absolute; left: 0; top: 0; width: 36px; height: 36px; border-radius: 50%;
-  display: grid; place-items: center; font-weight: 700; color: #fff; background: var(--teal);
-}
-.steps b { display: block; font-size: 17px; }
-.steps span { color: var(--muted); font-size: 15px; }
-.terminal { border-radius: 16px; overflow: hidden; background: #0b1220; box-shadow: 0 30px 60px -24px rgba(2, 6, 23, 0.6); border: 1px solid #1e293b; }
-.term-bar { display: flex; align-items: center; gap: 6px; padding: 12px 14px; background: #111a2e; color: #64748b; font-size: 12px; }
-.terminal pre { margin: 0; padding: 20px 22px 24px; overflow-x: auto; font-size: 13px; line-height: 1.75; color: #e2e8f0; background: transparent; }
-.terminal code { font-family: var(--vp-font-family-mono); background: none; padding: 0; color: inherit; }
-.terminal .c { color: #64748b; }
-.terminal .p { color: #2dd4bf; user-select: none; }
-.terminal .ok { color: #4ade80; }
+/* How it works */
+.how { padding-top: 112px; padding-bottom: 112px; }
+.how-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.how-step { display: flex; flex-direction: column; padding: 28px; border-radius: 22px; background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow); }
+.how-step h3 { font-size: 20px; margin: 18px 0 8px; }
+.how-step > p { color: var(--muted); font-size: 15.5px; line-height: 1.6; }
+.how-num { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; font-weight: 700; font-size: 17px; color: #fff; background: linear-gradient(135deg, #14b8a6, #0f766e); }
+.how-visual { margin-top: auto; padding-top: 24px; }
+.device, .invite, .together { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 16px; background: var(--soft); border: 1px solid var(--line); }
+.device b, .invite b, .together b { display: block; font-size: 14px; }
+.device small, .invite small, .together small { font-size: 12px; color: var(--muted); }
+.device > div, .invite > div, .together > div:last-child { flex: 1; min-width: 0; }
+.device-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: #1f2937; color: #5eead4; font-size: 18px; flex: none; }
+.invite img { border-radius: 9px; flex: none; }
+.invite-btn { padding: 6px 14px; border-radius: 999px; background: var(--teal); color: #fff; font-size: 13px; font-weight: 600; }
+.avatars { display: flex; flex: none; }
+.avatars span { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; color: #fff; font-size: 12px; font-weight: 700; border: 2px solid var(--soft); margin-left: -8px; }
+.avatars span:first-child { margin-left: 0; }
+.how-note { text-align: center; margin-top: 36px !important; color: var(--muted); font-size: 16px; }
+.how-note a { color: var(--vp-c-brand-1); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 
 /* FAQ */
 .faq { padding-bottom: 96px; }
@@ -761,7 +785,8 @@ h1 { font-size: clamp(42px, 6.2vw, 70px); line-height: 1.04; font-weight: 800; m
 /* Smaller screens */
 @media (max-width: 960px) {
   .hero { padding: 40px 0 72px; }
-  .hero-grid, .feature, .privacy-grid, .start { grid-template-columns: 1fr; gap: 40px; }
+  .hero-grid, .feature, .privacy-grid { grid-template-columns: 1fr; gap: 40px; }
+  .how-steps { grid-template-columns: 1fr; max-width: 560px; margin: 0 auto; }
   .feature.reverse .feature-copy { order: 0; }
   .feature { margin-bottom: 80px; }
   .hero-visual { height: 520px; max-width: 560px; width: 100%; margin: 0 auto; }
@@ -786,7 +811,7 @@ h1 { font-size: clamp(42px, 6.2vw, 70px); line-height: 1.04; font-weight: 800; m
   .panel { padding: 16px; }
   .month-grid { gap: 4px; }
   .month-grid .day { font-size: 12px; border-radius: 6px; }
-  .start, .features { padding-top: 72px; }
-  .start { padding-bottom: 72px; }
+  .how, .features { padding-top: 72px; }
+  .how { padding-bottom: 72px; }
 }
 </style>
