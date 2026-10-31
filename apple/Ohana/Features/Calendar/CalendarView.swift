@@ -40,7 +40,10 @@ struct CalendarPlannerView: View {
     @AppStorage(CalendarZoom.key) private var zoom = CalendarZoom.initial
     @State private var month = Day.today.month
     @State private var reveal: CalendarReveal?
-    @State private var width: CGFloat?
+    /// Narrower than the year grid needs (nil until measured). Only that, not the width: a
+    /// width in the state would draw the whole page again at every step of a resize (the
+    /// assistant panel sliding in), its toolbar and menus too.
+    @State private var narrow: Bool?
     @State private var monthFrames = CalendarMonthFrames()
     @FocusState private var focused: Bool
     @ScaledMetric(relativeTo: .caption2) private var detailRowHeight: CGFloat = 104
@@ -62,7 +65,7 @@ struct CalendarPlannerView: View {
     }
 
     /// The list of months instead of the year grid: by the calendar's own width.
-    private var monthList: Bool { CalendarLayoutRule.monthList(width: width, compact: compact) }
+    private var monthList: Bool { compact || narrow == true }
 
     private var reloadKey: [Int] { [family.revision(.calendar), family.revision(.events), family.revision(.family)] }
 
@@ -72,7 +75,9 @@ struct CalendarPlannerView: View {
             if monthList { listLayout } else { wideLayout }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+        .onGeometryChange(for: Bool.self) {
+            CalendarLayoutRule.monthList(width: $0.size.width, compact: false)
+        } action: { narrow = $0 }
         .toolbar { toolbar }
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
