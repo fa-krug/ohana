@@ -124,7 +124,7 @@ struct CalendarDayCell: View, Equatable {
         .modifier(CalendarDayAccessibilityActions(store: store, actions: actions, day: day, info: info))
         #if os(macOS)
         // The web grid's tooltip: the day, its types, note, events and birthdays.
-        .help(tooltip(types: types, note: note, events: events, birthdays: birthdays))
+        .help(Self.tooltip(day: day, types: types, note: note, events: events, birthdays: birthdays))
         #endif
     }
 
@@ -275,8 +275,9 @@ struct CalendarDayCell: View, Equatable {
         return parts.joined(separator: ", ")
     }
 
-    private func tooltip(types: [CalendarEntryType], note: CalendarNote?, events: [CalendarEvent],
-                         birthdays: [CalendarBirthday]) -> String {
+    /// The Mac's tooltip for a day (the web grid's): the day, its types, note, events and birthdays.
+    static func tooltip(day: Day, types: [CalendarEntryType], note: CalendarNote?, events: [CalendarEvent],
+                        birthdays: [CalendarBirthday]) -> String {
         var lines = [CalendarText.longDay(day)]
         if !types.isEmpty { lines.append(types.map(\.name).joined(separator: ", ")) }
         if let note, !note.text.isEmpty { lines.append(note.text) }
@@ -300,7 +301,7 @@ struct CalendarDayCell: View, Equatable {
 /// VoiceOver's way to do what a pointer or touch does on a day: activating it selects it (like
 /// a tap), the actions add it, extend the selection to it, toggle each type, edit the note and
 /// open its events. After each change VoiceOver hears how many days are selected.
-private struct CalendarDayAccessibilityActions: ViewModifier {
+struct CalendarDayAccessibilityActions: ViewModifier {
     let store: CalendarStore
     let actions: CalendarActions?
     let day: Day
