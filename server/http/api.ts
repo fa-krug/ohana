@@ -19,7 +19,7 @@ import { handleAccountApp } from "@/lib/auth/app-routes";
 import { AuthError } from "@/lib/auth/errors";
 import { handle } from "@/lib/auth/route";
 import { serializeUser } from "@/lib/auth/serialize";
-import { getApiUser, getAuth } from "@/lib/auth/session";
+import { getApiUser } from "@/lib/auth/session";
 import { deleteToken, findToken } from "@/lib/auth/tokens";
 import { handleCalendarApp } from "@/lib/calendar/app-routes";
 import { handleEvents } from "@/lib/calendar/events";
@@ -99,7 +99,7 @@ export function apiRoutes(db: Db): Hono {
   );
 
   // ---- separate family routes (before the family API's catch-all) ----
-  // A page of the family's recipes: list (KNOWN | TO_TRY), q, sort, locale, tags, offset, limit (≤ 100).
+  // A page of the family's recipes: list (KNOWN | TO_TRY), q, sort, locale (en | de), tags, offset, limit (≤ 100).
   api.get("/v1/families/:familyId/recipes", (c) =>
     handle(async () => {
       requireModule("meals");
@@ -110,7 +110,7 @@ export function apiRoutes(db: Db): Hono {
         listType: c.req.query("list") ?? undefined,
         search: c.req.query("q") ?? undefined,
         sort: c.req.query("sort") ?? "name-asc",
-        locale: c.req.query("locale") ?? "en",
+        locale: c.req.query("locale") === "de" ? "de" : "en",
         tagIds: tagsParam ? tagsParam.split(",").filter(Boolean) : undefined,
         offset: Math.max(0, parseInt(c.req.query("offset") ?? "0", 10) || 0),
         limit: Math.min(100, Math.max(1, parseInt(c.req.query("limit") ?? "20", 10) || 20)),
@@ -236,9 +236,9 @@ export function apiRoutes(db: Db): Hono {
   api.all("/v1/families/:familyId", (c) => familyApi(c.req.raw));
   api.all("/v1/families/:familyId/*", (c) => familyApi(c.req.raw));
 
-  // ---- recipe photos, for members of the recipe's family (session cookie or API token) ----
+  // ---- recipe photos, for members of the recipe's family (API token) ----
   api.get("/images/*", async (c) => {
-    const user = getApiUser(c.req.raw) ?? (await getAuth())?.user ?? null;
+    const user = getApiUser(c.req.raw);
     return serveRecipeImage(db, user?.id ?? null, pathAfter(c, "/api/images").join("/"));
   });
 

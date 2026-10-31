@@ -36,7 +36,7 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
 
 async function waitForMigrations(): Promise<void> {
   while (!stopping && !migrationsApplied(sqlite, "./drizzle")) {
-    console.log("[worker] waiting for the web process to apply migrations");
+    console.log("[worker] waiting for the server to apply migrations");
     await sleep(5000);
   }
 }
