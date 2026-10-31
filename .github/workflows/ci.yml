@@ -201,10 +201,10 @@ jobs:
         run: |
           want="+${GITHUB_SHA::7}"
           for i in $(seq 1 30); do
-            got="$(curl -fsS --max-time 10 https://ohana.fa-krug.de/api/v1/server | jq -r '.version // empty' 2>/dev/null || true)"
+            got="$(curl -fsS --max-time 10 https://ohana-app.fa-krug.de/api/v1/server | jq -r '.version // empty' 2>/dev/null || true)"
             if [ "${got%"$want"}" != "$got" ]; then echo "Running $got"; exit 0; fi
             echo "Waiting: server reports '${got:-no version}', want …$want"
             sleep 10
           done
-          echo "::error::https://ohana.fa-krug.de doesn't run $want after 5 minutes (does the Arcane project pull ghcr.io/fa-krug/ohana:main?)"
+          echo "::error::https://ohana-app.fa-krug.de doesn't run $want after 5 minutes (does the Arcane project pull ghcr.io/fa-krug/ohana:main?)"
           exit 1

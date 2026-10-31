@@ -1,12 +1,15 @@
 # docker-compose.production.yml: fa-krug's own server (Arcane on a Raspberry Pi), redeployed by CI
 # from ghcr.io/fa-krug/ohana:main. Self-hosters: see docker-compose.yml and docs/self-hosting.md.
 # web and worker share one image and one data volume (SQLite in WAL mode).
+# The server is ohana-app.fa-krug.de; ohana.fa-krug.de is the project's website (GitHub Pages,
+# docs/). Passkeys are bound to the server's domain: those made on ohana.fa-krug.de don't work
+# here, so after the move everyone signs in with a password or a setup link and adds a new one.
 x-env: &env
   NODE_ENV: production
   AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET}
   # Optional: a separate key for secrets at rest (else derived from AUTH_SECRET).
   ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
-  APP_URL: https://${OHANA_DOMAIN:-ohana.fa-krug.de}
+  APP_URL: https://${OHANA_DOMAIN:-ohana-app.fa-krug.de}
   # Passkeys: the domain and origin come from APP_URL.
   WEBAUTHN_RP_NAME: Ohana
   BACKUP_KEEP: ${BACKUP_KEEP:-14}
@@ -43,7 +46,7 @@ services:
         reservations: { cpus: "0.25", memory: 256M }
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.ohana.rule=Host(`${OHANA_DOMAIN:-ohana.fa-krug.de}`)"
+      - "traefik.http.routers.ohana.rule=Host(`${OHANA_DOMAIN:-ohana-app.fa-krug.de}`)"
       - "traefik.http.routers.ohana.entrypoints=web"
       - "traefik.http.services.ohana.loadbalancer.server.port=8000"
 

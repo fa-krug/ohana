@@ -10,7 +10,7 @@ A push to `origin/main` that touches `server/**`, `docker-compose*.yml` or the w
 of the sign-in pages' script and tests → linux/amd64 + linux/arm64 images → push
 `ghcr.io/fa-krug/ohana:latest`, `:main` and `:sha-…` → redeploy the Arcane project `ohana` with
 `arcane-cli` (GitHub OIDC federated credential, no deploy secret) → wait for
-`https://ohana.fa-krug.de/api/health`.
+`https://ohana-app.fa-krug.de/api/health`.
 
 So deploying means: get the reviewed commits onto `main` (merge the pull request), with
 `npm run typecheck` and `npm test` (in `server/`) passing on the merged result. Never push
@@ -24,4 +24,9 @@ The native app in `apple/` ships through Xcode Cloud / App Store Connect (apple/
 Coordinates: GitHub `fa-krug/ohana`, image `ghcr.io/fa-krug/ohana` (GITHUB_TOKEN pushes it; the
 package must be public so self-hosters and the Pi can pull it), Arcane project `ohana` at
 https://arcane.fa-krug.de (compose from `docker-compose.production.yml`), domain
-`ohana.fa-krug.de`.
+`ohana-app.fa-krug.de`.
+
+The website https://ohana.fa-krug.de (the docs, Imprint, privacy policy) is separate: VitePress in
+`docs/`, published to GitHub Pages by `.github/workflows/pages.yml` on every push to `main` that
+changes `docs/` (the build fails while `docs/.vitepress/operator.ts` lacks the Imprint's contact
+details).

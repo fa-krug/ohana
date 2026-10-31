@@ -10,6 +10,9 @@ and Mac** ([`apple/`](apple)). There is no web app: the server only serves the A
 few pages that need your server's own address (signing in with passkeys, the first-run setup,
 invite links).
 
+**Website and documentation: [ohana.fa-krug.de](https://ohana.fa-krug.de)** (a
+[quick start](https://ohana.fa-krug.de/quickstart), the self-hosting guide, the API reference).
+
 ## Features
 
 - **Families and people:** several families per account, members as **editor** (changes
@@ -45,7 +48,8 @@ invite links).
    docker compose up -d
    ```
 
-   The full guide (reverse proxy, backups, updates, AI, notifications, turning modules off) is
+   The [quick start](https://ohana.fa-krug.de/quickstart) walks through it; the full guide
+   (reverse proxy, backups, updates, AI, notifications, turning modules off) is
    [docs/self-hosting.md](docs/self-hosting.md).
 2. **Create the first account.** Open `https://<your server>/setup` (or connect the app
    right away: it opens the setup for a fresh server). The first account is the administrator.
@@ -89,6 +93,9 @@ Point the app at `http://<your machine>:3000` to try it against your checkout. S
 changes: edit `server/lib/db/schema*.ts`, then `npm run db:generate`. Settings come from the
 environment: [server/.env.example](server/.env.example). Locked out? `npm run setup-link --
 <email>` prints a new setup link.
+
+The website ([ohana.fa-krug.de](https://ohana.fa-krug.de)) is [`docs/`](docs): VitePress,
+`cd docs && npm install && npm run dev`; it's published to GitHub Pages from `main`.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for how to contribute and [SECURITY.md](SECURITY.md)
 for reporting vulnerabilities.
