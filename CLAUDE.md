@@ -325,6 +325,14 @@ npm run import-legacy -- --family-planner dump.sql --cookless cookless.db --cook
   built and uploaded by Xcode Cloud (`apple/ci_scripts/ci_post_clone.sh` runs XcodeGen); version
   from `MARKETING_VERSION` (the plists say `$(MARKETING_VERSION)`), build numbers Xcode Cloud's;
   `Resources/PrivacyInfo.xcprivacy` declares the `UserDefaults` use. Steps in `apple/README.md` → Releasing.
+  Keeping the Mac smooth while the assistant panel slides (each step lays out the whole window):
+  the panel stays in the inspector while closed (`AssistantPanel(visible:)`: closed, no toolbar
+  items, no ask requests, not a viewer of the chat) and has its buttons in a header of its own,
+  not in the toolbar; every page (`AppShell`) and the panel take any size
+  (`.frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)`), so the window
+  doesn't measure them for its smallest size — never a frame or a custom `Layout` around the tab
+  view itself (that lays out without end); no `ViewThatFits` in a toolbar; no width in a page's
+  state where a flag will do; the calendar's year grid is one `Canvas` (`CalendarYearDays`).
 
 ## Conventions
 
