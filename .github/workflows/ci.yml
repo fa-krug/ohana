@@ -195,11 +195,16 @@ jobs:
           # exits non-zero if the redeploy fails.
           arcane-cli projects redeploy "$PROJECT"
           arcane-cli projects get "$PROJECT"
-      - name: Wait for health check
+      - name: Wait for the new version
+        # /api/health alone would also pass on the old containers: wait until the server reports
+        # this commit (GET /api/v1/server → version "<package version>+<commit>").
         run: |
+          want="+${GITHUB_SHA::7}"
           for i in $(seq 1 30); do
-            if curl -fsS --max-time 10 https://ohana.fa-krug.de/api/health; then echo; echo "Healthy"; exit 0; fi
+            got="$(curl -fsS --max-time 10 https://ohana.fa-krug.de/api/v1/server | jq -r '.version // empty' 2>/dev/null || true)"
+            if [ "${got%"$want"}" != "$got" ]; then echo "Running $got"; exit 0; fi
+            echo "Waiting: server reports '${got:-no version}', want …$want"
             sleep 10
           done
-          echo "::error::https://ohana.fa-krug.de/api/health did not become healthy within 5 minutes"
+          echo "::error::https://ohana.fa-krug.de doesn't run $want after 5 minutes (does the Arcane project pull ghcr.io/fa-krug/ohana:main?)"
           exit 1
