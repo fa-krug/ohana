@@ -30,6 +30,10 @@ struct AssistantChatView: View {
     /// Given by the panel, which reads the shell: read here, the page's own menus (focused values
     /// it sets) would change what it reads and draw it again, endlessly.
     var here = "overview"
+    /// On screen. The panel stays in the shell while it is closed (built once, it opens at
+    /// once); closed, it has no toolbar, takes no requests, doesn't follow the chat (someone
+    /// following counts as someone looking) and leaves ⌘V alone.
+    var visible = true
 
     @State private var text = ""
     @State private var selection: TextSelection?
@@ -40,6 +44,7 @@ struct AssistantChatView: View {
     @State private var importing = false
     @State private var dropping = false
     @State private var photos: [PhotosPickerItem] = []
+    @State private var pickingPhotos = false
     @State private var dictation = AssistantDictation()
     @FocusState private var composerFocused: Bool
     @State private var scroll = ScrollPosition(edge: .bottom)
@@ -68,7 +73,7 @@ struct AssistantChatView: View {
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
-            .toolbar { toolbar }
+            .toolbar { if visible { toolbar } }
             .navigationDestination(isPresented: $showChats) {
                 AssistantChatListView(store: store) {
                     showChats = false
@@ -78,32 +83,22 @@ struct AssistantChatView: View {
             .background { OhanaBackground(tint: ModuleTint.assistant) }
             .environment(\.openURL, OpenURLAction { url in openLink(url) })
             .task(id: family.revision(.settings)) { await store.loadSettings() }
-            .task {
+            .task(id: visible) {
+                guard visible else { return }
                 await store.restoreLatest()
                 await store.refresh()
             }
-            .onAppear {
-                store.addViewer()
-                connect()
-                focusComposer()
-                #if os(macOS)
-                installPasteMonitor()
-                #endif
-            }
-            .onDisappear {
-                store.removeViewer()
-                #if os(iOS)
-                dictation.stop()
-                #endif
-                #if os(macOS)
-                removePasteMonitor()
-                #endif
+            .onAppear { if visible { cameOnScreen() } }
+            .onDisappear { if visible { wentOffScreen() } }
+            .onChange(of: visible) {
+                if visible { cameOnScreen() } else { wentOffScreen() }
+                takeRequest()
             }
             .onChange(of: here, initial: true) { store.page = here }
             .onChange(of: family.assistantRequest?.id, initial: true) { takeRequest() }
             .onChange(of: takesRequests) { takeRequest() }
             .onChange(of: scenePhase) {
-                if scenePhase == .active { Task { await store.refresh() } } else if scenePhase == .background { store.unfollow() }
+                if scenePhase == .active, visible { Task { await store.refresh() } } else if scenePhase == .background { store.unfollow() }
             }
             .sheet(isPresented: $showSettings, onDismiss: { Task { await store.loadSettings() } }) {
                 NavigationStack {
@@ -118,6 +113,8 @@ struct AssistantChatView: View {
                 if case let .success(urls) = result { attach(urls) }
                 else if case let .failure(error) = result { ErrorBanner.shared.show(error) }
             }
+            .photosPicker(isPresented: $pickingPhotos, selection: $photos, maxSelectionCount: AssistantAttachments.maxCount,
+                          matching: .images)
             .onChange(of: photos) {
                 let items = photos
                 photos = []
@@ -143,6 +140,25 @@ struct AssistantChatView: View {
         }
     }
 
+    private func cameOnScreen() {
+        store.addViewer()
+        connect()
+        focusComposer()
+        #if os(macOS)
+        installPasteMonitor()
+        #endif
+    }
+
+    private func wentOffScreen() {
+        store.removeViewer()
+        #if os(iOS)
+        dictation.stop()
+        #endif
+        #if os(macOS)
+        removePasteMonitor()
+        #endif
+    }
+
     /// The store tells this family's screens what changed.
     private func connect() {
         let family = family
@@ -162,7 +178,7 @@ struct AssistantChatView: View {
     /// `family.ask(…)`: a new chat if asked (an empty one is reused), the prompt in the composer,
     /// sent if asked, and the composer focused.
     private func takeRequest() {
-        guard takesRequests, family.assistantRequest != nil, let request = family.takeAssistantRequest() else { return }
+        guard takesRequests, visible, family.assistantRequest != nil, let request = family.takeAssistantRequest() else { return }
         showChats = false
         if request.newChat {
             store.newChatUnlessEmpty()
@@ -546,10 +562,9 @@ struct AssistantChatView: View {
 
     private var attachMenu: some View {
         Menu {
-            PhotosPicker(selection: $photos, maxSelectionCount: AssistantAttachments.maxCount,
-                         matching: .images) {
-                Label("Photo library", systemImage: "photo.on.rectangle")
-            }
+            // A button, not a `PhotosPicker`: that opens the photo library (a synchronous call to
+            // the system) as soon as the menu is built, which held up the panel's opening.
+            Button("Photo library", systemImage: "photo.on.rectangle") { pickingPhotos = true }
             Button("Choose files", systemImage: "folder") { importing = true }
             #if os(iOS)
             // ⌘V pastes pictures from iOS 27 on; this works everywhere.

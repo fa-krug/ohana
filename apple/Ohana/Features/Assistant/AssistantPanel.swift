@@ -8,6 +8,8 @@ struct AssistantPanel: View {
     @Environment(FamilyContext.self) private var family
     @Environment(\.horizontalSizeClass) private var sizeClass
     @FocusedValue(\.shell) private var shell
+    /// Shown: the inspector keeps the panel while it is closed (`AssistantChatView.visible`).
+    var visible = true
     /// On iPhone: full height to type at once; half height keeps the page behind usable.
     @State private var detent: PresentationDetent = .large
 
@@ -19,7 +21,10 @@ struct AssistantPanel: View {
 
     var body: some View {
         NavigationStack {
-            AssistantChatView(store: AssistantChatStore.shared(for: family.api), mode: .panel, here: here)
+            AssistantChatView(store: AssistantChatStore.shared(for: family.api), mode: .panel, here: here,
+                              visible: visible)
+                // Any size, so the window doesn't measure the chat for its smallest size (as the pages).
+                .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
         }
         .id(family.family.id)
         .presentationDetents([.medium, .large], selection: $detent)

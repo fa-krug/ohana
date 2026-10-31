@@ -36,6 +36,11 @@ struct AppShell: View {
                     Tab(item.title, systemImage: item.systemImage, value: item) {
                         NavigationStack {
                             item.root
+                                // Any size: asked for its smallest size after every layout of the
+                                // window (every step of the assistant panel sliding in), the page
+                                // would be measured whole. Not around the tab view: framing its
+                                // AppKit view made the window lay out without end.
+                                .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
                                 .shellToolbar()
                                 .demoBanner()
                         }
@@ -158,12 +163,11 @@ private struct AssistantPresentation: ViewModifier {
 
     private func inspector(_ content: Content) -> some View {
         content.inspector(isPresented: $isPresented) {
-            // Only while shown: a hidden inspector's toolbar items would stay in the window's.
-            if isPresented {
-                AssistantPanel()
-                    .errorBannerWhenCompact()
-                    .inspectorColumnWidth(min: 320, ideal: 400, max: 560)
-            }
+            // Kept while closed, so it opens without being built (and closes without being taken
+            // apart) while it slides; closed, it puts no items in the window's toolbar.
+            AssistantPanel(visible: isPresented)
+                .errorBannerWhenCompact()
+                .inspectorColumnWidth(min: 320, ideal: 400, max: 560)
         }
     }
 }
