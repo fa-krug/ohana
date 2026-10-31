@@ -224,7 +224,7 @@ final class AppModel {
     /// Opens a link into a family: `ohana://f/{familyId}/meals/recipes/{id}` or the same path on
     /// the server (`https://ohana.example/f/{id}/…`, e.g. from a notification). Switches to the
     /// family when it is one of the account's. An invite (`ohana://invite/{code}`, the server's
-    /// `/invite/{code}`) waits in `InviteInbox` for the family menu or the no-family screen to
+    /// `/invite/{code}`) waits in `InviteInbox` for the family picker or the no-family screen to
     /// show it. Signed out, a server's link (an invite, any page) leads to signing in there
     /// (`openSignedOut`). False for links it can't open.
     @discardableResult

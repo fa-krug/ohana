@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Administration (the web's /admin): users and families, for administrators. Pushed from the
-/// account screen on iPhone and iPad; a sheet from the family menu and on the Mac (`AdminSheet`).
+/// settings; a sheet while the account has no family (`AdminSheet`).
 struct AdminView: View {
     enum Tab: String, Hashable, CaseIterable {
         case users, families

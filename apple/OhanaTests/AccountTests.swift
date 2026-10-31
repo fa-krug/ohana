@@ -59,13 +59,6 @@ struct AccountTests {
         #expect(AccountRules.scriptTokens([paired] + a.tokens + [unnamed]).map(\.id) == ["t0"])
     }
 
-    @Test func showsTheMacTabsOneEachAndTheRestOnIPhone() {
-        #expect(AccountPage.all.shows(.account) && AccountPage.all.shows(.security) && AccountPage.all.shows(.general))
-        #expect(!AccountPage.all.shows(.developer))
-        #expect(AccountPage.developer.shows(.developer) && !AccountPage.developer.shows(.account))
-        #expect(!AccountPage.general.shows(.security))
-    }
-
     @Test func keepsAWayToSignIn() throws {
         let a = try decode(AccountOverview.self, Self.account)
         #expect(AccountRules.canRemovePassword(a))

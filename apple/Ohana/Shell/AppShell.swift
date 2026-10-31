@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// The frame around a family (the web app's components/shell/app-shell.tsx): the modules as a
-/// sidebar (iPad, Mac) or a floating Liquid Glass tab bar (iPhone), the family switcher, and
-/// the assistant as an inspector on the right (a sheet on iPhone), ⌘J.
+/// sidebar in sections (iPad, Mac) or a floating Liquid Glass tab bar (iPhone), the family
+/// switcher, and the assistant as an inspector on the right (a sheet on iPhone), ⌘J.
 struct AppShell: View {
     @Environment(AppModel.self) private var app
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -21,23 +21,17 @@ struct AppShell: View {
         @Bindable var app = app
         if let family = app.selectedFamily, let context = app.context(for: family) {
             TabView(selection: selection) {
-                ForEach(Module.allCases) { item in
-                    Tab(item.title, systemImage: item.systemImage, value: item) {
-                        NavigationStack {
-                            item.root
-                                .shellToolbar()
-                                .demoBanner()
-                        }
-                        // Not on the assistant's own page (iPad, Mac).
-                        .environment(\.shellAssistant, item == .assistant ? nil : $showAssistant)
-                    }
-                    // The assistant (a sheet from the toolbar) and the settings (the family menu)
-                    // live in the sidebar; the iPhone's tab bar keeps the five modules.
-                    .defaultVisibility(item == .settings || item == .assistant ? .hidden : .automatic, for: .tabBar)
+                tab(.overview)
+                TabSection("Modules") {
+                    ForEach(Module.modules) { tab($0) }
                 }
+                tab(.settings)
             }
             .tabViewStyle(.sidebarAdaptable)
             .tabViewSidebarHeader { FamilySwitcher() }
+            .tabViewSidebarBottomBar {
+                SidebarSettingsButton(selected: selection.wrappedValue == .settings) { module = .settings }
+            }
             .onChange(of: module) { if let module { storedModule = module } }
             #if os(iOS)
             .tabBarMinimizeBehavior(.onScrollDown)
@@ -103,6 +97,56 @@ struct AppShell: View {
             NoFamilyView()
         }
     }
+
+    private func tab(_ item: Module) -> some TabContent<Module> {
+        Tab(item.title, systemImage: item.systemImage, value: item) {
+            NavigationStack {
+                item.root
+                    .shellToolbar()
+                    .demoBanner()
+            }
+            // Not on the assistant's own page (iPad, Mac).
+            .environment(\.shellAssistant, item == .assistant ? nil : $showAssistant)
+        }
+        // The assistant (a sheet from the toolbar) and the settings (the family picker) live in
+        // the sidebar; the iPhone's tab bar keeps the five modules.
+        .defaultVisibility(item == .assistant || item == .settings ? .hidden : .automatic, for: .tabBar)
+        // The settings stand at the sidebar's foot instead (`SidebarSettingsButton`).
+        #if os(macOS)
+        .hidden(item == .settings)
+        #else
+        .defaultVisibility(item == .settings ? .hidden : .automatic, for: .sidebar)
+        #endif
+    }
+}
+
+/// The settings at the foot of the sidebar, below the modules however many there are: a row
+/// like the sidebar's own, highlighted while the settings are on screen.
+private struct SidebarSettingsButton: View {
+    let selected: Bool
+    let action: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            Label(Module.settings.title, systemImage: Module.settings.systemImage)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 10)
+                #if os(macOS)
+                .padding(.vertical, 6)
+                #else
+                .padding(.vertical, 11)
+                #endif
+                .background(
+                    .primary.opacity(selected ? 0.1 : hovering ? 0.05 : 0),
+                    in: .rect(cornerRadius: 10)
+                )
+                .contentShape(.rect(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
 }
 
 extension Notification.Name {
@@ -154,8 +198,8 @@ private struct AssistantPresentation: ViewModifier {
     }
 }
 
-/// The toolbar every module page gets from the shell: the family menu (on iPhone, where there is
-/// no sidebar) and the assistant toggle.
+/// The toolbar every module page gets from the shell: the family switcher (on iPhone, where there
+/// is no sidebar) and the assistant toggle.
 struct ShellToolbar: ViewModifier {
     @Environment(\.horizontalSizeClass) private var sizeClass
 
@@ -164,7 +208,11 @@ struct ShellToolbar: ViewModifier {
             .toolbar {
                 #if os(iOS)
                 if sizeClass == .compact {
-                    ToolbarItem(placement: .topBarLeading) { FamilyMenu() }
+                    ToolbarItem(placement: .topBarLeading) {
+                        FamilyPickerButton(showsPages: true) {
+                            Label("Family", systemImage: "person.2.circle")
+                        }
+                    }
                 }
                 #endif
             }
@@ -250,11 +298,7 @@ struct NoFamilyView: View {
                     }
                 }
                 ToolbarItem(placement: .primaryAction) {
-                    #if os(macOS)
-                    SettingsLink { Label("Account", systemImage: "person.crop.circle") }
-                    #else
                     Button("Account", systemImage: "person.crop.circle") { showAccount = true }
-                    #endif
                 }
             }
             .sheet(isPresented: $creating) { CreateFamilySheet().errorBanner() }
