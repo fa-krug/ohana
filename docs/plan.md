@@ -18,9 +18,9 @@ and one installed PWA. The modules know about each other (see
 | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Name / repo     | **Ohana**, repo `fa-krug/ohana` (the app at the repo root), `ohana.fa-krug.de`                                                                                 |
 | Approach        | A **new app**, taking the best parts of the three; the old apps run on until their data has moved                                                              |
-| Hosting         | **Raspberry Pi**, one Docker image, Traefik on the `gitops_default` network, redeployed by CI through Arcane (GitHub OIDC), like cookless and findmyappointment |
+| Hosting         | **Raspberry Pi** (since phase 8 also anyone's own server: open source, images on GHCR), one Docker image, Traefik on the `gitops_default` network, redeployed by CI through Arcane (GitHub OIDC), like cookless and findmyappointment |
 | Database        | **SQLite** (`better-sqlite3`, WAL) with **Drizzle**; one file under `/app/data`, plus `/app/data/media` for images                                             |
-| Framework       | **Next.js 16** (App Router), React 19, TypeScript, Tailwind 4, Radix / shadcn-style `components/ui`                                                            |
+| Framework       | **Next.js 16** (App Router), React 19, TypeScript, Tailwind 4, Radix / shadcn-style `components/ui`; since phase 8 **Hono**, no web UI (the native app is the client) |
 | Processes       | **web** (Next.js) and **worker** (scheduler, AI turns, notifications): the same image, two entrypoints, so a hanging scrape never blocks the UI                 |
 | Existing data   | **Imported**: users, families, calendars, finances, recipes, meal plans, searches. Accounts merged by email                                                    |
 | Old apps        | Shut down after the import; their domains are **not redirected** but removed. The Supabase project stays **read-only** for a while as an extra backup          |
