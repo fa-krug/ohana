@@ -1,9 +1,9 @@
 import Foundation
 
-// The calendar's JSON, as the server writes it (web/lib/calendar/vacation.ts, family-routes.ts,
+// The calendar's JSON, as the server writes it (server/lib/calendar/vacation.ts, family-routes.ts,
 // events.ts; the web client's components/calendar/api.ts types).
 
-/// What a type does for the coverage check (web/lib/calendar/core.ts `Role`).
+/// What a type does for the coverage check (server/lib/calendar/core.ts `Role`).
 enum CalendarRole: String, Codable, CaseIterable, Hashable, Identifiable {
     case none
     case needsCover = "needs_cover"

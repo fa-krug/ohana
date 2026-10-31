@@ -1,6 +1,0 @@
-node_modules
-.next
-data
-npm-debug.log*
-.env*
-*.tsbuildinfo

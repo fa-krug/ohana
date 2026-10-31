@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// GET /api/v1/families/{id}/overview (web/lib/families/dashboard.ts `Dashboard`).
+/// GET /api/v1/families/{id}/overview (server/lib/families/dashboard.ts `Dashboard`).
 struct OverviewDashboard: Codable, Hashable {
     let today: Day
     let calendar: OverviewCalendarSummary
@@ -15,7 +15,27 @@ struct OverviewDashboard: Codable, Hashable {
     let birthdays: [OverviewBirthday]
 }
 
-/// web/lib/calendar/summary.ts `CalendarSummary`.
+extension OverviewDashboard {
+    /// The parts of modules a server can turn off (meals, finance, appointments) may be missing
+    /// or null: they're empty then (and their cards hidden, `FamilyContext.isEnabled`).
+    init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        today = try c.decode(Day.self, forKey: .today)
+        calendar = try c.decode(OverviewCalendarSummary.self, forKey: .calendar)
+        awayToday = try c.decode([String].self, forKey: .awayToday)
+        todayEvents = try c.decode([OverviewEvent].self, forKey: .todayEvents)
+        upcoming = try c.decode([OverviewUpcomingItem].self, forKey: .upcoming)
+        meals = try c.decodeIfPresent(OverviewMealsSummary.self, forKey: .meals)
+            ?? OverviewMealsSummary(today: nil, shopping: nil)
+        finance = try c.decodeIfPresent(OverviewMonthSummary.self, forKey: .finance)
+            ?? OverviewMonthSummary(currency: "EUR", month: "", incomeCents: 0, expenseCents: 0, count: 0,
+                                    topExpense: nil, balanceCents: nil)
+        searches = try c.decodeIfPresent([OverviewSearchFind].self, forKey: .searches) ?? []
+        birthdays = try c.decode([OverviewBirthday].self, forKey: .birthdays)
+    }
+}
+
+/// server/lib/calendar/summary.ts `CalendarSummary`.
 struct OverviewCalendarSummary: Codable, Hashable {
     /// The first uncovered weekday from today on, if any.
     let nextGap: Day?
@@ -29,7 +49,7 @@ struct OverviewEntryRun: Codable, Hashable {
     let to: Day
 }
 
-/// web/lib/calendar/events.ts `PublicEvent`.
+/// server/lib/calendar/events.ts `PublicEvent`.
 struct OverviewEvent: Codable, Hashable, Identifiable {
     let id: String
     let date: Day
@@ -100,7 +120,7 @@ enum OverviewUpcomingItem: Codable, Hashable, Identifiable {
     }
 }
 
-/// web/lib/meals/queries/meal-plan.ts `MealsSummary`.
+/// server/lib/meals/queries/meal-plan.ts `MealsSummary`.
 struct OverviewMealsSummary: Codable, Hashable {
     struct Today: Codable, Hashable {
         let recipeId: String
@@ -122,7 +142,7 @@ struct OverviewMealsSummary: Codable, Hashable {
     let shopping: Shopping?
 }
 
-/// web/lib/finance/summary.ts `MonthSummary`.
+/// server/lib/finance/summary.ts `MonthSummary`.
 struct OverviewMonthSummary: Codable, Hashable {
     struct TopExpense: Codable, Hashable {
         let categoryId: String
@@ -147,7 +167,7 @@ struct OverviewMonthSummary: Codable, Hashable {
     var monthDay: Day? { Day("\(month)-01") }
 }
 
-/// web/lib/families/dashboard.ts `SearchFind`.
+/// server/lib/families/dashboard.ts `SearchFind`.
 struct OverviewSearchFind: Codable, Hashable, Identifiable {
     struct First: Codable, Hashable {
         let resultId: Int
@@ -167,7 +187,7 @@ struct OverviewSearchFind: Codable, Hashable, Identifiable {
     let doctors: Int
 }
 
-/// web/lib/families/birthdays.ts `BirthdayDay`.
+/// server/lib/families/birthdays.ts `BirthdayDay`.
 struct OverviewBirthday: Codable, Hashable, Identifiable {
     let day: Day
     let name: String

@@ -1,4 +1,5 @@
-# docker-compose.production.yml: the published image, as Arcane runs it on the Pi.
+# docker-compose.production.yml: fa-krug's own server (Arcane on a Raspberry Pi), redeployed by CI
+# from ghcr.io/fa-krug/ohana:main. Self-hosters: see docker-compose.yml and docs/self-hosting.md.
 # web and worker share one image and one data volume (SQLite in WAL mode).
 x-env: &env
   NODE_ENV: production
@@ -6,9 +7,8 @@ x-env: &env
   # Optional: a separate key for secrets at rest (else derived from AUTH_SECRET).
   ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
   APP_URL: https://${OHANA_DOMAIN:-ohana.fa-krug.de}
-  WEBAUTHN_RP_ID: ${OHANA_DOMAIN:-ohana.fa-krug.de}
+  # Passkeys: the domain and origin come from APP_URL.
   WEBAUTHN_RP_NAME: Ohana
-  WEBAUTHN_ORIGIN: https://${OHANA_DOMAIN:-ohana.fa-krug.de}
   BACKUP_KEEP: ${BACKUP_KEEP:-14}
   # Optional: allow the family's AI endpoint on the home network (e.g. Ollama).
   AI_ALLOW_PRIVATE_ENDPOINT: ${AI_ALLOW_PRIVATE_ENDPOINT:-}
@@ -18,9 +18,9 @@ x-env: &env
 
 services:
   web:
-    image: ${DOCKER_USERNAME:-sascha384}/ohana:latest
+    image: ghcr.io/fa-krug/ohana:main
     container_name: ohana
-    command: ["web"]
+    command: ["server"]
     restart: always
     expose:
       - "8000"
@@ -48,7 +48,7 @@ services:
       - "traefik.http.services.ohana.loadbalancer.server.port=8000"
 
   worker:
-    image: ${DOCKER_USERNAME:-sascha384}/ohana:latest
+    image: ghcr.io/fa-krug/ohana:main
     container_name: ohana-worker
     command: ["worker"]
     restart: always

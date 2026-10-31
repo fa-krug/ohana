@@ -114,7 +114,7 @@ struct ConnectServerView: View {
                     .font(.footnote)
                     .foregroundStyle(.red)
             } else {
-                Text("The address you use for Ohana in the browser, like ohana.example.com. A link from Ohana works too, such as an invite.")
+                Text("Your Ohana server’s address, like ohana.example.com. A link from Ohana works too, such as an invite.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -173,14 +173,25 @@ struct ConnectServerView: View {
         busy = true
         Task {
             defer { busy = false }
+            // The server must say which Ohana it runs before the browser opens: one too old for
+            // the app isn't paired.
+            let info: ServerInfo
             do {
-                // The server must answer its health check before the browser opens.
                 let client = APIClient(baseURL: url, token: nil)
-                _ = try await client.get("/api/health", as: JSONValue.self)
+                info = try await ServerInfo.fetch(from: client)
+                if !info.isSupported {
+                    // No /api/v1/server: an Ohana from before it (it answers its health check),
+                    // or no Ohana at all.
+                    _ = try await client.get("/api/health", as: JSONValue.self)
+                }
             } catch is CancellationError {
                 return
             } catch {
-                self.error = String(localized: "Couldn’t reach \(url.host() ?? url.absoluteString). Check the address: it’s the one you use for Ohana in the browser.")
+                self.error = String(localized: "Couldn’t reach \(url.host() ?? url.absoluteString). Check the address of your Ohana server.")
+                return
+            }
+            guard info.isSupported else {
+                self.error = ServerInfo.outdatedMessage
                 return
             }
             do {

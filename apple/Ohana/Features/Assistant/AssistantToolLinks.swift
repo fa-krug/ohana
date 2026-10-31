@@ -2,7 +2,7 @@ import Foundation
 
 /// Where the app shows what a tool call was about: the recipe it saved or read, the calendar day
 /// it changed, the appointment slot it booked, the shopping list, the finance category (the
-/// result shapes of web/lib/assistant/tools/*). The chat makes such a call's row tappable.
+/// result shapes of server/lib/assistant/tools/*). The chat makes such a call's row tappable.
 enum AssistantToolLinks {
     /// The route of a successful tool call, or nil when there is nothing to show.
     static func route(_ tool: AssistantToolCall, familyID: String) -> AppRoute? {

@@ -191,7 +191,7 @@ final class APIClient {
     }
 }
 
-/// One family's routes: `/api/v1/families/{id}/…` (see web/lib/api/family-api.ts) and the
+/// One family's routes: `/api/v1/families/{id}/…` (see server/lib/api/family-api.ts) and the
 /// family's other route handlers under the same prefix.
 struct FamilyAPI {
     let client: APIClient

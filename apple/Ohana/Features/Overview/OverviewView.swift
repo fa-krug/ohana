@@ -4,7 +4,8 @@ import SwiftUI
 /// modules. "Ask Ohana…", today, the meals and the shopping list, the next birthdays, what comes
 /// up, this month's finances and the appointment searches' latest finds, as content cards. A
 /// card's header opens its module; each row opens its exact place (a day of the calendar, a
-/// recipe, a shopping list, a category's transactions, an appointment slot).
+/// recipe, a shopping list, a category's transactions, an appointment slot). What belongs to a
+/// module the server has off doesn't show.
 struct OverviewView: View {
     @Environment(FamilyContext.self) private var family
     @Environment(AppModel.self) private var app
@@ -17,7 +18,7 @@ struct OverviewView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 OverviewHeader(familyName: family.family.name, userName: app.me?.name ?? "")
-                OverviewAskField()
+                if family.isEnabled(.assistant) { OverviewAskField() }
                 OverviewModuleChips()
                 LoadStateView(state: state, retry: load) { dashboard in
                     OverviewGrid(dashboard: dashboard)
@@ -160,7 +161,7 @@ private struct OverviewModuleChips: View {
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(modules) { module in
+                ForEach(modules.filter { family.isEnabled($0) }) { module in
                     Button {
                         family.open(.module(module))
                     } label: {
@@ -177,6 +178,7 @@ private struct OverviewModuleChips: View {
 }
 
 private struct OverviewGrid: View {
+    @Environment(FamilyContext.self) private var family
     let dashboard: OverviewDashboard
 
     private let columns = [GridItem(.adaptive(minimum: 320, maximum: 600), spacing: 16, alignment: .top)]
@@ -184,13 +186,19 @@ private struct OverviewGrid: View {
     var body: some View {
         LazyVGrid(columns: columns, alignment: .leading, spacing: 16) {
             OverviewTodayCard(dashboard: dashboard)
-            OverviewMealsCard(meals: dashboard.meals, awayToday: dashboard.awayToday)
+            if family.isEnabled(.meals) {
+                OverviewMealsCard(meals: dashboard.meals, awayToday: dashboard.awayToday)
+            }
             if !dashboard.birthdays.isEmpty {
                 OverviewBirthdaysCard(birthdays: dashboard.birthdays, today: dashboard.today)
             }
             OverviewUpcomingCard(items: dashboard.upcoming, today: dashboard.today)
-            OverviewFinanceCard(summary: dashboard.finance)
-            OverviewSearchesCard(searches: dashboard.searches)
+            if family.isEnabled(.finance) {
+                OverviewFinanceCard(summary: dashboard.finance)
+            }
+            if family.isEnabled(.appointments) {
+                OverviewSearchesCard(searches: dashboard.searches)
+            }
         }
     }
 }

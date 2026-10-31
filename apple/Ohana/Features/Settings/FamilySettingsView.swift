@@ -4,7 +4,8 @@ import SwiftUI
 /// page) on top, then the family's (the web app's settings page with its tabs: the name, the
 /// household (members, people without an account and invites; the home address; notifications),
 /// links to the modules' settings, export / import, and leaving or deleting the family; viewers
-/// see them read-only), this device's, and the server's administration for administrators.
+/// see them read-only), this device's, and the server's administration for administrators. The
+/// settings of a module the server has off don't show.
 struct FamilySettingsView: View {
     @Environment(FamilyContext.self) private var family
     @State private var model = FamilySettingsModel()
@@ -190,15 +191,19 @@ private struct FamilySettingsForm: View {
                 } label: {
                     FamilySettingsLabel(title: "Calendar", systemImage: Module.calendar.systemImage, tint: ModuleTint.calendar)
                 }
-                NavigationLink {
-                    FamilySettingsPageView(page: .finance, model: model).assistantButton()
-                } label: {
-                    FamilySettingsLabel(title: "Finance", systemImage: Module.finance.systemImage, tint: ModuleTint.finance)
+                if family.isEnabled(.finance) {
+                    NavigationLink {
+                        FamilySettingsPageView(page: .finance, model: model).assistantButton()
+                    } label: {
+                        FamilySettingsLabel(title: "Finance", systemImage: Module.finance.systemImage, tint: ModuleTint.finance)
+                    }
                 }
-                NavigationLink {
-                    FamilySettingsPageView(page: .assistant, model: model).assistantButton()
-                } label: {
-                    FamilySettingsLabel(title: "Assistant", systemImage: "sparkles", tint: ModuleTint.assistant)
+                if family.isEnabled(.assistant) {
+                    NavigationLink {
+                        FamilySettingsPageView(page: .assistant, model: model).assistantButton()
+                    } label: {
+                        FamilySettingsLabel(title: "Assistant", systemImage: "sparkles", tint: ModuleTint.assistant)
+                    }
                 }
             }
 

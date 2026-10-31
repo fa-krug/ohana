@@ -178,7 +178,8 @@ struct ShoppingListPage: View {
                 ForEach(ShoppingGrouping.groups(items)) { group in
                     categorySection(group)
                 }
-                if list.shoppingDate != nil, !savedCopy {
+                // What it cost comes from the finances: not without them.
+                if list.shoppingDate != nil, !savedCopy, family.isEnabled(.finance) {
                     ShoppingSpentSection(listID: list.id)
                 }
             }

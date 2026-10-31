@@ -1,0 +1,45 @@
+{
+  "name": "ohana",
+  "version": "0.2.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.23.4"
+  },
+  "scripts": {
+    "dev": "tsx scripts/dev.ts",
+    "start": "tsx http/index.ts",
+    "build": "tsx scripts/build-client.ts",
+    "worker": "tsx worker/index.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx scripts/db-migrate.ts && tsx scripts/seed.ts",
+    "db:seed": "tsx scripts/seed.ts",
+    "setup-link": "tsx scripts/setup-link.ts",
+    "mock-ai": "tsx scripts/mock-ai.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.5",
+    "@simplewebauthn/server": "^13.3.2",
+    "argon2": "^0.41.1",
+    "better-sqlite3": "^12.11.1",
+    "decimal.js": "^10.6.0",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.13.14",
+    "nodemailer": "^10.2.1",
+    "sharp": "^0.34.5",
+    "tsx": "^4.23.15",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@simplewebauthn/browser": "^13.3.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20",
+    "@types/nodemailer": "^8.0.2",
+    "drizzle-kit": "^0.31.10",
+    "esbuild": "^0.28.2",
+    "typescript": "^5",
+    "vitest": "^4.1.9"
+  },
+  "license": "AGPL-3.0-only"
+}

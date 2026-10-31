@@ -22,7 +22,7 @@ enum FinanceDateFormat: String, Codable, CaseIterable, Hashable {
 }
 
 /// How the columns of one bank's export map to transactions; saved per family in the finance
-/// settings (web/lib/finance/csv.ts CsvMapping: the same JSON, so the web reads the app's too).
+/// settings (server/lib/finance/csv.ts CsvMapping: the same JSON, so the web reads the app's too).
 struct FinanceCSVMapping: Codable, Hashable {
     /// The header cells, to recognize the same bank's files later.
     var signature: String
@@ -123,7 +123,7 @@ struct FinanceParsedRow: Hashable {
     }
 }
 
-/// Bank statement CSV files (web/lib/finance/csv.ts): decoding, splitting into cells, and
+/// Bank statement CSV files (server/lib/finance/csv.ts): decoding, splitting into cells, and
 /// guessing how the columns map to transactions (German and English bank formats).
 enum FinanceCSV {
     enum DecodeError: LocalizedError {

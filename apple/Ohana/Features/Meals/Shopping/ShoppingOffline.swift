@@ -5,7 +5,7 @@ import SwiftUI
 
 /// What the shopping lists keep on the device, per server and family, so they work in the shop
 /// without a connection (the app's version of the web's IndexedDB queue and the service
-/// worker's page cache, web/lib/offline and public/sw.js): the ticks not sent yet, and the
+/// worker's page cache, server/lib/offline and public/sw.js): the ticks not sent yet, and the
 /// lists as last loaded (shown read-only while offline). Files under Application Support:
 /// `Ohana/Shopping/<server>_<family>/`.
 struct ShoppingOfflineStore {

@@ -12,8 +12,12 @@ struct AppShell: View {
     @State private var module: Module?
     @SceneStorage("module") private var storedModule: Module = .overview
 
+    /// The tab on screen; the overview while the server has its module off.
     private var selection: Binding<Module> {
-        Binding { module ?? storedModule } set: { module = $0 }
+        Binding {
+            let current = module ?? storedModule
+            return app.isEnabled(current) ? current : .overview
+        } set: { module = $0 }
     }
     /// The assistant panel: each window opens it as the last one left it (on iPhone, where it
     /// is a sheet, closed).
@@ -31,12 +35,14 @@ struct AppShell: View {
     var body: some View {
         @Bindable var app = app
         if let family = app.selectedFamily, let context = app.context(for: family) {
+            // The modules the server has on (GET /api/v1/server).
+            let assistantOn = context.isEnabled(.assistant)
             TabView(selection: selection) {
-                tab(.overview)
+                tab(.overview, assistantOn: assistantOn)
                 TabSection("Modules") {
-                    ForEach(Module.modules) { tab($0) }
+                    ForEach(Module.modules.filter { context.isEnabled($0) }) { tab($0, assistantOn: assistantOn) }
                 }
-                tab(.settings)
+                tab(.settings, assistantOn: assistantOn)
             }
             .tabViewStyle(.sidebarAdaptable)
             .tabViewSidebarHeader { FamilySwitcher() }
@@ -47,12 +53,15 @@ struct AppShell: View {
             #if os(iOS)
             .tabBarMinimizeBehavior(.onScrollDown)
             #endif
-            .modifier(AssistantPresentation(isPresented: $showAssistant))
+            .modifier(AssistantPresentation(isPresented: $showAssistant, enabled: assistantOn))
             // The panel's settings and chats before it first opens, so it doesn't wait for them.
-            .task { await AssistantChatStore.shared(for: context.api).preload() }
+            .task(id: assistantOn) {
+                if assistantOn { await AssistantChatStore.shared(for: context.api).preload() }
+            }
             .environment(context)
             .id(family.id)
-            .focusedSceneValue(\.shell, ShellFocus(module: selection, assistant: $showAssistant) {
+            .focusedSceneValue(\.shell, ShellFocus(module: selection, assistant: $showAssistant,
+                                                   modules: Module.allCases.filter { context.isEnabled($0) }) {
                 context.ask(newChat: true)
             })
             .onChange(of: context.assistantRequest?.id) {
@@ -68,7 +77,7 @@ struct AppShell: View {
             }
             .sheet(isPresented: $app.showsConnect) { ConnectServerView().errorBanner() }
             .onReceive(NotificationCenter.default.publisher(for: .openModule)) { note in
-                if let target = note.object as? Module { module = target }
+                if let target = note.object as? Module, context.isEnabled(target) { module = target }
             }
             .onChange(of: context.pendingRoute, initial: true) {
                 guard let route = context.pendingRoute else { return }
@@ -94,7 +103,8 @@ struct AppShell: View {
             // the assistant at launch (screenshots, UI checks).
             .onAppear {
                 let defaults = UserDefaults.standard
-                if let name = defaults.string(forKey: "OHANA_DEV_MODULE"), let target = Module(rawValue: name) {
+                if let name = defaults.string(forKey: "OHANA_DEV_MODULE"), let target = Module(rawValue: name),
+                   context.isEnabled(target) {
                     module = target
                 }
                 if defaults.object(forKey: "OHANA_DEV_ASSISTANT") != nil {
@@ -111,7 +121,8 @@ struct AppShell: View {
         }
     }
 
-    private func tab(_ item: Module) -> some TabContent<Module> {
+    /// A module's tab; `assistantOn`: the server has the assistant, so the pages get its button.
+    private func tab(_ item: Module, assistantOn: Bool) -> some TabContent<Module> {
         Tab(item.title, systemImage: item.systemImage, value: item) {
             NavigationStack {
                 item.root
@@ -123,8 +134,8 @@ struct AppShell: View {
                     .shellToolbar()
                     .demoBanner()
             }
-            // Not on the assistant's own page (iPad, Mac).
-            .environment(\.shellAssistant, item == .assistant ? nil : $showAssistant)
+            // Not on the assistant's own page (iPad, Mac), nor without the assistant.
+            .environment(\.shellAssistant, item == .assistant || !assistantOn ? nil : $showAssistant)
         }
         // The assistant (a sheet from the toolbar) and the settings (the family picker) live in
         // the sidebar; the iPhone's tab bar keeps the five modules.
@@ -189,6 +200,14 @@ extension EnvironmentValues {
 /// under the status bar.
 private struct AssistantPresentation: ViewModifier {
     @Binding var isPresented: Bool
+    /// The server has the assistant on; off, the panel never shows (the views stay as they are,
+    /// so turning it on or off doesn't rebuild the shell).
+    var enabled = true
+
+    /// What the sheet or inspector shows: never while the assistant is off.
+    private var shown: Binding<Bool> {
+        Binding { enabled && isPresented } set: { isPresented = $0 }
+    }
 
     func body(content: Content) -> some View {
         presentation(content)
@@ -201,7 +220,7 @@ private struct AssistantPresentation: ViewModifier {
     private func presentation(_ content: Content) -> some View {
         #if os(iOS)
         if UIDevice.current.userInterfaceIdiom == .phone {
-            content.sheet(isPresented: $isPresented) {
+            content.sheet(isPresented: shown) {
                 AssistantPanel().errorBannerWhenCompact()
             }
         } else {
@@ -213,10 +232,10 @@ private struct AssistantPresentation: ViewModifier {
     }
 
     private func inspector(_ content: Content) -> some View {
-        content.inspector(isPresented: $isPresented) {
+        content.inspector(isPresented: shown) {
             // Kept while closed, so it opens without being built (and closes without being taken
             // apart) while it slides; closed, it puts no items in the window's toolbar.
-            AssistantPanel(visible: isPresented)
+            AssistantPanel(visible: enabled && isPresented)
                 .errorBannerWhenCompact()
                 .inspectorColumnWidth(min: 320, ideal: 400, max: 560)
         }

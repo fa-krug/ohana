@@ -1,6 +1,6 @@
 import Foundation
 
-/// The signed-in account (web/lib/auth/serialize.ts `UserDto`).
+/// The signed-in account (server/lib/auth/serialize.ts `UserDto`).
 struct UserAccount: Codable, Hashable, Identifiable {
     let id: String
     let email: String
@@ -18,7 +18,7 @@ enum FamilyRole: String, Codable, Hashable {
     case editor, viewer
 }
 
-/// One of the account's families (web/lib/families/manage.ts `listFamiliesOf`).
+/// One of the account's families (server/lib/families/manage.ts `listFamiliesOf`).
 struct FamilySummary: Codable, Hashable, Identifiable {
     let id: String
     let name: String

@@ -27,6 +27,18 @@ struct RootView: View {
                             .buttonStyle(.glass)
                     }
                     .background { OhanaBackground() }
+                case .outdated:
+                    ContentUnavailableView {
+                        Label("Your server needs an update", systemImage: "exclamationmark.arrow.triangle.2.circlepath")
+                    } description: {
+                        Text(ServerInfo.outdatedMessage)
+                    } actions: {
+                        Button("Try again") { Task { await app.refresh() } }
+                            .buttonStyle(.glassProminent)
+                        Button("Sign out and show the demo", role: .destructive) { Task { await app.signOut() } }
+                            .buttonStyle(.glass)
+                    }
+                    .background { OhanaBackground() }
                 case .ready:
                     AppShell()
                 }

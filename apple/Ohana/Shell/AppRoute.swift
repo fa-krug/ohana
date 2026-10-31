@@ -43,11 +43,28 @@ enum AppRoute: Hashable {
         case .settings: .settings
         }
     }
+
+    /// The module the server must have on for the route: its own, or for a module's settings
+    /// page that module.
+    var requiredModule: Module {
+        if case let .settings(page) = self, let owner = page.module { return owner }
+        return module
+    }
 }
 
 /// The pages of the family's settings a route can open.
 enum SettingsPage: String, Hashable, CaseIterable {
     case members, home, notifications, calendar, finance, assistant, data
+
+    /// The module whose settings the page holds; nil for the family's own pages.
+    var module: Module? {
+        switch self {
+        case .calendar: .calendar
+        case .finance: .finance
+        case .assistant: .assistant
+        case .members, .home, .notifications, .data: nil
+        }
+    }
 }
 
 extension AppRoute {

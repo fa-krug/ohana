@@ -1,0 +1,144 @@
+{
+  "meta": {
+    "description": "One app for the whole family: calendar, finance, meals, doctor appointments and an assistant.",
+    "title": "Ohana"
+  },
+  "languages": {
+    "de": "Deutsch",
+    "en": "English"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "continue": "Continue"
+  },
+  "auth": {
+    "devicePair": {
+      "connect": "Connect",
+      "description": "Sign in “{{device}}” as {{name}}? The app gets its own API token; you can remove it in the app's account settings.",
+      "invalid": "This pairing link is not valid. Start again in the app.",
+      "title": "Connect the Ohana app"
+    },
+    "login": {
+      "emailLabel": "Email",
+      "forgot": "Forgot your password? An administrator can send you a new setup link.",
+      "passwordLabel": "Password",
+      "signInWithPasskey": "Sign in with a passkey",
+      "submit": "Sign in",
+      "subtitle": "Welcome back to Ohana.",
+      "title": "Sign in",
+      "usePasskeyInstead": "Use a passkey instead",
+      "usePasswordInstead": "Use a password instead"
+    },
+    "setup": {
+      "emailLabel": "Email",
+      "nameLabel": "Your name",
+      "passwordLabel": "Password",
+      "submit": "Create account",
+      "subtitle": "Create the first account. It becomes the administrator.",
+      "title": "Welcome to Ohana",
+      "withPasskey": "Create with a passkey instead"
+    },
+    "setupLink": {
+      "description": "This link signs you in once. Continue to add a passkey or set a password.",
+      "invalid": "This setup link is invalid or has expired. Ask an administrator for a new one.",
+      "title": "Set up your account"
+    }
+  },
+  "invite": {
+    "accept": "Accept invite",
+    "createAccount": "Create account",
+    "createAccountDescription": "Create an account to join this family.",
+    "emailLabel": "Email",
+    "forPerson": "You were added to the family as {{name}}.",
+    "invalidInvite": "Invalid invite.",
+    "join": "Join {{family}}",
+    "nameLabel": "Your name",
+    "passwordLabel": "Password",
+    "registerWithPasskey": "Create with a passkey",
+    "signedInDescription": "You are signed in: accept the invite to join.",
+    "title": "Invite"
+  },
+  "onboarding": {
+    "addPasskey": {
+      "add": "Add a passkey",
+      "description": "Passkeys let you sign in without a password. Optional.",
+      "skip": "Skip for now",
+      "title": "Add a passkey"
+    },
+    "credentials": {
+      "description": "A passkey uses your fingerprint, face or device PIN. You can add more devices later.",
+      "passkey": "Add a passkey",
+      "password": "Use a password instead",
+      "passwordLabel": "Password",
+      "savePassword": "Save password",
+      "title": "How do you want to sign in?"
+    }
+  },
+  "pages": {
+    "language": "Language",
+    "openApp": "Open the app",
+    "signOut": "Sign out",
+    "openInviteInApp": "Have the Ohana app? Open the invite there.",
+    "home": {
+      "title": "You're signed in",
+      "signedInAs": "Signed in as {{name}}.",
+      "useApp": "Ohana runs in the app for iPhone, iPad and Mac. Open the app and connect it to this server:"
+    },
+    "open": {
+      "title": "Open in Ohana",
+      "description": "This link opens in the Ohana app."
+    },
+    "account": {
+      "title": "Your account",
+      "passkeys": "Passkeys",
+      "noPasskeys": "No passkeys yet.",
+      "addedOn": "added {{date}}",
+      "addPasskey": "Add a passkey",
+      "passkeyAdded": "Passkey added.",
+      "email": "Email",
+      "newEmail": "New email",
+      "changeEmail": "Change email",
+      "changeEmailWithPasskey": "Change with a passkey",
+      "emailChanged": "Email changed.",
+      "password": "Password",
+      "passwordSet": "You can sign in with a password.",
+      "noPassword": "No password set: you sign in with a passkey.",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "changePassword": "Change password",
+      "setPassword": "Set password",
+      "passwordSaved": "Password saved. Your other browsers were signed out.",
+      "backToApp": "Back to the app",
+      "back": "Back"
+    }
+  },
+  "notifications": {
+    "appointments": {
+      "book": "Book",
+      "nextAvailable": "next available",
+      "openInApp": "Open in Ohana",
+      "title_one": "{{count}} new appointment for {{search}}",
+      "title_other": "{{count}} new appointments for {{search}}",
+      "viewAllResults": "View all results"
+    },
+    "assistant": {
+      "failed": "The assistant couldn't finish",
+      "title": "The assistant has answered",
+      "untitled": "Your chat"
+    },
+    "coverage": {
+      "new": "new",
+      "title_one": "{{count}} day without cover in the next two weeks",
+      "title_other": "{{count}} days without cover in the next two weeks"
+    },
+    "shopping": {
+      "more": "… and {{count}} more",
+      "title_one": "Shopping tomorrow: {{count}} item",
+      "title_other": "Shopping tomorrow: {{count}} items"
+    },
+    "test": {
+      "body": "The channel \"{{channel}}\" works.",
+      "title": "Ohana test message"
+    }
+  }
+}

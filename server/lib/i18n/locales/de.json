@@ -1,0 +1,144 @@
+{
+  "meta": {
+    "description": "Eine App für die ganze Familie: Kalender, Finanzen, Essen, Arzttermine und ein Assistent.",
+    "title": "Ohana"
+  },
+  "languages": {
+    "de": "Deutsch",
+    "en": "English"
+  },
+  "common": {
+    "cancel": "Abbrechen",
+    "continue": "Weiter"
+  },
+  "auth": {
+    "devicePair": {
+      "connect": "Verbinden",
+      "description": "„{{device}}“ als {{name}} anmelden? Die App bekommt einen eigenen API-Token; du kannst ihn in den Kontoeinstellungen der App entfernen.",
+      "invalid": "Dieser Kopplungslink ist ungültig. Starte erneut in der App.",
+      "title": "Ohana-App verbinden"
+    },
+    "login": {
+      "emailLabel": "E-Mail",
+      "forgot": "Passwort vergessen? Ein Administrator kann dir einen neuen Einrichtungslink schicken.",
+      "passwordLabel": "Passwort",
+      "signInWithPasskey": "Mit Passkey anmelden",
+      "submit": "Anmelden",
+      "subtitle": "Willkommen zurück bei Ohana.",
+      "title": "Anmelden",
+      "usePasskeyInstead": "Stattdessen Passkey verwenden",
+      "usePasswordInstead": "Stattdessen Passwort verwenden"
+    },
+    "setup": {
+      "emailLabel": "E-Mail",
+      "nameLabel": "Dein Name",
+      "passwordLabel": "Passwort",
+      "submit": "Konto anlegen",
+      "subtitle": "Lege das erste Konto an. Es wird Administrator.",
+      "title": "Willkommen bei Ohana",
+      "withPasskey": "Stattdessen mit Passkey anlegen"
+    },
+    "setupLink": {
+      "description": "Dieser Link meldet dich einmal an. Danach fügst du einen Passkey hinzu oder legst ein Passwort fest.",
+      "invalid": "Dieser Einrichtungslink ist ungültig oder abgelaufen. Bitte einen Administrator um einen neuen.",
+      "title": "Konto einrichten"
+    }
+  },
+  "invite": {
+    "accept": "Einladung annehmen",
+    "createAccount": "Konto anlegen",
+    "createAccountDescription": "Lege ein Konto an, um dieser Familie beizutreten.",
+    "emailLabel": "E-Mail",
+    "forPerson": "Du wurdest der Familie als {{name}} hinzugefügt.",
+    "invalidInvite": "Ungültige Einladung.",
+    "join": "{{family}} beitreten",
+    "nameLabel": "Dein Name",
+    "passwordLabel": "Passwort",
+    "registerWithPasskey": "Mit Passkey anlegen",
+    "signedInDescription": "Du bist angemeldet: Nimm die Einladung an, um beizutreten.",
+    "title": "Einladung"
+  },
+  "onboarding": {
+    "addPasskey": {
+      "add": "Passkey hinzufügen",
+      "description": "Mit Passkeys meldest du dich ohne Passwort an. Optional.",
+      "skip": "Später",
+      "title": "Passkey hinzufügen"
+    },
+    "credentials": {
+      "description": "Ein Passkey nutzt Fingerabdruck, Gesicht oder Geräte-PIN. Weitere Geräte kannst du später hinzufügen.",
+      "passkey": "Passkey hinzufügen",
+      "password": "Stattdessen ein Passwort verwenden",
+      "passwordLabel": "Passwort",
+      "savePassword": "Passwort speichern",
+      "title": "Wie möchtest du dich anmelden?"
+    }
+  },
+  "pages": {
+    "language": "Sprache",
+    "openApp": "App öffnen",
+    "signOut": "Abmelden",
+    "openInviteInApp": "Du hast die Ohana-App? Öffne die Einladung dort.",
+    "home": {
+      "title": "Du bist angemeldet",
+      "signedInAs": "Angemeldet als {{name}}.",
+      "useApp": "Ohana läuft in der App für iPhone, iPad und Mac. Öffne die App und verbinde sie mit diesem Server:"
+    },
+    "open": {
+      "title": "In Ohana öffnen",
+      "description": "Dieser Link öffnet sich in der Ohana-App."
+    },
+    "account": {
+      "title": "Dein Konto",
+      "passkeys": "Passkeys",
+      "noPasskeys": "Noch keine Passkeys.",
+      "addedOn": "hinzugefügt am {{date}}",
+      "addPasskey": "Passkey hinzufügen",
+      "passkeyAdded": "Passkey hinzugefügt.",
+      "email": "E-Mail",
+      "newEmail": "Neue E-Mail",
+      "changeEmail": "E-Mail ändern",
+      "changeEmailWithPasskey": "Mit einem Passkey ändern",
+      "emailChanged": "E-Mail geändert.",
+      "password": "Passwort",
+      "passwordSet": "Du kannst dich mit einem Passwort anmelden.",
+      "noPassword": "Kein Passwort gesetzt: Du meldest dich mit einem Passkey an.",
+      "currentPassword": "Aktuelles Passwort",
+      "newPassword": "Neues Passwort",
+      "changePassword": "Passwort ändern",
+      "setPassword": "Passwort setzen",
+      "passwordSaved": "Passwort gespeichert. Deine anderen Browser wurden abgemeldet.",
+      "backToApp": "Zurück zur App",
+      "back": "Zurück"
+    }
+  },
+  "notifications": {
+    "appointments": {
+      "book": "Buchen",
+      "nextAvailable": "nächster freier Termin",
+      "openInApp": "In Ohana öffnen",
+      "title_one": "{{count}} neuer Termin für {{search}}",
+      "title_other": "{{count}} neue Termine für {{search}}",
+      "viewAllResults": "Alle Ergebnisse ansehen"
+    },
+    "assistant": {
+      "failed": "Der Assistent konnte nicht fertig werden",
+      "title": "Der Assistent hat geantwortet",
+      "untitled": "Dein Chat"
+    },
+    "coverage": {
+      "new": "neu",
+      "title_one": "{{count}} Tag ohne Betreuung in den nächsten zwei Wochen",
+      "title_other": "{{count}} Tage ohne Betreuung in den nächsten zwei Wochen"
+    },
+    "shopping": {
+      "more": "… und {{count}} weitere",
+      "title_one": "Morgen einkaufen: {{count}} Artikel",
+      "title_other": "Morgen einkaufen: {{count}} Artikel"
+    },
+    "test": {
+      "body": "Der Kanal „{{channel}}“ funktioniert.",
+      "title": "Ohana-Testnachricht"
+    }
+  }
+}

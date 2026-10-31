@@ -82,6 +82,29 @@ struct FamilySettingsTests {
         #expect(!input.canSave())
     }
 
+    @Test func ntfyNeedsOnlyItsTopicURL() throws {
+        var input = FamilyChannelInput()
+        input.name = "ntfy"
+        input.provider = .ntfy
+        #expect(input.missing() == [.target])
+        #expect(!input.canSave())
+        input.target = "https://ntfy.sh/krug-family"
+        // The access token is for protected topics only.
+        #expect(input.missing().isEmpty)
+        #expect(input.canSave())
+        let body = try JSONSerialization.jsonObject(with: JSONEncoder().encode(input)) as! [String: Any]
+        #expect(body["provider"] as? String == "NTFY")
+        #expect(body["target"] as? String == "https://ntfy.sh/krug-family")
+
+        let json = """
+        {"id":"c2","name":"ntfy","provider":"NTFY","target":"https://ntfy.example/family","enabled":true,"hasToken":false,"smtpHost":"","smtpPort":465,"smtpUsername":"","smtpFrom":""}
+        """
+        let channel = try JSONDecoder().decode(FamilyChannel.self, from: Data(json.utf8))
+        #expect(channel.kind == .ntfy)
+        #expect(FamilyChannelInput(channel).provider == .ntfy)
+        #expect(FamilyChannelProvider.ntfy.title == "ntfy")
+    }
+
     @Test func picksEventChannels() {
         let pref = FamilyEventPref(event: "shopping_reminder", enabled: true, channelIds: nil, hasChannels: true)
         let off = pref.toggling("b", on: false, all: ["a", "b", "c"])

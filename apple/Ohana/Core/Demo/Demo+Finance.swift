@@ -4,7 +4,7 @@ extension DemoServer {
     /// The demo's finance routes that depend on the query; the rest are files. Everything is
     /// worked out from `demo-finance.json` (settings, categories, accounts) and
     /// `demo-finance-transactions.json` (every transaction, none after today) the way
-    /// web/lib/finance/finance.ts does it: balances, the list's filters and paging, net counting
+    /// server/lib/finance/finance.ts does it: balances, the list's filters and paging, net counting
     /// of transfers in the totals and the summary, and the suggested transfers.
     static func finance(_ request: Request) -> JSONValue? {
         guard let path = request.familyPath,

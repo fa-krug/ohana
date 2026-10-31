@@ -1,7 +1,7 @@
 import Foundation
 
-// The shopping lists as the server sends them (web/lib/meals/app-routes-plan.ts and
-// web/lib/meals/queries/shopping.ts, web/lib/finance/groceries.ts for the spend).
+// The shopping lists as the server sends them (server/lib/meals/app-routes-plan.ts and
+// server/lib/meals/queries/shopping.ts, server/lib/finance/groceries.ts for the spend).
 
 /// GET /meals/shopping
 struct ShoppingOverview: Codable {

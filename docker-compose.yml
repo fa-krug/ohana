@@ -1,28 +1,37 @@
-# docker-compose.yml: local build of the web app in web/ (web + worker from the same image).
-services:
-  web:
-    build: ./web
-    ports:
-      - "3000:8000"
-    environment: &env
-      AUTH_SECRET: dev-only-not-secret
-      APP_URL: http://localhost:3000
-      WEBAUTHN_RP_ID: localhost
-      WEBAUTHN_ORIGIN: http://localhost:3000
-      MEDIA_ROOT: /app/data/media
-    volumes:
-      - app-data-dev:/app/data
-    restart: unless-stopped
+# Self-hosting Ohana: copy this file and .env.example (as .env) to your server, fill in .env,
+# then `docker compose up -d`. Put a reverse proxy with HTTPS in front of port 8000 (passkeys
+# need HTTPS); see docs/self-hosting.md. Two containers, one image, one data volume:
+#   ohana         the API and the sign-in pages; applies the database migrations at start
+#   ohana-worker  background jobs: assistant turns, appointment searches, notifications, backups
+# To build the image from this checkout instead, replace `image:` with `build: ./server`.
 
-  worker:
-    build: ./web
+x-ohana: &ohana
+  image: ghcr.io/fa-krug/ohana:${OHANA_VERSION:-latest}
+  restart: unless-stopped
+  env_file: .env
+  environment:
+    TZ: ${TZ:-Europe/Berlin}
+  volumes:
+    - ohana-data:/app/data
+
+services:
+  ohana:
+    <<: *ohana
+    container_name: ohana
+    command: ["server"]
+    ports:
+      - "${OHANA_PORT:-8000}:8000"
+
+  ohana-worker:
+    <<: *ohana
+    container_name: ohana-worker
     command: ["worker"]
-    environment: *env
-    volumes:
-      - app-data-dev:/app/data
     depends_on:
-      - web
-    restart: unless-stopped
+      ohana:
+        condition: service_healthy
+    healthcheck:
+      disable: true
 
 volumes:
-  app-data-dev:
+  # /app/data: the SQLite database, media/ (recipe photos) and backups/.
+  ohana-data:

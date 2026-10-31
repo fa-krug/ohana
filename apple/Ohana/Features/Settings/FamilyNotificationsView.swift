@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// Settings → Notifications: which events reach the family's channels (and which channels),
-/// and the channels themselves (Pushbullet, Pushover, Telegram, email). Editors change them;
-/// viewers see them.
+/// and the channels themselves (Pushbullet, Pushover, Telegram, ntfy, email). Editors change
+/// them; viewers see them. Events of a module the server has off don't show.
 struct FamilyNotificationsView: View {
     @Environment(FamilyContext.self) private var family
     let model: FamilySettingsModel
@@ -43,7 +43,7 @@ struct FamilyNotificationsView: View {
     private func form(_ household: FamilyHousehold) -> some View {
         Form {
             Section {
-                ForEach(household.events) { pref in
+                ForEach(household.events.filter { pref in pref.module.map { family.isEnabled($0) } ?? true }) { pref in
                     FamilyEventRow(pref: pref, channels: household.channels, canEdit: household.canEdit) { next in
                         save(next)
                     }

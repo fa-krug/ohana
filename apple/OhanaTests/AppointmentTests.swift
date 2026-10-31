@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import Ohana
 
-// Sample answers as web/lib/appointments/app-routes.ts sends them (captured from the routes).
+// Sample answers as server/lib/appointments/app-routes.ts sends them (captured from the routes).
 private enum AppointmentSamples {
     static let doctor = """
     {"resultId":1,"doctorName":"Dr A","doctorSubtitle":"","speciality":"","practiceName":"Praxis A","motiveLabel":"Erstuntersuchung","bookingUrl":"https://www.doctolib.de/a","slot":"2026-11-03T12:00:00.000Z","isNextSlot":false,"practiceAddress":"Hauptstr. 1","practiceCity":"München","practiceZipcode":"80331","practiceLatitude":"48.14","practiceLongitude":"11.58","source":"doctolib"}

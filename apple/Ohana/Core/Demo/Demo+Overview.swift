@@ -25,7 +25,7 @@ extension DemoServer {
         return .object(dashboard)
     }
 
-    /// The appointment searches as the appointments page has them (web/lib/families/dashboard.ts):
+    /// The appointment searches as the appointments page has them (server/lib/families/dashboard.ts):
     /// the last run's status, its first find and how many doctors it found.
     private static func searchFinds(_ request: Request) -> JSONValue? {
         let sub = "/appointments"
@@ -49,7 +49,7 @@ extension DemoServer {
     }
 
     /// This month's finances from the demo's transactions, so the card matches the finance
-    /// page (web/lib/finance/summary.ts `monthSummary`).
+    /// page (server/lib/finance/summary.ts `monthSummary`).
     private static func monthSummary(_ request: Request) -> JSONValue? {
         let today = request.today
         let month = String(format: "%04d-%02d", today.year, today.month)
@@ -93,7 +93,7 @@ extension DemoServer {
     }
 
     /// The birthdays from `from` to `to` (inclusive), by day then name; 29 February falls on the
-    /// 28th in other years (web/lib/families/birthdays.ts `birthdaysIn`).
+    /// 28th in other years (server/lib/families/birthdays.ts `birthdaysIn`).
     static func birthdays(_ people: [(name: String, birthday: Day)], from: Day, to: Day)
         -> [(day: Day, name: String, age: Int)] {
         var out: [(day: Day, name: String, age: Int)] = []

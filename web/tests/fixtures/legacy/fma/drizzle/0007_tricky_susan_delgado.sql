@@ -1,1 +1,0 @@
-ALTER TABLE `searches` ADD `jameda_speciality_type` text DEFAULT 'leistung' NOT NULL;

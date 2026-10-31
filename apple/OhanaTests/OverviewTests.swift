@@ -64,6 +64,16 @@ struct OverviewTests {
         #expect(d.searches[1].first == nil)
     }
 
+    @Test func decodesADashboardWithoutTheModulesAServerTurnedOff() throws {
+        let json = """
+        {"today":"2026-11-01","calendar":{"nextGap":null,"upcoming":[]},"awayToday":[],"todayEvents":[],"upcoming":[],"finance":null,"birthdays":[]}
+        """
+        let d = try JSONDecoder().decode(OverviewDashboard.self, from: Data(json.utf8))
+        #expect(d.meals.today == nil && d.meals.shopping == nil)
+        #expect(d.finance.count == 0)
+        #expect(d.searches.isEmpty)
+    }
+
     @Test func roundTripsUpcomingItems() throws {
         let d = try JSONDecoder().decode(OverviewDashboard.self, from: Data(Self.fullSample.utf8))
         let again = try JSONDecoder().decode(OverviewDashboard.self, from: JSONEncoder().encode(d))

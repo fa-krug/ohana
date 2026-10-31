@@ -280,7 +280,8 @@ struct FinanceImportSheet: View {
             if mapping?.signature.isEmpty == false {
                 Toggle("Remember this format for the next statement", isOn: $remember)
             }
-            if !store.categories.isEmpty {
+            // Sorting goes through the assistant's routes: not without it.
+            if !store.categories.isEmpty, family.isEnabled(.assistant) {
                 Toggle(store.aiConfigured
                        ? String(localized: "Sort the new transactions into categories (like similar ones, the rest with AI)")
                        : String(localized: "Sort the new transactions into categories like similar earlier ones"),
@@ -413,7 +414,7 @@ struct FinanceImportSheet: View {
                 await store.saveMapping(mapping)
             }
             let ids = res.ids
-            if categorize && !store.categories.isEmpty && !ids.isEmpty {
+            if categorize && family.isEnabled(.assistant) && !store.categories.isEmpty && !ids.isEmpty {
                 // Runs on after the sheet closed; its toast reports.
                 Task { await store.categorize(ids: ids) }
             }

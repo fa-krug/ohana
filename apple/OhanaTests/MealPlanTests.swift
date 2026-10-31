@@ -3,7 +3,7 @@ import Testing
 @testable import Ohana
 
 struct MealPlanTests {
-    /// GET /meals/plan as web/lib/meals/app-routes-plan.ts answers it (trimmed).
+    /// GET /meals/plan as server/lib/meals/app-routes-plan.ts answers it (trimmed).
     static let planJSON = """
     {"plan":{"id":"3516752d","iterationWeeks":1,"shoppingDays":[0,3],"servings":2,"knownRatio":"1","defaultLeftoverDays":0,"excludedTagIds":[],"iterations":[{"id":"it-2","startDate":"2026-11-01","endDate":"2026-11-07","status":"ACTIVE","entries":[{"id":"e1","date":"2026-11-01","mealType":"LUNCH","recipeId":"r2","recipeTitle":"Recipe 2","servings":2,"isLeftover":false,"sourceEntryId":null,"isLocked":false},{"id":"e2","date":"2026-11-02","mealType":"LUNCH","recipeId":"r2","recipeTitle":"Recipe 2","servings":2,"isLeftover":true,"sourceEntryId":"e1","isLocked":false}],"shoppingLists":[{"id":"l2","shoppingDate":"2026-11-05","itemCount":3},{"id":"l1","shoppingDate":"2026-11-02","itemCount":4}],"createdAt":"2026-11-01T12:00:00.000Z"},{"id":"it-1","startDate":"2026-10-25","endDate":"2026-10-31","status":"ARCHIVED","entries":[],"shoppingLists":[],"createdAt":"2026-10-25T12:00:00.000Z"}],"createdAt":"2026-11-01T12:00:00.000Z"},"away":{"2026-11-05":["Vacation"]},"tags":[{"id":"t1","category":"CUISINE","nameEn":"American","nameDe":"Amerikanisch"}]}
     """

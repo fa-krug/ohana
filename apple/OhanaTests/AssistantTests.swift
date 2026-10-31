@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import Ohana
 
-/// The assistant's API types against JSON as the server sends it (web/lib/assistant).
+/// The assistant's API types against JSON as the server sends it (server/lib/assistant).
 struct AssistantDecodingTests {
     static let chatJSON = """
     {

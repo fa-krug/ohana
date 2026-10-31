@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import Ohana
 
-/// The finance API's JSON as web/lib/finance/finance.ts writes it (dumped from the server's
+/// The finance API's JSON as server/lib/finance/finance.ts writes it (dumped from the server's
 /// routes), decoded by the app's models.
 struct FinanceDecodingTests {
     private func decode<T: Decodable>(_ type: T.Type, _ json: String) throws -> T {

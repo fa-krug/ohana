@@ -10,6 +10,8 @@ struct MenuBarAssistant: View {
         Group {
             if app.switching != nil {
                 ProgressView()
+            } else if !app.isEnabled(.assistant) {
+                ContentUnavailableView("The assistant is turned off on your Ohana server.", systemImage: "sparkles")
             } else if let family = app.selectedFamily, let context = app.context(for: family) {
                 AssistantPanel()
                     .environment(context)
@@ -24,10 +26,11 @@ struct MenuBarAssistant: View {
     }
 }
 
-/// The menu bar item that opens it, shown while `menuBarAssistant` is on. AppKit's status item
-/// rather than SwiftUI's `MenuBarExtra`: that one sets its icon again whenever a window of the app
-/// redraws, and a few redraws in one display cycle (the calendar's reload) make AppKit abort with
-/// "more Update Constraints in Window passes than there are views in the window".
+/// The menu bar item that opens it, shown while `menuBarAssistant` is on and the server has the
+/// assistant. AppKit's status item rather than SwiftUI's `MenuBarExtra`: that one sets its icon
+/// again whenever a window of the app redraws, and a few redraws in one display cycle (the
+/// calendar's reload) make AppKit abort with "more Update Constraints in Window passes than there
+/// are views in the window".
 final class MenuBarItem: NSObject, NSPopoverDelegate {
     static let shared = MenuBarItem()
 
@@ -51,6 +54,10 @@ final class MenuBarItem: NSObject, NSPopoverDelegate {
         center.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { _ in
             MainActor.assumeIsolated { MenuBarItem.shared.sync() }
         }
+        // A server without the assistant has no menu bar item.
+        center.addObserver(forName: .serverModulesChanged, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated { MenuBarItem.shared.sync() }
+        }
     }
 
     /// A status item made before the app has launched crashes in `NSApplication.init`.
@@ -59,7 +66,8 @@ final class MenuBarItem: NSObject, NSPopoverDelegate {
 
     private func sync() {
         guard launched else { return }
-        let shown = UserDefaults.standard.object(forKey: "menuBarAssistant") as? Bool ?? true
+        let shown = (UserDefaults.standard.object(forKey: "menuBarAssistant") as? Bool ?? true)
+            && app?.isEnabled(.assistant) != false
         // Stored before the item is made: making it saves its position in the defaults, which
         // calls this again.
         guard shown != self.shown else { return }

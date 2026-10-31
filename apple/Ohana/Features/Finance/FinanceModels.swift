@@ -1,6 +1,6 @@
 import Foundation
 
-// The finance API's JSON (web/lib/finance/finance.ts: publicCategory, publicAccount,
+// The finance API's JSON (server/lib/finance/finance.ts: publicCategory, publicAccount,
 // publicTransaction, overviewData, financeSummary, the routes' answers). Amounts are integer
 // cents, negative for money going out; days are "YYYY-MM-DD".
 
@@ -192,7 +192,7 @@ struct FinanceAccountsAt: Codable {
     var accounts: [FinanceAccount]
 }
 
-/// POST /ai/categorize (web/lib/assistant/routes.ts categorize).
+/// POST /ai/categorize (server/lib/assistant/routes.ts categorize).
 struct FinanceCategorizeResult: Codable {
     var changed: Int
     var matched: Int

@@ -15,6 +15,8 @@ final class AppModel {
         case ready
         /// Signed in, but the account couldn't be loaded (offline, server down).
         case failed(String)
+        /// The server's API is older than the app needs (`ServerInfo.requiredAPIVersion`).
+        case outdated
     }
 
     /// What the loading screen covers the whole app for, while it switches between the demo
@@ -33,6 +35,16 @@ final class AppModel {
     private(set) var me: UserAccount?
     private(set) var families: [FamilySummary] = []
     private(set) var client: APIClient?
+    /// The server's version and modules (GET /api/v1/server, the demo's too); nil until it
+    /// answered. Unknown, every module shows.
+    private(set) var serverInfo: ServerInfo? {
+        didSet {
+            guard serverInfo != oldValue else { return }
+            for context in contexts.values { context.serverInfo = serverInfo }
+            AssistantInbox.shared.available = isEnabled(.assistant)
+            NotificationCenter.default.post(name: .serverModulesChanged, object: nil)
+        }
+    }
 
     /// The server of a link opened in the demo (an invite link, a page of the server): the
     /// connect sheet takes it (`takePendingServer`) and starts signing in.
@@ -51,6 +63,11 @@ final class AppModel {
 
     var selectedFamily: FamilySummary? {
         families.first { $0.id == selectedFamilyID } ?? families.first
+    }
+
+    /// Whether the server has `module` on (all of them while that isn't known yet).
+    func isEnabled(_ module: Module) -> Bool {
+        serverInfo?.isEnabled(module) ?? true
     }
 
     /// Family contexts by id, so a family's caches and change signals survive switching away.
@@ -102,6 +119,7 @@ final class AppModel {
         guard let client else { return nil }
         if let existing = contexts[family.id], existing.family == family { return existing }
         let context = FamilyContext(family: family, api: FamilyAPI(client: client, familyID: family.id))
+        context.serverInfo = serverInfo
         if let old = contexts[family.id] { context.adoptRevisions(from: old) }
         contexts[family.id] = context
         return context
@@ -143,6 +161,7 @@ final class AppModel {
         me = nil
         families = []
         contexts = [:]
+        serverInfo = nil
         phase = .loading
     }
 
@@ -159,12 +178,23 @@ final class AppModel {
 
     static var minimumSwitch = Duration.milliseconds(900)
 
-    /// Reloads the account and its families (after creating or leaving a family, too).
+    /// Reloads the account and its families (after creating or leaving a family, too), and asks
+    /// the server for its version and modules alongside. A server too old for the app shows as
+    /// `outdated`; when the server's info can't be had (offline) the check waits for the next
+    /// refresh.
     func refresh() async {
         guard let client else { return }
         if me == nil { phase = .loading }
+        async let checked = checkServer(client)
         do {
             let response: MeResponse = try await client.get("/api/v1/me")
+            if let info = await checked {
+                serverInfo = info
+                guard info.isSupported else {
+                    phase = .outdated
+                    return
+                }
+            }
             me = response.user
             families = response.families
             if selectedFamilyID == nil || !families.contains(where: { $0.id == selectedFamilyID }) {
@@ -176,6 +206,17 @@ final class AppModel {
             await useDemo(signingOut: false)
         } catch {
             if me == nil { phase = .failed(error.localizedDescription) }
+        }
+    }
+
+    /// The server's info, nil when it can't be had (offline, an odd answer): then it's asked again
+    /// next time.
+    private func checkServer(_ client: APIClient) async -> ServerInfo? {
+        do {
+            return try await ServerInfo.fetch(from: client)
+        } catch {
+            APIClient.log.error("No server info: \(error.localizedDescription, privacy: .public)")
+            return nil
         }
     }
 
@@ -212,11 +253,6 @@ final class AppModel {
         #else
         UIDevice.current.name
         #endif
-    }
-
-    /// A page of the web app (for what the app leaves to it: passkeys).
-    func webURL(_ path: String) -> URL? {
-        client?.url(path)
     }
 
     // MARK: Links
@@ -281,6 +317,15 @@ final class FamilyContext {
 
     var canEdit: Bool { family.canEdit }
 
+    /// The server's modules (`AppModel.serverInfo`), kept up to date by the app model.
+    var serverInfo: ServerInfo?
+
+    /// Whether the server has `module` on (all of them while that isn't known yet). Screens hide
+    /// what belongs to a module that is off.
+    func isEnabled(_ module: Module) -> Bool {
+        serverInfo?.isEnabled(module) ?? true
+    }
+
     private(set) var revisions: [DataArea: Int] = [:]
 
     /// A counter per area that grows with every change; views reload with `.task(id:)` on it.
@@ -305,8 +350,10 @@ final class FamilyContext {
     /// it (`takeRoute`).
     private(set) var pendingRoute: AppRoute?
 
-    /// Sends the user to `route`: from a card, a link in another module, a web link.
+    /// Sends the user to `route`: from a card, a link in another module, a web link. A route
+    /// into a module the server has off is ignored.
     func open(_ route: AppRoute) {
+        guard isEnabled(route.requiredModule) else { return }
         pendingRoute = route
     }
 
@@ -320,6 +367,7 @@ final class FamilyContext {
     /// with `prompt` typed in, and sent right away with `send`. The shell shows the panel (or the
     /// assistant's page when it's on screen).
     func ask(_ prompt: String? = nil, send: Bool = false, newChat: Bool = false) {
+        guard isEnabled(.assistant) else { return }
         assistantRequest = AssistantRequest(prompt: prompt, send: send, newChat: newChat)
     }
 
@@ -343,6 +391,12 @@ struct AssistantRequest: Equatable, Identifiable {
     var prompt: String?
     var send: Bool
     var newChat: Bool
+}
+
+extension Notification.Name {
+    /// The server's modules changed (`AppModel.serverInfo`): for what isn't a view, like the Mac's
+    /// menu bar item.
+    static let serverModulesChanged = Notification.Name("OhanaServerModulesChanged")
 }
 
 /// What a change can touch, for `FamilyContext.didChange`.

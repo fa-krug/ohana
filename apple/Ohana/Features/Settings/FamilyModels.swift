@@ -2,7 +2,7 @@ import Foundation
 import SwiftUI
 import UniformTypeIdentifiers
 
-// The shapes of web/lib/families/app-routes.ts (GET /household and the changes under it).
+// The shapes of server/lib/families/app-routes.ts (GET /household and the changes under it).
 
 /// GET /api/v1/families/{id}/household
 struct FamilyHousehold: Codable, Hashable {
@@ -30,7 +30,7 @@ struct FamilyHousehold: Codable, Hashable {
     }
 }
 
-/// web/lib/families/members.ts `MemberDto`.
+/// server/lib/families/members.ts `MemberDto`.
 struct FamilyMember: Codable, Hashable, Identifiable {
     let userId: String
     let email: String
@@ -82,7 +82,7 @@ struct FamilyHome: Codable, Hashable {
     var hasLocation: Bool { address != nil && lat != nil && lng != nil }
 }
 
-/// GET /api/v1/families/{id}/geocode?q= (web/lib/appointments/geocoding.ts).
+/// GET /api/v1/families/{id}/geocode?q= (server/lib/appointments/geocoding.ts).
 struct FamilyLocationSuggestion: Codable, Hashable, Identifiable {
     let label: String
     let latitude: String
@@ -94,7 +94,7 @@ struct FamilyLocationSuggestion: Codable, Hashable, Identifiable {
 // MARK: Notifications
 
 enum FamilyChannelProvider: String, Codable, CaseIterable, Identifiable {
-    case pushbullet = "PUSHBULLET", pushover = "PUSHOVER", telegram = "TELEGRAM", email = "EMAIL"
+    case pushbullet = "PUSHBULLET", pushover = "PUSHOVER", telegram = "TELEGRAM", ntfy = "NTFY", email = "EMAIL"
 
     var id: String { rawValue }
 
@@ -103,6 +103,7 @@ enum FamilyChannelProvider: String, Codable, CaseIterable, Identifiable {
         case .pushbullet: "Pushbullet"
         case .pushover: "Pushover"
         case .telegram: "Telegram"
+        case .ntfy: "ntfy"
         case .email: String(localized: "Email")
         }
     }
@@ -112,6 +113,7 @@ enum FamilyChannelProvider: String, Codable, CaseIterable, Identifiable {
         case .pushbullet: "bell.badge"
         case .pushover: "bell.and.waves.left.and.right"
         case .telegram: "paperplane"
+        case .ntfy: "antenna.radiowaves.left.and.right"
         case .email: "envelope"
         }
     }
@@ -121,6 +123,7 @@ enum FamilyChannelProvider: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .email: "SMTP password"
         case .telegram: "Bot token"
+        case .ntfy: "Access token (optional)"
         default: "Access token / API key"
         }
     }
@@ -131,15 +134,18 @@ enum FamilyChannelProvider: String, Codable, CaseIterable, Identifiable {
         case .pushbullet: nil
         case .pushover: "User key"
         case .telegram: "Chat ID"
+        case .ntfy: "Topic URL"
         case .email: "Recipient email"
         }
     }
 
-    /// The fields the service needs (web/lib/notifications/schema.ts `CHANNEL_REQUIRED`).
+    /// The fields the service needs (server/lib/notifications/schema.ts `CHANNEL_REQUIRED`); ntfy's
+    /// token is for protected topics only.
     var required: [FamilyChannelField] {
         switch self {
         case .pushbullet: [.token]
         case .pushover, .telegram: [.token, .target]
+        case .ntfy: [.target]
         case .email: [.smtpHost, .smtpUsername, .token, .target]
         }
     }
@@ -149,7 +155,7 @@ enum FamilyChannelField: String, Hashable {
     case token, target, smtpHost, smtpUsername
 }
 
-/// web/lib/notifications/channels.ts `ChannelDto` (the secret is never sent back).
+/// server/lib/notifications/channels.ts `ChannelDto` (the secret is never sent back).
 struct FamilyChannel: Codable, Hashable, Identifiable {
     let id: String
     let name: String
@@ -209,7 +215,7 @@ struct FamilyChannelInput: Codable, Hashable {
     }
 }
 
-/// web/lib/notifications/prefs-shared.ts `EventPref` with `hasChannels` (EVENT_HAS_CHANNELS).
+/// server/lib/notifications/prefs-shared.ts `EventPref` with `hasChannels` (EVENT_HAS_CHANNELS).
 struct FamilyEventPref: Codable, Hashable, Identifiable {
     let event: String
     var enabled: Bool
@@ -218,6 +224,17 @@ struct FamilyEventPref: Codable, Hashable, Identifiable {
     let hasChannels: Bool
 
     var id: String { event }
+
+    /// The module the event belongs to (hidden when the server has it off); nil for unknown ones.
+    var module: Module? {
+        switch event {
+        case "appointment_found": .appointments
+        case "coverage_gap": .calendar
+        case "shopping_reminder": .meals
+        case "assistant_turn_finished": .assistant
+        default: nil
+        }
+    }
 
     var title: LocalizedStringKey {
         switch event {
@@ -320,7 +337,7 @@ struct FamilyHomeInput: Encodable {
 // MARK: Pure helpers
 
 enum FamilyBirthdays {
-    /// Full years on `today` (web/lib/families/birthdays.ts `ageOn`).
+    /// Full years on `today` (server/lib/families/birthdays.ts `ageOn`).
     static func age(_ birthday: Day, on today: Day) -> Int {
         let years = today.year - birthday.year
         return (today.month, today.day) < (birthday.month, birthday.day) ? years - 1 : years
@@ -350,7 +367,7 @@ extension FamilyRole {
     }
 }
 
-/// The family's export file (web/lib/calendar/export-file.ts).
+/// The family's export file (server/lib/calendar/export-file.ts).
 enum FamilyExportFile {
     static let formats = ["family-planner", "vacation-planner"]
 

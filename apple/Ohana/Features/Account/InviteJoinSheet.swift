@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// GET /api/v1/invites/{code} (web/lib/families/invite-routes.ts): what an invite joins.
+/// GET /api/v1/invites/{code} (server/lib/families/invite-routes.ts): what an invite joins.
 struct InviteSummary: Codable, Hashable {
     let familyId: String
     let familyName: String

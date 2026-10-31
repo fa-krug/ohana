@@ -2,7 +2,7 @@ import Foundation
 import Observation
 
 /// Ticks of shopping items, shown at once and sent in the background: the app's version of the
-/// web's offline queue (web/lib/offline). A tick that can't reach the server (offline, a server
+/// web's offline queue (server/lib/offline). A tick that can't reach the server (offline, a server
 /// error) stays queued — on disk too (`ShoppingOfflineStore`), so it survives quitting the app —
 /// and is retried with growing pauses and when the connection comes back; one the server refuses
 /// (the item is gone, no right to edit) is dropped and reported. Every tick is an idempotent "set"

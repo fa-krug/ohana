@@ -301,7 +301,7 @@ enum FamilyPasteboard {
 }
 
 /// A notification channel: the service, its secret (write-only: blank keeps the stored one),
-/// the target, SMTP for email.
+/// the target (ntfy: the topic's URL), SMTP for email.
 struct FamilyChannelSheet: View {
     let channel: FamilyChannel?
     let save: (FamilyChannelInput) async throws -> Void
@@ -330,7 +330,7 @@ struct FamilyChannelSheet: View {
                     }
                 }
             } footer: {
-                Text("Pushbullet, Pushover, Telegram or email over SMTP.")
+                Text("Pushbullet, Pushover, Telegram, ntfy or email over SMTP.")
             }
             if input.provider == .email {
                 Section("Email over SMTP") {
@@ -347,14 +347,23 @@ struct FamilyChannelSheet: View {
                 SecureField(input.provider.tokenLabel, text: $input.token,
                             prompt: hasToken ? Text("Leave empty to keep it") : nil)
                 if let label = input.provider.targetLabel {
-                    TextField(label, text: $input.target)
+                    TextField(label, text: $input.target,
+                              prompt: input.provider == .ntfy ? Text(verbatim: "https://ntfy.sh/your-topic") : nil)
                         .autocorrectionDisabled()
+                        #if os(iOS)
+                        .textInputAutocapitalization(input.provider == .ntfy ? TextInputAutocapitalization.never : nil)
+                        #endif
                 }
             } footer: {
-                if hasToken {
-                    Text("A token is stored; leave the field empty to keep it.")
-                } else {
-                    Text("Tokens and passwords are stored encrypted.")
+                VStack(alignment: .leading, spacing: 6) {
+                    if input.provider == .ntfy {
+                        Text("ntfy is push notifications you can host yourself, with an app for iPhone and iPad. The topic URL is the topic’s full address on ntfy.sh or your own ntfy server; the token is only needed for a protected topic.")
+                    }
+                    if hasToken {
+                        Text("A token is stored; leave the field empty to keep it.")
+                    } else {
+                        Text("Tokens and passwords are stored encrypted.")
+                    }
                 }
             }
             Section {

@@ -330,7 +330,8 @@ struct FinanceScreen: View {
 
     @ViewBuilder
     private var editActions: some View {
-        if !store.categories.isEmpty {
+        // Sorting goes through the assistant's routes (POST /ai/categorize): not without it.
+        if !store.categories.isEmpty, family.isEnabled(.assistant) {
             Button {
                 Task { await store.autoCategorize() }
             } label: {
@@ -375,8 +376,10 @@ struct FinanceScreen: View {
             Button("Import CSV…") { choosingFile = true }
                 .keyboardShortcut("i", modifiers: [.command, .shift])
             Button("Find Transfers…") { findingTransfers = true }
-            Button("Sort into Categories") { Task { await store.autoCategorize() } }
-                .disabled(store.categories.isEmpty || store.categorizing != nil)
+            if family.isEnabled(.assistant) {
+                Button("Sort into Categories") { Task { await store.autoCategorize() } }
+                    .disabled(store.categories.isEmpty || store.categorizing != nil)
+            }
             Button("Combine Automatically") { Task { await store.autoCombine() } }
         }
         Divider()

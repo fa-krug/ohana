@@ -931,6 +931,16 @@
         }
       }
     },
+    "Access token (optional)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Access-Token (optional)"
+          }
+        }
+      }
+    },
     "Access token / API key": {
       "localizations": {
         "de": {
@@ -1287,6 +1297,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Leg einen in den Einstellungen an."
+          }
+        }
+      }
+    },
+    "Add passkey": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passkey hinzufügen"
           }
         }
       }
@@ -2313,6 +2333,16 @@
         }
       }
     },
+    "Browsers signed in": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Angemeldete Browser"
+          }
+        }
+      }
+    },
     "Browsers signed in on the web": {
       "localizations": {
         "de": {
@@ -2599,6 +2629,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Menge ändern"
+          }
+        }
+      }
+    },
+    "Change with a passkey…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit einem Passkey ändern …"
           }
         }
       }
@@ -3429,6 +3469,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Konnte nicht geladen werden"
+          }
+        }
+      }
+    },
+    "Couldn’t reach %@. Check the address of your Ohana server.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ist nicht erreichbar. Prüfe die Adresse deines Ohana-Servers."
           }
         }
       }
@@ -9009,6 +9059,16 @@
         }
       }
     },
+    "Passkey added.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passkey hinzugefügt."
+          }
+        }
+      }
+    },
     "Passkey removed.": {
       "localizations": {
         "de": {
@@ -9655,6 +9715,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pushbullet, Pushover, Telegram oder E-Mail über SMTP."
+          }
+        }
+      }
+    },
+    "Pushbullet, Pushover, Telegram, ntfy or email over SMTP.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pushbullet, Pushover, Telegram, ntfy oder E-Mail über SMTP."
           }
         }
       }
@@ -11229,6 +11299,16 @@
         }
       }
     },
+    "Server version": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serverversion"
+          }
+        }
+      }
+    },
     "Service": {
       "localizations": {
         "de": {
@@ -11665,6 +11745,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Melde dich zuerst bei Ohana an"
+          }
+        }
+      }
+    },
+    "Sign in with your fingerprint, face or device PIN. A passkey belongs to your server’s address, so passkeys are added in a secure browser sheet of your server.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anmelden mit Fingerabdruck, Gesicht oder Geräte-PIN. Ein Passkey gehört zur Adresse deines Servers, deshalb fügst du Passkeys in einem sicheren Browserfenster deines Servers hinzu."
           }
         }
       }
@@ -12623,12 +12713,32 @@
         }
       }
     },
+    "The account page didn’t finish. Please try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Kontoseite wurde nicht abgeschlossen. Bitte versuche es noch einmal."
+          }
+        }
+      }
+    },
     "The address you use for Ohana in the browser, like ohana.example.com. A link from Ohana works too, such as an invite.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Die Adresse, unter der du Ohana im Browser öffnest, z. B. ohana.example.com. Ein Link aus Ohana geht auch, etwa eine Einladung."
+          }
+        }
+      }
+    },
+    "The assistant is turned off on your Ohana server.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Assistent ist auf deinem Ohana-Server ausgeschaltet."
           }
         }
       }
@@ -13173,6 +13283,16 @@
         }
       }
     },
+    "This server runs an older version of Ohana. Ask its administrator to update it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf diesem Server läuft eine ältere Version von Ohana. Bitte die Person, die ihn betreut, um ein Update."
+          }
+        }
+      }
+    },
     "This will delete all tags (including custom ones) and remove them from your recipes. Start fresh with the defaults?": {
       "localizations": {
         "de": {
@@ -13369,6 +13489,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Oberste Ebene"
+          }
+        }
+      }
+    },
+    "Topic URL": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topic-URL"
           }
         }
       }
@@ -14443,12 +14573,32 @@
         }
       }
     },
+    "Your Ohana server’s address, like ohana.example.com. A link from Ohana works too, such as an invite.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Adresse deines Ohana-Servers, z. B. ohana.example.com. Ein Link aus Ohana geht auch, etwa eine Einladung."
+          }
+        }
+      }
+    },
     "Your account can’t manage this server.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Dein Konto kann diesen Server nicht verwalten."
+          }
+        }
+      }
+    },
+    "Your account has no password, so the change is confirmed with a passkey, in a secure browser sheet of your server.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Konto hat kein Passwort, deshalb bestätigst du die Änderung mit einem Passkey – in einem sicheren Browserfenster deines Servers."
           }
         }
       }
@@ -14529,6 +14679,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Eigene Antwort…"
+          }
+        }
+      }
+    },
+    "Your server needs an update": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Server braucht ein Update"
           }
         }
       }
@@ -15519,6 +15679,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "benachrichtigt"
+          }
+        }
+      }
+    },
+    "ntfy is push notifications you can host yourself, with an app for iPhone and iPad. The topic URL is the topic’s full address on ntfy.sh or your own ntfy server; the token is only needed for a protected topic.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ntfy sind Push-Benachrichtigungen, die du selbst hosten kannst, mit einer App für iPhone und iPad. Die Topic-URL ist die vollständige Adresse des Topics auf ntfy.sh oder deinem eigenen ntfy-Server; das Token brauchst du nur für ein geschütztes Topic."
           }
         }
       }
