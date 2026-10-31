@@ -8,12 +8,23 @@ struct AssistantPanel: View {
     @Environment(FamilyContext.self) private var family
     @Environment(\.horizontalSizeClass) private var sizeClass
     @FocusedValue(\.shell) private var shell
+    /// Shown: the inspector keeps the panel while it is closed (`AssistantChatView.visible`).
+    var visible = true
     /// On iPhone: full height to type at once; half height keeps the page behind usable.
     @State private var detent: PresentationDetent = .large
 
+    /// The page beside the panel (web: `pageOf`; the assistant's page counts as the overview).
+    private var here: String {
+        guard let module = shell?.module.wrappedValue, module != .assistant else { return "overview" }
+        return module.rawValue
+    }
+
     var body: some View {
         NavigationStack {
-            AssistantChatView(store: AssistantChatStore.shared(for: family.api), mode: .panel)
+            AssistantChatView(store: AssistantChatStore.shared(for: family.api), mode: .panel, here: here,
+                              visible: visible)
+                // Any size, so the window doesn't measure the chat for its smallest size (as the pages).
+                .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
         }
         .id(family.family.id)
         .presentationDetents([.medium, .large], selection: $detent)
@@ -22,7 +33,10 @@ struct AssistantPanel: View {
         .onChange(of: shell?.module.wrappedValue) { before, after in
             // The assistant's page came on screen: no panel beside it (as on the web).
             if after == .assistant, before != .assistant, sizeClass != .compact {
-                shell?.assistant.wrappedValue = false
+                // At once: sliding shut, it would lay out the whole page's chat again every frame.
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) { shell?.assistant.wrappedValue = false }
             }
         }
     }

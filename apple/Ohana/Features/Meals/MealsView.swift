@@ -89,6 +89,8 @@ struct MealsView: View {
     @State private var creatingRecipe = false
     @State private var shoppingListID: String?
     @State private var onScreen = false
+    /// The page is wide enough for the segments in the toolbar.
+    @State private var segmentsFit = true
 
     var body: some View {
         Group {
@@ -106,11 +108,12 @@ struct MealsView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onGeometryChange(for: Bool.self) { $0.size.width >= 640 } action: { segmentsFit = $0 }
         .ohanaBackground(ModuleTint.meals)
         .toolbar {
             if sizeClass != .compact {
                 ToolbarItem(placement: .principal) {
-                    MealsSegmentPicker(selection: $segment)
+                    MealsSegmentPicker(selection: $segment, fits: segmentsFit)
                 }
             }
         }
@@ -175,23 +178,33 @@ extension EnvironmentValues {
 /// hold them (accessibility text sizes, a narrow window), a menu.
 struct MealsSegmentPicker: View {
     @Binding var selection: MealsSegment
+    /// Whether the segments fit, when the caller knows (the toolbar: by the page's width). A
+    /// `ViewThatFits` there measured both forms at every step of a resize, such as the assistant
+    /// panel sliding in.
+    var fits: Bool?
     @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         if typeSize.isAccessibilitySize {
             menu
+        } else if let fits {
+            if fits { segments } else { menu }
         } else {
             ViewThatFits(in: .horizontal) {
-                Picker("Section", selection: $selection) {
-                    ForEach(MealsSegment.allCases) { item in
-                        Text(item.title).tag(item)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
+                segments
                 menu
             }
         }
+    }
+
+    private var segments: some View {
+        Picker("Section", selection: $selection) {
+            ForEach(MealsSegment.allCases) { item in
+                Text(item.title).tag(item)
+            }
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
     }
 
     private var menu: some View {

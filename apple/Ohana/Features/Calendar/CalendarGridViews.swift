@@ -309,25 +309,20 @@ struct CalendarYearGrid: View {
             }
             .frame(height: layout.headerHeight)
             .accessibilityHidden(true)
-            ForEach(1...12, id: \.self) { month in
-                HStack(spacing: 0) {
-                    ForEach(1...31, id: \.self) { d in
-                        if CalendarMath.isValid(year: year, month: month, day: d) {
-                            let day = Day(year: year, month: month, day: d)
-                            CalendarDayCell(store: store, day: day, info: store.cell(day, context), style: .year,
-                                            showWeekday: showWeekday, iconSize: iconSize)
-                                .equatable()
-                                .padding(1)
-                                .frame(width: cellWidth, height: layout.rowHeight)
-                                .modifier(CalendarCellMenu(store: store, day: day))
-                        } else {
-                            Color.clear.frame(width: cellWidth, height: layout.rowHeight)
-                        }
-                    }
-                }
-            }
+            CalendarYearDays(store: store, year: year,
+                             months: (1...12).map { month in
+                                 (1...CalendarMath.daysInMonth(year: year, month: month)).map {
+                                     store.cell(Day(year: year, month: month, day: $0), context)
+                                 }
+                             },
+                             cellWidth: cellWidth, rowHeight: layout.rowHeight, showWeekday: showWeekday,
+                             iconSize: iconSize)
+                .equatable()
         }
         .frame(width: cellWidth * 31, height: layout.height, alignment: .topLeading)
+        #if os(macOS)
+        .overlay { CalendarYearPointer(store: store, layout: layout, space: Self.space) }
+        #endif
         // iPad: touch gestures, so swipes scroll the zoomed grid (a trackpad click is a tap there).
         .modifier(CalendarSelectionStyle(touch: calendarTouchInput, store: store, space: Self.space, hit: hit,
                                          onBegin: onBegin, onDoubleTap: onDoubleTap))
@@ -479,7 +474,7 @@ struct CalendarCellMenu: ViewModifier {
 
 /// The menu's items, a view of their own: what they read of the store (the selection) redraws
 /// them, not every day of the grid.
-private struct CalendarCellMenuItems: View {
+struct CalendarCellMenuItems: View {
     let store: CalendarStore
     let day: Day
     @Environment(CalendarActions.self) private var actions: CalendarActions?

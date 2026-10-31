@@ -103,6 +103,14 @@ final class AssistantChatStore {
 
     func setSettings(_ s: AssistantSettings) { settings = s }
 
+    /// Before the assistant first shows: its settings, the chats and the latest chat, so the
+    /// panel has them drawn before it slides in (a running turn isn't followed: no one looks yet).
+    func preload() async {
+        if settings == nil { await loadSettings() }
+        if !chatsLoaded { await loadChats() }
+        await restoreLatest(follow: false)
+    }
+
     func loadChats() async {
         do {
             chats = try await api.get("/ai/chats", as: AssistantChatList.self).chats
@@ -135,8 +143,8 @@ final class AssistantChatStore {
         activity = nil
     }
 
-    /// Opens a chat (a running turn goes on either way).
-    func open(_ id: String) async {
+    /// Opens a chat (a running turn goes on either way); `follow`: its running turn too.
+    func open(_ id: String, follow following: Bool = true) async {
         if id == currentID, current != nil { return }
         picks += 1
         unfollow()
@@ -152,7 +160,7 @@ final class AssistantChatStore {
                 usage: s.chat.usage, page: s.chat.page, queued: s.chat.queued ?? []
             )
             summary(s.chat)
-            if s.chat.isRunning { follow(id) }
+            if s.chat.isRunning, following { follow(id) }
         } catch is CancellationError {
         } catch {
             guard currentID == id else { return }
@@ -361,7 +369,7 @@ final class AssistantChatStore {
 
     /// The first time the assistant shows in a session, it opens on the latest chat if that was
     /// active in the last `within` (or still runs), so the conversation goes on where it was.
-    func restoreLatest(within: TimeInterval = 12 * 3600, now: Date = .now) async {
+    func restoreLatest(within: TimeInterval = 12 * 3600, now: Date = .now, follow: Bool = true) async {
         guard !restoredLatest else { return }
         restoredLatest = true
         let before = picks
@@ -370,7 +378,7 @@ final class AssistantChatStore {
         guard picks == before, current == nil, currentID == nil, let latest = chats.first,
               latest.isRunning || (latest.updatedDate.map { now.timeIntervalSince($0) < within } ?? false)
         else { return }
-        await open(latest.id)
+        await open(latest.id, follow: follow)
     }
 
     /// Starts a new chat unless the open one is still empty (no duplicates of empty chats).

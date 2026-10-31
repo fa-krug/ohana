@@ -19,14 +19,21 @@ struct AssistantChatView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @FocusedValue(\.shell) private var shell
     let store: AssistantChatStore
     let mode: AssistantChatMode
     /// The chat list is a column beside the chat (the page when there is room): no history
-    /// button then.
+    /// button then. The panel beside a module has none either, only the sheet on iPhone.
     var listBeside = false
     /// Takes the family's `ask` requests (only while this view is the one on screen).
     var takesRequests = true
+    /// The page the user looks at (web: `pageOf`; the assistant's page counts as the overview).
+    /// Given by the panel, which reads the shell: read here, the page's own menus (focused values
+    /// it sets) would change what it reads and draw it again, endlessly.
+    var here = "overview"
+    /// On screen. The panel stays in the shell while it is closed (built once, it opens at
+    /// once); closed, it has no toolbar, takes no requests, doesn't follow the chat (someone
+    /// following counts as someone looking) and leaves ⌘V alone.
+    var visible = true
 
     @State private var text = ""
     @State private var selection: TextSelection?
@@ -37,6 +44,7 @@ struct AssistantChatView: View {
     @State private var importing = false
     @State private var dropping = false
     @State private var photos: [PhotosPickerItem] = []
+    @State private var pickingPhotos = false
     @State private var dictation = AssistantDictation()
     @FocusState private var composerFocused: Bool
     @State private var scroll = ScrollPosition(edge: .bottom)
@@ -48,11 +56,6 @@ struct AssistantChatView: View {
     @State private var pasteMonitor: Any?
     #endif
 
-    /// The page the user looks at (web: `pageOf`; the assistant's page counts as the overview).
-    private var here: String {
-        guard let module = shell?.module.wrappedValue else { return "overview" }
-        return module == .assistant ? "overview" : module.rawValue
-    }
 
     /// The panel on iPhone is a sheet: opening a place in another module closes it.
     private var isSheet: Bool {
@@ -66,11 +69,12 @@ struct AssistantChatView: View {
     var body: some View {
         content
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .safeAreaInset(edge: .top, spacing: 0) { if headerInPanel { panelHeader } }
             .navigationTitle(Text(verbatim: store.current?.title ?? String(localized: "Assistant")))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
-            .toolbar { toolbar }
+            .toolbar { if visible && !headerInPanel { toolbar } }
             .navigationDestination(isPresented: $showChats) {
                 AssistantChatListView(store: store) {
                     showChats = false
@@ -80,32 +84,25 @@ struct AssistantChatView: View {
             .background { OhanaBackground(tint: ModuleTint.assistant) }
             .environment(\.openURL, OpenURLAction { url in openLink(url) })
             .task(id: family.revision(.settings)) { await store.loadSettings() }
-            .task {
+            .task(id: visible) {
+                guard visible else { return }
                 await store.restoreLatest()
+                // After the panel has slid in: what the refresh changes would be drawn while it slides.
+                if mode == .panel { try? await Task.sleep(for: .milliseconds(400)) }
+                guard !Task.isCancelled else { return }
                 await store.refresh()
             }
-            .onAppear {
-                store.addViewer()
-                connect()
-                focusComposer()
-                #if os(macOS)
-                installPasteMonitor()
-                #endif
-            }
-            .onDisappear {
-                store.removeViewer()
-                #if os(iOS)
-                dictation.stop()
-                #endif
-                #if os(macOS)
-                removePasteMonitor()
-                #endif
+            .onAppear { if visible { cameOnScreen() } }
+            .onDisappear { if visible { wentOffScreen() } }
+            .onChange(of: visible) {
+                if visible { cameOnScreen() } else { wentOffScreen() }
+                takeRequest()
             }
             .onChange(of: here, initial: true) { store.page = here }
             .onChange(of: family.assistantRequest?.id, initial: true) { takeRequest() }
             .onChange(of: takesRequests) { takeRequest() }
             .onChange(of: scenePhase) {
-                if scenePhase == .active { Task { await store.refresh() } } else if scenePhase == .background { store.unfollow() }
+                if scenePhase == .active, visible { Task { await store.refresh() } } else if scenePhase == .background { store.unfollow() }
             }
             .sheet(isPresented: $showSettings, onDismiss: { Task { await store.loadSettings() } }) {
                 NavigationStack {
@@ -120,6 +117,8 @@ struct AssistantChatView: View {
                 if case let .success(urls) = result { attach(urls) }
                 else if case let .failure(error) = result { ErrorBanner.shared.show(error) }
             }
+            .photosPicker(isPresented: $pickingPhotos, selection: $photos, maxSelectionCount: AssistantAttachments.maxCount,
+                          matching: .images)
             .onChange(of: photos) {
                 let items = photos
                 photos = []
@@ -145,6 +144,25 @@ struct AssistantChatView: View {
         }
     }
 
+    private func cameOnScreen() {
+        store.addViewer()
+        connect()
+        focusComposer()
+        #if os(macOS)
+        installPasteMonitor()
+        #endif
+    }
+
+    private func wentOffScreen() {
+        store.removeViewer()
+        #if os(iOS)
+        dictation.stop()
+        #endif
+        #if os(macOS)
+        removePasteMonitor()
+        #endif
+    }
+
     /// The store tells this family's screens what changed.
     private func connect() {
         let family = family
@@ -164,7 +182,7 @@ struct AssistantChatView: View {
     /// `family.ask(…)`: a new chat if asked (an empty one is reused), the prompt in the composer,
     /// sent if asked, and the composer focused.
     private func takeRequest() {
-        guard takesRequests, family.assistantRequest != nil, let request = family.takeAssistantRequest() else { return }
+        guard takesRequests, visible, family.assistantRequest != nil, let request = family.takeAssistantRequest() else { return }
         showChats = false
         if request.newChat {
             store.newChatUnlessEmpty()
@@ -211,7 +229,9 @@ struct AssistantChatView: View {
             }
         }
         #endif
-        if !listBeside {
+        // Beside a module the chats are on the page ("Open as a page"); the iPhone's sheet has
+        // no page to open, so it keeps the button.
+        if !listBeside, mode == .page || isSheet {
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     showChats = true
@@ -222,36 +242,59 @@ struct AssistantChatView: View {
             }
             ToolbarSpacer(.fixed, placement: .primaryAction)
         }
-        ToolbarItem(placement: .primaryAction) {
-            Menu {
-                // No shortcut: on the page ⌘N is File ▸ New Chat; beside a module ⌘N is that
-                // module's, and ⇧⌘J (Go ▸ Ask the assistant) starts a new chat.
-                Button("New chat", systemImage: "square.and.pencil") { newChat() }
-                Button("Copy the chat, with all tool results", systemImage: "doc.on.doc") {
-                    copy(store.current?.items ?? [])
-                }
-                .disabled(store.current?.items.isEmpty ?? true)
-                if family.canEdit {
-                    Divider()
-                    Button("Assistant settings", systemImage: "gearshape") { showSettings = true }
-                }
+        ToolbarItem(placement: .primaryAction) { newChatMenu }
+    }
+
+    /// Beside a module (the inspector on Mac and iPad) the panel's buttons are in a header of its
+    /// own, not in the window's toolbar: the toolbar's items came and went with every opening
+    /// and closing of the panel, the slowest part of its sliding in.
+    private var headerInPanel: Bool { mode == .panel && !isSheet }
+
+    private var panelHeader: some View {
+        HStack(spacing: 8) {
+            Text(verbatim: store.current?.title ?? String(localized: "Assistant"))
+                .font(.headline)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityAddTraits(.isHeader)
+            newChatMenu
+                .labelStyle(.iconOnly)
+                .menuIndicator(.hidden)
+                .buttonStyle(.glass)
+                .buttonBorderShape(.circle)
+            Button {
+                family.open(.assistantChat(id: store.currentID))
             } label: {
-                Label("New chat", systemImage: "square.and.pencil")
-            } primaryAction: {
-                newChat()
+                Label("Open as a page", systemImage: "arrow.up.left.and.arrow.down.right")
+                    .labelStyle(.iconOnly)
             }
-            .help(Text("New chat"))
+            .buttonStyle(.glass)
+            .buttonBorderShape(.circle)
+            .help(Text("Open as a page"))
         }
-        if mode == .panel, !isSheet {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    family.open(.assistantChat(id: store.currentID))
-                } label: {
-                    Label("Open as a page", systemImage: "arrow.up.left.and.arrow.down.right")
-                }
-                .help(Text("Open as a page"))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+    }
+
+    private var newChatMenu: some View {
+        Menu {
+            // No shortcut: on the page ⌘N is File ▸ New Chat; beside a module ⌘N is that
+            // module's, and ⇧⌘J (Go ▸ Ask the assistant) starts a new chat.
+            Button("New chat", systemImage: "square.and.pencil") { newChat() }
+            Button("Copy the chat, with all tool results", systemImage: "doc.on.doc") {
+                copy(store.current?.items ?? [])
             }
+            .disabled(store.current?.items.isEmpty ?? true)
+            if family.canEdit {
+                Divider()
+                Button("Assistant settings", systemImage: "gearshape") { showSettings = true }
+            }
+        } label: {
+            Label("New chat", systemImage: "square.and.pencil")
+        } primaryAction: {
+            newChat()
         }
+        .help(Text("New chat"))
     }
 
     private func newChat() {
@@ -324,6 +367,7 @@ struct AssistantChatView: View {
                 let items = visibleItems
                 ForEach(Array(items.enumerated()), id: \.element.offset) { index, entry in
                     AssistantItemView(item: entry.item, store: store, open: open)
+                        .equatable()
                         .contextMenu { itemMenu(items: items, index: index) }
                 }
                 if store.busy {
@@ -545,10 +589,9 @@ struct AssistantChatView: View {
 
     private var attachMenu: some View {
         Menu {
-            PhotosPicker(selection: $photos, maxSelectionCount: AssistantAttachments.maxCount,
-                         matching: .images) {
-                Label("Photo library", systemImage: "photo.on.rectangle")
-            }
+            // A button, not a `PhotosPicker`: that opens the photo library (a synchronous call to
+            // the system) as soon as the menu is built, which held up the panel's opening.
+            Button("Photo library", systemImage: "photo.on.rectangle") { pickingPhotos = true }
             Button("Choose files", systemImage: "folder") { importing = true }
             #if os(iOS)
             // ⌘V pastes pictures from iOS 27 on; this works everywhere.

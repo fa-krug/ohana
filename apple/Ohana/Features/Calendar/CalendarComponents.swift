@@ -155,18 +155,21 @@ struct CalendarStripes: View {
             .allowsHitTesting(false)
     }
 
-    private nonisolated struct Lines: Shape {
-        func path(in rect: CGRect) -> Path {
-            var path = Path()
-            let step: CGFloat = 6
-            var x = rect.minX - rect.height
-            while x < rect.maxX {
-                path.move(to: CGPoint(x: x, y: rect.maxY))
-                path.addLine(to: CGPoint(x: x + rect.height, y: rect.minY))
-                x += step
-            }
-            return path
+    /// The stripes over `rect` (the year grid draws them itself).
+    nonisolated static func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let step: CGFloat = 6
+        var x = rect.minX - rect.height
+        while x < rect.maxX {
+            path.move(to: CGPoint(x: x, y: rect.maxY))
+            path.addLine(to: CGPoint(x: x + rect.height, y: rect.minY))
+            x += step
         }
+        return path
+    }
+
+    private nonisolated struct Lines: Shape {
+        func path(in rect: CGRect) -> Path { CalendarStripes.path(in: rect) }
     }
 }
 
