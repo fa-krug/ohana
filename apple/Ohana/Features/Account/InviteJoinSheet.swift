@@ -41,7 +41,7 @@ enum InviteCode {
 }
 
 /// Invite links the app was opened with (`AppModel.open`), waiting for a screen to show them:
-/// the family menu or the no-family screen takes the code and shows `InviteJoinSheet`.
+/// the family picker or the no-family screen takes the code and shows `InviteJoinSheet`.
 @Observable
 final class InviteInbox {
     static let shared = InviteInbox()

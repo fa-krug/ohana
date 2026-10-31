@@ -33,14 +33,5 @@ struct OhanaApp: App {
         .windowToolbarStyle(.unified)
         #endif
         .commands { ShellCommands() }
-
-        #if os(macOS)
-        Settings {
-            AccountView()
-                .environment(app)
-                .tint(.ohana)
-                .frame(minWidth: 520, idealWidth: 620, minHeight: 560, idealHeight: 720)
-        }
-        #endif
     }
 }

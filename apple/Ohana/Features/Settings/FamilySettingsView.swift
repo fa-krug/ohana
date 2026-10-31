@@ -1,9 +1,10 @@
 import SwiftUI
 
-/// The family's settings (the web app's settings page with its tabs): the name, the household
-/// (members, people without an account and invites; the home address; notifications), links to
-/// the modules' settings, export / import, and leaving or deleting the family. Viewers see
-/// everything read-only.
+/// All settings in one place, like the system's Settings: the account (a card that opens its
+/// page) on top, then the family's (the web app's settings page with its tabs: the name, the
+/// household (members, people without an account and invites; the home address; notifications),
+/// links to the modules' settings, export / import, and leaving or deleting the family; viewers
+/// see them read-only), this device's, and the server's administration for administrators.
 struct FamilySettingsView: View {
     @Environment(FamilyContext.self) private var family
     @State private var model = FamilySettingsModel()
@@ -119,6 +120,8 @@ private struct FamilySettingsForm: View {
 
     var body: some View {
         Form {
+            accountSection
+
             if !household.canEdit {
                 Section {
                     Label("You are a viewer in this family: you can look at everything but not change it.",
@@ -143,7 +146,7 @@ private struct FamilySettingsForm: View {
                     LabeledContent("Family name", value: household.name)
                 }
             } header: {
-                Text("General")
+                Text("Family")
             } footer: {
                 if household.canEdit && trimmedName.isEmpty {
                     Text("A family needs a name.").foregroundStyle(.red)
@@ -222,6 +225,22 @@ private struct FamilySettingsForm: View {
                     Text("Only possible when you are the last member.")
                 }
             }
+
+            DeviceSettingsSection()
+
+            if app.me?.isAdmin == true, !app.isDemo {
+                Section {
+                    NavigationLink {
+                        AdminView().assistantButton()
+                    } label: {
+                        FamilySettingsLabel(title: "Administration", systemImage: "person.badge.shield.checkmark", tint: .indigo)
+                    }
+                } header: {
+                    Text("Server")
+                } footer: {
+                    Text("Users and families of this server.")
+                }
+            }
         }
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)
@@ -237,6 +256,32 @@ private struct FamilySettingsForm: View {
             Button("Delete the family", role: .destructive, action: delete)
         } message: {
             Text("Everything in it is deleted. This can’t be undone.")
+        }
+    }
+
+    /// Who is signed in (in the demo: that it is one), opening the account's page.
+    private var accountSection: some View {
+        Section {
+            NavigationLink {
+                AccountPageView().assistantButton()
+            } label: {
+                HStack(spacing: 14) {
+                    if app.isDemo {
+                        TintedIcon(systemImage: "sparkles.rectangle.stack", tint: .ohana, size: 44)
+                        VStack(alignment: .leading) {
+                            Text("Demo data").font(.headline)
+                            Text("No server connected").font(.subheadline).foregroundStyle(.secondary)
+                        }
+                    } else {
+                        TintedIcon(systemImage: "person.fill", tint: .ohana, size: 44)
+                        VStack(alignment: .leading) {
+                            Text(app.me?.displayName ?? "").font(.headline)
+                            Text("Account, sign-in and security").font(.subheadline).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .padding(.vertical, 2)
+            }
         }
     }
 

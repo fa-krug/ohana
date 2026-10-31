@@ -1,60 +1,55 @@
 import SwiftUI
 
 /// The account on this device (the web's /account): profile and language, email, password,
-/// passkeys, the signed-in devices and browsers, appearance, administration for admins, signing
-/// out, and (under Advanced) API tokens for scripts. On the Mac it's the Settings window (⌘,)
-/// with toolbar tabs; on iPhone and iPad one grouped form in a sheet, the API tokens a page of
-/// it. Adding a passkey stays on the web: a passkey belongs to the server's own domain. In the
-/// demo it offers to connect a server instead.
+/// passkeys, the signed-in devices and browsers, signing out, and (under Advanced, a page of its
+/// own) API tokens for scripts. A page of the settings (`AccountPageView`); a sheet while the
+/// account has no family yet, with the device's settings then. Adding a passkey stays on the
+/// web: a passkey belongs to the server's own domain. In the demo it offers to connect a server
+/// instead.
 struct AccountView: View {
     @AppStorage("appearance") private var appearance = Appearance.system
 
-    @Environment(AppModel.self) private var app
-
     var body: some View {
-        Group {
-            if app.switching != nil {
-                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if app.client == nil {
-                ContentUnavailableView("Not signed in", systemImage: "person.crop.circle.badge.questionmark",
-                                       description: Text("Connect Ohana to your server first."))
-            } else {
-                #if os(macOS)
-                TabView {
-                    Tab("General", systemImage: "gearshape") { AccountForm(page: .general) }
-                    Tab("Account", systemImage: "person.crop.circle") { AccountForm(page: .account) }
-                    if !app.isDemo {
-                        Tab("Sign-In & Security", systemImage: "lock") { AccountForm(page: .security) }
-                        Tab("Advanced", systemImage: "gearshape.2") { AccountForm(page: .developer) }
-                    }
-                }
-                #else
-                NavigationStack { AccountForm(page: .all) }
-                #endif
-            }
-        }
-        .errorBanner()
-        .preferredColorScheme(appearance.colorScheme)
+        NavigationStack { AccountContent(inSheet: true) }
+            .errorBanner()
+            .preferredColorScheme(appearance.colorScheme)
+            #if os(macOS)
+            .frame(minWidth: 520, idealWidth: 620, minHeight: 560, idealHeight: 720)
+            #endif
     }
 }
 
-/// Which part of the account a form shows: everything on iPhone and iPad (but the API tokens,
-/// a page of their own there), one tab of the Mac's Settings window otherwise.
+/// The account as a page of the family's settings.
+struct AccountPageView: View {
+    var body: some View {
+        AccountContent(inSheet: false)
+            .ohanaBackground(ModuleTint.settings)
+    }
+}
+
+/// The account's form, or why there is none.
+private struct AccountContent: View {
+    let inSheet: Bool
+    @Environment(AppModel.self) private var app
+
+    var body: some View {
+        if app.switching != nil {
+            ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if app.client == nil {
+            ContentUnavailableView("Not signed in", systemImage: "person.crop.circle.badge.questionmark",
+                                   description: Text("Connect Ohana to your server first."))
+        } else {
+            AccountForm(page: .all, inSheet: inSheet)
+        }
+    }
+}
+
+/// Which part of the account a form shows: everything but the API tokens, or the API tokens
+/// (a page of their own).
 enum AccountPage: Hashable {
     case all
-    /// Appearance (and the Mac's menu bar assistant).
-    case general
-    /// Who you are: name, language, email; administration, signing out.
-    case account
-    /// Password, passkeys, the signed-in devices and browsers.
-    case security
     /// API tokens for scripts and programs.
     case developer
-
-    /// Whether the form shows `part`.
-    func shows(_ part: AccountPage) -> Bool {
-        self == .all ? part != .developer : self == part
-    }
 }
 
 /// What a sheet of the account screen edits.
@@ -78,14 +73,11 @@ private enum AccountSheet: Identifiable {
 
 private struct AccountForm: View {
     let page: AccountPage
+    /// In a sheet (no family yet, so no settings page): a Done button and the device's settings.
+    var inSheet = false
     @Environment(AppModel.self) private var app
     @Environment(\.openURL) private var openURL
     @Environment(\.dismiss) private var dismiss
-    @AppStorage("appearance") private var appearance = Appearance.system
-    #if os(macOS)
-    @AppStorage("menuBarAssistant") private var menuBarAssistant = true
-    @State private var showAdmin = false
-    #endif
 
     @State private var state: LoadState<AccountOverview> = .idle
     @State private var name = ""
@@ -96,27 +88,26 @@ private struct AccountForm: View {
     @FocusState private var nameFocused: Bool
 
     private var user: UserAccount? { state.value?.user ?? app.me }
-    /// The general tab shows nothing of the server's, the demo has no account to show.
-    private var needsOverview: Bool { page != .general && !app.isDemo }
+    /// The demo has no account to show.
+    private var needsOverview: Bool { !app.isDemo }
 
     var body: some View {
         Form {
-            if page.shows(.account) {
+            if page == .all {
                 if app.isDemo { demoSection } else { header }
             }
 
             if needsOverview {
                 if let overview = state.value {
-                    if page.shows(.account) {
+                    if page == .all {
                         profileSection(overview.user)
                         emailSection(overview.user)
-                    }
-                    if page.shows(.security) {
                         passwordSection(overview)
                         passkeysSection(overview)
                         devicesSection(overview)
+                    } else {
+                        developerSections(overview)
                     }
-                    if page == .developer { developerSections(overview) }
                 } else if case let .failed(message) = state {
                     Section {
                         Label(message, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.red)
@@ -128,32 +119,28 @@ private struct AccountForm: View {
                 }
             }
 
-            if page.shows(.general) { appearanceSection }
-            if page.shows(.account), !app.isDemo {
-                adminSection
-                if page == .all { advancedSection }
-                signOutSection
+            if page == .all {
+                if inSheet { DeviceSettingsSection() }
+                if !app.isDemo {
+                    advancedSection
+                    signOutSection
+                }
             }
         }
         .formStyle(.grouped)
         .navigationTitle(page == .developer ? "API tokens" : "Account")
         .toolbar {
-            #if os(iOS)
-            if page == .all {
+            if inSheet {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done", systemImage: "checkmark") { dismiss() }
                 }
             }
-            #endif
         }
         .task(id: app.me?.id) { if needsOverview { await load() } }
         .refreshable { await load() }
         .sheet(item: $sheet) { sheet in
             sheetView(sheet)
         }
-        #if os(macOS)
-        .sheet(isPresented: $showAdmin) { AdminSheet() }
-        #endif
         .sheet(isPresented: $connecting) { ConnectServerView().errorBanner() }
         .accountConfirmation($confirmation)
         .confirmationDialog("Sign out of Ohana on this device?", isPresented: $confirmSignOut, titleVisibility: .visible) {
@@ -246,27 +233,7 @@ private struct AccountForm: View {
         }
     }
 
-    @ViewBuilder private var adminSection: some View {
-        if user?.isAdmin == true {
-            Section {
-                #if os(macOS)
-                Button("Open Administration…", systemImage: "person.badge.shield.checkmark") { showAdmin = true }
-                #else
-                NavigationLink {
-                    AdminView()
-                } label: {
-                    Label("Administration", systemImage: "person.badge.shield.checkmark")
-                }
-                #endif
-            } header: {
-                Text("Administration")
-            } footer: {
-                Text("Users and families of this server.")
-            }
-        }
-    }
-
-    /// iPhone and iPad: the API tokens are a page here; on the Mac they're the Advanced tab.
+    /// The API tokens, a page of their own.
     private var advancedSection: some View {
         Section {
             NavigationLink {
@@ -286,23 +253,6 @@ private struct AccountForm: View {
             Button("Sign out", role: .destructive) { confirmSignOut = true }
         } footer: {
             Text("Signs this device out and deletes its token.")
-        }
-    }
-
-    // MARK: General
-
-    private var appearanceSection: some View {
-        Section {
-            Picker("Theme", selection: $appearance) {
-                ForEach(Appearance.allCases) { Text($0.title).tag($0) }
-            }
-            #if os(macOS)
-            Toggle("Show the assistant in the menu bar", isOn: $menuBarAssistant)
-            #endif
-        } header: {
-            Text("Appearance")
-        } footer: {
-            Text("Applies to this device only.")
         }
     }
 
@@ -660,6 +610,29 @@ enum Appearance: String, CaseIterable, Identifiable {
         case .system: nil
         case .light: .light
         case .dark: .dark
+        }
+    }
+}
+
+/// The settings of this device: the theme and (on the Mac) the menu bar assistant.
+struct DeviceSettingsSection: View {
+    @AppStorage("appearance") private var appearance = Appearance.system
+    #if os(macOS)
+    @AppStorage("menuBarAssistant") private var menuBarAssistant = true
+    #endif
+
+    var body: some View {
+        Section {
+            Picker("Theme", selection: $appearance) {
+                ForEach(Appearance.allCases) { Text($0.title).tag($0) }
+            }
+            #if os(macOS)
+            Toggle("Show the assistant in the menu bar", isOn: $menuBarAssistant)
+            #endif
+        } header: {
+            Text("This device")
+        } footer: {
+            Text("Applies to this device only.")
         }
     }
 }
