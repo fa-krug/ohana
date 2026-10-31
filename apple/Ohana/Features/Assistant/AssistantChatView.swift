@@ -69,11 +69,12 @@ struct AssistantChatView: View {
     var body: some View {
         content
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .safeAreaInset(edge: .top, spacing: 0) { if headerInPanel { panelHeader } }
             .navigationTitle(Text(verbatim: store.current?.title ?? String(localized: "Assistant")))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
-            .toolbar { if visible { toolbar } }
+            .toolbar { if visible && !headerInPanel { toolbar } }
             .navigationDestination(isPresented: $showChats) {
                 AssistantChatListView(store: store) {
                     showChats = false
@@ -238,36 +239,59 @@ struct AssistantChatView: View {
             }
             ToolbarSpacer(.fixed, placement: .primaryAction)
         }
-        ToolbarItem(placement: .primaryAction) {
-            Menu {
-                // No shortcut: on the page ⌘N is File ▸ New Chat; beside a module ⌘N is that
-                // module's, and ⇧⌘J (Go ▸ Ask the assistant) starts a new chat.
-                Button("New chat", systemImage: "square.and.pencil") { newChat() }
-                Button("Copy the chat, with all tool results", systemImage: "doc.on.doc") {
-                    copy(store.current?.items ?? [])
-                }
-                .disabled(store.current?.items.isEmpty ?? true)
-                if family.canEdit {
-                    Divider()
-                    Button("Assistant settings", systemImage: "gearshape") { showSettings = true }
-                }
+        ToolbarItem(placement: .primaryAction) { newChatMenu }
+    }
+
+    /// Beside a module (the inspector on Mac and iPad) the panel's buttons are in a header of its
+    /// own, not in the window's toolbar: the toolbar's items came and went with every opening
+    /// and closing of the panel, the slowest part of its sliding in.
+    private var headerInPanel: Bool { mode == .panel && !isSheet }
+
+    private var panelHeader: some View {
+        HStack(spacing: 8) {
+            Text(verbatim: store.current?.title ?? String(localized: "Assistant"))
+                .font(.headline)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityAddTraits(.isHeader)
+            newChatMenu
+                .labelStyle(.iconOnly)
+                .menuIndicator(.hidden)
+                .buttonStyle(.glass)
+                .buttonBorderShape(.circle)
+            Button {
+                family.open(.assistantChat(id: store.currentID))
             } label: {
-                Label("New chat", systemImage: "square.and.pencil")
-            } primaryAction: {
-                newChat()
+                Label("Open as a page", systemImage: "arrow.up.left.and.arrow.down.right")
+                    .labelStyle(.iconOnly)
             }
-            .help(Text("New chat"))
+            .buttonStyle(.glass)
+            .buttonBorderShape(.circle)
+            .help(Text("Open as a page"))
         }
-        if mode == .panel, !isSheet {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    family.open(.assistantChat(id: store.currentID))
-                } label: {
-                    Label("Open as a page", systemImage: "arrow.up.left.and.arrow.down.right")
-                }
-                .help(Text("Open as a page"))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+    }
+
+    private var newChatMenu: some View {
+        Menu {
+            // No shortcut: on the page ⌘N is File ▸ New Chat; beside a module ⌘N is that
+            // module's, and ⇧⌘J (Go ▸ Ask the assistant) starts a new chat.
+            Button("New chat", systemImage: "square.and.pencil") { newChat() }
+            Button("Copy the chat, with all tool results", systemImage: "doc.on.doc") {
+                copy(store.current?.items ?? [])
             }
+            .disabled(store.current?.items.isEmpty ?? true)
+            if family.canEdit {
+                Divider()
+                Button("Assistant settings", systemImage: "gearshape") { showSettings = true }
+            }
+        } label: {
+            Label("New chat", systemImage: "square.and.pencil")
+        } primaryAction: {
+            newChat()
         }
+        .help(Text("New chat"))
     }
 
     private func newChat() {
