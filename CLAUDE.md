@@ -12,6 +12,14 @@ relative to `server/` unless they start with `apple/`. It replaced `fa-krug/fami
 decisions and the phases (all done, phase 8: headless, open source, self-hosted).
 Self-hosting: [docs/self-hosting.md](docs/self-hosting.md); the API:
 [docs/openapi.yaml](docs/openapi.yaml) (keep it in step with route changes).
+**`docs/` is also the website** https://ohana.fa-krug.de (VitePress: `docs/.vitepress/config.mts`,
+`cd docs && npm run dev` / `npm run build`; GitHub Pages via `.github/workflows/pages.yml` on pushes
+to `main` touching `docs/`): the quick start, guides, API reference (`/api-reference.html`, Redoc
+over `openapi.yaml`, served locally), Imprint and privacy policy (`docs/legal/`, contact details in
+`docs/.vitepress/operator.ts`; the privacy policy covers the app too: update it when the app starts
+using a new permission or service). Links from `docs/` to files outside it stay relative (they
+work on GitHub) and become repository links on the site. Keep new pages in the sidebar.
+fa-krug's own server runs at https://ohana-app.fa-krug.de.
 
 ## Commands
 

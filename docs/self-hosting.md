@@ -127,7 +127,7 @@ back. The calendar is always on.
 
 ## The assistant and AI
 
-AI is set up per family in the app (*Settings → AI*): any **OpenAI-compatible** endpoint with
+AI is set up per family in the app (*Settings → Assistant*): any **OpenAI-compatible** endpoint with
 its key and model (OpenAI, Anthropic's or Google's OpenAI-compatible endpoints, OpenRouter, …),
 optionally an image model for recipe photos and a web search key (Tavily or Brave). Keys are
 stored encrypted.

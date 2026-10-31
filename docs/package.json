@@ -1,0 +1,15 @@
+{
+  "name": "ohana-site",
+  "private": true,
+  "type": "module",
+  "description": "ohana.fa-krug.de: the project's website and documentation (VitePress, deployed to GitHub Pages)",
+  "scripts": {
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "preview": "vitepress preview"
+  },
+  "devDependencies": {
+    "redoc": "2.5.4",
+    "vitepress": "1.6.4"
+  }
+}

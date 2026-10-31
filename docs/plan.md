@@ -16,7 +16,7 @@ and one installed PWA. The modules know about each other (see
 
 | Topic           | Decision                                                                                                                                                       |
 | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Name / repo     | **Ohana**, repo `fa-krug/ohana` (the app at the repo root), `ohana.fa-krug.de`                                                                                 |
+| Name / repo     | **Ohana**, repo `fa-krug/ohana` (the app at the repo root); the server at `ohana-app.fa-krug.de`, the website at `ohana.fa-krug.de`                                                                                 |
 | Approach        | A **new app**, taking the best parts of the three; the old apps run on until their data has moved                                                              |
 | Hosting         | **Raspberry Pi** (since phase 8 also anyone's own server: open source, images on GHCR), one Docker image, Traefik on the `gitops_default` network, redeployed by CI through Arcane (GitHub OIDC), like cookless and findmyappointment |
 | Database        | **SQLite** (`better-sqlite3`, WAL) with **Drizzle**; one file under `/app/data`, plus `/app/data/media` for images                                             |
@@ -166,7 +166,7 @@ empty Ohana database. It has a **dry run** that only reports what it would do.
 - One multi-arch image (`linux/amd64`, `linux/arm64`) on Docker Hub, built by CI on `main`;
   Arcane project `ohana` redeployed through GitHub OIDC, then `/api/health` is awaited.
 - `docker-compose.production.yml`: services `web` and `worker` from the same image, one volume
-  `/app/data`, Traefik labels for `ohana.fa-krug.de`, network `gitops_default`.
+  `/app/data`, Traefik labels for `ohana-app.fa-krug.de`, network `gitops_default`.
 - Migrations run at boot in `web` (as in cookless); `worker` waits for them.
 - **Backups:** the finances move from Supabase's cloud to the Pi, so the worker writes a
   nightly SQLite backup to `/app/data/backups` (14 kept), and a job on the Pi copies it off-site
