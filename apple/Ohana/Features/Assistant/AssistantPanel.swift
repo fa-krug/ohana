@@ -11,9 +11,15 @@ struct AssistantPanel: View {
     /// On iPhone: full height to type at once; half height keeps the page behind usable.
     @State private var detent: PresentationDetent = .large
 
+    /// The page beside the panel (web: `pageOf`; the assistant's page counts as the overview).
+    private var here: String {
+        guard let module = shell?.module.wrappedValue, module != .assistant else { return "overview" }
+        return module.rawValue
+    }
+
     var body: some View {
         NavigationStack {
-            AssistantChatView(store: AssistantChatStore.shared(for: family.api), mode: .panel)
+            AssistantChatView(store: AssistantChatStore.shared(for: family.api), mode: .panel, here: here)
         }
         .id(family.family.id)
         .presentationDetents([.medium, .large], selection: $detent)
@@ -22,7 +28,10 @@ struct AssistantPanel: View {
         .onChange(of: shell?.module.wrappedValue) { before, after in
             // The assistant's page came on screen: no panel beside it (as on the web).
             if after == .assistant, before != .assistant, sizeClass != .compact {
-                shell?.assistant.wrappedValue = false
+                // At once: sliding shut, it would lay out the whole page's chat again every frame.
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) { shell?.assistant.wrappedValue = false }
             }
         }
     }

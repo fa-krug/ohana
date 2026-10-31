@@ -15,7 +15,18 @@ struct AppShell: View {
     private var selection: Binding<Module> {
         Binding { module ?? storedModule } set: { module = $0 }
     }
-    @SceneStorage("assistant") private var showAssistant = false
+    /// The assistant panel: each window opens it as the last one left it (on iPhone, where it
+    /// is a sheet, closed).
+    @State private var showAssistant = AppShell.assistantWasOpen
+
+    private static let assistantOpenKey = "assistantOpen"
+
+    private static var assistantWasOpen: Bool {
+        #if os(iOS)
+        if UIDevice.current.userInterfaceIdiom == .phone { return false }
+        #endif
+        return UserDefaults.standard.bool(forKey: assistantOpenKey)
+    }
 
     var body: some View {
         @Bindable var app = app
@@ -43,6 +54,9 @@ struct AppShell: View {
             .tabBarMinimizeBehavior(.onScrollDown)
             #endif
             .modifier(AssistantPresentation(isPresented: $showAssistant))
+            .onChange(of: showAssistant) { UserDefaults.standard.set(showAssistant, forKey: Self.assistantOpenKey) }
+            // The panel's settings and chats before it first opens, so it doesn't wait for them.
+            .task { await AssistantChatStore.shared(for: context.api).preload() }
             .environment(context)
             .id(family.id)
             .focusedSceneValue(\.shell, ShellFocus(module: selection, assistant: $showAssistant) {

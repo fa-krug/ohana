@@ -19,14 +19,17 @@ struct AssistantChatView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @FocusedValue(\.shell) private var shell
     let store: AssistantChatStore
     let mode: AssistantChatMode
     /// The chat list is a column beside the chat (the page when there is room): no history
-    /// button then.
+    /// button then. The panel beside a module has none either, only the sheet on iPhone.
     var listBeside = false
     /// Takes the family's `ask` requests (only while this view is the one on screen).
     var takesRequests = true
+    /// The page the user looks at (web: `pageOf`; the assistant's page counts as the overview).
+    /// Given by the panel, which reads the shell: read here, the page's own menus (focused values
+    /// it sets) would change what it reads and draw it again, endlessly.
+    var here = "overview"
 
     @State private var text = ""
     @State private var selection: TextSelection?
@@ -48,11 +51,6 @@ struct AssistantChatView: View {
     @State private var pasteMonitor: Any?
     #endif
 
-    /// The page the user looks at (web: `pageOf`; the assistant's page counts as the overview).
-    private var here: String {
-        guard let module = shell?.module.wrappedValue else { return "overview" }
-        return module == .assistant ? "overview" : module.rawValue
-    }
 
     /// The panel on iPhone is a sheet: opening a place in another module closes it.
     private var isSheet: Bool {
@@ -211,7 +209,9 @@ struct AssistantChatView: View {
             }
         }
         #endif
-        if !listBeside {
+        // Beside a module the chats are on the page ("Open as a page"); the iPhone's sheet has
+        // no page to open, so it keeps the button.
+        if !listBeside, mode == .page || isSheet {
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     showChats = true
@@ -324,6 +324,7 @@ struct AssistantChatView: View {
                 let items = visibleItems
                 ForEach(Array(items.enumerated()), id: \.element.offset) { index, entry in
                     AssistantItemView(item: entry.item, store: store, open: open)
+                        .equatable()
                         .contextMenu { itemMenu(items: items, index: index) }
                 }
                 if store.busy {

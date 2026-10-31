@@ -58,32 +58,20 @@ private struct AssistantPageContent: View {
         AssistantChatView(store: store, mode: .page, listBeside: wide, takesRequests: onScreen)
     }
 
-    /// The Mac's own split view with its resizable divider; on iPad a column with a divider to
-    /// drag. The chat keeps its place either way, so the composer keeps what's typed when the
-    /// column comes and goes.
-    @ViewBuilder private var split: some View {
-        #if os(macOS)
-        HSplitView {
-            if wide {
-                AssistantChatColumn(store: store)
-                    .frame(minWidth: AssistantChatColumnLayout.minWidth, idealWidth: AssistantChatColumnLayout.idealWidth,
-                           maxWidth: AssistantChatColumnLayout.maxWidth)
-            }
-            chat
-                .frame(minWidth: wide ? AssistantChatColumnLayout.minChatWidth : nil)
-        }
-        #else
+    /// A column with a divider to drag, the chat beside it. Not the Mac's `HSplitView`: it adds
+    /// the column after the first layout (the width is measured then) without shrinking the
+    /// chat, so a full-screen window's page ran off its right edge. The chat keeps its place
+    /// either way, so the composer keeps what's typed when the column comes and goes.
+    private var split: some View {
         AssistantResizableColumns(totalWidth: totalWidth, showsColumn: wide) {
             AssistantChatColumn(store: store)
         } detail: {
             chat
         }
-        #endif
     }
 }
 
-#if os(iOS)
-/// The iPad's chat list column and the chat, with a divider between them to drag (or adjust with
+/// The chat list column and the chat, with a divider between them to drag (or adjust with
 /// VoiceOver); the width is kept per device.
 private struct AssistantResizableColumns<Column: View, Detail: View>: View {
     let totalWidth: CGFloat
@@ -102,7 +90,10 @@ private struct AssistantResizableColumns<Column: View, Detail: View>: View {
                     .frame(width: width)
                 divider
             }
+            // Any width: the chat's own minimum (a long line) must not make the row wider than
+            // the page, whose width decides the column.
             detail
+                .frame(minWidth: 0, maxWidth: .infinity)
         }
     }
 
@@ -115,7 +106,7 @@ private struct AssistantResizableColumns<Column: View, Detail: View>: View {
                     .frame(width: 24)
                     .contentShape(.rect)
                     .gesture(
-                        DragGesture(minimumDistance: 1)
+                        DragGesture(minimumDistance: 1, coordinateSpace: .global)
                             .onChanged { value in
                                 let start = dragStart ?? width
                                 dragStart = start
@@ -124,6 +115,9 @@ private struct AssistantResizableColumns<Column: View, Detail: View>: View {
                             }
                             .onEnded { _ in dragStart = nil }
                     )
+                    #if os(macOS)
+                    .pointerStyle(.columnResize)
+                    #endif
             }
             .accessibilityElement()
             .accessibilityLabel(Text("Chat list width"))
@@ -134,4 +128,3 @@ private struct AssistantResizableColumns<Column: View, Detail: View>: View {
             }
     }
 }
-#endif

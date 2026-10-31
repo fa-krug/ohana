@@ -1,12 +1,18 @@
 import SwiftUI
 
 /// One item of the chat: a message, a tool call, a change with undo, a question, a note.
-struct AssistantItemView: View {
+/// Equal for the same item (`.equatable()`): the closure would otherwise draw every item again
+/// whenever the chat does (a keystroke, another module beside the panel).
+struct AssistantItemView: View, Equatable {
     @Environment(FamilyContext.self) private var family
     let item: AssistantItem
     let store: AssistantChatStore
     /// Opens a place of the app a tool call names.
     var open: (AppRoute) -> Void = { _ in }
+
+    static func == (a: Self, b: Self) -> Bool {
+        a.item == b.item && a.store === b.store
+    }
 
     var body: some View {
         switch item {

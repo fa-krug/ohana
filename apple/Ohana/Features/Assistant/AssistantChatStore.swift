@@ -103,6 +103,13 @@ final class AssistantChatStore {
 
     func setSettings(_ s: AssistantSettings) { settings = s }
 
+    /// Before the assistant first shows: its settings and the chats (not a chat: that would
+    /// follow a running turn with no one looking).
+    func preload() async {
+        if settings == nil { await loadSettings() }
+        if !chatsLoaded { await loadChats() }
+    }
+
     func loadChats() async {
         do {
             chats = try await api.get("/ai/chats", as: AssistantChatList.self).chats
