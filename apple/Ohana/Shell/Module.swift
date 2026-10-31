@@ -1,9 +1,12 @@
 import SwiftUI
 
-/// The sections of a family, in sidebar order (the web app's components/shell/modules.ts plus
-/// the overview, the assistant's own page and the family's settings).
+/// The pages of the shell, in sidebar order (the web app's components/shell/modules.ts plus
+/// the overview, the assistant's own page and the settings).
 enum Module: String, CaseIterable, Identifiable, Hashable {
     case overview, calendar, finance, meals, appointments, assistant, settings
+
+    /// The sidebar's "Modules" section; the overview stands above it, the settings at its foot.
+    static let modules: [Module] = [.calendar, .finance, .meals, .appointments, .assistant]
 
     var id: String { rawValue }
 
@@ -121,6 +124,12 @@ struct ShellCommands: Commands {
                 .keyboardShortcut("j", modifiers: .command)
             Button("Ask the assistant") { shell?.ask() }
                 .keyboardShortcut("j", modifiers: [.command, .shift])
+        }
+        // The settings (the account's among them) are a page of the sidebar, not a window.
+        CommandGroup(replacing: .appSettings) {
+            Button("Settings…") { shell?.module.wrappedValue = .settings }
+                .keyboardShortcut(",", modifiers: .command)
+                .disabled(shell == nil)
         }
     }
 }

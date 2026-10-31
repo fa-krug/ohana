@@ -213,6 +213,9 @@ struct CalendarYearGrid: View {
 
     static let space = "calendar-year"
 
+    /// Cells at least this wide show their weekday letter.
+    static let weekdayCellWidth: CGFloat = 30
+
     /// The vertical scroll view's id of a month's row.
     static func rowID(_ month: Int) -> String { "calendar-year-month-\(month)" }
 
@@ -286,7 +289,8 @@ struct CalendarYearGrid: View {
         let year = store.year
         let today = Day.today
         let zoomed = CalendarZoom.clamp(zoom)
-        let showWeekday = alwaysWeekdays || zoomed <= CalendarZoom.showWeekdays || cellWidth >= 30
+        let showWeekday = alwaysWeekdays || zoomed <= CalendarZoom.showWeekdays
+            || cellWidth >= Self.weekdayCellWidth
         let iconSize = min(max(layout.rowHeight * 0.42, 12), 32)
         let hit: (CGPoint, Bool) -> Day? = { layout.day(at: $0, year: year, clamp: $1) }
         let last = store.canRepeat ? store.selection.max() : nil

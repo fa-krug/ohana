@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Above every module while the app shows the demo: says so, and connects a server. A solid
 /// strip across the page, not glass: the content scrolls under it and mustn't show through.
-/// Can be hidden for good (`hidden`); the family menu still connects a server.
+/// Can be hidden for good (`hidden`); the family picker still connects a server.
 struct DemoBanner: View {
     @Environment(AppModel.self) private var app
     @Binding var hidden: Bool

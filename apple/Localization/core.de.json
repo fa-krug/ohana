@@ -81,5 +81,28 @@
   "Hide the demo notice": "Demo-Hinweis ausblenden",
   "Connect your Ohana…": "Dein Ohana verbinden …",
   "Sign out and show the demo": "Abmelden und Demo zeigen",
-  "This is demo data. Connect your Ohana server to make changes.": "Das sind Demodaten. Verbinde deinen Ohana-Server, um etwas zu ändern."
+  "This is demo data. Connect your Ohana server to make changes.": "Das sind Demodaten. Verbinde deinen Ohana-Server, um etwas zu ändern.",
+  "Switch family": "Familie wechseln",
+  "%lld members": {
+    "en": {
+      "one": "%lld member",
+      "other": "%lld members"
+    },
+    "de": {
+      "one": "%lld Mitglied",
+      "other": "%lld Mitglieder"
+    }
+  },
+  "%lld members · View only": {
+    "en": {
+      "one": "%lld member · View only",
+      "other": "%lld members · View only"
+    },
+    "de": {
+      "one": "%lld Mitglied · Nur ansehen",
+      "other": "%lld Mitglieder · Nur ansehen"
+    }
+  },
+  "Settings…": "Einstellungen …",
+  "Account, sign-in and security": "Konto, Anmeldung und Sicherheit"
 }

@@ -33,7 +33,7 @@ Without a server the app shows a demo family (`Core/Demo/`): `APIClient(demo:)` 
 from the JSON templates in `Ohana/Resources/Demo` (`demo-<path>.json`, dates relative to today;
 handlers in `Demo+<Module>.swift` for routes that depend on the query). The demo account is a
 viewer, so the screens hide editing, and any change is refused with a note to connect a server.
-A banner above every module, the family menu and the account screen connect one. While the app
+A banner above every module, the family picker and the account page in the settings connect one. While the app
 switches between the demo and a server (after pairing, after signing out or a revoked token) a
 loading screen covers it until the account and families are loaded.
 

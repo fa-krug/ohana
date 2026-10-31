@@ -130,7 +130,8 @@ struct CalendarZoomTests {
 
     @Test func picksTheListOfMonthsByWidth() {
         #expect(CalendarLayoutRule.monthList(width: 700, compact: false))
-        #expect(!CalendarLayoutRule.monthList(width: 880, compact: false))
+        #expect(CalendarLayoutRule.monthList(width: 1000, compact: false))
+        #expect(!CalendarLayoutRule.monthList(width: 1026, compact: false))
         #expect(CalendarLayoutRule.monthList(width: 1200, compact: true))
         #expect(!CalendarLayoutRule.monthList(width: nil, compact: false))
     }
