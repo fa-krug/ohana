@@ -90,6 +90,7 @@ struct CalendarYearDays: View, Equatable {
         let border: Path
         let today: Path
         let focus: Path
+        let focusInner: Path
         private var colors: [String: (fill: Color, dark: Bool)] = [:]
         private var letters: [String: GraphicsContext.ResolvedText] = [:]
 
@@ -102,7 +103,8 @@ struct CalendarYearDays: View, Equatable {
             shape = rounded(0)
             border = rounded(0.75)
             today = rounded(1)
-            focus = rounded(2.25)
+            focus = rounded(1.5)
+            focusInner = rounded(3.5)
         }
 
         /// A type's color, and whether text on it is dark.
@@ -166,14 +168,17 @@ struct CalendarYearDays: View, Equatable {
             context.stroke(cache.today.offsetBy(dx: origin.x, dy: origin.y), with: .color(.accentColor), lineWidth: 2)
         }
         if info.selected {
-            context.fill(shape, with: .color(Color.accentColor.opacity(0.24)))
+            // A tint and a border, like `CalendarDayCell`.
+            context.fill(shape, with: .color(Color.accentColor.opacity(0.3)))
+            context.stroke(cache.today.offsetBy(dx: origin.x, dy: origin.y), with: .color(.accentColor), lineWidth: 2)
         } else if info.preview {
             context.fill(shape, with: .color(Color.accentColor.opacity(0.1)))
             context.stroke(cache.border.offsetBy(dx: origin.x, dy: origin.y), with: .color(.accentColor),
                            style: StrokeStyle(lineWidth: 1.5, dash: [4, 2]))
         }
         if info.focused {
-            context.stroke(cache.focus.offsetBy(dx: origin.x, dy: origin.y), with: .color(.accentColor), lineWidth: 2.5)
+            context.stroke(cache.focus.offsetBy(dx: origin.x, dy: origin.y), with: .color(.accentColor), lineWidth: 3)
+            context.stroke(cache.focusInner.offsetBy(dx: origin.x, dy: origin.y), with: .color(.white), lineWidth: 1)
         }
     }
 

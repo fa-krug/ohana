@@ -61,6 +61,8 @@ final class CalendarStore {
     var rangeMode = false
     /// Touch: taps add days to the selection or remove them.
     var multiSelect = false
+    /// Touch: a long-press drag is selecting days; the day under the finger shows its outline.
+    var dragging = false
 
     private(set) var undoStack: [Step] = []
     private(set) var redoStack: [Step] = []
@@ -129,7 +131,7 @@ final class CalendarStore {
             if common?.isEmpty == true { break }
         }
         return CalendarCellContext(roles: CalendarMath.roles(types), today: .today,
-                                   focus: gridFocused ? focus : nil, selectionTypes: common ?? [])
+                                   focus: gridFocused || dragging ? focus : nil, selectionTypes: common ?? [])
     }
 
     /// A day's cell as values: the cells don't read the store themselves, so a change redraws

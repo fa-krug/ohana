@@ -259,6 +259,9 @@ struct CalendarCellTests {
         #expect(!other.selected && other.types.isEmpty && other.onTypes.isEmpty)
         // Without the keyboard focus no day shows the outline.
         #expect(!s.cell(d("2026-03-03"), s.cellContext(gridFocused: false)).focused)
+        // A touch drag outlines the day under the finger, keyboard focus or not.
+        s.dragging = true
+        #expect(s.cell(d("2026-03-03"), s.cellContext(gridFocused: false)).focused)
     }
 
     @Test func changesNothingForTheSameState() {

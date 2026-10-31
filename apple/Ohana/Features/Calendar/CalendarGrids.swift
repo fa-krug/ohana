@@ -104,7 +104,9 @@ struct CalendarDayCell: View, Equatable {
         }
         .overlay {
             if selected {
-                shape.fill(Color.accentColor.opacity(0.24))
+                // A tint and a border: a tint alone hardly shows on days filled with a type's color.
+                shape.fill(Color.accentColor.opacity(0.3))
+                    .overlay(shape.strokeBorder(Color.accentColor, lineWidth: 2))
             } else if preview {
                 // The fill handle would fill it.
                 shape.fill(Color.accentColor.opacity(0.1))
@@ -113,7 +115,9 @@ struct CalendarDayCell: View, Equatable {
         }
         .overlay {
             if focused {
-                shape.inset(by: 1).strokeBorder(Color.accentColor, lineWidth: 2.5)
+                // Thicker than the selection's border, with a white line inside it.
+                shape.strokeBorder(Color.accentColor, lineWidth: 3.5)
+                    .overlay(shape.inset(by: 3.5).strokeBorder(Color.white, lineWidth: 1.5))
             }
         }
         .contentShape(.rect)

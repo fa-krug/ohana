@@ -78,6 +78,7 @@ struct CalendarTouchSelection: ViewModifier {
     @State private var start: Day?
     @State private var base: Set<Day> = []
     @State private var pressed = 0
+    @State private var current: Day?
     @State private var pressEnded = Date.distantPast
 
     func body(content: Content) -> some View {
@@ -99,6 +100,8 @@ struct CalendarTouchSelection: ViewModifier {
             .gesture(CalendarLongPressDrag(space: space, began: began, moved: moved, ended: ended))
             #endif
             .sensoryFeedback(.selection, trigger: pressed)
+            // A tick for every day the finger moves on to (the press itself has its own).
+            .sensoryFeedback(.selection, trigger: current) { old, new in old != nil && new != nil }
     }
 
     private func began(_ location: CGPoint) {
@@ -106,17 +109,21 @@ struct CalendarTouchSelection: ViewModifier {
         start = day
         base = store.multiSelect || CalendarModifiers.current.contains(.command) ? store.selection : []
         pressed += 1
+        store.dragging = true
         onBegin()
         moved(location)
     }
 
     private func moved(_ location: CGPoint) {
-        guard let start, let current = hit(location, true) else { return }
-        store.setSelection(base.union(CalendarMath.range(start, current)), anchor: start, focus: current)
+        guard let start, let day = hit(location, true) else { return }
+        current = day
+        store.setSelection(base.union(CalendarMath.range(start, day)), anchor: start, focus: day)
     }
 
     private func ended() {
         start = nil
+        current = nil
+        store.dragging = false
         pressEnded = Date()
     }
 }
