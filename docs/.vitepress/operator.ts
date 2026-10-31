@@ -4,14 +4,14 @@
 // incomplete Imprint.
 export const operator = {
   /** Full name of the person (or organisation) responsible for the site. */
-  name: "",
+  name: "Sascha Krug",
   /** Postal address that can be served (no PO box). */
-  street: "",
-  postalCode: "",
-  city: "",
+  street: "Röntgenstraße 37",
+  postalCode: "82152",
+  city: "Planegg",
   country: "Germany",
   /** An address that is read: § 5 DDG asks for fast electronic contact. */
-  email: "",
+  email: "info@fa-krug.de",
   /** Optional. */
   phone: "",
 }
