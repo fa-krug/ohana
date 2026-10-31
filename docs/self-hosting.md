@@ -38,7 +38,7 @@ Edit `.env`:
 | `DISABLED_MODULES` | Optional: `finance`, `meals`, `appointments`, `assistant` (comma list). |
 | `AI_ALLOW_PRIVATE_ENDPOINT` | `1` to allow an AI endpoint on your own network (Ollama, LM Studio). |
 | `TZ` | Time zone of the daily jobs (in `docker-compose.yml`, default `Europe/Berlin`). |
-| `OHANA_VERSION` | Image tag to run (in `docker-compose.yml`, default `latest`). |
+| `OHANA_VERSION` | Image tag to run (in `docker-compose.yml`, default `latest`; `sha-<commit>` pins one version). |
 
 Every other setting (backup hour, notification hours, appointment search limits, …) is listed
 with its default in [server/.env.example](../server/.env.example).
@@ -167,13 +167,16 @@ tokens have to be entered again.
 docker compose pull && docker compose up -d
 ```
 
-Migrations run when `ohana` starts. Image tags:
+Migrations run when `ohana` starts. Every change that lands on `main` and passes the tests is
+published right away, there are no separate releases. Image tags:
 
-- `latest`: the newest release; `1.2.3`, `1.2`, `1`: pinned releases (set `OHANA_VERSION` in
-  `.env`).
-- `main`: the newest commit on `main` (what the author's own server runs; may break).
+- `latest` (and `main`, the same): the newest version.
+- `sha-<commit>` (e.g. `sha-56275e0`): one exact version, to pin it or go back (set
+  `OHANA_VERSION=sha-56275e0` in `.env`). `/api/v1/server` shows the running version as
+  `<version>+<commit>`.
 
-Read the release notes before a major update. The app checks the server's API version and asks
+Before updating, glance at the commits since your version on GitHub. Going back to an older
+image after a database migration isn't supported: restore a backup instead. The app checks the server's API version and asks
 you to update the server when it's too old; the server's API only grows, so older apps keep
 working with newer servers.
 

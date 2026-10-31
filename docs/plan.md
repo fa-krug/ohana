@@ -205,7 +205,7 @@ Ohana is not sold. It is an open-source app the family runs on its own server; t
 | Push | A new channel **ntfy** (topic URL, optional access token): self-hostable push with an iOS app. A server can't use APNs without the developer's key, so no relay. |
 | API description | `docs/openapi.yaml` (OpenAPI 3.1), written by hand from the route modules. |
 | License | Server (`server/`) **AGPL-3.0**, app (`apple/`) **MPL-2.0** (fits App Store distribution). |
-| Images | **GHCR** only: `ghcr.io/fa-krug/ohana`, `latest` from `main`, versions from tags `v*`. |
+| Images | **GHCR** only: `ghcr.io/fa-krug/ohana`. Every push to `main` is a release (`:latest`, `:main`, `:sha-<commit>`); no release tags. |
 | Import | The one-time import of the old apps is done and removed (`lib/import`, `import-legacy`, fixtures). |
 
 Steps:

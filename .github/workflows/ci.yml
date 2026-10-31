@@ -1,16 +1,16 @@
 name: CI/CD
 
-# The server (server/) and its image: tests on every pull request; on pushes to main and on
-# release tags (v1.2.3) the linux/amd64 + linux/arm64 image goes to GHCR (ghcr.io/<owner>/ohana):
-#   main          → :main, :sha-<sha>       (the newest state; fa-krug's own server runs it)
-#   tag v1.2.3    → :1.2.3, :1.2, :1, :latest (releases; what self-hosters use)
-# Then fa-krug's own server (Arcane) redeploys from :main. Forks build and test, push to their
-# own GHCR, and never deploy. Changes to the native app (apple/, its own workflow) or docs alone
-# don't build images.
+# The server (server/) and its image: tests on every pull request. Every push to main that passes
+# them is a release: the linux/amd64 + linux/arm64 image goes to GHCR (ghcr.io/<owner>/ohana) as
+#   :latest   the newest state of main (what self-hosters run; `docker compose pull` updates)
+#   :main     the same (fa-krug's own server runs it)
+#   :sha-<7>  that exact commit, for pinning or going back
+# No release tags to make by hand. Then fa-krug's own server (Arcane) redeploys. Forks build
+# and test, push to their own GHCR, and never deploy. Changes to the native app (apple/, its own
+# workflow) or docs alone don't build images.
 on:
   push:
     branches: [main]
-    tags: ['v*']
     paths: ['server/**', 'docker-compose*.yml', '.github/workflows/ci.yml']
   pull_request:
     branches: [main]
@@ -20,12 +20,9 @@ env:
   IMAGE: ghcr.io/${{ github.repository_owner }}/ohana
   PUSH: ${{ github.event_name == 'push' }}
   TAGS: |
+    type=raw,value=latest,enable={{is_default_branch}}
     type=ref,event=branch
     type=sha
-    type=semver,pattern={{version}}
-    type=semver,pattern={{major}}.{{minor}}
-    type=semver,pattern={{major}}
-    type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
 
 jobs:
   test:
@@ -61,8 +58,8 @@ jobs:
       - name: Version
         id: version
         run: |
-          if [ "${{ github.ref_type }}" = "tag" ]; then v="${GITHUB_REF_NAME#v}"; else v="$(node -p "require('./server/package.json').version")-dev+${GITHUB_SHA::7}"; fi
-          echo "version=$v" >> "$GITHUB_OUTPUT"
+          # Shown by GET /api/v1/server: package.json's version and the commit, e.g. 0.2.0+56275e0.
+          echo "version=$(node -p "require('./server/package.json').version")+${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
       - name: Log in to GHCR
         if: env.PUSH == 'true'
         uses: docker/login-action@v3
@@ -106,8 +103,8 @@ jobs:
       - name: Version
         id: version
         run: |
-          if [ "${{ github.ref_type }}" = "tag" ]; then v="${GITHUB_REF_NAME#v}"; else v="$(node -p "require('./server/package.json').version")-dev+${GITHUB_SHA::7}"; fi
-          echo "version=$v" >> "$GITHUB_OUTPUT"
+          # Shown by GET /api/v1/server: package.json's version and the commit, e.g. 0.2.0+56275e0.
+          echo "version=$(node -p "require('./server/package.json').version")+${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
       - name: Log in to GHCR
         if: env.PUSH == 'true'
         uses: docker/login-action@v3
