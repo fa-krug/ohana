@@ -11,12 +11,12 @@ let calendarTouchInput: Bool = {
 }()
 
 /// The selection's actions: note, clear, event, repeat, skip weekends and (touch) the range and
-/// multi-select modes.
+/// multi-select modes. Editors only: viewers have none (their details button is in the bar's
+/// header).
 struct CalendarSelectionActions: View {
     @Bindable var store: CalendarStore
     let actions: CalendarActions
     var touch: Bool
-    var showDetails: Bool
 
     var body: some View {
         if !store.readOnly {
@@ -48,16 +48,14 @@ struct CalendarSelectionActions: View {
                 .help("Tap days to add them to the selection or remove them")
             }
         }
-        if showDetails {
-            Button("Details", systemImage: "list.bullet.below.rectangle") { actions.showDetails() }
-        }
     }
 }
 
 /// The glass bar floating at the bottom of the calendar, on every size, so the selection's
 /// actions are always next to the days: the selection (or how to select), its actions, the
 /// type chips that apply a type, and (year grid) the zoom. `showDetails`: the details open in
-/// a sheet (the list of months has no room for them under the grid).
+/// a sheet (the list of months has no room for them under the grid), from a round button next
+/// to the close button, so it takes no row of its own.
 struct CalendarSelectionBar: View {
     let store: CalendarStore
     let actions: CalendarActions
@@ -90,26 +88,30 @@ struct CalendarSelectionBar: View {
                     .buttonStyle(.borderless)
                     .help("Help & shortcuts (?)")
                 } else if !days.isEmpty {
+                    if showDetails {
+                        Button {
+                            actions.showDetails()
+                        } label: {
+                            roundIcon("list.bullet.below.rectangle")
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Details")
+                        .help("Show the selected days’ details")
+                    }
                     Button {
                         store.deselect()
                     } label: {
-                        Image(systemName: "xmark")
-                            .font(.body.weight(.semibold))
-                            .frame(width: closeSize, height: closeSize)
-                            .background(Color.primary.opacity(0.08), in: .circle)
-                            .frame(minWidth: 44, minHeight: 44)
-                            .contentShape(.rect)
+                        roundIcon("xmark")
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Clear the selection")
                     .help("Clear the selection (Esc)")
                 }
             }
-            if !days.isEmpty && store.fill == nil {
+            if !days.isEmpty && store.fill == nil && !store.readOnly {
                 ScrollView(.horizontal) {
                     HStack(spacing: 8) {
-                        CalendarSelectionActions(store: store, actions: actions, touch: calendarTouchInput,
-                                                 showDetails: showDetails)
+                        CalendarSelectionActions(store: store, actions: actions, touch: calendarTouchInput)
                     }
                     .buttonStyle(.bordered)
                     .buttonBorderShape(.capsule)
@@ -122,7 +124,10 @@ struct CalendarSelectionBar: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .glassEffect(.regular, in: .rect(cornerRadius: 26))
+        // The rows scroll under the bar's rounded edge, not past it.
+        .clipShape(.rect(cornerRadius: 26))
+        // Glass tinted with the cards' color: the days behind it stay out of the text's way.
+        .glassEffect(.regular.tint(Color.cardBackground.opacity(0.8)), in: .rect(cornerRadius: 26))
         .frame(maxWidth: 760)
         .padding(.horizontal, 10)
         .padding(.bottom, 6)
@@ -130,6 +135,16 @@ struct CalendarSelectionBar: View {
         .onChange(of: days.isEmpty) { _, empty in
             if !empty && selections < Self.hintedSelections { selections += 1 }
         }
+    }
+
+    /// The header's round buttons (details, close): a tinted circle in a 44 pt target.
+    private func roundIcon(_ systemName: String) -> some View {
+        Image(systemName: systemName)
+            .font(.body.weight(.semibold))
+            .frame(width: closeSize, height: closeSize)
+            .background(Color.primary.opacity(0.08), in: .circle)
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(.rect)
     }
 
     @ViewBuilder
