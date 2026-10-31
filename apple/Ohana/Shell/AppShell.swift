@@ -19,7 +19,7 @@ struct AppShell: View {
     /// is a sheet, closed).
     @State private var showAssistant = AppShell.assistantWasOpen
 
-    private static let assistantOpenKey = "assistantOpen"
+    static let assistantOpenKey = "assistantOpen"
 
     private static var assistantWasOpen: Bool {
         #if os(iOS)
@@ -59,7 +59,6 @@ struct AppShell: View {
             .tabBarMinimizeBehavior(.onScrollDown)
             #endif
             .modifier(AssistantPresentation(isPresented: $showAssistant))
-            .onChange(of: showAssistant) { UserDefaults.standard.set(showAssistant, forKey: Self.assistantOpenKey) }
             // The panel's settings and chats before it first opens, so it doesn't wait for them.
             .task { await AssistantChatStore.shared(for: context.api).preload() }
             .environment(context)
@@ -148,6 +147,14 @@ private struct AssistantPresentation: ViewModifier {
     @Binding var isPresented: Bool
 
     func body(content: Content) -> some View {
+        presentation(content)
+            // Here, not in the shell: what reads the state is drawn again when it changes, and the
+            // shell holds every module's page.
+            .onChange(of: isPresented) { UserDefaults.standard.set(isPresented, forKey: AppShell.assistantOpenKey) }
+    }
+
+    @ViewBuilder
+    private func presentation(_ content: Content) -> some View {
         #if os(iOS)
         if UIDevice.current.userInterfaceIdiom == .phone {
             content.sheet(isPresented: $isPresented) {

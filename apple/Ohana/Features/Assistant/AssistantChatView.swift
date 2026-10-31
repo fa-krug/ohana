@@ -87,6 +87,9 @@ struct AssistantChatView: View {
             .task(id: visible) {
                 guard visible else { return }
                 await store.restoreLatest()
+                // After the panel has slid in: what the refresh changes would be drawn while it slides.
+                if mode == .panel { try? await Task.sleep(for: .milliseconds(400)) }
+                guard !Task.isCancelled else { return }
                 await store.refresh()
             }
             .onAppear { if visible { cameOnScreen() } }
