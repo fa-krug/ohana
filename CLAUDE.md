@@ -157,7 +157,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   (what the model gets, append-only, summaries among them) in `lib/db/schema/assistant.ts`;
   `store.ts` is the AI part of the `Store` (`DrizzleAssistantStore`, `ctx.assistant`; queue and
   item revisions in immediate transactions). Routes: `routes.ts` `handleAi(env)` (settings,
-  models, test, categorize, `/agent`) and `chat-routes.ts` (chats; they save the message and
+  models, test, categorize, letter, `/agent`) and `chat-routes.ts` (chats; they save the message and
   leave the chat running without a holder, then stream it from the database). **Turns run
   only in the worker:** `runner.ts` `ChatRunner.tick()` claims waiting chats (`pendingChats`,
   `claimChatNow`) and runs `chats.ts` `Runner` (the tool loop `chat.ts` `runChat` against
@@ -193,7 +193,10 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   tasks and deadlines (Reminders, so only with the `reminders` context; `list` null = the
   device's default list) → `kind: "suggestions"` card, the user ticks which to add, the app adds
   them (events via `POST /events`, the rest through EventKit) and answers
-  `POST /ai/chats/{id}/suggestions`; an unticked one is `{ok: false, declined: true}`. `notify.ts` is the "assistant turn finished" notification (`RunnerEnv.turnEnded`
+  `POST /ai/chats/{id}/suggestions`; an unticked one is `{ok: false, declined: true}`. The
+  letter scan's sheet gets the same items without a chat: `letter.ts`, `POST /ai/letter {text,
+  today?, lang?}` (editors; one completion with the family's model, items checked one by one with
+  `resolveSuggestion`, wrong ones dropped, tasks' `list` null) → `{ai, source?, items}`. `notify.ts` is the "assistant turn finished" notification (`RunnerEnv.turnEnded`
   from the `ChatRunner`; `chats.seen_at`, set every 15 s by a follower, says someone looks).
   `net.ts` refuses private addresses (`AiEnv.modelNet` may allow them for the endpoint with
   `AI_ALLOW_PRIVATE_ENDPOINT`). `toolsFor` leaves out the tools of turned-off modules
@@ -435,8 +438,11 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `ScanLetterIntent` App Shortcut (Spotlight, `LetterScanInbox`) and the assistant's paperclip,
   all through `FamilyContext.scanLetter()` / `ShellLetterScan` → `LetterReviewSheet` (name, date
   and tags suggested by `LetterSuggestions`: Apple's on-device model, else rules; never over the
-  user's edits) → optionally a new chat with only the text as an attachment (the paperclip
-  attaches it instead). The assistant's `suggest_items` card (`AssistantSuggestions.swift`,
+  user's edits). From the shell (assistant on, editor, not the demo) the sheet also sends only the
+  text to `POST …/ai/letter` (`LetterFind.swift`) and lists the events, tasks and deadlines found at
+  its bottom, ticked, each editable (`LetterItemEditor`); Done saves the PDF, then adds the ticked
+  ones with `AssistantSuggestionsApply` (failed ones stay, Done retries them). The paperclip
+  attaches the text to the chat instead. The assistant's `suggest_items` card (`AssistantSuggestions.swift`,
   `AssistantSuggestionsCard`) ticks each suggestion; Add creates the events (`POST /events`) and
   the reminders (`RemindersStore`), then answers `…/suggestions`.
   The assistant: `family.ask(prompt, send:, newChat:, attachments:)` opens it ready to type from anywhere (⇧⌘J, the overview's field, the Mac's menu bar item (`MenuBarItem`, an AppKit status item: SwiftUI's `MenuBarExtra` re-sets its icon on every window redraw and crashed the app), the

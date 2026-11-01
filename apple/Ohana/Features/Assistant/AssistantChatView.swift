@@ -592,7 +592,7 @@ struct AssistantChatView: View {
         .padding(.top, 6)
         .padding(.bottom, 10)
         // Here, not beside the attachments' file picker: two on one view don't both work.
-        .letterScanFlow(isPresented: $scanningLetter, offersAssistant: false) { outcome in attachLetter(outcome) }
+        .letterScanFlow(isPresented: $scanningLetter, findsItems: false) { outcome in attachLetter(outcome) }
     }
 
     private var attachMenu: some View {

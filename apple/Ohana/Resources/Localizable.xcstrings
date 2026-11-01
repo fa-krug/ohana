@@ -1161,6 +1161,16 @@
         }
       }
     },
+    "A deadline needs a date.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Frist braucht ein Datum."
+          }
+        }
+      }
+    },
     "A family always keeps an editor.": {
       "localizations": {
         "de": {
@@ -4663,6 +4673,16 @@
         }
       }
     },
+    "Deadline": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frist"
+          }
+        }
+      }
+    },
     "Debit (out)": {
       "localizations": {
         "de": {
@@ -5283,6 +5303,16 @@
         }
       }
     },
+    "Done adds the ticked ones: events to the family’s calendar, tasks and deadlines to your Reminders.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„Fertig“ fügt die angewählten hinzu: Termine zum Kalender der Familie, Aufgaben und Fristen zu deinen Erinnerungen."
+          }
+        }
+      }
+    },
     "Don’t Add": {
       "localizations": {
         "de": {
@@ -5399,6 +5429,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dateien zum Anhängen hier ablegen"
+          }
+        }
+      }
+    },
+    "Due": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fällig"
           }
         }
       }
@@ -5659,6 +5699,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bearbeiten"
+          }
+        }
+      }
+    },
+    "Edits it": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bearbeitet es"
           }
         }
       }
@@ -6633,6 +6683,16 @@
         }
       }
     },
+    "Found in the Letter": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Im Brief gefunden"
+          }
+        }
+      }
+    },
     "Free text": {
       "localizations": {
         "de": {
@@ -6659,6 +6719,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Von"
+          }
+        }
+      }
+    },
+    "From %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Von %@"
           }
         }
       }
@@ -7545,6 +7615,16 @@
         }
       }
     },
+    "It couldn’t be added.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das konnte nicht hinzugefügt werden."
+          }
+        }
+      }
+    },
     "It is used on ^[%lld day](inflect: true) in %@. This can’t be undone.": {
       "localizations": {
         "de": {
@@ -8043,6 +8123,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Such die Feiertage des nächsten Jahres heraus und trag sie in den Kalender ein."
+          }
+        }
+      }
+    },
+    "Looking for dates and tasks…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche nach Terminen und Aufgaben …"
           }
         }
       }
@@ -9133,6 +9223,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Keine Konflikte"
+          }
+        }
+      }
+    },
+    "No dates or tasks found.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Termine oder Aufgaben gefunden."
           }
         }
       }
@@ -14499,16 +14599,6 @@
         }
       }
     },
-    "Suggest dates and tasks": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Termine und Aufgaben vorschlagen"
-          }
-        }
-      }
-    },
     "Suggesting a name and tags…": {
       "localizations": {
         "de": {
@@ -14789,6 +14879,16 @@
         }
       }
     },
+    "Task": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufgabe"
+          }
+        }
+      }
+    },
     "Temperature (°C)": {
       "localizations": {
         "de": {
@@ -14955,16 +15055,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Die Adresse, unter der du Ohana im Browser öffnest, z. B. ohana.example.com. Ein Link aus Ohana geht auch, etwa eine Einladung."
-          }
-        }
-      }
-    },
-    "The assistant gets the letter’s text and suggests events, tasks and deadlines to add.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Der Assistent bekommt den Text des Briefs und schlägt Termine, Aufgaben und Fristen zum Hinzufügen vor."
           }
         }
       }
@@ -15155,6 +15245,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Die Sprache der Benachrichtigungen und von dem, was Ohana für dich benennt, etwa die Kalenderarten einer neuen Familie."
+          }
+        }
+      }
+    },
+    "The letter couldn’t be checked for dates and tasks.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Brief konnte nicht nach Terminen und Aufgaben durchsucht werden."
           }
         }
       }

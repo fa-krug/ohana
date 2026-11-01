@@ -48,6 +48,11 @@
 // Asked to import a web page's recipe (the import prompt), it answers with one recipe titled
 // like the page (tomatoes and the family's tags the page names) when the page mentions
 // ingredients / Zutaten / recipe / Rezept, else with [].
+// Asked to read a letter (the letter prompt, POST /ai/letter), it answers with JSON in a Markdown
+// block: source "Elternbrief" (the letter's first line), an event in 7 days 15:00–17:00 in the
+// schoolyard for the family's first member, a task due in 5 days and a deadline in 3 days at
+// 12:00 (German titles when asked to answer in German). A letter saying "nothing" gets no items;
+// one saying "sloppy" gets wrong items too (no date, end without start, unknown kind …).
 // Asked to sort transactions into categories (the categorize prompt), it picks the category
 // whose id or name occurs in a row's payee or description, searching the web once for a payee
 // it can't place.
@@ -217,6 +222,50 @@ function importRecipe(stream: boolean, prompt: string) {
   return reply(stream, "```json\n" + JSON.stringify([recipe]) + "\n```");
 }
 
+/** The letter prompt: a few items relative to the prompt's today (see the top). */
+function letter(stream: boolean, system: string, text: string) {
+  const today = /^Today is \w+, (\d{4}-\d{2}-\d{2})\./m.exec(system)?.[1] ?? new Date().toISOString().slice(0, 10);
+  const de = /^Answer in German/m.test(system);
+  const first = /^The family's members[^:]*: ([^,(.]+)/m.exec(system)?.[1]?.trim();
+  const day = (n: number) => {
+    const d = new Date(today + "T00:00:00Z");
+    d.setUTCDate(d.getUTCDate() + n);
+    return d.toISOString().slice(0, 10);
+  };
+  const source = text.trim().split("\n")[0].slice(0, 80) || "Elternbrief";
+  if (/\bnothing\b/i.test(text)) return reply(stream, JSON.stringify({ source, items: [] }));
+  const items: unknown[] = [
+    {
+      kind: "event",
+      title: de ? "Schulfest" : "School party",
+      date: day(7),
+      start: "15:00",
+      end: "17:00",
+      location: de ? "Schulhof" : "Schoolyard",
+      ...(first ? { person: first } : {}),
+    },
+    { kind: "task", title: de ? "Kuchen mitbringen" : "Bring a cake", date: day(5) },
+    {
+      kind: "deadline",
+      title: de ? "Einverständniserklärung abgeben" : "Return the consent form",
+      date: day(3),
+      start: "12:00",
+      note: de ? "Von einem Elternteil unterschrieben" : "Signed by a parent",
+    },
+  ];
+  if (/\bsloppy\b/i.test(text)) {
+    items.push(
+      { kind: "deadline", title: "Reply" },
+      { kind: "event", title: "Concert", date: day(9), end: "20:00" },
+      { kind: "event", title: "Trip", date: "2026-02-30" },
+      { kind: "todo", title: "Something" },
+      { kind: "task", title: "x".repeat(300) },
+      "not an item",
+    );
+  }
+  return reply(stream, "Here is what I found:\n```json\n" + JSON.stringify({ source, items }, null, 1) + "\n```");
+}
+
 /** How often the conversation looked at the calendar: in the summary, and after it. */
 function looks(messages: Msg[]) {
   const before = messages.map((m) => /Looked (\d+) times/.exec(textOf(m.content))?.[1])
@@ -294,6 +343,9 @@ async function respond(req: Request, body: any): Promise<Response> {
     return recipes(stream, textOf(messages[0]?.content));
   }
   if (system.startsWith("You are a professional recipe editor")) return importRecipe(stream, system);
+  if (system.startsWith("You find the events, tasks and deadlines in a letter")) {
+    return letter(stream, system, textOf(last.content));
+  }
   if (system.startsWith("You sort bank transactions into categories.")) {
     return categorize(
       stream,

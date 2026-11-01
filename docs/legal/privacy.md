@@ -148,11 +148,11 @@ The app only asks for these permissions, and only when you use the feature:
 - **Camera and photos:** to add pictures to recipes. The picture is uploaded to your server.
   And to scan receipts: the receipt is read on your device (Apple's text recognition); the
   picture stays there, only the amount, date and shop you save are sent to your server.
-  And to scan letters (a school letter, a notice, an invitation) for the assistant: the letter
-  is read on your device the same way and the picture stays there; its text is sent to your
-  server and, as part of the chat, to the AI provider your family set up. What the assistant
-  suggests from it is only added (to your family's calendar, or as reminders) once you choose
-  it. If you save a scanned letter or receipt as a PDF, it goes only into the folder you pick
+  And to scan letters (a school letter, a notice, an invitation): the letter is read on your
+  device the same way and the picture stays there. With the assistant on, its text is sent to
+  your server and from there to the AI provider your family set up, which finds the dates,
+  tasks and deadlines in it (also when you attach a letter to a chat). What it finds is only
+  added (to your family's calendar, or as reminders) once you choose it. If you save a scanned letter or receipt as a PDF, it goes only into the folder you pick
   (the app remembers that folder on the device); its name and tags are suggested on your device
   (with Apple's on-device model where available), and the PDF isn't sent anywhere.
 - **Microphone and speech recognition:** to dictate messages to the assistant. The speech is
@@ -179,7 +179,7 @@ The app only asks for these permissions, and only when you use the feature:
   only after you tap **Apply**. You can take the permission back at any time in the system
   settings (*Privacy & Security → Calendars*); the assistant then no longer sees your calendars.
 - **Reminders:** asked when you pick a Reminders list for a family's shopping, or when you add
-  a task or deadline the assistant suggested from a scanned letter. For the shopping, the app
+  a task or deadline found in a scanned letter. For the shopping, the app
   writes what the meal plan needs (item, amount, shopping day) into that list on your device and
   keeps those items up to date; it gets them from your server, but nothing from Reminders is
   sent back for this. If your reminders sync over iCloud, Apple stores them as it does any
