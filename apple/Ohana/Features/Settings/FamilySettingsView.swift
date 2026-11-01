@@ -62,14 +62,16 @@ final class FamilySettingsModel {
 
     var household: FamilyHousehold? { state.value }
 
+    /// Changes to what's shown wait while it's the copy on the device.
+    var canEdit: Bool { household?.canEdit == true && !state.isSaved }
+
     func load(_ api: FamilyAPI) async {
-        if state.value == nil { state = .loading }
-        do {
-            state = .loaded(try await api.get("/household"))
-        } catch is CancellationError {
-        } catch {
-            if state.value == nil { state = .failed(error.localizedDescription) } else { ErrorBanner.shared.show(error) }
-        }
+        await LoadState.run(Binding(get: { self.state }, set: { self.state = $0 }), Self.request(api))
+    }
+
+    /// The household's GET (the prefetch asks the same).
+    static func request(_ api: FamilyAPI) -> CachedGet<FamilyHousehold> {
+        api.cached("/household")
     }
 
     /// Runs a change (errors go to the banner), then reloads, tells the other screens and
@@ -87,7 +89,11 @@ final class FamilySettingsModel {
     func replace(_ pref: FamilyEventPref) {
         guard var household = state.value, let i = household.events.firstIndex(where: { $0.id == pref.id }) else { return }
         household.events[i] = pref
-        state = .loaded(household)
+        if case let .saved(_, date, updating) = state {
+            state = .saved(household, date: date, updating: updating)
+        } else {
+            state = .loaded(household)
+        }
     }
 }
 
@@ -132,7 +138,7 @@ private struct FamilySettingsForm: View {
             }
 
             Section {
-                if household.canEdit {
+                if model.canEdit {
                     HStack {
                         TextField("Family name", text: $name)
                             .onSubmit(rename)
@@ -149,7 +155,7 @@ private struct FamilySettingsForm: View {
             } header: {
                 Text("Family")
             } footer: {
-                if household.canEdit && trimmedName.isEmpty {
+                if model.canEdit && trimmedName.isEmpty {
                     Text("A family needs a name.").foregroundStyle(.red)
                 }
             }
@@ -218,10 +224,11 @@ private struct FamilySettingsForm: View {
             Section {
                 if memberCount > 1 {
                     Button("Leave the family", role: .destructive) { confirmLeave = true }
+                        .disabled(model.state.isSaved)
                 }
                 if household.canEdit {
                     Button("Delete the family", role: .destructive) { confirmDelete = true }
-                        .disabled(memberCount > 1)
+                        .disabled(memberCount > 1 || model.state.isSaved)
                 }
             } header: {
                 Text("Leave or delete")
@@ -292,7 +299,7 @@ private struct FamilySettingsForm: View {
 
     private func rename() {
         let new = trimmedName
-        guard household.canEdit, !new.isEmpty, new != household.name else { return }
+        guard model.canEdit, !new.isEmpty, new != household.name else { return }
         let api = family.api
         model.change(family, success: String(localized: "Family renamed.")) {
             try await api.perform(.patch, "", body: FamilyNameInput(name: new))

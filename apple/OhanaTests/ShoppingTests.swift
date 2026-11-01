@@ -85,10 +85,16 @@ struct ShoppingTests {
 @MainActor
 final class ShoppingFakeServer {
     var sent: [(String, Bool)] = []
+    var added: [ShoppingAddItemInput] = []
     var failures: [any Error] = []
 
     func send(_ id: String, _ checked: Bool) async throws {
         sent.append((id, checked))
+        if !failures.isEmpty { throw failures.removeFirst() }
+    }
+
+    func add(_ add: ShoppingPendingAdd) async throws {
+        added.append(add.input)
         if !failures.isEmpty { throw failures.removeFirst() }
     }
 }
@@ -99,7 +105,7 @@ struct ShoppingTickQueueTests {
                                    unitAbbreviation: "Stk", isChecked: false)
 
     func queue(_ server: ShoppingFakeServer) -> ShoppingTickQueue {
-        let queue = ShoppingTickQueue { id, checked in try await server.send(id, checked) }
+        let queue = ShoppingTickQueue { id, checked in try await server.send(id, checked) } add: { try await server.add($0) }
         queue.retryDelay = { _ in .seconds(3600) } // retries only when the test says so
         return queue
     }
@@ -151,6 +157,87 @@ struct ShoppingTickQueueTests {
         #expect(!queue.isChecked(Self.item)) // back to the server's state
     }
 
+    static func milk(list: String = "l1") -> ShoppingPendingAdd {
+        ShoppingPendingAdd(listID: list, name: "Milk", quantity: "2.0", unitID: 2, unitAbbreviation: "Stk",
+                           category: "DAIRY", clientID: "c1")
+    }
+
+    @Test func addsAtOnceWhileOnline() async throws {
+        let server = ShoppingFakeServer()
+        let queue = queue(server)
+        #expect(try await queue.add(Self.milk()))
+        #expect(server.added.map(\.clientId) == ["c1"]) // the key goes along online too
+        #expect(queue.pendingAdds.isEmpty)
+    }
+
+    @Test func queuesAnAddWhileOfflineAndSendsItWithItsKey() async throws {
+        let server = ShoppingFakeServer()
+        server.failures = [APIError.transport("offline")]
+        let queue = queue(server)
+        #expect(try await queue.add(Self.milk()) == false)
+        #expect(queue.pendingAdds(for: "l1").map(\.id) == ["c1"])
+        #expect(queue.pendingAdds(for: "l2").isEmpty)
+        #expect(queue.isWaiting)
+        let row = queue.pendingAdds[0].item
+        #expect(row.id == "pending-c1" && row.label(locale: Locale(identifier: "en_US")) == "2 Stk Milk" && !row.isChecked)
+        // The answer of the retry is lost: the next one sends the same key, so the server adds it once.
+        server.failures = [URLError(.timedOut)]
+        await queue.flush()
+        await queue.flush()
+        #expect(server.added.map(\.clientId) == ["c1", "c1", "c1"])
+        #expect(queue.pendingAdds.isEmpty)
+        #expect(queue.addsSettled == 1)
+        #expect(!queue.isWaiting)
+    }
+
+    @Test func queuesWithoutTryingWhenTold() async throws {
+        let server = ShoppingFakeServer()
+        let queue = queue(server)
+        queue.retryDelay = { _ in .seconds(3600) }
+        // The saved copy is shown: queued, then sent by the queue.
+        #expect(try await queue.add(Self.milk(), sendNow: false) == false)
+        await queue.flush()
+        #expect(server.added.count == 1)
+        #expect(queue.pendingAdds.isEmpty)
+    }
+
+    @Test func dropsAnAddTheServerRefuses() async throws {
+        let server = ShoppingFakeServer()
+        server.failures = [APIError.transport("offline"), APIError.http(status: 404, message: "Shopping list not found")]
+        let queue = queue(server)
+        var rejected: [String] = []
+        queue.onAddRejected = { add, _ in rejected.append(add.id) }
+        try await queue.add(Self.milk())
+        await queue.flush()
+        #expect(rejected == ["c1"])
+        #expect(queue.pendingAdds.isEmpty)
+        #expect(queue.addsSettled == 1) // the list loads again
+        // Refused at once (online): thrown, nothing queued.
+        server.failures = [APIError.http(status: 422, message: "The quantity must be more than 0")]
+        await #expect(throws: APIError.self) { try await queue.add(Self.milk()) }
+        #expect(queue.pendingAdds.isEmpty)
+    }
+
+    @Test func takesBackAQueuedAdd() async throws {
+        let server = ShoppingFakeServer()
+        server.failures = [APIError.transport("offline")]
+        let queue = queue(server)
+        try await queue.add(Self.milk())
+        #expect(queue.removeAdd("c1"))
+        #expect(queue.pendingAdds.isEmpty)
+        await queue.flush()
+        #expect(server.added.count == 1) // only the first try
+    }
+
+    @Test func encodesTheAddWithItsKey() throws {
+        let body = try JSONSerialization.jsonObject(with: JSONEncoder().encode(Self.milk().input)) as? [String: Any]
+        #expect(body?["clientId"] as? String == "c1")
+        #expect(body?["unitId"] as? Int == 2)
+        let old = ShoppingAddItemInput(name: "Milk", quantity: "1", unitId: 2, category: nil)
+        let oldBody = try JSONSerialization.jsonObject(with: JSONEncoder().encode(old)) as? [String: Any]
+        #expect(oldBody?["clientId"] == nil)
+    }
+
     @Test func tellsRetryableErrors() {
         #expect(ShoppingTickQueue.isRetryable(APIError.transport("offline")))
         #expect(ShoppingTickQueue.isRetryable(URLError(.notConnectedToInternet)))
@@ -174,7 +261,9 @@ struct ShoppingOfflineTests {
         defer { try? FileManager.default.removeItem(at: store.directory) }
         let offline = ShoppingFakeServer()
         offline.failures = [APIError.transport("offline"), APIError.transport("offline")]
-        let first = ShoppingTickQueue(store: store) { id, checked in try await offline.send(id, checked) }
+        let first = ShoppingTickQueue(store: store) { id, checked in try await offline.send(id, checked) } add: {
+            try await offline.add($0)
+        }
         first.retryDelay = { _ in .seconds(3600) }
         first.set("a", checked: true)
         first.set("b", checked: false)
@@ -183,7 +272,9 @@ struct ShoppingOfflineTests {
 
         // The app starts again: the queue picks the ticks up and sends them.
         let online = ShoppingFakeServer()
-        let second = ShoppingTickQueue(store: store) { id, checked in try await online.send(id, checked) }
+        let second = ShoppingTickQueue(store: store) { id, checked in try await online.send(id, checked) } add: {
+            try await online.add($0)
+        }
         #expect(second.pending == ["a": true, "b": false])
         #expect(second.isChecked(ShoppingTickQueueTests.item))
         await second.flush()
@@ -192,12 +283,40 @@ struct ShoppingOfflineTests {
         #expect(store.loadTicks().isEmpty)
     }
 
+    @Test func keepsUnsentAddsAcrossARestart() async throws {
+        let store = Self.store()
+        defer { try? FileManager.default.removeItem(at: store.directory) }
+        let offline = ShoppingFakeServer()
+        offline.failures = [APIError.transport("offline"), APIError.transport("offline")]
+        let first = ShoppingTickQueue(store: store) { id, checked in try await offline.send(id, checked) } add: {
+            try await offline.add($0)
+        }
+        first.retryDelay = { _ in .seconds(3600) }
+        try await first.add(ShoppingTickQueueTests.milk())
+        try await first.add(ShoppingPendingAdd(listID: "l1", name: "Eggs", quantity: "6.0", unitID: 2,
+                                               unitAbbreviation: "Stk", category: nil, clientID: "c2"))
+        #expect(store.loadAdds().map(\.id) == ["c1", "c2"])
+        #expect(store.loadAdds().first?.input.name == "Milk")
+
+        // The app starts again: the adds are back, in order, and go out with their keys.
+        let online = ShoppingFakeServer()
+        let second = ShoppingTickQueue(store: store) { id, checked in try await online.send(id, checked) } add: {
+            try await online.add($0)
+        }
+        #expect(second.pendingAdds(for: "l1").map(\.item.ingredientName) == ["Milk", "Eggs"])
+        await second.flush()
+        #expect(online.added.map(\.clientId) == ["c1", "c2"])
+        #expect(store.loadAdds().isEmpty)
+    }
+
     @Test func forgetsATickTheServerRefused() async {
         let store = Self.store()
         defer { try? FileManager.default.removeItem(at: store.directory) }
         let server = ShoppingFakeServer()
         server.failures = [APIError.http(status: 404, message: "gone")]
-        let queue = ShoppingTickQueue(store: store) { id, checked in try await server.send(id, checked) }
+        let queue = ShoppingTickQueue(store: store) { id, checked in try await server.send(id, checked) } add: {
+            try await server.add($0)
+        }
         queue.set("a", checked: true)
         await queue.flush()
         #expect(store.loadTicks().isEmpty)

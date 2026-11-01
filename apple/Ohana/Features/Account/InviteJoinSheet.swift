@@ -106,7 +106,7 @@ struct InviteJoinSheet: View {
                     Section {
                         Label(message, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.red)
                     }
-                case let .loaded(invite):
+                case let .loaded(invite), let .saved(invite, _, _):
                     inviteSection(invite)
                 }
 

@@ -128,9 +128,17 @@ struct FinanceProgress: Equatable {
 /// The open family's finances (web/components/finance/finance-store.ts): accounts, categories
 /// and settings, the transactions of the chosen period (filtered), the summary and its
 /// comparisons. Changes go straight to the API; each one can be undone from its toast with the
-/// inverse ops the API returns.
+/// inverse ops the API returns. The reads' answers are kept on the device (`ResponseCache`):
+/// with nothing shown yet for a read, its copy shows until the server answers.
 @Observable
 final class FinanceStore {
+    /// A read shows the copy kept on the device, from `date`, until the server answers:
+    /// `updating` while it's asked, false once it couldn't be reached.
+    struct SavedCopy: Equatable {
+        var date: Date
+        var updating: Bool
+    }
+
     static let page = 200
     /// The most ops POST /finance/transactions takes.
     static let maxOps = 2000
@@ -139,7 +147,8 @@ final class FinanceStore {
 
     let family: FamilyContext
     var api: FamilyAPI { family.api }
-    var canEdit: Bool { family.canEdit }
+    /// Editors change what's shown, unless it may be stale (`showsStaleCopy`).
+    var canEdit: Bool { family.canEdit && !showsStaleCopy }
 
     var overview: FinanceOverview? {
         didSet {
@@ -155,6 +164,7 @@ final class FinanceStore {
     var shoppingLinks = FinanceShoppingLinks.none
     /// Whether the assistant is set up: auto-categorize uses the AI too.
     var aiConfigured = false
+    /// A list request is on its way and what's shown isn't its copy on the device (the list dims).
     var loadingList = false
     var error: String?
     var period = FinancePeriod.current()
@@ -167,6 +177,17 @@ final class FinanceStore {
     /// Changes register their undo in the window's undo manager too (Edit → Undo, ⌘Z); the
     /// page attaches it.
     @ObservationIgnored let undoRegistry = FinanceUndoRegistry()
+
+    /// What shows the copy on the device instead of the server's answer; nil once it answered.
+    private(set) var overviewCopy: SavedCopy?
+    private(set) var listCopy: SavedCopy?
+    private(set) var balancesCopy: SavedCopy?
+    private(set) var summaryCopy: SavedCopy?
+    /// What the list, the balances and the summary shown are for: another query shows its copy
+    /// on the device (if there is one) until the server answers.
+    private var listQuery: [String: String?]?
+    private var balancesAt: String?
+    private var summaryPeriod: FinancePeriod?
 
     private var knownRevision = -1
     /// The page is open (not only the settings): what it shows reloads after changes.
@@ -186,6 +207,21 @@ final class FinanceStore {
         undoRegistry.used = { [weak self] token in
             if self?.toast?.undoToken === token { self?.toast = nil }
         }
+    }
+
+    /// The page's copies on the device together (one badge): the oldest one's date, updating
+    /// until one of them couldn't be.
+    var savedCopy: SavedCopy? {
+        let copies = [overviewCopy, listCopy, balancesCopy, summaryCopy].compactMap { $0 }
+        guard let date = copies.map(\.date).min() else { return nil }
+        return SavedCopy(date: date, updating: copies.allSatisfy(\.updating))
+    }
+
+    /// Changes wait while what's shown may be stale: until the server first answered (the
+    /// overview is still the copy) and while it can't be reached. A new period's copy, shown for
+    /// the moment its answer takes, leaves the buttons alone.
+    var showsStaleCopy: Bool {
+        overviewCopy != nil || savedCopy?.updating == false
     }
 
     var currency: String { overview?.currency ?? "EUR" }
@@ -232,11 +268,28 @@ final class FinanceStore {
     }
 
     func loadOverview() async {
+        let get = Self.overviewRequest(api)
+        if overview == nil, let copy = get.saved() {
+            overview = copy.value
+            overviewCopy = SavedCopy(date: copy.date, updating: true)
+        } else {
+            overviewCopy?.updating = true
+        }
         do {
-            overview = try await api.get("/finance")
+            overview = try await get.fetch()
+            overviewCopy = nil
             error = nil
-        } catch is CancellationError {
         } catch {
+            if overviewCopy != nil {
+                // The copy stays while the failure may pass (offline, the server down).
+                if APIError.isTemporary(error) {
+                    overviewCopy?.updating = false
+                    return
+                }
+                overview = nil
+                overviewCopy = nil
+            }
+            if error is CancellationError { return }
             if overview == nil { self.error = error.localizedDescription } else { ErrorBanner.shared.show(error) }
         }
     }
@@ -254,25 +307,42 @@ final class FinanceStore {
         listSeq += 1
         let seq = listSeq
         loadingList = true
-        var query = period.query
-        query["limit"] = String(limit)
-        let q = filter.q.trimmingCharacters(in: .whitespaces)
-        if !q.isEmpty { query["q"] = q }
-        if !filter.category.isEmpty { query["category"] = filter.category }
-        if !filter.account.isEmpty { query["account"] = filter.account }
-        if filter.kind != .all { query["kind"] = filter.kind.rawValue }
+        let query = Self.listQuery(period, filter, limit: limit)
+        // Only the first page is kept on the device, and not a search's.
+        let get = limit == Self.page && filter.q.trimmingCharacters(in: .whitespaces).isEmpty
+            ? Self.listRequest(api, query) : nil
+        if query != listQuery, let copy = get?.saved() {
+            list = copy.value
+            listQuery = query
+            listCopy = SavedCopy(date: copy.date, updating: true)
+        } else {
+            listCopy?.updating = true
+        }
+        loadingList = listCopy == nil || query != listQuery
         do {
-            let list = try await api.get("/finance/transactions", query: query, as: FinanceTransactionList.self)
+            let list = if let get { try await get.fetch() }
+                else { try await api.get("/finance/transactions", query: query, as: FinanceTransactionList.self) }
             guard seq == listSeq else { return } // a newer request is on its way
             self.list = list
+            listQuery = query
+            listCopy = nil
             error = nil
             // Keep only what is still shown ticked.
             let ids = Set(list.transactions.map(\.id))
             selected = selected.intersection(ids)
-        } catch is CancellationError {
         } catch {
             guard seq == listSeq else { return }
-            if list == nil { self.error = error.localizedDescription } else { ErrorBanner.shared.show(error) }
+            if listCopy != nil, APIError.isTemporary(error) {
+                listCopy?.updating = false
+            } else if !(error is CancellationError) {
+                if listCopy != nil {
+                    // Refused: as if nothing had been kept.
+                    list = nil
+                    listQuery = nil
+                    listCopy = nil
+                }
+                if list == nil { self.error = error.localizedDescription } else { ErrorBanner.shared.show(error) }
+            }
         }
         if seq == listSeq { loadingList = false }
     }
@@ -282,14 +352,40 @@ final class FinanceStore {
         let seq = balancesSeq
         guard let at = period.balanceDay() else {
             balances = nil
+            balancesAt = nil
+            balancesCopy = nil
             return
         }
+        // While the period runs they're today's: kept as such, so tomorrow starts with them too.
+        let get = Self.balancesRequest(api, at: at)
+        if at != balancesAt, let copy = get.saved() {
+            balances = Self.balances(copy.value, at: at)
+            balancesAt = at
+            balancesCopy = SavedCopy(date: copy.date, updating: true)
+        } else {
+            balancesCopy?.updating = true
+        }
         do {
-            let res = try await api.get("/finance/accounts", query: ["at": at], as: FinanceAccountsAt.self)
+            let res = try await get.fetch()
             guard seq == balancesSeq else { return }
-            balances = FinanceBalances(at: res.at ?? at,
-                                       cents: Dictionary(res.accounts.map { ($0.id, $0.balanceCents) }) { a, _ in a })
-        } catch {}
+            balances = Self.balances(res, at: at)
+            balancesAt = at
+            balancesCopy = nil
+        } catch {
+            // Nice to have: failures stay quiet, a copy stays while they may pass.
+            guard seq == balancesSeq, balancesCopy != nil else { return }
+            if APIError.isTemporary(error) {
+                balancesCopy?.updating = false
+            } else {
+                balances = nil
+                balancesAt = nil
+                balancesCopy = nil
+            }
+        }
+    }
+
+    private static func balances(_ res: FinanceAccountsAt, at: String) -> FinanceBalances {
+        FinanceBalances(at: res.at ?? at, cents: Dictionary(res.accounts.map { ($0.id, $0.balanceCents) }) { a, _ in a })
     }
 
     /// The summary of the period and the comparison columns.
@@ -298,6 +394,14 @@ final class FinanceStore {
         summarySeq += 1
         let seq = summarySeq
         let period = self.period
+        if period != summaryPeriod, let copy = savedSummary(period) {
+            summary = copy.summary
+            comparisons = copy.comparisons
+            summaryPeriod = period
+            summaryCopy = SavedCopy(date: copy.date, updating: true)
+        } else {
+            summaryCopy?.updating = true
+        }
         do {
             async let summary = fetchSummary(period.query)
             async let comparisons = loadComparisons(period)
@@ -305,14 +409,50 @@ final class FinanceStore {
             guard seq == summarySeq else { return }
             self.summary = s
             self.comparisons = c
-        } catch is CancellationError {
+            summaryPeriod = period
+            summaryCopy = nil
         } catch {
-            ErrorBanner.shared.show(error)
+            guard seq == summarySeq else { return }
+            if summaryCopy != nil, APIError.isTemporary(error) {
+                summaryCopy?.updating = false
+            } else if !(error is CancellationError) {
+                if summaryCopy != nil {
+                    summary = nil
+                    comparisons = nil
+                    summaryPeriod = nil
+                    summaryCopy = nil
+                }
+                ErrorBanner.shared.show(error)
+            }
         }
     }
 
+    private func summaryGet(_ query: [String: String?]) -> CachedGet<FinanceSummary> {
+        Self.summaryRequest(api, query)
+    }
+
     private func fetchSummary(_ query: [String: String?]) async throws -> FinanceSummary {
-        try await api.get("/finance/summary", query: query, as: FinanceSummary.self)
+        try await summaryGet(query).fetch()
+    }
+
+    /// The period's summary kept on the device, with its comparisons when all of them are; from
+    /// the oldest copy's date.
+    private func savedSummary(_ period: FinancePeriod) -> (summary: FinanceSummary, comparisons: [FinanceComparison]?, date: Date)? {
+        guard let summary = summaryGet(period.query).saved() else { return nil }
+        var comparisons: [FinanceComparison] = []
+        var date = summary.date
+        for range in period.comparisonRanges() {
+            if let from = range.from, range.to < from {
+                comparisons.append(.none(range))
+                continue
+            }
+            guard let copy = summaryGet(Self.summaryQuery(range)).saved() else {
+                return (summary.value, nil, summary.date)
+            }
+            comparisons.append(.from(copy.value, range: range))
+            date = min(date, copy.date)
+        }
+        return (summary.value, comparisons, date)
     }
 
     private func loadComparisons(_ period: FinancePeriod) async throws -> [FinanceComparison] {
@@ -322,10 +462,58 @@ final class FinanceStore {
                 out.append(.none(range)) // no completed month yet
                 continue
             }
-            let summary = try await fetchSummary(["from": range.from, "to": range.to])
+            let summary = try await fetchSummary(Self.summaryQuery(range))
             out.append(.from(summary, range: range))
         }
         return out
+    }
+
+    // MARK: Requests
+
+    // The reads the page starts with, shared with the prefetch so both file the same copies.
+
+    static func overviewRequest(_ api: FamilyAPI) -> CachedGet<FinanceOverview> {
+        api.cached("/finance")
+    }
+
+    /// The transaction list's query for a period, filter and page size.
+    static func listQuery(_ period: FinancePeriod, _ filter: FinanceFilter, limit: Int) -> [String: String?] {
+        var query = period.query
+        query["limit"] = String(limit)
+        let q = filter.q.trimmingCharacters(in: .whitespaces)
+        if !q.isEmpty { query["q"] = q }
+        if !filter.category.isEmpty { query["category"] = filter.category }
+        if !filter.account.isEmpty { query["account"] = filter.account }
+        if filter.kind != .all { query["kind"] = filter.kind.rawValue }
+        return query
+    }
+
+    static func listRequest(_ api: FamilyAPI, _ query: [String: String?]) -> CachedGet<FinanceTransactionList> {
+        api.cached("/finance/transactions", query: query)
+    }
+
+    /// The balances at the end of `at`; while the period runs they're today's: kept as such, so
+    /// tomorrow starts with them too.
+    static func balancesRequest(_ api: FamilyAPI, at: String) -> CachedGet<FinanceAccountsAt> {
+        api.cached("/finance/accounts", query: ["at": at],
+                   key: at == Day.today.description ? "/finance/accounts?at=today" : nil)
+    }
+
+    static func summaryRequest(_ api: FamilyAPI, _ query: [String: String?]) -> CachedGet<FinanceSummary> {
+        api.cached("/finance/summary", query: query)
+    }
+
+    static func summaryQuery(_ range: FinanceComparisonRange) -> [String: String?] {
+        ["from": range.from, "to": range.to]
+    }
+
+    /// The summaries the overview shows for `period`: its own and its comparisons' (those with
+    /// a completed month).
+    static func summaryQueries(_ period: FinancePeriod) -> [[String: String?]] {
+        [period.query] + period.comparisonRanges().compactMap { range in
+            if let from = range.from, range.to < from { return nil }
+            return summaryQuery(range)
+        }
     }
 
     /// What is shown, after the period or the data changed.

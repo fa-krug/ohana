@@ -47,7 +47,7 @@ struct RecipeEditorSheet: View {
     private func load() async {
         await LoadState.run($state) {
             let c = try await RecipeCatalogCache.load(family.api)
-            let t = try await family.api.get("/meals/tags", as: RecipeTagsResponse.self)
+            let t = try await RecipeTagsView.request(family.api).fetchOrSaved()
             let model: RecipeEditorModel
             switch mode {
             case let .create(list):

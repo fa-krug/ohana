@@ -18,6 +18,13 @@ struct AssistantChat: Equatable {
     var isRunning: Bool { status == "running" }
 }
 
+/// The open chat is its copy on the device from `date`: `updating` while the server is asked,
+/// false once it couldn't be reached.
+struct AssistantSavedCopy: Equatable {
+    var date: Date
+    var updating: Bool
+}
+
 /// What a running turn does, and since when this device knows it.
 struct AssistantActivityState: Equatable {
     var activity: AssistantActivity
@@ -28,7 +35,9 @@ struct AssistantActivityState: Equatable {
 /// server, whose worker runs the turns (they go on when the app is closed, and every device sees
 /// the same chats). The store lists the chats, shows the open one and follows it while a turn
 /// runs: the server streams what changed from its database (server-sent events, `since` a
-/// revision), and the stream is simply asked for again when it ends or breaks off.
+/// revision), and the stream is simply asked for again when it ends or breaks off. The settings,
+/// the list and the chats' states are kept on the device (`CachedGet`): with nothing loaded yet
+/// they show from there, so past chats can be read offline.
 @Observable
 final class AssistantChatStore {
     private(set) var settings: AssistantSettings?
@@ -39,6 +48,9 @@ final class AssistantChatStore {
     private(set) var currentID: String?
     /// The open chat, once loaded (or a new one being started).
     private(set) var current: AssistantChat?
+    /// Set while `current` is the copy on the device, until the server or the chat's stream
+    /// answers: its changes can't be undone and its question not answered meanwhile.
+    private(set) var savedCopy: AssistantSavedCopy?
     /// Set while a turn runs.
     private(set) var activity: AssistantActivityState?
     /// A message is on its way to the server.
@@ -92,8 +104,10 @@ final class AssistantChatStore {
     // MARK: Loading
 
     func loadSettings() async {
+        let get = Self.settingsRequest(api)
+        if settings == nil { settings = get.saved()?.value }
         do {
-            settings = try await api.get("/ai/settings", as: AssistantSettings.self)
+            settings = try await get.fetch()
             settingsError = nil
         } catch is CancellationError {
         } catch {
@@ -102,6 +116,15 @@ final class AssistantChatStore {
     }
 
     func setSettings(_ s: AssistantSettings) { settings = s }
+
+    /// The settings' and the chat list's GETs (the prefetch asks the same).
+    static func settingsRequest(_ api: FamilyAPI) -> CachedGet<AssistantSettings> {
+        api.cached("/ai/settings")
+    }
+
+    static func chatsRequest(_ api: FamilyAPI) -> CachedGet<AssistantChatList> {
+        api.cached("/ai/chats")
+    }
 
     /// Before the assistant first shows: its settings, the chats and the latest chat, so the
     /// panel has them drawn before it slides in (a running turn isn't followed: no one looks yet).
@@ -112,8 +135,11 @@ final class AssistantChatStore {
     }
 
     func loadChats() async {
+        let get = Self.chatsRequest(api)
+        // Only into an empty list: the server's chats are never replaced by the copy.
+        if !chatsLoaded, chats.isEmpty, let copy = get.saved() { chats = copy.value.chats }
         do {
-            chats = try await api.get("/ai/chats", as: AssistantChatList.self).chats
+            chats = try await get.fetch().chats
             chatsLoaded = true
         } catch {
             // Offline or not allowed: the list stays as it is.
@@ -123,7 +149,14 @@ final class AssistantChatStore {
     /// Back in the app (another device may have chatted meanwhile): the list and the open chat
     /// catch up.
     func refresh() async {
+        if let id = currentID, savedCopy?.updating == false { await fetch(id, follow: false) }
         if let id = current?.id, !id.isEmpty, following == nil { follow(id) }
+        await loadChats()
+    }
+
+    /// Tries again to reach the server for the open chat's copy and the list (the badge over it).
+    func retrySaved() async {
+        if let id = currentID, savedCopy?.updating == false { await fetch(id, follow: true) }
         await loadChats()
     }
 
@@ -133,6 +166,7 @@ final class AssistantChatStore {
         for item in chat.items { markSeen(item) }
         currentID = chat.id.isEmpty ? nil : chat.id
         current = chat
+        savedCopy = nil
     }
 
     func newChat() {
@@ -140,33 +174,73 @@ final class AssistantChatStore {
         unfollow()
         currentID = nil
         current = nil
+        savedCopy = nil
         activity = nil
     }
 
     /// Opens a chat (a running turn goes on either way); `follow`: its running turn too.
     func open(_ id: String, follow following: Bool = true) async {
-        if id == currentID, current != nil { return }
+        if id == currentID, current != nil {
+            // Its copy on the device, the server out of reach before: ask again.
+            if savedCopy?.updating == false { await fetch(id, follow: following) }
+            return
+        }
         picks += 1
         unfollow()
         currentID = id
         current = nil
+        savedCopy = nil
         activity = nil
+        if let copy = chatState(id).saved() {
+            for item in copy.value.items { markSeen(item) }
+            var chat = Self.chat(id, copy.value)
+            // A turn that ran then has ended or goes on without this device: the server says.
+            chat.status = "idle"
+            chat.queued = []
+            current = chat
+            savedCopy = .init(date: copy.date, updating: true)
+        }
+        await fetch(id, follow: following)
+    }
+
+    private func chatState(_ id: String) -> CachedGet<AssistantChatState> {
+        api.cached("/ai/chats/\(Self.enc(id))")
+    }
+
+    private static func chat(_ id: String, _ s: AssistantChatState) -> AssistantChat {
+        AssistantChat(
+            id: id, title: s.chat.title, status: s.chat.status, items: s.items, rev: s.rev,
+            usage: s.chat.usage, page: s.chat.page, queued: s.chat.queued ?? []
+        )
+    }
+
+    /// Asks the server for the open chat. Its answer replaces what's shown unless that changed
+    /// meanwhile (a message was sent: the chat's stream brings the rest); the copy on the device
+    /// stays while the server can't be reached.
+    private func fetch(_ id: String, follow following: Bool) async {
+        let shown = current
+        savedCopy?.updating = true
         do {
-            let s = try await api.get("/ai/chats/\(Self.enc(id))", as: AssistantChatState.self)
-            guard currentID == id else { return }
+            let s = try await chatState(id).fetch()
+            guard currentID == id, current == shown else { return }
             for item in s.items { markSeen(item) }
-            current = AssistantChat(
-                id: id, title: s.chat.title, status: s.chat.status, items: s.items, rev: s.rev,
-                usage: s.chat.usage, page: s.chat.page, queued: s.chat.queued ?? []
-            )
+            current = Self.chat(id, s)
+            savedCopy = nil
             summary(s.chat)
             if s.chat.isRunning, following { follow(id) }
-        } catch is CancellationError {
         } catch {
-            guard currentID == id else { return }
+            guard currentID == id, !(error is CancellationError) else { return }
+            if savedCopy != nil, APIError.isTemporary(error) {
+                savedCopy?.updating = false
+                return
+            }
             if (error as? APIError)?.status == 404 {
                 chats.removeAll { $0.id == id }
                 currentID = nil
+            }
+            if savedCopy != nil {
+                current = nil
+                savedCopy = nil
             }
             ErrorBanner.shared.show(error)
         }
@@ -307,7 +381,7 @@ final class AssistantChatStore {
 
     /// The open chat's question that waits for an answer, with its position.
     func openQuestion() -> (index: Int, question: AssistantQuestion)? {
-        guard let items = current?.items, !busy,
+        guard let items = current?.items, !busy, savedCopy == nil,
               let index = items.lastIndex(where: { if case .question = $0 { true } else { false } }),
               case let .question(q) = items[index], q.answer == nil, !q.skipped,
               !items[(index + 1)...].contains(where: \.isUser)
@@ -406,6 +480,7 @@ final class AssistantChatStore {
         var chatID = id
         var request = first
         var failures = 0
+        var finished = false
         while !Task.isCancelled {
             var ended = false
             var heard = false
@@ -446,6 +521,7 @@ final class AssistantChatStore {
                 failures += 1
             }
             sending = false
+            finished = ended
             if Task.isCancelled || ended { break }
             // Reconnect at once after a good stream, else a little later each time.
             if heard {
@@ -458,6 +534,10 @@ final class AssistantChatStore {
             following = nil
             sending = false
             if current?.id == chatID, current?.isRunning != true { activity = nil }
+        }
+        // The copy on the device is the state the chat was opened in: after a turn, the new one.
+        if finished, let chatID, api.client.cache != nil {
+            _ = try? await chatState(chatID).fetch()
         }
     }
 
@@ -515,6 +595,8 @@ final class AssistantChatStore {
             c.page = s.page ?? c.page
             c.queued = Self.queued(s, before: c.queued)
             current = c
+            // From the server: with the items since the copy's revision, the chat is up to date.
+            savedCopy = nil
             if let a = s.activity, s.isRunning {
                 if activity?.activity != a { activity = .init(activity: a, at: .now) }
             } else {
@@ -564,7 +646,7 @@ final class AssistantChatStore {
     /// Undoes a change of the open chat: replays its undo requests on the family API, then tells
     /// the chat (the model hears it with the next message).
     func undo(_ changeID: String) async {
-        guard let chat = current, !chat.id.isEmpty,
+        guard let chat = current, !chat.id.isEmpty, savedCopy == nil,
               let index = chat.items.firstIndex(where: { if case let .change(c) = $0 { c.id == changeID } else { false } }),
               case let .change(change) = chat.items[index], !change.undone else { return }
         do {

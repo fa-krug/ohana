@@ -3,6 +3,7 @@
 import {
   index,
   integer,
+  primaryKey,
   sqliteTable,
   text,
   uniqueIndex,
@@ -250,4 +251,20 @@ export const shoppingListItems = sqliteTable(
       t.shoppingListId,
     ),
   }),
+);
+
+// Adds sent with the app's `clientId`: a retry of one already applied (its answer was lost)
+// gets the earlier result back instead of adding the quantity again.
+export const shoppingItemAdds = sqliteTable(
+  "shopping_item_adds",
+  {
+    shoppingListId: text("shopping_list_id")
+      .notNull()
+      .references(() => shoppingLists.id, { onDelete: "cascade" }),
+    clientId: text("client_id").notNull(),
+    itemId: text("item_id").notNull(),
+    merged: integer("merged", { mode: "boolean" }).notNull(),
+    previousQuantity: text("previous_quantity"),
+  },
+  (t) => ({ pk: primaryKey({ columns: [t.shoppingListId, t.clientId] }) }),
 );

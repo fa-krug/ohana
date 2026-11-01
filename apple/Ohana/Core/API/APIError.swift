@@ -32,6 +32,17 @@ enum APIError: LocalizedError, Equatable {
         }
     }
 
+    /// A failure that may pass by itself (no connection, the server down or busy), unlike a
+    /// refusal: worth trying again, and a reason to keep showing what's on the device.
+    static func isTemporary(_ error: any Error) -> Bool {
+        switch error {
+        case is URLError, is CancellationError: true
+        case APIError.transport: true
+        case let APIError.http(status, _): status >= 500 || status == 408 || status == 429
+        default: false
+        }
+    }
+
     /// The message of an error body, whichever key the route used.
     static func message(from data: Data) -> String? {
         guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }

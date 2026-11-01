@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, eq, inArray } from "drizzle-orm";
 import type { Db } from "@/lib/db";
 import { AuthError } from "@/lib/auth/errors";
-import { shoppingListItems, shoppingLists, planIterations, mealPlans } from "@/lib/db/schema";
+import { shoppingItemAdds, shoppingListItems, shoppingLists, planIterations, mealPlans } from "@/lib/db/schema";
 import { Decimal, quantize2 } from "@/lib/meals/domain/decimal";
 
 /** Returns the set of item ids (from `candidateIds`) that belong to `familyId`. */
@@ -63,17 +63,48 @@ function ownedList(db: Db, familyId: string, listId: string): void {
   if (!row) throw new AuthError(404, "Shopping list not found");
 }
 
+type AddResult = { id: string; merged: boolean; previousQuantity: string | null };
+
+/**
+ * An add with this `clientId` already applied to the list: its result (a retry whose answer was
+ * lost), else null.
+ */
+export function earlierShoppingAdd(db: Db, listId: string, clientId: string): AddResult | null {
+  const row = db
+    .select()
+    .from(shoppingItemAdds)
+    .where(and(eq(shoppingItemAdds.shoppingListId, listId), eq(shoppingItemAdds.clientId, clientId)))
+    .get();
+  return row ? { id: row.itemId, merged: row.merged, previousQuantity: row.previousQuantity } : null;
+}
+
 /**
  * Adds an item to one of the family's shopping lists. An unticked item of the same ingredient
- * and unit gets the quantity added instead (`merged`, with the quantity it had before).
+ * and unit gets the quantity added instead (`merged`, with the quantity it had before). With a
+ * `clientId` (the app's, for its offline queue) an add is applied once: sent again, it returns
+ * the earlier result.
  */
 export function addShoppingItem(
   db: Db,
   familyId: string,
   listId: string,
-  input: { ingredientId: number; unitId: number; quantity: string },
-): { id: string; merged: boolean; previousQuantity: string | null } {
+  input: { ingredientId: number; unitId: number; quantity: string; clientId?: string },
+): AddResult {
   ownedList(db, familyId, listId);
+  const { clientId } = input;
+  if (clientId === undefined) return applyAdd(db, listId, input);
+  return db.transaction(() => {
+    const earlier = earlierShoppingAdd(db, listId, clientId);
+    if (earlier) return earlier;
+    const result = applyAdd(db, listId, input);
+    db.insert(shoppingItemAdds)
+      .values({ shoppingListId: listId, clientId, itemId: result.id, merged: result.merged, previousQuantity: result.previousQuantity })
+      .run();
+    return result;
+  });
+}
+
+function applyAdd(db: Db, listId: string, input: { ingredientId: number; unitId: number; quantity: string }): AddResult {
   let quantity: Decimal;
   try {
     quantity = new Decimal(input.quantity);

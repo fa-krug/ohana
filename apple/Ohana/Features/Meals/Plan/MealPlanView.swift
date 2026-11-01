@@ -29,13 +29,16 @@ struct MealPlanView: View {
     @State private var undo: MealPlanUndo?
     @State private var working = false
 
+    /// Changes need an editor and the server's latest plan, not the copy on the device.
+    private var canEdit: Bool { family.canEdit && !state.isSaved }
+
     var body: some View {
         LoadStateView(state: state, retry: load) { data in
             content(data)
         }
         .navigationTitle("Meal plan")
         .toolbar {
-            if family.canEdit, let data = state.value, data.plan != nil {
+            if canEdit, let data = state.value, data.plan != nil {
                 ToolbarItem(placement: .primaryAction) {
                     Button("Update plan", systemImage: "slider.horizontal.3") { showSetup = true }
                 }
@@ -77,7 +80,12 @@ struct MealPlanView: View {
     }
 
     private func load() async {
-        await LoadState.run($state) { try await family.api.get("/meals/plan") }
+        await LoadState.run($state, Self.request(family.api))
+    }
+
+    /// The plan's GET (the prefetch asks the same).
+    static func request(_ api: FamilyAPI) -> CachedGet<MealPlanResponse> {
+        api.cached("/meals/plan")
     }
 
     // MARK: Content
@@ -87,7 +95,7 @@ struct MealPlanView: View {
         if let plan = data.plan, !plan.iterations.isEmpty {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    if family.canEdit, plan.activeEnded(today: .today) {
+                    if canEdit, plan.activeEnded(today: .today) {
                         endedBanner
                     }
                     if let active = plan.activeIteration {
@@ -98,7 +106,7 @@ struct MealPlanView: View {
                         } description: {
                             Text("Time to plan your next round!")
                         } actions: {
-                            if family.canEdit { nextButton }
+                            if canEdit { nextButton }
                         }
                         .contentCard()
                     }
@@ -125,7 +133,7 @@ struct MealPlanView: View {
             } description: {
                 Text("Set up your first plan to get cooking!")
             } actions: {
-                if family.canEdit {
+                if canEdit {
                     Button("Let’s go!") { showSetup = true }
                         .buttonStyle(.glassProminent)
                         .tint(ModuleTint.meals)
@@ -139,7 +147,7 @@ struct MealPlanView: View {
             iteration: iteration,
             rows: iteration.dayRows(shoppingDays: plan.shoppingDays, away: away),
             archived: archived,
-            canEdit: family.canEdit,
+            canEdit: canEdit,
             working: working,
             onRenew: { confirmRenew = iteration },
             onAction: { action in

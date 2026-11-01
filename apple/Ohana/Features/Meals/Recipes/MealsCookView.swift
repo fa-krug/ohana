@@ -44,9 +44,8 @@ struct MealsCookView: View {
     }
 
     private func load() async {
-        await LoadState.run($state) {
-            RecipeResolved(try await family.api.get("/meals/recipes/\(recipeID)", as: RecipeDetailResponse.self))
-        }
+        // The recipe's page keeps the same copy, so a recipe opened once cooks offline too.
+        await LoadState.run($state, MealsRecipeDetailView.request(family.api, recipeID: recipeID), RecipeResolved.init)
     }
 }
 

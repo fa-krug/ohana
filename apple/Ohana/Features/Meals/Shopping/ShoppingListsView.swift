@@ -3,11 +3,14 @@ import SwiftUI
 /// Meals → Shopping: the latest shopping list (as on the web's shopping page), with a switcher
 /// to the family's other lists (one per shopping day of each plan iteration). `selection` picks
 /// one (nil: the latest), e.g. a shopping day of the plan (`AppRoute.shoppingList`). The lists
-/// are kept on the device and shown from there while offline.
+/// are kept on the device: shown from there at once on a cold start, and while offline.
 struct ShoppingListsView: View {
     @Environment(FamilyContext.self) private var family
     @Binding var selection: String?
+    /// The saved overview shows as `.loaded`: the list page below says it's a copy (its badge or
+    /// banner), so the two don't both say so.
     @State private var state: LoadState<ShoppingOverview> = .idle
+    /// The overview shown is the copy kept on the device.
     @State private var savedCopy = false
 
     var body: some View {
@@ -24,7 +27,14 @@ struct ShoppingListsView: View {
 
     private func load() async {
         let store = ShoppingOfflineStore(api: family.api)
-        if state.value == nil { state = .loading }
+        if state.value == nil {
+            if !family.api.client.isDemo, let saved = store.loadOverview() {
+                state = .loaded(saved)
+                savedCopy = true
+            } else {
+                state = .loading
+            }
+        }
         do {
             let overview: ShoppingOverview = try await family.api.get("/meals/shopping", query: ["lang": MealPlanLanguage.current])
             state = .loaded(overview)
@@ -37,8 +47,9 @@ struct ShoppingListsView: View {
             if ShoppingTickQueue.isRetryable(error), state.value == nil, let saved = store.loadOverview() {
                 state = .loaded(saved)
                 savedCopy = true
-            } else if state.value == nil {
+            } else if state.value == nil || (savedCopy && !ShoppingTickQueue.isRetryable(error)) {
                 state = .failed(error.localizedDescription)
+                savedCopy = false
             } else if !savedCopy {
                 ErrorBanner.shared.show(error)
             }
@@ -69,7 +80,7 @@ struct ShoppingEmptyView: View {
 
 /// One shopping list: its items by aisle, ticked off at once (sent in the background, queued
 /// while offline), quantities, deleting (undoable for a few seconds) and adding items (File ▸
-/// New Item, ⌘N), and what the trip cost.
+/// New Item, ⌘N; queued too while offline, shown with a clock until sent), and what the trip cost.
 struct ShoppingListPage: View {
     @Environment(FamilyContext.self) private var family
     @Environment(\.undoManager) private var undoManager
@@ -81,6 +92,9 @@ struct ShoppingListPage: View {
     var latestID: String?
     var onSelect: ((String?) -> Void)?
 
+    /// `.saved` (the quiet badge) while the copy kept on the device shows until the server answers;
+    /// when it can't be reached the copy shows as `.loaded` with `savedCopy`, and the banner says
+    /// so instead of the badge.
     @State private var state: LoadState<ShoppingList> = .idle
     /// The list shown is the copy kept on the device (no connection): ticks still work.
     @State private var savedCopy = false
@@ -90,7 +104,7 @@ struct ShoppingListPage: View {
     @State private var showAdd = false
     @State private var confirmReset = false
     @State private var ticks = 0
-    @State private var connectivity = ShoppingConnectivity.shared
+    @State private var connectivity = Connectivity.shared
 
     private var queue: ShoppingTickQueue { .for(family.api) }
 
@@ -105,7 +119,7 @@ struct ShoppingListPage: View {
         }
         .task(id: LoadKey(listID: listID, revision: family.revision(.shopping))) { await load() }
         .toolbar { toolbar }
-        .focusedSceneValue(\.newItem, onScreen && canChange && state.value != nil
+        .focusedSceneValue(\.newItem, onScreen && canAdd
                            ? NewItemAction(title: "New Item") { showAdd = true } : nil)
         .alert("Quantity", isPresented: Binding(get: { editing != nil }, set: { if !$0 { editing = nil } }),
                presenting: editing) { item in
@@ -119,21 +133,38 @@ struct ShoppingListPage: View {
             Button("Reset") { resetTicks() }
         }
         .sheet(isPresented: $showAdd) {
-            ShoppingAddItemSheet(listID: listID) { family.didChange(.shopping) }
+            ShoppingAddItemSheet(listID: listID, queueOnly: savedCopy || !connectivity.isOnline) {
+                family.didChange(.shopping)
+            }
         }
         .sensoryFeedback(.selection, trigger: ticks)
         .onChange(of: connectivity.isOnline) { _, online in
             // Back online: fresh lists instead of the saved copy (the queue sends the ticks).
             if online, savedCopy { family.didChange(.shopping) }
         }
+        .onChange(of: queue.addsSettled) {
+            // A queued add was sent (or refused): the server's list has it now.
+            family.didChange(.shopping)
+        }
     }
 
-    /// Editing beyond ticking needs the server.
-    private var canChange: Bool { family.canEdit && !savedCopy }
+    /// Editing beyond ticking and adding needs the server.
+    private var canChange: Bool { family.canEdit && !savedCopy && !state.isSaved }
+    /// Adds wait in the queue while the server can't be reached (not in the demo: it's read-only).
+    private var canAdd: Bool { family.canEdit && !family.api.client.isDemo && state.value != nil }
 
     private func load() async {
         let store = ShoppingOfflineStore(api: family.api)
-        if state.value?.id != listID { state = .loading }
+        if state.value?.id != listID {
+            if !family.api.client.isDemo, let saved = store.savedList(listID) {
+                state = .saved(saved.value, date: saved.date, updating: true)
+            } else {
+                state = .loading
+            }
+            savedCopy = false
+        } else if case let .saved(list, date, _) = state {
+            state = .saved(list, date: date, updating: true)
+        }
         do {
             let response: ShoppingListResponse = try await family.api.get(
                 "/meals/shopping/lists/\(listID)", query: ["lang": MealPlanLanguage.current])
@@ -143,10 +174,10 @@ struct ShoppingListPage: View {
             queue.reconcile()
         } catch is CancellationError {
         } catch {
-            if ShoppingTickQueue.isRetryable(error), let saved = store.loadList(listID) {
+            if ShoppingTickQueue.isRetryable(error), let saved = state.isSaved ? state.value : store.loadList(listID) {
                 state = .loaded(saved)
                 savedCopy = true
-            } else if state.value == nil {
+            } else if state.value == nil || state.isSaved {
                 state = .failed(error.localizedDescription)
             } else {
                 ErrorBanner.shared.show(error)
@@ -165,7 +196,7 @@ struct ShoppingListPage: View {
             } description: {
                 Text("Create a meal plan and we’ll sort it out for you!")
             } actions: {
-                if canChange {
+                if canAdd {
                     Button("Add item", systemImage: "plus") { showAdd = true }
                         .buttonStyle(.glassProminent)
                 }
@@ -179,7 +210,7 @@ struct ShoppingListPage: View {
                     categorySection(group)
                 }
                 // What it cost comes from the finances: not without them.
-                if list.shoppingDate != nil, !savedCopy, family.isEnabled(.finance) {
+                if list.shoppingDate != nil, !savedCopy, !state.isSaved, family.isEnabled(.finance) {
                     ShoppingSpentSection(listID: list.id)
                 }
             }
@@ -275,6 +306,41 @@ struct ShoppingListPage: View {
 
     @ViewBuilder
     private func row(_ item: ShoppingItem) -> some View {
+        if let add = queue.pendingAdds(for: listID).first(where: { $0.item.id == item.id }) {
+            pendingRow(add)
+        } else {
+            itemRow(item)
+        }
+    }
+
+    /// An add waiting for the server: not tickable yet; it can be taken back until it's on its way.
+    private func pendingRow(_ add: ShoppingPendingAdd) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "clock")
+                .font(.title3)
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+            Text(add.item.label())
+                .foregroundStyle(.secondary)
+            Spacer(minLength: 0)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityValue(Text("Waiting to be sent"))
+        .help("Waiting to be sent")
+        .swipeActions(edge: .trailing) {
+            if queue.sendingAddID != add.id {
+                Button("Remove", systemImage: "trash", role: .destructive) { queue.removeAdd(add.id) }
+            }
+        }
+        .contextMenu {
+            if queue.sendingAddID != add.id {
+                Button("Remove", systemImage: "trash", role: .destructive) { queue.removeAdd(add.id) }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func itemRow(_ item: ShoppingItem) -> some View {
         let label = HStack(spacing: 12) {
             Image(systemName: item.isChecked ? "checkmark.circle.fill" : "circle")
                 .font(.title3)
@@ -354,7 +420,7 @@ struct ShoppingListPage: View {
                 ToolbarSpacer(.fixed, placement: .primaryAction)
                 ToolbarItemGroup(placement: .primaryAction) {
                     Button("Add item", systemImage: "plus") { showAdd = true }
-                        .disabled(savedCopy)
+                        .disabled(!canAdd)
                     Button("Reset", systemImage: "arrow.uturn.backward") { confirmReset = true }
                         .disabled(!visibleItems(of: list).contains(where: \.isChecked))
                         .help("Untick every item")
@@ -370,9 +436,9 @@ struct ShoppingListPage: View {
 
     // MARK: Actions
 
-    /// The items with their ticks, without those being deleted.
+    /// The items with their ticks, without those being deleted, and the adds waiting to be sent.
     private func visibleItems(of list: ShoppingList) -> [ShoppingItem] {
-        queue.apply(to: list.items).filter { !deletes.isHidden($0.id) }
+        queue.apply(to: list.items).filter { !deletes.isHidden($0.id) } + queue.pendingAdds(for: list.id).map(\.item)
     }
 
     private func tick(_ item: ShoppingItem) {
@@ -498,11 +564,15 @@ struct ShoppingSpentSection: View {
 }
 
 /// Adds an item to a list: an ingredient Ohana knows (by its English or German name) or a new
-/// one; an open item of the same ingredient and unit gets the quantity added.
+/// one; an open item of the same ingredient and unit gets the quantity added. While the server
+/// can't be reached the add waits in the list's queue (`ShoppingTickQueue`).
 struct ShoppingAddItemSheet: View {
     @Environment(FamilyContext.self) private var family
     @Environment(\.dismiss) private var dismiss
     let listID: String
+    /// Offline, or the list shown is the saved copy: queue the add without trying first.
+    var queueOnly = false
+    /// The server has the add (not called for a queued one: the queue reloads the list once sent).
     var onAdded: () -> Void
 
     @State private var name = ""
@@ -586,7 +656,9 @@ struct ShoppingAddItemSheet: View {
 
     private func loadUnits() async {
         do {
-            let response: ShoppingUnitsResponse = try await family.api.get("/meals/shopping/units")
+            // The units as last loaded while offline.
+            let response = try await family.api.cached("/meals/shopping/units", as: ShoppingUnitsResponse.self)
+                .fetchOrSaved()
             units = response.units
             if unitID == nil {
                 unitID = (units.first { $0.abbreviation == "Stk" } ?? units.first)?.id
@@ -598,15 +670,14 @@ struct ShoppingAddItemSheet: View {
     }
 
     private func save() {
-        guard let unitID, let value = quantityValue else { return }
+        guard let unitID, let value = quantityValue, let unit = units.first(where: { $0.id == unitID }) else { return }
         saving = true
-        let input = ShoppingAddItemInput(name: name.trimmingCharacters(in: .whitespaces),
-                                         quantity: String(value), unitId: unitID, category: category.rawValue)
+        let add = ShoppingPendingAdd(listID: listID, name: name.trimmingCharacters(in: .whitespaces),
+                                     quantity: String(value), unitID: unitID, unitAbbreviation: unit.abbreviation,
+                                     category: category.rawValue)
         perform {
             defer { saving = false }
-            let _: ShoppingAddItemResult = try await family.api.send(.post, "/meals/shopping/lists/\(listID)/items",
-                                                                     body: input)
-            onAdded()
+            if try await ShoppingTickQueue.for(family.api).add(add, sendNow: !queueOnly) { onAdded() }
             dismiss()
         }
     }

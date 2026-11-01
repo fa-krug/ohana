@@ -6,7 +6,9 @@ import UIKit
 
 /// The app's session: which server, the device's API token, the account and its families, and
 /// the family on screen. One per app; views read it from the environment. Without a server the
-/// app shows the demo (`DemoServer`, read-only) until one is connected.
+/// app shows the demo (`DemoServer`, read-only) until one is connected. The account, its families
+/// and the server's info as last loaded are kept on the device (`ResponseCache`): the app opens
+/// on them at once, offline too, and refreshes behind.
 @Observable
 final class AppModel {
     enum Phase: Equatable {
@@ -58,7 +60,10 @@ final class AppModel {
 
     /// The family on screen; remembered per device (the demo's isn't).
     var selectedFamilyID: String? {
-        didSet { if !isDemo { UserDefaults.standard.set(selectedFamilyID, forKey: Keys.family) } }
+        didSet {
+            if !isDemo { UserDefaults.standard.set(selectedFamilyID, forKey: Keys.family) }
+            if selectedFamilyID != oldValue { prefetch() }
+        }
     }
 
     var selectedFamily: FamilySummary? {
@@ -73,6 +78,11 @@ final class AppModel {
     /// Family contexts by id, so a family's caches and change signals survive switching away.
     private var contexts: [String: FamilyContext] = [:]
 
+    /// Loads the selected family's screens ahead (`prefetch`).
+    @ObservationIgnored private let prefetcher = Prefetcher()
+    /// The server answered for the account since connecting (not only its copy on the device).
+    @ObservationIgnored private var answered = false
+
     private enum Keys {
         static let server = "serverURL"
         static let family = "selectedFamilyID"
@@ -80,6 +90,12 @@ final class AppModel {
     }
 
     init() {
+        Connectivity.shared.start()
+        Connectivity.shared.whenReconnected { [weak self] in
+            guard let self, !isDemo else { return }
+            // Offline at launch, the account is asked again (and the screens loaded ahead then).
+            if answered { prefetch() } else { Task { await self.refresh() } }
+        }
         selectedFamilyID = UserDefaults.standard.string(forKey: Keys.family)
         #if DEBUG
         // Development: `-OHANA_DEV_SERVER http://localhost:3000 -OHANA_DEV_TOKEN ohana_…` as launch
@@ -133,6 +149,8 @@ final class AppModel {
         await whileSwitching(.server(host: server.host() ?? server.absoluteString)) {
             UserDefaults.standard.set(server.absoluteString, forKey: Keys.server)
             Keychain.save(token, for: Keys.token)
+            // It may be another account: nothing of the last one shows.
+            ResponseCache(server: server).clear()
             connect(server: server, token: token)
             await refresh()
         }
@@ -140,7 +158,7 @@ final class AppModel {
 
     private func connect(server: URL, token: String) {
         serverURL = server
-        let client = APIClient(baseURL: server, token: token)
+        let client = APIClient(baseURL: server, token: token, cache: ResponseCache(server: server))
         client.onUnauthorized = { [weak self] in
             Task { @MainActor in await self?.useDemo(signingOut: false) }
         }
@@ -148,6 +166,29 @@ final class AppModel {
         // The demo's family isn't remembered: back to the server's.
         selectedFamilyID = UserDefaults.standard.string(forKey: Keys.family)
         reset()
+        restoreSaved(client)
+    }
+
+    /// The account, families and server info kept on the device: ready at once, `refresh`
+    /// brings the server's.
+    private func restoreSaved(_ client: APIClient) {
+        guard let saved = Self.meRequest(client).saved()?.value else { return }
+        serverInfo = ServerInfo.saved(from: client)
+        if let serverInfo, !serverInfo.isSupported { return }
+        take(saved)
+    }
+
+    private static func meRequest(_ client: APIClient) -> CachedGet<MeResponse> {
+        client.cached("/api/v1/me")
+    }
+
+    private func take(_ response: MeResponse) {
+        me = response.user
+        families = response.families
+        if selectedFamilyID == nil || !families.contains(where: { $0.id == selectedFamilyID }) {
+            selectedFamilyID = families.first?.id
+        }
+        phase = .ready
     }
 
     private func connectDemo() {
@@ -158,6 +199,8 @@ final class AppModel {
 
     /// Forgets the previous connection's account, families and caches.
     private func reset() {
+        prefetcher.cancel()
+        answered = false
         me = nil
         families = []
         contexts = [:]
@@ -187,7 +230,7 @@ final class AppModel {
         if me == nil { phase = .loading }
         async let checked = checkServer(client)
         do {
-            let response: MeResponse = try await client.get("/api/v1/me")
+            let response = try await Self.meRequest(client).fetch()
             if let info = await checked {
                 serverInfo = info
                 guard info.isSupported else {
@@ -195,12 +238,9 @@ final class AppModel {
                     return
                 }
             }
-            me = response.user
-            families = response.families
-            if selectedFamilyID == nil || !families.contains(where: { $0.id == selectedFamilyID }) {
-                selectedFamilyID = families.first?.id
-            }
-            phase = .ready
+            take(response)
+            answered = true
+            prefetch()
         } catch is CancellationError {
         } catch APIError.unauthorized {
             await useDemo(signingOut: false)
@@ -220,6 +260,14 @@ final class AppModel {
         }
     }
 
+    /// Loads the selected family's main screens in the background, so they're on the device
+    /// before they're opened (`Prefetcher`: not in the demo, at most every 15 minutes a family).
+    /// Only once the server answered: the account's copy alone may be outdated.
+    private func prefetch() {
+        guard answered, phase == .ready, let family = selectedFamily, let context = context(for: family) else { return }
+        prefetcher.start(context)
+    }
+
     /// Signs the device out: the server forgets its token, the app forgets the server and shows
     /// the demo again.
     func signOut() async {
@@ -232,6 +280,9 @@ final class AppModel {
         guard let client, !client.isDemo else { return }
         await whileSwitching(.demo) {
             Keychain.delete(Keys.token)
+            client.cache?.clear()
+            ShoppingOfflineStore.removeAll(server: client.baseURL)
+            CalendarStore.removeQueues(server: client.baseURL)
             connectDemo()
             if signingOut {
                 _ = try? await client.send(.delete, "/api/v1/me", as: JSONValue.self)

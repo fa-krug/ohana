@@ -36,10 +36,13 @@ struct OverviewView: View {
     }
 
     private func load() async {
-        let api = family.api
-        await LoadState.run($state) {
-            try await api.get("/overview", query: ["today": Day.today.description])
-        }
+        await LoadState.run($state, Self.request(family.api))
+    }
+
+    /// The overview's GET (the prefetch asks the same): filed without `today`, so yesterday's
+    /// copy still shows offline.
+    static func request(_ api: FamilyAPI) -> CachedGet<OverviewDashboard> {
+        api.cached("/overview", query: ["today": Day.today.description], key: "/overview")
     }
 }
 

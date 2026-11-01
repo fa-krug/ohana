@@ -301,6 +301,33 @@ describe("shopping", () => {
     expect(db.select().from(ingredients).all().length).toBe(count);
   });
 
+  it("applies an add with a clientId once, and keeps adds without one as they were", async () => {
+    seedPlan();
+    const { latest } = (await call("GET", "/meals/shopping")).data;
+    const path = `/meals/shopping/lists/${latest.id}/items`;
+    const name = latest.items[0].ingredientName;
+    const clientId = "6f1c2c1e-3b1a-4a51-9d55-0d2f8f7a9b10";
+    const first = await call("POST", path, { name, quantity: "50", unitId: 1, clientId });
+    expect(first.data).toEqual({ id: latest.items[0].id, merged: true, previousQuantity: "100" });
+    // The answer was lost: the same add again changes nothing and gets the same result.
+    expect((await call("POST", path, { name, quantity: "50", unitId: 1, clientId })).data).toEqual(first.data);
+    const quantity = () => db.select().from(shoppingListItems).where(eq(shoppingListItems.id, latest.items[0].id)).get()?.quantity;
+    expect(quantity()).toBe("150");
+    // A new item, sent twice, is there once.
+    const fresh = await call("POST", path, { name: "Brand new", quantity: "1", unitId: 2, clientId: "second" });
+    expect((await call("POST", path, { name: "Brand new", quantity: "1", unitId: 2, clientId: "second" })).data).toEqual(fresh.data);
+    expect(db.select().from(shoppingListItems).where(eq(shoppingListItems.shoppingListId, latest.id)).all()
+      .filter((i) => i.id === fresh.data.id)).toHaveLength(1);
+    // A new key adds again; without a key every add counts (older apps).
+    await call("POST", path, { name, quantity: "50", unitId: 1, clientId: "third" });
+    await call("POST", path, { name, quantity: "50", unitId: 1 });
+    await call("POST", path, { name, quantity: "50", unitId: 1 });
+    expect(quantity()).toBe("300");
+    // The key is the list's: another family's list stays a 404.
+    expect((await stranger("POST", path, { name, quantity: "50", unitId: 1, clientId })).status).toBe(404);
+    expect((await call("POST", path, { name, quantity: "1", unitId: 1, clientId: "x".repeat(65) })).status).toBe(400);
+  });
+
   it("leaves the existing meals routes alone", async () => {
     seedPlan();
     const { latest } = (await call("GET", "/meals/shopping")).data;
