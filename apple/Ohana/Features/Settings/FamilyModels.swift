@@ -231,7 +231,7 @@ struct FamilyEventPref: Codable, Hashable, Identifiable {
     var module: Module? {
         switch event {
         case "appointment_found": .appointments
-        case "coverage_gap": .calendar
+        case "coverage_gap", "weekly_digest": .calendar
         case "assistant_turn_finished": .assistant
         default: nil
         }
@@ -241,6 +241,7 @@ struct FamilyEventPref: Codable, Hashable, Identifiable {
         switch event {
         case "appointment_found": "Appointment found"
         case "coverage_gap": "Day without cover"
+        case "weekly_digest": "Week ahead"
         case "assistant_turn_finished": "Assistant finished"
         default: LocalizedStringKey(event)
         }
@@ -252,6 +253,8 @@ struct FamilyEventPref: Codable, Hashable, Identifiable {
             "When a search finds a new or earlier appointment. Each search chooses its channels."
         case "coverage_gap":
             "In the morning, when a weekday in the next two weeks needs cover (e.g. a day-care closure) and nobody covers it yet."
+        case "weekly_digest":
+            "Sunday evening: the next two weeks for each member, with clashes and plans that don’t work out."
         case "assistant_turn_finished":
             "When the assistant worked on a request for a while (30 seconds or more) and the chat isn’t open anywhere."
         default: LocalizedStringKey(String())

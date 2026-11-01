@@ -235,3 +235,4 @@ export * from "./schema/meals";
 export * from "./schema/finance";
 export * from "./schema/connections";
 export * from "./schema/assistant";
+export * from "./schema/digest";

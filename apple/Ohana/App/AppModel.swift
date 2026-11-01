@@ -518,4 +518,6 @@ extension Notification.Name {
 /// What a change can touch, for `FamilyContext.didChange`.
 enum DataArea: String, CaseIterable, Hashable {
     case family, calendar, events, finance, meals, recipes, mealPlan, appointments, settings
+    /// The week ahead's dismissed issues.
+    case digest
 }

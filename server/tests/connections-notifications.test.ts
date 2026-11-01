@@ -51,6 +51,7 @@ describe("preferences", () => {
       { event: "appointment_found", enabled: true, channelIds: null, app: true },
       { event: "coverage_gap", enabled: true, channelIds: null, app: true },
       { event: "assistant_turn_finished", enabled: false, channelIds: null, app: true },
+      { event: "weekly_digest", enabled: true, channelIds: null, app: true },
     ]);
     setPref(db, { id: editorId }, familyId, { event: "assistant_turn_finished", enabled: true, channelIds: [phone] }, NOW);
     expect(getPref(db, familyId, "assistant_turn_finished")).toEqual({ event: "assistant_turn_finished", enabled: true, channelIds: [phone], app: true });

@@ -9,6 +9,8 @@ import SwiftUI
 struct OverviewView: View {
     @Environment(FamilyContext.self) private var family
     @State private var state: LoadState<OverviewDashboard> = .idle
+    /// The week ahead, pushed (its card, a notification's link).
+    @State private var showsWeekAhead = false
 
     /// Every area's revision: anything that changes elsewhere reloads the overview.
     private var reloadKey: [Int] { DataArea.allCases.map { family.revision($0) } }
@@ -30,6 +32,12 @@ struct OverviewView: View {
         .navigationTitle("Overview")
         .refreshable { await load() }
         .task(id: reloadKey) { await load() }
+        .navigationDestination(isPresented: $showsWeekAhead) { WeekAheadView().assistantButton() }
+        .onChange(of: family.pendingRoute, initial: true) {
+            // The week ahead is pushed; the overview itself pops back to it.
+            guard let route = family.takeRoute(for: .overview) else { return }
+            showsWeekAhead = route == .weekAhead
+        }
     }
 
     private func load() async {
@@ -121,6 +129,9 @@ private struct OverviewGrid: View {
     var body: some View {
         LazyVGrid(columns: columns, alignment: .leading, spacing: 16) {
             OverviewTodayCard(dashboard: dashboard)
+            if let weekAhead = dashboard.weekAhead, weekAhead.hasIssues {
+                OverviewWeekAheadCard(summary: weekAhead)
+            }
             if family.isEnabled(.meals) {
                 OverviewMealsCard(meals: dashboard.meals, awayToday: dashboard.awayToday)
             }
@@ -149,6 +160,8 @@ private struct OverviewCard<Content: View>: View {
     let systemImage: String
     let module: Module
     var route: AppRoute?
+    /// What the header opens, for VoiceOver; the module's name when nil.
+    var destination: Text?
     @ViewBuilder var content: Content
 
     var body: some View {
@@ -172,7 +185,7 @@ private struct OverviewCard<Content: View>: View {
             }
             .buttonStyle(.plain)
             .accessibilityAddTraits(.isHeader)
-            .accessibilityHint(Text("Opens \(Text(module.title))"))
+            .accessibilityHint(Text("Opens \(destination ?? Text(module.title))"))
             content
                 .font(.callout)
         }
@@ -266,6 +279,59 @@ private struct OverviewTodayCard: View {
                 } else {
                     Label("No uncovered days coming up.", systemImage: "checkmark.circle.fill")
                         .foregroundStyle(.green)
+                }
+            }
+        }
+    }
+}
+
+/// The week ahead's open conflicts and warnings, the first few of them, and "See all".
+private struct OverviewWeekAheadCard: View {
+    let summary: WeekAheadSummary
+
+    var body: some View {
+        OverviewCard(title: Text("Week ahead"), systemImage: "calendar.badge.exclamationmark", module: .calendar,
+                     route: .weekAhead, destination: Text("Week ahead")) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 14) {
+                    if summary.conflicts > 0 {
+                        Label(String(localized: "\(summary.conflicts) conflicts"), systemImage: WeekAheadSeverity.conflict.systemImage)
+                            .foregroundStyle(WeekAheadSeverity.conflict.tint)
+                    }
+                    if summary.warnings > 0 {
+                        Label(String(localized: "\(summary.warnings) warnings"), systemImage: WeekAheadSeverity.warning.systemImage)
+                            .foregroundStyle(WeekAheadSeverity.warning.tint)
+                    }
+                }
+                .fontWeight(.medium)
+                ForEach(summary.top) { issue in
+                    OverviewRow(route: .calendarDay(issue.date)) {
+                        OverviewLine {
+                            Image(systemName: issue.severity.systemImage)
+                                .font(.caption)
+                                .foregroundStyle(issue.severity.tint)
+                                .frame(width: 14)
+                                .accessibilityLabel(Text(issue.severity.label))
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(issue.sentence).lineLimit(2)
+                                if !issue.names.isEmpty {
+                                    Text(issue.names)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                }
+                            }
+                        } trailing: {
+                            Text(issue.date.formatted())
+                                .monospacedDigit()
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                OverviewRow(route: .weekAhead) {
+                    Label("See all", systemImage: "list.bullet")
+                        .foregroundStyle(Color.ohana)
+                        .fontWeight(.medium)
                 }
             }
         }

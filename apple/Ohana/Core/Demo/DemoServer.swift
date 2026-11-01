@@ -57,6 +57,7 @@ struct DemoServer {
         DemoServer.appointments,
         DemoServer.assistant,
         DemoServer.overview,
+        DemoServer.digest,
         DemoServer.search,
     ]
 

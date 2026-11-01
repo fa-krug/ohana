@@ -131,6 +131,34 @@
       "title_one": "{{count}} Tag ohne Betreuung in den nächsten zwei Wochen",
       "title_other": "{{count}} Tage ohne Betreuung in den nächsten zwei Wochen"
     },
+    "digest": {
+      "title_one": "Wochenvorschau: {{count}} Sache zu prüfen",
+      "title_other": "Wochenvorschau: {{count}} Dinge zu prüfen",
+      "clear": "Wochenvorschau: alles passt",
+      "allClear": "In den nächsten zwei Wochen überschneidet sich nichts.",
+      "more": "… und {{count}} weitere in der App",
+      "events_one": "{{count}} Termin",
+      "events_other": "{{count}} Termine",
+      "birthdays_one": "{{count}} Geburtstag",
+      "birthdays_other": "{{count}} Geburtstage",
+      "away_one": "{{count}} Tag unterwegs",
+      "away_other": "{{count}} Tage unterwegs",
+      "and": "und",
+      "issue": {
+        "overlap": "{{who}}: „{{a}}“ und „{{b}}“ zur selben Zeit ({{minutes}} Min.)",
+        "tight_transfer": "{{who}}: {{gapMinutes}} Min. von „{{a}}“ zu „{{b}}“, die Fahrt dauert etwa {{travelMinutes}} Min.",
+        "tight_transfer_nearby": "{{who}}: nur {{gapMinutes}} Min. von „{{a}}“ zu „{{b}}“ an einem anderen Ort",
+        "during_trip": "{{who}}: „{{a}}“ während „{{trip}}“, an einem anderen Ort",
+        "packed_day": "{{who}}: {{events}} Termine, {{hours}} Stunden verplant",
+        "long_travel_day": "{{who}}: etwa {{minutes}} Min. unterwegs ({{km}} km)",
+        "travel_week": "{{who}}: an {{days}} Tagen dieser Woche weit weg von zu Hause",
+        "short_night": "{{who}}: nur {{hours}} Stunden zwischen „{{a}}“ und „{{b}}“",
+        "away_clash": "„{{a}}“, obwohl ihr weg seid ({{away}})",
+        "drivers_needed": "{{who}}: verschiedene Orte zur selben Zeit, {{adults}} Erwachsene zum Fahren frei",
+        "birthday_away": "{{who}}: am Geburtstag von {{name}} ({{age}}) unterwegs",
+        "unassigned_overlap": "„{{a}}“ und „{{b}}“ überschneiden sich: Wer geht hin?"
+      }
+    },
     "push": {
       "test": {
         "body": "Benachrichtigungen funktionieren auf diesem Gerät.",

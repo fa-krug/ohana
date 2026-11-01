@@ -13,6 +13,8 @@ struct OverviewDashboard: Codable, Hashable {
     let searches: [OverviewSearchFind]
     /// Birthdays from today to 29 days on, by day.
     let birthdays: [OverviewBirthday]
+    /// The week ahead's open issues; nil from a server without it.
+    let weekAhead: WeekAheadSummary?
 }
 
 extension OverviewDashboard {
@@ -32,6 +34,7 @@ extension OverviewDashboard {
                                     topExpense: nil, balanceCents: nil)
         searches = try c.decodeIfPresent([OverviewSearchFind].self, forKey: .searches) ?? []
         birthdays = try c.decode([OverviewBirthday].self, forKey: .birthdays)
+        weekAhead = try c.decodeIfPresent(WeekAheadSummary.self, forKey: .weekAhead)
     }
 }
 

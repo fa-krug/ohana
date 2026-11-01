@@ -1,0 +1,87 @@
+{
+  "from": "{{day:0}}",
+  "to": "{{day:13}}",
+  "geocoding": true,
+  "people": [
+    { "id": "demo-anna", "name": "Anna Parker", "account": true, "child": false, "events": 0 },
+    { "id": "demo-user", "name": "Ben Parker", "account": true, "child": false, "events": 1 },
+    { "id": "person-grandma-rose", "name": "Grandma Rose", "account": false, "child": false, "events": 0 },
+    { "id": "person-leo", "name": "Leo", "account": false, "child": true, "events": 2 },
+    { "id": "person-mia", "name": "Mia", "account": false, "child": true, "events": 4 }
+  ],
+  "issues": [
+    {
+      "key": "tight_transfer:event-football@{{day:8}}+event-piano@{{day:8}}",
+      "kind": "tight_transfer",
+      "severity": "conflict",
+      "date": "{{day:8}}",
+      "people": [{ "id": "person-mia", "name": "Mia" }],
+      "events": [
+        { "id": "event-football", "occurrence": null, "title": "Football training", "date": "{{day:8}}", "endDate": "{{day:8}}",
+          "start": "16:15", "end": "17:30", "location": "Sportplatz Volkspark Rehberge" },
+        { "id": "event-piano", "occurrence": null, "title": "Piano lesson", "date": "{{day:8}}", "endDate": "{{day:8}}",
+          "start": "17:40", "end": "18:25", "location": "Musikschule Fanny Hensel" }
+      ],
+      "data": { "gapMinutes": 10, "travelMinutes": 24, "km": 6.8 },
+      "dismissed": false
+    },
+    {
+      "key": "drivers_needed:event-swim@{{day:8}}+event-football@{{day:8}}",
+      "kind": "drivers_needed",
+      "severity": "warning",
+      "date": "{{day:8}}",
+      "people": [{ "id": "person-leo", "name": "Leo" }, { "id": "person-mia", "name": "Mia" }],
+      "events": [
+        { "id": "event-swim", "occurrence": "{{day:8}}", "title": "Swimming lesson", "date": "{{day:8}}", "endDate": "{{day:8}}",
+          "start": "16:00", "end": "17:00", "location": "Stadtbad Mitte" },
+        { "id": "event-football", "occurrence": null, "title": "Football training", "date": "{{day:8}}", "endDate": "{{day:8}}",
+          "start": "16:15", "end": "17:30", "location": "Sportplatz Volkspark Rehberge" }
+      ],
+      "data": { "children": 2, "adults": 1 },
+      "dismissed": false
+    },
+    {
+      "key": "long_travel_day:person-mia@{{day:9}}",
+      "kind": "long_travel_day",
+      "severity": "warning",
+      "date": "{{day:9}}",
+      "people": [{ "id": "person-mia", "name": "Mia" }],
+      "events": [
+        { "id": "event-class-trip", "occurrence": null, "title": "Class trip to the Baltic Sea", "date": "{{day:9}}",
+          "endDate": "{{day:11}}", "start": null, "end": null, "location": "Jugendherberge Prerow" }
+      ],
+      "data": { "km": 252, "minutes": 218 },
+      "dismissed": false
+    },
+    {
+      "key": "birthday_away:person-mia@{{day:10}}",
+      "kind": "birthday_away",
+      "severity": "info",
+      "date": "{{day:10}}",
+      "people": [{ "id": "person-mia", "name": "Mia" }],
+      "events": [
+        { "id": "event-class-trip", "occurrence": null, "title": "Class trip to the Baltic Sea", "date": "{{day:9}}",
+          "endDate": "{{day:11}}", "start": null, "end": null, "location": "Jugendherberge Prerow" }
+      ],
+      "data": { "name": "Grandma Rose", "age": 0 },
+      "dismissed": false
+    },
+    {
+      "key": "long_travel_day:person-mia@{{day:11}}",
+      "kind": "long_travel_day",
+      "severity": "warning",
+      "date": "{{day:11}}",
+      "people": [{ "id": "person-mia", "name": "Mia" }],
+      "events": [
+        { "id": "event-class-trip", "occurrence": null, "title": "Class trip to the Baltic Sea", "date": "{{day:9}}",
+          "endDate": "{{day:11}}", "start": null, "end": null, "location": "Jugendherberge Prerow" }
+      ],
+      "data": { "km": 252, "minutes": 218 },
+      "dismissed": true
+    }
+  ],
+  "away": [
+    { "from": "{{day:12}}", "to": "{{day:13}}", "names": ["Vacation"] }
+  ],
+  "birthdays": []
+}

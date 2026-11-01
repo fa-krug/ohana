@@ -8,6 +8,9 @@ import Foundation
 enum AppRoute: Hashable {
     case module(Module)
 
+    // Overview
+    /// The next two weeks' clashes (`/f/{id}/digest`, the weekly notification's link).
+    case weekAhead
     // Calendar
     case calendarDay(Day)
     // Finance
@@ -35,6 +38,7 @@ enum AppRoute: Hashable {
     var module: Module {
         switch self {
         case let .module(module): module
+        case .weekAhead: .overview
         case .calendarDay: .calendar
         case .financeTransactions, .financeTransaction: .finance
         case .recipe, .cook, .newRecipe, .mealPlan, .mealTags: .meals
@@ -123,6 +127,8 @@ extension AppRoute {
             return .assistantChat(id: nil)
         case "settings":
             return .module(.settings)
+        case "digest":
+            return .weekAhead
         default:
             return .module(.overview)
         }

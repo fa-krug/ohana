@@ -168,6 +168,19 @@ To turn notifications to the app off on your server, set `PUSH_RELAY_URL=` (empt
 the app then hides the switch and the channels work as before. Someone who builds the app under
 their own Apple developer account runs their own relay and sets `PUSH_RELAY_URL` to it.
 
+### The week ahead
+
+Every Sunday from 18:00 (`DIGEST_WEEKDAY`, `DIGEST_HOUR`, server time) each family gets a look at
+the next two weeks and what doesn't work out (overlaps, too little time between places, packed
+days, long drives, events while the family is away, children needing more drivers than there
+are adults free). The family's channels get every conflict and warning, each member's app what
+concerns them; *Settings → Household → What Ohana tells you* turns it off.
+
+For the travel checks the worker looks up where events are once a day: the locations of the
+next two weeks' events go to **Photon** (`photon.komoot.io`, at most 25 new ones per family and
+day; the results are kept in the database). Set `DIGEST_GEOCODE=0` to keep event locations at
+home; the checks then only compare the locations' text.
+
 ## Backups
 
 The worker writes a consistent copy of the database every night (after `BACKUP_HOUR`, default

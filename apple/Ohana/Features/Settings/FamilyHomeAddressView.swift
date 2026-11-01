@@ -11,6 +11,9 @@ struct FamilyHomeAddressView: View {
     @State private var suggestions: [FamilyLocationSuggestion] = []
     @State private var searching = false
     @State private var confirmClear = false
+    /// The saved address as text, editable (e.g. to add a house number the map doesn't know);
+    /// the coordinates stay the chosen ones.
+    @State private var addressText = ""
 
     var body: some View {
         Group {
@@ -29,7 +32,23 @@ struct FamilyHomeAddressView: View {
         Form {
             Section {
                 if let address = household.home.address {
-                    Label(address, systemImage: "house.fill")
+                    if household.canEdit, household.home.lat != nil {
+                        HStack {
+                            Image(systemName: "house.fill").foregroundStyle(.secondary)
+                            TextField("Address", text: $addressText)
+                                .autocorrectionDisabled()
+                                .textContentType(.fullStreetAddress)
+                                .onSubmit { rename(household.home) }
+                            if edited(household.home) {
+                                Button("Save") { rename(household.home) }
+                                    .buttonStyle(.borderless)
+                            }
+                        }
+                        .onAppear { addressText = address }
+                        .onChange(of: address) { addressText = address }
+                    } else {
+                        Label(address, systemImage: "house.fill")
+                    }
                     if let lat = household.home.lat, let lng = household.home.lng {
                         FamilyHomeMap(address: address, coordinate: .init(latitude: lat, longitude: lng))
                             .frame(height: 180)
@@ -40,7 +59,11 @@ struct FamilyHomeAddressView: View {
                     Text("Not set.").foregroundStyle(.secondary)
                 }
             } footer: {
-                Text("Where the family lives: appointments show how far a practice is from here.")
+                if household.canEdit, household.home.address != nil {
+                    Text("Where the family lives: appointments show how far a practice is from here. You can add what the search left out, e.g. the house number.")
+                } else {
+                    Text("Where the family lives: appointments show how far a practice is from here.")
+                }
             }
 
             if household.canEdit {
@@ -99,6 +122,18 @@ struct FamilyHomeAddressView: View {
         query = ""
         suggestions = []
         save(FamilyHomeInput(address: suggestion.label, lat: lat, lng: lng), success: String(localized: "Home address saved."))
+    }
+
+    private func edited(_ home: FamilyHome) -> Bool {
+        let text = addressText.trimmingCharacters(in: .whitespaces)
+        return !text.isEmpty && text != home.address
+    }
+
+    /// Saves the edited text with the coordinates already chosen.
+    private func rename(_ home: FamilyHome) {
+        guard edited(home), let lat = home.lat, let lng = home.lng else { return }
+        let text = addressText.trimmingCharacters(in: .whitespaces)
+        save(FamilyHomeInput(address: text, lat: lat, lng: lng), success: String(localized: "Home address saved."))
     }
 
     private func save(_ input: FamilyHomeInput, success: String) {

@@ -45,7 +45,7 @@ describe("cleanup", () => {
     createToken(db, { userId: u.id, kind: "api" }, NOW);
     createInvite(db, { id: u.id }, f.id, "viewer", NOW);
     const later = new Date(NOW.getTime() + INVITE_TTL_MS + 60_000);
-    expect(cleanup(db, later)).toEqual({ tokens: 1, invites: 1, rateLimits: 0 });
+    expect(cleanup(db, later)).toEqual({ tokens: 1, invites: 1, rateLimits: 0, dismissals: 0 });
   });
 });
 

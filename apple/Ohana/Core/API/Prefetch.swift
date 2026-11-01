@@ -72,6 +72,7 @@ enum Prefetch {
         let api = family.api
         var jobs: [Job] = [
             fetch(OverviewView.request(api)),
+            fetch(WeekAheadView.request(api)),
             // As `CalendarStore.load` asks for the year it opens on.
             fetch(api.cached("", query: ["year": String(CalendarStore.lastYear ?? Day.today.year)],
                              as: CalendarState.self)),

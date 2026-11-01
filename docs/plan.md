@@ -191,6 +191,7 @@ empty Ohana database. It has a **dry run** that only reports what it would do.
 | 8  | Headless, open source | No web UI: the native app is the client; a lean server (Hono) with only the sign-in pages; self-hosting docs, GHCR images, AGPL / MPL (see Phase 8) |
 | 9  | Push to the app ✅ | Notifications straight to the app from any self-hosted server, through a push relay run by fa-krug that holds the APNs key and sees only ciphertext (see Phase 9) |
 | 10 | Shopping in Reminders ✅ | The shopping list moves to Apple Reminders: the server computes what the meal plan needs, the app writes it into a list the user picks; the assistant reads and edits reminders, each edit confirmed (see Phase 10) |
+| 11 | Week ahead ✅ | A weekly digest per member that checks the next two weeks for clashes and plans that don't work out (overlaps, no time to get from one place to the next, packed days, a lot of driving, events while the family is away, children needing two drivers at once); a *Week ahead* page in the app (see Phase 11) |
 
 ### Phase 8: headless, open source, self-hosted
 
@@ -401,6 +402,57 @@ competed with it.
 | App | Per family and device the user picks a Reminders list. The app writes every upcoming shopping day's items into it (title like "150 g Tomato", due on the shopping day, an `ohana://…/meals/shopping/{date}/{key}` URL as its marker), updates its own items when the plan changes, and leaves alone what the user ticked, edited or deleted. One-way: nothing from Reminders goes back to the server. Viewers can use it too. |
 | Gone | The in-app shopping screen, its offline queue, dragging shopping items, the shopping widget, the overview's shopping row, the shopping reminder notification (`SHOPPING_REMINDER_HOUR`), the finance links to shopping days (`GET /finance/shopping-links`, the groceries category setting). |
 | Assistant | `get_shopping_items` replaces `get_shopping_list`, `tick_shopping_items` and `add_shopping_items`. With Reminders access the app sends the open reminders (any list) with each message; `get_reminders` reads them, `edit_reminders` proposes changes that the app shows as a card and applies only after the user taps **Apply** (`POST …/ai/chats/{chatId}/reminders`). |
+
+### Phase 11: the week ahead
+
+Every Sunday evening each member gets a look at the next two weeks: what's coming, and what
+doesn't work out. Ohana knows who an event is for (`person`), where it is (`location`), the
+family's home, who's a child (birthdays) and when the family is away, so it can spot clashes a
+shared calendar app doesn't show.
+
+| Topic | Decision |
+| ----- | -------- |
+| Checks | **Rules, not the model.** Pure functions (`lib/digest/checks.ts`) over the occurrences of the next 14 days; deterministic, tested, explainable. The assistant can read them (`check_schedule`) but doesn't make them up. |
+| Who | `person` is free text: matched against `familyNames` (split at `,` `&` `+` `/` " and " " und ", case and accents ignored, a unique first name counts). Unmatched or empty: the family's ("unassigned"). Children: under 14 on the day (by birthday); adults: 18 or older, or accounts without a birthday. |
+| Places | Event locations are geocoded with Photon (biased to the home address) by the **worker** (daily, new locations of the next 14 days, at most 25 per family and day) into `geo_places` (per family; misses retried after 7 days, hits refreshed after 180). Requests only read the cache. `DIGEST_GEOCODE=0` turns it off (the travel checks then only compare the location text). Travel time is an estimate: straight line × 1.3, at 30 / 60 / 90 km/h (under 20 km / under 80 km / beyond), plus 10 minutes. |
+| When | `weekly_digest`, a new notification event (on by default, channels + app). The worker sends it on `DIGEST_WEEKDAY` (0 = Sunday, default) from `DIGEST_HOUR` (18), once per family and day (`state.lastSent`). Nothing is sent when the two weeks have no events, no away days and no birthdays. |
+| Who gets what | Channels (family-wide) get everything. The app push goes to each account member separately (`notifyFamily` with `app: { userIds }`, `channelIds: []`): issues about them, about people without an account (the children), and unassigned ones. Info-level issues are only in the app. |
+| Dismiss | "Looks fine" hides an issue for good (`digest_dismissals`, key = kind + the occurrences it is about; pruned once the day passed). Editors only; the page shows the hidden ones and can restore them. |
+| API | `GET /families/{id}/digest?today=` (members) → `Digest`; `POST /digest/dismiss {key}` and `DELETE /digest/dismiss/{key}` (editors). The overview gets `weekAhead: {conflicts, warnings, top: Issue[3]}` (optional, older apps ignore it). |
+| App | A *Week ahead* page (route `/f/{id}/digest`, the push's link): per person their issues, each a sentence built from `kind` + `data` in the app's language, tap → the calendar day; the overview's card; the event in Settings → Notifications. In the demo too. |
+
+The checks (each issue: `key`, `kind`, `severity` conflict | warning | info, `date`, `people`,
+`events` (id, occurrence, title, date, start, end, location), `data`):
+
+| Kind | Severity | When |
+| ---- | -------- | ---- |
+| `overlap` | conflict | One person has two timed events at the same time. |
+| `tight_transfer` | conflict | Consecutive events of one person in different places, the gap shorter than the estimated travel time (without coordinates: warning, when the gap is under 15 minutes and the locations differ). |
+| `during_trip` | warning | A person is on a trip (an event of theirs over several days with a location) and has a timed event elsewhere during it. |
+| `packed_day` | warning | One person, one day: 4 or more timed events, or 9 or more hours booked. |
+| `long_travel_day` | warning | One person, one day: home → events → home is about 150 minutes or more on the road, or 200 km or more. |
+| `travel_week` | warning | One person, one week (Mon–Sun): 3 or more days with an event 50 km or more from home. |
+| `short_night` | warning | Less than 9 hours between getting home from the last event of a day and leaving for the first of the next. |
+| `away_clash` | warning | The family is away (an "away" type) but someone has a timed event near home (within 30 km) or without a location; one issue per series. |
+| `drivers_needed` | warning | Children have events at the same time in different places and there are fewer adults free then than children to take. |
+| `birthday_away` | info | Someone is on a trip or far away (50 km or more) on another member's birthday. |
+| `unassigned_overlap` | info | Two timed events without a person overlap ("who goes?"). |
+
+Later, if wanted: thresholds per family, a check of the meal plan (a long recipe on a packed
+evening), a second look by the model.
+
+Notes (deviations and details):
+
+- Two geocoded places under 0.3 km apart count as the same place (rooms of one building raise no
+  transfer conflict). `km` in `tight_transfer` / `long_travel_day` is the estimated road
+  distance; "from home" distances (50 km, 30 km) are straight lines.
+- An event is timed when it has a start and lasts at most 24 hours (no end: 60 minutes); a trip is
+  any event over several days with a location. `during_trip`, `away_clash` skip events without a
+  (geocoded) location.
+- Issues with the same kind and events are merged (all people in `people`), so the key holds a
+  person only for `birthday_away`; keys over 200 characters become `kind:#<sha256 prefix>`.
+- `weeklyDigests` runs next to the daily notifications in the worker tick (not behind
+  `NOTIFY_HOUR`); `lastSent` is written before sending, so a failed send isn't retried that day.
 
 ### Phase 7 notes (connections)
 

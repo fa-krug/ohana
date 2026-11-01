@@ -32,6 +32,46 @@
         }
       }
     },
+    "%@ and %@ overlap": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ und %2$@ überschneiden sich"
+          }
+        }
+      }
+    },
+    "%@ and %@ overlap by %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ und %2$@ überschneiden sich um %3$@"
+          }
+        }
+      }
+    },
+    "%@ and %@ overlap by %@: who goes?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ und %2$@ überschneiden sich um %3$@: Wer geht hin?"
+          }
+        }
+      }
+    },
+    "%@ and %@ overlap: who goes?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ und %2$@ überschneiden sich: Wer geht hin?"
+          }
+        }
+      }
+    },
     "%@ and ^[%lld more doctor](inflect: true)": {
       "localizations": {
         "de": {
@@ -70,6 +110,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ zusammengefasst"
+          }
+        }
+      }
+    },
+    "%@ during %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ während %2$@"
+          }
+        }
+      }
+    },
+    "%@ in one day": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ an einem Tag"
           }
         }
       }
@@ -166,6 +226,26 @@
         }
       }
     },
+    "%@ — %@ on %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ — %2$@ an %3$@"
+          }
+        }
+      }
+    },
+    "%@, %@ hours booked": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@ Stunden verplant"
+          }
+        }
+      }
+    },
     "%@: %@ per month": {
       "localizations": {
         "de": {
@@ -216,12 +296,212 @@
         }
       }
     },
+    "%lld adults free": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Erwachsener frei"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Erwachsene frei"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld adult free"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld adults free"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld already imported – skipped": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "%lld schon importiert – übersprungen"
+          }
+        }
+      }
+    },
+    "%lld children at once": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Kind gleichzeitig"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Kinder gleichzeitig"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld child at once"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld children at once"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld conflicts": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Konflikt"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Konflikte"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld conflict"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld conflicts"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld days": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Tag"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Tagen"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld day"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld days"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld events": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Termin"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Termine"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld event"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld events"
+                }
+              }
+            }
           }
         }
       }
@@ -284,6 +564,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld g"
+          }
+        }
+      }
+    },
+    "%lld h": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Std."
+          }
+        }
+      }
+    },
+    "%lld h %lld min": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld Std. %2$lld Min."
           }
         }
       }
@@ -650,6 +950,46 @@
         }
       }
     },
+    "%lld warnings": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Warnung"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Warnungen"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld warning"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld warnings"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld °C": {
       "localizations": {
         "de": {
@@ -1008,6 +1348,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "API-Tokens"
+          }
+        }
+      }
+    },
+    "About %@ km on the road": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etwa %@ km unterwegs"
+          }
+        }
+      }
+    },
+    "About %@ on the road": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etwa %@ unterwegs"
+          }
+        }
+      }
+    },
+    "About %@ on the road (%@ km)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etwa %1$@ unterwegs (%2$@ km)"
           }
         }
       }
@@ -1762,6 +2132,16 @@
         }
       }
     },
+    "All clear": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alles in Ordnung"
+          }
+        }
+      }
+    },
     "All covered": {
       "localizations": {
         "de": {
@@ -2350,6 +2730,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Unterwegs"
+          }
+        }
+      }
+    },
+    "Away (%@)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unterwegs (%@)"
+          }
+        }
+      }
+    },
+    "Away on %@’s birthday": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unterwegs am Geburtstag von %@"
+          }
+        }
+      }
+    },
+    "Away when %@ turns %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unterwegs, wenn %1$@ %2$lld wird"
           }
         }
       }
@@ -3064,6 +3474,16 @@
         }
       }
     },
+    "Child": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kind"
+          }
+        }
+      }
+    },
     "Child-friendly only": {
       "localizations": {
         "de": {
@@ -3500,6 +3920,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bestätige die Änderung mit deinem Passwort."
+          }
+        }
+      }
+    },
+    "Conflict": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konflikt"
           }
         }
       }
@@ -4944,6 +5374,16 @@
         }
       }
     },
+    "Drivers needed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fahrdienst nötig"
+          }
+        }
+      }
+    },
     "Drop a bank statement (CSV) to import it": {
       "localizations": {
         "de": {
@@ -4980,6 +5420,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zeitangaben starten einen Timer"
+          }
+        }
+      }
+    },
+    "During a trip": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Während einer Reise"
           }
         }
       }
@@ -5884,6 +6334,26 @@
         }
       }
     },
+    "Far from home on %@ in one week": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An %@ einer Woche weit weg von zu Hause"
+          }
+        }
+      }
+    },
+    "Far from home on %@ in the week of %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An %1$@ in der Woche ab %2$@ weit weg von zu Hause"
+          }
+        }
+      }
+    },
     "Favourites": {
       "localizations": {
         "de": {
@@ -6334,6 +6804,16 @@
         }
       }
     },
+    "Good to know": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gut zu wissen"
+          }
+        }
+      }
+    },
     "Grandma": {
       "localizations": {
         "de": {
@@ -6370,6 +6850,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hilfe & Tastenkürzel (?)"
+          }
+        }
+      }
+    },
+    "Hidden (%lld)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgeblendet (%lld)"
           }
         }
       }
@@ -7528,6 +8018,16 @@
         }
       }
     },
+    "Long day on the road": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Langer Tag unterwegs"
+          }
+        }
+      }
+    },
     "Long-press + drag": {
       "localizations": {
         "de": {
@@ -7564,6 +8064,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sucht Fachrichtungen"
+          }
+        }
+      }
+    },
+    "Looks fine": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passt so"
+          }
+        }
+      }
+    },
+    "Lots of travel": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Viel unterwegs"
           }
         }
       }
@@ -7684,6 +8204,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Als gebucht eintragen (⌘B)"
+          }
+        }
+      }
+    },
+    "Marked as looking fine. Restore one to see it again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Als „Passt so“ markiert. Stelle einen Punkt wieder her, um ihn wieder zu sehen."
           }
         }
       }
@@ -8598,6 +9128,16 @@
         }
       }
     },
+    "No conflicts": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Konflikte"
+          }
+        }
+      }
+    },
     "No days selected": {
       "localizations": {
         "de": {
@@ -8834,6 +9374,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Im Scan wurde kein Text gefunden."
+          }
+        }
+      }
+    },
+    "No time between %@ and %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Zeit zwischen %1$@ und %2$@"
           }
         }
       }
@@ -9144,6 +9694,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "In deinen Kalendern ändert sich nichts, bis du es anwendest."
+          }
+        }
+      }
+    },
+    "Nothing clashes in the next two weeks.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In den nächsten zwei Wochen passt alles zusammen."
           }
         }
       }
@@ -9590,6 +10150,36 @@
         }
       }
     },
+    "Only %@ from %@ to %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur %1$@ zwischen %2$@ und %3$@"
+          }
+        }
+      }
+    },
+    "Only %@ hours between %@ and %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur %1$@ Stunden zwischen %2$@ und %3$@"
+          }
+        }
+      }
+    },
+    "Only %@ hours of night": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur %@ Stunden Nachtruhe"
+          }
+        }
+      }
+    },
     "Only editors of the family can change entry types.": {
       "localizations": {
         "de": {
@@ -9960,6 +10550,16 @@
         }
       }
     },
+    "Overlap": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Überschneidung"
+          }
+        }
+      }
+    },
     "Overview": {
       "localizations": {
         "de": {
@@ -9992,6 +10592,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "New notification from Ohana"
+          }
+        }
+      }
+    },
+    "Packed day": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voller Tag"
           }
         }
       }
@@ -11676,6 +12286,16 @@
         }
       }
     },
+    "Restore": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wiederherstellen"
+          }
+        }
+      }
+    },
     "Result pages": {
       "localizations": {
         "de": {
@@ -12446,6 +13066,16 @@
         }
       }
     },
+    "See all": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle ansehen"
+          }
+        }
+      }
+    },
     "Select": {
       "localizations": {
         "de": {
@@ -12966,6 +13596,16 @@
         }
       }
     },
+    "Short night": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kurze Nacht"
+          }
+        }
+      }
+    },
     "Show": {
       "localizations": {
         "de": {
@@ -12996,12 +13636,32 @@
         }
       }
     },
+    "Show in Calendar": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Im Kalender zeigen"
+          }
+        }
+      }
+    },
     "Show in calendar": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Im Kalender zeigen"
+          }
+        }
+      }
+    },
+    "Show it again": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wieder anzeigen"
           }
         }
       }
@@ -13072,6 +13732,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zeigt es in der App"
+          }
+        }
+      }
+    },
+    "Shows the day in the calendar": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeigt den Tag im Kalender"
           }
         }
       }
@@ -13876,6 +14546,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rechnet die Finanzen zusammen"
+          }
+        }
+      }
+    },
+    "Sunday evening: the next two weeks for each member, with clashes and plans that don’t work out.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonntagabend: die nächsten zwei Wochen für jedes Mitglied, mit Überschneidungen und Plänen, die nicht aufgehen."
           }
         }
       }
@@ -15160,6 +15840,16 @@
         }
       }
     },
+    "Tight transfer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Knapper Wechsel"
+          }
+        }
+      }
+    },
     "Time": {
       "localizations": {
         "de": {
@@ -15460,6 +16150,16 @@
         }
       }
     },
+    "Travel isn’t estimated: the server doesn’t look up the events’ places, so only differing place names count.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fahrzeiten werden nicht geschätzt: Der Server schlägt die Orte der Termine nicht nach, es zählen nur unterschiedliche Ortsnamen."
+          }
+        }
+      }
+    },
     "Treatment": {
       "localizations": {
         "de": {
@@ -15546,6 +16246,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Arten übernommen."
+          }
+        }
+      }
+    },
+    "Unassigned": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohne Person"
           }
         }
       }
@@ -15910,6 +16620,16 @@
         }
       }
     },
+    "Warning": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Warnung"
+          }
+        }
+      }
+    },
     "Watches Doctolib and jameda and tells you when an appointment frees up.": {
       "localizations": {
         "de": {
@@ -15946,6 +16666,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Websuche"
+          }
+        }
+      }
+    },
+    "Week ahead": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wochenvorschau"
           }
         }
       }
@@ -16240,6 +16970,16 @@
         }
       }
     },
+    "Where the family lives: appointments show how far a practice is from here. You can add what the search left out, e.g. the house number.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wo die Familie wohnt: Termine zeigen, wie weit eine Praxis von hier entfernt ist. Was die Suche nicht kennt, z. B. die Hausnummer, kannst du ergänzen."
+          }
+        }
+      }
+    },
     "Where to search": {
       "localizations": {
         "de": {
@@ -16306,6 +17046,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Auf welcher Webseite steht das Rezept?"
+          }
+        }
+      }
+    },
+    "While away": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Während ihr weg seid"
+          }
+        }
+      }
+    },
+    "Who goes?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wer geht hin?"
           }
         }
       }
@@ -16386,6 +17146,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ohne Konto"
+          }
+        }
+      }
+    },
+    "Worth a look": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einen Blick wert"
+          }
+        }
+      }
+    },
+    "Worth a look: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einen Blick wert: %@"
           }
         }
       }
@@ -17314,6 +18094,26 @@
         }
       }
     },
+    "about %@ on the road": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "etwa %@ Fahrt"
+          }
+        }
+      }
+    },
+    "about %@ on the road (%@ km)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "etwa %1$@ Fahrt (%2$@ km)"
+          }
+        }
+      }
+    },
     "above": {
       "localizations": {
         "de": {
@@ -17814,6 +18614,16 @@
         }
       }
     },
+    "no adult free": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kein Erwachsener frei"
+          }
+        }
+      }
+    },
     "no due date": {
       "localizations": {
         "de": {
@@ -18140,6 +18950,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "zweiter"
+          }
+        }
+      }
+    },
+    "somewhere else": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "an einem anderen Ort"
           }
         }
       }

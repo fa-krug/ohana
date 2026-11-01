@@ -29,11 +29,12 @@ struct DemoOverviewTests {
         let events = d.upcoming.compactMap { item -> OverviewEvent? in
             if case let .event(_, event) = item { event } else { nil }
         }
-        #expect(events.map(\.id) == ["event-swim", "event-pediatrician", "event-parents-evening", "event-swim", "event-class-trip"])
-        #expect(events.map(\.date) == [1, 3, 6, 8, 9].map { Self.today.adding(days: $0) })
+        #expect(events.map(\.id) == ["event-swim", "event-pediatrician", "event-parents-evening", "event-swim",
+                                      "event-football", "event-piano", "event-class-trip"])
+        #expect(events.map(\.date) == [1, 3, 6, 8, 8, 8, 9].map { Self.today.adding(days: $0) })
         // Occurrences of the weekly lesson tell apart by their day; the trip spans three days.
         #expect(Set(events.map(\.uid)).count == events.count && events[0].rrule != nil)
-        #expect(events[4].endDate == Self.today.adding(days: 11) && events[4].time(on: Self.today.adding(days: 9)) == nil)
+        #expect(events[6].endDate == Self.today.adding(days: 11) && events[6].time(on: Self.today.adding(days: 9)) == nil)
         #expect(events[1].searchId == "search-pediatrician" && events[1].source == "appointment")
         #expect(events[2].end == nil)
         #expect(d.upcoming.map(\.date) == d.upcoming.map(\.date).sorted())
@@ -108,7 +109,7 @@ struct DemoOverviewTests {
         #expect(h.home.hasLocation)
         #expect(h.channels.map(\.kind) == [.telegram, .email])
         #expect(h.channels.allSatisfy { $0.hasToken && $0.enabled })
-        #expect(h.events.map(\.event) == ["appointment_found", "coverage_gap", "assistant_turn_finished"])
+        #expect(h.events.map(\.event) == ["appointment_found", "coverage_gap", "weekly_digest", "assistant_turn_finished"])
         #expect(h.events[1].channelIds == ["channel-telegram"])
         #expect(h.events[0].hasChannels == false)
     }
