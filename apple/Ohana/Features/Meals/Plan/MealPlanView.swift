@@ -14,9 +14,10 @@ final class MealPlanUndo: Identifiable {
 }
 
 /// Meals → Plan: the family's meal plan (port of the web's plan page). The active iteration day
-/// by day (lunch with its recipe, leftovers, away days, shopping days with their lists), the
-/// past ones folded, and for editors: setting the plan up, refreshing an iteration, starting the
-/// next one, swapping or removing a meal (each undoable for a few seconds). Editors drag a meal
+/// by day (lunch with its recipe, leftovers, away days, shopping days), the past ones folded; the
+/// shopping list in Reminders (toolbar: Shopping List, `ShoppingRemindersSheet`); and for
+/// editors: setting the plan up, refreshing an iteration, starting the next one, swapping or
+/// removing a meal (each undoable for a few seconds). Editors drag a meal
 /// onto another day (swapping them) or a recipe onto a day; on iPad and Mac the recipes to drag
 /// sit in a column beside the plan (toolbar: Recipes).
 struct MealPlanView: View {
@@ -32,9 +33,21 @@ struct MealPlanView: View {
     @State private var confirmRenew: MealPlanIteration?
     @State private var undo: MealPlanUndo?
     @State private var working = false
+    @State private var showsShopping = false
+    @State private var reminders = ShoppingReminders.shared
 
     /// Changes need an editor and the server's latest plan, not the copy on the device.
     private var canEdit: Bool { family.canEdit && !state.isSaved }
+
+    /// What the shopping days say about Reminders: the list they go to, or that they could.
+    private var shoppingLabel: String? {
+        guard !family.api.client.isDemo else { return nil }
+        guard let listID = reminders.settings(for: family.api).listID else {
+            return String(localized: "Shopping list in Reminders")
+        }
+        let title = RemindersStore.shared.list(listID)?.title ?? String(localized: "Reminders")
+        return String(localized: "In Reminders: \(title)")
+    }
 
     var body: some View {
         LoadStateView(state: state, retry: load) { data in
@@ -46,6 +59,12 @@ struct MealPlanView: View {
                 ToolbarItem(placement: .primaryAction) {
                     Toggle("Recipes", systemImage: "book", isOn: $showsRecipes)
                         .help("Recipes to drag onto a day")
+                }
+            }
+            if !family.api.client.isDemo {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Shopping List", systemImage: "checklist") { showsShopping = true }
+                        .help("The shopping list in Reminders")
                 }
             }
             if canEdit, let data = state.value, data.plan != nil {
@@ -63,6 +82,7 @@ struct MealPlanView: View {
                 }
             }
         }
+        .sheet(isPresented: $showsShopping) { ShoppingRemindersSheet() }
         .sheet(item: $swapping) { entry in
             MealPlanSwapSheet(entry: entry, planned: state.value?.plan?.recipeIDs(in: iterationID(of: entry)) ?? []) { recipe in
                 swap(entry, to: recipe)
@@ -73,7 +93,7 @@ struct MealPlanView: View {
         ), titleVisibility: .visible, presenting: confirmRenew) { iteration in
             Button("Refresh") { renew(iteration) }
         } message: { _ in
-            Text("The meals and shopping lists of these days are planned anew.")
+            Text("The meals of these days are planned anew.")
         }
         .navigationDestination(item: $shownRecipe) {
             MealsRecipeDetailView(recipeID: $0.recipeID, initialServings: $0.servings).assistantButton()
@@ -176,10 +196,11 @@ struct MealPlanView: View {
     private func card(_ iteration: MealPlanIteration, plan: MealPlanDTO, away: [String: [String]], archived: Bool) -> some View {
         MealPlanIterationCard(
             iteration: iteration,
-            rows: iteration.dayRows(shoppingDays: plan.shoppingDays, away: away),
+            rows: iteration.dayRows(away: away),
             archived: archived,
             familyID: family.family.id,
             canEdit: canEdit,
+            shoppingLabel: shoppingLabel,
             working: working,
             onRenew: { confirmRenew = iteration },
             onDrop: { item, row in drop(item, onto: row, of: iteration) },
@@ -189,7 +210,7 @@ struct MealPlanView: View {
                 case let .cook(entry): cooking = MealsRecipeRef(recipeID: entry.recipeId, servings: entry.servings)
                 case let .swap(entry): swapping = entry
                 case let .remove(entry): remove(entry)
-                case let .shoppingList(id): family.open(.shoppingList(id: id))
+                case .shoppingSettings: showsShopping = true
                 }
             }
         )
@@ -239,7 +260,7 @@ struct MealPlanView: View {
         // Setting up deletes every iteration (the sheet asked first), so an earlier change can't
         // be restored any more, and the server keeps nothing to restore this one from.
         if let undo { expire(undo) }
-        family.didChange(.mealPlan, .shopping)
+        family.didChange(.mealPlan)
         ErrorBanner.shared.success(String(localized: "Meal plan generated."))
     }
 
@@ -249,7 +270,7 @@ struct MealPlanView: View {
             defer { working = false }
             let result = try await call()
             if let body = result.undo { offer(MealPlanUndo(message: message, body: body)) }
-            family.didChange(.mealPlan, .shopping)
+            family.didChange(.mealPlan)
         }
     }
 
@@ -321,7 +342,7 @@ struct MealPlanView: View {
         if self.undo === undo { self.undo = nil }
         perform {
             try await family.api.perform(.post, "/meals/plan/restore", body: undo.body)
-            family.didChange(.mealPlan, .shopping)
+            family.didChange(.mealPlan)
         }
     }
 }
@@ -332,7 +353,8 @@ enum MealPlanEntryAction {
     case cook(MealPlanEntry)
     case swap(MealPlanEntry)
     case remove(MealPlanEntry)
-    case shoppingList(String)
+    /// The shopping list in Reminders (its settings).
+    case shoppingSettings
 }
 
 /// One iteration: its days with lunch and dinner; past ones start folded.
@@ -342,6 +364,8 @@ struct MealPlanIterationCard: View {
     let archived: Bool
     let familyID: String
     let canEdit: Bool
+    /// The shopping days' line about Reminders; nil: none (the demo).
+    var shoppingLabel: String?
     let working: Bool
     var onRenew: () -> Void
     /// A recipe or meal dropped onto a day; whether it was used.
@@ -360,7 +384,7 @@ struct MealPlanIterationCard: View {
                 VStack(spacing: 0) {
                     ForEach(rows) { row in
                         MealPlanDayRowView(row: row, isToday: row.day == .today, familyID: familyID, canEdit: canEdit,
-                                           onDrop: { onDrop($0, row) }, onAction: onAction)
+                                           shoppingLabel: shoppingLabel, onDrop: { onDrop($0, row) }, onAction: onAction)
                         if row.id != rows.last?.id {
                             Divider().opacity(0.6)
                         }
@@ -405,7 +429,8 @@ struct MealPlanIterationCard: View {
     }
 }
 
-/// A day of the plan: its date, the shopping list on shopping days, lunch (or away) and dinner.
+/// A day of the plan: its date, the shopping list in Reminders on shopping days to come, lunch
+/// (or away) and dinner.
 /// "Lunch" and "Dinner" sit in a column as wide as the longer of them; at accessibility text
 /// sizes above their meal. For editors the lunch can be dragged and the day takes a dropped
 /// recipe or meal (outlined while one hovers it).
@@ -414,6 +439,7 @@ struct MealPlanDayRowView: View {
     let isToday: Bool
     let familyID: String
     let canEdit: Bool
+    var shoppingLabel: String?
     var onDrop: (MealDragItem) -> Bool
     var onAction: (MealPlanEntryAction) -> Void
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -438,9 +464,9 @@ struct MealPlanDayRowView: View {
                         .accessibilityLabel("Shopping day")
                 }
             }
-            if let list = row.shoppingList {
-                Button { onAction(.shoppingList(list.id)) } label: {
-                    Label("\(list.itemCount) items to grab", systemImage: "cart.fill")
+            if row.isShoppingDay, row.day >= .today, let shoppingLabel {
+                Button { onAction(.shoppingSettings) } label: {
+                    Label { Text(verbatim: shoppingLabel) } icon: { Image(systemName: "checklist") }
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.blue)
                         .chip(tint: .blue)
@@ -450,7 +476,7 @@ struct MealPlanDayRowView: View {
                         .contentShape(.rect)
                 }
                 .buttonStyle(.plain)
-                .accessibilityHint(Text("Opens the shopping list"))
+                .accessibilityHint(Text("Opens the shopping list’s settings"))
             }
             if row.isAway {
                 Label("Away · \(row.awayTypes?.joined(separator: ", ") ?? "")", systemImage: "suitcase")

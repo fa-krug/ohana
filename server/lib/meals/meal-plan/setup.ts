@@ -8,7 +8,6 @@ import {
 } from "@/lib/meals/domain/meal-plan/selection";
 import { assignSchedule, type ScheduleRecipe } from "@/lib/meals/domain/meal-plan/schedule";
 import { validateShoppingDays, computeIterationDates } from "@/lib/meals/domain/meal-plan/iteration-dates";
-import { generateShoppingListsForIteration } from "@/lib/meals/shopping/generate";
 import { awayDays } from "./away";
 import {
   mealPlans, mealPlanExcludedTags, planIterations, mealPlanEntries,
@@ -187,11 +186,6 @@ export function populateIteration(
       })),
     ).run();
   }
-
-  const shoppingDays = [plan.shoppingDay1, plan.shoppingDay2].filter((d): d is number => d != null);
-  generateShoppingListsForIteration(db, {
-    iterationId, startDate, endDate, shoppingDays,
-  });
 }
 
 export function setupMealPlan(
@@ -235,7 +229,7 @@ export function setupMealPlan(
     ).run();
   }
 
-  // Reset iterations (entries + shopping lists cascade via FK).
+  // Reset iterations (entries cascade via FK).
   db.delete(planIterations).where(eq(planIterations.mealPlanId, planId)).run();
 
   const today = now.toISOString().slice(0, 10);

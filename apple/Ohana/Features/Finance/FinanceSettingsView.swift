@@ -1,8 +1,7 @@
 import SwiftUI
 
-/// Settings → Finance (web/components/finance/finance-settings.tsx): currency, the groceries
-/// category, accounts, nested categories, the statistic average, saved bank formats, and
-/// deleting all finance data. Viewers see it all, read-only.
+/// Settings → Finance (web/components/finance/finance-settings.tsx): currency, accounts, nested
+/// categories, the statistic average, saved bank formats, and deleting all finance data. Viewers see it all, read-only.
 struct FinanceSettingsView: View {
     @Environment(FamilyContext.self) private var family
     @State private var store: FinanceStore?
@@ -124,8 +123,6 @@ struct FinanceSettingsForm: View {
                 }
                 .disabled(!store.canEdit)
             }
-            // The groceries category is for the shopping lists (meals).
-            if family.isEnabled(.meals) { groceries }
             accounts
             categories
             Section {
@@ -152,26 +149,6 @@ struct FinanceSettingsForm: View {
             }
         }
         .formStyle(.grouped)
-    }
-
-    private var groceries: some View {
-        Section {
-            Picker("Groceries category", selection: Binding { store.overview?.groceriesCategoryId } set: { id in
-                Task { await store.setGroceriesCategory(id) }
-            }) {
-                Text(store.defaultGroceries.map { String(localized: "Automatic: \($0.label)") }
-                     ?? String(localized: "Automatic (a category called Groceries)"))
-                    .tag(String?.none)
-                ForEach(store.tree.ordered.filter { $0.category.kind != .income }) { node in
-                    Text(node.depth == 0 ? node.category.label : store.tree.path(node.id)).tag(Optional(node.id))
-                }
-            }
-            .disabled(!store.canEdit)
-        } header: {
-            Text("Groceries")
-        } footer: {
-            Text("The category of your grocery shopping (with its subcategories): a shopping list shows what was spent in it on the shopping day (± 1 day), and those transactions link to the list.")
-        }
     }
 
     private var accounts: some View {

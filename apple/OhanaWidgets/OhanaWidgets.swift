@@ -2,15 +2,14 @@ import SwiftUI
 import WidgetKit
 
 /// The widget extension: the Home Screen, Lock Screen and Mac desktop widgets (today, tomorrow,
-/// tonight's dinner, the shopping list and the appointment a search found, of the family the app
-/// shows: `SharedConnection`), and on iOS the cook timers' Live Activity.
+/// tonight's dinner and the appointment a search found, of the family the app shows:
+/// `SharedConnection`), and on iOS the cook timers' Live Activity.
 @main
 struct OhanaWidgets: WidgetBundle {
     var body: some Widget {
         AgendaWidget.Today()
         AgendaWidget.Tomorrow()
         DinnerWidget()
-        ShoppingWidget()
         AppointmentWidget()
         #if os(iOS)
         CookTimerLiveActivity()
@@ -256,141 +255,6 @@ struct DinnerView: View {
     }
 }
 
-// MARK: Shopping list
-
-struct ShoppingWidget: Widget {
-    var body: some WidgetConfiguration {
-        StaticConfiguration(kind: WidgetStore.shoppingKind, provider: OhanaProvider()) { entry in
-            ShoppingView(entry: entry)
-        }
-        .configurationDisplayName("Shopping list")
-        .description("How many items are left on the shopping list.")
-        .supportedFamilies(families(home: [.systemSmall],
-                                    lockScreen: [.circular, .rectangular, .inline]))
-    }
-}
-
-struct ShoppingView: View {
-    @Environment(\.widgetFamily) private var family
-    let entry: OhanaEntry
-
-    var body: some View {
-        content
-            .containerBackground(for: .widget) { WidgetBackground(tint: ModuleTint.meals) }
-    }
-
-    @ViewBuilder
-    private var content: some View {
-        if let snapshot = entry.snapshot {
-            let list = snapshot.mealsEnabled ? snapshot.shopping.flatMap { $0.total > 0 ? $0 : nil } : nil
-            Group {
-                if family.isCircular {
-                    circular(list)
-                } else if family.isInline {
-                    inline(list)
-                } else if family.isRectangular {
-                    rectangular(snapshot, list)
-                } else {
-                    small(snapshot, list)
-                }
-            }
-            .widgetURL(WidgetLink.shopping(snapshot))
-        } else if family.isCircular {
-            ZStack {
-                AccessoryWidgetBackground()
-                Image(systemName: "cart")
-            }
-        } else if family.isInline {
-            Label { Text(verbatim: "Ohana") } icon: { Image(systemName: "cart") }
-        } else {
-            WidgetMessage(state: entry.state, compact: family.isRectangular)
-        }
-    }
-
-    private func small(_ snapshot: WidgetSnapshot, _ list: WidgetSnapshot.Shopping?) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            WidgetHeader(title: Text("Shopping list"), systemImage: "cart", tint: ModuleTint.meals)
-            Spacer(minLength: 0)
-            if let list {
-                if list.open == 0 {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.largeTitle)
-                        .foregroundStyle(.green)
-                        .widgetAccentable()
-                    Text("Everything bought").font(.subheadline.weight(.medium))
-                } else {
-                    Text(list.open, format: .number)
-                        .font(.system(size: 44, weight: .bold, design: .rounded))
-                        .minimumScaleFactor(0.6)
-                        .widgetAccentable()
-                    Text("of \(list.total) left to buy")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                ProgressView(value: list.progress)
-                    .tint(ModuleTint.meals)
-                if let date = list.date {
-                    Text(date.formatted()).font(.caption2).foregroundStyle(.secondary)
-                }
-            } else {
-                Text(snapshot.mealsEnabled ? "No shopping list yet" : "Meals are turned off on this server.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
-
-    @ViewBuilder
-    private func circular(_ list: WidgetSnapshot.Shopping?) -> some View {
-        if let list {
-            Gauge(value: list.progress) {
-                Image(systemName: "cart")
-            } currentValueLabel: {
-                if list.open == 0 { Image(systemName: "checkmark") } else { Text(list.open, format: .number) }
-            }
-            .gaugeStyle(.accessoryCircularCapacity)
-        } else {
-            ZStack {
-                AccessoryWidgetBackground()
-                Image(systemName: "cart")
-            }
-        }
-    }
-
-    private func rectangular(_ snapshot: WidgetSnapshot, _ list: WidgetSnapshot.Shopping?) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text("Shopping list").font(.headline).widgetAccentable()
-            if let list {
-                if list.open == 0 {
-                    Text("Everything bought").font(.caption)
-                } else {
-                    Text(AttributedString(localized: "\(list.open) of ^[\(list.total) item](inflect: true) left to buy"))
-                        .font(.caption)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                }
-                ProgressView(value: list.progress)
-            } else {
-                Text(snapshot.mealsEnabled ? "No shopping list yet" : "Meals are turned off on this server.")
-                    .font(.caption)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    @ViewBuilder
-    private func inline(_ list: WidgetSnapshot.Shopping?) -> some View {
-        if let list, list.open > 0 {
-            Label("\(list.open) left to buy", systemImage: "cart")
-        } else if list != nil {
-            Label("Everything bought", systemImage: "cart")
-        } else {
-            Label("No shopping list yet", systemImage: "cart")
-        }
-    }
-}
-
 // MARK: An appointment found
 
 struct AppointmentWidget: Widget {
@@ -519,10 +383,4 @@ struct AppointmentView: View {
 } timeline: {
     OhanaEntry(date: Date(), state: .ready(.sample()))
     OhanaEntry(date: Date(), state: .signedOut)
-}
-
-#Preview("Shopping", as: .systemSmall) {
-    ShoppingWidget()
-} timeline: {
-    OhanaEntry(date: Date(), state: .ready(.sample()))
 }

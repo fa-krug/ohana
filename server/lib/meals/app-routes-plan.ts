@@ -1,8 +1,7 @@
-// Routes of the family API for the native app (apple/): /meals/plan/... and /meals/shopping/...
-// reads and changes the meal plan and shopping pages do with server actions.
+// Routes of the family API for the native app (apple/): /meals/plan/... and /meals/shopping:
+// reads and changes of the meal plan, and what it needs from the shops.
 // Registered before the meals' other routes; null for paths that aren't its own (handleMeals
-// keeps POST /meals/shopping/check, PATCH|DELETE /meals/shopping/items/{id},
-// POST /meals/plan/restore and DELETE /meals/plan).
+// keeps POST /meals/plan/restore and DELETE /meals/plan).
 //
 //   GET    /meals/plan                          {plan: MealPlanView | null, away: {day: [type names]}, tags}
 //   POST   /meals/plan/setup                    SetupPlanInput → {iterationId}            (the plan page's form)
@@ -12,44 +11,30 @@
 //   PATCH  /meals/plan/entries/{id}             {recipeId} → {iterationId, undo}           (swap a meal)
 //   DELETE /meals/plan/entries/{id}             → {iterationId, undo}                      (remove a meal)
 //   POST   /meals/plan/entries/{id}/move        {date} → {iterationId, undo | null}        (to another day; that day's lunch takes its day)
-//   GET    /meals/shopping?lang=                {lists: [summary], latest: ShoppingListView | null}
-//   GET    /meals/shopping/lists/{id}?lang=     {list: ShoppingListView}
-//   GET    /meals/shopping/lists/{id}/spent     ShoppingSpend (groceries spend of its shopping day ± 1)
-//   POST   /meals/shopping/lists/{id}/items     {name, quantity, unitId, category?, clientId?} → {id, merged, previousQuantity}
-//   POST   /meals/shopping/items/{id}/move      {listId, quantity?} → {id, merged, previousQuantity, fromListId, quantity}
-//   GET    /meals/shopping/units                {units: [{id, abbreviation, nameEn, nameDe}]}
+//   GET    /meals/shopping?from=&lang=          {days: [{date, items: [ShoppingNeed]}]}    (what the plan needs per shopping day)
 //
-// `clientId` (the app's, e.g. a UUID) makes an add apply once: sent again (a retry whose answer
-// was lost), it returns the earlier result instead of adding the quantity again.
 // `undo` is the body for POST /meals/plan/restore that puts the plan back as it was.
-// Viewers read; changes need an editor. Adding, swapping, moving or removing a meal makes the
-// iteration's shopping lists new from its meals, keeping ticks and what was added by hand.
+// Viewers read; changes need an editor. No shopping list is stored: GET /meals/shopping computes
+// it from the plan (lib/meals/shopping/needs.ts), the app writes it into the user's Reminders.
+// `from` (YYYY-MM-DD, default the server's today): shopping days on or after it.
 
 import { randomUUID } from "node:crypto";
-import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/lib/db";
 import type { Ctx } from "@/lib/api/family-api";
-import { HttpError, json, readBody } from "@/lib/api/http";
+import { json, readBody } from "@/lib/api/http";
 import { AuthError } from "@/lib/auth/errors";
-import {
-  ingredients, mealPlanEntries, mealPlans, planIterations, recipes, shoppingListItems, shoppingLists, units,
-} from "@/lib/db/schema";
-import { shoppingSpend } from "@/lib/finance/groceries";
-import { Decimal, quantize2 } from "./domain/decimal";
+import { formatDate } from "@/lib/calendar/dates";
+import { mealPlanEntries, mealPlans, planIterations, recipes } from "@/lib/db/schema";
 import { awayDays } from "./meal-plan/away";
 import { generateNextIteration, renewIteration } from "./meal-plan/iterations";
 import { setupMealPlan } from "./meal-plan/setup";
 import { type IterationSnapshot, snapshotIteration } from "./meal-plan/snapshot";
 import { getMealPlanView } from "./queries/meal-plan";
 import { listTags } from "./queries/recipes";
-import { getLatestShoppingList, getShoppingListById } from "./queries/shopping";
-import { findOrCreateIngredient } from "./recipes/ingredients";
 import { setupPlanSchema } from "./schemas/mutations";
-import { generateShoppingListsForIteration } from "./shopping/generate";
-import { addShoppingItem, moveShoppingItem } from "./shopping/items";
-
-const CATEGORIES = ["PRODUCE", "DAIRY", "MEAT", "PANTRY", "FROZEN", "OTHER"] as const;
+import { shoppingNeeds } from "./shopping/needs";
 
 const swapSchema = z.object({ recipeId: z.string().min(1).max(64) });
 const day = z
@@ -58,20 +43,6 @@ const day = z
   .refine((d) => !Number.isNaN(Date.parse(`${d}T00:00:00Z`)) && new Date(`${d}T00:00:00Z`).toISOString().startsWith(d), "Unknown date");
 const addEntrySchema = z.object({ date: day, recipeId: z.string().min(1).max(64) });
 const moveEntrySchema = z.object({ date: day });
-const moveItemSchema = z.object({
-  listId: z.string().min(1).max(64),
-  quantity: z
-    .union([z.string().max(40), z.number()])
-    .transform((v) => String(v).trim().replace(",", "."))
-    .optional(),
-});
-const addItemSchema = z.object({
-  name: z.string().trim().min(1).max(80),
-  quantity: z.union([z.string(), z.number()]).transform((v) => String(v).trim().replace(",", ".")),
-  unitId: z.number().int(),
-  category: z.enum(CATEGORIES).optional(),
-  clientId: z.string().min(1).max(64).optional(),
-});
 
 export function handleMealPlanApp(ctx: Ctx): Promise<Response> | null {
   if (ctx.rest[0] !== "meals") return null;
@@ -108,41 +79,8 @@ export function handleMealPlanApp(ctx: Ctx): Promise<Response> | null {
     }
     return null;
   }
-  if (area === "shopping") {
-    if (m === "GET" && sub === undefined) return view(ctx, async (familyId) => shoppingOverview(ctx, familyId));
-    if (m === "GET" && sub === "units" && id === undefined) {
-      return view(ctx, async () => ({
-        units: ctx.db
-          .select({ id: units.id, abbreviation: units.abbreviation, nameEn: units.nameEn, nameDe: units.nameDe })
-          .from(units)
-          .orderBy(asc(units.id))
-          .all(),
-      }));
-    }
-    if (sub === "lists" && id !== undefined) {
-      if (m === "GET" && more === undefined) {
-        return view(ctx, async (familyId) => {
-          const list = getShoppingListById(ctx.db, familyId, id, lang(ctx));
-          if (!list) throw new HttpError(404, "Shopping list not found");
-          return { list };
-        });
-      }
-      if (m === "GET" && more === "spent") {
-        return view(ctx, async (familyId) => {
-          const list = getShoppingListById(ctx.db, familyId, id, "en");
-          if (!list) throw new HttpError(404, "Shopping list not found");
-          if (!list.shoppingDate) throw new HttpError(404, "The list has no shopping day");
-          return shoppingSpend(ctx.db, familyId, list.shoppingDate);
-        });
-      }
-      if (m === "POST" && more === "items") {
-        return edit(ctx, async (familyId) => addItem(ctx.db, familyId, id, addItemSchema.parse(await readBody(ctx.req))));
-      }
-    }
-    if (m === "POST" && sub === "items" && id !== undefined && more === "move") {
-      return edit(ctx, async (familyId) => moveShoppingItem(ctx.db, familyId, id, moveItemSchema.parse(await readBody(ctx.req))));
-    }
-    return null;
+  if (area === "shopping" && m === "GET" && sub === undefined) {
+    return view(ctx, (familyId) => ({ days: shoppingNeeds(ctx.db, familyId, { from: fromDay(ctx), locale: lang(ctx) }) }));
   }
   return null;
 }
@@ -157,7 +95,14 @@ async function edit(ctx: Ctx, fn: (familyId: string) => Promise<unknown>): Promi
   return json(await fn(family.id));
 }
 
-/** The language of names in shopping lists: `?lang=`, else the request's Accept-Language. */
+/** `?from=` (YYYY-MM-DD), else the server's today. */
+function fromDay(ctx: Ctx): string {
+  const from = ctx.url.searchParams.get("from");
+  if (from === null || from === "") return formatDate(ctx.now);
+  return day.parse(from);
+}
+
+/** The language of the ingredients' names: `?lang=`, else the request's Accept-Language. */
 function lang(ctx: Ctx): "en" | "de" {
   const asked = ctx.url.searchParams.get("lang") ?? ctx.req.headers.get("accept-language") ?? "";
   return asked.trim().toLowerCase().startsWith("de") ? "de" : "en";
@@ -187,8 +132,7 @@ function nextIteration(ctx: Ctx, familyId: string) {
   return { iterationId, undo: { restore: before ? [before] : [], remove: [iterationId] } };
 }
 
-/** Swaps a meal's recipe (its leftover days follow) or removes it (with its leftovers); the
- *  iteration's shopping lists are made anew, keeping ticks and items added by hand. */
+/** Swaps a meal's recipe (its leftover days follow) or removes it (with its leftovers). */
 function changeEntry(db: Db, familyId: string, entryId: string, change: { swap: string } | { remove: true }) {
   const entry = db
     .select({ id: mealPlanEntries.id, iterationId: mealPlanEntries.iterationId, isLeftover: mealPlanEntries.isLeftover })
@@ -208,7 +152,6 @@ function changeEntry(db: Db, familyId: string, entryId: string, change: { swap: 
   }
   const before = snapshotIteration(db, familyId, entry.iterationId);
   db.transaction(() => {
-    const generated = regenerate(db, familyId, entry.iterationId); // what the old meals make
     if ("swap" in change) {
       if (entry.isLeftover) {
         // A leftover day becomes a meal of its own.
@@ -231,8 +174,6 @@ function changeEntry(db: Db, familyId: string, entryId: string, change: { swap: 
       }
       db.delete(mealPlanEntries).where(eq(mealPlanEntries.id, entryId)).run();
     }
-    regenerate(db, familyId, entry.iterationId);
-    carryOver(db, entry.iterationId, before, generated);
   });
   return { iterationId: entry.iterationId, undo: { restore: [before], remove: [] } };
 }
@@ -271,7 +212,6 @@ function addEntry(db: Db, familyId: string, iterationId: string, input: { date: 
   if (taken) throw new AuthError(409, "That day already has a meal");
   const before = snapshotIteration(db, familyId, iterationId);
   db.transaction(() => {
-    const generated = regenerate(db, familyId, iterationId);
     db.insert(mealPlanEntries)
       .values({
         id: randomUUID(),
@@ -285,8 +225,6 @@ function addEntry(db: Db, familyId: string, iterationId: string, input: { date: 
         isLocked: false,
       })
       .run();
-    regenerate(db, familyId, iterationId);
-    carryOver(db, iterationId, before, generated);
   });
   return { iterationId, undo: { restore: [before], remove: [] } };
 }
@@ -307,7 +245,6 @@ function moveEntry(db: Db, familyId: string, entryId: string, date: string) {
   if (date === entry.date) return { iterationId: entry.iterationId, undo: null };
   const before = snapshotIteration(db, familyId, entry.iterationId);
   db.transaction(() => {
-    const generated = regenerate(db, familyId, entry.iterationId);
     const other = db
       .select({ id: mealPlanEntries.id })
       .from(mealPlanEntries)
@@ -336,170 +273,6 @@ function moveEntry(db: Db, familyId: string, entryId: string, date: string) {
     if (loose.length) {
       db.update(mealPlanEntries).set({ isLeftover: false, sourceEntryId: null }).where(inArray(mealPlanEntries.id, loose)).run();
     }
-    regenerate(db, familyId, entry.iterationId);
-    carryOver(db, entry.iterationId, before, generated);
   });
   return { iterationId: entry.iterationId, undo: { restore: [before], remove: [] } };
-}
-
-type ItemKey = string; // `${shoppingDate}|${ingredientId}|${unitId}`
-const keyOf = (date: string | null, ingredientId: number, unitId: number): ItemKey => `${date ?? ""}|${ingredientId}|${unitId}`;
-
-/** Makes the iteration's shopping lists from its meals; returns the generated quantities. */
-function regenerate(db: Db, familyId: string, iterationId: string): Map<ItemKey, Decimal> {
-  const it = db
-    .select({ start: planIterations.startDate, end: planIterations.endDate, day1: mealPlans.shoppingDay1, day2: mealPlans.shoppingDay2 })
-    .from(planIterations)
-    .innerJoin(mealPlans, eq(mealPlans.id, planIterations.mealPlanId))
-    .where(and(eq(planIterations.id, iterationId), eq(mealPlans.familyId, familyId)))
-    .get()!;
-  generateShoppingListsForIteration(db, {
-    iterationId,
-    startDate: it.start,
-    endDate: it.end,
-    shoppingDays: [it.day1, it.day2].filter((d): d is number => d !== null),
-  });
-  const out = new Map<ItemKey, Decimal>();
-  for (const row of listItems(db, iterationId)) out.set(keyOf(row.date, row.ingredientId, row.unitId), new Decimal(row.quantity));
-  return out;
-}
-
-function listItems(db: Db, iterationId: string) {
-  return db
-    .select({
-      id: shoppingListItems.id,
-      listId: shoppingLists.id,
-      date: shoppingLists.shoppingDate,
-      ingredientId: shoppingListItems.ingredientId,
-      unitId: shoppingListItems.unitId,
-      quantity: shoppingListItems.quantity,
-    })
-    .from(shoppingListItems)
-    .innerJoin(shoppingLists, eq(shoppingLists.id, shoppingListItems.shoppingListId))
-    .where(eq(shoppingLists.iterationId, iterationId))
-    .all();
-}
-
-/** After the lists were made anew: puts back the ticks of `before` and what was added by hand
- *  (an item's quantity beyond what the old meals made), per shopping day, ingredient and unit. */
-function carryOver(db: Db, iterationId: string, before: IterationSnapshot, oldGenerated: Map<ItemKey, Decimal>) {
-  // Per key: what the list had (an item ticked before and one added later may share a key)
-  // and whether all of it was ticked.
-  const had = new Map<ItemKey, { quantity: Decimal; checked: boolean }>();
-  for (const list of before.lists) {
-    for (const item of list.items) {
-      const key = keyOf(list.shoppingDate, item.ingredientId, item.unitId);
-      let quantity: Decimal;
-      try {
-        quantity = new Decimal(item.quantity);
-      } catch {
-        quantity = new Decimal(0);
-      }
-      const prev = had.get(key);
-      had.set(key, {
-        quantity: (prev?.quantity ?? new Decimal(0)).plus(quantity),
-        checked: (prev?.checked ?? true) && item.isChecked,
-      });
-    }
-  }
-  const checked = new Set<ItemKey>();
-  const extra = new Map<ItemKey, Decimal>();
-  for (const [key, h] of had) {
-    if (h.checked) checked.add(key);
-    const left = h.quantity.minus(oldGenerated.get(key) ?? new Decimal(0));
-    if (left.gt(0)) extra.set(key, left);
-  }
-  const now = listItems(db, iterationId);
-  const lists = db.select().from(shoppingLists).where(eq(shoppingLists.iterationId, iterationId)).all();
-  const listByDate = new Map(lists.map((l) => [l.shoppingDate ?? "", l.id]));
-  const ticked: string[] = [];
-  for (const row of now) {
-    const key = keyOf(row.date, row.ingredientId, row.unitId);
-    const add = extra.get(key);
-    if (add) {
-      const sum = quantize2(new Decimal(row.quantity).plus(add)).toString();
-      db.update(shoppingListItems).set({ quantity: sum }).where(eq(shoppingListItems.id, row.id)).run();
-      extra.delete(key);
-    }
-    if (checked.has(key)) ticked.push(row.id);
-  }
-  if (ticked.length) db.update(shoppingListItems).set({ isChecked: true }).where(inArray(shoppingListItems.id, ticked)).run();
-  for (const [key, quantity] of extra) {
-    const [date, ingredientId, unitId] = key.split("|");
-    const listId = listByDate.get(date);
-    if (!listId) continue; // that shopping day is gone
-    db.insert(shoppingListItems)
-      .values({
-        id: randomUUID(),
-        shoppingListId: listId,
-        ingredientId: Number(ingredientId),
-        unitId: Number(unitId),
-        quantity: quantize2(quantity).toString(),
-        isChecked: checked.has(key),
-      })
-      .run();
-  }
-}
-
-function shoppingOverview(ctx: Ctx, familyId: string) {
-  const rows = ctx.db
-    .select({
-      id: shoppingLists.id,
-      iterationId: shoppingLists.iterationId,
-      status: planIterations.status,
-      shoppingDate: shoppingLists.shoppingDate,
-      itemCount: sql<number>`count(${shoppingListItems.id})`,
-      checkedCount: sql<number>`coalesce(sum(case when ${shoppingListItems.isChecked} then 1 else 0 end), 0)`,
-    })
-    .from(shoppingLists)
-    .innerJoin(planIterations, eq(planIterations.id, shoppingLists.iterationId))
-    .innerJoin(mealPlans, eq(mealPlans.id, planIterations.mealPlanId))
-    .leftJoin(shoppingListItems, eq(shoppingListItems.shoppingListId, shoppingLists.id))
-    .where(eq(mealPlans.familyId, familyId))
-    .groupBy(shoppingLists.id)
-    .all()
-    .sort((a, b) => (b.shoppingDate ?? "").localeCompare(a.shoppingDate ?? ""));
-  return {
-    lists: rows.map((r) => ({
-      id: r.id,
-      iterationId: r.iterationId,
-      iterationStatus: r.status,
-      shoppingDate: r.shoppingDate,
-      itemCount: Number(r.itemCount),
-      checkedCount: Number(r.checkedCount),
-    })),
-    latest: getLatestShoppingList(ctx.db, familyId, lang(ctx)),
-  };
-}
-
-function addItem(db: Db, familyId: string, listId: string, input: z.infer<typeof addItemSchema>) {
-  if (!db.select({ id: units.id }).from(units).where(eq(units.id, input.unitId)).get()) {
-    throw new HttpError(404, "Unknown unit");
-  }
-  const low = input.name.toLowerCase();
-  const existing = db
-    .select({ id: ingredients.id })
-    .from(ingredients)
-    .where(sql`lower(${ingredients.nameEn}) = ${low} or lower(${ingredients.nameDe}) = ${low}`)
-    .get();
-  // Check the list (and the quantity) before a new ingredient is added to the shared table.
-  if (!existing) {
-    const owned = db
-      .select({ id: shoppingLists.id })
-      .from(shoppingLists)
-      .innerJoin(planIterations, eq(planIterations.id, shoppingLists.iterationId))
-      .innerJoin(mealPlans, eq(mealPlans.id, planIterations.mealPlanId))
-      .where(and(eq(shoppingLists.id, listId), eq(mealPlans.familyId, familyId)))
-      .get();
-    if (!owned) throw new AuthError(404, "Shopping list not found");
-    if (!/^\d+(\.\d+)?$/.test(input.quantity) || Number(input.quantity) <= 0) {
-      throw new AuthError(422, "The quantity must be more than 0");
-    }
-  }
-  const ingredientId =
-    existing?.id ??
-    findOrCreateIngredient(db, { nameEn: input.name, nameDe: input.name, category: input.category ?? "OTHER" }).id;
-  return addShoppingItem(db, familyId, listId, {
-    ingredientId, unitId: input.unitId, quantity: input.quantity, clientId: input.clientId,
-  });
 }

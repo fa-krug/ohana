@@ -1,10 +1,10 @@
 import SwiftUI
 
 /// The family overview (the web app's app/(app)/f/[familyId]/page.tsx): one dashboard over all
-/// modules. "Ask Ohana…", today, the meals and the shopping list, the next birthdays, what comes
-/// up, this month's finances and the appointment searches' latest finds, as content cards. A
-/// card's header opens its module; each row opens its exact place (a day of the calendar, a
-/// recipe, a shopping list, a category's transactions, an appointment slot). What belongs to a
+/// modules. "Ask Ohana…", today, the meals, the next birthdays, what comes up, this month's
+/// finances and the appointment searches' latest finds, as content cards. A card's header opens
+/// its module; each row opens its exact place (a day of the calendar, a recipe, a category's
+/// transactions, an appointment slot). What belongs to a
 /// module the server has off doesn't show.
 struct OverviewView: View {
     @Environment(FamilyContext.self) private var family
@@ -347,55 +347,29 @@ private struct OverviewMealsCard: View {
 
     var body: some View {
         OverviewCard(title: Text("Meals"), systemImage: "fork.knife", module: .meals) {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 8) {
-                    OverviewRow(route: OverviewLinks.meal(meals)) {
-                        HStack(spacing: 10) {
-                            if let meal = meals.today {
-                                Image(systemName: "fork.knife").foregroundStyle(ModuleTint.meals)
-                                Text(meal.recipeTitle).fontWeight(.medium).lineLimit(2)
-                                if meal.isLeftover {
-                                    Text("Leftovers").font(.caption).foregroundStyle(.secondary)
-                                }
-                            } else if !awayToday.isEmpty {
-                                Image(systemName: "suitcase.rolling").foregroundStyle(.secondary)
-                                Text("Away · \(awayToday.joined(separator: ", "))").foregroundStyle(.secondary)
-                            } else {
-                                Image(systemName: "fork.knife").foregroundStyle(.secondary)
-                                Text("Nothing planned").foregroundStyle(.secondary)
+            HStack(spacing: 8) {
+                OverviewRow(route: OverviewLinks.meal(meals)) {
+                    HStack(spacing: 10) {
+                        if let meal = meals.today {
+                            Image(systemName: "fork.knife").foregroundStyle(ModuleTint.meals)
+                            Text(meal.recipeTitle).fontWeight(.medium).lineLimit(2)
+                            if meal.isLeftover {
+                                Text("Leftovers").font(.caption).foregroundStyle(.secondary)
                             }
+                        } else if !awayToday.isEmpty {
+                            Image(systemName: "suitcase.rolling").foregroundStyle(.secondary)
+                            Text("Away · \(awayToday.joined(separator: ", "))").foregroundStyle(.secondary)
+                        } else {
+                            Image(systemName: "fork.knife").foregroundStyle(.secondary)
+                            Text("Nothing planned").foregroundStyle(.secondary)
                         }
-                    }
-                    if let meal = meals.today {
-                        Button("Cook", systemImage: "flame") { family.open(.cook(recipeID: meal.recipeId)) }
-                            .buttonStyle(.bordered)
-                            .controlSize(.small)
-                            .help("Open the cook view")
                     }
                 }
-                Divider()
-                OverviewRow(route: OverviewLinks.shopping(meals)) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            Label("Shopping list", systemImage: "cart")
-                                .font(.subheadline.weight(.semibold))
-                            Spacer()
-                            if let date = meals.shopping?.shoppingDate {
-                                Text(date.formatted()).font(.caption).foregroundStyle(.secondary)
-                            }
-                        }
-                        if let shopping = meals.shopping, shopping.total > 0 {
-                            if shopping.open == 0 {
-                                Text("Everything bought")
-                            } else {
-                                Text(OverviewFormat.itemsLeft(open: shopping.open, total: shopping.total))
-                            }
-                            ProgressView(value: shopping.progress)
-                                .tint(ModuleTint.meals)
-                        } else {
-                            Text("No shopping list yet").foregroundStyle(.secondary)
-                        }
-                    }
+                if let meal = meals.today {
+                    Button("Cook", systemImage: "flame") { family.open(.cook(recipeID: meal.recipeId)) }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .help("Open the cook view")
                 }
             }
         }

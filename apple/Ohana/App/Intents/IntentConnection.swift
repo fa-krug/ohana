@@ -46,9 +46,10 @@ nonisolated enum OhanaIntentError: Error, Equatable, CustomLocalizedStringResour
     /// Needed for reading recipes from web pages.
     case assistantOff
     case sessionEnded
-    /// The family has no shopping list (they come with the meal plan).
-    case noShoppingList
-    case unknownUnit(String)
+    /// No Reminders list is chosen for the family's shopping on this device.
+    case noRemindersList
+    /// Ohana may not use Reminders.
+    case noRemindersAccess
     case badQuantity
     case emptyText
     /// The server's own words (`{error}` / `{message}`), or what went wrong on the way.
@@ -61,8 +62,8 @@ nonisolated enum OhanaIntentError: Error, Equatable, CustomLocalizedStringResour
         case .mealsOff: "Meals are turned off on your Ohana server."
         case .assistantOff: "This needs the assistant, which is turned off on your Ohana server."
         case .sessionEnded: "Your session has ended. Open Ohana and sign in again."
-        case .noShoppingList: "There’s no shopping list yet: it comes with the meal plan."
-        case let .unknownUnit(unit): "Ohana doesn’t know the unit “\(unit)”."
+        case .noRemindersList: "Choose a Reminders list for the shopping list in Ohana first: Meals → Plan → Shopping List."
+        case .noRemindersAccess: "Ohana has no access to your reminders. You can allow it in the Settings."
         case .badQuantity: "The quantity must be a number above 0."
         case .emptyText: "That’s empty."
         case let .server(message): LocalizedStringResource(stringLiteral: message)

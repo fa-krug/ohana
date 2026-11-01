@@ -1,6 +1,6 @@
 // Phase 7, notifications everywhere: per-family event preferences, the daily coverage alert
-// (sent once per new set of uncovered days), the shopping reminder, and appointment
-// notifications that the family can turn off.
+// (sent once per new set of uncovered days), and appointment notifications that the family
+// can turn off.
 
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Db } from "@/lib/db";
@@ -8,10 +8,8 @@ import * as schema from "@/lib/db/schema";
 import { createChannel } from "@/lib/notifications/channels";
 import type { Channel, Message } from "@/lib/notifications";
 import { getPref, getPrefs, setPref } from "@/lib/notifications/prefs";
-import { checkCoverage, remindShopping, uncoveredDays } from "@/lib/notifications/daily";
+import { checkCoverage, uncoveredDays } from "@/lib/notifications/daily";
 import { notifyRun } from "@/lib/appointments/notify";
-import { setupMealPlan } from "@/lib/meals/meal-plan/setup";
-import { mulberry32 } from "@/lib/meals/domain/rng";
 import { createTestDb } from "@/lib/test/db";
 import { NOW, makeFamily, makeUser } from "@/lib/test/factories";
 import { makeResult, makeRun, makeSearch } from "@/lib/test/appointments";
@@ -52,11 +50,12 @@ describe("preferences", () => {
     expect(getPrefs(db, familyId)).toEqual([
       { event: "appointment_found", enabled: true, channelIds: null, app: true },
       { event: "coverage_gap", enabled: true, channelIds: null, app: true },
-      { event: "shopping_reminder", enabled: false, channelIds: null, app: true },
       { event: "assistant_turn_finished", enabled: false, channelIds: null, app: true },
     ]);
-    setPref(db, { id: editorId }, familyId, { event: "shopping_reminder", enabled: true, channelIds: [phone] }, NOW);
-    expect(getPref(db, familyId, "shopping_reminder")).toEqual({ event: "shopping_reminder", enabled: true, channelIds: [phone], app: true });
+    setPref(db, { id: editorId }, familyId, { event: "assistant_turn_finished", enabled: true, channelIds: [phone] }, NOW);
+    expect(getPref(db, familyId, "assistant_turn_finished")).toEqual({ event: "assistant_turn_finished", enabled: true, channelIds: [phone], app: true });
+    // The shopping reminder is gone (the shopping list lives in Reminders).
+    expect(() => setPref(db, { id: editorId }, familyId, { event: "shopping_reminder", enabled: true, channelIds: null }, NOW)).toThrow();
     expect(() => setPref(db, { id: viewerId }, familyId, { event: "coverage_gap", enabled: false, channelIds: null }, NOW)).toThrow(
       expect.objectContaining({ status: 403 }),
     );
@@ -137,41 +136,6 @@ describe("coverage alert", () => {
     sent.length = 0;
     expect(await check("2026-11-04")).toEqual([]);
     expect(sent).toHaveLength(0);
-  });
-});
-
-describe("shopping reminder", () => {
-  function plan() {
-    db.insert(schema.units).values({ id: 1, nameEn: "gram", nameDe: "Gramm", abbreviation: "g", conversionFactor: "1" }).run();
-    db.insert(schema.ingredients).values({ id: 1, nameEn: "Tomato", nameDe: "Tomate", category: "PRODUCE" }).run();
-    db.insert(schema.recipes)
-      .values({ id: "r1", familyId, title: "Soup", description: "", listType: "KNOWN", defaultServings: 2, createdAt: NOW, updatedAt: NOW })
-      .run();
-    db.insert(schema.recipeIngredients).values({ recipeId: "r1", ingredientId: 1, quantity: "250", unitId: 1, order: 0 }).run();
-    // Monday 2026-06-01, shopping on Mondays and Thursdays.
-    setupMealPlan(
-      db,
-      familyId,
-      { iterationWeeks: 1, shoppingDays: [0, 3], servings: 2, knownRatio: 1, defaultLeftoverDays: 1, excludedTagIds: [] },
-      new Date("2026-06-01T08:00:00Z"),
-      mulberry32(1),
-    );
-  }
-  const remind = (today: string) => remindShopping(db, familyId, NOW, { today, send: ok });
-
-  it("is off by default; on, it sends tomorrow's list once", async () => {
-    plan();
-    expect(await remind("2026-06-03")).toBe(false);
-    expect(sent).toHaveLength(0);
-    setPref(db, { id: editorId }, familyId, { event: "shopping_reminder", enabled: true, channelIds: [phone] }, NOW);
-    expect(await remind("2026-06-02")).toBe(false); // no shopping on Wednesday
-    expect(await remind("2026-06-03")).toBe(true);
-    expect(sent).toHaveLength(1);
-    expect(sent[0].msg.title).toMatch(/^Shopping tomorrow: \d+ items?$/);
-    expect(sent[0].msg.body).toMatch(/• \d+ g Tomato/);
-    expect(sent[0].msg.url).toMatch(new RegExp(`/f/${familyId}/meals/shopping/`));
-    expect(await remind("2026-06-03")).toBe(false);
-    expect(sent).toHaveLength(1);
   });
 });
 

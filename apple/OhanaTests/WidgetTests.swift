@@ -26,14 +26,12 @@ struct WidgetTests {
         #expect(s.items(on: Self.day("2026-11-04"), now: Self.at("2026-11-02", "07:00")) == nil)
     }
 
-    @Test func takesDinnerShoppingAndFinds() throws {
+    @Test func takesDinnerAndFinds() throws {
         let s = try Self.snapshot(OverviewTests.fullSample, loadedAt: Self.at("2026-11-02", "07:00"))
         let today = Self.day("2026-11-02")
         #expect(s.dinner(on: today) == WidgetSnapshot.Dinner(recipeID: "r1", title: "Lasagne", isLeftover: true))
         #expect(s.dinner(on: today.adding(days: 1)) == nil)
         #expect(s.away(on: today) == ["Vacation"])
-        #expect(s.shopping == WidgetSnapshot.Shopping(listID: "l1", date: Self.day("2026-11-03"), open: 3, total: 12))
-        #expect(s.shopping?.progress == 0.75)
         // The paused search and its missing find are left out.
         #expect(s.finds.map(\.searchID) == ["s1"])
         #expect(s.finds.first?.resultID == 42)
@@ -61,7 +59,7 @@ struct WidgetTests {
            {"id":"b","date":"2026-11-01","start":null,"end":null,"title":"Trip","location":"","person":"","note":"","url":"","source":"manual","searchId":null},
            {"id":"c","date":"2026-11-01","start":"08:00","end":"09:00","title":"Early","location":"","person":"Leo","note":"","url":"","source":"manual","searchId":null}],
          "upcoming":[{"kind":"entry","date":"2026-11-01","to":"2026-11-01","name":"School","color":"#3b82f6"}],
-         "meals":{"today":null,"shopping":null},"searches":[],
+         "meals":{"today":null},"searches":[],
          "birthdays":[{"day":"2026-11-01","name":"Mia","age":8},{"day":"2026-11-02","name":"Anna","age":36}]}
         """
         let s = try Self.snapshot(json, loadedAt: Self.at("2026-11-01", "07:00"))
@@ -76,9 +74,9 @@ struct WidgetTests {
         #expect(!s.mealsEnabled)
         #expect(s.appointmentsEnabled)
         // An older server without the parts of turned-off modules.
-        let bare = try Self.snapshot(OverviewTests.serverSample.replacingOccurrences(of: #""meals":{"today":null,"shopping":null},"#, with: ""),
+        let bare = try Self.snapshot(OverviewTests.serverSample.replacingOccurrences(of: #""meals":{"today":null},"#, with: ""),
                                      loadedAt: Self.at("2026-11-01", "07:00"))
-        #expect(bare.dinner == nil && bare.shopping == nil)
+        #expect(bare.dinner == nil)
     }
 
     @Test func survivesBeingSaved() throws {

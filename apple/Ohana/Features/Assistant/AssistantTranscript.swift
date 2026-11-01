@@ -35,6 +35,15 @@ enum AssistantTranscript {
                 if let text = q.answer?.text { lines.append("**\(you):** \(text)") }
                 else if q.skipped { lines.append("(\(String(localized: "Not answered")))") }
                 out.append(lines.joined(separator: "\n"))
+            case let .reminders(edit):
+                var lines = ["**☑️ \(edit.summary)**"]
+                for (index, op) in edit.ops.enumerated() {
+                    let result = edit.answer?.results.flatMap { index < $0.count ? $0[index] : nil }
+                    let mark = result.map { $0.ok ? " ✓" : " ✗ \($0.error ?? "")" } ?? ""
+                    lines.append("- " + AssistantReminderOpLine.make(op).text + mark)
+                }
+                if let outcome = edit.outcome { lines.append("(\(outcome))") }
+                out.append(lines.joined(separator: "\n"))
             case .compacted:
                 out.append("*\(String(localized: "Earlier messages condensed for the model"))*")
             case let .error(text):

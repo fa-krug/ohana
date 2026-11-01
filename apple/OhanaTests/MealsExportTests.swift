@@ -138,7 +138,6 @@ struct MealsExportTests {
     @Test func pluralizesTheMealsStrings() {
         #expect(String(localized: "\(1) servings") == "1 serving")
         #expect(String(localized: "\(3) servings") == "3 servings")
-        #expect(String(localized: "\(1) items to grab") == "1 item to grab")
         #expect(String(localized: "\(1) recipes") == "1 recipe")
         #expect(String(localized: "Save \(1) recipes") == "Save 1 recipe")
         #expect(String(localized: "\(2) ingredients") == "2 ingredients")

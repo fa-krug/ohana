@@ -29,7 +29,6 @@ struct DemoFinanceTests {
     @Test func theOverviewHasCategoriesAccountsAndBalances() throws {
         let overview = try get("/finance", as: FinanceOverview.self)
         #expect(overview.currency == "EUR")
-        #expect(overview.groceriesCategoryId == "groceries")
         #expect(overview.categories.first { $0.id == "groceries" }?.label == "🛒 Groceries")
         #expect(overview.categories.filter { $0.parentId == "kids" }.count == 3)
         #expect(overview.accounts.map(\.name) == ["Checking", "Savings"])
@@ -123,13 +122,6 @@ struct DemoFinanceTests {
         let none = try get("/finance/transfers/suggestions", ["from": "2026-09-01", "to": "2026-09-30"],
                            as: FinanceTransferSuggestions.self)
         #expect(none.pairs.isEmpty)
-    }
-
-    @Test func theShoppingLinksNameTheShoppingList() throws {
-        let links = try get("/finance/shopping-links", as: FinanceShoppingLinks.self)
-        #expect(links.categoryIds == ["groceries"])
-        #expect(links.lists.map(\.id) == ["list-0", "list-1", "list-2"])
-        #expect(links.lists[1] == FinanceShoppingLinks.Trip(id: "list-1", date: "2026-10-31"))
     }
 
     @Test func earlyInTheMonthNothingIsInTheFuture() throws {

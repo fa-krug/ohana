@@ -10,15 +10,14 @@ enum AssistantChangeAreas {
     }
 
     /// The areas a change kind names (entries | notes | types | events | categories |
-    /// transactions | benchmark | recipes | plan | shopping | appointments).
+    /// transactions | benchmark | recipes | plan | appointments).
     static func areas(kind: String) -> [DataArea] {
         switch kind {
         case "entries", "notes", "types": [.calendar]
         case "events": [.events, .calendar]
         case "categories", "transactions", "benchmark": [.finance]
         case "recipes": [.recipes, .meals]
-        case "plan": [.mealPlan, .shopping, .meals]
-        case "shopping": [.shopping, .meals]
+        case "plan": [.mealPlan, .meals]
         case "appointments": [.appointments]
         default: []
         }
@@ -35,12 +34,10 @@ enum AssistantChangeAreas {
         case "finance": return [.finance]
         case "appointments": return [.appointments]
         case "recipes": return [.recipes, .meals]
-        case "shopping": return [.shopping, .meals]
         case "meals":
             switch parts.dropFirst().first {
             case "recipes": return [.recipes, .meals]
-            case "shopping": return [.shopping, .meals]
-            case "plan": return [.mealPlan, .shopping, .meals]
+            case "plan": return [.mealPlan, .meals]
             default: return [.meals]
             }
         default: return []
@@ -55,8 +52,7 @@ enum AssistantChangeAreas {
         case "add_event", "remove_event": [.events, .calendar]
         case "manage_categories", "change_transactions", "combine_transfers", "set_statistic_average": [.finance]
         case "save_recipe": [.recipes, .meals]
-        case "plan_meals": [.mealPlan, .shopping, .meals]
-        case "tick_shopping_items", "add_shopping_items": [.shopping, .meals]
+        case "plan_meals": [.mealPlan, .meals]
         case "create_appointment_search", "change_appointment_search", "run_appointment_search": [.appointments]
         case "book_appointment_slot": [.appointments, .events, .calendar]
         default: []

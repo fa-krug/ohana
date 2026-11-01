@@ -40,9 +40,6 @@ struct DemoOverviewTests {
 
         #expect(d.meals.today?.recipeId == "recipe-lasagne")
         #expect(d.meals.today?.recipeTitle == "Vegetable lasagne")
-        #expect(d.meals.shopping?.id == "list-1")
-        #expect(d.meals.shopping?.shoppingDate == Self.today.adding(days: 1))
-        #expect(d.meals.shopping?.total == 12 && d.meals.shopping?.open == 8)
 
         #expect(d.finance.currency == "EUR")
         #expect(d.finance.month == "2026-10")
@@ -108,7 +105,7 @@ struct DemoOverviewTests {
         #expect(h.home.hasLocation)
         #expect(h.channels.map(\.kind) == [.telegram, .email])
         #expect(h.channels.allSatisfy { $0.hasToken && $0.enabled })
-        #expect(h.events.map(\.event) == ["appointment_found", "coverage_gap", "shopping_reminder", "assistant_turn_finished"])
+        #expect(h.events.map(\.event) == ["appointment_found", "coverage_gap", "assistant_turn_finished"])
         #expect(h.events[1].channelIds == ["channel-telegram"])
         #expect(h.events[0].hasChannels == false)
     }

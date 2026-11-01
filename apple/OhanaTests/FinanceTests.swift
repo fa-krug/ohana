@@ -16,7 +16,6 @@ struct FinanceDecodingTests {
         "payee":null,"description":[]},{"signature":"odd","something":"else"}],
         "benchmark":{"label":"Destatis","income":{"lowCents":400000,"highCents":400000},
         "expense":{"lowCents":250000,"highCents":320000},"categories":[{"categoryId":"groceries","lowCents":50000,"highCents":70000}]},
-        "groceriesCategoryId":null,
         "categories":[{"id":"salary","name":"Salary","color":"#22c55e","icon":"💼","kind":"income","position":0,"parentId":null},
         {"id":"groceries","name":"Groceries","color":"#f97316","icon":"🛒","kind":"expense","position":2,"parentId":null},
         {"id":"bakery","name":"Bakery","color":"#f97316","icon":"","kind":"expense","position":0,"parentId":"groceries"}],
@@ -30,7 +29,6 @@ struct FinanceDecodingTests {
         #expect(overview.accounts[0].balanceCents == -5000)
         #expect(overview.benchmark?.expense == FinanceCentsRange(lowCents: 250000, highCents: 320000))
         #expect(overview.benchmark?.categories.first?.categoryId == "groceries")
-        #expect(overview.groceriesCategoryId == nil)
         // The mapping the app can't read is kept as JSON but not offered.
         #expect(overview.csvMappings.count == 2)
         #expect(overview.mappings.count == 1)
@@ -148,17 +146,6 @@ struct FinanceDecodingTests {
         #expect(split["id"] == .string("b"))
         #expect(split["ids"] == .array([.string("p1"), .string("p2")]))
         #expect(FinanceOp.unlink("x").objectValue?["ids"] == .array([.string("x")]))
-    }
-
-    @Test func linksGroceriesToShoppingLists() throws {
-        let links = try decode(FinanceShoppingLinks.self, """
-        {"categoryIds":["groceries","bakery"],"lists":[{"id":"mon","date":"2026-06-01"},{"id":"thu","date":"2026-06-04"}]}
-        """)
-        #expect(links.list(for: "2026-06-05", categoryId: "groceries")?.id == "thu")
-        #expect(links.list(for: "2026-06-02", categoryId: "bakery")?.id == "mon")
-        #expect(links.list(for: "2026-06-07", categoryId: "groceries") == nil)
-        #expect(links.list(for: "2026-06-04", categoryId: "housing") == nil)
-        #expect(links.list(for: "2026-06-04", categoryId: nil) == nil)
     }
 }
 

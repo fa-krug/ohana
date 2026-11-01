@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createTestDb } from "@/lib/test/db";
 import {
   families, recipes, mealPlans, planIterations, mealPlanEntries,
-  mealPlanExcludedTags, mealTags, shoppingLists, shoppingListItems, ingredients, units,
+  mealPlanExcludedTags, mealTags, ingredients, units,
 } from "@/lib/db/schema";
 import { getMealPlanView } from "@/lib/meals/queries/meal-plan";
 
@@ -33,11 +33,6 @@ function seed() {
     id: "e1", iterationId: "it_new", date: "2026-06-22", mealType: "LUNCH",
     recipeId: "r1", servings: 2, isLeftover: false, isLocked: false,
   }).run();
-  db.insert(shoppingLists).values({ id: "sl1", iterationId: "it_new", shoppingDate: "2026-06-22", createdAt: now }).run();
-  db.insert(shoppingListItems).values([
-    { id: "i1", shoppingListId: "sl1", ingredientId: 1, quantity: "200", unitId: 1, isChecked: false },
-    { id: "i2", shoppingListId: "sl1", ingredientId: 1, quantity: "100", unitId: 1, isChecked: true },
-  ]).run();
   return db;
 }
 
@@ -64,9 +59,10 @@ describe("getMealPlanView", () => {
     expect(active.entries[0]!.recipeTitle).toBe("Pasta");
   });
 
-  it("counts shopping-list items per iteration", () => {
+  it("gives each iteration its shopping days", () => {
     const v = getMealPlanView(seed(), "h1")!;
-    const active = v.iterations[0]!;
-    expect(active.shoppingLists).toEqual([{ id: "sl1", shoppingDate: "2026-06-22", itemCount: 2 }]);
+    // Monday and Thursday; 2026-06-22 is a Monday.
+    expect(v.iterations[0]!.shoppingDates).toEqual(["2026-06-22", "2026-06-25"]);
+    expect(v.iterations[1]!.shoppingDates).toEqual(["2026-06-01", "2026-06-04"]);
   });
 });

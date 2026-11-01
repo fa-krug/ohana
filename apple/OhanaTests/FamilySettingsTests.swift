@@ -5,7 +5,7 @@ import Testing
 struct FamilySettingsTests {
     /// GET /household as the server answered it (web tests' family).
     static let household = """
-    {"name":"Krug","role":"editor","selfId":"u1","members":[{"userId":"u1","email":"anna@test","name":"Anna","role":"editor","birthday":"1990-11-20","joinedAt":"2026-11-01T12:00:00.000Z"},{"userId":"u2","email":"ben@test","name":"","role":"viewer","birthday":null,"joinedAt":"2026-11-01T12:00:00.000Z"}],"people":[{"id":"p1","name":"Mia","birthday":"2018-11-15"}],"invites":[{"id":"i1","url":"http://ohana.test/invite/JoB_YiEHiYZCAkViLmlhsA","role":"viewer","personId":"p1","expiresAt":"2026-11-08T12:00:00.000Z"}],"home":{"address":"Hauptstr. 1, Berlin","lat":52.5,"lng":13.4},"channels":[{"id":"c1","name":"Phone","provider":"PUSHBULLET","target":"","enabled":true,"hasToken":true,"smtpHost":"","smtpPort":465,"smtpUsername":"","smtpFrom":""}],"events":[{"event":"appointment_found","enabled":true,"channelIds":null,"hasChannels":false},{"event":"coverage_gap","enabled":true,"channelIds":null,"hasChannels":true},{"event":"shopping_reminder","enabled":false,"channelIds":null,"hasChannels":true},{"event":"assistant_turn_finished","enabled":false,"channelIds":null,"hasChannels":true}]}
+    {"name":"Krug","role":"editor","selfId":"u1","members":[{"userId":"u1","email":"anna@test","name":"Anna","role":"editor","birthday":"1990-11-20","joinedAt":"2026-11-01T12:00:00.000Z"},{"userId":"u2","email":"ben@test","name":"","role":"viewer","birthday":null,"joinedAt":"2026-11-01T12:00:00.000Z"}],"people":[{"id":"p1","name":"Mia","birthday":"2018-11-15"}],"invites":[{"id":"i1","url":"http://ohana.test/invite/JoB_YiEHiYZCAkViLmlhsA","role":"viewer","personId":"p1","expiresAt":"2026-11-08T12:00:00.000Z"}],"home":{"address":"Hauptstr. 1, Berlin","lat":52.5,"lng":13.4},"channels":[{"id":"c1","name":"Phone","provider":"PUSHBULLET","target":"","enabled":true,"hasToken":true,"smtpHost":"","smtpPort":465,"smtpUsername":"","smtpFrom":""}],"events":[{"event":"appointment_found","enabled":true,"channelIds":null,"hasChannels":false},{"event":"coverage_gap","enabled":true,"channelIds":null,"hasChannels":true},{"event":"assistant_turn_finished","enabled":false,"channelIds":null,"hasChannels":true}]}
     """
 
     @Test func decodesTheHousehold() throws {
@@ -21,7 +21,7 @@ struct FamilySettingsTests {
         #expect(h.home.hasLocation)
         #expect(h.channels[0].kind == .pushbullet)
         #expect(h.channels[0].hasToken)
-        #expect(h.events.map(\.hasChannels) == [false, true, true, true])
+        #expect(h.events.map(\.hasChannels) == [false, true, true])
         #expect(h.events.allSatisfy { $0.channelIds == nil })
     }
 
@@ -106,7 +106,7 @@ struct FamilySettingsTests {
     }
 
     @Test func picksEventChannels() {
-        let pref = FamilyEventPref(event: "shopping_reminder", enabled: true, channelIds: nil, hasChannels: true)
+        let pref = FamilyEventPref(event: "coverage_gap", enabled: true, channelIds: nil, hasChannels: true)
         let off = pref.toggling("b", on: false, all: ["a", "b", "c"])
         #expect(off.channelIds == ["a", "c"])
         #expect(off.toggling("b", on: true, all: ["a", "b", "c"]).channelIds == ["a", "c", "b"])

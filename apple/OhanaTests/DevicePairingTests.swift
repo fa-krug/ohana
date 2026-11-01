@@ -94,7 +94,9 @@ struct AppRouteTests {
         #expect(AppRoute.parse(webPath: "/f/fam1/meals/recipes/r1")?.route == .recipe(id: "r1"))
         #expect(AppRoute.parse(webPath: "/f/fam1/meals/recipes/new")?.route == .newRecipe)
         #expect(AppRoute.parse(webPath: "/f/fam1/meals/cook/r1")?.route == .cook(recipeID: "r1"))
-        #expect(AppRoute.parse(webPath: "/f/fam1/meals/shopping")?.route == .shoppingList(id: nil))
+        // The shopping list lives in Reminders: its old links and the reminders' urls open the plan.
+        #expect(AppRoute.parse(webPath: "/f/fam1/meals/shopping")?.route == .mealPlan)
+        #expect(AppRoute.parse(webPath: "/f/fam1/meals/shopping/2026-11-07/12-3")?.route == .mealPlan)
         #expect(AppRoute.parse(webPath: "/f/fam1/calendar/2026-11-03")?.route == .calendarDay(Day(year: 2026, month: 11, day: 3)))
         #expect(AppRoute.parse(webPath: "/f/fam1/calendar")?.route == .module(.calendar))
         #expect(AppRoute.parse(webPath: "/f/fam1/appointments/s1/slots/x9")?.route == .appointmentSlot(searchID: "s1", resultID: "x9"))

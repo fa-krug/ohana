@@ -1,9 +1,8 @@
-// Meals (ported from cookless): recipes, meal plans, shopping lists. `ingredients` and
+// Meals (ported from cookless): recipes, meal plans (the shopping lists live in Reminders). `ingredients` and
 // `units` are shared seed data (scripts/seed.ts); everything else belongs to a family.
 import {
   index,
   integer,
-  primaryKey,
   sqliteTable,
   text,
   uniqueIndex,
@@ -213,58 +212,4 @@ export const mealPlanExcludedTags = sqliteTable(
       .references(() => mealTags.id, { onDelete: "cascade" }),
   },
   (t) => ({ uniqExcluded: uniqueIndex("meal_plan_excluded_tags_plan_tag_idx").on(t.mealPlanId, t.tagId) }),
-);
-
-export const shoppingLists = sqliteTable(
-  "shopping_lists",
-  {
-    id: text("id").primaryKey(),
-    iterationId: text("iteration_id")
-      .notNull()
-      .references(() => planIterations.id, { onDelete: "cascade" }),
-    shoppingDate: text("shopping_date"),
-    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-  },
-  (t) => ({
-    shoppingListsIterationIdIdx: index("shopping_lists_iteration_id_idx").on(t.iterationId),
-  }),
-);
-
-export const shoppingListItems = sqliteTable(
-  "shopping_list_items",
-  {
-    id: text("id").primaryKey(),
-    shoppingListId: text("shopping_list_id")
-      .notNull()
-      .references(() => shoppingLists.id, { onDelete: "cascade" }),
-    ingredientId: integer("ingredient_id")
-      .notNull()
-      .references(() => ingredients.id, { onDelete: "cascade" }),
-    quantity: text("quantity").notNull(),
-    unitId: integer("unit_id")
-      .notNull()
-      .references(() => units.id, { onDelete: "cascade" }),
-    isChecked: integer("is_checked", { mode: "boolean" }).notNull().default(false),
-  },
-  (t) => ({
-    shoppingListItemsShoppingListIdIdx: index("shopping_list_items_shopping_list_id_idx").on(
-      t.shoppingListId,
-    ),
-  }),
-);
-
-// Adds sent with the app's `clientId`: a retry of one already applied (its answer was lost)
-// gets the earlier result back instead of adding the quantity again.
-export const shoppingItemAdds = sqliteTable(
-  "shopping_item_adds",
-  {
-    shoppingListId: text("shopping_list_id")
-      .notNull()
-      .references(() => shoppingLists.id, { onDelete: "cascade" }),
-    clientId: text("client_id").notNull(),
-    itemId: text("item_id").notNull(),
-    merged: integer("merged", { mode: "boolean" }).notNull(),
-    previousQuantity: text("previous_quantity"),
-  },
-  (t) => ({ pk: primaryKey({ columns: [t.shoppingListId, t.clientId] }) }),
 );

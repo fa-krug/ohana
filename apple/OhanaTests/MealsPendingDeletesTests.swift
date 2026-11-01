@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import Ohana
 
-/// Deleting a recipe or a shopping item waits a moment so it can be undone (`MealsPendingDeletes`).
+/// Deleting a recipe waits a moment so it can be undone (`MealsPendingDeletes`).
 @MainActor
 struct MealsPendingDeletesTests {
     /// What the delete sent and whether it finished.
@@ -18,7 +18,7 @@ struct MealsPendingDeletesTests {
     }
 
     func schedule(_ deletes: MealsPendingDeletes, _ id: String, _ log: Log, undoManager: UndoManager? = nil) {
-        deletes.schedule(id, kind: .shoppingItem, title: "1 Stk Tomato", undoManager: undoManager) {
+        deletes.schedule(id, kind: .recipe, title: "Tomato soup", undoManager: undoManager) {
             log.sent.append(id)
         } done: {
             log.done += 1
@@ -36,7 +36,7 @@ struct MealsPendingDeletesTests {
         let deletes = deletes(), log = Log()
         schedule(deletes, "i1", log)
         #expect(deletes.isHidden("i1"))
-        #expect(deletes.latest == .init(id: "i1", title: "1 Stk Tomato", kind: .shoppingItem))
+        #expect(deletes.latest == .init(id: "i1", title: "Tomato soup", kind: .recipe))
         #expect(log.sent.isEmpty)
         try await until { log.done == 1 }
         #expect(log.sent == ["i1"])
@@ -64,7 +64,7 @@ struct MealsPendingDeletesTests {
         schedule(deletes, "i1", log, undoManager: manager)
         manager.endUndoGrouping()
         #expect(manager.canUndo)
-        #expect(manager.undoActionName == String(localized: "Delete Item"))
+        #expect(manager.undoActionName == String(localized: "Delete Recipe"))
         manager.undo()
         #expect(!deletes.isHidden("i1"))
 
@@ -79,7 +79,6 @@ struct MealsPendingDeletesTests {
 
     @Test func deletesFromTheRightPath() {
         #expect(MealsPendingDeletes.Kind.recipe.path("r1") == "/meals/recipes/r1")
-        #expect(MealsPendingDeletes.Kind.shoppingItem.path("i1") == "/meals/shopping/items/i1")
-        #expect(MealsPendingDeletes.Kind.shoppingItem.areas == [.shopping])
+        #expect(MealsPendingDeletes.Kind.recipe.areas == [.recipes, .meals, .mealPlan])
     }
 }

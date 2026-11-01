@@ -19,7 +19,7 @@ import { type StoredMessage, type SummaryMark, viewOf } from "./context";
 import type { ChatMessage, Provider, ToolCall } from "./provider";
 import type { AssistantStore, ChatRow } from "./store";
 import type { NetOptions } from "./net";
-import type { ToolContext } from "./tools";
+import type { ReminderOp, ToolContext } from "./tools";
 
 /** What a turn needs from the family's AI settings. */
 export interface Turn {
@@ -86,11 +86,23 @@ export type Item =
       answer?: { selected: string[]; text?: string };
       skipped?: boolean;
     }
+  /** A change of the user's Reminders (edit_reminders) that waits for them to apply or decline
+   *  it in the app (POST …/reminders), like a question. */
+  | {
+      kind: "reminders";
+      id: string;
+      summary: string;
+      ops: ReminderOp[];
+      answer?: { applied: true; results: ReminderResult[] } | { applied: false };
+      skipped?: boolean;
+    }
   /** The older part of the chat was condensed for the model from here on. */
   | { kind: "compacted" }
   | { kind: "error"; text: string };
 
 export type Attachment = { kind: "image" | "file"; name: string; url?: string };
+/** What the app reports per op of a Reminders edit it applied. */
+export type ReminderResult = { ok: true; id?: string } | { ok: false; error: string };
 export type UserItem = Item & { kind: "user" };
 
 /** A message that waits for the running turn to end: what the chat shows, what the model gets,
@@ -103,6 +115,9 @@ export interface Queued {
 }
 type ToolItem = Item & { kind: "tool" };
 export type QuestionItem = Item & { kind: "question" };
+export type RemindersItem = Item & { kind: "reminders" };
+/** What waits for the user: a question, or a Reminders edit. */
+export type WaitingItem = QuestionItem | RemindersItem;
 
 /** What a running turn does right now. */
 type Activity =
@@ -125,6 +140,11 @@ export const STOPPED = "(stopped)";
 const SKIPPED = JSON.stringify({
   skipped: true,
   note: "The user didn't pick an answer and wrote a new message instead, which may answer it.",
+});
+/** What the model learns about a Reminders edit the user neither applied nor declined. */
+const SKIPPED_REMINDERS = JSON.stringify({
+  skipped: true,
+  note: "The user neither applied nor declined these changes and wrote a new message instead: nothing was changed in their Reminders.",
 });
 /** What the model learns about a tool that was running when its turn broke off. */
 const INTERRUPTED = JSON.stringify({
@@ -182,14 +202,15 @@ export function pause(ms: number, signal?: AbortSignal) {
   });
 }
 
-/** The turn is over: answered, or a question waits for the user. */
+/** The turn is over: answered, or a question (or Reminders edit) waits for the user. */
 function over(items: Item[], messages: StoredMessage[]) {
   const last = messages.at(-1);
-  return !last || (last.role === "assistant" && !last.tool_calls?.length) || !!openQuestion(items, messages);
+  return !last || (last.role === "assistant" && !last.tool_calls?.length) || !!waitingFor(items, messages);
 }
 
-/** What a new message adds: a question that waits stays unanswered, the changes undone since are
- *  told (so the assistant doesn't assume they are still there), then the message itself. */
+/** What a new message adds: a question (or Reminders edit) that waits stays unanswered, the
+ *  changes undone since are told (so the assistant doesn't assume they are still there), then
+ *  the message itself. */
 export function withMessage(
   shown: Item[],
   messages: StoredMessage[],
@@ -197,10 +218,10 @@ export function withMessage(
   message: { content: ChatMessage["content"]; item: Item },
 ) {
   const add: { messages: ChatMessage[]; items: { seq: number; item: Item }[] } = { messages: [], items: [] };
-  const q = openQuestion(shown, messages);
+  const q = waitingFor(shown, messages);
   if (q) {
     add.items.push({ seq: shown.indexOf(q), item: { ...q, skipped: true } });
-    add.messages.push({ role: "tool", tool_call_id: q.id, content: SKIPPED });
+    add.messages.push({ role: "tool", tool_call_id: q.id, content: q.kind === "question" ? SKIPPED : SKIPPED_REMINDERS });
   }
   for (const note of notes) {
     add.messages.push({ role: "user", content: `(I undid this change: ${note})` }, { role: "assistant", content: "OK." });
@@ -210,15 +231,27 @@ export function withMessage(
   return add;
 }
 
-/** The question that waits for its answer: the last one, unanswered, while the history ends
- *  with its call. */
-export function openQuestion(items: Item[], messages: StoredMessage[]): QuestionItem | undefined {
-  const q = items.findLast((it) => it?.kind === "question");
-  if (q?.kind !== "question" || q.answer || q.skipped) return undefined;
+/** The question or Reminders edit that waits for its answer: the last one, unanswered, while
+ *  the history ends with its call. */
+export function waitingFor(items: Item[], messages: StoredMessage[]): WaitingItem | undefined {
+  const q = items.findLast((it) => it?.kind === "question" || it?.kind === "reminders");
+  if ((q?.kind !== "question" && q?.kind !== "reminders") || q.answer || q.skipped) return undefined;
   const last = messages.at(-1);
   const asked = messages.findLast((m) => m.tool_calls?.some((c) => c.id === q.id));
   const answered = messages.some((m) => m.role === "tool" && m.tool_call_id === q.id);
   return asked && !answered && last?.role !== "user" ? q : undefined;
+}
+
+/** The question that waits for its answer (see waitingFor). */
+export function openQuestion(items: Item[], messages: StoredMessage[]): QuestionItem | undefined {
+  const q = waitingFor(items, messages);
+  return q?.kind === "question" ? q : undefined;
+}
+
+/** The Reminders edit that waits for the user to apply or decline it (see waitingFor). */
+export function openRemindersEdit(items: Item[], messages: StoredMessage[]): RemindersItem | undefined {
+  const q = waitingFor(items, messages);
+  return q?.kind === "reminders" ? q : undefined;
 }
 
 type Outcome = { kind: "done" | "handoff" | "stopped" | "lost" } | { kind: "retry"; message: string };
@@ -389,7 +422,7 @@ export class Runner {
       return this.fail(err instanceof HttpError ? err.message : "The assistant failed");
     }
     for (;;) {
-      // Answered already, or a question waits for the user.
+      // Answered already, or a question (or Reminders edit) waits for the user.
       if (over(this.items, this.messages)) return this.finish();
       const outcome = await this.go(turn);
       switch (outcome.kind) {
@@ -494,6 +527,12 @@ export class Runner {
         case "question":
           this.answer = null;
           this.add({ kind: "question", ...data });
+          this.saveItems();
+          outcome = { kind: "done" };
+          break;
+        case "reminders":
+          this.answer = null;
+          this.add({ kind: "reminders", id: data.id, summary: data.summary, ops: data.ops });
           this.saveItems();
           outcome = { kind: "done" };
           break;

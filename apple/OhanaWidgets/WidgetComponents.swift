@@ -15,10 +15,6 @@ enum WidgetLink {
         dinner.map { url(snapshot, "meals/recipes/\($0.recipeID)") } ?? url(snapshot, "meals/plan")
     }
 
-    static func shopping(_ snapshot: WidgetSnapshot) -> URL {
-        url(snapshot, "meals/shopping" + (snapshot.shopping.map { "/\($0.listID)" } ?? ""))
-    }
-
     static func find(_ snapshot: WidgetSnapshot, _ find: WidgetSnapshot.Find?) -> URL {
         find.map { url(snapshot, "appointments/\($0.searchID)/slots/\($0.resultID)") } ?? url(snapshot, "appointments")
     }
@@ -176,7 +172,6 @@ extension WidgetSnapshot {
             ],
             awayToday: [],
             dinner: Dinner(recipeID: "sample", title: String(localized: "Vegetable lasagne"), isLeftover: false),
-            shopping: Shopping(listID: "sample", date: tomorrow, open: 7, total: 18),
             finds: [
                 Find(searchID: "s1", searchName: String(localized: "Dermatologist"), resultID: 1,
                      doctorName: String(localized: "Dr. Weber"),

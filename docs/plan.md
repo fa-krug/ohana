@@ -103,7 +103,7 @@ UUIDs; money is integer cents; days are ISO `YYYY-MM-DD` text; timestamps are in
 | Calendar     | `cal_entry_types` (per year), `cal_entries`, `cal_notes`                                                                                                 |
 | Finance      | `fin_settings`, `fin_categories` (tree), `fin_accounts`, `fin_transactions` (transfer_id, split_of, import_hash), `fin_csv_mappings`, `fin_benchmark` |
 | Assistant    | `chats`, `chat_items`, `chat_messages`                                                                                                                   |
-| Meals        | `ingredients`, `units` (shared seed data), `meal_tags`, `recipes`, `recipe_ingredients`, `cooking_steps`, `step_ingredients`, `recipe_tags`, `meal_plans`, `plan_iterations`, `meal_plan_entries`, `meal_plan_excluded_tags`, `shopping_lists`, `shopping_list_items` |
+| Meals        | `ingredients`, `units` (shared seed data), `meal_tags`, `recipes`, `recipe_ingredients`, `cooking_steps`, `step_ingredients`, `recipe_tags`, `meal_plans`, `plan_iterations`, `meal_plan_entries`, `meal_plan_excluded_tags` (no shopping tables since phase 10: the shopping items are computed) |
 | Appointments | `appt_searches`, `appt_search_channels`, `appt_ignored`, `appt_runs`, `appt_results`, `appt_profile_cache`                                              |
 
 ## Accounts and sign-in
@@ -130,7 +130,7 @@ The reason for one app instead of three; built after the modules are in place:
 2. **Calendar → Meals:** the meal plan skips days on which the whole family is away (types with
    the role _Covers_ / _Day off_ for everyone, or a "Away" type).
 3. **Meals → Finance:** the shopping list's estimated cost; grocery transactions are linked to the
-   shopping trip of that day.
+   shopping trip of that day. *Dropped in phase 10, with Ohana's own shopping list.*
 4. **Assistant everywhere:** tools for recipes and meal plans ("plan next week without fish"),
    appointment searches ("find a dermatologist before June"), next to the calendar and finance tools.
 5. **Notifications everywhere:** appointment found, assistant turn finished, import done,
@@ -190,6 +190,7 @@ empty Ohana database. It has a **dry run** that only reports what it would do.
 | 7  | Connections ✅     | The cross-module features above, the assistant's tools everywhere (item 4) with phase 3 part B |
 | 8  | Headless, open source | No web UI: the native app is the client; a lean server (Hono) with only the sign-in pages; self-hosting docs, GHCR images, AGPL / MPL (see Phase 8) |
 | 9  | Push to the app ✅ | Notifications straight to the app from any self-hosted server, through a push relay run by fa-krug that holds the APNs key and sees only ciphertext (see Phase 9) |
+| 10 | Shopping in Reminders ✅ | The shopping list moves to Apple Reminders: the server computes what the meal plan needs, the app writes it into a list the user picks; the assistant reads and edits reminders, each edit confirmed (see Phase 10) |
 
 ### Phase 8: headless, open source, self-hosted
 
@@ -388,6 +389,19 @@ hand). Deviations and details:
 - `aps-environment` is `development` in the entitlements; exporting for TestFlight / the App
   Store signs it as production. The app tells the relay `sandbox` in Debug builds.
 
+### Phase 10: the shopping list moves to Reminders
+
+Ohana stops keeping a shopping list of its own. Families already have one in Apple Reminders,
+shared over iCloud, ticked off on the watch, filled by Siri; a second list in Ohana only
+competed with it.
+
+| Topic | Decision |
+| ----- | -------- |
+| Server | **Computes, stores nothing.** `GET /api/v1/families/{id}/meals/shopping?from=&lang=` (viewers too) returns, live, what each shopping day from `from` (default today) of every plan iteration needs: the meals' ingredients summed per ingredient and unit, `key` = `<ingredientId>-<unitId>`. The tables `shopping_lists`, `shopping_list_items` and `shopping_item_adds` are dropped; plan iterations show `shoppingDates` instead of `shoppingLists`. |
+| App | Per family and device the user picks a Reminders list. The app writes every upcoming shopping day's items into it (title like "150 g Tomato", due on the shopping day, an `ohana://…/meals/shopping/{date}/{key}` URL as its marker), updates its own items when the plan changes, and leaves alone what the user ticked, edited or deleted. One-way: nothing from Reminders goes back to the server. Viewers can use it too. |
+| Gone | The in-app shopping screen, its offline queue, dragging shopping items, the shopping widget, the overview's shopping row, the shopping reminder notification (`SHOPPING_REMINDER_HOUR`), the finance links to shopping days (`GET /finance/shopping-links`, the groceries category setting). |
+| Assistant | `get_shopping_items` replaces `get_shopping_list`, `tick_shopping_items` and `add_shopping_items`. With Reminders access the app sends the open reminders (any list) with each message; `get_reminders` reads them, `edit_reminders` proposes changes that the app shows as a card and applies only after the user taps **Apply** (`POST …/ai/chats/{chatId}/reminders`). |
+
 ### Phase 7 notes (connections)
 
 Built: all items of [Connections](#connections-between-modules), a new overview and a
@@ -427,6 +441,7 @@ notes). One migration, `0005_connections` (two tables, two columns; nothing to b
   finance module's net total (refunds count back, split bookings by their parts); a
   transaction in that window gets a 🛒 link to the list. **No estimated cost**: ingredients
   have no prices, so the plan's "estimated cost" isn't possible without a price list.
+  *Removed in phase 10 with the shopping lists.*
 - **Notifications everywhere:** `notification_prefs` per family and event (on/off,
   channels; a missing row = the defaults: appointments and coverage on, shopping reminder
   off). Appointment searches keep choosing their channels; the family switch only turns them
@@ -436,12 +451,12 @@ notes). One migration, `0005_connections` (two tables, two columns; nothing to b
   The days told about are remembered and dropped once covered, so a day that loses its cover
   is told again; a failed or impossible send (no channel) retries the next day. The
   **shopping reminder** (from `SHOPPING_REMINDER_HOUR`, 18) sends tomorrow's list (what is
-  still unticked) once per shopping day. Days are the server's local days (the container's
-  `TZ`, Europe/Berlin in production).
+  still unticked) once per shopping day (*removed in phase 10*). Days are the server's local
+  days (the container's `TZ`, Europe/Berlin in production).
 - **Overview:** one dashboard instead of a card per module (the module descriptions are gone,
   a row of module links stays): today (meal or "away", the day's appointments), the next
   uncovered day, coming up (calendar runs and booked appointments together, 30 days), the
-  shopping list, this month's finances, the searches' earliest finds.
+  shopping list (*until phase 10*), this month's finances, the searches' earliest finds.
 - **Settings:** the General tab keeps name, members, invites and leave/delete; the home
   address and notifications (events + channels) moved to a new *Household* tab
   (`?tab=household`; links from the slot page and the search form go there). On phones the
@@ -481,7 +496,7 @@ notes). One migration, `0005_connections` (two tables, two columns; nothing to b
   after a tick) was queued offline and replayed, unticking the item again. The queue also
   drops ops the server refuses for good (4xx other than 401/429) instead of blocking on them
   forever. The sync route is `POST /api/v1/families/{id}/shopping/toggle` (`toggle` stays
-  accepted).
+  accepted). *Gone in phase 10: the shopping list lives in Reminders.*
 - Small fixes found while porting: the ingredient suggestions stayed open after picking one;
   empty prep/cooking times (and program parameters) were saved as 0; a dnd-kit hydration
   mismatch in the step editor.
@@ -516,7 +531,8 @@ while Ohana grows.
   added to the shared list, units by abbreviation, name or alias), `get_meal_plan` (meals,
   away days, iterations, settings), `plan_meals` (`next`, `again`, `setup` only while there is
   no plan), `get_shopping_list`, `tick_shopping_items`, `add_shopping_items` (merges with an
-  open item of the same ingredient and unit); `appointments.ts` — `list_appointment_searches`
+  open item of the same ingredient and unit; *phase 10 replaced the three with
+  `get_shopping_items` and the Reminders tools*); `appointments.ts` — `list_appointment_searches`
   (earliest finds), `find_doctor_specialities`, `create_appointment_search`,
   `change_appointment_search`, `run_appointment_search` (queues only), `get_appointment_slot`
   (distance from home), `book_appointment_slot`; `events.ts` — `list_events`, `add_event`,

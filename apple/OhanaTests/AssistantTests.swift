@@ -164,8 +164,7 @@ struct AssistantChangeAreaTests {
         #expect(AssistantChangeAreas.areas(kind: "categories") == [.finance])
         #expect(AssistantChangeAreas.areas(kind: "benchmark") == [.finance])
         #expect(AssistantChangeAreas.areas(kind: "recipes") == [.recipes, .meals])
-        #expect(AssistantChangeAreas.areas(kind: "plan") == [.mealPlan, .shopping, .meals])
-        #expect(AssistantChangeAreas.areas(kind: "shopping") == [.shopping, .meals])
+        #expect(AssistantChangeAreas.areas(kind: "plan") == [.mealPlan, .meals])
         #expect(AssistantChangeAreas.areas(kind: "appointments") == [.appointments])
         #expect(AssistantChangeAreas.areas(kind: "something-new").isEmpty)
     }
@@ -177,8 +176,7 @@ struct AssistantChangeAreaTests {
         #expect(AssistantChangeAreas.areas(path: "/finance/transactions") == [.finance])
         #expect(AssistantChangeAreas.areas(path: "/finance/settings") == [.finance])
         #expect(AssistantChangeAreas.areas(path: "/meals/recipes/r1") == [.recipes, .meals])
-        #expect(AssistantChangeAreas.areas(path: "/meals/shopping/check") == [.shopping, .meals])
-        #expect(AssistantChangeAreas.areas(path: "/meals/plan/restore") == [.mealPlan, .shopping, .meals])
+        #expect(AssistantChangeAreas.areas(path: "/meals/plan/restore") == [.mealPlan, .meals])
         #expect(AssistantChangeAreas.areas(path: "/appointments/searches/s1") == [.appointments])
         #expect(AssistantChangeAreas.areas(path: "/ai/chats").isEmpty)
     }
@@ -197,11 +195,11 @@ struct AssistantChangeAreaTests {
         #expect(AssistantChangeAreas.areas(tool: "add_event") == [.events, .calendar])
         #expect(AssistantChangeAreas.areas(tool: "change_transactions") == [.finance])
         #expect(AssistantChangeAreas.areas(tool: "save_recipe") == [.recipes, .meals])
-        #expect(AssistantChangeAreas.areas(tool: "plan_meals") == [.mealPlan, .shopping, .meals])
-        #expect(AssistantChangeAreas.areas(tool: "add_shopping_items") == [.shopping, .meals])
+        #expect(AssistantChangeAreas.areas(tool: "plan_meals") == [.mealPlan, .meals])
         #expect(AssistantChangeAreas.areas(tool: "run_appointment_search") == [.appointments])
         #expect(AssistantChangeAreas.areas(tool: "book_appointment_slot") == [.appointments, .events, .calendar])
-        for reading in ["get_calendar", "list_transactions", "web_search", "fetch_page", "list_recipes", "ask_user", "calculate"] {
+        for reading in ["get_calendar", "list_transactions", "web_search", "fetch_page", "list_recipes", "ask_user", "calculate",
+                        "get_shopping_items", "get_reminders"] {
             #expect(AssistantChangeAreas.areas(tool: reading).isEmpty)
         }
     }
@@ -229,16 +227,16 @@ struct AssistantStoreTests {
         #expect(signalled.isEmpty)
 
         let change = AssistantItem.change(AssistantChange(
-            id: "chg", change: "shopping", summary: "Added milk",
-            undo: [AssistantUndoStep(method: "DELETE", path: "/meals/shopping/items/i1")], undone: false
+            id: "chg", change: "recipes", summary: "Saved Lasagne",
+            undo: [AssistantUndoStep(method: "DELETE", path: "/meals/recipes/r1")], undone: false
         ))
-        let tool = AssistantItem.tool(AssistantToolCall(id: "t1", name: "add_shopping_items", args: [:], status: "ok",
+        let tool = AssistantItem.tool(AssistantToolCall(id: "t1", name: "save_recipe", args: [:], status: "ok",
                                                         summary: nil, result: nil, interrupted: false))
         store.apply("c1", .items(rev: 4, items: [(2, tool), (4, change)]))
         #expect(store.current?.rev == 4)
         #expect(store.current?.items.count == 5)
         #expect(store.current?.items[3] == .unknown(kind: ""))
-        #expect(signalled == [[.shopping, .meals]])
+        #expect(signalled == [[.recipes, .meals]])
 
         // Seen once: the same change again (a reconnect) doesn't reload anything.
         store.apply("c1", .items(rev: 4, items: [(4, change)]))
@@ -331,6 +329,24 @@ struct AssistantRenderingTests {
         #expect(AssistantToolLabels.span("2026-01-01", "2027-12-31") == "2026 – 2027")
     }
 
+    @Test func namesTheShoppingAndRemindersTools() {
+        func call(_ name: String, _ args: [String: JSONValue] = [:]) -> AssistantToolCall {
+            AssistantToolCall(id: "t", name: name, args: args, status: "ok", summary: nil, result: nil, interrupted: false)
+        }
+        #expect(AssistantToolLabels.label(call("get_shopping_items")) == "Reading what the meal plan needs")
+        #expect(AssistantToolLabels.label(call("get_reminders")) == "Reading your reminders")
+        #expect(AssistantToolLabels.label(call("edit_reminders")) == "Suggesting changes to your reminders")
+        #expect(AssistantToolLabels.icon("get_shopping_items") == "cart")
+        #expect(AssistantToolLabels.icon("edit_reminders") == "checklist")
+        #expect(AssistantToolLabels.detail(call("get_shopping_items", ["from": .string("2026-11-07")])).hasPrefix("from "))
+        #expect(AssistantToolLabels.detail(call("get_reminders", ["list": .string("Groceries")])) == "“Groceries”")
+        let edit = call("edit_reminders", ["ops": .array([
+            .object(["op": .string("add"), "list": .string("shopping"), "title": .string("Milk")]),
+            .object(["op": .string("complete"), "id": .string("r1")]),
+        ])])
+        #expect(AssistantToolLabels.detail(edit) == "2 changes · Milk")
+    }
+
     @Test func copiesATranscript() {
         let items: [AssistantItem] = [
             .user(text: "Hi", attachments: [.init(kind: "file", name: "a.csv")]),
@@ -342,5 +358,273 @@ struct AssistantRenderingTests {
         #expect(text.contains("📎 a.csv"))
         #expect(text.contains("```json"))
         #expect(text.hasSuffix("\n\n2"))
+    }
+}
+
+/// The assistant's Reminders tools on the device: the edit item, the snapshot every request
+/// carries, applying an edit and its answer.
+struct AssistantRemindersTests {
+    static let itemsJSON = """
+    {
+      "chat": { "id": "c1", "title": "Groceries", "status": "idle", "updatedAt": "2026-11-01T08:00:00.000Z" },
+      "rev": 3,
+      "items": [
+        { "kind": "reminders", "id": "call_1", "summary": "Add 1 reminder, change 1 reminder, complete 1 reminder, delete 1 reminder",
+          "ops": [
+            { "op": "add", "list": "L1", "listTitle": "Groceries", "title": "Milk", "due": "2026-11-07", "notes": "2 l" },
+            { "op": "update", "id": "r1", "itemTitle": "Call dentist", "list": "L2", "listTitle": "Work", "due": null, "notes": "" },
+            { "op": "complete", "id": "r2", "itemTitle": "Pay rent", "list": "L2", "listTitle": "Work" },
+            { "op": "delete", "id": "r3", "itemTitle": "Old note", "list": "L1", "listTitle": "Groceries" },
+            { "op": "teleport", "id": "r4" }
+          ] },
+        { "kind": "reminders", "id": "call_2", "summary": "Delete “X”",
+          "ops": [ { "op": "delete", "id": "r9", "itemTitle": "X", "list": "L1", "listTitle": "Groceries" } ],
+          "answer": { "applied": true, "results": [ { "ok": false, "error": "The reminder is gone." } ] } },
+        { "kind": "reminders", "id": "call_3", "summary": "S", "ops": [], "answer": { "applied": false } },
+        { "kind": "reminders", "id": "call_4", "summary": "S", "ops": [], "skipped": true }
+      ]
+    }
+    """
+
+    private func store(_ items: [AssistantItem]) -> AssistantChatStore {
+        let store = AssistantChatStore(api: FamilyAPI(client: APIClient(baseURL: URL(string: "https://x.example")!, token: nil),
+                                                      familyID: "f1"))
+        store.remindersContext = { nil }
+        store.show(AssistantChat(id: "c1", title: "R", status: "idle", items: items, rev: 1, usage: nil, page: "meals",
+                                 queued: []))
+        return store
+    }
+
+    @Test func decodesTheRemindersItem() throws {
+        let state = try JSONDecoder().decode(AssistantChatState.self, from: Data(Self.itemsJSON.utf8))
+        #expect(state.items.count == 4)
+        guard case let .reminders(open) = state.items[0] else { Issue.record("reminders"); return }
+        #expect(open.id == "call_1")
+        #expect(open.answer == nil)
+        #expect(!open.skipped)
+        #expect(open.ops.map(\.op) == ["add", "update", "complete", "delete", "teleport"])
+        #expect(open.ops[0] == AssistantReminderOp(op: "add", list: "L1", listTitle: "Groceries", title: "Milk", notes: "2 l",
+                                                   due: .set(ReminderDue(day: Day(year: 2026, month: 11, day: 7)))))
+        #expect(open.ops[1].due == .clear)
+        #expect(open.ops[1].notes == "")
+        #expect(open.ops[1].itemTitle == "Call dentist")
+        #expect(open.ops[2].due == .keep)
+        #expect(open.ops[4].list == "")
+        #expect(open.outcome == nil)
+
+        guard case let .reminders(failed) = state.items[1], case let .reminders(declined) = state.items[2],
+              case let .reminders(skipped) = state.items[3] else { Issue.record("answered"); return }
+        #expect(failed.answer?.applied == true)
+        #expect(failed.answer?.results == [.failed("The reminder is gone.")])
+        #expect(failed.outcome == "Applied, 1 of 1 failed")
+        #expect(declined.answer == .init(applied: false, results: nil))
+        #expect(declined.outcome == "Not applied")
+        #expect(skipped.skipped)
+        #expect(skipped.outcome == "Not answered")
+    }
+
+    @Test func findsTheWaitingEdit() {
+        let edit = AssistantRemindersEdit(id: "e1", summary: "Add “Milk”", ops: [], answer: nil, skipped: false)
+        let q = AssistantQuestion(id: "q", question: "Which?", options: ["A"], multiple: false, answer: nil, skipped: false)
+        // Only the last of them waits.
+        let s = store([.question(q), .reminders(edit)])
+        #expect(s.openRemindersEdit()?.edit.id == "e1")
+        #expect(s.openQuestion() == nil)
+        #expect(store([.reminders(edit), .question(q)]).openRemindersEdit() == nil)
+        #expect(store([.reminders(edit), .user(text: "No", attachments: [])]).openRemindersEdit() == nil)
+        var answered = edit
+        answered.answer = .init(applied: false, results: nil)
+        #expect(store([.reminders(answered)]).openRemindersEdit() == nil)
+    }
+
+    @Test func describesTheOps() {
+        let add = AssistantReminderOp(op: "add", list: "L1", listTitle: "Groceries", title: "Milk",
+                                      due: .set(ReminderDue(day: Day(year: 2026, month: 11, day: 7))))
+        let line = AssistantReminderOpLine.make(add, locale: Locale(identifier: "en_GB"))
+        #expect(line.text.hasPrefix("Add “Milk” to Groceries · due "))
+        #expect(line.text.contains("7"))
+        #expect(line.text.contains("Nov"))
+        #expect(!line.destructive)
+
+        let move = AssistantReminderOp(op: "update", id: "r1", itemTitle: "X", list: "L2", listTitle: "Work")
+        #expect(AssistantReminderOpLine.make(move).text == "Move “X” to Work")
+
+        let change = AssistantReminderOp(op: "update", id: "r1", itemTitle: "X", list: "L2", listTitle: "Work",
+                                         title: "Y", notes: "", due: .clear)
+        let changed = AssistantReminderOpLine.make(change)
+        #expect(changed.text == "Change “X”")
+        #expect(changed.detail == "rename to “Y”, no due date, remove the notes")
+        #expect(AssistantReminderOpLine.make(change, currentListID: "L1").detail?.hasSuffix("move to Work") == true)
+        #expect(AssistantReminderOpLine.make(change, currentListID: "L2").detail == "rename to “Y”, no due date, remove the notes")
+
+        let complete = AssistantReminderOp(op: "complete", id: "r2", itemTitle: "Call dentist", list: "L2", listTitle: "Work")
+        #expect(AssistantReminderOpLine.make(complete).text == "Complete “Call dentist”")
+        #expect(AssistantReminderOpLine.make(complete).detail == "Work")
+        let delete = AssistantReminderOp(op: "delete", id: "r3", itemTitle: "Y", list: "L1", listTitle: "Groceries")
+        #expect(AssistantReminderOpLine.make(delete).text == "Delete “Y”")
+        #expect(AssistantReminderOpLine.make(delete).destructive)
+
+        let timed = AssistantReminderOpLine.dueText(ReminderDue(day: Day(year: 2026, month: 11, day: 7), hour: 18, minute: 30),
+                                                   locale: Locale(identifier: "en_GB"))
+        #expect(timed.contains("18:30"))
+    }
+
+    @Test func buildsTheSnapshot() throws {
+        let lists = (0..<105).map { ReminderList(id: "L\($0)", title: "List \($0)", source: "iCloud", isWritable: true) }
+            + [ReminderList(id: "RO", title: "Holidays", source: "Subscribed", isWritable: false)]
+        let long = String(repeating: "a", count: 250)
+        var reminders = (0..<520).map {
+            ReminderSnapshot(id: "r\($0)", listID: "L0", title: "Item \($0)", due: nil)
+        }
+        reminders += [
+            ReminderSnapshot(id: "soon", listID: "L1", title: "  \(long)  ", notes: String(repeating: "n", count: 1200),
+                             due: ReminderDue(day: Day(year: 2026, month: 11, day: 7), hour: 18, minute: 30)),
+            ReminderSnapshot(id: "done", listID: "L1", title: "Done", due: ReminderDue(day: Day(year: 2026, month: 1, day: 1)),
+                             isCompleted: true),
+            ReminderSnapshot(id: "ro", listID: "RO", title: "Read only", due: ReminderDue(day: Day(year: 2026, month: 1, day: 1))),
+            ReminderSnapshot(id: "far", listID: "L104", title: "Beyond the lists",
+                             due: ReminderDue(day: Day(year: 2026, month: 1, day: 1))),
+        ]
+        let snapshot = AssistantRemindersContext.build(lists: lists, reminders: reminders, shoppingListID: "L3")
+        #expect(snapshot.lists.count == 100)
+        #expect(!snapshot.lists.contains { $0.id == "RO" })
+        #expect(snapshot.shoppingListId == "L3")
+        #expect(snapshot.items.count == 500)
+        #expect(snapshot.items[0].id == "soon") // nearest due first
+        #expect(snapshot.items[0].title.count == 200)
+        #expect(snapshot.items[0].title.first == "a")
+        #expect(snapshot.items[0].notes?.count == 1000)
+        #expect(!snapshot.items.contains { ["done", "ro", "far"].contains($0.id) })
+        #expect(AssistantRemindersContext.build(lists: lists, reminders: [], shoppingListID: "RO").shoppingListId == nil)
+
+        let small = AssistantRemindersContext.build(
+            lists: [ReminderList(id: "L1", title: "Groceries", source: "iCloud", isWritable: true)],
+            reminders: [ReminderSnapshot(id: "r1", listID: "L1", title: "Milk", notes: "  ", due: nil),
+                        ReminderSnapshot(id: "r2", listID: "L1", title: "Call", notes: "Dr. Weber",
+                                         due: ReminderDue(day: Day(year: 2026, month: 11, day: 7), hour: 9, minute: 5))],
+            shoppingListID: nil
+        )
+        let json = try JSONSerialization.jsonObject(with: APIClient.encoder.encode(small)) as? [String: Any]
+        #expect(json?["shoppingListId"] is NSNull)
+        #expect((json?["lists"] as? [[String: Any]])?.first?["title"] as? String == "Groceries")
+        let items = json?["items"] as? [[String: Any]] ?? []
+        #expect(items.count == 2)
+        #expect(items[0]["id"] as? String == "r2")
+        #expect(items[0]["due"] as? String == "2026-11-07T09:05")
+        #expect(items[0]["notes"] as? String == "Dr. Weber")
+        #expect(items[0]["completed"] as? Bool == false)
+        #expect(items[1]["due"] is NSNull)
+        #expect(items[1]["notes"] == nil)
+    }
+
+    @Test func encodesTheAnswer() throws {
+        let context = AssistantRemindersContext(shoppingListId: "L1", lists: [.init(id: "L1", title: "Groceries")], items: [])
+        let applied = AssistantChatStore.remindersAnswer(
+            id: "call_1", answer: .init(applied: true, results: [.done("new"), .failed("The reminder is gone.")]),
+            page: "meals", year: 2026, lang: "en", today: "2026-11-01", reminders: context
+        )
+        let a = try JSONSerialization.jsonObject(with: APIClient.encoder.encode(applied)) as? [String: Any]
+        #expect(a?["id"] as? String == "call_1")
+        #expect(a?["applied"] as? Bool == true)
+        #expect(a?["page"] as? String == "meals")
+        #expect(a?["today"] as? String == "2026-11-01")
+        let results = a?["results"] as? [[String: Any]] ?? []
+        #expect(results.count == 2)
+        #expect(results[0]["ok"] as? Bool == true)
+        #expect(results[0]["id"] as? String == "new")
+        #expect(results[0]["error"] == nil)
+        #expect(results[1]["ok"] as? Bool == false)
+        #expect(results[1]["error"] as? String == "The reminder is gone.")
+        #expect(results[1]["id"] == nil)
+        #expect((a?["reminders"] as? [String: Any])?["shoppingListId"] as? String == "L1")
+
+        let declined = AssistantChatStore.remindersAnswer(
+            id: "call_1", answer: .init(applied: false, results: nil), page: "meals", year: 2026, lang: "de",
+            today: "2026-11-01", reminders: nil
+        )
+        let d = try JSONSerialization.jsonObject(with: APIClient.encoder.encode(declined)) as? [String: Any]
+        #expect(d?["applied"] as? Bool == false)
+        #expect(d?["results"] == nil)
+        #expect(d?["reminders"] == nil)
+
+        let message = AssistantChatInput(text: "Hi", attachments: nil, page: "overview", year: 2026, lang: "en",
+                                         today: "2026-11-01", reminders: context)
+        let m = try JSONSerialization.jsonObject(with: APIClient.encoder.encode(message)) as? [String: Any]
+        #expect((m?["reminders"] as? [String: Any])?["lists"] is [Any])
+    }
+
+    /// Records what applying does; ids in `missing` are gone, and `commitFails` breaks the save.
+    final class FakeReminders: RemindersWriting {
+        var calls: [String] = []
+        var missing: Set<String> = []
+        var commitFails = false
+        var lists = ["L1": ReminderList(id: "L1", title: "Groceries", source: "", isWritable: true),
+                     "L2": ReminderList(id: "L2", title: "Work", source: "", isWritable: true)]
+
+        func list(_ id: String) -> ReminderList? { lists[id] }
+        func add(_ draft: ReminderDraft, to listID: String, commit: Bool) throws -> String {
+            #expect(!commit)
+            calls.append("add \(draft.title) \(listID) \(draft.due?.description ?? "-") \(draft.notes ?? "-")")
+            return "new-\(draft.title)"
+        }
+        func update(_ id: String, _ change: ReminderChange, commit: Bool) throws {
+            guard !missing.contains(id) else { throw RemindersError.reminderNotFound }
+            let due = change.due.map { $0?.description ?? "clear" } ?? "keep"
+            let notes = change.notes.map { $0 ?? "clear" } ?? "keep"
+            calls.append("update \(id) \(change.title ?? "-") \(due) \(notes) \(change.listID ?? "-")")
+        }
+        func setCompleted(_ id: String, _ completed: Bool, commit: Bool) throws {
+            guard !missing.contains(id) else { throw RemindersError.reminderNotFound }
+            calls.append("\(completed ? "complete" : "uncomplete") \(id)")
+        }
+        func delete(_ id: String, commit: Bool) throws {
+            guard !missing.contains(id) else { throw RemindersError.reminderNotFound }
+            calls.append("delete \(id)")
+        }
+        func commit() throws {
+            calls.append("commit")
+            if commitFails { throw RemindersError.noAccess }
+        }
+        func reset() { calls.append("reset") }
+    }
+
+    @Test func appliesEachOpAndReportsFailures() {
+        let ops = [
+            AssistantReminderOp(op: "add", list: "L1", listTitle: "Groceries", title: "Milk",
+                                due: .set(ReminderDue(day: Day(year: 2026, month: 11, day: 7)))),
+            AssistantReminderOp(op: "update", id: "r1", itemTitle: "X", list: "L2", listTitle: "Work", notes: "", due: .clear),
+            AssistantReminderOp(op: "complete", id: "gone", itemTitle: "Gone", list: "L1", listTitle: "Groceries"),
+            AssistantReminderOp(op: "update", id: "r2", itemTitle: "Y", list: "L9", listTitle: "Nowhere", title: "Z"),
+            AssistantReminderOp(op: "uncomplete", id: "r3", itemTitle: "W", list: "L1", listTitle: "Groceries"),
+            AssistantReminderOp(op: "delete", id: "r4", itemTitle: "V", list: "L1", listTitle: "Groceries"),
+            AssistantReminderOp(op: "teleport", list: "", listTitle: ""),
+        ]
+        let fake = FakeReminders()
+        fake.missing = ["gone"]
+        let results = AssistantRemindersApply.perform(ops, on: fake)
+        #expect(fake.calls == [
+            "add Milk L1 2026-11-07 -",
+            "update r1 - clear clear L2",
+            "uncomplete r3",
+            "delete r4",
+            "commit",
+        ])
+        #expect(results.map(\.ok) == [true, true, false, false, true, true, false])
+        #expect(results[0].id == "new-Milk")
+        #expect(results[1].id == "r1")
+        #expect(results[2].error == RemindersError.reminderNotFound.errorDescription)
+        #expect(results[3].error == RemindersError.listNotFound.errorDescription)
+
+        let broken = FakeReminders()
+        broken.commitFails = true
+        let none = AssistantRemindersApply.perform(Array(ops.prefix(2)), on: broken)
+        #expect(broken.calls.suffix(2) == ["commit", "reset"])
+        #expect(none.allSatisfy { !$0.ok && $0.error == RemindersError.noAccess.errorDescription })
+
+        // Nothing went through: nothing to save.
+        let nothing = FakeReminders()
+        nothing.missing = ["gone"]
+        _ = AssistantRemindersApply.perform([ops[2]], on: nothing)
+        #expect(nothing.calls.isEmpty)
     }
 }
