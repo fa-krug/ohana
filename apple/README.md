@@ -169,14 +169,25 @@ Connect). The workflow needs one Archive action per platform, each with its own 
 it finds no destination). `ci_scripts/ci_post_clone.sh` generates the project with XcodeGen there, since
 `Ohana.xcodeproj` isn't committed. `MARKETING_VERSION` in `project.yml` is the version people see;
 raise it for a new release. The build number (`CURRENT_PROJECT_VERSION`) doesn't need editing:
-Xcode Cloud gives every build its own. Both apps embed the widget extension
-(`de.fa-krug.Ohana.Widgets`: the widgets, on iOS also the cook timers' Live Activity), signed
-with them; like the share extensions it has the Keychain sharing capability; the app has the
-Time Sensitive Notifications capability (finished timers come through a Focus). The share
-extensions (`OhanaShare`, `OhanaShare-macOS`) have their own bundle id, `de.fa-krug.Ohana.Share`,
-with the Keychain sharing capability like the apps: with automatic signing Xcode registers it,
-otherwise create it once in the developer account (Identifiers, Keychain Sharing on) before Xcode
-Cloud can sign an archive. The app declares no encryption beyond HTTPS
+Xcode Cloud gives every build its own.
+
+Xcode Cloud's signing doesn't register bundle ids or turn capabilities on: whatever the
+entitlements ask for must already be on the identifiers in the developer account (Certificates,
+Identifiers & Profiles → Identifiers), or the archive builds and every export fails (`xcodebuild
+-exportArchive` exit code 70; the reason is in the build's artifacts, `*-export-archive-logs/`).
+Signing once from Xcode with the team's account and automatic signing sets them up too. Each
+identifier is used by the iOS and the macOS target alike:
+
+| Identifier | What it is | Capabilities to turn on |
+| --- | --- | --- |
+| `de.fa-krug.Ohana` | the apps | Push Notifications, Time Sensitive Notifications (finished timers come through a Focus) |
+| `de.fa-krug.Ohana.Widgets` | the widget extension (on iOS also the cook timers' Live Activity) | – |
+| `de.fa-krug.Ohana.Share` | the share extensions | – |
+| `de.fa-krug.Ohana.NotificationService` | the notification service extensions (decrypt pushes) | – |
+
+All of them share the app's keychain group (`keychain-access-groups`), which needs no capability.
+
+The app declares no encryption beyond HTTPS
 (`ITSAppUsesNonExemptEncryption`) and its use of `UserDefaults` in
 `Ohana/Resources/PrivacyInfo.xcprivacy`; the iOS icon (`icon-1024.png`) must stay without an
 alpha channel.

@@ -38,8 +38,8 @@ struct FamilySwitcher: View {
 }
 
 /// Opens the family picker: the families to switch to, and creating or joining one (in the
-/// demo: connecting a server). `showsPages` adds the settings, for the iPhone, where there is no
-/// sidebar to show them. The visible one shows invite links the app
+/// demo: connecting a server). `showsPages` adds the settings, where there is no sidebar to show
+/// them (on iPhone also the appointments: `Module.phonePages`). The visible one shows invite links the app
 /// was opened with (`InviteInbox`).
 struct FamilyPickerButton<ButtonLabel: View>: View {
     @Environment(AppModel.self) private var app
@@ -78,13 +78,13 @@ struct FamilyPickerButton<ButtonLabel: View>: View {
         case .create: creating = true
         case .join: joining = InviteRequest()
         case .connect: app.showsConnect = true
-        case .settings: Module.settings.open()
+        case let .page(page): page.open()
         }
     }
 }
 
 private enum FamilyPickerAction {
-    case family(String), create, join, connect, settings
+    case family(String), create, join, connect, page(Module)
 }
 
 /// The picker's panel: a row per family (the current one checked), then what else it offers.
@@ -92,6 +92,11 @@ private struct FamilyPicker: View {
     @Environment(AppModel.self) private var app
     let showsPages: Bool
     let choose: (FamilyPickerAction) -> Void
+
+    /// The pages the sidebar would show.
+    private var pages: [Module] {
+        Module.phonePages.isEmpty ? [.settings] : Module.phonePages.filter { app.isEnabled($0) }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -113,7 +118,9 @@ private struct FamilyPicker: View {
             }
             if showsPages {
                 Divider().padding(.vertical, 4)
-                actionRow("Settings", systemImage: Module.settings.systemImage, .settings)
+                ForEach(pages) { page in
+                    actionRow(page.title, systemImage: page.systemImage, .page(page))
+                }
             }
         }
         .padding(8)
