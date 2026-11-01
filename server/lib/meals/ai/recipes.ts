@@ -1,6 +1,7 @@
 // The recipe generator's database side (port of cookless's app/api/recipes/generate/route.ts
-// and lib/recipes/images.ts generateRecipeImageFromAI, scoped to a family): what the prompt
-// gets from the family's recipes, tags and the shared ingredients and units; the tag and unit
+// and lib/recipes/images.ts generateRecipeImageFromAI, scoped to a family): what the prompts
+// (the generator's and a web page's import) get from the family's recipes, tags and the shared
+// ingredients and units; the tag and unit
 // ids of what the model made up; and an AI photo for a stored recipe.
 
 import { and, asc, eq } from "drizzle-orm";
@@ -10,7 +11,10 @@ import {
   cookingSteps, ingredients, mealTags, recipeIngredients, recipes, recipeTags, units,
 } from "@/lib/db/schema";
 import { deleteImageFile, processToWebp, writeRecipeImage } from "@/lib/meals/images/storage";
-import { buildGenerationPrompt, buildImagePrompt, type PromptRecipe, selectReferenceRecipes } from "./prompt";
+import {
+  type BuildImportArgs, buildGenerationPrompt, buildImagePrompt, buildImportPrompt, type PromptCatalog, type PromptRecipe,
+  selectReferenceRecipes,
+} from "./prompt";
 import type { VerifiedRecipe } from "./verify";
 
 const MAX_REFERENCE_RECIPES = 10;
@@ -58,9 +62,9 @@ export interface PromptInput {
   language: string;
 }
 
-/** The generator's prompt for the family: its tags, its recipes as style references (those
- *  with the required tags first) and titles not to repeat, the shared ingredients and units. */
-export function recipePrompt(db: Db, familyId: string, input: PromptInput): string {
+/** What the prompts name: the shared ingredients (the first MAX_INGREDIENTS) and units, the
+ *  family's tags. */
+function catalogOf(db: Db, familyId: string) {
   const ingredientRows = db
     .select({ nameEn: ingredients.nameEn, nameDe: ingredients.nameDe, category: ingredients.category })
     .from(ingredients)
@@ -72,6 +76,21 @@ export function recipePrompt(db: Db, familyId: string, input: PromptInput): stri
     .from(mealTags)
     .where(eq(mealTags.familyId, familyId))
     .all();
+  return {
+    unitRows,
+    tagRows,
+    catalog: {
+      ingredients: ingredientRows,
+      units: unitRows.map((u) => ({ abbreviation: u.abbreviation, nameEn: u.nameEn, nameDe: u.nameDe })),
+      tags: tagRows,
+    } satisfies PromptCatalog,
+  };
+}
+
+/** The generator's prompt for the family: its tags, its recipes as style references (those
+ *  with the required tags first) and titles not to repeat, the shared ingredients and units. */
+export function recipePrompt(db: Db, familyId: string, input: PromptInput): string {
+  const { unitRows, tagRows, catalog } = catalogOf(db, familyId);
   const recipeRows = db.select().from(recipes).where(eq(recipes.familyId, familyId)).all();
   const recipeTagRows = db
     .select({ recipeId: recipeTags.recipeId, tagId: recipeTags.tagId })
@@ -110,13 +129,17 @@ export function recipePrompt(db: Db, familyId: string, input: PromptInput): stri
     count: input.count,
     freeText: input.freeText,
     language: input.language,
-    ingredients: ingredientRows,
-    units: unitRows.map((u) => ({ abbreviation: u.abbreviation, nameEn: u.nameEn, nameDe: u.nameDe })),
-    tags: tagRows,
+    ...catalog,
     requiredTagIds: ownTagIds,
     referenceRecipes,
     allTitles: recipeRows.map((r) => r.title),
   });
+}
+
+/** The import's prompt for a web page (buildImportPrompt) with the family's tags and the
+ *  shared ingredients and units. */
+export function importPrompt(db: Db, familyId: string, page: Omit<BuildImportArgs, keyof PromptCatalog>): string {
+  return buildImportPrompt({ ...catalogOf(db, familyId).catalog, ...page });
 }
 
 /** Resolves a generated recipe's tag names to the family's tag ids and its units'

@@ -1,13 +1,15 @@
 import SwiftUI
 
-/// What the editor sheet shows: a new transaction, or one of the list.
+/// What the editor sheet shows: a new transaction, one read from a receipt, or one of the list.
 enum FinanceEditTarget: Identifiable {
     case new
+    case scanned(ReceiptScan)
     case existing(FinanceTransaction)
 
     var id: String {
         switch self {
         case .new: "new"
+        case .scanned: "scan"
         case let .existing(t): t.id
         }
     }
@@ -87,6 +89,10 @@ struct FinanceTransactionEditor: View {
         if case let .existing(t) = target { t } else { nil }
     }
 
+    private var scan: ReceiptScan? {
+        if case let .scanned(scan) = target { scan } else { nil }
+    }
+
     private var hasChanges: Bool { store.canEdit && draft != original }
 
     var body: some View {
@@ -136,6 +142,7 @@ struct FinanceTransactionEditor: View {
 
     @ViewBuilder
     private var editForm: some View {
+        if let scan { scanned(scan) }
         Section {
             Picker("Kind", selection: $draft.income) {
                 Text("Expense").tag(false)
@@ -181,7 +188,12 @@ struct FinanceTransactionEditor: View {
                     ForEach(store.accounts) { Text($0.label).tag(Optional($0.id)) }
                 }
             }
+        } footer: {
+            if scan != nil && draft.categoryId == nil && store.sortsOnSave {
+                Text("Left without one, it is sorted into a category when you save.")
+            }
         }
+        if existing == nil && !draft.income { shoppingDay }
         Section("Note") {
             TextField("Note", text: $draft.note, axis: .vertical)
                 .lineLimit(2...6)
@@ -192,6 +204,40 @@ struct FinanceTransactionEditor: View {
             Section {
                 Button("Delete transaction", systemImage: "trash", role: .destructive) { confirmDelete = true }
                     .disabled(busy)
+            }
+        }
+    }
+
+    /// What the receipt gave: the fields are filled in, the user checks them.
+    private func scanned(_ scan: ReceiptScan) -> some View {
+        Section {
+            Label(scan.amountCents == nil && scan.date == nil && scan.shop == nil
+                  ? String(localized: "Nothing could be read from the receipt")
+                  : String(localized: "Filled in from the receipt"),
+                  systemImage: "doc.text.viewfinder")
+        } footer: {
+            if scan.amountCents == nil {
+                Text("No total found: type in the amount.")
+            } else {
+                Text("Read on this device. Check the amount and the date before saving.")
+            }
+        }
+    }
+
+    /// A purchase near a shopping day: booked as groceries, it links to that day's list.
+    @ViewBuilder
+    private var shoppingDay: some View {
+        if let trip = store.shoppingLinks.trip(near: Day(draft.date).description), let day = Day(trip.date),
+           let groceries = store.groceriesCategory {
+            Section {
+                if store.shoppingLinks.categoryIds.contains(draft.categoryId ?? "") {
+                    Label("Linked to the shopping of \(day.formatted())", systemImage: "cart")
+                        .foregroundStyle(.secondary)
+                } else {
+                    Button("Groceries of the shopping on \(day.formatted())", systemImage: "cart.badge.plus") {
+                        draft.categoryId = groceries.id
+                    }
+                }
             }
         }
     }
@@ -244,17 +290,28 @@ struct FinanceTransactionEditor: View {
             // A new one goes to the account the list shows, else the first one.
             let shown = store.filter.account
             draft.accountId = !shown.isEmpty && shown != "none" ? shown : store.accounts.first?.id
-            amountFocused = true
+            amountFocused = scan?.amountCents == nil
         }
+        // The receipt's fields count as changes: cancelling asks first.
         original = draft
+        if let scan {
+            if let cents = scan.amountCents { draft.amount = FinanceMoney.input(cents) }
+            if let day = scan.date { draft.date = day.date }
+            if let shop = scan.shop { draft.payee = shop }
+        }
     }
 
     private func save() async {
         guard let fields = draft.fields else { return }
         busy = true
         let op = existing.map { FinanceOp.update($0.id, fields) } ?? FinanceOp.add(fields)
-        let ok = await store.change([op], message: existing == nil ? String(localized: "Transaction added") : String(localized: "Saved"))
+        let added = await store.change([op], message: existing == nil ? String(localized: "Transaction added") : String(localized: "Saved"))
         busy = false
-        if ok != nil { dismiss() }
+        guard let added else { return }
+        // A receipt left without a category: sorted after the sheet closes (the AI can take a while).
+        if scan != nil, fields.categoryId == nil, store.sortsOnSave, let id = added.first {
+            Task { await store.categorizeReceipt(id, date: fields.date) }
+        }
+        dismiss()
     }
 }

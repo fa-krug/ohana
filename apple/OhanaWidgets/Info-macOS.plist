@@ -30,7 +30,5 @@
 		<key>NSExtensionPointIdentifier</key>
 		<string>com.apple.widgetkit-extension</string>
 	</dict>
-	<key>OhanaAppGroup</key>
-	<string>$(OHANA_APP_GROUP)</string>
 </dict>
 </plist>

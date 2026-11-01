@@ -1,27 +1,9 @@
 import Foundation
 
-// What the Home Screen and Lock Screen widgets (apple/OhanaWidgets) show, and where they find it.
-// Compiled into the app and the widget extension: the app tells the widgets which server and
-// family to show (`WidgetSource`), the extension loads that family's overview with the device's
-// API token and keeps the last one (`WidgetSnapshot`), both in the App Group (`WidgetStore`).
-
-/// The server and family the widgets show: the family selected in the app. Written by the app
-/// (`WidgetSync`), removed when it signs out.
-struct WidgetSource: Codable, Hashable, Sendable {
-    var server: URL
-    var familyID: String
-    var familyName: String
-    /// The modules the server has off (`ServerInfo`): their widgets say so.
-    var disabledModules: [String] = []
-
-    func isEnabled(_ module: String) -> Bool { !disabledModules.contains(module) }
-
-    /// GET /api/v1/families/{id}/overview for `today` (server/lib/families/app-routes.ts).
-    func overviewURL(today: Day) -> URL {
-        server.appending(path: "api/v1/families/\(familyID)/overview")
-            .appending(queryItems: [URLQueryItem(name: "today", value: today.description)])
-    }
-}
+// What the Home Screen and Lock Screen widgets (apple/OhanaWidgets) show. Compiled into the app
+// and the widget extension. The widgets show the family the app shows: the extension reads the
+// server, token and family from the Keychain (`SharedConnection`), loads that family's overview
+// and keeps the last one (`WidgetSnapshot`, `WidgetStore`).
 
 /// The family's overview (GET /overview) cut down to what the widgets show: today and tomorrow,
 /// tonight's dinner, the shopping list and the appointments the searches found.
@@ -79,7 +61,6 @@ struct WidgetSnapshot: Codable, Hashable, Sendable {
     }
 
     var familyID: String
-    var familyName: String
     var loadedAt: Date
     /// The day the overview was loaded for; `items` hold it and the day after.
     var today: Day
@@ -142,13 +123,20 @@ struct WidgetSnapshot: Codable, Hashable, Sendable {
 }
 
 extension WidgetSnapshot {
-    /// The snapshot of GET /overview's answer (server/lib/families/dashboard.ts `Dashboard`).
-    init(overview data: Data, source: WidgetSource, loadedAt: Date = Date()) throws {
-        let wire = try JSONDecoder().decode(OverviewWire.self, from: data)
-        self.init(wire, source: source, loadedAt: loadedAt)
+    /// GET /api/v1/families/{id}/overview for `today` (server/lib/families/app-routes.ts).
+    static func overviewURL(server: URL, familyID: String, today: Day) -> URL {
+        server.appending(path: "api/v1/families/\(familyID)/overview")
+            .appending(queryItems: [URLQueryItem(name: "today", value: today.description)])
     }
 
-    private init(_ wire: OverviewWire, source: WidgetSource, loadedAt: Date) {
+    /// The snapshot of GET /overview's answer (server/lib/families/dashboard.ts `Dashboard`);
+    /// `disabledModules` are the modules the server has off (`ServerInfo`), whose widgets say so.
+    init(overview data: Data, familyID: String, disabledModules: [String] = [], loadedAt: Date = Date()) throws {
+        let wire = try JSONDecoder().decode(OverviewWire.self, from: data)
+        self.init(wire, familyID: familyID, disabledModules: disabledModules, loadedAt: loadedAt)
+    }
+
+    private init(_ wire: OverviewWire, familyID: String, disabledModules: [String], loadedAt: Date) {
         let today = wire.today
         let days = [today, today.adding(days: 1)]
         var items: [Item] = []
@@ -181,8 +169,7 @@ extension WidgetSnapshot {
                         doctorName: first.doctorName, slot: slot, doctors: search.doctors)
         }
         self.init(
-            familyID: source.familyID,
-            familyName: source.familyName,
+            familyID: familyID,
             loadedAt: loadedAt,
             today: today,
             items: items,
@@ -190,8 +177,8 @@ extension WidgetSnapshot {
             dinner: wire.meals?.today.map { Dinner(recipeID: $0.recipeId, title: $0.recipeTitle, isLeftover: $0.isLeftover) },
             shopping: wire.meals?.shopping.map { Shopping(listID: $0.id, date: $0.shoppingDate, open: $0.open, total: $0.total) },
             finds: finds.sorted { $0.slot < $1.slot },
-            mealsEnabled: source.isEnabled("meals"),
-            appointmentsEnabled: source.isEnabled("appointments")
+            mealsEnabled: !disabledModules.contains("meals"),
+            appointmentsEnabled: !disabledModules.contains("appointments")
         )
     }
 }
@@ -277,58 +264,52 @@ private struct OverviewWire: Decodable {
     let birthdays: [Birthday]
 }
 
-/// The widgets' files in the App Group's container (`OhanaAppGroup` in the Info.plists: the
-/// `group.` id on iOS, the team-prefixed one on the Mac): `Widgets/source.json` and
-/// `Widgets/snapshot.json`.
+/// What the widgets keep: the modules the server has off (written by the app, in the Keychain
+/// like `SharedConnection`, so no App Group is needed) and the last snapshot (the extension's own,
+/// in its container's Application Support).
 enum WidgetStore {
-    /// The widgets' kinds, for reloading them.
+    /// The widgets' kinds.
     static let todayKind = "de.fa-krug.Ohana.today"
     static let tomorrowKind = "de.fa-krug.Ohana.tomorrow"
     static let dinnerKind = "de.fa-krug.Ohana.dinner"
     static let shoppingKind = "de.fa-krug.Ohana.shopping"
     static let appointmentKind = "de.fa-krug.Ohana.appointment"
 
-    static var directory: URL? {
-        guard let group = Bundle.main.object(forInfoDictionaryKey: "OhanaAppGroup") as? String, !group.isEmpty,
-              let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group) else {
-            return nil
-        }
-        return container.appending(path: "Widgets", directoryHint: .isDirectory)
+    /// The Keychain account (service `de.fa-krug.Ohana`).
+    private static let modulesAccount = "widgetDisabledModules"
+
+    static func loadDisabledModules() -> [String] {
+        (Keychain.load(modulesAccount) ?? "").split(separator: ",").map(String.init)
     }
 
-    static func loadSource() -> WidgetSource? { read(WidgetSource.self, "source.json") }
-
-    /// Saves the source (nil: signed out, the snapshot goes too); false when it didn't change.
-    @discardableResult
-    static func saveSource(_ source: WidgetSource?) -> Bool {
-        guard source != loadSource() else { return false }
-        if let source {
-            write(source, "source.json")
-            if loadSnapshot()?.familyID != source.familyID { remove("snapshot.json") }
+    static func saveDisabledModules(_ modules: [String]) {
+        guard modules != loadDisabledModules() else { return }
+        if modules.isEmpty {
+            Keychain.delete(modulesAccount)
         } else {
-            remove("source.json")
-            remove("snapshot.json")
+            Keychain.save(modules.joined(separator: ","), for: modulesAccount)
         }
-        return true
     }
 
-    static func loadSnapshot() -> WidgetSnapshot? { read(WidgetSnapshot.self, "snapshot.json") }
-
-    static func saveSnapshot(_ snapshot: WidgetSnapshot) { write(snapshot, "snapshot.json") }
-
-    private static func read<T: Decodable>(_ type: T.Type, _ name: String) -> T? {
-        guard let url = directory?.appending(path: name), let data = try? Data(contentsOf: url) else { return nil }
-        return try? JSONDecoder().decode(T.self, from: data)
+    private static var snapshotFile: URL? {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
+            .appending(path: "Widgets/snapshot.json")
     }
 
-    private static func write(_ value: some Encodable, _ name: String) {
-        guard let directory, let data = try? JSONEncoder().encode(value) else { return }
-        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        try? data.write(to: directory.appending(path: name), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+    static func loadSnapshot() -> WidgetSnapshot? {
+        guard let url = snapshotFile, let data = try? Data(contentsOf: url) else { return nil }
+        return try? JSONDecoder().decode(WidgetSnapshot.self, from: data)
     }
 
-    private static func remove(_ name: String) {
-        guard let url = directory?.appending(path: name) else { return }
+    static func saveSnapshot(_ snapshot: WidgetSnapshot) {
+        guard let url = snapshotFile, let data = try? JSONEncoder().encode(snapshot) else { return }
+        try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? data.write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+    }
+
+    /// Signed out: nothing of the family stays.
+    static func removeSnapshot() {
+        guard let url = snapshotFile else { return }
         try? FileManager.default.removeItem(at: url)
     }
 }

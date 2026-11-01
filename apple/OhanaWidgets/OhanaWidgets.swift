@@ -1,9 +1,9 @@
 import SwiftUI
 import WidgetKit
 
-/// The Home Screen, Lock Screen and Mac desktop widgets: today, tomorrow, tonight's dinner, the
-/// shopping list and the appointment a search found, of the family selected in the app
-/// (`WidgetSource`, written by the app's `WidgetSync`).
+/// The widget extension: the Home Screen, Lock Screen and Mac desktop widgets (today, tomorrow,
+/// tonight's dinner, the shopping list and the appointment a search found, of the family the app
+/// shows: `SharedConnection`), and on iOS the cook timers' Live Activity.
 @main
 struct OhanaWidgets: WidgetBundle {
     var body: some Widget {
@@ -12,6 +12,9 @@ struct OhanaWidgets: WidgetBundle {
         DinnerWidget()
         ShoppingWidget()
         AppointmentWidget()
+        #if os(iOS)
+        CookTimerLiveActivity()
+        #endif
     }
 }
 

@@ -94,6 +94,8 @@ tags:
     description: Creating families, the family itself, its links and its export file.
   - name: Overview
     description: The family dashboard over all modules.
+  - name: Search
+    description: One search across the modules.
   - name: Household
     description: Members, people without an account, invites, home address and notifications.
   - name: Calendar
@@ -938,6 +940,42 @@ paths:
           content:
             application/json:
               schema: {$ref: "#/components/schemas/Dashboard"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+
+  # ------------------------------------------------------------------ search
+  /api/v1/families/{familyId}/search:
+    get:
+      tags: [Search]
+      operationId: search
+      summary: Search across the modules
+      description: >-
+        Recipes, calendar events and notes, transactions, appointment searches, the people of
+        the family and the caller's own assistant chats whose text holds every word of `q`
+        (case and accents ignored). Grouped by kind in the order of `SearchHit.kind`; within a
+        kind title matches first, then the ones nearest to `today`. Disabled modules are left
+        out.
+      x-ohana-role: viewer
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+        - name: q
+          in: query
+          description: What to look for (at most 100 characters; empty finds nothing).
+          schema: {type: string}
+        - name: today
+          in: query
+          description: The client's day (default the server's UTC day).
+          schema: {type: string, format: date}
+        - name: limit
+          in: query
+          description: Hits per kind (1–50, default 8).
+          schema: {type: integer, minimum: 1, maximum: 50}
+      responses:
+        "200":
+          description: The hits.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SearchResult"}
         "401": {$ref: "#/components/responses/Unauthorized"}
         "404": {$ref: "#/components/responses/NotFound"}
 
@@ -2412,6 +2450,59 @@ paths:
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
         "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/families/{familyId}/meals/recipes/import:
+    post:
+      tags: [Meals]
+      operationId: importRecipe
+      summary: Import a recipe from a web page with the family's AI
+      description: >-
+        The family's AI turns the page into one recipe in the user's language (the author's
+        quantities and steps, units converted to the available ones, the family's tags) and saves it
+        on the "to try" list, with `Source: <url>` at the end of its description. The page is read
+        from `text` (the page's text or HTML as the browser had it; the share extension and
+        Shortcuts send it) or, without one, fetched by the server (never from private addresses,
+        also not after a redirect; 20 s). The photo is `imageUrl`, else the page's schema.org
+        Recipe image or `og:image`; a photo that can't be loaded is left out. Waits for the model
+        (up to two minutes). 400 when the AI isn't set up or the address is invalid or private,
+        404 when the `assistant` or `meals` module is off.
+      x-ohana-role: editor
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url]
+              properties:
+                url: {type: string, format: uri, description: "The page's address (http or https)."}
+                text:
+                  type: [string, "null"]
+                  description: The page's readable text (or HTML, JSON-LD included) as the browser had it; cut after 100,000 characters. Without it (or under 100 characters) the server fetches the page.
+                title: {type: [string, "null"], description: "The page's title as the browser had it."}
+                imageUrl: {type: [string, "null"], format: uri, description: "The recipe's photo (http or https); anything else is ignored."}
+      responses:
+        "200":
+          description: The saved recipe.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, title]
+                properties:
+                  id: {type: string}
+                  title: {type: string}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "422":
+          description: No recipe found on that page.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+        "502": {$ref: "#/components/responses/BadGateway"}
   /api/v1/families/{familyId}/meals/recipes/{recipeId}:
     parameters:
       - $ref: "#/components/parameters/FamilyId"
@@ -4632,6 +4723,36 @@ components:
         name: {type: string}
         age: {type: integer, description: "The age they turn that day."}
 
+    # ---------------------------------------------------------------- search
+    SearchResult:
+      type: object
+      required: [query, currency, results, more]
+      properties:
+        query: {type: string, description: "The query as searched (trimmed)."}
+        currency: {type: string, description: "The family's currency (ISO 4217), for the amounts."}
+        results:
+          type: array
+          items: {$ref: "#/components/schemas/SearchHit"}
+        more:
+          type: object
+          description: How many more hits than listed, per kind (kinds without more are left out).
+          additionalProperties: {type: integer}
+    SearchHit:
+      type: object
+      required: [kind, id, title, detail, day]
+      properties:
+        kind: {type: string, enum: [recipe, event, note, transaction, search, person, chat]}
+        id:
+          type: string
+          description: >-
+            The item's id (a member's user id for a person with an account); a note's is its day.
+        title: {type: string}
+        detail: {type: string, description: "More of the item, joined with \" · \" (may be empty)."}
+        day: {type: [string, "null"], format: date, description: "An event's, note's or transaction's day; a chat's last change."}
+        time: {type: [string, "null"], description: "An event's start (HH:MM), null all day."}
+        amountCents: {type: integer, description: "A transaction's amount; negative: money going out."}
+        account: {type: boolean, description: "A person: a member with an account (else a person without one)."}
+
     # ---------------------------------------------------------------- overview
     Dashboard:
       type: object
@@ -5733,7 +5854,7 @@ components:
           items: {$ref: "#/components/schemas/DoctorSlot"}
     SlotDetail:
       type: object
-      required: [slot, searchId, searchName, specialityLabel, insuranceSector, homeLat, homeLng, booking, searchEnabled, people]
+      required: [slot, searchId, searchName, specialityLabel, insuranceSector, homeLat, homeLng, booking, searchEnabled, people, suggestedPerson]
       properties:
         slot: {$ref: "#/components/schemas/DoctorSlot"}
         searchId: {type: string}
@@ -5756,6 +5877,11 @@ components:
         people:
           type: array
           items: {type: string}
+        suggestedPerson:
+          type: string
+          description: >-
+            Whom a booking is likely for: the person of the search's latest booking, else the one
+            name of `people` the search's name holds as a word, else the only name; "" otherwise.
     BookingInput:
       type: object
       required: [date, start]

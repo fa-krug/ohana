@@ -3,14 +3,13 @@ import Testing
 @testable import Ohana
 
 struct WidgetTests {
-    static let source = WidgetSource(server: URL(string: "https://ohana.example")!, familyID: "f1", familyName: "Krugs")
 
     static func day(_ text: String) -> Day { Day(text)! }
 
     static func at(_ day: String, _ time: String) -> Date { WidgetSnapshot.date(Self.day(day), time)! }
 
-    static func snapshot(_ json: String, source: WidgetSource = source, loadedAt: Date) throws -> WidgetSnapshot {
-        try WidgetSnapshot(overview: Data(json.utf8), source: source, loadedAt: loadedAt)
+    static func snapshot(_ json: String, disabledModules: [String] = [], loadedAt: Date) throws -> WidgetSnapshot {
+        try WidgetSnapshot(overview: Data(json.utf8), familyID: "f1", disabledModules: disabledModules, loadedAt: loadedAt)
     }
 
     @Test func takesTodayAndTomorrowFromTheOverview() throws {
@@ -73,9 +72,7 @@ struct WidgetTests {
     }
 
     @Test func knowsTheModulesThatAreOff() throws {
-        var source = Self.source
-        source.disabledModules = ["meals"]
-        let s = try Self.snapshot(OverviewTests.fullSample, source: source, loadedAt: Self.at("2026-11-02", "07:00"))
+        let s = try Self.snapshot(OverviewTests.fullSample, disabledModules: ["meals"], loadedAt: Self.at("2026-11-02", "07:00"))
         #expect(!s.mealsEnabled)
         #expect(s.appointmentsEnabled)
         // An older server without the parts of turned-off modules.
@@ -91,8 +88,8 @@ struct WidgetTests {
     }
 
     @Test func asksTheServersOverview() {
-        let url = WidgetSource(server: URL(string: "https://example.org/ohana/")!, familyID: "f1", familyName: "")
-            .overviewURL(today: Self.day("2026-11-01"))
+        let url = WidgetSnapshot.overviewURL(server: URL(string: "https://example.org/ohana/")!, familyID: "f1",
+                                             today: Self.day("2026-11-01"))
         #expect(url.absoluteString == "https://example.org/ohana/api/v1/families/f1/overview?today=2026-11-01")
     }
 }

@@ -1,4 +1,6 @@
+import CoreSpotlight
 import SwiftUI
+import UserNotifications
 
 @main
 struct OhanaApp: App {
@@ -8,6 +10,8 @@ struct OhanaApp: App {
     init() {
         let app = AppModel()
         _app = State(initialValue: app)
+        // A cook timer's notification shows while the app is open too.
+        UNUserNotificationCenter.current().delegate = CookTimers.NotificationDelegate.shared
         #if os(macOS)
         // The assistant in the menu bar: a click away while the window is hidden or another app
         // is in front.
@@ -28,15 +32,23 @@ struct OhanaApp: App {
                 .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
                     if let url = activity.webpageURL { app.open(url) }
                 }
-                // What changed while the app was open shows on the widgets.
-                .onChange(of: scenePhase) { _, phase in
-                    if phase == .background, !app.isDemo { WidgetSync.reload() }
+                // A recipe picked in Spotlight (`RecipeSpotlight`).
+                .onContinueUserActivity(CSSearchableItemActionType) { activity in
+                    guard let id = activity.userInfo?[CSSearchableItemActivityIdentifier] as? String else { return }
+                    Task { await app.openSpotlightItem(id) }
                 }
+                .modifier(RecipeSpotlightUpdates(app: app))
         }
         #if os(macOS)
         .defaultSize(width: 1280, height: 820)
         .windowToolbarStyle(.unified)
         #endif
         .commands { ShellCommands() }
+        // Cook timers that finished while the app was away leave the Live Activity; what changed
+        // while the app was open shows on the widgets.
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { CookTimers.shared.refresh() }
+            if phase == .background, !app.isDemo { WidgetSync.reload() }
+        }
     }
 }

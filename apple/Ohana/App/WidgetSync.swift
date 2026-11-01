@@ -1,14 +1,16 @@
 import Foundation
 import WidgetKit
 
-/// Keeps the widgets (OhanaWidgets) in step with the app: which server and family they show
-/// (`WidgetSource` in the App Group: the family selected here; nothing while signed out), and a
-/// reload when the family's data changed here or the app leaves the screen. The widgets load the
-/// overview themselves (`WidgetLoader`).
+/// Keeps the widgets (OhanaWidgets) in step with the app. They show the family the app shows,
+/// read with the server and token from the Keychain (`SharedConnection`); this tells them which
+/// modules the server has off and reloads them when the family's data changed here, the family
+/// switched, the app signed out or left the screen. The widgets load the overview themselves
+/// (`WidgetLoader`).
 enum WidgetSync {
-    /// Tells the widgets what to show; they reload when it changed.
-    static func show(_ source: WidgetSource?) {
-        if WidgetStore.saveSource(source) { reload() }
+    /// The modules the server has off (`WidgetStore`), and a reload.
+    static func show(disabledModules: [String]) {
+        WidgetStore.saveDisabledModules(disabledModules)
+        reloadSoon()
     }
 
     static func reload() {

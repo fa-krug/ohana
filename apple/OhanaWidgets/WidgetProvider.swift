@@ -88,30 +88,44 @@ enum WidgetLoader {
     }
 
     private static func fetch(now: Date = Date()) async -> OhanaEntry.State {
-        guard let source = WidgetStore.loadSource() else { return .signedOut }
-        let cached = WidgetStore.loadSnapshot().flatMap { $0.familyID == source.familyID ? $0 : nil }
-        guard let token = Keychain.load(Keychain.apiTokenAccount) else { return .signedOut }
-        // Loaded a moment ago (the app asked several widgets at once): no need to ask again.
-        if let cached, cached.today == Day(now), now.timeIntervalSince(cached.loadedAt) < 60 {
-            return .ready(cached)
+        guard let connection = SharedConnection.load() else {
+            WidgetStore.removeSnapshot()
+            return .signedOut
         }
-        var request = URLRequest(url: source.overviewURL(today: Day(now)))
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.timeoutInterval = 20
+        let cached = WidgetStore.loadSnapshot()
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
-            if status == 401 { return .signedOut }
-            guard (200..<300).contains(status) else {
-                log.error("Overview: HTTP \(status)")
-                return cached.map { .ready($0) } ?? .unavailable
+            // The family the app shows; when it hasn't said, the account's first.
+            let familyID: String
+            if let id = connection.familyID {
+                familyID = id
+            } else {
+                familyID = try await connection.family().id
             }
-            let snapshot = try WidgetSnapshot(overview: data, source: source, loadedAt: now)
-            WidgetStore.saveSnapshot(snapshot)
-            return .ready(snapshot)
+            let mine = cached.flatMap { $0.familyID == familyID ? $0 : nil }
+            // Loaded a moment ago (the widgets asking one after another): no need to ask again.
+            if let mine, mine.today == Day(now), now.timeIntervalSince(mine.loadedAt) < 60 {
+                return .ready(mine)
+            }
+            var request = connection.request("GET", "/", timeout: 20)
+            request.url = WidgetSnapshot.overviewURL(server: connection.server, familyID: familyID, today: Day(now))
+            do {
+                let data = try await connection.data(for: request)
+                let snapshot = try WidgetSnapshot(overview: data, familyID: familyID,
+                                                  disabledModules: WidgetStore.loadDisabledModules(), loadedAt: now)
+                WidgetStore.saveSnapshot(snapshot)
+                return .ready(snapshot)
+            } catch SharedError.server(401, _) {
+                WidgetStore.removeSnapshot()
+                return .signedOut
+            } catch {
+                log.error("Overview: \(error.localizedDescription, privacy: .public)")
+                return mine.map { .ready($0) } ?? .unavailable
+            }
+        } catch SharedError.server(401, _) {
+            WidgetStore.removeSnapshot()
+            return .signedOut
         } catch {
-            log.error("Overview: \(error.localizedDescription, privacy: .public)")
+            log.error("Family: \(error.localizedDescription, privacy: .public)")
             return cached.map { .ready($0) } ?? .unavailable
         }
     }

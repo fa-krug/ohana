@@ -1,13 +1,14 @@
 import Foundation
 import Security
 
-/// The device's API token, in the Keychain (never synced: each device pairs on its own).
+/// The device's API token, in the Keychain (never synced: each device pairs on its own), and the
+/// connection the share extensions read (`SharedConnection`). The items go to the access group
+/// `$(AppIdentifierPrefix)de.fa-krug.Ohana` (the first of `keychain-access-groups` in the app's
+/// and the extensions' entitlements), so the app and its extensions see the same items.
 /// Uses the data protection keychain; an unsigned development build of the Mac app has no
 /// entitlement for it, and falls back to the login keychain.
-enum Keychain {
+nonisolated enum Keychain {
     private static let service = "de.fa-krug.Ohana"
-    /// The account of the device's API token (the app's and the widgets' `Keychain.load`).
-    static let apiTokenAccount = "apiToken"
 
     static func save(_ value: String, for account: String) {
         delete(account)

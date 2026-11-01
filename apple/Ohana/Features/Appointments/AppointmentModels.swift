@@ -196,6 +196,9 @@ struct AppointmentSlotDetail: Codable, Hashable {
     let booking: AppointmentBookingInfo?
     let searchEnabled: Bool
     let people: [String]
+    /// Whom a booking is likely for (the search's last booking, or the name in its name); nil
+    /// from older servers.
+    let suggestedPerson: String?
 }
 
 /// POST /appointments/searches/{id}/slots/{resultId}/book

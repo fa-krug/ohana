@@ -161,7 +161,6 @@ extension WidgetSnapshot {
         let tomorrow = today.adding(days: 1)
         return WidgetSnapshot(
             familyID: "sample",
-            familyName: "Ohana",
             loadedAt: now,
             today: today,
             items: [

@@ -57,11 +57,13 @@ final class AppModel {
     /// No server connected: the screens show the demo's data.
     var isDemo: Bool { client?.isDemo ?? true }
 
-    /// The family on screen; remembered per device (the demo's isn't).
+    /// The family on screen; remembered per device (the demo's isn't), in the Keychain too for the
+    /// share extensions (`SharedConnection`).
     var selectedFamilyID: String? {
         didSet {
-            guard !isDemo else { return }
+            guard !isDemo, selectedFamilyID != oldValue else { return }
             UserDefaults.standard.set(selectedFamilyID, forKey: Keys.family)
+            SharedConnection.remember(familyID: selectedFamilyID)
             syncWidgets()
         }
     }
@@ -81,7 +83,7 @@ final class AppModel {
     private enum Keys {
         static let server = "serverURL"
         static let family = "selectedFamilyID"
-        static let token = Keychain.apiTokenAccount
+        static let token = SharedConnection.Account.token
     }
 
     /// Whether this model tells the widgets what to show (`WidgetSync`): the app's, not the
@@ -104,6 +106,8 @@ final class AppModel {
         if let text = UserDefaults.standard.string(forKey: Keys.server), let url = URL(string: text),
            let token = Keychain.load(Keys.token) {
             connect(server: url, token: token)
+            // Also for installs from before the share extensions: they read it from the Keychain.
+            SharedConnection.remember(server: url, familyID: selectedFamilyID)
         } else {
             connectDemo()
         }
@@ -144,6 +148,7 @@ final class AppModel {
             UserDefaults.standard.set(server.absoluteString, forKey: Keys.server)
             Keychain.save(token, for: Keys.token)
             connect(server: server, token: token)
+            SharedConnection.remember(server: server, familyID: selectedFamilyID)
             await refresh()
         }
     }
@@ -243,7 +248,8 @@ final class AppModel {
         guard let client, !client.isDemo else { return }
         await whileSwitching(.demo) {
             Keychain.delete(Keys.token)
-            if syncsWidgets { WidgetSync.show(nil) }
+            SharedConnection.forget()
+            if syncsWidgets { WidgetSync.reload() }
             connectDemo()
             if signingOut {
                 _ = try? await client.send(.delete, "/api/v1/me", as: JSONValue.self)
@@ -252,13 +258,11 @@ final class AppModel {
         }
     }
 
-    /// Tells the widgets the server and family on screen; with no family they ask to open the app.
+    /// The widgets show the family on screen (`SharedConnection`): they reload, and learn which
+    /// modules the server has off.
     private func syncWidgets() {
-        guard syncsWidgets, !isDemo, phase == .ready, let serverURL else { return }
-        WidgetSync.show(selectedFamily.map { family in
-            WidgetSource(server: serverURL, familyID: family.id, familyName: family.name,
-                         disabledModules: Module.allCases.filter { !isEnabled($0) }.map(\.rawValue))
-        })
+        guard syncsWidgets, !isDemo, phase == .ready else { return }
+        WidgetSync.show(disabledModules: Module.allCases.filter { !isEnabled($0) }.map(\.rawValue))
     }
 
     /// The server a link brought in the demo, once.
@@ -378,6 +382,18 @@ final class FamilyContext {
     func open(_ route: AppRoute) {
         guard isEnabled(route.requiredModule) else { return }
         pendingRoute = route
+    }
+
+    // MARK: Searching
+
+    /// Grows each time the search should take the keyboard (⌘K); the search page focuses its
+    /// field when it changes.
+    private(set) var searchRequest = 0
+
+    /// Shows the search ready to type (the shell switches to its tab).
+    func startSearch() {
+        searchRequest += 1
+        open(.module(.search))
     }
 
     // MARK: Asking the assistant
