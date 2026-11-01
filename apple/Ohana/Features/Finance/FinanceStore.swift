@@ -385,6 +385,17 @@ final class FinanceStore {
         await setFilter { $0 = FinanceFilter(category: category ?? "") }
     }
 
+    /// The month of `day` with all its transactions (`AppRoute.financeTransaction`); returns the
+    /// transaction `id` of that day, nil when it's gone.
+    func showTransaction(_ id: String, on day: Day) async -> FinanceTransaction? {
+        await setPeriod(FinancePeriod(mode: .month, year: day.year, month: day.month))
+        await setFilter { $0 = FinanceFilter() }
+        // Asked for on its own: the month's list may not hold it (a page, still loading).
+        let query = ["from": day.description, "to": day.description, "limit": "500"]
+        let list = try? await api.get("/finance/transactions", query: query, as: FinanceTransactionList.self)
+        return list?.transactions.first { $0.id == id }
+    }
+
     func showMore() async {
         limit += Self.page
         await loadList()

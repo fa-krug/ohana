@@ -1,9 +1,10 @@
 import SwiftUI
 
 /// The pages of the shell, in sidebar order (the web app's components/shell/modules.ts plus
-/// the overview, the assistant's own page and the settings).
+/// the overview, the assistant's own page and the settings), and the search across them (its
+/// own tab, ⌘K; last, so the others keep their ⌘-numbers).
 enum Module: String, CaseIterable, Identifiable, Hashable {
-    case overview, calendar, finance, meals, appointments, assistant, settings
+    case overview, calendar, finance, meals, appointments, assistant, settings, search
 
     /// The sidebar's "Modules" section; the overview stands above it, the settings at its foot.
     static let modules: [Module] = [.calendar, .finance, .meals, .appointments, .assistant]
@@ -19,6 +20,7 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
         case .appointments: "Appointments"
         case .assistant: "Assistant"
         case .settings: "Settings"
+        case .search: "Search"
         }
     }
 
@@ -31,6 +33,7 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
         case .appointments: "stethoscope"
         case .assistant: "sparkles"
         case .settings: "gearshape"
+        case .search: "magnifyingglass"
         }
     }
 
@@ -43,6 +46,7 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
         case .appointments: ModuleTint.appointments
         case .assistant: ModuleTint.assistant
         case .settings: ModuleTint.settings
+        case .search: ModuleTint.overview
         }
     }
 
@@ -58,6 +62,7 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
         case .appointments: AppointmentsView()
         case .assistant: AssistantPage()
         case .settings: FamilySettingsView()
+        case .search: FamilySearchView()
         }
     }
 }
@@ -70,6 +75,8 @@ struct ShellFocus {
     var modules: [Module] = Module.allCases
     /// Opens the assistant on a new chat, ready to type.
     var ask: () -> Void = {}
+    /// Opens the search, ready to type.
+    var search: () -> Void = {}
 }
 
 /// The visible module's "New …" (File ▸ New …, ⌘N). A module sets it with
@@ -118,10 +125,14 @@ struct ShellCommands: Commands {
         }
         CommandMenu("Go") {
             // The modules the server has on; each keeps its ⌘-number.
-            ForEach(shell?.modules ?? Module.allCases) { module in
+            ForEach((shell?.modules ?? Module.allCases).filter { $0 != .search }) { module in
                 Button(module.title) { shell?.module.wrappedValue = module }
                     .keyboardShortcut(module.shortcut, modifiers: .command)
             }
+            Divider()
+            Button("Search") { shell?.search() }
+                .keyboardShortcut("k", modifiers: .command)
+                .disabled(shell == nil)
             if shell?.modules.contains(.assistant) ?? true {
                 Divider()
                 Button("Assistant panel") { shell?.assistant.wrappedValue.toggle() }

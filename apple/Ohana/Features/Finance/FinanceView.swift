@@ -196,14 +196,22 @@ struct FinanceScreen: View {
 
     /// A place in Finance another module (or a link) sends the user to.
     private func open(_ route: AppRoute) {
-        guard case let .financeTransactions(categoryID) = route else { return }
         tab = .transactions
         editing = nil
         query = ""
         #if os(iOS)
         editMode = .inactive
         #endif
-        Task { await store.showTransactions(category: categoryID) }
+        switch route {
+        case let .financeTransactions(categoryID):
+            Task { await store.showTransactions(category: categoryID) }
+        case let .financeTransaction(id, day):
+            Task {
+                if let transaction = await store.showTransaction(id, on: day) { editing = .existing(transaction) }
+            }
+        default:
+            break
+        }
     }
 
     @ViewBuilder
