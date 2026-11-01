@@ -71,12 +71,14 @@ Ohana/
   Features/       One folder per module: Overview, Calendar, Finance, Meals, Appointments,
                   Assistant, Settings
   Resources/      Assets (app icon, accent color), Localizable.xcstrings (en + de), Demo (demo data)
-Shared/           Compiled into the apps and the share extensions: Keychain, SharedConnection (the
-                  app's server, token and family for the extensions; the recipe import request),
-                  SharedPage (what the share sheet hands over)
+Shared/           Compiled into the apps and their extensions: Keychain, SharedConnection (the
+                  app's server, token and family for the share extensions; the recipe import
+                  request), SharedPage (what the share sheet hands over), CookTimerAttributes
+                  (the cook timers' Live Activity, iOS)
 ShareExtension/   "Save to Ohana" in the share sheet (targets OhanaShare for iOS and
                   OhanaShare-macOS, embedded in the apps): the server imports a web page's recipe;
                   Preprocess.js reads the page in Safari on iOS
+OhanaWidgets/     Widget extension (iOS, embedded in the app): the cook timers' Live Activity
 OhanaTests/       Swift Testing unit tests
 ```
 
@@ -128,11 +130,14 @@ Connect). The workflow needs one Archive action per platform, each with its own 
 `Ohana`, macOS with `Ohana-macOS` (the `Ohana` scheme is the iOS app only, so a macOS archive of
 it finds no destination). `ci_scripts/ci_post_clone.sh` generates the project with XcodeGen there, since
 `Ohana.xcodeproj` isn't committed. `MARKETING_VERSION` in `project.yml` is the version people see;
-raise it for a new release. The share extensions (`OhanaShare`, `OhanaShare-macOS`) have their own
-bundle id, `de.fa-krug.Ohana.Share`, with the Keychain sharing capability like the apps: with
-automatic signing Xcode registers it, otherwise create it once in the developer account (Identifiers,
-Keychain Sharing on) before Xcode Cloud can sign an archive. The build number (`CURRENT_PROJECT_VERSION`) doesn't need editing:
-Xcode Cloud gives every build its own. The app declares no encryption beyond HTTPS
+raise it for a new release. The build number (`CURRENT_PROJECT_VERSION`) doesn't need editing:
+Xcode Cloud gives every build its own. The iOS app embeds a widget extension
+(`de.fa-krug.Ohana.Widgets`, the cook timers' Live Activity), signed with it; the app has the
+Time Sensitive Notifications capability (finished timers come through a Focus). The share
+extensions (`OhanaShare`, `OhanaShare-macOS`) have their own bundle id, `de.fa-krug.Ohana.Share`,
+with the Keychain sharing capability like the apps: with automatic signing Xcode registers it,
+otherwise create it once in the developer account (Identifiers, Keychain Sharing on) before Xcode
+Cloud can sign an archive. The app declares no encryption beyond HTTPS
 (`ITSAppUsesNonExemptEncryption`) and its use of `UserDefaults` in
 `Ohana/Resources/PrivacyInfo.xcprivacy`; the iOS icon (`icon-1024.png`) must stay without an
 alpha channel.

@@ -48,10 +48,12 @@ targets:
       - path: Ohana
         excludes:
           - "Info-*.plist"
-      # Code the app shares with its share extension (Keychain, SharedConnection).
+      # Code the app shares with its extensions: the share extension (Keychain, SharedConnection)
+      # and the widget extension (the cook timers' Live Activity).
       - path: Shared
     dependencies:
       - target: OhanaShare
+      - target: OhanaWidgets
     info:
       path: Ohana/Info-iOS.plist
       properties:
@@ -78,6 +80,8 @@ targets:
         NSCameraUsageDescription: "Ohana uses the camera for recipe pictures."
         NSMicrophoneUsageDescription: "Ohana listens when you dictate a message to the assistant."
         NSSpeechRecognitionUsageDescription: "Ohana turns what you dictate to the assistant into text."
+        # The cook view's timers on the Lock Screen and in the Dynamic Island.
+        NSSupportsLiveActivities: true
         CFBundleURLTypes:
           - CFBundleURLName: de.fa-krug.Ohana.pairing
             CFBundleURLSchemes: [ohana]
@@ -90,6 +94,30 @@ targets:
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: false
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+
+  # The widget extension, embedded in the iOS app: the cook timers' Live Activity.
+  OhanaWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: OhanaWidgets
+        excludes:
+          - "Info.plist"
+      - path: Shared
+    info:
+      path: OhanaWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: Ohana
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: de.fa-krug.Ohana.Widgets
+        GENERATE_INFOPLIST_FILE: false
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SKIP_INSTALL: YES
 
   Ohana-macOS:
     type: application

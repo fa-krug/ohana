@@ -2,7 +2,8 @@ import SwiftUI
 
 /// The frame around a family (the web app's components/shell/app-shell.tsx): the modules as a
 /// sidebar in sections (iPad, Mac) or a floating Liquid Glass tab bar (iPhone), the family
-/// switcher, and the assistant as an inspector on the right (a sheet on iPhone), ⌘J.
+/// switcher, the search across the modules (its own tab, ⌘K), and the assistant as an inspector
+/// on the right (a sheet on iPhone), ⌘J.
 struct AppShell: View {
     @Environment(AppModel.self) private var app
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -43,6 +44,10 @@ struct AppShell: View {
                     ForEach(Module.modules.filter { context.isEnabled($0) }) { tab($0, assistantOn: assistantOn) }
                 }
                 tab(.settings, assistantOn: assistantOn)
+                // The iPhone's tab bar shows it apart, at its end; the sidebar at its top.
+                Tab(value: Module.search, role: .search) {
+                    page(.search, assistantOn: assistantOn)
+                }
             }
             .tabViewStyle(.sidebarAdaptable)
             .tabViewSidebarHeader { FamilySwitcher() }
@@ -63,9 +68,9 @@ struct AppShell: View {
             .environment(context)
             .id(family.id)
             .focusedSceneValue(\.shell, ShellFocus(module: selection, assistant: $showAssistant,
-                                                   modules: Module.allCases.filter { context.isEnabled($0) }) {
-                context.ask(newChat: true)
-            })
+                                                   modules: Module.allCases.filter { context.isEnabled($0) },
+                                                   ask: { context.ask(newChat: true) },
+                                                   search: { context.startSearch() }))
             .onChange(of: context.assistantRequest?.id) {
                 guard context.assistantRequest != nil else { return }
                 // The assistant's page takes the request itself when it's on screen.
@@ -126,18 +131,7 @@ struct AppShell: View {
     /// A module's tab; `assistantOn`: the server has the assistant, so the pages get its button.
     private func tab(_ item: Module, assistantOn: Bool) -> some TabContent<Module> {
         Tab(item.title, systemImage: item.systemImage, value: item) {
-            NavigationStack {
-                item.root
-                    // Any size: asked for its smallest size after every layout of the window
-                    // (every step of the assistant panel sliding in), the page would be measured
-                    // whole. Not around the tab view: framing its AppKit view made the window lay
-                    // out without end.
-                    .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
-                    .shellToolbar()
-                    .demoBanner()
-            }
-            // Not on the assistant's own page (iPad, Mac), nor without the assistant.
-            .environment(\.shellAssistant, item == .assistant || !assistantOn ? nil : $showAssistant)
+            page(item, assistantOn: assistantOn)
         }
         // The assistant (a sheet from the toolbar) and the settings (the family picker) live in
         // the sidebar; the iPhone's tab bar keeps the five modules.
@@ -148,6 +142,22 @@ struct AppShell: View {
         #else
         .defaultVisibility(item == .settings ? .hidden : .automatic, for: .sidebar)
         #endif
+    }
+
+    /// What a tab shows: the module's root in its navigation stack.
+    private func page(_ item: Module, assistantOn: Bool) -> some View {
+        NavigationStack {
+            item.root
+                // Any size: asked for its smallest size after every layout of the window
+                // (every step of the assistant panel sliding in), the page would be measured
+                // whole. Not around the tab view: framing its AppKit view made the window lay
+                // out without end.
+                .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+                .shellToolbar()
+                .demoBanner()
+        }
+        // Not on the assistant's own page (iPad, Mac), nor without the assistant.
+        .environment(\.shellAssistant, item == .assistant || !assistantOn ? nil : $showAssistant)
     }
 }
 

@@ -417,6 +417,16 @@
         }
       }
     },
+    "%lld more – add a word to narrow it down.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld weitere – ein weiteres Wort grenzt die Suche ein."
+          }
+        }
+      }
+    },
     "%lld of %lld": {
       "localizations": {
         "de": {
@@ -3613,6 +3623,16 @@
         }
       }
     },
+    "Couldn’t search": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche fehlgeschlagen"
+          }
+        }
+      }
+    },
     "Couldn’t share the recipe. Try again?": {
       "localizations": {
         "de": {
@@ -4503,6 +4523,16 @@
         }
       }
     },
+    "Dismiss timer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timer ausblenden"
+          }
+        }
+      }
+    },
     "Distance from home": {
       "localizations": {
         "de": {
@@ -4609,6 +4639,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dauer (Sek.)"
+          }
+        }
+      }
+    },
+    "Durations start a timer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeitangaben starten einen Timer"
           }
         }
       }
@@ -4979,6 +5019,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aktionen des Termins"
+          }
+        }
+      }
+    },
+    "Events": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termine"
           }
         }
       }
@@ -5399,6 +5449,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Such mir einen Hautarzttermin vor Juni."
+          }
+        }
+      }
+    },
+    "Find recipes, calendar events and notes, transactions, appointment searches, people and chats.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finde Rezepte, Termine und Notizen im Kalender, Buchungen, Terminsuchen, Personen und Chats."
           }
         }
       }
@@ -8507,6 +8567,16 @@
         }
       }
     },
+    "Notes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notizen"
+          }
+        }
+      }
+    },
     "Nothing found yet": {
       "localizations": {
         "de": {
@@ -9449,6 +9519,16 @@
         }
       }
     },
+    "People": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Personen"
+          }
+        }
+      }
+    },
     "Per category": {
       "localizations": {
         "de": {
@@ -10255,6 +10335,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rezepte mit diesen Tags werden nicht eingeplant."
+          }
+        }
+      }
+    },
+    "Recipes, events, transactions, people…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rezepte, Termine, Buchungen, Personen …"
           }
         }
       }
@@ -11289,6 +11379,16 @@
         }
       }
     },
+    "Search the family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Familie durchsuchen"
+          }
+        }
+      }
+    },
     "Search users": {
       "localizations": {
         "de": {
@@ -12019,6 +12119,16 @@
         }
       }
     },
+    "Shows the step": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeigt den Schritt"
+          }
+        }
+      }
+    },
     "Sign in": {
       "localizations": {
         "de": {
@@ -12649,6 +12759,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Das Ziehen des Anfassers abbrechen oder die Auswahl aufheben"
+          }
+        }
+      }
+    },
+    "Stop timer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timer stoppen"
           }
         }
       }
@@ -13719,6 +13839,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Termine mit Uhrzeit, z. B. gebuchte Arzttermine; sie nennen Arzt und Praxis"
+          }
+        }
+      }
+    },
+    "Timer done: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timer fertig: %@"
           }
         }
       }

@@ -240,6 +240,11 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
     is off.
   - *Overview:* `lib/families/dashboard.ts` (`familyDashboard`, `GET /overview`; no searches
     with appointments off).
+  - *Search:* `lib/families/search.ts` (`searchFamily`, `GET /search?q=&today=&limit=`): recipes,
+    events, notes, transactions, appointment searches, people (members + `family_people`) and the
+    caller's own chats whose text holds every word (`normalizeForSearch`: case and accents
+    ignored), grouped by kind, per kind title matches first then nearest to `today`, `limit` per
+    kind (`more` counts the rest); turned-off modules are left out. The app's search tab.
 - **Meals (`lib/meals/`, ported from cookless):** recipes, meal plan, shopping lists, cook
   view, tags. Tables in `lib/db/schema/meals.ts` (re-exported by `schema.ts`): `ingredients`
   and `units` are shared seed data (`lib/meals/seed.ts`, run by `scripts/seed.ts` at every
@@ -313,7 +318,9 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   right of every page: module roots get it from `shellToolbar()`, a page pushed onto a module's
   stack adds `.assistantButton()`; and its own
   page, `AppRoute`: `family.open(.recipe(id:))` etc. switches to the module, whose root takes it
-  with `family.takeRoute(for:)`; server paths `/f/{id}/…` and `ohana://f/{id}/…` map onto routes),
+  with `family.takeRoute(for:)`; server paths `/f/{id}/…` and `ohana://f/{id}/…` map onto routes;
+  the search tab (`Module.search`, `Tab(role: .search)`, ⌘K → `family.startSearch()`,
+  `Features/Search/`) opens its hits the same way, a transaction as `.financeTransaction`),
   `DesignSystem/` (solid content cards — Liquid Glass only on bars and floating controls —, error banner, `CancelButton`/`discardGuard`; the module sets `newItem`/`moduleMenu` focused values for File ▸ New and its menu), `Features/<Module>/` (plus `Account/`, `Admin/`).
   The assistant: `family.ask(prompt, send:, newChat:)` opens it ready to type from anywhere (⇧⌘J, the overview's field, the Mac's menu bar item (`MenuBarItem`, an AppKit status item: SwiftUI's `MenuBarExtra` re-sets its icon on every window redraw and crashed the app), the
   `AskOhanaIntent` App Shortcut). Recipes are in Spotlight (`RecipeSpotlight.swift`: every family's,
@@ -326,7 +333,13 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   targets `OhanaShare` / `OhanaShare-macOS`, bundle id `de.fa-krug.Ohana.Share`; iOS sends the
   page's text via `Preprocess.js`). Code both use is in `apple/Shared/` (`Keychain`,
   `SharedConnection`): no App Group — the app mirrors the server URL and selected family into the
-  shared Keychain access group next to the token, and removes them on sign out. German strings: per-module
+  shared Keychain access group next to the token, and removes them on sign out.
+  The cook view (`MealsCookView`) turns durations in a step's
+  text into timer links (`StepDurations`, English and German); `CookTimers` (app-wide, kept in
+  `UserDefaults`) schedules a time-sensitive local notification per timer (shown in the
+  foreground too: `CookTimers.NotificationDelegate`) and keeps one Live Activity for all running
+  timers (iOS: `apple/Shared/CookTimerAttributes.swift`, drawn by the widget extension
+  `apple/OhanaWidgets/`, the XcodeGen target `OhanaWidgets` embedded in `Ohana`). German strings: per-module
   `apple/Localization/*.de.json`, merged into `Resources/Localizable.xcstrings` by
   `apple/scripts/merge-localizations.py` (`--check` in CI). Build/test: `apple/README.md`; CI:
   `.github/workflows/apple.yml` (macOS unit tests, iOS build, strings; only on `apple/**` changes).

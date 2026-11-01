@@ -94,6 +94,8 @@ tags:
     description: Creating families, the family itself, its links and its export file.
   - name: Overview
     description: The family dashboard over all modules.
+  - name: Search
+    description: One search across the modules.
   - name: Household
     description: Members, people without an account, invites, home address and notifications.
   - name: Calendar
@@ -938,6 +940,42 @@ paths:
           content:
             application/json:
               schema: {$ref: "#/components/schemas/Dashboard"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+
+  # ------------------------------------------------------------------ search
+  /api/v1/families/{familyId}/search:
+    get:
+      tags: [Search]
+      operationId: search
+      summary: Search across the modules
+      description: >-
+        Recipes, calendar events and notes, transactions, appointment searches, the people of
+        the family and the caller's own assistant chats whose text holds every word of `q`
+        (case and accents ignored). Grouped by kind in the order of `SearchHit.kind`; within a
+        kind title matches first, then the ones nearest to `today`. Disabled modules are left
+        out.
+      x-ohana-role: viewer
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+        - name: q
+          in: query
+          description: What to look for (at most 100 characters; empty finds nothing).
+          schema: {type: string}
+        - name: today
+          in: query
+          description: The client's day (default the server's UTC day).
+          schema: {type: string, format: date}
+        - name: limit
+          in: query
+          description: Hits per kind (1–50, default 8).
+          schema: {type: integer, minimum: 1, maximum: 50}
+      responses:
+        "200":
+          description: The hits.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SearchResult"}
         "401": {$ref: "#/components/responses/Unauthorized"}
         "404": {$ref: "#/components/responses/NotFound"}
 
@@ -4684,6 +4722,36 @@ components:
         day: {type: string, format: date}
         name: {type: string}
         age: {type: integer, description: "The age they turn that day."}
+
+    # ---------------------------------------------------------------- search
+    SearchResult:
+      type: object
+      required: [query, currency, results, more]
+      properties:
+        query: {type: string, description: "The query as searched (trimmed)."}
+        currency: {type: string, description: "The family's currency (ISO 4217), for the amounts."}
+        results:
+          type: array
+          items: {$ref: "#/components/schemas/SearchHit"}
+        more:
+          type: object
+          description: How many more hits than listed, per kind (kinds without more are left out).
+          additionalProperties: {type: integer}
+    SearchHit:
+      type: object
+      required: [kind, id, title, detail, day]
+      properties:
+        kind: {type: string, enum: [recipe, event, note, transaction, search, person, chat]}
+        id:
+          type: string
+          description: >-
+            The item's id (a member's user id for a person with an account); a note's is its day.
+        title: {type: string}
+        detail: {type: string, description: "More of the item, joined with \" · \" (may be empty)."}
+        day: {type: [string, "null"], format: date, description: "An event's, note's or transaction's day; a chat's last change."}
+        time: {type: [string, "null"], description: "An event's start (HH:MM), null all day."}
+        amountCents: {type: integer, description: "A transaction's amount; negative: money going out."}
+        account: {type: boolean, description: "A person: a member with an account (else a person without one)."}
 
     # ---------------------------------------------------------------- overview
     Dashboard:
