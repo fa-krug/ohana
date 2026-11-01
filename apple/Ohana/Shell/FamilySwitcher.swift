@@ -38,9 +38,9 @@ struct FamilySwitcher: View {
 }
 
 /// Opens the family picker: the families to switch to, and creating or joining one (in the
-/// demo: connecting a server). `showsPages` adds the settings, where there is no sidebar to show
-/// them (on iPhone also the appointments: `Module.phonePages`). The visible one shows invite links the app
-/// was opened with (`InviteInbox`).
+/// demo: connecting a server). `showsPages` is the iPhone's family button: a system menu that
+/// also has the pages that aren't tabs there (`Module.phonePages`); the sidebar's is a popover.
+/// The visible one shows invite links the app was opened with (`InviteInbox`).
 struct FamilyPickerButton<ButtonLabel: View>: View {
     @Environment(AppModel.self) private var app
     var showsPages = false
@@ -52,29 +52,41 @@ struct FamilyPickerButton<ButtonLabel: View>: View {
     @State private var joining: InviteRequest?
 
     var body: some View {
-        Button { showsPicker.toggle() } label: { label }
+        picker
             .help("Switch family")
-            .popover(isPresented: $showsPicker, arrowEdge: .bottom) {
-                FamilyPicker(showsPages: showsPages) { action in
-                    if case let .family(id) = action {
-                        app.selectedFamilyID = id
-                    } else {
-                        pending = action
-                    }
-                    showsPicker = false
-                }
-                .onDisappear(perform: runPending)
-            }
             .sheet(isPresented: $creating) { CreateFamilySheet().errorBanner() }
             // In the demo an invite waits for the server (the connect sheet shows it).
             .inviteJoinSheet($joining, claimsLinks: !app.isDemo)
     }
 
+    @ViewBuilder private var picker: some View {
+        if showsPages {
+            Menu { FamilyMenu(choose: run) } label: { label }
+        } else {
+            Button { showsPicker.toggle() } label: { label }
+                .popover(isPresented: $showsPicker, arrowEdge: .bottom) {
+                    FamilyPicker { action in
+                        if case let .family(id) = action {
+                            app.selectedFamilyID = id
+                        } else {
+                            pending = action
+                        }
+                        showsPicker = false
+                    }
+                    .onDisappear(perform: runPending)
+                }
+        }
+    }
+
     private func runPending() {
         guard let action = pending else { return }
         pending = nil
+        run(action)
+    }
+
+    private func run(_ action: FamilyPickerAction) {
         switch action {
-        case .family: break
+        case let .family(id): app.selectedFamilyID = id
         case .create: creating = true
         case .join: joining = InviteRequest()
         case .connect: app.showsConnect = true
@@ -87,16 +99,52 @@ private enum FamilyPickerAction {
     case family(String), create, join, connect, page(Module)
 }
 
-/// The picker's panel: a row per family (the current one checked), then what else it offers.
-private struct FamilyPicker: View {
+/// The iPhone's family menu: the families (the current one checked), creating or joining one,
+/// then the pages that aren't tabs there.
+private struct FamilyMenu: View {
     @Environment(AppModel.self) private var app
-    let showsPages: Bool
     let choose: (FamilyPickerAction) -> Void
 
-    /// The pages the sidebar would show.
+    var body: some View {
+        Section("Families") {
+            ForEach(app.families) { family in
+                Toggle(isOn: Binding(
+                    get: { family.id == app.selectedFamilyID },
+                    set: { _ in choose(.family(family.id)) }
+                )) {
+                    Text(family.name)
+                    Text(family.canEdit
+                        ? "\(family.memberCount) members"
+                        : "\(family.memberCount) members · View only")
+                }
+            }
+        }
+        Section {
+            if app.isDemo {
+                Button("Connect your Ohana…", systemImage: "server.rack") { choose(.connect) }
+            } else {
+                Button("New family…", systemImage: "plus") { choose(.create) }
+                Button("Join a family…", systemImage: "person.badge.plus") { choose(.join) }
+            }
+        }
+        Section {
+            ForEach(pages) { page in
+                Button(page.title, systemImage: page.systemImage) { choose(.page(page)) }
+            }
+        }
+    }
+
+    /// The pages the sidebar would show (a narrow iPad window has no sidebar either).
     private var pages: [Module] {
         Module.phonePages.isEmpty ? [.settings] : Module.phonePages.filter { app.isEnabled($0) }
     }
+}
+
+/// The sidebar's picker panel: a row per family (the current one checked), then what else it
+/// offers.
+private struct FamilyPicker: View {
+    @Environment(AppModel.self) private var app
+    let choose: (FamilyPickerAction) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -115,12 +163,6 @@ private struct FamilyPicker: View {
             } else {
                 actionRow("New family…", systemImage: "plus", .create)
                 actionRow("Join a family…", systemImage: "person.badge.plus", .join)
-            }
-            if showsPages {
-                Divider().padding(.vertical, 4)
-                ForEach(pages) { page in
-                    actionRow(page.title, systemImage: page.systemImage, .page(page))
-                }
             }
         }
         .padding(8)

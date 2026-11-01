@@ -1,7 +1,6 @@
 {
   "sourceLanguage": "en",
   "strings": {
-    "%@ %@": {},
     "%@ (%@) becomes the booking, the others its parts": {
       "localizations": {
         "de": {
@@ -1427,7 +1426,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Konto …"
+            "value": "Konto …"
           }
         }
       }
@@ -1717,7 +1716,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Termin hinzufügen …"
+            "value": "Termin hinzufügen …"
           }
         }
       }
@@ -2507,7 +2506,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ohana fragen …"
+            "value": "Ohana fragen …"
           }
         }
       }
@@ -2617,7 +2616,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Einstellungen des Assistenten …"
+            "value": "Einstellungen des Assistenten …"
           }
         }
       }
@@ -3179,7 +3178,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "E-Mail ändern …"
+            "value": "E-Mail ändern …"
           }
         }
       }
@@ -3229,7 +3228,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Passwort ändern …"
+            "value": "Passwort ändern …"
           }
         }
       }
@@ -3239,7 +3238,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mit einem Passkey ändern …"
+            "value": "Mit einem Passkey ändern …"
           }
         }
       }
@@ -3479,7 +3478,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Auswählen …"
+            "value": "Auswählen …"
           }
         }
       }
@@ -3874,12 +3873,12 @@
         }
       }
     },
-    "Connect any OpenAI-compatible AI (OpenAI, OpenRouter, Mistral, Gemini, a local model …) in the settings. It can then look things up on the web and plan in your calendar and finances.": {
+    "Connect any OpenAI-compatible AI (OpenAI, OpenRouter, Mistral, Gemini, a local model …) in the settings. It can then look things up on the web and plan in your calendar and finances.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Verbinde eine beliebige OpenAI-kompatible KI (OpenAI, OpenRouter, Mistral, Gemini, ein lokales Modell …) in den Einstellungen. Dann kann sie im Web recherchieren und in Kalender und Finanzen planen."
+            "value": "Verbinde eine beliebige OpenAI-kompatible KI (OpenAI, OpenRouter, Mistral, Gemini, ein lokales Modell …) in den Einstellungen. Dann kann sie im Web recherchieren und in Kalender und Finanzen planen."
           }
         }
       }
@@ -3939,7 +3938,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dein Ohana verbinden …"
+            "value": "Dein Ohana verbinden …"
           }
         }
       }
@@ -4349,7 +4348,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Token erstellen …"
+            "value": "Token erstellen …"
           }
         }
       }
@@ -4459,7 +4458,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Eigene …"
+            "value": "Eigene …"
           }
         }
       }
@@ -4699,7 +4698,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Suche löschen …"
+            "value": "Suche löschen …"
           }
         }
       }
@@ -5059,7 +5058,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Details …"
+            "value": "Details …"
           }
         }
       }
@@ -5269,7 +5268,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Den ▪-Anfasser ziehen oder „Wiederholen …“"
+            "value": "Den ▪-Anfasser ziehen oder „Wiederholen …“"
           }
         }
       }
@@ -5469,7 +5468,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Suche bearbeiten …"
+            "value": "Suche bearbeiten …"
           }
         }
       }
@@ -6034,12 +6033,12 @@
         }
       }
     },
-    "Every recipe should be …": {
+    "Every recipe should be …": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Jedes Rezept soll … sein"
+            "value": "Jedes Rezept soll … sein"
           }
         }
       }
@@ -6379,7 +6378,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Umbuchungen finden …"
+            "value": "Umbuchungen finden …"
           }
         }
       }
@@ -6644,12 +6643,12 @@
         }
       }
     },
-    "Generating recipes …": {
+    "Generating recipes …": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Rezepte werden erstellt …"
+            "value": "Rezepte werden erstellt …"
           }
         }
       }
@@ -6949,7 +6948,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Symbol & Notiz …"
+            "value": "Symbol & Notiz …"
           }
         }
       }
@@ -6969,7 +6968,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Symbol & Notiz …"
+            "value": "Symbol & Notiz …"
           }
         }
       }
@@ -7079,7 +7078,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "CSV importieren …"
+            "value": "CSV importieren …"
           }
         }
       }
@@ -7216,12 +7215,12 @@
         }
       }
     },
-    "Importing the recipe …": {
+    "Importing the recipe …": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Rezept wird importiert …"
+            "value": "Rezept wird importiert …"
           }
         }
       }
@@ -7231,7 +7230,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Importieren …"
+            "value": "Importieren …"
           }
         }
       }
@@ -7276,12 +7275,12 @@
         }
       }
     },
-    "Including the version, e.g. …/v1. A model on your home network works only if the server allows it (AI_ALLOW_PRIVATE_ENDPOINT).": {
+    "Including the version, e.g. …/v1. A model on your home network works only if the server allows it (AI_ALLOW_PRIVATE_ENDPOINT).": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mit Version, z. B. …/v1. Ein Modell im Heimnetz geht nur, wenn der Server es erlaubt (AI_ALLOW_PRIVATE_ENDPOINT)."
+            "value": "Mit Version, z. B. …/v1. Ein Modell im Heimnetz geht nur, wenn der Server es erlaubt (AI_ALLOW_PRIVATE_ENDPOINT)."
           }
         }
       }
@@ -7533,7 +7532,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Einer Familie beitreten …"
+            "value": "Einer Familie beitreten …"
           }
         }
       }
@@ -7893,7 +7892,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Die Demo wird geladen …"
+            "value": "Die Demo wird geladen …"
           }
         }
       }
@@ -7903,7 +7902,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Deine Familien werden geladen …"
+            "value": "Deine Familien werden geladen …"
           }
         }
       }
@@ -8048,12 +8047,12 @@
         }
       }
     },
-    "Making photos …": {
+    "Making photos …": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fotos werden gemacht …"
+            "value": "Fotos werden gemacht …"
           }
         }
       }
@@ -8083,7 +8082,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Als gebucht eintragen …"
+            "value": "Als gebucht eintragen …"
           }
         }
       }
@@ -8723,7 +8722,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Neue Familie …"
+            "value": "Neue Familie …"
           }
         }
       }
@@ -10115,7 +10114,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Verwaltung öffnen …"
+            "value": "Verwaltung öffnen …"
           }
         }
       }
@@ -11411,7 +11410,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kassenbon wird gelesen …"
+            "value": "Kassenbon wird gelesen …"
           }
         }
       }
@@ -11571,7 +11570,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Rezepte, Termine, Buchungen, Personen …"
+            "value": "Rezepte, Termine, Buchungen, Personen …"
           }
         }
       }
@@ -11791,7 +11790,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Passwort entfernen …"
+            "value": "Passwort entfernen …"
           }
         }
       }
@@ -11886,12 +11885,12 @@
         }
       }
     },
-    "Removing “%@” …": {
+    "Removing “%@” …": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "„%@“ wird entfernt …"
+            "value": "„%@“ wird entfernt …"
           }
         }
       }
@@ -12011,7 +12010,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wiederholen …"
+            "value": "Wiederholen …"
           }
         }
       }
@@ -12511,7 +12510,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sichern …"
+            "value": "Sichern …"
           }
         }
       }
@@ -12541,7 +12540,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Speichert …"
+            "value": "Speichert …"
           }
         }
       }
@@ -12561,7 +12560,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kassenbon scannen …"
+            "value": "Kassenbon scannen …"
           }
         }
       }
@@ -13121,7 +13120,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Passwort festlegen …"
+            "value": "Passwort festlegen …"
           }
         }
       }
@@ -13241,7 +13240,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Einstellungen …"
+            "value": "Einstellungen …"
           }
         }
       }
@@ -14305,7 +14304,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tauschen …"
+            "value": "Tauschen …"
           }
         }
       }
@@ -14375,7 +14374,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mit Apple Kalender abgleichen …"
+            "value": "Mit Apple Kalender abgleichen …"
           }
         }
       }
@@ -14385,7 +14384,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Abgleich mit %@ …"
+            "value": "Abgleich mit %@ …"
           }
         }
       }
@@ -14395,7 +14394,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wird abgeglichen …"
+            "value": "Wird abgeglichen …"
           }
         }
       }
@@ -16105,7 +16104,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wird aktualisiert …"
+            "value": "Wird aktualisiert …"
           }
         }
       }

@@ -115,6 +115,9 @@ struct MealsView: View {
                     .padding(.vertical, 8)
             }
         }
+        // Under a large title the bar moves with the title as it collapses, and scrolling back
+        // up made the two fight (the page jittered). The segments name the part anyway.
+        .navigationBarTitleDisplayMode(sizeClass == .compact ? .inline : .automatic)
         #endif
         .overlay(alignment: .bottom) { MealsUndoBanner() }
         .animation(.spring(duration: 0.35), value: MealsPendingDeletes.shared.latest)
