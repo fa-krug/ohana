@@ -1282,16 +1282,6 @@
         }
       }
     },
-    "A repeating chore is ticked off in Reminders, occurrence by occurrence.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eine wiederkehrende Aufgabe wird in Erinnerungen abgehakt, jedes Mal einzeln."
-          }
-        }
-      }
-    },
     "A search watches Doctolib and jameda for a speciality near a place and tells you when an appointment frees up.": {
       "localizations": {
         "de": {
@@ -7616,6 +7606,16 @@
         }
       }
     },
+    "In Reminders, a repeating chore gets a new reminder each time, three hours before it’s due.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Erinnerungen bekommt eine wiederkehrende Aufgabe jedes Mal eine neue Erinnerung, drei Stunden bevor sie fällig ist."
+          }
+        }
+      }
+    },
     "In Reminders: %@": {
       "localizations": {
         "de": {
@@ -7858,12 +7858,12 @@
         }
       }
     },
-    "It syncs by itself when you open Ohana, when the chores change and when you tick one off in Reminders. A reminder you delete stays deleted until its chore changes.": {
+    "It syncs by itself when you open Ohana, when the chores change and when you tick one off in Reminders; while Ohana is open, also when a repeating chore is due again. A reminder you delete stays deleted until its chore changes (a repeating chore’s until its next time).": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Der Abgleich läuft von selbst, wenn du Ohana öffnest, wenn sich die Aufgaben ändern und wenn du eine in Erinnerungen abhakst. Eine gelöschte Erinnerung bleibt gelöscht, bis sich ihre Aufgabe ändert."
+            "value": "Der Abgleich läuft von selbst, wenn du Ohana öffnest, wenn sich die Aufgaben ändern und wenn du eine in Erinnerungen abhakst; solange Ohana geöffnet ist, auch wenn eine wiederkehrende Aufgabe wieder dran ist. Eine gelöschte Erinnerung bleibt gelöscht, bis sich ihre Aufgabe ändert (die einer wiederkehrenden Aufgabe bis zum nächsten Mal)."
           }
         }
       }
@@ -10460,12 +10460,12 @@
         }
       }
     },
-    "Ohana puts the family’s chores into a list in Reminders: each one due when it’s due next, repeating ones repeating. Tick a chore off in Reminders and it’s done in Ohana too.": {
+    "Ohana puts the family’s chores into a list in Reminders, each due on its day. A repeating chore gets a new reminder each time, three hours before it’s due. Tick a one-off chore off in Reminders and it’s done in Ohana too.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ohana überträgt die Aufgaben der Familie in eine Liste in Erinnerungen: jede fällig, wenn sie als Nächstes dran ist, wiederkehrende wiederkehrend. Hakst du eine Aufgabe in Erinnerungen ab, ist sie auch in Ohana erledigt."
+            "value": "Ohana überträgt die Aufgaben der Familie in eine Liste in Erinnerungen, jede fällig an ihrem Tag. Eine wiederkehrende Aufgabe bekommt jedes Mal eine neue Erinnerung, drei Stunden bevor sie fällig ist. Hakst du eine einmalige Aufgabe in Erinnerungen ab, ist sie auch in Ohana erledigt."
           }
         }
       }

@@ -9,7 +9,8 @@ struct ChoreRemindersSettings: Codable, Equatable {
     var listID: String?
     /// Whose chores: a `ChorePerson.id`; nil: everyone's.
     var scope: String?
-    /// The reminder of each chore, by chore id (`ChoreReminderPlan`).
+    /// The reminders written, by `ChoreReminderLink.key`: a single chore's, a repeating chore's
+    /// occurrences' (`ChoreReminderPlan`).
     var links: [String: ChoreReminderLink] = [:]
     /// The last sync that went through.
     var lastSync: Date?
@@ -32,12 +33,14 @@ struct ChoreSyncResult: Codable, Equatable {
 }
 
 /// Writes the family's chores (GET /chores) into the Reminders list the user chose for them on
-/// this device, one reminder each (`ChoreReminderPlan` has the rules), and brings back what was
-/// ticked off there (POST /chores/{id}/done). Off in the demo and with Chores turned off. Viewers
-/// sync too; ticking off a chore that isn't theirs isn't taken by the server, and the reminder
-/// opens again. It runs when it is turned on, when the app becomes active or shows another
-/// family, a few seconds after the chores or the reminders change, and from "Sync now"
-/// (`ChoreRemindersUpdates`, the settings page).
+/// this device: a single chore as one reminder, a repeating one as a reminder per occurrence made
+/// 3 hours before it's due (`ChoreReminderPlan` has the rules), and brings back what was ticked off
+/// there of the single ones (POST /chores/{id}/done). Off in the demo and with Chores turned off.
+/// Viewers sync too; ticking off a chore that isn't theirs isn't taken by the server, and the
+/// reminder opens again. It runs when it is turned on, when the app becomes active or shows another
+/// family, a few seconds after the chores or the reminders change, from "Sync now"
+/// (`ChoreRemindersUpdates`, the settings page) and, while the app runs, when the next occurrence of
+/// a repeating chore is to appear (`wakeUps`).
 @Observable
 final class ChoreReminders {
     static let shared = ChoreReminders()
@@ -63,6 +66,8 @@ final class ChoreReminders {
     private(set) var syncing: Set<String> = []
     /// Keys asked to sync again while one was running.
     @ObservationIgnored private var again: Set<String> = []
+    /// The sync waiting for the next occurrence of a repeating chore to appear, by key.
+    @ObservationIgnored private var wakeUps: [String: Task<Void, Never>] = [:]
 
     init(defaults: UserDefaults = .standard, store: RemindersStore = .shared) {
         self.defaults = defaults
@@ -111,6 +116,7 @@ final class ChoreReminders {
         let key = Self.key(api)
         let current = settings(key)
         guard current.listID != listID else { return }
+        cancelWakeUp(key)
         save(ChoreRemindersSettings(listID: listID, scope: current.scope), key)
     }
 
@@ -133,6 +139,31 @@ final class ChoreReminders {
             defaults.removeObject(forKey: key)
         }
         shared.cache = shared.cache.filter { !$0.key.hasPrefix(prefix) }
+        for key in shared.wakeUps.keys where key.hasPrefix(prefix) { shared.cancelWakeUp(key) }
+    }
+
+    // MARK: Waking up
+
+    /// Syncs the family again at `date` (replacing the one waiting; nil: none), while the app runs.
+    private func scheduleWakeUp(_ key: String, at date: Date?, family: FamilyContext) {
+        cancelWakeUp(key)
+        guard let date else { return }
+        wakeUps[key] = Task { [weak self] in
+            // A moment after, so the occurrence has appeared by then.
+            let wait = max(date.timeIntervalSinceNow, 0) + 1
+            do {
+                try await Task.sleep(for: .seconds(wait))
+            } catch {
+                return
+            }
+            guard let self, !Task.isCancelled else { return }
+            self.wakeUps[key] = nil
+            await self.sync(family, reason: .changed)
+        }
+    }
+
+    private func cancelWakeUp(_ key: String) {
+        wakeUps.removeValue(forKey: key)?.cancel()
     }
 
     // MARK: Syncing
@@ -142,10 +173,16 @@ final class ChoreReminders {
     /// meanwhile, it runs once more afterwards.
     func sync(_ family: FamilyContext, reason: Reason = .changed, now: Date = Date()) async {
         let api = family.api
-        guard !api.client.isDemo, family.isEnabled(.chores) else { return }
+        guard !api.client.isDemo, family.isEnabled(.chores) else {
+            cancelWakeUp(Self.key(api))
+            return
+        }
         let key = Self.key(api)
         let start = settings(key)
-        guard let listID = start.listID else { return }
+        guard let listID = start.listID else {
+            cancelWakeUp(key)
+            return
+        }
         if reason == .automatic, start.lastError == nil, let last = start.lastSync,
            now.timeIntervalSince(last) < Self.automaticInterval { return }
         guard !syncing.contains(key) else {
@@ -153,7 +190,7 @@ final class ChoreReminders {
             return
         }
         syncing.insert(key)
-        var result: Result<(ChoreSyncResult, [String: ChoreReminderLink]), any Error>
+        var result: Result<(ChoreSyncResult, [String: ChoreReminderLink], Date?), any Error>
         do {
             result = .success(try await run(family, listID: listID, scope: start.scope, now: now))
         } catch is CancellationError {
@@ -169,8 +206,9 @@ final class ChoreReminders {
         var settings = settings(key)
         if settings.listID == listID, settings.scope == start.scope {
             switch result {
-            case let .success((changes, links)):
+            case let .success((changes, links, next)):
                 settings.links = links
+                scheduleWakeUp(key, at: next, family: family)
                 settings.lastSync = now
                 settings.lastResult = changes
                 settings.lastError = nil
@@ -179,16 +217,17 @@ final class ChoreReminders {
             }
             save(settings, key)
         }
-        if case let .success((changes, _)) = result, changes.reported > 0 {
+        if case let .success((changes, _, _)) = result, changes.reported > 0 {
             // The chores screens show what was ticked off in Reminders.
             family.didChange(.chores)
         }
         if again.remove(key) != nil { await sync(family, reason: .changed) }
     }
 
-    /// One sync: the server's chores, the list's reminders, the plan, applied.
+    /// One sync: the server's chores, the list's reminders, the plan, applied. What changed, the
+    /// links, and when the next occurrence appears.
     private func run(_ family: FamilyContext, listID: String, scope: String?,
-                     now: Date) async throws -> (ChoreSyncResult, [String: ChoreReminderLink]) {
+                     now: Date) async throws -> (ChoreSyncResult, [String: ChoreReminderLink], Date?) {
         let api = family.api
         store.refreshAccess()
         guard store.access.isGranted else { throw RemindersError.noAccess }
@@ -198,7 +237,7 @@ final class ChoreReminders {
         let since = Day.calendar.date(byAdding: .day, value: -30, to: now) ?? now
         let reminders = try await store.reminders(in: listID, completedSince: since)
         let plan = ChoreReminderPlan.make(familyID: api.familyID, chores: page.chores, reminders: reminders,
-                                          links: settings(for: api).links, scope: scope, today: today)
+                                          links: settings(for: api).links, scope: scope, today: today, now: now)
         // The server first: a failure there leaves Reminders as they were, to try again.
         var reported = 0
         for mark in plan.markDone {
@@ -216,7 +255,7 @@ final class ChoreReminders {
         try apply(plan, to: listID, links: &links)
         let changes = ChoreSyncResult(added: plan.creates.count, updated: plan.updates.count, removed: plan.removals.count,
                                       completed: plan.completions.count, reported: reported)
-        return (changes, links)
+        return (changes, links, plan.nextAppearance)
     }
 
     /// Makes the plan's changes to Reminders, saved together (none of them when one fails); the
@@ -229,14 +268,15 @@ final class ChoreReminders {
             var added: [String: ChoreReminderLink] = [:]
             for create in plan.creates {
                 let c = create.content
-                let id = try store.add(ReminderDraft(title: c.title, notes: c.notes, due: c.due, url: c.url, rule: c.rule),
+                let id = try store.add(ReminderDraft(title: c.title, notes: c.notes, due: c.due, url: c.url),
                                        to: listID, commit: false)
-                added[create.choreID] = ChoreReminderLink(reminderID: id, done: false, fingerprint: create.fingerprint)
+                added[create.key] = ChoreReminderLink(reminderID: id, done: false, fingerprint: create.fingerprint,
+                                                      occurrence: create.occurrence)
             }
             for update in plan.updates {
                 let c = update.content
                 try store.update(update.id, ReminderChange(title: c.title, notes: .some(c.notes), due: .some(c.due),
-                                                           url: .some(c.url), rule: .some(c.rule)), commit: false)
+                                                           url: .some(c.url)), commit: false)
             }
             for completion in plan.completions {
                 try store.setCompleted(completion.id, completion.done, commit: false)

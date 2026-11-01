@@ -183,7 +183,7 @@ The app only asks for these permissions, and only when you use the feature:
   writes what the meal plan needs (item, amount, shopping day) into that list on your device and
   keeps those items up to date; it gets them from your server, but nothing from Reminders is
   sent back for this. For the chores, the app writes the family's chores (title, note, who does
-  it, when it's due, how it repeats) into the list you chose and keeps them up to date; the only
+  it, when it's due) into the list you chose and keeps them up to date; the only
   thing it sends back to your server is that you ticked a one-off chore off (or on again) in
   Reminders. If your reminders sync over iCloud, Apple stores them as it does any
   reminder ([Apple's privacy policy](https://www.apple.com/legal/privacy/)).

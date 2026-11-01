@@ -19,7 +19,7 @@ struct ChoreRemindersView: View {
         Form {
             Section {
                 Label {
-                    Text("Ohana puts the family’s chores into a list in Reminders: each one due when it’s due next, repeating ones repeating. Tick a chore off in Reminders and it’s done in Ohana too.")
+                    Text("Ohana puts the family’s chores into a list in Reminders, each due on its day. A repeating chore gets a new reminder each time, three hours before it’s due. Tick a one-off chore off in Reminders and it’s done in Ohana too.")
                 } icon: {
                     TintedIcon(systemImage: Module.chores.systemImage, tint: ModuleTint.chores, size: 34)
                 }
@@ -186,7 +186,7 @@ struct ChoreRemindersView: View {
         } header: {
             Text("Sync")
         } footer: {
-            Text("It syncs by itself when you open Ohana, when the chores change and when you tick one off in Reminders. A reminder you delete stays deleted until its chore changes.")
+            Text("It syncs by itself when you open Ohana, when the chores change and when you tick one off in Reminders; while Ohana is open, also when a repeating chore is due again. A reminder you delete stays deleted until its chore changes (a repeating chore’s until its next time).")
         }
     }
 

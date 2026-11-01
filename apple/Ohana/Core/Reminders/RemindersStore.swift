@@ -209,19 +209,17 @@ final class RemindersStore {
         reminder.notes = draft.notes
         reminder.dueDateComponents = draft.due?.components
         reminder.url = draft.url
-        reminder.recurrenceRules = draft.rule.map { [$0.ekRule] }
         try eventStore.save(reminder, commit: commit)
         return reminder.calendarItemIdentifier
     }
 
-    /// Changes a reminder's title, notes, due date, list, url or how it repeats (`ReminderChange`).
+    /// Changes a reminder's title, notes, due date, list or url (`ReminderChange`).
     func update(_ id: String, _ change: ReminderChange, commit: Bool = true) throws {
         let reminder = try writable(id)
         if let title = change.title { reminder.title = title }
         if let notes = change.notes { reminder.notes = notes }
         if let due = change.due { reminder.dueDateComponents = due?.components }
         if let url = change.url { reminder.url = url }
-        if let rule = change.rule { reminder.recurrenceRules = rule.map { [$0.ekRule] } }
         if let listID = change.listID, listID != reminder.calendar?.calendarIdentifier {
             guard let calendar = calendar(listID) else { throw RemindersError.listNotFound }
             guard calendar.allowsContentModifications else { throw RemindersError.readOnlyList }

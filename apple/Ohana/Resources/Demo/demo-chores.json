@@ -12,7 +12,8 @@
       "doneAt": null,
       "next": "{{day:-2}}",
       "createdAt": "{{time:-14400}}",
-      "updatedAt": "{{time:-14400}}"
+      "updatedAt": "{{time:-14400}}",
+      "occurrences": []
     },
     {
       "id": "chore-bins",
@@ -26,7 +27,8 @@
       "doneAt": null,
       "next": "{{day}}",
       "createdAt": "{{time:-43200}}",
-      "updatedAt": "{{time:-43200}}"
+      "updatedAt": "{{time:-43200}}",
+      "occurrences": ["{{day:-7}}", "{{day}}", "{{day:7}}"]
     },
     {
       "id": "chore-tidy",
@@ -40,7 +42,8 @@
       "doneAt": null,
       "next": "{{day}}",
       "createdAt": "{{time:-50000}}",
-      "updatedAt": "{{time:-50000}}"
+      "updatedAt": "{{time:-50000}}",
+      "occurrences": ["{{day:-1}}", "{{day}}", "{{day:1}}"]
     },
     {
       "id": "chore-swim-bag",
@@ -54,7 +57,8 @@
       "doneAt": null,
       "next": "{{day:1}}",
       "createdAt": "{{time:-3000}}",
-      "updatedAt": "{{time:-3000}}"
+      "updatedAt": "{{time:-3000}}",
+      "occurrences": []
     },
     {
       "id": "chore-plants",
@@ -68,7 +72,8 @@
       "doneAt": null,
       "next": "{{day:3}}",
       "createdAt": "{{time:-40000}}",
-      "updatedAt": "{{time:-40000}}"
+      "updatedAt": "{{time:-40000}}",
+      "occurrences": ["{{day:-11}}", "{{day:3}}"]
     },
     {
       "id": "chore-present",
@@ -82,7 +87,8 @@
       "doneAt": null,
       "next": "{{day:5}}",
       "createdAt": "{{time:-2000}}",
-      "updatedAt": "{{time:-2000}}"
+      "updatedAt": "{{time:-2000}}",
+      "occurrences": []
     },
     {
       "id": "chore-windows",
@@ -96,7 +102,8 @@
       "doneAt": "{{time:-2880}}",
       "next": null,
       "createdAt": "{{time:-20000}}",
-      "updatedAt": "{{time:-20000}}"
+      "updatedAt": "{{time:-20000}}",
+      "occurrences": []
     }
   ],
   "people": [

@@ -66,6 +66,7 @@ describe("chores", () => {
       done: false,
       doneAt: null,
       next: "2026-11-03",
+      occurrences: [],
       createdAt: NOW.toISOString(),
       updatedAt: NOW.toISOString(),
     });
@@ -181,6 +182,22 @@ describe("chores", () => {
     // The server's day without ?today=.
     const daily = (await edit("GET", "/chores")).data.chores.find((c: { day: string; rrule: string | null }) => c.rrule === "FREQ=DAILY");
     expect(daily.next).toBe("2026-11-04");
+  });
+
+  it("list the occurrences around today for repeating ones", async () => {
+    const edit = call(editorId);
+    const add = async (body: Record<string, unknown>) =>
+      (await edit("POST", "/chores?today=2026-11-04", { title: "x", ...body })).data.chore.occurrences;
+    // Single: none.
+    expect(await add({ day: "2026-11-10" })).toEqual([]);
+    // The last before today, today's and the first after it.
+    expect(await add({ day: "2026-10-01", rrule: "FREQ=DAILY" })).toEqual(["2026-11-03", "2026-11-04", "2026-11-05"]);
+    // None today: the one before and the next.
+    expect(await add({ day: "2026-10-05", rrule: "FREQ=WEEKLY;BYDAY=MO" })).toEqual(["2026-11-02", "2026-11-09"]);
+    // Not started yet: only the first.
+    expect(await add({ day: "2026-12-01", rrule: "FREQ=MONTHLY" })).toEqual(["2026-12-01"]);
+    // Ended: only the last one.
+    expect(await add({ day: "2026-10-01", rrule: "FREQ=WEEKLY;COUNT=2" })).toEqual(["2026-10-08"]);
   });
 
   it("sorts by title on the same day", async () => {

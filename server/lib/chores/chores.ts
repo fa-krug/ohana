@@ -37,6 +37,9 @@ export interface Chore {
   /** Single: `day` while open (also when past), null when done; repeating: the first
    *  occurrence on or after today, null once the series ended. */
   next: string | null;
+  /** Repeating: the last occurrence before today, today's and the first after today (those
+   *  there are), ascending; the app writes each into Reminders 3 h before it's due. Single: []. */
+  occurrences: string[];
   createdAt: string;
   /** Edits only, not done. */
   updatedAt: string;
@@ -120,6 +123,19 @@ export function nextDue(row: Pick<ChoreRow, "day" | "rrule" | "doneAt">, today: 
   return expandRule(parseRrule(row.rrule), row.day, from, addDays(from, NEXT_YEARS * 366), 1)[0] ?? null;
 }
 
+/** How far back a repeating chore's last occurrence before today is looked for. */
+const PREVIOUS_DAYS = 400;
+
+/** The occurrences around today (see Chore.occurrences). */
+export function occurrencesAround(row: Pick<ChoreRow, "day" | "rrule">, today: string): string[] {
+  if (!row.rrule) return [];
+  const rule = parseRrule(row.rrule);
+  const before = expandRule(rule, row.day, addDays(today, -PREVIOUS_DAYS), addDays(today, -1));
+  const from = row.day > today ? row.day : today;
+  const after = expandRule(rule, row.day, from, addDays(from, NEXT_YEARS * 366), 2);
+  return [...before.slice(-1), ...(after[0] === today ? after : after.slice(0, 1))];
+}
+
 function choreJson(row: ChoreRow, who: ChorePerson[], today: string): Chore {
   const assigneeId = row.assigneeUserId ?? row.assigneePersonId;
   return {
@@ -133,6 +149,7 @@ function choreJson(row: ChoreRow, who: ChorePerson[], today: string): Chore {
     done: !row.rrule && !!row.doneAt,
     doneAt: !row.rrule && row.doneAt ? row.doneAt.toISOString() : null,
     next: nextDue(row, today),
+    occurrences: occurrencesAround(row, today),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };

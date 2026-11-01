@@ -159,15 +159,12 @@ struct ReminderDraft: Hashable {
     var notes: String?
     var due: ReminderDue?
     var url: URL?
-    /// How it repeats (from its due day, which it needs then); nil: once.
-    var rule: RepeatRule?
 
-    init(title: String, notes: String? = nil, due: ReminderDue? = nil, url: URL? = nil, rule: RepeatRule? = nil) {
+    init(title: String, notes: String? = nil, due: ReminderDue? = nil, url: URL? = nil) {
         self.title = title
         self.notes = notes
         self.due = due
         self.url = url
-        self.rule = rule
     }
 }
 
@@ -179,21 +176,17 @@ struct ReminderChange: Hashable {
     /// Another list to move it to.
     var listID: String?
     var url: URL??
-    /// How it repeats; `.some(nil)`: not anymore.
-    var rule: RepeatRule??
 
-    init(title: String? = nil, notes: String?? = nil, due: ReminderDue?? = nil, listID: String? = nil, url: URL?? = nil,
-         rule: RepeatRule?? = nil) {
+    init(title: String? = nil, notes: String?? = nil, due: ReminderDue?? = nil, listID: String? = nil, url: URL?? = nil) {
         self.title = title
         self.notes = notes
         self.due = due
         self.listID = listID
         self.url = url
-        self.rule = rule
     }
 
     /// Nothing would change.
-    var isEmpty: Bool { title == nil && notes == nil && due == nil && listID == nil && url == nil && rule == nil }
+    var isEmpty: Bool { title == nil && notes == nil && due == nil && listID == nil && url == nil }
 
     /// `reminder` with the change applied (what `RemindersStore.update` does to the real one).
     func applied(to reminder: ReminderSnapshot) -> ReminderSnapshot {

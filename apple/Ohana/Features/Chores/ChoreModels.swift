@@ -32,6 +32,10 @@ struct Chore: Codable, Hashable, Identifiable {
     let next: Day?
     let createdAt: String
     let updatedAt: String
+    /// A repeating chore's occurrences around today, ascending: the last one before today, today's
+    /// and the first after today (each if there is one); empty for a single chore. Older servers
+    /// don't send it.
+    var occurrences: [Day] = []
 
     var isRepeating: Bool { rrule != nil }
     var rule: RepeatRule? { rrule.flatMap(RepeatRule.init) }
@@ -40,6 +44,27 @@ struct Chore: Codable, Hashable, Identifiable {
     /// Open and its day passed.
     func isOverdue(today: Day) -> Bool {
         !isRepeating && !done && day < today
+    }
+}
+
+extension Chore {
+    private enum CodingKeys: String, CodingKey {
+        case id, title, note, assignee, day, time, rrule, done, doneAt, next, createdAt, updatedAt, occurrences
+    }
+
+    /// `occurrences` may be missing (an older server): none then.
+    init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(id: try c.decode(String.self, forKey: .id), title: try c.decode(String.self, forKey: .title),
+                  note: try c.decode(String.self, forKey: .note),
+                  assignee: try c.decodeIfPresent(ChorePerson.self, forKey: .assignee),
+                  day: try c.decode(Day.self, forKey: .day), time: try c.decodeIfPresent(String.self, forKey: .time),
+                  rrule: try c.decodeIfPresent(String.self, forKey: .rrule), done: try c.decode(Bool.self, forKey: .done),
+                  doneAt: try c.decodeIfPresent(String.self, forKey: .doneAt),
+                  next: try c.decodeIfPresent(Day.self, forKey: .next),
+                  createdAt: try c.decode(String.self, forKey: .createdAt),
+                  updatedAt: try c.decode(String.self, forKey: .updatedAt),
+                  occurrences: try c.decodeIfPresent([Day].self, forKey: .occurrences) ?? [])
     }
 }
 

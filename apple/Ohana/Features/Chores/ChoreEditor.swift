@@ -122,7 +122,7 @@ struct ChoreEditor: View {
                     if let chore, chore.done, let date = chore.doneDate {
                         Text("Done \(date.formatted(date: .abbreviated, time: .shortened)).")
                     } else if draft.rule != nil {
-                        Text("A repeating chore is ticked off in Reminders, occurrence by occurrence.")
+                        Text("In Reminders, a repeating chore gets a new reminder each time, three hours before it’s due.")
                     }
                 }
                 if let chore, !readOnly {

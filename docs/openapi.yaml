@@ -5175,7 +5175,7 @@ components:
         account: {type: boolean}
     Chore:
       type: object
-      required: [id, title, note, assignee, day, time, rrule, done, doneAt, next, createdAt, updatedAt]
+      required: [id, title, note, assignee, day, time, rrule, done, doneAt, next, occurrences, createdAt, updatedAt]
       properties:
         id: {type: string}
         title: {type: string}
@@ -5195,6 +5195,13 @@ components:
           description: >-
             Single: `day` while open (also when it is past: overdue), null when done. Repeating:
             the first occurrence on or after `today`, null once the series ended.
+        occurrences:
+          type: array
+          items: {type: string, format: date}
+          description: >-
+            Repeating: the last occurrence before `today`, the one on `today` and the first after
+            it (those there are), ascending; the app writes each into Reminders 3 hours before it
+            is due. Single: empty.
         createdAt: {type: string, format: date-time}
         updatedAt: {type: string, format: date-time, description: "Edits only; marking done doesn't change it."}
     ChoreInput:

@@ -58,7 +58,8 @@ Ready to try it? Go to the [quick start](/quickstart).
 - **Chores** for anyone in the family, with or without an account: once, due on a day (and a
   time, if you like), or **repeating** (daily, weekly, every second Saturday, …).
 - They go into a **Reminders list** you pick on each device (shared over iCloud if you like):
-  everyone's chores, only yours or one person's, a repeating chore as one repeating reminder.
+  everyone's chores, only yours or one person's. Each time a repeating chore comes round, its
+  reminder shows up 3 hours before it's due.
 - Tick a one-off chore off in Reminders or in the app; the other side follows.
 
 ## Appointments

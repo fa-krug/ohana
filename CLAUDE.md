@@ -261,7 +261,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   one account (`assignee_user_id`) or person (`assignee_person_id`) of the family or nobody, `day`
   (the due day / a series' first), `time` ("HH:MM" or null), `rrule` (null = once; events'
   `lib/calendar/rrule.ts`), `done_at` (single chores only). `chores.ts` (CRUD, `nextDue`: a single
-  chore's `day` while open, a repeating one's first occurrence from `today`), `routes.ts`
+  chore's `day` while open, a repeating one's first occurrence from `today`; `occurrences`: a
+  repeating one's last before `today`, today's and the first after), `routes.ts`
   `handleChores` (`GET/POST /chores?today=`, `GET/PATCH/DELETE /chores/{id}`, `POST
   /chores/{id}/done {done}`; members read, editors change, viewers may tick off their own; POST
   takes an optional `id` so the assistant's undo brings a chore back under its id). Accepting a
@@ -429,13 +430,16 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   Chores (`Features/Chores/`: `ChoresView` by Overdue / Today / Upcoming / Repeating / Done,
   `ChoreEditor` with the calendar's repeat controls (`RepeatEditing`), `ChoreRemindersView`) go into a
   Reminders list chosen per device and family (`Core/Reminders/ChoreReminders.swift`, `UserDefaults`:
-  list, whose chores (everyone's or one person's), links chore → reminder). `ChoreReminderPlan`
-  (pure, tested): one reminder per chore, a repeating chore as one repeating reminder
-  (`RepeatRule+EventKit.swift`, shared with the calendar sync), due on `next`, url
-  `ohana://f/{id}/chores/{choreId}?v=<fingerprint>` (an open reminder with another `v` is written
-  again); a single chore's done goes both ways (`POST …/done`), a deleted reminder stays deleted
-  until the chore changes, only reminders this device linked are ever removed. Syncs on becoming
-  active, a family switch, chore changes and Reminders changes.
+  list, whose chores (everyone's or one person's), links chore (or occurrence) → reminder).
+  `ChoreReminderPlan` (pure, tested): a single chore is one reminder due on its day; a repeating
+  one gets a plain reminder per occurrence (no recurrence rule), written once it's due within 3 h
+  (all day: from 21:00 the evening before; the latest of the server's `occurrences` that has
+  appeared; none from before the chore was made or of a series that ended before today), missed
+  ones are left; url `ohana://f/{id}/chores/{choreId}?v=<fingerprint>[&o=<day>]`
+  (an open reminder with another `v` is written again); a single chore's done goes both ways
+  (`POST …/done`), a deleted reminder stays deleted until the chore changes, only reminders this
+  device linked are ever removed. Syncs on becoming active, a family switch, chore changes,
+  Reminders changes and, while the app runs, when the next occurrence's reminder is due to appear.
   The shopping list is a Reminders list (`Core/Reminders/`: `RemindersStore` wraps one
   `EKEventStore`; `ShoppingReminders` per server + family on this device, in `UserDefaults`: the
   chosen list and the keys already written). `sync` writes `GET /meals/shopping?from=today` one-way
