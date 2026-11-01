@@ -48,6 +48,10 @@ targets:
       - path: Ohana
         excludes:
           - "Info-*.plist"
+      # Code the app shares with its share extension (Keychain, SharedConnection).
+      - path: Shared
+    dependencies:
+      - target: OhanaShare
     info:
       path: Ohana/Info-iOS.plist
       properties:
@@ -94,6 +98,9 @@ targets:
       - path: Ohana
         excludes:
           - "Info-*.plist"
+      - path: Shared
+    dependencies:
+      - target: OhanaShare-macOS
     info:
       path: Ohana/Info-macOS.plist
       properties:
@@ -119,6 +126,81 @@ targets:
         COMBINE_HIDPI_IMAGES: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+
+  # "Save to Ohana" in the share sheet (Safari and other apps sharing a web page): the server's
+  # assistant imports the page's recipe. Embedded in the apps; reads the app's connection from the
+  # Keychain (same access group, no App Group: Shared/SharedConnection.swift). One bundle id for
+  # both platforms, like the apps.
+  OhanaShare:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: ShareExtension
+        excludes:
+          - "Info-*.plist"
+      - path: Shared
+      # The app's strings (the extension's are among them).
+      - path: Ohana/Resources/Localizable.xcstrings
+    info:
+      path: ShareExtension/Info-iOS.plist
+      properties:
+        CFBundleDisplayName: Ohana
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: OhanaShareViewController
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsWebURLWithMaxCount: 1
+              NSExtensionActivationSupportsWebPageWithMaxCount: 1
+            # Safari runs it in the page first: title, text (JSON-LD + visible text), og:image.
+            NSExtensionJavaScriptPreprocessingFile: Preprocess
+    settings:
+      base:
+        PRODUCT_NAME: OhanaShare
+        PRODUCT_BUNDLE_IDENTIFIER: de.fa-krug.Ohana.Share
+        GENERATE_INFOPLIST_FILE: false
+        CODE_SIGN_ENTITLEMENTS: ShareExtension/OhanaShare-iOS.entitlements
+        TARGETED_DEVICE_FAMILY: "1,2"
+        APPLICATION_EXTENSION_API_ONLY: YES
+
+  OhanaShare-macOS:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: ShareExtension
+        excludes:
+          - "Info-*.plist"
+          # Safari on the Mac doesn't run a preprocessing script: the server fetches the page.
+          - "Preprocess.js"
+      - path: Shared
+      - path: Ohana/Resources/Localizable.xcstrings
+    info:
+      path: ShareExtension/Info-macOS.plist
+      properties:
+        CFBundleDisplayName: Ohana
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: OhanaShareViewController
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsWebURLWithMaxCount: 1
+              NSExtensionActivationSupportsWebPageWithMaxCount: 1
+    settings:
+      base:
+        PRODUCT_NAME: OhanaShare
+        PRODUCT_BUNDLE_IDENTIFIER: de.fa-krug.Ohana.Share
+        GENERATE_INFOPLIST_FILE: false
+        CODE_SIGN_ENTITLEMENTS: ShareExtension/OhanaShare-macOS.entitlements
+        ENABLE_HARDENED_RUNTIME: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
 
   OhanaTests:
     type: bundle.unit-test

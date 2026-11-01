@@ -1,3 +1,4 @@
+import CoreSpotlight
 import SwiftUI
 
 @main
@@ -27,6 +28,12 @@ struct OhanaApp: App {
                 .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
                     if let url = activity.webpageURL { app.open(url) }
                 }
+                // A recipe picked in Spotlight (`RecipeSpotlight`).
+                .onContinueUserActivity(CSSearchableItemActionType) { activity in
+                    guard let id = activity.userInfo?[CSSearchableItemActivityIdentifier] as? String else { return }
+                    Task { await app.openSpotlightItem(id) }
+                }
+                .modifier(RecipeSpotlightUpdates(app: app))
         }
         #if os(macOS)
         .defaultSize(width: 1280, height: 820)

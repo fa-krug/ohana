@@ -2412,6 +2412,59 @@ paths:
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
         "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/families/{familyId}/meals/recipes/import:
+    post:
+      tags: [Meals]
+      operationId: importRecipe
+      summary: Import a recipe from a web page with the family's AI
+      description: >-
+        The family's AI turns the page into one recipe in the user's language (the author's
+        quantities and steps, units converted to the available ones, the family's tags) and saves it
+        on the "to try" list, with `Source: <url>` at the end of its description. The page is read
+        from `text` (the page's text or HTML as the browser had it; the share extension and
+        Shortcuts send it) or, without one, fetched by the server (never from private addresses,
+        also not after a redirect; 20 s). The photo is `imageUrl`, else the page's schema.org
+        Recipe image or `og:image`; a photo that can't be loaded is left out. Waits for the model
+        (up to two minutes). 400 when the AI isn't set up or the address is invalid or private,
+        404 when the `assistant` or `meals` module is off.
+      x-ohana-role: editor
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url]
+              properties:
+                url: {type: string, format: uri, description: "The page's address (http or https)."}
+                text:
+                  type: [string, "null"]
+                  description: The page's readable text (or HTML, JSON-LD included) as the browser had it; cut after 100,000 characters. Without it (or under 100 characters) the server fetches the page.
+                title: {type: [string, "null"], description: "The page's title as the browser had it."}
+                imageUrl: {type: [string, "null"], format: uri, description: "The recipe's photo (http or https); anything else is ignored."}
+      responses:
+        "200":
+          description: The saved recipe.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, title]
+                properties:
+                  id: {type: string}
+                  title: {type: string}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "422":
+          description: No recipe found on that page.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+        "502": {$ref: "#/components/responses/BadGateway"}
   /api/v1/families/{familyId}/meals/recipes/{recipeId}:
     parameters:
       - $ref: "#/components/parameters/FamilyId"
