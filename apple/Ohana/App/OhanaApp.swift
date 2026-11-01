@@ -1,12 +1,16 @@
 import SwiftUI
+import UserNotifications
 
 @main
 struct OhanaApp: App {
     @State private var app: AppModel
+    @Environment(\.scenePhase) private var scenePhase
 
     init() {
         let app = AppModel()
         _app = State(initialValue: app)
+        // A cook timer's notification shows while the app is open too.
+        UNUserNotificationCenter.current().delegate = CookTimers.NotificationDelegate.shared
         #if os(macOS)
         // The assistant in the menu bar: a click away while the window is hidden or another app
         // is in front.
@@ -33,5 +37,9 @@ struct OhanaApp: App {
         .windowToolbarStyle(.unified)
         #endif
         .commands { ShellCommands() }
+        // Cook timers that finished while the app was away leave the Live Activity.
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { CookTimers.shared.refresh() }
+        }
     }
 }
