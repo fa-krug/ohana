@@ -311,6 +311,16 @@ struct AppointmentSearchEditor: View {
 
     @ViewBuilder private var notifications: some View {
         Section {
+            if family.serverInfo?.push != nil {
+                Toggle(isOn: Binding(get: { input.notifyApp ?? true }, set: { input.notifyApp = $0 })) {
+                    VStack(alignment: .leading) {
+                        Text("Ohana app")
+                        Text("On the devices that have notifications turned on")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
             if let options {
                 if options.channels.isEmpty {
                     Text("Your family has no notification channels yet.")

@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "67cc033f-1738-487a-85be-0f97e6a96de3",
+  "id": "63512ec6-0cd3-4c02-a822-45a31360903d",
   "prevId": "b7ac6aed-1d40-4270-a4f3-f626573f8a57",
   "tables": {
     "auth_tokens": {
@@ -814,6 +814,129 @@
           "tableTo": "users",
           "columnsFrom": [
             "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "push_devices": {
+      "name": "push_devices",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "token_id": {
+          "name": "token_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "platform": {
+          "name": "platform",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "relay_token": {
+          "name": "relay_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "muted_family_ids": {
+          "name": "muted_family_ids",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'[]'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "last_sent_at": {
+          "name": "last_sent_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "last_error": {
+          "name": "last_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "push_devices_token_id_unique": {
+          "name": "push_devices_token_id_unique",
+          "columns": [
+            "token_id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "push_devices_user_id_users_id_fk": {
+          "name": "push_devices_user_id_users_id_fk",
+          "tableFrom": "push_devices",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "push_devices_token_id_auth_tokens_id_fk": {
+          "name": "push_devices_token_id_auth_tokens_id_fk",
+          "tableFrom": "push_devices",
+          "tableTo": "auth_tokens",
+          "columnsFrom": [
+            "token_id"
           ],
           "columnsTo": [
             "id"
@@ -1760,6 +1883,14 @@
           "notNull": true,
           "autoincrement": false,
           "default": false
+        },
+        "notify_app": {
+          "name": "notify_app",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
         },
         "earliest_seen": {
           "name": "earliest_seen",
@@ -2739,73 +2870,6 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "shopping_item_adds": {
-      "name": "shopping_item_adds",
-      "columns": {
-        "shopping_list_id": {
-          "name": "shopping_list_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "client_id": {
-          "name": "client_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "item_id": {
-          "name": "item_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "merged": {
-          "name": "merged",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "previous_quantity": {
-          "name": "previous_quantity",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "shopping_item_adds_shopping_list_id_shopping_lists_id_fk": {
-          "name": "shopping_item_adds_shopping_list_id_shopping_lists_id_fk",
-          "tableFrom": "shopping_item_adds",
-          "tableTo": "shopping_lists",
-          "columnsFrom": [
-            "shopping_list_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "shopping_item_adds_shopping_list_id_client_id_pk": {
-          "columns": [
-            "shopping_list_id",
-            "client_id"
-          ],
-          "name": "shopping_item_adds_shopping_list_id_client_id_pk"
-        }
-      },
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
@@ -3793,6 +3857,14 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "app": {
+          "name": "app",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
         },
         "state": {
           "name": "state",

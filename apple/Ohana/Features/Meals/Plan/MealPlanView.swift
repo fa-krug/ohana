@@ -16,10 +16,14 @@ final class MealPlanUndo: Identifiable {
 /// Meals → Plan: the family's meal plan (port of the web's plan page). The active iteration day
 /// by day (lunch with its recipe, leftovers, away days, shopping days with their lists), the
 /// past ones folded, and for editors: setting the plan up, refreshing an iteration, starting the
-/// next one, swapping or removing a meal (each undoable for a few seconds).
+/// next one, swapping or removing a meal (each undoable for a few seconds). Editors drag a meal
+/// onto another day (swapping them) or a recipe onto a day; on iPad and Mac the recipes to drag
+/// sit in a column beside the plan (toolbar: Recipes).
 struct MealPlanView: View {
     @Environment(FamilyContext.self) private var family
     @Environment(\.undoManager) private var undoManager
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    @AppStorage("meals.plan.recipes") private var showsRecipes = true
     @State private var state: LoadState<MealPlanResponse> = .idle
     @State private var showSetup = false
     @State private var shownRecipe: MealsRecipeRef?
@@ -38,6 +42,12 @@ struct MealPlanView: View {
         }
         .navigationTitle("Meal plan")
         .toolbar {
+            if offersRecipeColumn(state.value?.plan) {
+                ToolbarItem(placement: .primaryAction) {
+                    Toggle("Recipes", systemImage: "book", isOn: $showsRecipes)
+                        .help("Recipes to drag onto a day")
+                }
+            }
             if canEdit, let data = state.value, data.plan != nil {
                 ToolbarItem(placement: .primaryAction) {
                     Button("Update plan", systemImage: "slider.horizontal.3") { showSetup = true }
@@ -90,43 +100,27 @@ struct MealPlanView: View {
 
     // MARK: Content
 
+    /// Editors on iPad and Mac with an active iteration may show the recipes beside the plan.
+    private func offersRecipeColumn(_ plan: MealPlanDTO?) -> Bool {
+        canEdit && sizeClass != .compact && plan?.activeIteration != nil
+    }
+
     @ViewBuilder
     private func content(_ data: MealPlanResponse) -> some View {
         if let plan = data.plan, !plan.iterations.isEmpty {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    if canEdit, plan.activeEnded(today: .today) {
-                        endedBanner
+            HStack(spacing: 0) {
+                days(plan, away: data.away)
+                if showsRecipes, offersRecipeColumn(plan), let active = plan.activeIteration {
+                    MealPlanRecipeColumn(planned: plan.recipeIDs(in: active.id)) { recipe in
+                        shownRecipe = MealsRecipeRef(recipeID: recipe.id)
                     }
-                    if let active = plan.activeIteration {
-                        card(active, plan: plan, away: data.away, archived: false)
-                    } else {
-                        ContentUnavailableView {
-                            Label("No active plan", systemImage: "calendar.badge.exclamationmark")
-                        } description: {
-                            Text("Time to plan your next round!")
-                        } actions: {
-                            if canEdit { nextButton }
-                        }
-                        .contentCard()
-                    }
-                    if !plan.pastIterations.isEmpty {
-                        Text("Previous plans")
-                            .font(.title3.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 4)
-                            .padding(.top, 8)
-                        ForEach(plan.pastIterations) { iteration in
-                            card(iteration, plan: plan, away: data.away, archived: true)
-                        }
-                    }
+                    .contentCard(padding: 12)
+                    .frame(minWidth: 0, maxWidth: 320, maxHeight: .infinity)
+                    .padding([.vertical, .trailing])
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
-                .padding()
-                .padding(.bottom, undo == nil ? 0 : 60)
-                .frame(maxWidth: 760)
-                .frame(maxWidth: .infinity)
             }
-            .refreshable { await load() }
+            .animation(.snappy, value: showsRecipes)
         } else {
             ContentUnavailableView {
                 Label("No meal plan yet", systemImage: "calendar.badge.plus")
@@ -142,14 +136,53 @@ struct MealPlanView: View {
         }
     }
 
+    private func days(_ plan: MealPlanDTO, away: [String: [String]]) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                if canEdit, plan.activeEnded(today: .today) {
+                    endedBanner
+                }
+                if let active = plan.activeIteration {
+                    card(active, plan: plan, away: away, archived: false)
+                } else {
+                    ContentUnavailableView {
+                        Label("No active plan", systemImage: "calendar.badge.exclamationmark")
+                    } description: {
+                        Text("Time to plan your next round!")
+                    } actions: {
+                        if canEdit { nextButton }
+                    }
+                    .contentCard()
+                }
+                if !plan.pastIterations.isEmpty {
+                    Text("Previous plans")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 4)
+                        .padding(.top, 8)
+                    ForEach(plan.pastIterations) { iteration in
+                        card(iteration, plan: plan, away: away, archived: true)
+                    }
+                }
+            }
+            .padding()
+            .padding(.bottom, undo == nil ? 0 : 60)
+            .frame(maxWidth: 760)
+            .frame(maxWidth: .infinity)
+        }
+        .refreshable { await load() }
+    }
+
     private func card(_ iteration: MealPlanIteration, plan: MealPlanDTO, away: [String: [String]], archived: Bool) -> some View {
         MealPlanIterationCard(
             iteration: iteration,
             rows: iteration.dayRows(shoppingDays: plan.shoppingDays, away: away),
             archived: archived,
+            familyID: family.family.id,
             canEdit: canEdit,
             working: working,
             onRenew: { confirmRenew = iteration },
+            onDrop: { item, row in drop(item, onto: row, of: iteration) },
             onAction: { action in
                 switch action {
                 case let .open(entry): shownRecipe = MealsRecipeRef(recipeID: entry.recipeId, servings: entry.servings)
@@ -238,6 +271,29 @@ struct MealPlanView: View {
         }
     }
 
+    /// Puts a dragged recipe or meal onto `row`'s day; false when it changes nothing there.
+    private func drop(_ item: MealDragItem, onto row: MealPlanDayRow, of iteration: MealPlanIteration) -> Bool {
+        guard !working, let drop = MealPlanDrop(item, onto: row, of: iteration, familyID: family.family.id) else {
+            return false
+        }
+        switch drop {
+        case let .replace(entryID, recipeID, title):
+            change(String(localized: "\(title) is planned instead")) {
+                try await family.api.send(.patch, "/meals/plan/entries/\(entryID)", body: MealPlanSwapInput(recipeId: recipeID))
+            }
+        case let .add(iterationID, date, recipeID, title):
+            change(String(localized: "\(title) planned for \(date.formatted())")) {
+                try await family.api.send(.post, "/meals/plan/iterations/\(iterationID)/entries",
+                                          body: MealPlanAddInput(date: date, recipeId: recipeID))
+            }
+        case let .move(entryID, date, title, swapped):
+            change(swapped ? String(localized: "Meals swapped") : String(localized: "\(title) moved to \(date.formatted())")) {
+                try await family.api.send(.post, "/meals/plan/entries/\(entryID)/move", body: MealPlanMoveInput(date: date))
+            }
+        }
+        return true
+    }
+
     private func remove(_ entry: MealPlanEntry) {
         change(String(localized: "Meal removed")) {
             try await family.api.send(.delete, "/meals/plan/entries/\(entry.id)")
@@ -284,9 +340,12 @@ struct MealPlanIterationCard: View {
     let iteration: MealPlanIteration
     let rows: [MealPlanDayRow]
     let archived: Bool
+    let familyID: String
     let canEdit: Bool
     let working: Bool
     var onRenew: () -> Void
+    /// A recipe or meal dropped onto a day; whether it was used.
+    var onDrop: (MealDragItem, MealPlanDayRow) -> Bool
     var onAction: (MealPlanEntryAction) -> Void
 
     @State private var expanded: Bool?
@@ -300,7 +359,8 @@ struct MealPlanIterationCard: View {
                 Divider().padding(.vertical, 10)
                 VStack(spacing: 0) {
                     ForEach(rows) { row in
-                        MealPlanDayRowView(row: row, isToday: row.day == .today, canEdit: canEdit, onAction: onAction)
+                        MealPlanDayRowView(row: row, isToday: row.day == .today, familyID: familyID, canEdit: canEdit,
+                                           onDrop: { onDrop($0, row) }, onAction: onAction)
                         if row.id != rows.last?.id {
                             Divider().opacity(0.6)
                         }
@@ -347,13 +407,17 @@ struct MealPlanIterationCard: View {
 
 /// A day of the plan: its date, the shopping list on shopping days, lunch (or away) and dinner.
 /// "Lunch" and "Dinner" sit in a column as wide as the longer of them; at accessibility text
-/// sizes above their meal.
+/// sizes above their meal. For editors the lunch can be dragged and the day takes a dropped
+/// recipe or meal (outlined while one hovers it).
 struct MealPlanDayRowView: View {
     let row: MealPlanDayRow
     let isToday: Bool
+    let familyID: String
     let canEdit: Bool
+    var onDrop: (MealDragItem) -> Bool
     var onAction: (MealPlanEntryAction) -> Void
     @Environment(\.dynamicTypeSize) private var typeSize
+    @State private var targeted = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -413,6 +477,18 @@ struct MealPlanDayRowView: View {
                 RoundedRectangle(cornerRadius: 14).fill(ModuleTint.meals.opacity(0.12))
             }
         }
+        .background {
+            // Reaches past the row's edges where it has no padding of its own.
+            if targeted {
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(ModuleTint.meals.opacity(0.14))
+                    .overlay { RoundedRectangle(cornerRadius: 14).strokeBorder(ModuleTint.meals, lineWidth: 2) }
+                    .padding(.horizontal, isToday ? 0 : -8)
+            }
+        }
+        .animation(.snappy(duration: 0.15), value: targeted)
+        .contentShape(.rect)
+        .mealDropDestination(enabled: canEdit, action: onDrop) { targeted = $0 }
     }
 
     @ViewBuilder
@@ -453,6 +529,8 @@ struct MealPlanDayRowView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .contextMenu { actions(entry) }
+            .mealDraggable(canEdit ? MealDragItem(familyID: familyID, recipeID: entry.recipeId,
+                                                  title: entry.recipeTitle, entryID: entry.id) : nil)
         } else {
             Text(verbatim: "—").foregroundStyle(.secondary)
         }

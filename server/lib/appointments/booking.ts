@@ -3,7 +3,7 @@
 // details are copied into the event (results are pruned after 30 days; the event stays).
 // Optionally the search stops watching (it is turned off).
 
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, ne } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/lib/db";
 import { AuthError } from "@/lib/auth/errors";
@@ -86,4 +86,33 @@ export function removeBooking(db: Db, actor: Actor, familyId: string, eventId: s
     .where(and(eq(calEvents.familyId, familyId), eq(calEvents.id, eventId)))
     .run();
   if (!res.changes) throw new AuthError(404, "Appointment not found.");
+}
+
+/** Whom a booking of the search is likely for, to fill in "for whom": the person of its latest
+ *  booking, else the one family name its name holds as a word ("Kinderarzt Mia"), else the
+ *  family's only name; "" when that doesn't say. */
+export function suggestedPerson(
+  db: Db,
+  familyId: string,
+  search: { id: string; name: string },
+  people: string[],
+): string {
+  const last = db
+    .select({ person: calEvents.person })
+    .from(calEvents)
+    .where(
+      and(
+        eq(calEvents.familyId, familyId),
+        eq(calEvents.source, "appointment"),
+        eq(calEvents.sourceId, search.id),
+        ne(calEvents.person, ""),
+      ),
+    )
+    .orderBy(desc(calEvents.createdAt))
+    .get();
+  if (last) return last.person;
+  const words = new Set(search.name.toLocaleLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean));
+  const named = people.filter((p) => words.has(p.toLocaleLowerCase()));
+  if (named.length === 1) return named[0];
+  return people.length === 1 ? people[0] : "";
 }

@@ -39,13 +39,17 @@
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Ohana uses the camera for recipe pictures.</string>
+	<string>Ohana uses the camera for recipe pictures and to scan receipts.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Ohana listens when you dictate a message to the assistant.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Ohana uses your photos for recipe pictures.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Ohana turns what you dictate to the assistant into text.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+	<key>OhanaPushRelay</key>
+	<string>https://ohana-push.fa-krug.de</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -65,6 +69,39 @@
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Ohana meal</string>
+			<key>UTTypeIdentifier</key>
+			<string>de.fa-krug.ohana.meal</string>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Ohana calendar event</string>
+			<key>UTTypeIdentifier</key>
+			<string>de.fa-krug.ohana.calendar-event</string>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Ohana shopping item</string>
+			<key>UTTypeIdentifier</key>
+			<string>de.fa-krug.ohana.shopping-item</string>
+		</dict>
 	</array>
 </dict>
 </plist>

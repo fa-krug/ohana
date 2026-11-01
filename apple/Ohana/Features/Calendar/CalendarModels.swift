@@ -142,6 +142,12 @@ struct CalendarEvent: Codable, Hashable, Identifiable {
         let name = person.isEmpty ? title : "\(title) (\(person))"
         return [start, name].compactMap { $0 }.joined(separator: " ")
     }
+
+    /// The event moved to another day, everything else as it is.
+    func on(_ day: Day) -> CalendarEvent {
+        CalendarEvent(id: id, date: day, start: start, end: end, title: title, location: location, person: person,
+                      note: note, url: url, source: source, searchId: searchId)
+    }
 }
 
 /// The family as GET /families/{id} describes it (family-routes.ts `publicFamily`).
@@ -235,4 +241,9 @@ struct CalendarEventInput: Encodable, Equatable {
         try c.encode(note, forKey: .note)
         try c.encode(url, forKey: .url)
     }
+}
+
+/// PATCH /events/{id} that only moves the event to another day (an event dragged onto it).
+struct CalendarEventDateBody: Encodable, Equatable {
+    let date: Day
 }

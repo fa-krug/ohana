@@ -161,3 +161,83 @@ export function deleteShoppingItem(db: Db, familyId: string, itemId: string): vo
   if (!ownedItemIds(db, familyId, [itemId]).has(itemId)) throw new AuthError(404, "Item not found");
   db.delete(shoppingListItems).where(eq(shoppingListItems.id, itemId)).run();
 }
+
+/**
+ * Moves one of the family's items (or `quantity` of it) to another of its shopping lists. A part
+ * leaves the rest on the old list and goes as an unticked item; a whole item moves itself and
+ * keeps its tick. What moves unticked is added to an unticked item of the same ingredient and
+ * unit on the target list (`merged`, with that item's quantity before). Undo: move `id` back to
+ * `fromListId` (whole, not merged) or `quantity` of `id` (merged or a part).
+ */
+export function moveShoppingItem(
+  db: Db,
+  familyId: string,
+  itemId: string,
+  input: { listId: string; quantity?: string },
+): { id: string; merged: boolean; previousQuantity: string | null; fromListId: string; quantity: string } {
+  if (!ownedItemIds(db, familyId, [itemId]).has(itemId)) throw new AuthError(404, "Item not found");
+  ownedList(db, familyId, input.listId);
+  const item = db.select().from(shoppingListItems).where(eq(shoppingListItems.id, itemId)).get();
+  if (!item) throw new AuthError(404, "Item not found");
+  if (item.shoppingListId === input.listId) throw new AuthError(422, "The item is already on that list");
+  let has: Decimal | null;
+  try {
+    has = new Decimal(item.quantity);
+    if (!has.isFinite()) has = null;
+  } catch {
+    has = null;
+  }
+  let moved: Decimal | null = null;
+  if (input.quantity !== undefined) {
+    try {
+      moved = new Decimal(input.quantity);
+    } catch {
+      throw new AuthError(422, "The quantity must be a number");
+    }
+    if (!moved.isFinite() || moved.lte(0)) throw new AuthError(422, "The quantity must be more than 0");
+    if (!has || moved.gt(has)) throw new AuthError(422, "The quantity is more than the item has");
+  }
+  const whole = moved === null || quantize2(has!.minus(moved)).lte(0);
+  const amount = whole ? (has ?? new Decimal(0)) : moved!;
+  const quantity = quantize2(amount).toString();
+  const fromListId = item.shoppingListId;
+  return db.transaction((tx) => {
+    const unticked = whole ? !item.isChecked : true;
+    const same = unticked
+      ? tx
+          .select()
+          .from(shoppingListItems)
+          .where(
+            and(
+              eq(shoppingListItems.shoppingListId, input.listId),
+              eq(shoppingListItems.ingredientId, item.ingredientId),
+              eq(shoppingListItems.unitId, item.unitId),
+              eq(shoppingListItems.isChecked, false),
+            ),
+          )
+          .get()
+      : undefined;
+    if (whole) {
+      if (same && has) {
+        const sum = quantize2(new Decimal(same.quantity).plus(has)).toString();
+        tx.update(shoppingListItems).set({ quantity: sum }).where(eq(shoppingListItems.id, same.id)).run();
+        tx.delete(shoppingListItems).where(eq(shoppingListItems.id, item.id)).run();
+        return { id: same.id, merged: true, previousQuantity: same.quantity, fromListId, quantity };
+      }
+      tx.update(shoppingListItems).set({ shoppingListId: input.listId }).where(eq(shoppingListItems.id, item.id)).run();
+      return { id: item.id, merged: false, previousQuantity: null, fromListId, quantity: has ? quantity : item.quantity };
+    }
+    const rest = quantize2(has!.minus(amount)).toString();
+    tx.update(shoppingListItems).set({ quantity: rest }).where(eq(shoppingListItems.id, item.id)).run();
+    if (same) {
+      const sum = quantize2(new Decimal(same.quantity).plus(amount)).toString();
+      tx.update(shoppingListItems).set({ quantity: sum }).where(eq(shoppingListItems.id, same.id)).run();
+      return { id: same.id, merged: true, previousQuantity: same.quantity, fromListId, quantity };
+    }
+    const id = randomUUID();
+    tx.insert(shoppingListItems)
+      .values({ id, shoppingListId: input.listId, ingredientId: item.ingredientId, unitId: item.unitId, quantity, isChecked: false })
+      .run();
+    return { id, merged: false, previousQuantity: null, fromListId, quantity };
+  });
+}

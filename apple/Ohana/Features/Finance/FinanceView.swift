@@ -45,6 +45,10 @@ struct FinanceScreen: View {
     /// The bank statement the import sheet shows (picked or dropped).
     @State private var importing: FinanceImportFile?
     @State private var choosingFile = false
+    /// What the file picker is for: a receipt (a photo or PDF), else a bank statement.
+    @State private var choosingReceipt = false
+    @State private var scanningReceipt = false
+    @State private var readingReceipt = false
     @State private var findingTransfers = false
     @State private var dropping = false
     @State private var query = ""
@@ -110,9 +114,30 @@ struct FinanceScreen: View {
             }
             .sheet(item: $importing) { file in FinanceImportSheet(store: store, file: file) }
             .sheet(isPresented: $findingTransfers) { FinanceTransferSheet(store: store) }
-            .fileImporter(isPresented: $choosingFile, allowedContentTypes: FinanceImportFile.contentTypes) { result in
-                do { importing = try FinanceImportFile(url: result.get()) } catch { ErrorBanner.shared.show(error) }
+            // One file picker for both (two on one view don't both work).
+            .fileImporter(isPresented: $choosingFile,
+                          allowedContentTypes: choosingReceipt ? ReceiptReader.fileTypes : FinanceImportFile.contentTypes) { result in
+                do {
+                    let url = try result.get()
+                    if choosingReceipt {
+                        read { try await ReceiptReader.images(at: url) }
+                    } else {
+                        importing = try FinanceImportFile(url: url)
+                    }
+                } catch {
+                    ErrorBanner.shared.show(error)
+                }
             }
+            #if os(iOS)
+            .fullScreenCover(isPresented: $scanningReceipt) {
+                ReceiptCamera { pages in
+                    scanningReceipt = false
+                    if !pages.isEmpty { read { pages } }
+                }
+                .ignoresSafeArea()
+            }
+            #endif
+            .overlay { if readingReceipt { readingHint } }
             #if os(iOS)
             .environment(\.editMode, $editMode)
             .onChange(of: editMode.isEditing) { _, editing in if !editing { store.selected = [] } }
@@ -136,16 +161,61 @@ struct FinanceScreen: View {
             .focusedSceneValue(\.moduleMenu, ModuleMenu(title: "Finance") { moduleMenu })
     }
 
+    // MARK: Receipts
+
+    /// The document camera, or the file picker where there is none (the Mac, the Simulator).
+    private func scanReceipt() {
+        #if os(iOS)
+        if ReceiptCamera.isSupported {
+            scanningReceipt = true
+            return
+        }
+        #endif
+        chooseFile(receipt: true)
+    }
+
+    private func chooseFile(receipt: Bool) {
+        choosingReceipt = receipt
+        choosingFile = true
+    }
+
+    /// Reads the receipt's pages on the device, then opens the editor filled in with them.
+    private func read(_ pages: @escaping () async throws -> [CGImage]) {
+        readingReceipt = true
+        Task {
+            defer { readingReceipt = false }
+            do {
+                editing = .scanned(try await ReceiptParser.scan(pages()))
+            } catch {
+                ErrorBanner.shared.show(error)
+            }
+        }
+    }
+
+    private var readingHint: some View {
+        ProgressView("Reading the receipt…")
+            .padding()
+            .glassEffect(.regular, in: .rect(cornerRadius: 16))
+    }
+
     /// A place in Finance another module (or a link) sends the user to.
     private func open(_ route: AppRoute) {
-        guard case let .financeTransactions(categoryID) = route else { return }
         tab = .transactions
         editing = nil
         query = ""
         #if os(iOS)
         editMode = .inactive
         #endif
-        Task { await store.showTransactions(category: categoryID) }
+        switch route {
+        case let .financeTransactions(categoryID):
+            Task { await store.showTransactions(category: categoryID) }
+        case let .financeTransaction(id, day):
+            Task {
+                if let transaction = await store.showTransaction(id, on: day) { editing = .existing(transaction) }
+            }
+        default:
+            break
+        }
     }
 
     @ViewBuilder
@@ -253,9 +323,16 @@ struct FinanceScreen: View {
                     Label("New Transaction", systemImage: "plus")
                 }
                 .help("New Transaction (⌘N)")
+                Button {
+                    scanReceipt()
+                } label: {
+                    Label("Scan Receipt", systemImage: "doc.text.viewfinder")
+                }
+                .help("Add a transaction from a receipt")
+                .disabled(readingReceipt)
                 if !compact {
                     Button {
-                        choosingFile = true
+                        chooseFile(receipt: false)
                     } label: {
                         Label("Import CSV", systemImage: "square.and.arrow.down")
                     }
@@ -330,7 +407,7 @@ struct FinanceScreen: View {
         Menu {
             if store.canEdit {
                 if compact {
-                    Button("Import CSV", systemImage: "square.and.arrow.down") { choosingFile = true }
+                    Button("Import CSV", systemImage: "square.and.arrow.down") { chooseFile(receipt: false) }
                 }
                 editActions
             }
@@ -385,8 +462,10 @@ struct FinanceScreen: View {
         Button("Today") { Task { await store.goToToday() } }
         if store.canEdit {
             Divider()
-            Button("Import CSV…") { choosingFile = true }
+            Button("Import CSV…") { chooseFile(receipt: false) }
                 .keyboardShortcut("i", modifiers: [.command, .shift])
+            Button("Scan Receipt…") { scanReceipt() }
+                .disabled(readingReceipt)
             Button("Find Transfers…") { findingTransfers = true }
             if family.isEnabled(.assistant) {
                 Button("Sort into Categories") { Task { await store.autoCategorize() } }

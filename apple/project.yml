@@ -48,6 +48,13 @@ targets:
       - path: Ohana
         excludes:
           - "Info-*.plist"
+      # Code the app shares with its extensions: the share extension (Keychain, SharedConnection)
+      # and the widget extension (those, and the cook timers' Live Activity).
+      - path: Shared
+    dependencies:
+      - target: OhanaShare
+      - target: OhanaWidgets
+      - target: OhanaNotificationService
     info:
       path: Ohana/Info-iOS.plist
       properties:
@@ -71,12 +78,28 @@ targets:
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
         NSPhotoLibraryUsageDescription: "Ohana uses your photos for recipe pictures."
-        NSCameraUsageDescription: "Ohana uses the camera for recipe pictures."
+        NSCameraUsageDescription: "Ohana uses the camera for recipe pictures and to scan receipts."
         NSMicrophoneUsageDescription: "Ohana listens when you dictate a message to the assistant."
         NSSpeechRecognitionUsageDescription: "Ohana turns what you dictate to the assistant into text."
+        # The cook view's timers on the Lock Screen and in the Dynamic Island.
+        NSSupportsLiveActivities: true
         CFBundleURLTypes:
           - CFBundleURLName: de.fa-krug.Ohana.pairing
             CFBundleURLSchemes: [ohana]
+        # The push relay that holds this app's APNs key (relay/; Core/Push). A fork with its own
+        # bundle id runs its own relay and names it here.
+        OhanaPushRelay: https://ohana-push.fa-krug.de
+        # The app's own drag-and-drop payloads (Core/Support/DragItems.swift).
+        UTExportedTypeDeclarations:
+          - UTTypeIdentifier: de.fa-krug.ohana.meal
+            UTTypeDescription: Ohana meal
+            UTTypeConformsTo: [public.data]
+          - UTTypeIdentifier: de.fa-krug.ohana.calendar-event
+            UTTypeDescription: Ohana calendar event
+            UTTypeConformsTo: [public.data]
+          - UTTypeIdentifier: de.fa-krug.ohana.shopping-item
+            UTTypeDescription: Ohana shopping item
+            UTTypeConformsTo: [public.data]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: de.fa-krug.Ohana
@@ -87,6 +110,86 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
 
+  # The widget extension, embedded in the iOS app: the Home Screen and Lock Screen widgets and
+  # the cook timers' Live Activity. Besides Shared it compiles the app's widget data
+  # (Core/Widgets), Day, the colors and the strings. The widgets read the app's connection from
+  # the Keychain (SharedConnection), so it has the app's keychain access group.
+  OhanaWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: OhanaWidgets
+        excludes:
+          - "Info*.plist"
+          - "Entitlements"
+      - path: Shared
+      - &widgetData
+        path: Ohana/Core/Widgets
+      - &widgetDay
+        path: Ohana/Core/Support/Day.swift
+      - &widgetTints
+        path: Ohana/DesignSystem/Tints.swift
+      - &widgetStrings
+        path: Ohana/Resources/Localizable.xcstrings
+    info:
+      path: OhanaWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: Ohana
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: de.fa-krug.Ohana.Widgets
+        GENERATE_INFOPLIST_FILE: false
+        CODE_SIGN_ENTITLEMENTS: OhanaWidgets/Entitlements/OhanaWidgets-iOS.entitlements
+        TARGETED_DEVICE_FAMILY: "1,2"
+        # WidgetKit's providers aren't on the main actor.
+        SWIFT_DEFAULT_ACTOR_ISOLATION: nonisolated
+        SKIP_INSTALL: YES
+
+  # The same widgets on the Mac's desktop (no Lock Screen, no Live Activity), embedded in the Mac
+  # app; one bundle id for both platforms, like the apps.
+  OhanaWidgets-macOS:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: OhanaWidgets
+        excludes:
+          - "Info*.plist"
+          - "Entitlements"
+          - "CookTimerLiveActivity.swift"
+      - path: Shared
+        excludes:
+          # The cook timers' Live Activity: the iOS app and its widgets only.
+          - "CookTimerAttributes.swift"
+      - *widgetData
+      - *widgetDay
+      - *widgetTints
+      - *widgetStrings
+    info:
+      path: OhanaWidgets/Info-macOS.plist
+      properties:
+        CFBundleDisplayName: Ohana
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    settings:
+      base:
+        PRODUCT_NAME: OhanaWidgets
+        PRODUCT_BUNDLE_IDENTIFIER: de.fa-krug.Ohana.Widgets
+        GENERATE_INFOPLIST_FILE: false
+        CODE_SIGN_ENTITLEMENTS: OhanaWidgets/Entitlements/OhanaWidgets-macOS.entitlements
+        ENABLE_HARDENED_RUNTIME: YES
+        SWIFT_DEFAULT_ACTOR_ISOLATION: nonisolated
+        SKIP_INSTALL: YES
+
   Ohana-macOS:
     type: application
     platform: macOS
@@ -94,6 +197,14 @@ targets:
       - path: Ohana
         excludes:
           - "Info-*.plist"
+      - path: Shared
+        excludes:
+          # The cook timers' Live Activity: the iOS app and its widgets only.
+          - "CookTimerAttributes.swift"
+    dependencies:
+      - target: OhanaShare-macOS
+      - target: OhanaWidgets-macOS
+      - target: OhanaNotificationService-macOS
     info:
       path: Ohana/Info-macOS.plist
       properties:
@@ -108,6 +219,18 @@ targets:
         CFBundleURLTypes:
           - CFBundleURLName: de.fa-krug.Ohana.pairing
             CFBundleURLSchemes: [ohana]
+        OhanaPushRelay: https://ohana-push.fa-krug.de
+        # The app's own drag-and-drop payloads (Core/Support/DragItems.swift).
+        UTExportedTypeDeclarations:
+          - UTTypeIdentifier: de.fa-krug.ohana.meal
+            UTTypeDescription: Ohana meal
+            UTTypeConformsTo: [public.data]
+          - UTTypeIdentifier: de.fa-krug.ohana.calendar-event
+            UTTypeDescription: Ohana calendar event
+            UTTypeConformsTo: [public.data]
+          - UTTypeIdentifier: de.fa-krug.ohana.shopping-item
+            UTTypeDescription: Ohana shopping item
+            UTTypeConformsTo: [public.data]
     settings:
       base:
         # Both targets build "Ohana.app" with one bundle id, so the Keychain item is shared.
@@ -119,6 +242,147 @@ targets:
         COMBINE_HIDPI_IMAGES: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+
+  # "Save to Ohana" in the share sheet (Safari and other apps sharing a web page): the server's
+  # assistant imports the page's recipe. Embedded in the apps; reads the app's connection from the
+  # Keychain (same access group, no App Group: Shared/SharedConnection.swift). One bundle id for
+  # both platforms, like the apps.
+  OhanaShare:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: ShareExtension
+        excludes:
+          - "Info-*.plist"
+      - path: Shared
+        excludes:
+          # The cook timers' Live Activity: the iOS app and its widgets only.
+          - "CookTimerAttributes.swift"
+      # The app's strings (the extension's are among them).
+      - path: Ohana/Resources/Localizable.xcstrings
+    info:
+      path: ShareExtension/Info-iOS.plist
+      properties:
+        CFBundleDisplayName: Ohana
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: OhanaShareViewController
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsWebURLWithMaxCount: 1
+              NSExtensionActivationSupportsWebPageWithMaxCount: 1
+            # Safari runs it in the page first: title, text (JSON-LD + visible text), og:image.
+            NSExtensionJavaScriptPreprocessingFile: Preprocess
+    settings:
+      base:
+        PRODUCT_NAME: OhanaShare
+        PRODUCT_BUNDLE_IDENTIFIER: de.fa-krug.Ohana.Share
+        GENERATE_INFOPLIST_FILE: false
+        CODE_SIGN_ENTITLEMENTS: ShareExtension/OhanaShare-iOS.entitlements
+        TARGETED_DEVICE_FAMILY: "1,2"
+        APPLICATION_EXTENSION_API_ONLY: YES
+
+  OhanaShare-macOS:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: ShareExtension
+        excludes:
+          - "Info-*.plist"
+          # Safari on the Mac doesn't run a preprocessing script: the server fetches the page.
+          - "Preprocess.js"
+      - path: Shared
+        excludes:
+          # The cook timers' Live Activity: the iOS app and its widgets only.
+          - "CookTimerAttributes.swift"
+      - path: Ohana/Resources/Localizable.xcstrings
+    info:
+      path: ShareExtension/Info-macOS.plist
+      properties:
+        CFBundleDisplayName: Ohana
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: OhanaShareViewController
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsWebURLWithMaxCount: 1
+              NSExtensionActivationSupportsWebPageWithMaxCount: 1
+    settings:
+      base:
+        PRODUCT_NAME: OhanaShare
+        PRODUCT_BUNDLE_IDENTIFIER: de.fa-krug.Ohana.Share
+        GENERATE_INFOPLIST_FILE: false
+        CODE_SIGN_ENTITLEMENTS: ShareExtension/OhanaShare-macOS.entitlements
+        ENABLE_HARDENED_RUNTIME: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
+
+  # Opens the sealed payload of a push (Core/Push/PushPayload.swift) with the key the app keeps
+  # in the shared Keychain group, so the relay and Apple never see what a notification says.
+  OhanaNotificationService:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: OhanaNotificationService
+        excludes:
+          - "*.entitlements"
+          - "Info-*.plist"
+      - Ohana/Core/Push/PushPayload.swift
+      - Shared/Keychain.swift
+    info:
+      path: OhanaNotificationService/Info-iOS.plist
+      properties:
+        CFBundleDisplayName: Ohana
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.usernotifications.service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).NotificationService
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: de.fa-krug.Ohana.NotificationService
+        GENERATE_INFOPLIST_FILE: false
+        CODE_SIGN_ENTITLEMENTS: OhanaNotificationService/NotificationService-iOS.entitlements
+        # Called by the system off the main thread.
+        SWIFT_DEFAULT_ACTOR_ISOLATION: nonisolated
+        TARGETED_DEVICE_FAMILY: "1,2"
+        APPLICATION_EXTENSION_API_ONLY: YES
+
+  OhanaNotificationService-macOS:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: OhanaNotificationService
+        excludes:
+          - "*.entitlements"
+          - "Info-*.plist"
+      - Ohana/Core/Push/PushPayload.swift
+      - Shared/Keychain.swift
+    info:
+      path: OhanaNotificationService/Info-macOS.plist
+      properties:
+        CFBundleDisplayName: Ohana
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.usernotifications.service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).NotificationService
+    settings:
+      base:
+        PRODUCT_NAME: OhanaNotificationService
+        PRODUCT_BUNDLE_IDENTIFIER: de.fa-krug.Ohana.NotificationService
+        GENERATE_INFOPLIST_FILE: false
+        CODE_SIGN_ENTITLEMENTS: OhanaNotificationService/NotificationService-macOS.entitlements
+        ENABLE_HARDENED_RUNTIME: YES
+        SWIFT_DEFAULT_ACTOR_ISOLATION: nonisolated
+        APPLICATION_EXTENSION_API_ONLY: YES
 
   OhanaTests:
     type: bundle.unit-test

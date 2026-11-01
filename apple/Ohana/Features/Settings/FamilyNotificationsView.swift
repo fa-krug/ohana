@@ -44,7 +44,8 @@ struct FamilyNotificationsView: View {
         Form {
             Section {
                 ForEach(household.events.filter { pref in pref.module.map { family.isEnabled($0) } ?? true }) { pref in
-                    FamilyEventRow(pref: pref, channels: household.channels, canEdit: household.canEdit) { next in
+                    FamilyEventRow(pref: pref, channels: household.channels, canEdit: household.canEdit,
+                                   showsApp: family.serverInfo?.push != nil) { next in
                         save(next)
                     }
                 }
@@ -188,6 +189,8 @@ private struct FamilyEventRow: View {
     let pref: FamilyEventPref
     let channels: [FamilyChannel]
     let canEdit: Bool
+    /// The server pushes to the app (`ServerInfo.push`).
+    let showsApp: Bool
     let save: (FamilyEventPref) -> Void
 
     var body: some View {
@@ -204,6 +207,18 @@ private struct FamilyEventRow: View {
             }
         }
         .disabled(!canEdit)
+
+        // The Ohana app (push through the relay); appointment searches choose it themselves.
+        if showsApp, pref.hasChannels && pref.enabled, let app = pref.app {
+            Toggle("Ohana app", isOn: Binding(get: { app }, set: { on in
+                var next = pref
+                next.app = on
+                save(next)
+            }))
+            .font(.callout)
+            .disabled(!canEdit)
+            .padding(.leading, 12)
+        }
 
         if pref.hasChannels && pref.enabled {
             if channels.isEmpty {

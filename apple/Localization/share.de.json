@@ -1,0 +1,18 @@
+{
+  "Save to Ohana": "In Ohana speichern",
+  "Open Ohana and connect your server first.": "Öffne Ohana und verbinde zuerst deinen Server.",
+  "Your account isn’t in a family yet. Open Ohana to create or join one.": "Dein Konto gehört noch zu keiner Familie. Öffne Ohana, um eine zu erstellen oder einer beizutreten.",
+  "Your session has ended. Open Ohana and sign in again.": "Deine Sitzung ist abgelaufen. Öffne Ohana und melde dich wieder an.",
+  "The server answered with an error (%lld).": "Der Server hat mit einem Fehler geantwortet (%lld).",
+  "The server sent something unexpected.": "Der Server hat etwas Unerwartetes geschickt.",
+  "Ohana can only save web pages.": "Ohana kann nur Webseiten speichern.",
+  "For %@": "Für %@",
+  "Ohana is reading the recipe. This can take a minute or two.": "Ohana liest das Rezept. Das kann ein, zwei Minuten dauern.",
+  "Saved “%@” to “Want to try”.": "„%@“ ist unter „Ausprobieren“ gespeichert.",
+  "Cancel": "Abbrechen",
+  "Done": "Fertig",
+  "Close": "Schließen",
+  "Undo": "Rückgängig",
+  "Removing “%@” …": "„%@“ wird entfernt …",
+  "“%@” was removed again.": "„%@“ wurde wieder entfernt."
+}

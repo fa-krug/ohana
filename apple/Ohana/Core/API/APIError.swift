@@ -45,7 +45,6 @@ enum APIError: LocalizedError, Equatable {
 
     /// The message of an error body, whichever key the route used.
     static func message(from data: Data) -> String? {
-        guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
-        return (object["error"] as? String) ?? (object["message"] as? String)
+        ServerErrorText.message(from: data)
     }
 }

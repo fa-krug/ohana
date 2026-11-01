@@ -17,6 +17,7 @@ struct RecipeListView: View {
     @State private var showFilter = false
     @State private var creating = false
     @State private var generating = false
+    @State private var importing = false
     @State private var deletes = MealsPendingDeletes.shared
     @State private var confirmDelete: RecipeSummary?
     @State private var cooking: MealsRecipeRef?
@@ -69,6 +70,13 @@ struct RecipeListView: View {
         }
         .sheet(isPresented: $generating) {
             RecipeGenerateView { list = .toTry }
+        }
+        .sheet(isPresented: $importing) {
+            // The server saves it to "Want to try".
+            RecipeImportView { id in
+                list = .toTry
+                family.open(.recipe(id: id))
+            }
         }
         .confirmationDialog("Delete recipe?", isPresented: Binding(get: { confirmDelete != nil }, set: { if !$0 { confirmDelete = nil } }),
                             titleVisibility: .visible, presenting: confirmDelete) { recipe in
@@ -129,7 +137,8 @@ struct RecipeListView: View {
                                        description: Text("No recipe has these tags."))
                     .padding(.top, 40)
             } else if ai.showsWelcome(canEdit: family.canEdit) {
-                MealsWelcomeView(ai: ai, addRecipe: { creating = true }, generate: { generating = true })
+                MealsWelcomeView(ai: ai, addRecipe: { creating = true }, generate: { generating = true },
+                                 importFromWeb: { importing = true })
                     .padding(.top, 24)
             } else {
                 ContentUnavailableView {
@@ -142,6 +151,8 @@ struct RecipeListView: View {
                             .buttonStyle(.glassProminent)
                         if ai.generate {
                             Button("Generate with AI", systemImage: "sparkles") { generating = true }
+                                .buttonStyle(.bordered)
+                            Button("Import from Web", systemImage: "globe") { importing = true }
                                 .buttonStyle(.bordered)
                         }
                     }
@@ -230,6 +241,11 @@ struct RecipeListView: View {
                         generating = true
                     } label: {
                         Label("Generate with AI", systemImage: "sparkles")
+                    }
+                    Button {
+                        importing = true
+                    } label: {
+                        Label("Import from Web", systemImage: "globe")
                     }
                 }
                 Button {

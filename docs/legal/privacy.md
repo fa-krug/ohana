@@ -7,7 +7,8 @@ description: Privacy policy for ohana.fa-krug.de and the Ohana app
 
 This policy explains which personal data is processed when you visit **ohana.fa-krug.de** and
 when you use the **Ohana app** for iPhone, iPad and Mac. In short: this website doesn't track
-you, and the app sends your data only to the Ohana server you connect it to.
+you, and the app sends your data only to the Ohana server you connect it to. If you turn on
+notifications in the app, they pass through our push relay encrypted, so we can't read them.
 
 *Last updated: 1 November 2026*
 
@@ -59,10 +60,11 @@ unless the law requires us to keep them.
 
 ## The Ohana app
 
-### What we receive: nothing
+### What we receive: almost nothing
 
 The app contains **no analytics, no tracking, no advertising** and no third-party SDKs. We, the
-developers of the app, **receive no data** about you or about how you use it. The app's
+developers of the app, **receive no data** about you or about how you use it, except what our
+push relay needs when you turn on notifications (see *Notifications in the app*). The app's
 privacy manifest declares no collected data types and no tracking.
 
 The only exception is Apple's own mechanism: if you have chosen in your device's settings to
@@ -91,31 +93,79 @@ What a server sends to other services depends on what its families set up, for e
 
 Ask your server's operator about their privacy policy.
 
+### Notifications in the app
+
+Notifications in the app are **off until you turn them on** on a device (*Settings →
+Notifications on this device*). Apple delivers notifications to an app only when they are
+signed with the app developer's key, which your Ohana server doesn't have. So your server sends
+them through our **push relay** (`ohana-push.fa-krug.de`), which passes them on to Apple's Push
+Notification service (APNs) and on to your device:
+
+- When you turn notifications on, the app sends the relay your device's **push token** (an
+  address Apple gives the app for notifications on this device), whether it is an iPhone/iPad or
+  a Mac, and its network address. The relay answers with an encrypted form of that token, which
+  the app gives your server. The relay doesn't store it.
+- For each notification, your server sends the relay that encrypted token and the
+  notification. **What a notification says is encrypted end to end**: the app makes a key that
+  only your server and your device know; the relay and Apple can't read the text, the link or
+  which family it is about. The relay sees the address of the sending server, the device token,
+  the time and the size, keeps them only in memory while sending (and, for limiting misuse, for
+  at most a day), and logs only counts and errors, never tokens or contents.
+- Apple processes the token and the encrypted notification to deliver it
+  ([Apple's privacy policy](https://www.apple.com/legal/privacy/)).
+
+The legal basis is Art. 6(1)(b) GDPR (delivering the notifications you turned on) and our
+legitimate interest in keeping the relay from being misused (Art. 6(1)(f)). Turning
+notifications off, signing out or deleting the app stops them; your server's operator can also
+turn them off for the whole server.
+
 ### On your device
 
 The app stores on your device only what it needs to work: the **API token** for your server
-(in the Keychain), app settings such as the selected family (in the app's preferences), a
-**copy of what your server last sent** (your account, your families and the screens you
-opened, and what it loads ahead in the background: calendar, meal plan, recipes, shopping
-lists and so on), so the app opens on it at once and you can read it without a connection, and
-changes made offline (calendar days and notes, ticked and added shopping items) until they're
-sent. The copy is kept in the app's cache, which the system may empty when space runs
-low. Signing out deletes the token on the server and on the device, the copy and the changes
-not sent yet. Deleting the
-app removes the rest.
+and, so the *Save to Ohana* share extension can reach it, the server's address and the selected
+family, and with notifications on the key for them (in the Keychain), app settings such as the
+selected family (in the app's preferences), a **copy of what your server last sent** (your
+account, your families and the screens you opened, and what it loads ahead in the background:
+calendar, meal plan, recipes, shopping lists and so on), so the app opens on it at once and you
+can read it without a connection, changes made offline (calendar days and notes, ticked and
+added shopping items) until they're sent, and the cook view's running timers. The copy is kept
+in the app's cache, which the system may empty when space runs low. If you use the
+**widgets**, they load your family's overview from the same server with the same token and keep
+a copy of it on your device (today's and tomorrow's calendar, tonight's dinner, the number of
+items on the shopping list, found appointments), so they can show it while the server is out of
+reach; no other service or permission is involved. The names, tags and short descriptions of
+your recipes are added to the device's **Spotlight** index, so you can find them in the system
+search; the index stays on the device. Signing out deletes the token on the server and on the
+device, the app's copy and the changes not sent yet, and removes the recipes from Spotlight;
+the widgets then delete their copy. Deleting the app removes the rest.
 
 ### Permissions
 
 The app only asks for these permissions, and only when you use the feature:
 
 - **Camera and photos:** to add pictures to recipes. The picture is uploaded to your server.
+  And to scan receipts: the receipt is read on your device (Apple's text recognition); the
+  picture stays there, only the amount, date and shop you save are sent to your server.
 - **Microphone and speech recognition:** to dictate messages to the assistant. The speech is
   turned into text by Apple's speech recognition, which may process it on Apple's servers
   ([Apple's privacy policy](https://www.apple.com/legal/privacy/)); the text is sent to your
   server.
+- **Notifications:** asked when you turn on notifications on a device (see *Notifications in the
+  app*), or when you start your first timer in a recipe's cook view, to tell you when it's done.
+  The timer runs on the device; nothing is sent to your server. Running timers also show as a
+  Live Activity on the Lock Screen and in the Dynamic Island.
 
-With Siri and Shortcuts (*Ask Ohana*), what you say is processed by Apple as for any Siri
-request.
+With Siri and Shortcuts (*Ask Ohana*, adding to the shopping list, adding an event, importing a
+recipe), what you say is processed by Apple as for any Siri request; the result is sent to your
+server.
+
+### Importing recipes
+
+When you import a recipe from a web page (the *Save to Ohana* share extension in Safari, the
+Shortcuts action or the address field in the app), the page's address and, from Safari on iPhone
+and iPad, its text are sent to your server. The server loads the page and its photo itself when
+needed and sends the page's content to the AI provider your family set up for the assistant, as
+for any request to the assistant.
 
 ### Demo mode
 

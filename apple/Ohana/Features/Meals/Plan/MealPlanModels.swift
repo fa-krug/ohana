@@ -114,6 +114,17 @@ struct MealPlanSwapInput: Codable {
     let recipeId: String
 }
 
+/// POST /meals/plan/iterations/{id}/entries: a recipe on a day of the iteration without a lunch.
+struct MealPlanAddInput: Codable {
+    let date: Day
+    let recipeId: String
+}
+
+/// POST /meals/plan/entries/{id}/move: the meal onto another day of its iteration (swapping).
+struct MealPlanMoveInput: Codable {
+    let date: Day
+}
+
 /// A page of GET /recipes (server/lib/meals/queries/recipes.ts `RecipeListResult`), for swapping.
 struct MealPlanRecipePage: Codable {
     let items: [MealPlanRecipeOption]
@@ -130,6 +141,61 @@ struct MealPlanRecipeOption: Codable, Identifiable, Hashable {
 
     /// The photo's server path, if there is one.
     var imagePath: String? { image.isEmpty ? nil : "/api/images/\(image)" }
+
+    var isFavourite: Bool { listType == "KNOWN" }
+}
+
+extension [MealPlanRecipeOption] {
+    /// The recipes whose title contains `query` (all of them for a blank one).
+    func matching(_ query: String) -> [MealPlanRecipeOption] {
+        let q = query.trimmingCharacters(in: .whitespaces)
+        return q.isEmpty ? self : filter { $0.title.localizedStandardContains(q) }
+    }
+}
+
+/// What dropping a `MealDragItem` onto a day of an iteration does.
+enum MealPlanDrop: Equatable {
+    /// A recipe onto a day with a lunch: PATCH /meals/plan/entries/{entryID}.
+    case replace(entryID: String, recipeID: String, title: String)
+    /// A recipe onto a day without one (empty or away): POST /meals/plan/iterations/{id}/entries.
+    case add(iterationID: String, date: Day, recipeID: String, title: String)
+    /// A planned meal onto another day of its iteration: POST /meals/plan/entries/{entryID}/move;
+    /// `swapped`: that day has a lunch, which takes the meal's day.
+    case move(entryID: String, date: Day, title: String, swapped: Bool)
+
+    /// Nil when the drop changes nothing or isn't allowed: another family's item, a meal onto
+    /// its own day or onto another iteration, a recipe onto a day that has it already.
+    init?(_ item: MealDragItem, onto row: MealPlanDayRow, of iteration: MealPlanIteration, familyID: String) {
+        guard item.familyID == familyID else { return nil }
+        if let entryID = item.entryID {
+            guard let entry = iteration.entries.first(where: { $0.id == entryID }), entry.date != row.day else {
+                return nil
+            }
+            self = .move(entryID: entryID, date: row.day, title: item.title, swapped: row.entry != nil)
+        } else if let target = row.entry {
+            guard target.recipeId != item.recipeID else { return nil }
+            self = .replace(entryID: target.id, recipeID: item.recipeID, title: item.title)
+        } else {
+            self = .add(iterationID: iteration.id, date: row.day, recipeID: item.recipeID, title: item.title)
+        }
+    }
+}
+
+/// The family's recipes for planning: GET /recipes, every page.
+enum MealPlanRecipes {
+    static func load(_ api: FamilyAPI) async throws -> [MealPlanRecipeOption] {
+        var all: [MealPlanRecipeOption] = []
+        var offset = 0
+        while true {
+            let page: MealPlanRecipePage = try await api.get("/recipes", query: [
+                "limit": "100", "offset": "\(offset)", "locale": MealPlanLanguage.current,
+            ])
+            all += page.items
+            offset += page.items.count
+            if page.items.isEmpty || offset >= page.totalCount { break }
+        }
+        return all
+    }
 }
 
 // MARK: Logic of the plan page

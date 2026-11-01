@@ -14,6 +14,8 @@ export interface Message {
   url: string;
   /** A richer email body; otherwise the email is built from title, body and url. */
   email?: { text: string; html: string };
+  /** The app: what this notification replaces when it comes again (a chat, a search, a day). */
+  collapseKey?: string;
 }
 
 /** A channel with its secret opened. */

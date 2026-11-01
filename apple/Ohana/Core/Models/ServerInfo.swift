@@ -11,6 +11,13 @@ struct ServerInfo: Codable, Equatable {
     /// The modules that are on, by the server's names (`Module`'s raw values); the calendar is
     /// always among them.
     var modules: [String]
+    /// Push to the app (through the relay); nil when the server has it off or is older.
+    var push: Push?
+
+    struct Push: Codable, Equatable {
+        /// The relay the app registers with (`PUSH_RELAY_URL` on the server).
+        var relay: URL
+    }
 
     /// The oldest API version this app works with: older servers are refused.
     static let requiredAPIVersion = 1
@@ -22,11 +29,12 @@ struct ServerInfo: Codable, Equatable {
     static let legacy = ServerInfo(name: "Ohana", version: "", apiVersion: 0,
                                    modules: ([Module.calendar] + optionalModules).map(\.rawValue))
 
-    init(name: String, version: String, apiVersion: Int, modules: [String]) {
+    init(name: String, version: String, apiVersion: Int, modules: [String], push: Push? = nil) {
         self.name = name
         self.version = version
         self.apiVersion = apiVersion
         self.modules = modules
+        self.push = push
     }
 
     /// Lenient: a missing field takes its default (no API version: too old; no module list:
@@ -37,10 +45,11 @@ struct ServerInfo: Codable, Equatable {
         version = try c.decodeIfPresent(String.self, forKey: .version) ?? ""
         apiVersion = try c.decodeIfPresent(Int.self, forKey: .apiVersion) ?? 0
         modules = try c.decodeIfPresent([String].self, forKey: .modules) ?? Self.legacy.modules
+        push = try? c.decodeIfPresent(Push.self, forKey: .push)
     }
 
     private enum CodingKeys: String, CodingKey {
-        case name, version, apiVersion, modules
+        case name, version, apiVersion, modules, push
     }
 
     /// The app can talk to this server.
@@ -50,7 +59,7 @@ struct ServerInfo: Codable, Equatable {
     /// always there.
     func isEnabled(_ module: Module) -> Bool {
         switch module {
-        case .overview, .calendar, .settings: true
+        case .overview, .calendar, .settings, .search: true
         case .finance, .meals, .appointments, .assistant: modules.contains(module.rawValue)
         }
     }

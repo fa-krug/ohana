@@ -14,6 +14,7 @@ import type { Db } from "@/lib/db";
 import { apptResults, apptRuns, apptSearches } from "@/lib/db/schema";
 import { getAppUrl } from "@/lib/auth/config";
 import { type Message, type Sender, notifyFamily } from "@/lib/notifications";
+import type { RelayClient } from "@/lib/push/relay";
 import { familyLocale, translator, type TFn } from "@/lib/notifications/locale";
 import { channelIdsForSearch } from "./searches";
 import { getPref } from "@/lib/notifications/prefs";
@@ -179,7 +180,7 @@ export function buildMessage(
 export async function notifyRun(
   db: Db,
   runId: string,
-  opts: { send?: Sender; now?: Date } = {},
+  opts: { send?: Sender; push?: RelayClient; now?: Date } = {},
 ): Promise<boolean> {
   const run = db.select().from(apptRuns).where(eq(apptRuns.id, runId)).get();
   if (!run) return false;
@@ -239,10 +240,19 @@ export async function notifyRun(
     ...buildMessage(t, search.name, searchPageUrl(search.familyId, search.id), changed, slots),
     slots,
   };
-  const message: Message = { title: msg.title, body: msg.body, url: msg.url, email: renderEmailBody(t, msg) };
+  const message: Message = {
+    title: msg.title,
+    body: msg.body,
+    url: msg.url,
+    email: renderEmailBody(t, msg),
+    collapseKey: `search:${search.id}`,
+  };
   const { sent } = await notifyFamily(db, search.familyId, message, {
     channelIds: channelIdsForSearch(db, search.id),
     send: opts.send,
+    app: search.notifyApp,
+    event: "appointment_found",
+    push: opts.push,
   });
 
   if (sent > 0) {

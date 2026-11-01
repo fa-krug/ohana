@@ -18,11 +18,14 @@
 // DELETE /me/tokens/{id}                     (the request's own token too: that signs it out)
 // GET    /me/sessions                        → {count} of signed-in browsers
 // DELETE /me/sessions                        signs out every browser ("other devices")
+// /me/push[/test]                            push to this device (lib/push/app-routes.ts)
 
 import { eq } from "drizzle-orm";
 import type { Db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { type AppCtx, type AppRoutes, runAppRoutes } from "@/lib/api/app-router";
+import { pushRoutes } from "@/lib/push/app-routes";
+import type { RelayClient } from "@/lib/push/relay";
 import { HttpError } from "@/lib/api/http";
 import { apiTokenSchema, emailChangeSchema, profileSchema, removePasswordSchema, setPasswordSchema } from "@/lib/schemas/auth";
 import { changeEmail } from "./email";
@@ -181,7 +184,13 @@ const routes: AppRoutes = [
   ],
 ];
 
-/** /api/v1/me/{path…} for the app. */
-export function handleAccountApp(db: Db, req: Request, path: string[], now?: Date): Promise<Response> {
-  return runAppRoutes(routes, db, req, path, { now });
+/** /api/v1/me/{path…} for the app. `relay` replaces the push relay client (tests). */
+export function handleAccountApp(
+  db: Db,
+  req: Request,
+  path: string[],
+  now?: Date,
+  opts: { relay?: RelayClient } = {},
+): Promise<Response> {
+  return runAppRoutes([...routes, ...pushRoutes(opts)], db, req, path, { now });
 }

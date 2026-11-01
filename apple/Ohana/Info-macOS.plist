@@ -42,5 +42,40 @@
 	</dict>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2026 Sascha Krug. All rights reserved.</string>
+	<key>OhanaPushRelay</key>
+	<string>https://ohana-push.fa-krug.de</string>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Ohana meal</string>
+			<key>UTTypeIdentifier</key>
+			<string>de.fa-krug.ohana.meal</string>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Ohana calendar event</string>
+			<key>UTTypeIdentifier</key>
+			<string>de.fa-krug.ohana.calendar-event</string>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Ohana shopping item</string>
+			<key>UTTypeIdentifier</key>
+			<string>de.fa-krug.ohana.shopping-item</string>
+		</dict>
+	</array>
 </dict>
 </plist>

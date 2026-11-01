@@ -9,6 +9,7 @@ import type { Db } from "@/lib/db";
 import { familyLocale, translator } from "@/lib/notifications/locale";
 import { notifyEvent } from "@/lib/notifications/prefs";
 import type { Sender } from "@/lib/notifications";
+import type { RelayClient } from "@/lib/push/relay";
 import type { ChatRow } from "./store";
 
 /** A follower that looked this recently counts as looking. */
@@ -24,7 +25,7 @@ export async function notifyTurnFinished(
   db: Db,
   chat: ChatRow,
   info: { startedAt: number; outcome: "answered" | "failed" | "stopped" },
-  opts: { now?: number; send?: Sender; afterMs?: number } = {},
+  opts: { now?: number; send?: Sender; push?: RelayClient; afterMs?: number } = {},
 ): Promise<boolean> {
   const now = opts.now ?? Date.now();
   if (info.outcome === "stopped") return false;
@@ -42,8 +43,10 @@ export async function notifyTurnFinished(
       title: t(info.outcome === "failed" ? "notifications.assistant.failed" : "notifications.assistant.title"),
       body: chat.title || t("notifications.assistant.untitled"),
       url: `${getAppUrl()}/f/${chat.family_id}${path}`,
+      collapseKey: `chat:${chat.id}`,
     },
-    { send: opts.send },
+    // The app: only the devices of the chat's own user (the channels are the family's).
+    { send: opts.send, push: opts.push, userIds: [chat.user_id] },
   );
   return !!res && res.sent > 0;
 }

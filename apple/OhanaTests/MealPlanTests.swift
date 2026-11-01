@@ -93,4 +93,53 @@ struct MealPlanTests {
         #expect(body?["shoppingDays"] as? [Int] == [5])
         #expect(body?["knownRatio"] as? Double == 0.7)
     }
+
+    @Test func decidesWhatADropDoes() throws {
+        let response = try Self.decodePlan()
+        let plan = try #require(response.plan)
+        let iteration = plan.iterations[0]
+        let rows = iteration.dayRows(shoppingDays: plan.shoppingDays, away: response.away)
+        let recipe = MealDragItem(familyID: "f1", recipeID: "r9", title: "Soup")
+        // A recipe onto a day with a lunch replaces it; onto an empty or away day adds it.
+        #expect(MealPlanDrop(recipe, onto: rows[1], of: iteration, familyID: "f1")
+            == .replace(entryID: "e2", recipeID: "r9", title: "Soup"))
+        #expect(MealPlanDrop(recipe, onto: rows[2], of: iteration, familyID: "f1")
+            == .add(iterationID: "it-2", date: Day("2026-11-03")!, recipeID: "r9", title: "Soup"))
+        #expect(MealPlanDrop(recipe, onto: rows[4], of: iteration, familyID: "f1")
+            == .add(iterationID: "it-2", date: Day("2026-11-05")!, recipeID: "r9", title: "Soup"))
+        // The recipe the day has already, or another family's: nothing.
+        let same = MealDragItem(familyID: "f1", recipeID: "r2", title: "Recipe 2")
+        #expect(MealPlanDrop(same, onto: rows[0], of: iteration, familyID: "f1") == nil)
+        #expect(MealPlanDrop(recipe, onto: rows[0], of: iteration, familyID: "f2") == nil)
+    }
+
+    @Test func movesAMealWithinItsIteration() throws {
+        let response = try Self.decodePlan()
+        let plan = try #require(response.plan)
+        let iteration = plan.iterations[0]
+        let rows = iteration.dayRows(shoppingDays: plan.shoppingDays, away: response.away)
+        let meal = MealDragItem(familyID: "f1", recipeID: "r2", title: "Recipe 2", entryID: "e1")
+        // Onto a day with a lunch: the two swap; onto an empty day: it moves.
+        #expect(MealPlanDrop(meal, onto: rows[1], of: iteration, familyID: "f1")
+            == .move(entryID: "e1", date: Day("2026-11-02")!, title: "Recipe 2", swapped: true))
+        #expect(MealPlanDrop(meal, onto: rows[3], of: iteration, familyID: "f1")
+            == .move(entryID: "e1", date: Day("2026-11-04")!, title: "Recipe 2", swapped: false))
+        // Its own day, or a day of another iteration: nothing.
+        #expect(MealPlanDrop(meal, onto: rows[0], of: iteration, familyID: "f1") == nil)
+        let past = plan.iterations[1]
+        let pastRows = past.dayRows(shoppingDays: plan.shoppingDays, away: response.away)
+        #expect(MealPlanDrop(meal, onto: pastRows[0], of: past, familyID: "f1") == nil)
+    }
+
+    @Test func filtersRecipesByTitle() throws {
+        let json = #"{"items":[{"id":"a","title":"Tomato Soup","listType":"KNOWN","image":"","leftoverDays":null},{"id":"b","title":"Pasta","listType":"TO_TRY","image":"b.webp","leftoverDays":1}],"totalCount":2}"#
+        let page = try JSONDecoder().decode(MealPlanRecipePage.self, from: Data(json.utf8))
+        #expect(page.items.matching(" ").map(\.id) == ["a", "b"])
+        #expect(page.items.matching("soup").map(\.id) == ["a"])
+        #expect(page.items[0].isFavourite && !page.items[1].isFavourite)
+        #expect(page.items[1].imagePath == "/api/images/b.webp")
+        let body = try JSONSerialization.jsonObject(with: JSONEncoder().encode(
+            MealPlanAddInput(date: Day("2026-11-03")!, recipeId: "a"))) as? [String: String]
+        #expect(body == ["date": "2026-11-03", "recipeId": "a"])
+    }
 }

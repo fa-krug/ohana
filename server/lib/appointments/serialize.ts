@@ -73,6 +73,8 @@ export interface SearchListItem {
   scheduleMinutes: number | null;
   cron: string;
   notifyOnlyEarlier: boolean;
+  /** Also pushed to the app (phase 9). */
+  notifyApp: boolean;
   lastRunAt: string | null;
   lastStatus: string;
   nextRunAt: string | null;
@@ -212,6 +214,7 @@ function serializeSearch(db: Db, s: SearchRow): SearchListItem {
     scheduleMinutes: s.scheduleMinutes,
     cron: s.cron,
     notifyOnlyEarlier: s.notifyOnlyEarlier,
+    notifyApp: s.notifyApp,
     lastRunAt: iso(s.lastRunAt),
     lastStatus: s.lastStatus,
     nextRunAt: s.scheduleType === "CRON" ? null : iso(s.nextRunAt),

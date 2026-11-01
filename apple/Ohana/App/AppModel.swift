@@ -45,6 +45,7 @@ final class AppModel {
             for context in contexts.values { context.serverInfo = serverInfo }
             AssistantInbox.shared.available = isEnabled(.assistant)
             NotificationCenter.default.post(name: .serverModulesChanged, object: nil)
+            syncWidgets()
         }
     }
 
@@ -58,11 +59,15 @@ final class AppModel {
     /// No server connected: the screens show the demo's data.
     var isDemo: Bool { client?.isDemo ?? true }
 
-    /// The family on screen; remembered per device (the demo's isn't).
+    /// The family on screen; remembered per device (the demo's isn't), in the Keychain too for the
+    /// share extensions (`SharedConnection`).
     var selectedFamilyID: String? {
         didSet {
-            if !isDemo { UserDefaults.standard.set(selectedFamilyID, forKey: Keys.family) }
-            if selectedFamilyID != oldValue { prefetch() }
+            guard !isDemo, selectedFamilyID != oldValue else { return }
+            UserDefaults.standard.set(selectedFamilyID, forKey: Keys.family)
+            SharedConnection.remember(familyID: selectedFamilyID)
+            syncWidgets()
+            prefetch()
         }
     }
 
@@ -86,10 +91,15 @@ final class AppModel {
     private enum Keys {
         static let server = "serverURL"
         static let family = "selectedFamilyID"
-        static let token = "apiToken"
+        static let token = SharedConnection.Account.token
     }
 
+    /// Whether this model tells the widgets what to show (`WidgetSync`): the app's, not the
+    /// previews' and tests'.
+    private var syncsWidgets = false
+
     init() {
+        syncsWidgets = true
         Connectivity.shared.start()
         Connectivity.shared.whenReconnected { [weak self] in
             guard let self, !isDemo else { return }
@@ -110,6 +120,8 @@ final class AppModel {
         if let text = UserDefaults.standard.string(forKey: Keys.server), let url = URL(string: text),
            let token = Keychain.load(Keys.token) {
             connect(server: url, token: token)
+            // Also for installs from before the share extensions: they read it from the Keychain.
+            SharedConnection.remember(server: url, familyID: selectedFamilyID)
         } else {
             connectDemo()
         }
@@ -152,6 +164,7 @@ final class AppModel {
             // It may be another account: nothing of the last one shows.
             ResponseCache(server: server).clear()
             connect(server: server, token: token)
+            SharedConnection.remember(server: server, familyID: selectedFamilyID)
             await refresh()
         }
     }
@@ -240,6 +253,10 @@ final class AppModel {
             }
             take(response)
             answered = true
+            syncWidgets()
+            // Push: a new APNs token, a new relay token (while it's on for this device).
+            let info = serverInfo
+            Task { await PushNotifications.shared.renew(client: client, info: info) }
             prefetch()
         } catch is CancellationError {
         } catch APIError.unauthorized {
@@ -283,12 +300,23 @@ final class AppModel {
             client.cache?.clear()
             ShoppingOfflineStore.removeAll(server: client.baseURL)
             CalendarStore.removeQueues(server: client.baseURL)
+            SharedConnection.forget()
+            if syncsWidgets { WidgetSync.reload() }
+            // The server drops the device's push with its token.
+            PushNotifications.shared.forget()
             connectDemo()
             if signingOut {
                 _ = try? await client.send(.delete, "/api/v1/me", as: JSONValue.self)
             }
             await refresh()
         }
+    }
+
+    /// The widgets show the family on screen (`SharedConnection`): they reload, and learn which
+    /// modules the server has off.
+    private func syncWidgets() {
+        guard syncsWidgets, !isDemo, phase == .ready else { return }
+        WidgetSync.show(disabledModules: Module.allCases.filter { !isEnabled($0) }.map(\.rawValue))
     }
 
     /// The server a link brought in the demo, once.
@@ -384,11 +412,13 @@ final class FamilyContext {
 
     /// Something changed `areas` (the assistant, another screen): views showing them reload.
     func didChange(_ areas: DataArea...) {
-        for area in areas { revisions[area, default: 0] += 1 }
+        didChange(areas)
     }
 
+    /// The widgets reload too (`WidgetSync`).
     func didChange(_ areas: [DataArea]) {
         for area in areas { revisions[area, default: 0] += 1 }
+        if !api.client.isDemo { WidgetSync.reloadSoon() }
     }
 
     fileprivate func adoptRevisions(from other: FamilyContext) {
@@ -406,6 +436,18 @@ final class FamilyContext {
     func open(_ route: AppRoute) {
         guard isEnabled(route.requiredModule) else { return }
         pendingRoute = route
+    }
+
+    // MARK: Searching
+
+    /// Grows each time the search should take the keyboard (⌘K); the search page focuses its
+    /// field when it changes.
+    private(set) var searchRequest = 0
+
+    /// Shows the search ready to type (the shell switches to its tab).
+    func startSearch() {
+        searchRequest += 1
+        open(.module(.search))
     }
 
     // MARK: Asking the assistant

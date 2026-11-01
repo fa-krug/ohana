@@ -60,19 +60,69 @@ domain: the account page opens `{server}/account?state=…` in the same browser 
 ```
 Ohana/
   App/            OhanaApp (scenes, commands), AppModel (server, token, account, families,
-                  FamilyContext: the family's API and change signals)
+                  FamilyContext: the family's API and change signals), WidgetSync
   Core/           APIClient + FamilyAPI (JSON over /api/v1), APIError, JSONValue, Keychain,
                   DevicePairing, ServerAccountPage, ServerInfo (version, modules), DemoServer
-                  (the demo), account models, Day / Money helpers
+                  (the demo), account models, Day / Money helpers, Widgets (WidgetFeed: the
+                  widgets' snapshot and store, shared with the extension)
   DesignSystem/   Content surfaces (contentCard, CardSection, chip, TintedIcon), OhanaBackground,
-                  LoadState / LoadStateView, ErrorBanner, CancelButton / discardGuard, RemoteImage
+                  LoadState / LoadStateView, ErrorBanner, CancelButton / discardGuard, RemoteImage,
+                  Tints (Color.ohana, ModuleTint; shared with the widgets)
   Shell/          RootView, LoadingScreen, ConnectServerView (pairing), DemoBanner, AppShell
                   (sidebar-adaptable TabView, family switcher, assistant inspector ⌘J), AccountView
   Features/       One folder per module: Overview, Calendar, Finance, Meals, Appointments,
                   Assistant, Settings
   Resources/      Assets (app icon, accent color), Localizable.xcstrings (en + de), Demo (demo data)
+Shared/           Compiled into the apps and their extensions: Keychain, SharedConnection (the
+                  app's server, token and family for the share extensions; the recipe import
+                  request), SharedPage (what the share sheet hands over), CookTimerAttributes
+                  (the cook timers' Live Activity, iOS)
+ShareExtension/   "Save to Ohana" in the share sheet (targets OhanaShare for iOS and
+                  OhanaShare-macOS, embedded in the apps): the server imports a web page's recipe;
+                  Preprocess.js reads the page in Safari on iOS
+OhanaWidgets/     Widget extension (OhanaWidgets for iOS, OhanaWidgets-macOS, embedded in the
+                  apps): the Home Screen / Lock Screen / desktop widgets, and on iOS the cook
+                  timers' Live Activity
 OhanaTests/       Swift Testing unit tests
 ```
+
+## From outside the app
+
+- **Siri, Shortcuts, Spotlight** (`App/Intents/`): *Ask Ohana* opens the assistant; *Add to
+  Shopping List*, *Add Event* and *Import Recipe* (a URL, also from the share sheet in a shortcut)
+  run without opening the app and answer in a sentence. They use the server, token and family the
+  app stored (`IntentConnection`). The phrases' German is in `Resources/AppShortcuts.xcstrings`.
+- **Share extension** (`ShareExtension/`): sharing a web page (Safari, or any app sharing a URL) to
+  Ohana has the server read its recipe and save it to "Want to try"; *Undo* deletes it again, and
+  cancelling while it works saves nothing (the server notices the request go away). The app's
+  *Import from Web* sheet works the same. There is no App Group: the
+  extension reads the token, the server's address and the selected family from the Keychain,
+  where the app keeps them (`SharedConnection`; same access group in all entitlements). The app
+  writes them at launch, after pairing and when the family changes, and removes them when it
+  signs out.
+- **Spotlight** (`Features/Meals/Recipes/RecipeSpotlight.swift`): the recipes of every family of
+  the connected server's account (both lists: title, description, tags and the family's name as
+  keywords; item `recipe/{familyId}/{recipeId}`, domain `recipes/{familyId}`), indexed with Core
+  Spotlight once the account has loaded and again for a family a few seconds after its recipes
+  change (`revision(.recipes)`). In the demo, after signing out and with Meals off the index is
+  emptied. A result opens the recipe in its family (`ohana://f/{familyId}/meals/recipes/{id}`).
+
+## Widgets
+
+Home Screen and Lock Screen widgets on iPhone and iPad, desktop widgets on the Mac: **Today** and
+**Tomorrow** (calendar entries, events, birthdays; today's events drop off once they end),
+**Tonight's dinner**, **Shopping list** (what's left to buy) and **Appointment found** (the
+earliest slot the enabled searches found). The Lock Screen sizes exist on iOS only.
+
+They show the family the app shows. Like the share extension they need no App Group: the
+extension reads the server, token and family from the Keychain (`SharedConnection`), loads the
+family's overview (`GET /api/v1/families/{id}/overview`) itself and keeps the last answer in its
+own container for when the server can't be reached (`Core/Widgets/WidgetFeed.swift`). The app
+leaves the modules the server turned off in the Keychain too and reloads the widgets after loading
+the account, on a family switch, after a change and when it goes to the background
+(`WidgetSync`); on their own they refresh every 30 minutes, when an event of today ends and at
+midnight. Signed out or in the demo they ask to open the app. A tap opens the day, recipe,
+shopping list or appointment in the app (`ohana://f/{familyId}/…`).
 
 ## Building and testing from the command line
 
@@ -102,7 +152,14 @@ Connect). The workflow needs one Archive action per platform, each with its own 
 it finds no destination). `ci_scripts/ci_post_clone.sh` generates the project with XcodeGen there, since
 `Ohana.xcodeproj` isn't committed. `MARKETING_VERSION` in `project.yml` is the version people see;
 raise it for a new release. The build number (`CURRENT_PROJECT_VERSION`) doesn't need editing:
-Xcode Cloud gives every build its own. The app declares no encryption beyond HTTPS
+Xcode Cloud gives every build its own. Both apps embed the widget extension
+(`de.fa-krug.Ohana.Widgets`: the widgets, on iOS also the cook timers' Live Activity), signed
+with them; like the share extensions it has the Keychain sharing capability; the app has the
+Time Sensitive Notifications capability (finished timers come through a Focus). The share
+extensions (`OhanaShare`, `OhanaShare-macOS`) have their own bundle id, `de.fa-krug.Ohana.Share`,
+with the Keychain sharing capability like the apps: with automatic signing Xcode registers it,
+otherwise create it once in the developer account (Identifiers, Keychain Sharing on) before Xcode
+Cloud can sign an archive. The app declares no encryption beyond HTTPS
 (`ITSAppUsesNonExemptEncryption`) and its use of `UserDefaults` in
 `Ohana/Resources/PrivacyInfo.xcprivacy`; the iOS icon (`icon-1024.png`) must stay without an
 alpha channel.

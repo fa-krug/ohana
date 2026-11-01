@@ -94,6 +94,8 @@ tags:
     description: Creating families, the family itself, its links and its export file.
   - name: Overview
     description: The family dashboard over all modules.
+  - name: Search
+    description: One search across the modules.
   - name: Household
     description: Members, people without an account, invites, home address and notifications.
   - name: Calendar
@@ -492,6 +494,116 @@ paths:
                   ok: {type: boolean, const: true}
                   count: {type: integer, description: "Sessions that were open."}
         "401": {$ref: "#/components/responses/Unauthorized"}
+  /api/v1/me/push:
+    description: >-
+      Push notifications to this device of the app (the calling API token) through the push
+      relay (`GET /api/v1/server` → `push.relay`). The app registers with the relay, then gives
+      the server the relay's token for it and a key for the payloads, which the server seals
+      (AES-256-GCM: 12-byte IV + ciphertext + 16-byte tag, base64) so the relay sees only
+      ciphertext. Signing out (deleting the token) removes the device. 404 when push is off on
+      this server (`PUSH_RELAY_URL` empty).
+    get:
+      tags: [Account]
+      operationId: getPushDevice
+      summary: Whether this device gets push notifications
+      security: [{bearerAuth: []}]
+      x-ohana-role: token
+      responses:
+        "200":
+          description: This device.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/PushDevice"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+    put:
+      tags: [Account]
+      operationId: registerPushDevice
+      summary: Register or renew this device for push notifications
+      security: [{bearerAuth: []}]
+      x-ohana-role: token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [relay, relayToken, key, platform]
+              properties:
+                relay: {type: string, format: uri, description: "The relay the app registered with; must be this server's."}
+                relayToken: {type: string, pattern: "^r1\\.[A-Za-z0-9_-]+$", maxLength: 2000}
+                key: {type: string, description: "The device's AES-256 key (32 bytes), base64."}
+                platform: {type: string, enum: [ios, macos]}
+                mutedFamilyIds:
+                  type: array
+                  maxItems: 500
+                  items: {type: string}
+                  description: Families this device doesn't want pushes for (kept when left out).
+      responses:
+        "200":
+          description: Registered.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/PushDevice"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+    patch:
+      tags: [Account]
+      operationId: mutePushFamilies
+      summary: Choose the families this device doesn't want pushes for
+      security: [{bearerAuth: []}]
+      x-ohana-role: token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mutedFamilyIds]
+              properties:
+                mutedFamilyIds:
+                  type: array
+                  maxItems: 500
+                  items: {type: string}
+      responses:
+        "200":
+          description: This device.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/PushDevice"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    delete:
+      tags: [Account]
+      operationId: unregisterPushDevice
+      summary: Stop push notifications to this device
+      security: [{bearerAuth: []}]
+      x-ohana-role: token
+      responses:
+        "200":
+          description: "Unregistered (`registered: false`)."
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/PushDevice"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+  /api/v1/me/push/test:
+    post:
+      tags: [Account]
+      operationId: testPushDevice
+      summary: Send a test push to this device right away
+      security: [{bearerAuth: []}]
+      x-ohana-role: token
+      responses:
+        "200":
+          description: The relay accepted it.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/PushDevice"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "502": {$ref: "#/components/responses/BadGateway"}
 
   # ------------------------------------------------------------------ admin
   /api/v1/admin/users:
@@ -941,6 +1053,42 @@ paths:
         "401": {$ref: "#/components/responses/Unauthorized"}
         "404": {$ref: "#/components/responses/NotFound"}
 
+  # ------------------------------------------------------------------ search
+  /api/v1/families/{familyId}/search:
+    get:
+      tags: [Search]
+      operationId: search
+      summary: Search across the modules
+      description: >-
+        Recipes, calendar events and notes, transactions, appointment searches, the people of
+        the family and the caller's own assistant chats whose text holds every word of `q`
+        (case and accents ignored). Grouped by kind in the order of `SearchHit.kind`; within a
+        kind title matches first, then the ones nearest to `today`. Disabled modules are left
+        out.
+      x-ohana-role: viewer
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+        - name: q
+          in: query
+          description: What to look for (at most 100 characters; empty finds nothing).
+          schema: {type: string}
+        - name: today
+          in: query
+          description: The client's day (default the server's UTC day).
+          schema: {type: string, format: date}
+        - name: limit
+          in: query
+          description: Hits per kind (1–50, default 8).
+          schema: {type: integer, minimum: 1, maximum: 50}
+      responses:
+        "200":
+          description: The hits.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SearchResult"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+
   # ------------------------------------------------------------------ household
   /api/v1/families/{familyId}/household:
     parameters:
@@ -1301,6 +1449,7 @@ paths:
                   type: [array, "null"]
                   maxItems: 50
                   items: {type: string}
+                app: {type: boolean, description: "Also push to the members' app devices (kept when left out)."}
       responses:
         "200":
           description: The event's setting.
@@ -2412,6 +2561,59 @@ paths:
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
         "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/families/{familyId}/meals/recipes/import:
+    post:
+      tags: [Meals]
+      operationId: importRecipe
+      summary: Import a recipe from a web page with the family's AI
+      description: >-
+        The family's AI turns the page into one recipe in the user's language (the author's
+        quantities and steps, units converted to the available ones, the family's tags) and saves it
+        on the "to try" list, with `Source: <url>` at the end of its description. The page is read
+        from `text` (the page's text or HTML as the browser had it; the share extension and
+        Shortcuts send it) or, without one, fetched by the server (never from private addresses,
+        also not after a redirect; 20 s). The photo is `imageUrl`, else the page's schema.org
+        Recipe image or `og:image`; a photo that can't be loaded is left out. Waits for the model
+        (up to two minutes). 400 when the AI isn't set up or the address is invalid or private,
+        404 when the `assistant` or `meals` module is off.
+      x-ohana-role: editor
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url]
+              properties:
+                url: {type: string, format: uri, description: "The page's address (http or https)."}
+                text:
+                  type: [string, "null"]
+                  description: The page's readable text (or HTML, JSON-LD included) as the browser had it; cut after 100,000 characters. Without it (or under 100 characters) the server fetches the page.
+                title: {type: [string, "null"], description: "The page's title as the browser had it."}
+                imageUrl: {type: [string, "null"], format: uri, description: "The recipe's photo (http or https); anything else is ignored."}
+      responses:
+        "200":
+          description: The saved recipe.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, title]
+                properties:
+                  id: {type: string}
+                  title: {type: string}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "422":
+          description: No recipe found on that page.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+        "502": {$ref: "#/components/responses/BadGateway"}
   /api/v1/families/{familyId}/meals/recipes/{recipeId}:
     parameters:
       - $ref: "#/components/parameters/FamilyId"
@@ -2660,6 +2862,42 @@ paths:
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
         "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/families/{familyId}/meals/plan/iterations/{iterationId}/entries:
+    post:
+      tags: [Meal plan]
+      operationId: addMeal
+      summary: Put a recipe as the lunch on a day without one
+      description: >-
+        For a day of the iteration that has no lunch yet (an empty or away day): the meal gets the
+        plan's servings. The iteration's shopping lists are made anew, keeping ticks and what was
+        added by hand. A day that has a lunch answers 409 (swap it with PATCH
+        `…/meals/plan/entries/{entryId}` instead).
+      x-ohana-role: editor
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+        - {name: iterationId, in: path, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [date, recipeId]
+              properties:
+                date: {type: string, format: date, description: "A day of the iteration (YYYY-MM-DD)."}
+                recipeId: {type: string, minLength: 1, maxLength: 64}
+      responses:
+        "200": {$ref: "#/components/responses/PlanChange"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+        "422":
+          description: The day is not in the iteration.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
   /api/v1/families/{familyId}/meals/plan/entries/{entryId}:
     parameters:
       - $ref: "#/components/parameters/FamilyId"
@@ -2698,6 +2936,52 @@ paths:
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
         "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/families/{familyId}/meals/plan/entries/{entryId}/move:
+    post:
+      tags: [Meal plan]
+      operationId: moveMeal
+      summary: Move a meal to another day of its iteration (the two days swap)
+      description: >-
+        The meal on that day, if any, takes the moved one's day. Afterwards a leftover day that
+        lies on or before the day of its meal becomes a meal of its own. The iteration's shopping
+        lists are made anew, keeping ticks and what was added by hand. The same day changes
+        nothing and answers `undo: null`.
+      x-ohana-role: editor
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+        - {name: entryId, in: path, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [date]
+              properties:
+                date: {type: string, format: date, description: "A day of the meal's iteration (YYYY-MM-DD)."}
+      responses:
+        "200":
+          description: The changed iteration and the body that undoes the change (null if nothing changed).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [iterationId, undo]
+                properties:
+                  iterationId: {type: string}
+                  undo:
+                    oneOf:
+                      - $ref: "#/components/schemas/PlanUndo"
+                      - type: "null"
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "422":
+          description: The day is not in the iteration.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
   /api/v1/families/{familyId}/meals/plan/restore:
     post:
       tags: [Meal plan]
@@ -2931,6 +3215,55 @@ paths:
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
         "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/families/{familyId}/meals/shopping/items/{itemId}/move:
+    post:
+      tags: [Shopping]
+      operationId: moveShoppingItem
+      summary: Move an item (or part of it) to another shopping list
+      description: >-
+        To any of the family's lists. With `quantity` below the item's, only that much moves and
+        the rest stays; absent or equal, the whole item. What moves unticked (a part always does)
+        is added to an unticked item of the same ingredient and unit on the target list
+        (`merged`); otherwise the item itself moves (keeping its tick) or a new unticked item is
+        made with the part. Undo by calling it back: not merged and whole, move `id` to
+        `fromListId`; merged, move `quantity` of `id` to `fromListId`.
+      x-ohana-role: editor
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+        - {name: itemId, in: path, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [listId]
+              properties:
+                listId: {type: string, minLength: 1, maxLength: 64}
+                quantity: {type: [string, number], description: "How much to move: more than 0, at most the item's quantity; `,` is read as `.`."}
+      responses:
+        "200":
+          description: Where it went.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, merged, previousQuantity, fromListId, quantity]
+                properties:
+                  id: {type: string, description: "The moved or new item, or the item it was added to."}
+                  merged: {type: boolean, description: "Added to an existing item."}
+                  previousQuantity: {type: [string, "null"], description: "The existing item's quantity before."}
+                  fromListId: {type: string, description: "The list it came from."}
+                  quantity: {type: string, description: "How much moved."}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "422":
+          description: The item is already on that list, or the quantity is not more than 0 or more than the item has.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
 
   # ------------------------------------------------------------------ meals: separate routes ({message} errors)
   /api/v1/families/{familyId}/recipes:
@@ -4311,7 +4644,7 @@ components:
     # ---------------------------------------------------------------- server / account
     ServerInfo:
       type: object
-      required: [name, version, apiVersion, modules]
+      required: [name, version, apiVersion, modules, push]
       properties:
         name: {type: string, const: Ohana}
         version: {type: string, description: "The server release, e.g. `0.1.0`."}
@@ -4322,6 +4655,23 @@ components:
           items:
             type: string
             enum: [calendar, finance, meals, appointments, assistant]
+        push:
+          description: Push to the app through a relay; null when the server turned it off.
+          oneOf:
+            - type: object
+              required: [relay]
+              properties:
+                relay: {type: string, format: uri, description: "The relay the app registers with."}
+            - type: "null"
+    PushDevice:
+      type: object
+      required: [registered, platform, mutedFamilyIds, lastSentAt, lastError]
+      properties:
+        registered: {type: boolean}
+        platform: {type: [string, "null"], enum: [ios, macos, null]}
+        mutedFamilyIds: {type: array, items: {type: string}}
+        lastSentAt: {type: [string, "null"], format: date-time}
+        lastError: {type: [string, "null"], description: "The relay's answer to the last failed push (`limited`, `error`)."}
     User:
       type: object
       required: [id, email, name, preferredLanguage, onboardingStep, isAdmin, hasPassword, hasPasskey]
@@ -4640,6 +4990,36 @@ components:
         name: {type: string}
         age: {type: integer, description: "The age they turn that day."}
 
+    # ---------------------------------------------------------------- search
+    SearchResult:
+      type: object
+      required: [query, currency, results, more]
+      properties:
+        query: {type: string, description: "The query as searched (trimmed)."}
+        currency: {type: string, description: "The family's currency (ISO 4217), for the amounts."}
+        results:
+          type: array
+          items: {$ref: "#/components/schemas/SearchHit"}
+        more:
+          type: object
+          description: How many more hits than listed, per kind (kinds without more are left out).
+          additionalProperties: {type: integer}
+    SearchHit:
+      type: object
+      required: [kind, id, title, detail, day]
+      properties:
+        kind: {type: string, enum: [recipe, event, note, transaction, search, person, chat]}
+        id:
+          type: string
+          description: >-
+            The item's id (a member's user id for a person with an account); a note's is its day.
+        title: {type: string}
+        detail: {type: string, description: "More of the item, joined with \" · \" (may be empty)."}
+        day: {type: [string, "null"], format: date, description: "An event's, note's or transaction's day; a chat's last change."}
+        time: {type: [string, "null"], description: "An event's start (HH:MM), null all day."}
+        amountCents: {type: integer, description: "A transaction's amount; negative: money going out."}
+        account: {type: boolean, description: "A person: a member with an account (else a person without one)."}
+
     # ---------------------------------------------------------------- overview
     Dashboard:
       type: object
@@ -4860,7 +5240,7 @@ components:
         once per shopping day), `assistant_turn_finished` (off; when nobody watches the chat).
     EventPref:
       type: object
-      required: [event, enabled, channelIds, hasChannels]
+      required: [event, enabled, channelIds, app, hasChannels]
       properties:
         event: {$ref: "#/components/schemas/NotifyEvent"}
         enabled: {type: boolean}
@@ -4868,6 +5248,7 @@ components:
           type: [array, "null"]
           description: null = all of the family's enabled channels.
           items: {type: string}
+        app: {type: boolean, description: "Also pushed to the members' app devices (default true)."}
         hasChannels: {type: boolean, description: "Whether the event picks its channels here."}
 
     # ---------------------------------------------------------------- finance
@@ -5638,6 +6019,7 @@ components:
         scheduleMinutes: {type: [integer, "null"], minimum: 1, maximum: 1440, default: 30}
         cron: {type: string, maxLength: 100, default: ""}
         notifyOnlyEarlier: {type: boolean, default: false, description: "Notify only when a slot is earlier than any seen before."}
+        notifyApp: {type: boolean, description: "Also push to the members' app devices (new searches: true; an edit without it keeps it)."}
         channelIds:
           type: array
           default: []
@@ -5689,7 +6071,7 @@ components:
     Search:
       type: object
       description: A search with its schedule and the latest run's finds.
-      required: [id, name, sources, specialitySlug, specialityLabel, jamedaSpecialitySlug, jamedaSpecialityLabel, jamedaSpecialityType, jamedaInsuranceType, jamedaKidsFriendly, jamedaVideo, locationLabel, latitude, longitude, insuranceSector, dayLimit, maxPages, enabled, scheduleType, scheduleMinutes, cron, notifyOnlyEarlier, lastRunAt, lastStatus, nextRunAt, runRequested, channelIds, latestRun, doctors, ignored]
+      required: [id, name, sources, specialitySlug, specialityLabel, jamedaSpecialitySlug, jamedaSpecialityLabel, jamedaSpecialityType, jamedaInsuranceType, jamedaKidsFriendly, jamedaVideo, locationLabel, latitude, longitude, insuranceSector, dayLimit, maxPages, enabled, scheduleType, scheduleMinutes, cron, notifyOnlyEarlier, notifyApp, lastRunAt, lastStatus, nextRunAt, runRequested, channelIds, latestRun, doctors, ignored]
       properties:
         id: {type: string}
         name: {type: string}
@@ -5713,6 +6095,7 @@ components:
         scheduleMinutes: {type: [integer, "null"]}
         cron: {type: string}
         notifyOnlyEarlier: {type: boolean}
+        notifyApp: {type: boolean}
         lastRunAt: {type: [string, "null"], format: date-time}
         lastStatus: {type: string, description: "The latest run's status (\"\" before the first)."}
         nextRunAt: {type: [string, "null"], format: date-time}
@@ -5741,7 +6124,7 @@ components:
           items: {$ref: "#/components/schemas/DoctorSlot"}
     SlotDetail:
       type: object
-      required: [slot, searchId, searchName, specialityLabel, insuranceSector, homeLat, homeLng, booking, searchEnabled, people]
+      required: [slot, searchId, searchName, specialityLabel, insuranceSector, homeLat, homeLng, booking, searchEnabled, people, suggestedPerson]
       properties:
         slot: {$ref: "#/components/schemas/DoctorSlot"}
         searchId: {type: string}
@@ -5764,6 +6147,11 @@ components:
         people:
           type: array
           items: {type: string}
+        suggestedPerson:
+          type: string
+          description: >-
+            Whom a booking is likely for: the person of the search's latest booking, else the one
+            name of `people` the search's name holds as a word, else the only name; "" otherwise.
     BookingInput:
       type: object
       required: [date, start]

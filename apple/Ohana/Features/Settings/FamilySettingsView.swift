@@ -239,6 +239,7 @@ private struct FamilySettingsForm: View {
             }
 
             DeviceSettingsSection()
+            PushSettingsSection()
 
             if app.me?.isAdmin == true, !app.isDemo {
                 Section {

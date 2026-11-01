@@ -5,8 +5,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Ohana** is one app for a family: calendar, finance, meals, doctor appointments and an
 AI assistant. It is **open source and self-hosted** (server AGPL-3.0, app MPL-2.0). The
 repository holds **`server/`**, the server (JSON API, the few sign-in pages, worker; Hono +
-SQLite, one Docker image on GHCR) and **`apple/`**, the native SwiftUI app for iOS/iPadOS and
-macOS, the **only client**: there is no web UI (see *Native app* below). Paths in this file are
+SQLite, one Docker image on GHCR), **`apple/`**, the native SwiftUI app for iOS/iPadOS and
+macOS, the **only client**: there is no web UI (see *Native app* below), and **`relay/`**, the
+push relay fa-krug runs for every server's notifications to the app (see *Push to the app*). Paths in this file are
 relative to `server/` unless they start with `apple/`. It replaced `fa-krug/family-planner`,
 `fa-krug/cookless` and `fa-krug/findmyappointment`; [docs/plan.md](docs/plan.md) has the
 decisions and the phases (all done, phase 8: headless, open source, self-hosted).
@@ -147,7 +148,10 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   day transactions list newest created first, then in insertion order (rowid); one request's
   ops share one `created_at`. CSV files are parsed by the app; the server stores the saved
   formats (`fin_settings.csv_mappings`). Auto-categorize calls the assistant's
-  `POST …/ai/categorize` (so it's off with the assistant).
+  `POST …/ai/categorize` (so it's off with the assistant). Receipts are scanned and read in
+  the app only (`apple/…/Finance/ReceiptScanner.swift`: VisionKit's document camera, Vision
+  text recognition, `ReceiptParser`); it saves a plain transaction, then sorts it with
+  `…/ai/categorize` (`ids`); the shopping-day link is the usual groceries category + day ± 1.
 - **Assistant (`lib/assistant/`):** family-planner's `ai/*`. Tables
   `ai_settings` (keys sealed with `getSecretBox()`), `chats` (status, lease `run_token` /
   `run_until`, `stop`, JSON `context` / `activity` / `notes` / `usage` / `queue`, `rev`),
@@ -191,6 +195,28 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   family's language (its longest-standing editor's). **ntfy** (`NTFY`): `target` is the topic
   URL (`validNtfyTopicUrl`), `token` an optional access token; `ntfyRequest` builds the publish
   request (title RFC 2047-encoded when not ASCII). Set up in the app (Settings → Household).
+  `notifyFamily`'s `app` option (`true` or `{ userIds }`) also pushes to the members' app
+  devices (`lib/push`); `notifyEvent` passes the pref's `app`, `notifyRun` the search's
+  `notifyApp`, the assistant's turn notification only the chat user's devices.
+- **Push to the app (`lib/push/`, `relay/`, phase 9):** APNs needs the app developer's key, so
+  every server sends through fa-krug's relay (`PUSH_RELAY_URL`, default
+  `https://ohana-push.fa-krug.de`, empty = off; `GET /api/v1/server` `push: { relay } | null`).
+  The app registers its APNs token with the relay (`POST /v1/register` → sealed `relayToken`),
+  then `PUT /api/v1/me/push` (`lib/push/app-routes.ts`, on the account router) gives the server
+  the relay token and a per-device AES-256 key; `push_devices` (one per API token, cascade: sign
+  out removes it; both secrets sealed; `muted_family_ids`). `deliver.ts` `pushToFamily` seals
+  `payload.ts` `{v, title, body, path, familyId, event}` per device (12-byte IV + ciphertext +
+  tag, base64 = CryptoKit's combined box; shortened to 3000 bytes), opaque collapse ids
+  (hash of key + `Message.collapseKey`), sends through `relay.ts` (`RelayClient`, injected in
+  tests as `push`/`relay`); `gone` / `invalid` deletes the device (the app registers again at
+  start). Prefs: `notification_prefs.app`, `appt_searches.notify_app` (both optional in input:
+  an older app keeps them). `relay/` is its own Hono service (stateless, AGPL, image
+  `ghcr.io/fa-krug/ohana-relay`, `.github/workflows/relay.yml`, tests with a fake APNs client;
+  `relay/README.md` has the protocol). App: `Core/Push/` (`PushNotifications`: enable / renew
+  at start / mute / test, tap → `AppModel.open`; `PushPayload` + `PushKey`, shared with the
+  `OhanaNotificationService(-macOS)` extension targets, which decrypt with the key from the
+  shared Keychain group), `App/AppDelegate.swift` (the APNs token), `Shell/PushSettingsSection`,
+  `OhanaPushRelay` in the Info.plists; `PUSH_FALLBACK` is the relay's visible fallback string.
 - **Appointments (`lib/appointments/`)**, port of findmyappointment: `doctolib/` (JSON client,
   profile cache), `jameda/` (HTML client, offline term list), `sources/` (fan-out, dedup,
   ignore keys), `pipeline.ts` (`runPipeline`: never throws once the run exists; per-provider
@@ -240,6 +266,11 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
     is off.
   - *Overview:* `lib/families/dashboard.ts` (`familyDashboard`, `GET /overview`; no searches
     with appointments off).
+  - *Search:* `lib/families/search.ts` (`searchFamily`, `GET /search?q=&today=&limit=`): recipes,
+    events, notes, transactions, appointment searches, people (members + `family_people`) and the
+    caller's own chats whose text holds every word (`normalizeForSearch`: case and accents
+    ignored), grouped by kind, per kind title matches first then nearest to `today`, `limit` per
+    kind (`more` counts the rest); turned-off modules are left out. The app's search tab.
 - **Meals (`lib/meals/`, ported from cookless):** recipes, meal plan, shopping lists, cook
   view, tags. Tables in `lib/db/schema/meals.ts` (re-exported by `schema.ts`): `ingredients`
   and `units` are shared seed data (`lib/meals/seed.ts`, run by `scripts/seed.ts` at every
@@ -259,7 +290,11 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   (one chat completion through `lib/assistant/provider.ts` with the family's model —
   `familyModel()` in `lib/assistant/routes.ts` —; photos via `POST {base}/images/generations`
   with `ai_settings.image_model`, or Gemini's native `generateContent` for a Gemini image model
-  on Gemini's endpoint), `verify.ts` (zod check of the answer), `stream.ts` (the NDJSON stream
+  on Gemini's endpoint), `verify.ts` (zod check of the answer), `import.ts` (one recipe from a
+  web page, `POST …/meals/recipes/import`: the browser's text or the page fetched with `net`
+  (never private), JSON-LD / og:image read before `htmlToText`, `buildImportPrompt`, saved
+  TO_TRY with "Source: <url>" in the description, the photo best effort; nothing is saved once the
+  request's signal aborted, i.e. the client went away), `stream.ts` (the NDJSON stream
   of `POST /api/v1/families/{id}/recipes/generate`, inline in the server process: one
   user-started call with timeouts, cancelled with the request), `status.ts` (`mealsAi`: show
   the buttons; off with the assistant). Saving: `recipes/bulk-create.ts`; photo: the meals
@@ -323,10 +358,46 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   right of every page: module roots get it from `shellToolbar()`, a page pushed onto a module's
   stack adds `.assistantButton()`; and its own
   page, `AppRoute`: `family.open(.recipe(id:))` etc. switches to the module, whose root takes it
-  with `family.takeRoute(for:)`; server paths `/f/{id}/…` and `ohana://f/{id}/…` map onto routes),
+  with `family.takeRoute(for:)`; server paths `/f/{id}/…` and `ohana://f/{id}/…` map onto routes;
+  the search tab (`Module.search`, `Tab(role: .search)`, ⌘K → `family.startSearch()`,
+  `Features/Search/`) opens its hits the same way, a transaction as `.financeTransaction`),
   `DesignSystem/` (solid content cards — Liquid Glass only on bars and floating controls —, error banner, `CancelButton`/`discardGuard`; the module sets `newItem`/`moduleMenu` focused values for File ▸ New and its menu), `Features/<Module>/` (plus `Account/`, `Admin/`).
+  Drag and drop (iPad, Mac) carries the payloads of `Core/Support/DragItems.swift` (own UTTypes,
+  declared in `project.yml`, each naming its family): a recipe or a planned meal onto a day of the
+  meal plan (`MealPlanDrop`; the plan's recipe column, `MealPlanRecipeColumn.swift`), a calendar
+  event onto another day (`CalendarEventDrag.swift`, `CalendarStore.moveEvent`; the grids' selection
+  gestures step aside on an event label), a shopping item onto another list's chip (`ShoppingMove`).
   The assistant: `family.ask(prompt, send:, newChat:)` opens it ready to type from anywhere (⇧⌘J, the overview's field, the Mac's menu bar item (`MenuBarItem`, an AppKit status item: SwiftUI's `MenuBarExtra` re-sets its icon on every window redraw and crashed the app), the
-  `AskOhanaIntent` App Shortcut). German strings: per-module
+  `AskOhanaIntent` App Shortcut). Recipes are in Spotlight (`RecipeSpotlight.swift`: every family's,
+  after loading the account and after recipe changes; emptied in the demo / with Meals off; a result
+  opens `ohana://f/{id}/meals/recipes/{id}`). The recipe list's *Import from Web* sheet
+  (`RecipeImportView`, editors, with the meals AI) posts a URL to `…/meals/recipes/import`, then
+  offers to open the recipe or undo (DELETE it); so does the share extension. From outside the app: Siri / Shortcuts actions without opening it
+  (`App/Intents/CaptureIntents.swift`: add to the shopping list, add an event, import a recipe;
+  `IntentConnection`) and the *Save to Ohana* Safari share extension (`apple/ShareExtension/`,
+  targets `OhanaShare` / `OhanaShare-macOS`, bundle id `de.fa-krug.Ohana.Share`; iOS sends the
+  page's text via `Preprocess.js`). Code both use is in `apple/Shared/` (`Keychain`,
+  `SharedConnection`): no App Group — the app mirrors the server URL and selected family into the
+  shared Keychain access group next to the token, and removes them on sign out.
+  The cook view (`MealsCookView`) turns durations in a step's
+  text into timer links (`StepDurations`, English and German); `CookTimers` (app-wide, kept in
+  `UserDefaults`) schedules a time-sensitive local notification per timer (shown in the
+  foreground too: the notification center's delegate is `PushNotifications`) and keeps one Live Activity for all running
+  timers (iOS: `apple/Shared/CookTimerAttributes.swift`, drawn by the widget extension
+  `apple/OhanaWidgets/`, the XcodeGen target `OhanaWidgets` embedded in `Ohana`). The same
+  extension has the Home Screen / Lock Screen widgets (also `OhanaWidgets-macOS`, desktop widgets
+  in the Mac app, without the Live Activity; one bundle id `de.fa-krug.Ohana.Widgets`; both
+  nonisolated by default and compiling `Shared/`, `Core/Widgets/WidgetFeed.swift`,
+  `Core/Support/Day.swift`, `DesignSystem/Tints.swift` and `Localizable.xcstrings`): Today,
+  Tomorrow, Tonight's dinner, Shopping list, Appointment found (Lock Screen families on iOS only).
+  They show the family the app shows: the extension reads `SharedConnection` (no App Group
+  either), loads `GET /families/{id}/overview?today=` into a `WidgetSnapshot` and keeps the last
+  one in its own container for when the server can't be reached (`WidgetStore`; the modules the
+  server has off are a Keychain item the app writes). `App/WidgetSync.swift`: `AppModel` writes
+  those modules and reloads the widgets after loading the account, on a family switch and on
+  sign out, `FamilyContext.didChange` (debounced 3 s) and the background reload them too;
+  timelines every 30 min plus each of today's event ends and midnight. Taps open `ohana://f/{id}/…`
+  (`/calendar/{YYYY-MM-DD}` is a day of the calendar in `AppRoute.parse`). German strings: per-module
   `apple/Localization/*.de.json`, merged into `Resources/Localizable.xcstrings` by
   `apple/scripts/merge-localizations.py` (`--check` in CI). Build/test: `apple/README.md`; CI:
   `.github/workflows/apple.yml` (macOS unit tests, iOS build, strings; only on `apple/**` changes).
