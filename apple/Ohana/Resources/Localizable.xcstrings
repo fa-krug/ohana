@@ -1,6 +1,7 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ %@": {},
     "%@ (%@) becomes the booking, the others its parts": {
       "localizations": {
         "de": {
@@ -3873,7 +3874,7 @@
         }
       }
     },
-    "Connect any OpenAI-compatible AI (OpenAI, OpenRouter, Mistral, Gemini, a local model …) in the settings. It can then look things up on the web and plan in your calendar and finances.": {
+    "Connect any OpenAI-compatible AI (OpenAI, OpenRouter, Mistral, Gemini, a local model …) in the settings. It can then look things up on the web and plan in your calendar and finances.": {
       "localizations": {
         "de": {
           "stringUnit": {
@@ -6033,7 +6034,7 @@
         }
       }
     },
-    "Every recipe should be …": {
+    "Every recipe should be …": {
       "localizations": {
         "de": {
           "stringUnit": {
@@ -6643,7 +6644,7 @@
         }
       }
     },
-    "Generating recipes …": {
+    "Generating recipes …": {
       "localizations": {
         "de": {
           "stringUnit": {
@@ -7215,7 +7216,7 @@
         }
       }
     },
-    "Importing the recipe …": {
+    "Importing the recipe …": {
       "localizations": {
         "de": {
           "stringUnit": {
@@ -7275,7 +7276,7 @@
         }
       }
     },
-    "Including the version, e.g. …/v1. A model on your home network works only if the server allows it (AI_ALLOW_PRIVATE_ENDPOINT).": {
+    "Including the version, e.g. …/v1. A model on your home network works only if the server allows it (AI_ALLOW_PRIVATE_ENDPOINT).": {
       "localizations": {
         "de": {
           "stringUnit": {
@@ -8047,7 +8048,7 @@
         }
       }
     },
-    "Making photos …": {
+    "Making photos …": {
       "localizations": {
         "de": {
           "stringUnit": {
@@ -11885,7 +11886,7 @@
         }
       }
     },
-    "Removing “%@” …": {
+    "Removing “%@” …": {
       "localizations": {
         "de": {
           "stringUnit": {
