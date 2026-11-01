@@ -319,7 +319,12 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `Features/Search/`) opens its hits the same way, a transaction as `.financeTransaction`),
   `DesignSystem/` (solid content cards — Liquid Glass only on bars and floating controls —, error banner, `CancelButton`/`discardGuard`; the module sets `newItem`/`moduleMenu` focused values for File ▸ New and its menu), `Features/<Module>/` (plus `Account/`, `Admin/`).
   The assistant: `family.ask(prompt, send:, newChat:)` opens it ready to type from anywhere (⇧⌘J, the overview's field, the Mac's menu bar item (`MenuBarItem`, an AppKit status item: SwiftUI's `MenuBarExtra` re-sets its icon on every window redraw and crashed the app), the
-  `AskOhanaIntent` App Shortcut). German strings: per-module
+  `AskOhanaIntent` App Shortcut). The cook view (`MealsCookView`) turns durations in a step's
+  text into timer links (`StepDurations`, English and German); `CookTimers` (app-wide, kept in
+  `UserDefaults`) schedules a time-sensitive local notification per timer (shown in the
+  foreground too: `CookTimers.NotificationDelegate`) and keeps one Live Activity for all running
+  timers (iOS: `apple/Shared/CookTimerAttributes.swift`, drawn by the widget extension
+  `apple/OhanaWidgets/`, the XcodeGen target `OhanaWidgets` embedded in `Ohana`). German strings: per-module
   `apple/Localization/*.de.json`, merged into `Resources/Localizable.xcstrings` by
   `apple/scripts/merge-localizations.py` (`--check` in CI). Build/test: `apple/README.md`; CI:
   `.github/workflows/apple.yml` (macOS unit tests, iOS build, strings; only on `apple/**` changes).

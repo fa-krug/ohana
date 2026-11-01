@@ -95,7 +95,7 @@ Ask your server's operator about their privacy policy.
 
 The app stores on your device only what it needs to work: the **API token** for your server
 (in the Keychain), app settings such as the selected family (in the app's preferences) and
-changes to the shopping list made offline until they're sent. Signing out deletes the token on
+changes to the shopping list made offline until they're sent, and the cook view's running timers. Signing out deletes the token on
 the server and on the device. Deleting the app removes the rest.
 
 ### Permissions
@@ -107,6 +107,9 @@ The app only asks for these permissions, and only when you use the feature:
   turned into text by Apple's speech recognition, which may process it on Apple's servers
   ([Apple's privacy policy](https://www.apple.com/legal/privacy/)); the text is sent to your
   server.
+- **Notifications:** asked when you start your first timer in a recipe's cook view, to tell you
+  when it's done. The timer runs on the device; nothing is sent to your server. Running timers
+  also show as a Live Activity on the Lock Screen and in the Dynamic Island.
 
 With Siri and Shortcuts (*Ask Ohana*), what you say is processed by Apple as for any Siri
 request.
