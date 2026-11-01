@@ -12,6 +12,8 @@
 //   POST   {chat}/queue    a message while a turn runs: it goes next (or now, if none runs)
 //   POST   {chat}/unqueue  takes back a message that waits
 //   POST   {chat}/answer   the answer to the assistant's question; streams like events
+//   POST   {chat}/reminders  the user applied (with the results) or declined the waiting
+//                          Reminders edit; streams like events
 //   POST   {chat}/stop     stops the running turn
 //   POST   {chat}/undone   a change of the chat was undone (the model hears it next time)
 //   POST   {chat}/page     moves the chat to another page
@@ -38,8 +40,10 @@ import {
   leaseUntil,
   onPage,
   openQuestion,
+  openRemindersEdit,
   pause,
   type Queued,
+  type ReminderResult,
   STOPPED,
   type Summary,
   summaryOf,
@@ -48,6 +52,7 @@ import {
 } from "./chats";
 import type { StoredMessage } from "./context";
 import type { ChatMessage, ContentPart } from "./provider";
+import type { ReminderOp } from "./tools";
 import type { AssistantStore, ChatRow } from "./store";
 
 /** How often followers look for news (the worker saves streaming text every 0.5 s). */
@@ -102,6 +107,8 @@ export function handleChats(
       return r.unqueue(id);
     case "POST :id/answer":
       return r.answer(id);
+    case "POST :id/reminders":
+      return r.reminders(id);
     case "POST :id/stop":
       return r.stop(id);
     case "POST :id/undone":
@@ -381,6 +388,57 @@ class ChatRoutes {
     }
   }
 
+  /** POST /ai/chats/{id}/reminders {id, applied, results?, reminders?, page, year, lang, today}:
+   *  the user applied the waiting Reminders edit in the app (results: one per op, in order:
+   *  {ok: true, id?} or {ok: false, error}) or declined it (applied: false); the turn goes on
+   *  with that as the tool's result. `reminders` is the fresh snapshot after the change. */
+  async reminders(id: string) {
+    const store = this.store;
+    const body = await readBody(this.ctx.req);
+    if (typeof body.applied !== "boolean") throw new HttpError(400, "applied must be true or false");
+    if (body.applied && !Array.isArray(body.results)) throw new HttpError(400, "results must be a list");
+    const { family } = await this.ownChat(id);
+    await this.checkSetUp(family.id);
+    const token = randomToken(32);
+    const chat = await store.claimChat(id, token, leaseUntil(this.env), "start");
+    if (!chat) throw new HttpError(409, "The assistant is still answering in this chat");
+    try {
+      const [items, messages] = await Promise.all([store.listChatItems(id), store.listChatMessages(id)]);
+      const shown = items.map((r) => r.item as unknown as Item);
+      const edit = openRemindersEdit(
+        shown,
+        messages.map((r) => r.message as unknown as StoredMessage),
+      );
+      if (!edit || edit.id !== body.id) throw new HttpError(409, "This change doesn't wait any more");
+      let answer: NonNullable<(Item & { kind: "reminders" })["answer"]>;
+      let result: unknown;
+      if (body.applied) {
+        const raw = body.results as unknown[];
+        const results = edit.ops.map((_, i) => cleanResult(raw[i]));
+        answer = { applied: true, results };
+        result = {
+          applied: true,
+          results: edit.ops.map((op, i) => ({
+            op: op.op,
+            title: op.op === "add" ? op.title : op.itemTitle,
+            ...results[i],
+          })),
+        };
+      } else {
+        answer = { applied: false };
+        result = { applied: false, note: "The user declined these changes: nothing was changed in their Reminders." };
+      }
+      return await this.begin(chat, token, {
+        messages: [{ role: "tool", tool_call_id: edit.id, content: JSON.stringify(result) }],
+        items: [{ seq: shown.indexOf(edit), item: { ...edit, answer } }],
+        context: onPage(chat, cleanContext(body)),
+      });
+    } catch (err) {
+      await this.letGo(id, token);
+      throw err;
+    }
+  }
+
   /** POST /ai/chats/{id}/page {page}: moves the chat to another page; its next turn is about
    *  that page. Answers with the chat. */
   async move(id: string) {
@@ -534,6 +592,13 @@ function cleanUndo(raw: unknown): unknown[] {
 
 const str = (v: unknown, max = MAX_TEXT) => (typeof v === "string" ? v.slice(0, max) : "");
 
+/** What the app reports for one op of a Reminders edit; a missing one failed. */
+function cleanResult(raw: unknown): ReminderResult {
+  const o = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  if (o.ok === true) return typeof o.id === "string" && o.id ? { ok: true, id: o.id.slice(0, 200) } : { ok: true };
+  return { ok: false, error: str(o.error, 500) || (raw === undefined ? "No result" : "Failed") };
+}
+
 /** Items of an imported chat: only what the app can show, with the expected fields. */
 function cleanItems(raw: unknown): Item[] {
   if (!Array.isArray(raw)) throw new HttpError(400, "items must be a list");
@@ -581,6 +646,25 @@ function cleanItems(raw: unknown): Item[] {
             ...(o.undone === true ? { undone: true } : {}),
           },
         ];
+      case "reminders": {
+        const ops = Array.isArray(o.ops) && JSON.stringify(o.ops).length < 100_000 ? o.ops.slice(0, 50) : [];
+        const a = o.answer as { applied?: unknown; results?: unknown } | undefined;
+        return [
+          {
+            kind: "reminders",
+            id: str(o.id, 200),
+            summary: str(o.summary, 2000),
+            ops: ops.filter((op) => op && typeof op === "object") as ReminderOp[],
+            ...(a && typeof a === "object" && typeof a.applied === "boolean"
+              ? {
+                  answer: a.applied
+                    ? { applied: true, results: (Array.isArray(a.results) ? a.results : []).slice(0, 50).map(cleanResult) }
+                    : { applied: false },
+                }
+              : { skipped: true }),
+          },
+        ];
+      }
       case "question": {
         const options = (Array.isArray(o.options) ? o.options : []).map((v) => str(v, 500)).slice(0, 8);
         const a = o.answer as { selected?: unknown; text?: unknown } | undefined;

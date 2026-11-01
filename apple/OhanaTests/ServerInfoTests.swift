@@ -92,10 +92,10 @@ struct ServerInfoTests {
     }
 
     @Test func notificationEventsBelongToTheirModules() {
-        let modules = ["appointment_found", "coverage_gap", "shopping_reminder", "assistant_turn_finished", "other"].map {
+        let modules = ["appointment_found", "coverage_gap", "assistant_turn_finished", "other"].map {
             FamilyEventPref(event: $0, enabled: true, channelIds: nil, hasChannels: true).module
         }
-        #expect(modules == [.appointments, .calendar, .meals, .assistant, nil])
+        #expect(modules == [.appointments, .calendar, .assistant, nil])
     }
 }
 

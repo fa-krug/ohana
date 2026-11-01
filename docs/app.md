@@ -28,7 +28,7 @@ For a server on your own network without HTTPS, use its address with `http://` (
 ## Offline
 
 The app keeps a copy of what your server last sent: your families and every screen you opened
-(the overview, the calendar, the meal plan, recipes, shopping lists, finances, appointments,
+(the overview, the calendar, the meal plan, recipes, finances, appointments,
 past chats). Shortly after it starts it also loads the selected family's main screens and the
 recipes of the current meal plan in the background (on Wi-Fi or mobile data, not in Low Data
 Mode), so they're there before you open them. It opens on that copy at once and asks the
@@ -36,9 +36,8 @@ server behind; a small *Updating…* shows meanwhile. Without a connection the c
 readable, marked *Offline · as of 9:41*, and is replaced as soon as the server answers again.
 
 Some changes work offline too and are sent when you're back online, even after quitting the
-app: **calendar days and notes**, and **ticking and adding shopping items** (new items show a
-clock until they're sent). If the server refuses one (say, a type was deleted or the list was
-replaced meanwhile), the server wins: the change is dropped, a message says so, and the screen
+app: **calendar days and notes**. If the server refuses one (say, a type was deleted
+meanwhile), the server wins: the change is dropped, a message says so, and the screen
 shows the server's state. Other changes need the server. Signing out removes the copy and the
 changes not sent yet.
 
@@ -61,6 +60,15 @@ goes back. Several devices can sync into the same iCloud calendar without copyin
 - **Viewers** see everything but can't change anything; the app hides the editing controls.
 - Modules the server turned off disappear from the app.
 
+## Shopping in Reminders
+
+Ohana doesn't keep a shopping list of its own. The meal plan works out what each shopping day
+needs, and the app writes those items into a **Reminders** list you pick in the meal plan (per
+family, on each device), each one due on its shopping day. Tick, edit and add items in
+Reminders, or share the list with the family over iCloud. When the meal plan changes, the app
+updates the items it wrote; what you changed or deleted yourself stays as it is. Viewers can use
+it too.
+
 ## Search
 
 The search tab (🔍, at the end of the iPhone's tab bar and at the top of the sidebar; ⌘K on the
@@ -75,11 +83,15 @@ The ✨ button at the top right of every page opens the assistant next to what y
 (⌘J on the Mac and iPad keyboards, ⇧⌘J for a new question). On the Mac it's also in the menu bar,
 and *Ask Ohana* is available as a Shortcut and to Siri.
 
+If you let the app use Reminders, the assistant can read your open reminders (any list) and
+suggest changes to them, such as adding groceries to your shopping list. It never changes them by
+itself: the chat shows what it wants to do, with **Apply** and **Don't apply**.
+
 ## Widgets
 
 Add Ohana's widgets to the Home Screen, the Lock Screen (iPhone and iPad) or the Mac's desktop:
-**Today** and **Tomorrow** (calendar, events, birthdays), **Tonight's dinner**, **Shopping
-list** and **Appointment found** (the earliest slot your searches found). They show the family
+**Today** and **Tomorrow** (calendar, events, birthdays), **Tonight's dinner** and
+**Appointment found** (the earliest slot your searches found). They show the family
 selected in the app, load it from your server with the app's token and refresh on their own; a
 tap opens the same thing in the app. Before you connect a server they ask you to open the app.
 

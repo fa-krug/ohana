@@ -286,7 +286,7 @@ describe("delivery", () => {
     expect(await notifyEvent(db, familyId, "coverage_gap", msg, { push: relay.relay })).toEqual({ sent: 0, failed: 0 });
     expect(relay.calls).toHaveLength(0);
     // userIds narrows (the assistant's chat is one person's).
-    expect(await notifyEvent(db, familyId, "shopping_reminder", msg, { push: relay.relay, userIds: [viewerId] })).toBeNull();
+    expect(await notifyEvent(db, familyId, "assistant_turn_finished", msg, { push: relay.relay, userIds: [viewerId] })).toBeNull();
     setPref(db, { id: editorId }, familyId, { event: "assistant_turn_finished", enabled: true, channelIds: [] }, NOW);
     expect(
       await notifyEvent(db, familyId, "assistant_turn_finished", msg, { push: relay.relay, userIds: [viewerId] }),

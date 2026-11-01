@@ -6,7 +6,7 @@ import Testing
 struct OverviewTests {
     /// GET /overview as the server answered it (web tests' family with two events and birthdays).
     static let serverSample = """
-    {"today":"2026-11-01","calendar":{"nextGap":null,"upcoming":[]},"awayToday":[],"todayEvents":[{"id":"e6cc03b9","date":"2026-11-01","start":"09:30","end":null,"title":"Dentist","location":"","person":"Mia","note":"","url":"","source":"manual","searchId":null}],"upcoming":[{"kind":"event","date":"2026-11-05","event":{"id":"6751a886","date":"2026-11-05","start":null,"end":null,"title":"Trip","location":"","person":"","note":"","url":"","source":"manual","searchId":null}}],"meals":{"today":null,"shopping":null},"finance":{"currency":"EUR","month":"2026-11","incomeCents":0,"expenseCents":0,"count":0,"topExpense":null,"balanceCents":null},"searches":[],"birthdays":[{"day":"2026-11-15","name":"Mia","age":8},{"day":"2026-11-20","name":"Anna","age":36}]}
+    {"today":"2026-11-01","calendar":{"nextGap":null,"upcoming":[]},"awayToday":[],"todayEvents":[{"id":"e6cc03b9","date":"2026-11-01","start":"09:30","end":null,"title":"Dentist","location":"","person":"Mia","note":"","url":"","source":"manual","searchId":null}],"upcoming":[{"kind":"event","date":"2026-11-05","event":{"id":"6751a886","date":"2026-11-05","start":null,"end":null,"title":"Trip","location":"","person":"","note":"","url":"","source":"manual","searchId":null}}],"meals":{"today":null},"finance":{"currency":"EUR","month":"2026-11","incomeCents":0,"expenseCents":0,"count":0,"topExpense":null,"balanceCents":null},"searches":[],"birthdays":[{"day":"2026-11-15","name":"Mia","age":8},{"day":"2026-11-20","name":"Anna","age":36}]}
     """
 
     /// Every optional part filled in (shapes of dashboard.ts, summary.ts, meal-plan.ts).
@@ -15,7 +15,7 @@ struct OverviewTests {
      "awayToday":["Vacation"],"todayEvents":[],
      "upcoming":[{"kind":"entry","date":"2026-10-30","to":"2026-11-03","name":"Vacation","color":"#22c55e"},
                  {"kind":"event","date":"2026-11-03","event":{"id":"e1","date":"2026-11-03","start":"08:15","end":"09:00","title":"Pediatrician","location":"Praxis","person":"Mia","note":"","url":"https://x.example","source":"appointment","searchId":"s1"}}],
-     "meals":{"today":{"recipeId":"r1","recipeTitle":"Lasagne","isLeftover":true},"shopping":{"id":"l1","shoppingDate":"2026-11-03","open":3,"total":12}},
+     "meals":{"today":{"recipeId":"r1","recipeTitle":"Lasagne","isLeftover":true}},
      "finance":{"currency":"EUR","month":"2026-11","incomeCents":250000,"expenseCents":12345,"count":7,"topExpense":{"categoryId":"c1","name":"Groceries","icon":"🛒","color":"#f97316","expenseCents":9000},"balanceCents":-500},
      "searches":[{"id":"s1","name":"Pediatrician","enabled":true,"lastStatus":"ok","first":{"resultId":42,"doctorName":"Dr. Weber","slot":"2026-11-03T08:15:00.000Z"},"doctors":3},
                  {"id":"s2","name":"Dentist","enabled":false,"lastStatus":"paused","first":null,"doctors":0}],
@@ -35,7 +35,7 @@ struct OverviewTests {
         #expect(date == Day("2026-11-05"))
         #expect(event.label == "Trip")
         #expect(event.start == nil)
-        #expect(d.meals.today == nil && d.meals.shopping == nil)
+        #expect(d.meals.today == nil)
         #expect(d.finance.balanceCents == nil)
         #expect(d.birthdays.map(\.name) == ["Mia", "Anna"])
         #expect(d.birthdays.map(\.age) == [8, 36])
@@ -55,7 +55,6 @@ struct OverviewTests {
         #expect(color == "#22c55e")
         #expect(d.upcoming[1].id == "event|e1")
         #expect(d.meals.today?.isLeftover == true)
-        #expect(d.meals.shopping?.progress == 0.75)
         #expect(d.finance.netCents == 250000 - 12345)
         #expect(d.finance.topExpense?.icon == "🛒")
         #expect(d.finance.monthDay == Day("2026-11-01"))
@@ -69,7 +68,7 @@ struct OverviewTests {
         {"today":"2026-11-01","calendar":{"nextGap":null,"upcoming":[]},"awayToday":[],"todayEvents":[],"upcoming":[],"finance":null,"birthdays":[]}
         """
         let d = try JSONDecoder().decode(OverviewDashboard.self, from: Data(json.utf8))
-        #expect(d.meals.today == nil && d.meals.shopping == nil)
+        #expect(d.meals.today == nil)
         #expect(d.finance.count == 0)
         #expect(d.searches.isEmpty)
     }
@@ -100,7 +99,6 @@ struct OverviewTests {
         let d = try JSONDecoder().decode(OverviewDashboard.self, from: Data(Self.fullSample.utf8))
         #expect(d.upcoming.map(OverviewLinks.route(for:)) == [.calendarDay(Day("2026-10-30")!), .calendarDay(Day("2026-11-03")!)])
         #expect(OverviewLinks.meal(d.meals) == .recipe(id: "r1"))
-        #expect(OverviewLinks.shopping(d.meals) == .shoppingList(id: "l1"))
         #expect(OverviewLinks.topExpense(d.finance) == .financeTransactions(categoryID: "c1"))
         #expect(d.searches.map(OverviewLinks.route(for:)) == [
             .appointmentSlot(searchID: "s1", resultID: "42"), .appointmentSearch(id: "s2"),
@@ -108,7 +106,6 @@ struct OverviewTests {
 
         let empty = try JSONDecoder().decode(OverviewDashboard.self, from: Data(Self.serverSample.utf8))
         #expect(OverviewLinks.meal(empty.meals) == .mealPlan)
-        #expect(OverviewLinks.shopping(empty.meals) == .shoppingList(id: nil))
         #expect(OverviewLinks.topExpense(empty.finance) == .financeTransactions(categoryID: nil))
         #expect(empty.birthdays.map(OverviewLinks.route(for:)).first == .calendarDay(Day("2026-11-15")!))
         #expect(OverviewLinks.route(for: empty.todayEvents[0], today: empty.today) == .calendarDay(Day("2026-11-01")!))
@@ -120,8 +117,6 @@ struct OverviewTests {
     @Test func countsWithPlurals() {
         #expect(String(OverviewFormat.doctorAndMore("Dr. Weber", more: 1).characters) == "Dr. Weber and 1 more doctor")
         #expect(String(OverviewFormat.doctorAndMore("Dr. Weber", more: 2).characters) == "Dr. Weber and 2 more doctors")
-        #expect(String(OverviewFormat.itemsLeft(open: 1, total: 1).characters) == "1 of 1 item left to buy")
-        #expect(String(OverviewFormat.itemsLeft(open: 3, total: 12).characters) == "3 of 12 items left to buy")
     }
 
     @Test func asksTheAssistant() {

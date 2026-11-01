@@ -78,14 +78,6 @@ struct CaptureTests {
 
     // MARK: Shopping
 
-    static let units: [ShoppingIntentLogic.Unit] = [
-        .init(id: 1, abbreviation: "g", nameEn: "gram", nameDe: "Gramm"),
-        .init(id: 2, abbreviation: "kg", nameEn: "kilogram", nameDe: "Kilogramm"),
-        .init(id: 3, abbreviation: "l", nameEn: "liter", nameDe: "Liter"),
-        .init(id: 4, abbreviation: "Stk", nameEn: "piece", nameDe: "Stück"),
-        .init(id: 5, abbreviation: "EL", nameEn: "tablespoon", nameDe: "Esslöffel"),
-    ]
-
     @Test func quantityIsADecimalString() {
         #expect(ShoppingIntentLogic.quantityText(1) == "1")
         #expect(ShoppingIntentLogic.quantityText(2.5) == "2.5")
@@ -96,30 +88,15 @@ struct CaptureTests {
         #expect(ShoppingIntentLogic.quantityText(.nan) == nil)
     }
 
-    @Test func unitsMatchByAbbreviationOrName() {
-        let units = Self.units
-        #expect(ShoppingIntentLogic.unit(named: nil, in: units)?.id == 4)
-        #expect(ShoppingIntentLogic.unit(named: "  ", in: units)?.id == 4)
-        #expect(ShoppingIntentLogic.unit(named: "L", in: units)?.id == 3)
-        #expect(ShoppingIntentLogic.unit(named: "litres", in: units)?.id == 3)
-        #expect(ShoppingIntentLogic.unit(named: "Kilogramm", in: units)?.id == 2)
-        #expect(ShoppingIntentLogic.unit(named: "grams", in: units)?.id == 1)
-        #expect(ShoppingIntentLogic.unit(named: "el", in: units)?.id == 5)
-        #expect(ShoppingIntentLogic.unit(named: "pieces", in: units)?.id == 4)
-        #expect(ShoppingIntentLogic.unit(named: "Stück", in: units)?.id == 4)
-        #expect(ShoppingIntentLogic.unit(named: "bucket", in: units) == nil)
-        // Without "Stk" the default is the first unit.
-        #expect(ShoppingIntentLogic.unit(named: nil, in: Array(units.prefix(2)))?.id == 1)
-    }
-
-    @Test func addItemBody() throws {
-        let json = try Self.json(ShoppingIntentLogic.AddItem(name: "Milk", quantity: "2", unitId: 3))
-        #expect(json["name"] as? String == "Milk")
-        #expect(json["quantity"] as? String == "2")
-        #expect(json["unitId"] as? Int == 3)
-        let overview = try JSONDecoder().decode(ShoppingIntentLogic.Overview.self,
-                                                from: Data(#"{"lists":[],"latest":null}"#.utf8))
-        #expect(overview.latest == nil)
+    @Test func theItemsTitleInReminders() {
+        let en = Locale(identifier: "en_US")
+        #expect(ShoppingIntentLogic.title(name: "Milk", quantity: "1", unit: nil, locale: en) == "Milk")
+        #expect(ShoppingIntentLogic.title(name: "Milk", quantity: "1", unit: "  ", locale: en) == "Milk")
+        #expect(ShoppingIntentLogic.title(name: "Milk", quantity: "2", unit: "l", locale: en) == "2 l Milk")
+        #expect(ShoppingIntentLogic.title(name: "Flour", quantity: "1", unit: "kg", locale: en) == "1 kg Flour")
+        #expect(ShoppingIntentLogic.title(name: "Eggs", quantity: "6", unit: nil, locale: en) == "6 Eggs")
+        #expect(ShoppingIntentLogic.title(name: "Milch", quantity: "2.5", unit: "l", locale: Locale(identifier: "de_DE"))
+            == "2,5 l Milch")
     }
 
     // MARK: Recipe import
@@ -195,11 +172,11 @@ struct CaptureTests {
         await #expect(throws: OhanaIntentError.sessionEnded) {
             try await OhanaIntentError.wrapping { () async throws -> Int in throw APIError.unauthorized(nil) }
         }
-        await #expect(throws: OhanaIntentError.noShoppingList) {
-            try await OhanaIntentError.wrapping { () async throws -> Int in throw OhanaIntentError.noShoppingList }
+        await #expect(throws: OhanaIntentError.noRemindersList) {
+            try await OhanaIntentError.wrapping { () async throws -> Int in throw OhanaIntentError.noRemindersList }
         }
         #expect(String(localized: OhanaIntentError.server("Nope").localizedStringResource) == "Nope")
-        #expect(String(localized: OhanaIntentError.noShoppingList.localizedStringResource)
-            == "There’s no shopping list yet: it comes with the meal plan.")
+        #expect(String(localized: OhanaIntentError.noRemindersList.localizedStringResource)
+            == "Choose a Reminders list for the shopping list in Ohana first: Meals → Plan → Shopping List.")
     }
 }

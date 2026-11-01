@@ -74,16 +74,6 @@
         }
       }
     },
-    "%@ in your finances, %@ – %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ in euren Finanzen, %@ – %@"
-          }
-        }
-      }
-    },
     "%@ is planned instead": {
       "localizations": {
         "de": {
@@ -216,6 +206,16 @@
         }
       }
     },
+    "%lld added": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld hinzugefügt"
+          }
+        }
+      }
+    },
     "%lld already imported – skipped": {
       "localizations": {
         "de": {
@@ -318,56 +318,6 @@
         }
       }
     },
-    "%lld items to grab": {
-      "localizations": {
-        "de": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld Sache"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld Sachen"
-                }
-              }
-            }
-          }
-        },
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld item to grab"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld items to grab"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "%lld left to buy": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld noch zu kaufen"
-          }
-        }
-      }
-    },
     "%lld members": {
       "localizations": {
         "de": {
@@ -464,26 +414,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld weitere – ein weiteres Wort grenzt die Suche ein."
-          }
-        }
-      }
-    },
-    "%lld of %lld": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld von %lld"
-          }
-        }
-      }
-    },
-    "%lld of ^[%lld item](inflect: true) left to buy": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noch %lld von %lld Artikeln zu kaufen"
           }
         }
       }
@@ -590,6 +520,16 @@
         }
       }
     },
+    "%lld removed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld entfernt"
+          }
+        }
+      }
+    },
     "%lld selected": {
       "localizations": {
         "de": {
@@ -686,6 +626,16 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "%lld updated": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld geändert"
           }
         }
       }
@@ -898,6 +848,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ein Schlüssel mit der Endung %@ ist gespeichert. Gib einen neuen ein, um ihn zu ersetzen."
+          }
+        }
+      }
+    },
+    "A list that’s gone": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Liste, die es nicht mehr gibt"
           }
         }
       }
@@ -1412,16 +1372,6 @@
         }
       }
     },
-    "Add item": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Artikel hinzufügen"
-          }
-        }
-      }
-    },
     "Add member": {
       "localizations": {
         "de": {
@@ -1542,12 +1492,22 @@
         }
       }
     },
-    "Added %@ to the shopping list.": {
+    "Add “%@” to %@": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ steht jetzt auf der Einkaufsliste."
+            "value": "„%@“ zu %@ hinzufügen"
+          }
+        }
+      }
+    },
+    "Added %@ to %@.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ zu %2$@ hinzugefügt."
           }
         }
       }
@@ -1592,16 +1552,6 @@
         }
       }
     },
-    "Adding to the shopping list": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ergänzt die Einkaufsliste"
-          }
-        }
-      }
-    },
     "Additional wishes": {
       "localizations": {
         "de": {
@@ -1632,12 +1582,12 @@
         }
       }
     },
-    "Adds an item to the family’s shopping list in Ohana.": {
+    "Adds an item to the family’s shopping list in Reminders, the list chosen in Ohana.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Setzt etwas auf die Einkaufsliste der Familie in Ohana."
+            "value": "Setzt etwas auf die Einkaufsliste der Familie in Erinnerungen, die Liste, die in Ohana ausgewählt ist."
           }
         }
       }
@@ -1718,16 +1668,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nach"
-          }
-        }
-      }
-    },
-    "Aisle": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abteilung"
           }
         }
       }
@@ -1848,6 +1788,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Alle „%@“-Tage in %@ sind abgedeckt"
+          }
+        }
+      }
+    },
+    "Allow Access to Reminders": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zugriff auf Erinnerungen erlauben"
+          }
+        }
+      }
+    },
+    "Allow Ohana full access to Reminders in the Settings, then come back here.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erlaube Ohana in den Einstellungen vollen Zugriff auf Erinnerungen und komm dann hierher zurück."
           }
         }
       }
@@ -2022,12 +1982,52 @@
         }
       }
     },
+    "Applied": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Angewendet"
+          }
+        }
+      }
+    },
+    "Applied, %lld of %lld failed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Angewendet, %lld von %lld fehlgeschlagen"
+          }
+        }
+      }
+    },
     "Applies to this device only.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Gilt nur für dieses Gerät."
+          }
+        }
+      }
+    },
+    "Apply": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anwenden"
+          }
+        }
+      }
+    },
+    "Apply: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anwenden: %@"
           }
         }
       }
@@ -2284,26 +2284,6 @@
         }
       }
     },
-    "Automatic (a category called Groceries)": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Automatisch (eine Kategorie namens Lebensmittel)"
-          }
-        }
-      }
-    },
-    "Automatic: %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Automatisch: %@"
-          }
-        }
-      }
-    },
     "Away": {
       "localizations": {
         "de": {
@@ -2350,16 +2330,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zurück bis"
-          }
-        }
-      }
-    },
-    "Back to meal plan": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zurück zum Essensplan"
           }
         }
       }
@@ -2724,16 +2694,6 @@
         }
       }
     },
-    "Can’t reach the server — changes will sync once it answers again.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Der Server ist nicht erreichbar – Änderungen werden synchronisiert, sobald er wieder antwortet."
-          }
-        }
-      }
-    },
     "Can’t reach your server": {
       "localizations": {
         "de": {
@@ -2854,22 +2814,22 @@
         }
       }
     },
-    "Change quantity": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Menge ändern"
-          }
-        }
-      }
-    },
     "Change with a passkey…": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Mit einem Passkey ändern …"
+          }
+        }
+      }
+    },
+    "Change “%@”": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ ändern"
           }
         }
       }
@@ -3064,22 +3024,22 @@
         }
       }
     },
+    "Choose a Reminders list for the shopping list in Ohana first: Meals → Plan → Shopping List.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle zuerst in Ohana eine Erinnerungsliste für die Einkaufsliste: Essen → Planung → Einkaufsliste."
+          }
+        }
+      }
+    },
     "Choose files": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Dateien auswählen"
-          }
-        }
-      }
-    },
-    "Choose the groceries category": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lebensmittel-Kategorie wählen"
           }
         }
       }
@@ -3414,6 +3374,16 @@
         }
       }
     },
+    "Complete “%@”": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ abhaken"
+          }
+        }
+      }
+    },
     "Condensing the earlier conversation…": {
       "localizations": {
         "de": {
@@ -3500,6 +3470,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Verbinde zuerst in der App deinen Ohana-Server."
+          }
+        }
+      }
+    },
+    "Connect your Ohana server to put the shopping list into Reminders.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbinde deinen Ohana-Server, um die Einkaufsliste in Erinnerungen zu schreiben."
           }
         }
       }
@@ -3884,16 +3864,6 @@
         }
       }
     },
-    "Create a meal plan and we’ll sort it out for you!": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Erstelle einen Essensplan und wir kümmern uns drum!"
-          }
-        }
-      }
-    },
     "Create an invite link so they can sign in": {
       "localizations": {
         "de": {
@@ -4070,16 +4040,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Täglich"
-          }
-        }
-      }
-    },
-    "Dairy": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Milchprodukte"
           }
         }
       }
@@ -4270,16 +4230,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Chat löschen"
-          }
-        }
-      }
-    },
-    "Delete Item": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Artikel löschen"
           }
         }
       }
@@ -4564,6 +4514,16 @@
         }
       }
     },
+    "Delete “%@”": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ löschen"
+          }
+        }
+      }
+    },
     "Delete “%@”?": {
       "localizations": {
         "de": {
@@ -4800,6 +4760,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fertig"
+          }
+        }
+      }
+    },
+    "Don’t Apply": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht anwenden"
           }
         }
       }
@@ -5624,32 +5594,12 @@
         }
       }
     },
-    "Everything bought": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alles eingekauft"
-          }
-        }
-      }
-    },
     "Everything in it is deleted. This can’t be undone.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Alles darin wird gelöscht. Das lässt sich nicht rückgängig machen."
-          }
-        }
-      }
-    },
-    "Everything on this list has been checked off": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alles auf dieser Liste wurde abgehakt"
           }
         }
       }
@@ -6034,16 +5984,6 @@
         }
       }
     },
-    "For a new ingredient; one Ohana knows keeps its own aisle.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Für eine neue Zutat; eine, die Ohana kennt, behält ihre Abteilung."
-          }
-        }
-      }
-    },
     "For other AI agents that use Ohana’s API with an API token:": {
       "localizations": {
         "de": {
@@ -6150,36 +6090,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aus der Zutatenliste"
-          }
-        }
-      }
-    },
-    "From your meal plan": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aus deinem Essensplan"
-          }
-        }
-      }
-    },
-    "Frozen": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tiefkühl"
-          }
-        }
-      }
-    },
-    "Fruit & Veg": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Obst & Gemüse"
           }
         }
       }
@@ -6314,52 +6224,12 @@
         }
       }
     },
-    "Go to meal plan": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zum Essensplan"
-          }
-        }
-      }
-    },
     "Grandma": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Oma"
-          }
-        }
-      }
-    },
-    "Groceries": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lebensmittel"
-          }
-        }
-      }
-    },
-    "Groceries category": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lebensmittel-Kategorie"
-          }
-        }
-      }
-    },
-    "Groceries of the shopping on %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lebensmittel vom Einkauf am %@"
           }
         }
       }
@@ -6470,16 +6340,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Haushalt"
-          }
-        }
-      }
-    },
-    "How many items are left on the shopping list.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wie viel noch auf der Einkaufsliste steht."
           }
         }
       }
@@ -6886,22 +6746,22 @@
         }
       }
     },
+    "In Reminders: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Erinnerungen: %@"
+          }
+        }
+      }
+    },
     "In and out": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Ein und aus"
-          }
-        }
-      }
-    },
-    "In the evening before a shopping day: what is still on its list.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Am Abend vor einem Einkaufstag: was noch auf der Liste steht."
           }
         }
       }
@@ -7098,22 +6958,22 @@
         }
       }
     },
+    "It syncs by itself when you open Ohana and when the meal plan changes. Tick items off in the Reminders app while you shop.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sie gleicht sich von selbst ab, wenn du Ohana öffnest und wenn sich der Essensplan ändert. Hake beim Einkaufen in der Erinnerungen-App ab."
+          }
+        }
+      }
+    },
     "Item": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Artikel"
-          }
-        }
-      }
-    },
-    "Item deleted.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Artikel gelöscht."
           }
         }
       }
@@ -7478,16 +7338,6 @@
         }
       }
     },
-    "Linked to the shopping of %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mit dem Einkauf vom %@ verknüpft"
-          }
-        }
-      }
-    },
     "List": {
       "localizations": {
         "de": {
@@ -7504,16 +7354,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hört zu…"
-          }
-        }
-      }
-    },
-    "Lists": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Listen"
           }
         }
       }
@@ -7818,16 +7658,6 @@
         }
       }
     },
-    "Meat & Fish": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fleisch & Fisch"
-          }
-        }
-      }
-    },
     "Members": {
       "localizations": {
         "de": {
@@ -7948,16 +7778,6 @@
         }
       }
     },
-    "Move Item": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Artikel verschieben"
-          }
-        }
-      }
-    },
     "Move down": {
       "localizations": {
         "de": {
@@ -8018,22 +7838,12 @@
         }
       }
     },
-    "Moved to %@": {
+    "Move “%@” to %@": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Auf %@ verschoben"
-          }
-        }
-      }
-    },
-    "Moved to another list": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Auf eine andere Liste verschoben"
+            "value": "„%@“ nach %@ verschieben"
           }
         }
       }
@@ -8198,12 +8008,12 @@
         }
       }
     },
-    "New Item": {
+    "New List “%@”": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Neuer Artikel"
+            "value": "Neue Liste „%@“"
           }
         }
       }
@@ -8364,16 +8174,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Neue Familie …"
-          }
-        }
-      }
-    },
-    "New items show a clock until they’re sent.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Neue Artikel zeigen eine Uhr, bis sie gesendet sind."
           }
         }
       }
@@ -8908,16 +8708,6 @@
         }
       }
     },
-    "No shopping list yet": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noch keine Einkaufsliste"
-          }
-        }
-      }
-    },
     "No total found: type in the amount.": {
       "localizations": {
         "de": {
@@ -8984,16 +8774,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noch keine Buchungen in diesem Monat."
-          }
-        }
-      }
-    },
-    "No transactions yet.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noch keine Buchungen."
           }
         }
       }
@@ -9098,6 +8878,16 @@
         }
       }
     },
+    "Not applied": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht angewendet"
+          }
+        }
+      }
+    },
     "Not covered": {
       "localizations": {
         "de": {
@@ -9188,6 +8978,16 @@
         }
       }
     },
+    "Nothing changes in your Reminders until you apply it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In deinen Erinnerungen ändert sich nichts, bis du es anwendest."
+          }
+        }
+      }
+    },
     "Nothing could be read from the receipt": {
       "localizations": {
         "de": {
@@ -9270,22 +9070,22 @@
         }
       }
     },
+    "Nothing to change": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nichts zu ändern"
+          }
+        }
+      }
+    },
     "Nothing to redo": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Nichts zum Wiederholen"
-          }
-        }
-      }
-    },
-    "Nothing to shop for": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nichts einzukaufen"
           }
         }
       }
@@ -9450,16 +9250,6 @@
         }
       }
     },
-    "Ohana doesn’t know the unit “%@”.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ohana kennt die Einheit „%@“ nicht."
-          }
-        }
-      }
-    },
     "Ohana has no access to your calendars.": {
       "localizations": {
         "de": {
@@ -9476,6 +9266,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ohana hat keinen Zugriff auf deine Kalender. Erlaube ihn in den Einstellungen unter Datenschutz & Sicherheit → Kalender."
+          }
+        }
+      }
+    },
+    "Ohana has no access to your reminders.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohana hat keinen Zugriff auf deine Erinnerungen."
+          }
+        }
+      }
+    },
+    "Ohana has no access to your reminders. You can allow it in the Settings.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohana hat keinen Zugriff auf deine Erinnerungen. Du kannst ihn in den Einstellungen erlauben."
           }
         }
       }
@@ -9500,6 +9310,16 @@
         }
       }
     },
+    "Ohana needs access to your reminders to write the shopping list into the list you choose and to keep it up to date. Nothing of your reminders goes to the server.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohana braucht Zugriff auf deine Erinnerungen, um die Einkaufsliste in die Liste zu schreiben, die du auswählst, und sie aktuell zu halten. Nichts aus deinen Erinnerungen geht an den Server."
+          }
+        }
+      }
+    },
     "Ohana on %@ is signed out right away. It can be connected again.": {
       "localizations": {
         "de": {
@@ -9510,12 +9330,12 @@
         }
       }
     },
-    "Ohana shows here what this shopping trip cost, from the finances’ groceries category.": {
+    "Ohana puts what the meal plan needs into a list in Reminders, each item due on its shopping day. Tick items off, change them or add more in Reminders: Ohana leaves what you changed alone.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hier zeigt Ohana, was dieser Einkauf gekostet hat – aus der Lebensmittel-Kategorie der Finanzen."
+            "value": "Ohana schreibt, was der Essensplan braucht, in eine Liste in Erinnerungen, jeden Artikel fällig an seinem Einkaufstag. Hake ab, ändere oder ergänze in Erinnerungen: Was du geändert hast, lässt Ohana in Ruhe."
           }
         }
       }
@@ -9710,6 +9530,16 @@
         }
       }
     },
+    "Open Reminders": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erinnerungen öffnen"
+          }
+        }
+      }
+    },
     "Open Settings": {
       "localizations": {
         "de": {
@@ -9736,16 +9566,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Termin %@ öffnen"
-          }
-        }
-      }
-    },
-    "Open finance": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Finanzen öffnen"
           }
         }
       }
@@ -9910,12 +9730,12 @@
         }
       }
     },
-    "Opens the shopping list": {
+    "Opens the shopping list’s settings": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Öffnet die Einkaufsliste"
+            "value": "Öffnet die Einstellungen der Einkaufsliste"
           }
         }
       }
@@ -9936,16 +9756,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Organisiere deine Rezepte mit Tags."
-          }
-        }
-      }
-    },
-    "Other": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sonstiges"
           }
         }
       }
@@ -10022,16 +9832,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bild auf / Bild ab, ⌘[ / ⌘]"
-          }
-        }
-      }
-    },
-    "Pantry": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vorratskammer"
           }
         }
       }
@@ -10976,22 +10776,32 @@
         }
       }
     },
-    "Reading the shopping list": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Liest die Einkaufsliste"
-          }
-        }
-      }
-    },
     "Reading transactions": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Liest Buchungen"
+          }
+        }
+      }
+    },
+    "Reading what the meal plan needs": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liest, was der Essensplan braucht"
+          }
+        }
+      }
+    },
+    "Reading your reminders": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liest deine Erinnerungen"
           }
         }
       }
@@ -11182,6 +10992,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dieses Format für den nächsten Auszug merken"
+          }
+        }
+      }
+    },
+    "Reminders": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erinnerungen"
+          }
+        }
+      }
+    },
+    "Reminders aren’t allowed on this device.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erinnerungen sind auf diesem Gerät nicht erlaubt."
+          }
+        }
+      }
+    },
+    "Reminders list": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erinnerungsliste"
           }
         }
       }
@@ -11432,6 +11272,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Benennt den Tag um"
+          }
+        }
+      }
+    },
+    "Reopen “%@”": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ wieder öffnen"
           }
         }
       }
@@ -12006,12 +11856,12 @@
         }
       }
     },
-    "Saving plans anew from today: the current meals and shopping lists are replaced.": {
+    "Saving plans anew from today: the current meals are replaced.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Speichern plant ab heute neu: die aktuellen Mahlzeiten und Einkaufslisten werden ersetzt."
+            "value": "Speichern plant ab heute neu: die aktuellen Mahlzeiten werden ersetzt."
           }
         }
       }
@@ -12786,6 +12636,16 @@
         }
       }
     },
+    "Shopping List": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einkaufsliste"
+          }
+        }
+      }
+    },
     "Shopping day": {
       "localizations": {
         "de": {
@@ -12806,42 +12666,12 @@
         }
       }
     },
-    "Shopping for %@": {
+    "Shopping list in Reminders": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Einkauf für %@"
-          }
-        }
-      }
-    },
-    "Shopping list": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Einkaufsliste"
-          }
-        }
-      }
-    },
-    "Shopping list of this day": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Einkaufsliste dieses Tages"
-          }
-        }
-      }
-    },
-    "Shopping reminder": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Einkaufserinnerung"
+            "value": "Einkaufsliste in Erinnerungen"
           }
         }
       }
@@ -12942,16 +12772,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Heute zeigen"
-          }
-        }
-      }
-    },
-    "Showing the list as it was last loaded.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die Liste, wie sie zuletzt geladen wurde."
           }
         }
       }
@@ -13298,16 +13118,6 @@
         }
       }
     },
-    "Sorted into %@, linked to the shopping of %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In %1$@ einsortiert, mit dem Einkauf vom %2$@ verknüpft"
-          }
-        }
-      }
-    },
     "Sorting…": {
       "localizations": {
         "de": {
@@ -13384,16 +13194,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Stufe %lld"
-          }
-        }
-      }
-    },
-    "Spent": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ausgegeben"
           }
         }
       }
@@ -13730,6 +13530,16 @@
         }
       }
     },
+    "Suggesting changes to your reminders": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schlägt Änderungen an deinen Erinnerungen vor"
+          }
+        }
+      }
+    },
     "Summing up the finances": {
       "localizations": {
         "de": {
@@ -13810,6 +13620,16 @@
         }
       }
     },
+    "Sync Now": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jetzt abgleichen"
+          }
+        }
+      }
+    },
     "Sync now": {
       "localizations": {
         "de": {
@@ -13836,16 +13656,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Abgleich mit %@ …"
-          }
-        }
-      }
-    },
-    "Syncing your changes…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Änderungen werden synchronisiert …"
           }
         }
       }
@@ -14100,6 +13910,16 @@
         }
       }
     },
+    "The Reminders list is gone.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Erinnerungsliste gibt es nicht mehr."
+          }
+        }
+      }
+    },
     "The account page didn’t finish. Please try again.": {
       "localizations": {
         "de": {
@@ -14150,12 +13970,12 @@
         }
       }
     },
-    "The category of your grocery shopping (with its subcategories): a shopping list shows what was spent in it on the shopping day (± 1 day), and those transactions link to the list.": {
+    "The chosen list is gone. Choose another one.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Die Kategorie eurer Lebensmitteleinkäufe (mit ihren Unterkategorien): Eine Einkaufsliste zeigt, was am Einkaufstag (± 1 Tag) darin ausgegeben wurde, und diese Buchungen verlinken auf die Liste."
+            "value": "Die gewählte Liste gibt es nicht mehr. Wähle eine andere."
           }
         }
       }
@@ -14290,32 +14110,32 @@
         }
       }
     },
-    "The meals and shopping lists of every iteration, ticks included, are deleted and planned anew from today. This can’t be undone.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die Mahlzeiten und Einkaufslisten aller Iterationen, samt Häkchen, werden gelöscht und ab heute neu geplant. Das lässt sich nicht rückgängig machen."
-          }
-        }
-      }
-    },
-    "The meals and shopping lists of these days are planned anew.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die Mahlzeiten und Einkaufslisten dieser Tage werden neu geplant."
-          }
-        }
-      }
-    },
     "The meals module can make a photo of a recipe with an image model of the same API. Without one, the photo buttons stay hidden.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Das Essen-Modul kann mit einem Bildmodell derselben API ein Foto zu einem Rezept machen. Ohne Bildmodell bleiben die Foto-Knöpfe ausgeblendet."
+          }
+        }
+      }
+    },
+    "The meals of every iteration are deleted and planned anew from today. This can’t be undone.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Mahlzeiten aller Iterationen werden gelöscht und ab heute neu geplant. Das lässt sich nicht rückgängig machen."
+          }
+        }
+      }
+    },
+    "The meals of these days are planned anew.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Mahlzeiten dieser Tage werden neu geplant."
           }
         }
       }
@@ -14450,6 +14270,16 @@
         }
       }
     },
+    "The reminder is gone.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Erinnerung gibt es nicht mehr."
+          }
+        }
+      }
+    },
     "The repeat must end after the event starts.": {
       "localizations": {
         "de": {
@@ -14550,6 +14380,16 @@
         }
       }
     },
+    "The shopping list in Reminders": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Einkaufsliste in Erinnerungen"
+          }
+        }
+      }
+    },
     "The whole family as a JSON file: the calendar of all years (entry types, entries, notes) and the finances (accounts, categories, transactions, settings). Viewers can export too.": {
       "localizations": {
         "de": {
@@ -14600,12 +14440,12 @@
         }
       }
     },
-    "There’s no shopping list yet: it comes with the meal plan.": {
+    "There’s no account for Reminders lists on this device.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Es gibt noch keine Einkaufsliste: Sie kommt mit dem Essensplan."
+            "value": "Auf diesem Gerät gibt es keinen Account für Erinnerungslisten."
           }
         }
       }
@@ -14646,6 +14486,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Denkt nach…"
+          }
+        }
+      }
+    },
+    "This Reminders list can’t be changed.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Erinnerungsliste lässt sich nicht ändern."
           }
         }
       }
@@ -14696,6 +14546,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dieses Gerät ist mit keinem Server mehr verbunden. Bis du einen verbindest, zeigt Ohana eine Demo-Familie."
+          }
+        }
+      }
+    },
+    "This device only. With a list shared in iCloud, everyone sees the items: then turn it on on one device.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur auf diesem Gerät. Bei einer in iCloud geteilten Liste sehen alle die Artikel: Schalte es dann auf einem Gerät ein."
           }
         }
       }
@@ -14820,6 +14680,16 @@
         }
       }
     },
+    "This version of Ohana can’t make this change.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Version von Ohana kann diese Änderung nicht vornehmen."
+          }
+        }
+      }
+    },
     "This will delete all tags (including custom ones) and remove them from your recipes. Start fresh with the defaults?": {
       "localizations": {
         "de": {
@@ -14836,26 +14706,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dieses Jahr"
-          }
-        }
-      }
-    },
-    "Tick": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abhaken"
-          }
-        }
-      }
-    },
-    "Ticking off the shopping list": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hakt die Einkaufsliste ab"
           }
         }
       }
@@ -15390,36 +15240,6 @@
         }
       }
     },
-    "Untick": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nicht abhaken"
-          }
-        }
-      }
-    },
-    "Untick every item": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alle Haken entfernen"
-          }
-        }
-      }
-    },
-    "Untick every item?": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alle Haken entfernen?"
-          }
-        }
-      }
-    },
     "Until": {
       "localizations": {
         "de": {
@@ -15640,16 +15460,6 @@
         }
       }
     },
-    "Waiting to be sent": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wartet aufs Senden"
-          }
-        }
-      }
-    },
     "Want to try": {
       "localizations": {
         "de": {
@@ -15820,6 +15630,16 @@
         }
       }
     },
+    "What do we need to buy for this week’s meals?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was müssen wir für die Gerichte dieser Woche einkaufen?"
+          }
+        }
+      }
+    },
     "What do you want to ask?": {
       "localizations": {
         "de": {
@@ -15896,16 +15716,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wie heißt das Rezept?"
-          }
-        }
-      }
-    },
-    "What’s still on the shopping list? Add 2 l of milk.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Was steht noch auf der Einkaufsliste? Setz 2 l Milch dazu."
           }
         }
       }
@@ -16466,16 +16276,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Deine Sitzung ist abgelaufen. Öffne Ohana und melde dich wieder an."
-          }
-        }
-      }
-    },
-    "You’re offline — changes will sync when you reconnect.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Du bist offline – Änderungen werden synchronisiert, sobald du wieder online bist."
           }
         }
       }
@@ -17130,6 +16930,16 @@
         }
       }
     },
+    "due %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "fällig %@"
+          }
+        }
+      }
+    },
     "e.g. Christmas": {
       "localizations": {
         "de": {
@@ -17430,6 +17240,16 @@
         }
       }
     },
+    "move to %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "nach %@ verschieben"
+          }
+        }
+      }
+    },
     "never run": {
       "localizations": {
         "de": {
@@ -17460,6 +17280,16 @@
         }
       }
     },
+    "no due date": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kein Fälligkeitsdatum"
+          }
+        }
+      }
+    },
     "no value": {
       "localizations": {
         "de": {
@@ -17476,6 +17306,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "nicht geplant"
+          }
+        }
+      }
+    },
+    "notes: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notizen: %@"
           }
         }
       }
@@ -17516,16 +17356,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "ntfy sind Push-Benachrichtigungen, die du selbst hosten kannst, mit einer App für iPhone und iPad. Die Topic-URL ist die vollständige Adresse des Topics auf ntfy.sh oder deinem eigenen ntfy-Server; das Token brauchst du nur für ein geschütztes Topic."
-          }
-        }
-      }
-    },
-    "of %lld left to buy": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "von %lld noch zu kaufen"
           }
         }
       }
@@ -17706,6 +17536,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rest %@"
+          }
+        }
+      }
+    },
+    "remove the notes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notizen entfernen"
+          }
+        }
+      }
+    },
+    "rename to “%@”": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "umbenennen in „%@“"
           }
         }
       }

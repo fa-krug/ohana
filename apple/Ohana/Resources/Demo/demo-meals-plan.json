@@ -92,17 +92,9 @@
       "isLocked": false
      }
     ],
-    "shoppingLists": [
-     {
-      "id": "list-2",
-      "shoppingDate": "{{day:4}}",
-      "itemCount": 19
-     },
-     {
-      "id": "list-1",
-      "shoppingDate": "{{day:1}}",
-      "itemCount": 12
-     }
+    "shoppingDates": [
+     "{{day:1}}",
+     "{{day:4}}"
     ],
     "createdAt": "{{time:-600}}"
    },
@@ -190,12 +182,8 @@
       "isLocked": false
      }
     ],
-    "shoppingLists": [
-     {
-      "id": "list-0",
-      "shoppingDate": "{{day:-3}}",
-      "itemCount": 19
-     }
+    "shoppingDates": [
+     "{{day:-3}}"
     ],
     "createdAt": "{{time:-10680}}"
    }

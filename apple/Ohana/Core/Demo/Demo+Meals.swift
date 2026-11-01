@@ -2,8 +2,7 @@ import Foundation
 
 extension DemoServer {
     /// The demo's meals routes that depend on the query; the rest are files
-    /// (`demo-meals-status.json`, `-tags`, `-catalog`, `-recipes-recipe-<slug>`, `-shopping-units`,
-    /// `-shopping-lists-<id>-spent`).
+    /// (`demo-meals-status.json`, `-tags`, `-catalog`, `-recipes-recipe-<slug>`).
     static func meals(_ request: Request) -> JSONValue? {
         guard let path = request.familyPath else { return nil }
         let parts = path.split(separator: "/").map(String.init)
@@ -14,11 +13,7 @@ extension DemoServer {
         case ["meals", "plan"]:
             return mealPlan(request)
         case ["meals", "shopping"]:
-            guard var overview = request.json("meals-shopping")?.objectValue else { return nil }
-            overview["latest"] = shoppingList("list-1", request)
-            return .object(overview)
-        case let p where p.count == 4 && p[0] == "meals" && p[1] == "shopping" && p[2] == "lists":
-            return shoppingList(p[3], request).map { .object(["list": $0]) }
+            return shoppingItems(request)
         default:
             return nil
         }
@@ -68,19 +63,26 @@ extension DemoServer {
         return .object(response)
     }
 
-    /// A shopping list with its items' names in the asked language (`?lang=de`), in alphabetical
-    /// order like the server's.
-    private static func shoppingList(_ id: String, _ request: Request) -> JSONValue? {
-        guard var list = request.json("meals-shopping-lists-\(id)")?["list"]?.objectValue else { return nil }
+    /// GET /meals/shopping `?lang&from`: what the plan needs per shopping day from `from` (default
+    /// today) on, the items' names in the asked language and in alphabetical order, like the
+    /// server's (server/lib/meals/queries/shopping.ts).
+    private static func shoppingItems(_ request: Request) -> JSONValue? {
+        guard let days = request.json("meals-shopping")?["days"]?.arrayValue else { return nil }
         let german = (request.query["lang"] ?? "").lowercased().hasPrefix("de")
-        let items: [JSONValue] = (list["items"]?.arrayValue ?? []).compactMap { item in
-            guard var item = item.objectValue else { return nil }
-            if german, let name = item["ingredientNameDe"] { item["ingredientName"] = name }
-            item["ingredientNameDe"] = nil
-            return .object(item)
+        let from = request.query["from"].flatMap { Day($0) } ?? request.today
+        func name(_ item: JSONValue) -> String { item["name"]?.stringValue ?? "" }
+        let shown: [JSONValue] = days.compactMap { day in
+            guard var day = day.objectValue, let date = day["date"]?.stringValue.flatMap({ Day($0) }),
+                  date >= from else { return nil }
+            let items: [JSONValue] = (day["items"]?.arrayValue ?? []).compactMap { item in
+                guard var item = item.objectValue else { return nil }
+                if german, let name = item["nameDe"] { item["name"] = name }
+                item["nameDe"] = nil
+                return .object(item)
+            }
+            day["items"] = .array(items.sorted { name($0).localizedCompare(name($1)) == .orderedAscending })
+            return .object(day)
         }
-        func name(_ item: JSONValue) -> String { item["ingredientName"]?.stringValue ?? "" }
-        list["items"] = .array(items.sorted { name($0).localizedCompare(name($1)) == .orderedAscending })
-        return .object(list)
+        return .object(["days": .array(shown)])
     }
 }

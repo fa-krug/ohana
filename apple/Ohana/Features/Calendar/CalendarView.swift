@@ -443,6 +443,7 @@ struct CalendarPlannerView: View {
             if compact {
                 Button("Redo", systemImage: "arrow.uturn.forward") { store.performRedo() }
                     .disabled(!store.canRedo)
+                Divider()
             }
             Button("Add event", systemImage: "calendar.badge.plus") { actions.addEvent() }
             Button("Icon & note", systemImage: "face.smiling") { actions.editNote() }

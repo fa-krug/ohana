@@ -6,16 +6,15 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { Db } from "@/lib/db";
 import {
   calEntries, calEntryTypes, familyMembers, ingredients, mealPlanEntries, mealPlans, planIterations, recipeIngredients,
-  recipes, shoppingListItems, shoppingLists, units,
+  recipes, units,
 } from "@/lib/db/schema";
 import { createFamilyApi } from "@/lib/api/family-api";
 import { createToken } from "@/lib/auth/tokens";
-import { applyTransactionOps } from "@/lib/finance/finance";
-import { DrizzleFinanceStore } from "@/lib/finance/store";
 import { handleMealPlanApp } from "@/lib/meals/app-routes-plan";
 import { handleMeals } from "@/lib/meals/family-routes";
 import { setupMealPlan } from "@/lib/meals/meal-plan/setup";
 import { mulberry32 } from "@/lib/meals/domain/rng";
+import { shoppingNeeds } from "@/lib/meals/shopping/needs";
 import { createTestDb } from "@/lib/test/db";
 import { NOW, makeFamily, makeUser } from "@/lib/test/factories";
 
@@ -77,13 +76,11 @@ function seedPlan() {
 const entriesOf = (iterationId: string) =>
   db.select().from(mealPlanEntries).where(eq(mealPlanEntries.iterationId, iterationId)).all().sort((a, b) => a.date.localeCompare(b.date));
 
-function itemsOf(iterationId: string) {
-  return db
-    .select({ id: shoppingListItems.id, date: shoppingLists.shoppingDate, ingredientId: shoppingListItems.ingredientId, quantity: shoppingListItems.quantity, isChecked: shoppingListItems.isChecked })
-    .from(shoppingListItems)
-    .innerJoin(shoppingLists, eq(shoppingLists.id, shoppingListItems.shoppingListId))
-    .where(eq(shoppingLists.iterationId, iterationId))
-    .all();
+/** What the plan needs, per shopping day (computed live; no list is stored). */
+function itemsOf() {
+  return shoppingNeeds(db, familyId, { from: "2000-01-01", locale: "en" }).flatMap((d) =>
+    d.items.map((i) => ({ date: d.date, ingredientId: i.ingredientId, quantity: i.quantity })),
+  );
 }
 
 beforeEach(() => {
@@ -109,7 +106,7 @@ describe("GET /meals/plan", () => {
     expect((await stranger("GET", "/meals/plan")).status).toBe(404);
   });
 
-  it("returns the plan with its iterations, meals, lists and away days", async () => {
+  it("returns the plan with its iterations, meals, shopping days and away days", async () => {
     const iterationId = seedPlan();
     db.update(calEntryTypes).set({ away: true }).where(and(eq(calEntryTypes.familyId, familyId), eq(calEntryTypes.id, "vacation"))).run();
     db.insert(calEntries).values({ familyId, day: "2026-11-05", year: 2026, typeId: "vacation" }).run();
@@ -123,8 +120,8 @@ describe("GET /meals/plan", () => {
     expect(it0.entries[0]).toEqual(
       expect.objectContaining({ id: expect.any(String), date: "2026-11-01", mealType: "LUNCH", recipeId: expect.any(String), recipeTitle: expect.stringMatching(/^Recipe /), servings: 2, isLeftover: false, sourceEntryId: null, isLocked: false }),
     );
-    expect(it0.shoppingLists.map((l: any) => l.shoppingDate).sort()).toEqual(["2026-11-02", "2026-11-05"]);
-    expect(it0.shoppingLists[0].itemCount).toBeGreaterThan(0);
+    expect(it0.shoppingDates).toEqual(["2026-11-02", "2026-11-05"]);
+    expect(it0).not.toHaveProperty("shoppingLists");
     expect(away).toEqual({ "2026-11-05": ["Vacation"] });
   });
 });
@@ -170,22 +167,15 @@ describe("changing the plan", () => {
     expect((await viewer("POST", "/meals/plan/next")).status).toBe(403);
   });
 
-  it("swaps a meal, keeping ticks and what was added by hand", async () => {
+  it("swaps a meal; what the plan needs follows", async () => {
     const iterationId = seedPlan();
     const entries = entriesOf(iterationId);
     const used = new Set(entries.map((e) => e.recipeId));
     const unused = [...Array(14).keys()].map((k) => `r${k}`).find((id) => !used.has(id))!;
-    // The meal of Monday (bought on Monday) is swapped; Tuesday's ingredient is ticked and
-    // got 50 g more by hand; a new item was added by hand.
+    // The meal of Monday (bought on Monday) is swapped.
     const monday = entries.find((e) => e.date === "2026-11-02")!;
     const tuesday = entries.find((e) => e.date === "2026-11-03")!;
     const ingOf = (recipeId: string) => Number(recipeId.slice(1)) + 1;
-    const sunday = db.select().from(shoppingLists).where(and(eq(shoppingLists.iterationId, iterationId), eq(shoppingLists.shoppingDate, "2026-11-02"))).get()!;
-    const tue = db.select().from(shoppingListItems).where(and(eq(shoppingListItems.shoppingListId, sunday.id), eq(shoppingListItems.ingredientId, ingOf(tuesday.recipeId)))).get()!;
-    db.update(shoppingListItems).set({ isChecked: true, quantity: "150" }).where(eq(shoppingListItems.id, tue.id)).run();
-    const added = await call("POST", `/meals/shopping/lists/${sunday.id}/items`, { name: "Milk", quantity: "2", unitId: 2, category: "DAIRY" });
-    expect(added.status).toBe(200);
-    expect(added.data).toEqual({ id: expect.any(String), merged: false, previousQuantity: null });
 
     expect((await viewer("PATCH", `/meals/plan/entries/${monday.id}`, { recipeId: unused })).status).toBe(403);
     expect((await call("PATCH", `/meals/plan/entries/${monday.id}`, { recipeId: "nope" })).status).toBe(404);
@@ -194,18 +184,16 @@ describe("changing the plan", () => {
     expect(res.data.iterationId).toBe(iterationId);
     expect(entriesOf(iterationId).find((e) => e.id === monday.id)!.recipeId).toBe(unused);
 
-    const items = itemsOf(iterationId).filter((i) => i.date === "2026-11-02");
+    const items = itemsOf().filter((i) => i.date === "2026-11-02");
     const by = (ing: number) => items.find((i) => i.ingredientId === ing);
     expect(by(ingOf(monday.recipeId))).toBeUndefined();
-    expect(by(ingOf(unused))).toEqual(expect.objectContaining({ quantity: "100", isChecked: false }));
-    expect(by(ingOf(tuesday.recipeId))).toEqual(expect.objectContaining({ quantity: "150", isChecked: true }));
-    const milk = db.select().from(ingredients).where(eq(ingredients.nameEn, "Milk")).get()!;
-    expect(milk.category).toBe("DAIRY");
-    expect(by(milk.id)).toEqual(expect.objectContaining({ quantity: "2", isChecked: false }));
+    expect(by(ingOf(unused))).toEqual(expect.objectContaining({ quantity: "100" }));
+    expect(by(ingOf(tuesday.recipeId))).toEqual(expect.objectContaining({ quantity: "100" }));
 
-    // Undo puts the old meal and list back.
+    // Undo puts the old meal back.
     await call("POST", "/meals/plan/restore", res.data.undo);
     expect(entriesOf(iterationId).find((e) => e.id === monday.id)!.recipeId).toBe(monday.recipeId);
+    expect(itemsOf().some((i) => i.ingredientId === ingOf(unused))).toBe(false);
   });
 
   it("swaps and removes a meal together with its leftover days", async () => {
@@ -223,7 +211,7 @@ describe("changing the plan", () => {
     expect(res.status).toBe(200);
     after = entriesOf(iterationId);
     expect(after.find((e) => e.id === cook.id || e.id === leftover.id)).toBeUndefined();
-    expect(itemsOf(iterationId).some((i) => i.ingredientId === Number(unused.slice(1)) + 1)).toBe(false);
+    expect(itemsOf().some((i) => i.ingredientId === Number(unused.slice(1)) + 1)).toBe(false);
     expect((await viewer("DELETE", `/meals/plan/entries/${after[0].id}`)).status).toBe(403);
     expect((await call("DELETE", `/meals/plan/entries/${cook.id}`)).status).toBe(404);
   });
@@ -274,11 +262,11 @@ describe("drag and drop in the plan", () => {
     expect(onDay(iterationId, "2026-11-06")).toEqual(
       expect.objectContaining({ mealType: "LUNCH", recipeId, servings: 2, isLeftover: false, sourceEntryId: null, isLocked: false }),
     );
-    expect(itemsOf(iterationId).find((i) => i.ingredientId === ingOf(recipeId))).toEqual(expect.objectContaining({ date: "2026-11-05", quantity: "100" }));
+    expect(itemsOf().find((i) => i.ingredientId === ingOf(recipeId))).toEqual(expect.objectContaining({ date: "2026-11-05", quantity: "100" }));
 
     expect((await call("POST", "/meals/plan/restore", res.data.undo)).status).toBe(200);
     expect(onDay(iterationId, "2026-11-06")).toBeUndefined();
-    expect(itemsOf(iterationId).some((i) => i.ingredientId === ingOf(recipeId))).toBe(false);
+    expect(itemsOf().some((i) => i.ingredientId === ingOf(recipeId))).toBe(false);
   });
 
   it("moves a meal to an empty day, its ingredients to that day's list", async () => {
@@ -290,7 +278,7 @@ describe("drag and drop in the plan", () => {
     expect(res.data.iterationId).toBe(iterationId);
     expect(onDay(iterationId, "2026-11-02")).toBeUndefined();
     expect(onDay(iterationId, "2026-11-06")!.id).toBe(monday.id);
-    expect(itemsOf(iterationId).filter((i) => i.ingredientId === ingOf(monday.recipeId)).map((i) => i.date)).toEqual(["2026-11-05"]);
+    expect(itemsOf().filter((i) => i.ingredientId === ingOf(monday.recipeId)).map((i) => i.date)).toEqual(["2026-11-05"]);
 
     await call("POST", "/meals/plan/restore", res.data.undo);
     expect(onDay(iterationId, "2026-11-02")!.id).toBe(monday.id);
@@ -350,196 +338,84 @@ describe("drag and drop in the plan", () => {
   });
 });
 
-describe("moving shopping items", () => {
-  type Item = typeof shoppingListItems.$inferSelect;
-  let a: string; // list of Monday 2026-11-02
-  let b: string; // list of Thursday 2026-11-05
-  const item = (id: string): Item | undefined => db.select().from(shoppingListItems).where(eq(shoppingListItems.id, id)).get();
-  const itemsOn = (listId: string) => db.select().from(shoppingListItems).where(eq(shoppingListItems.shoppingListId, listId)).all();
-  const move = (id: string, body: unknown) => call("POST", `/meals/shopping/items/${id}/move`, body);
-
-  beforeEach(() => {
+describe("GET /meals/shopping", () => {
+  it("computes what the plan needs per shopping day, for viewers too", async () => {
     const iterationId = seedPlan();
-    const lists = db.select().from(shoppingLists).where(eq(shoppingLists.iterationId, iterationId)).all();
-    a = lists.find((l) => l.shoppingDate === "2026-11-02")!.id;
-    b = lists.find((l) => l.shoppingDate === "2026-11-05")!.id;
-  });
-
-  it("moves a whole item, and back", async () => {
-    const x = itemsOn(a)[0];
-    expect((await viewer("POST", `/meals/shopping/items/${x.id}/move`, { listId: b })).status).toBe(403);
-    const res = await move(x.id, { listId: b });
+    const entries = entriesOf(iterationId);
+    const res = await viewer("GET", "/meals/shopping?from=2026-11-01");
     expect(res.status).toBe(200);
-    expect(res.data).toEqual({ id: x.id, merged: false, previousQuantity: null, fromListId: a, quantity: "100" });
-    expect(item(x.id)!.shoppingListId).toBe(b);
-    const back = await move(x.id, { listId: a });
-    expect(back.data).toEqual({ id: x.id, merged: false, previousQuantity: null, fromListId: b, quantity: "100" });
-    expect(item(x.id)).toEqual(x);
+    expect(res.data.days.map((d: any) => d.date)).toEqual(["2026-11-02", "2026-11-05"]);
+    // Monday covers Sunday to Wednesday, Thursday the rest of the week.
+    const ingOf = (recipeId: string) => Number(recipeId.slice(1)) + 1;
+    const want = (from: string, to: string) =>
+      entries.filter((e) => e.date >= from && e.date <= to).map((e) => ingOf(e.recipeId)).sort((a, b) => a - b);
+    const got = (i: number) => res.data.days[i].items.map((x: any) => x.ingredientId).sort((a: number, b: number) => a - b);
+    expect(got(0)).toEqual(want("2026-11-01", "2026-11-04"));
+    expect(got(1)).toEqual(want("2026-11-05", "2026-11-07"));
+    const first = res.data.days[0].items[0];
+    expect(first).toEqual({
+      key: `${first.ingredientId}-1`,
+      ingredientId: expect.any(Number),
+      name: `Ing ${first.ingredientId - 1}`,
+      category: "PRODUCE",
+      quantity: "100",
+      unit: "g",
+    });
+    // Sorted by name.
+    const names = res.data.days[0].items.map((x: any) => x.name);
+    expect(names).toEqual([...names].sort((a: string, b: string) => a.localeCompare(b, "en")));
+    expect((await stranger("GET", "/meals/shopping")).status).toBe(404);
   });
 
-  it("merges into an open item of the same ingredient; undo moves the quantity back", async () => {
-    const y = itemsOn(a)[0];
-    const open = await call("POST", `/meals/shopping/lists/${b}/items`, { name: `Ing ${y.ingredientId - 1}`, quantity: "30", unitId: 1 });
-    expect(open.data.merged).toBe(false);
-    const res = await move(y.id, { listId: b });
-    expect(res.data).toEqual({ id: open.data.id, merged: true, previousQuantity: "30", fromListId: a, quantity: "100" });
-    expect(item(y.id)).toBeUndefined();
-    expect(item(open.data.id)!.quantity).toBe("130");
-
-    const undo = await move(res.data.id, { listId: res.data.fromListId, quantity: res.data.quantity });
-    expect(undo.status).toBe(200);
-    expect(undo.data).toEqual({ id: expect.any(String), merged: false, previousQuantity: null, fromListId: b, quantity: "100" });
-    expect(item(open.data.id)!.quantity).toBe("30");
-    expect(item(undo.data.id)).toEqual(expect.objectContaining({ shoppingListId: a, ingredientId: y.ingredientId, unitId: y.unitId, quantity: "100", isChecked: false }));
+  it("starts at `from` (default today), names in the asked language", async () => {
+    seedPlan();
+    expect((await viewer("GET", "/meals/shopping")).data.days.map((d: any) => d.date)).toEqual(["2026-11-02", "2026-11-05"]);
+    expect((await viewer("GET", "/meals/shopping?from=2026-11-03")).data.days.map((d: any) => d.date)).toEqual(["2026-11-05"]);
+    expect((await viewer("GET", "/meals/shopping?from=2026-11-06")).data.days).toEqual([]);
+    expect((await viewer("GET", "/meals/shopping?from=2026-11-3")).status).toBe(400);
+    const de = await viewer("GET", "/meals/shopping?lang=de");
+    expect(de.data.days[0].items[0].name).toMatch(/^Zutat /);
   });
 
-  it("moves part of an item, leaving the rest; moving it back merges it again", async () => {
-    const y = itemsOn(a)[0];
-    expect((await move(y.id, { listId: b, quantity: "0" })).status).toBe(422);
-    expect((await move(y.id, { listId: b, quantity: "100.5" })).status).toBe(422);
-    expect((await move(y.id, { listId: b, quantity: "lots" })).status).toBe(422);
-    const res = await move(y.id, { listId: b, quantity: "40,5" });
-    expect(res.status).toBe(200);
-    expect(res.data).toEqual({ id: expect.any(String), merged: false, previousQuantity: null, fromListId: a, quantity: "40.5" });
-    expect(res.data.id).not.toBe(y.id);
-    expect(item(y.id)!.quantity).toBe("59.5");
-    expect(item(res.data.id)).toEqual(expect.objectContaining({ shoppingListId: b, ingredientId: y.ingredientId, quantity: "40.5", isChecked: false }));
-
-    const back = await move(res.data.id, { listId: a });
-    expect(back.data).toEqual({ id: y.id, merged: true, previousQuantity: "59.5", fromListId: b, quantity: "40.5" });
-    expect(item(y.id)!.quantity).toBe("100");
-    expect(item(res.data.id)).toBeUndefined();
-
-    // All of it is the whole item.
-    const all = await move(y.id, { listId: b, quantity: 100 });
-    expect(all.data).toEqual({ id: y.id, merged: false, previousQuantity: null, fromListId: a, quantity: "100" });
-  });
-
-  it("keeps a ticked item's tick and doesn't merge it", async () => {
-    const z = itemsOn(a)[0];
-    db.update(shoppingListItems).set({ isChecked: true }).where(eq(shoppingListItems.id, z.id)).run();
-    const open = await call("POST", `/meals/shopping/lists/${b}/items`, { name: `Ing ${z.ingredientId - 1}`, quantity: "30", unitId: 1 });
-    const res = await move(z.id, { listId: b });
-    expect(res.data).toEqual({ id: z.id, merged: false, previousQuantity: null, fromListId: a, quantity: "100" });
-    expect(item(z.id)).toEqual(expect.objectContaining({ shoppingListId: b, isChecked: true, quantity: "100" }));
-    expect(item(open.data.id)!.quantity).toBe("30");
-    await move(z.id, { listId: a });
-    expect(item(z.id)).toEqual(expect.objectContaining({ shoppingListId: a, isChecked: true, quantity: "100" }));
-  });
-
-  it("refuses the same list and what isn't the family's", async () => {
-    const x = itemsOn(a)[0];
-    expect((await move(x.id, { listId: a })).status).toBe(422);
-    expect((await move("nope", { listId: b })).status).toBe(404);
-    expect((await move(x.id, { listId: "nope" })).status).toBe(404);
-    expect((await stranger("POST", `/meals/shopping/items/${x.id}/move`, { listId: b })).status).toBe(404);
-    // Another family's list.
-    const other = makeFamily(db, makeUser(db).id).id;
-    db.insert(mealPlans).values({ id: "other-plan", familyId: other, createdAt: NOW }).run();
-    db.insert(planIterations).values({ id: "other-it", mealPlanId: "other-plan", startDate: "2026-11-01", endDate: "2026-11-07", createdAt: NOW }).run();
-    db.insert(shoppingLists).values({ id: "other-list", iterationId: "other-it", shoppingDate: "2026-11-02", createdAt: NOW }).run();
-    expect((await move(x.id, { listId: "other-list" })).status).toBe(404);
-    expect(item(x.id)).toEqual(x);
-  });
-});
-
-describe("shopping", () => {
-  it("lists the shopping lists with the latest one, names in the asked language", async () => {
+  it("sums the meals of a day, scaled to their servings, and leaves out leftovers and empty days", async () => {
     const iterationId = seedPlan();
-    const empty = await viewer("GET", "/meals/shopping");
-    expect(empty.status).toBe(200);
-    expect(empty.data.lists.map((l: any) => l.shoppingDate)).toEqual(["2026-11-05", "2026-11-02"]);
-    expect(empty.data.lists[0]).toEqual(
-      expect.objectContaining({ id: expect.any(String), iterationId, iterationStatus: "ACTIVE", itemCount: expect.any(Number), checkedCount: 0 }),
-    );
-    const latest = empty.data.latest;
-    expect(latest.items[0]).toEqual(
-      expect.objectContaining({ id: expect.any(String), ingredientName: expect.stringMatching(/^Ing /), category: "PRODUCE", quantity: "100", unitAbbreviation: "g", isChecked: false }),
-    );
-    const de = await viewer("GET", `/meals/shopping/lists/${latest.id}?lang=de`);
-    expect(de.status).toBe(200);
-    expect(de.data.list.items[0].ingredientName).toMatch(/^Zutat /);
-    expect((await viewer("GET", "/meals/shopping/lists/nope")).status).toBe(404);
-    expect((await stranger("GET", `/meals/shopping/lists/${latest.id}`)).status).toBe(404);
+    const entries = entriesOf(iterationId);
+    const sunday = entries.find((e) => e.date === "2026-11-01")!;
+    const monday = entries.find((e) => e.date === "2026-11-02")!;
+    // Monday cooks Sunday's recipe for 4 (twice the recipe's servings); Tuesday is its leftover.
+    db.update(mealPlanEntries).set({ recipeId: sunday.recipeId, servings: 4 }).where(eq(mealPlanEntries.id, monday.id)).run();
+    const tuesday = entries.find((e) => e.date === "2026-11-03")!;
+    db.update(mealPlanEntries).set({ recipeId: sunday.recipeId, isLeftover: true, sourceEntryId: monday.id }).where(eq(mealPlanEntries.id, tuesday.id)).run();
+    const ing = Number(sunday.recipeId.slice(1)) + 1;
+    const day = (await viewer("GET", "/meals/shopping")).data.days[0];
+    expect(day.items.filter((i: any) => i.ingredientId === ing)).toEqual([expect.objectContaining({ key: `${ing}-1`, quantity: "300" })]);
+    // A shopping day whose meals are all gone isn't listed.
+    db.delete(mealPlanEntries).where(and(eq(mealPlanEntries.iterationId, iterationId), eq(mealPlanEntries.date, "2026-11-05"))).run();
+    db.delete(mealPlanEntries).where(and(eq(mealPlanEntries.iterationId, iterationId), eq(mealPlanEntries.date, "2026-11-06"))).run();
+    db.delete(mealPlanEntries).where(and(eq(mealPlanEntries.iterationId, iterationId), eq(mealPlanEntries.date, "2026-11-07"))).run();
+    expect((await viewer("GET", "/meals/shopping")).data.days.map((d: any) => d.date)).toEqual(["2026-11-02"]);
   });
 
-  it("answers without a plan", async () => {
-    const res = await viewer("GET", "/meals/shopping");
-    expect(res.data).toEqual({ lists: [], latest: null });
-  });
-
-  it("shows what the shopping trip cost", async () => {
+  it("covers every iteration ahead", async () => {
     seedPlan();
-    const store = new DrizzleFinanceStore(db);
-    await applyTransactionOps(store, familyId, [{ action: "add", date: "2026-11-05", amountCents: -2350, categoryId: "groceries", payee: "Rewe" }]);
-    const { lists } = (await viewer("GET", "/meals/shopping")).data;
-    const res = await viewer("GET", `/meals/shopping/lists/${lists[0].id}/spent`);
-    expect(res.status).toBe(200);
-    expect(res.data).toEqual(
-      expect.objectContaining({ currency: "EUR", from: "2026-11-04", to: "2026-11-06", totalCents: 2350, category: expect.objectContaining({ id: "groceries" }) }),
-    );
-    expect(res.data.transactions).toEqual([expect.objectContaining({ date: "2026-11-05", payee: "Rewe", amountCents: -2350 })]);
+    await call("POST", "/meals/plan/next");
+    const days = (await viewer("GET", "/meals/shopping")).data.days.map((d: any) => d.date);
+    expect(days).toEqual(["2026-11-02", "2026-11-05", "2026-11-09", "2026-11-12"]);
   });
 
-  it("adds items (merging into an open one), and needs an editor", async () => {
+  it("answers without a plan; the old shopping routes are gone", async () => {
+    expect((await viewer("GET", "/meals/shopping")).data).toEqual({ days: [] });
     seedPlan();
-    const { latest } = (await call("GET", "/meals/shopping")).data;
-    const units = (await viewer("GET", "/meals/shopping/units")).data.units;
-    expect(units).toEqual([
-      { id: 1, abbreviation: "g", nameEn: "gram", nameDe: "Gramm" },
-      { id: 2, abbreviation: "Stk", nameEn: "piece", nameDe: "Stück" },
-    ]);
-    const name = latest.items[0].ingredientName; // an existing ingredient, by its English name
-    expect((await viewer("POST", `/meals/shopping/lists/${latest.id}/items`, { name, quantity: "1", unitId: 1 })).status).toBe(403);
-    const res = await call("POST", `/meals/shopping/lists/${latest.id}/items`, { name: name.toLowerCase(), quantity: "50", unitId: 1 });
-    expect(res.data).toEqual({ id: latest.items[0].id, merged: true, previousQuantity: "100" });
-    const de = await call("POST", `/meals/shopping/lists/${latest.id}/items`, { name: "Zutat 13", quantity: 2.5, unitId: 2 });
-    expect(de.data.merged).toBe(false);
-    expect(db.select().from(shoppingListItems).where(eq(shoppingListItems.id, de.data.id)).get()).toEqual(
-      expect.objectContaining({ ingredientId: 14, unitId: 2, quantity: "2.5" }),
-    );
-    const count = db.select().from(ingredients).all().length;
-    expect((await call("POST", `/meals/shopping/lists/${latest.id}/items`, { name: "Brand new", quantity: "0", unitId: 1 })).status).toBe(422);
-    expect((await call("POST", "/meals/shopping/lists/nope/items", { name: "Brand new", quantity: "1", unitId: 1 })).status).toBe(404);
-    expect((await call("POST", `/meals/shopping/lists/${latest.id}/items`, { name: "Brand new", quantity: "1", unitId: 99 })).status).toBe(404);
-    expect(db.select().from(ingredients).all().length).toBe(count);
-  });
-
-  it("applies an add with a clientId once, and keeps adds without one as they were", async () => {
-    seedPlan();
-    const { latest } = (await call("GET", "/meals/shopping")).data;
-    const path = `/meals/shopping/lists/${latest.id}/items`;
-    const name = latest.items[0].ingredientName;
-    const clientId = "6f1c2c1e-3b1a-4a51-9d55-0d2f8f7a9b10";
-    const first = await call("POST", path, { name, quantity: "50", unitId: 1, clientId });
-    expect(first.data).toEqual({ id: latest.items[0].id, merged: true, previousQuantity: "100" });
-    // The answer was lost: the same add again changes nothing and gets the same result.
-    expect((await call("POST", path, { name, quantity: "50", unitId: 1, clientId })).data).toEqual(first.data);
-    const quantity = () => db.select().from(shoppingListItems).where(eq(shoppingListItems.id, latest.items[0].id)).get()?.quantity;
-    expect(quantity()).toBe("150");
-    // A new item, sent twice, is there once.
-    const fresh = await call("POST", path, { name: "Brand new", quantity: "1", unitId: 2, clientId: "second" });
-    expect((await call("POST", path, { name: "Brand new", quantity: "1", unitId: 2, clientId: "second" })).data).toEqual(fresh.data);
-    expect(db.select().from(shoppingListItems).where(eq(shoppingListItems.shoppingListId, latest.id)).all()
-      .filter((i) => i.id === fresh.data.id)).toHaveLength(1);
-    // A new key adds again; without a key every add counts (older apps).
-    await call("POST", path, { name, quantity: "50", unitId: 1, clientId: "third" });
-    await call("POST", path, { name, quantity: "50", unitId: 1 });
-    await call("POST", path, { name, quantity: "50", unitId: 1 });
-    expect(quantity()).toBe("300");
-    // The key is the list's: another family's list stays a 404.
-    expect((await stranger("POST", path, { name, quantity: "50", unitId: 1, clientId })).status).toBe(404);
-    expect((await call("POST", path, { name, quantity: "1", unitId: 1, clientId: "x".repeat(65) })).status).toBe(400);
-  });
-
-  it("leaves the existing meals routes alone", async () => {
-    seedPlan();
-    const { latest } = (await call("GET", "/meals/shopping")).data;
-    const id = latest.items[0].id;
-    expect((await call("POST", "/meals/shopping/check", { ids: [id], checked: true })).data).toEqual({ count: 1 });
-    expect((await call("PATCH", `/meals/shopping/items/${id}`, { quantity: "3" })).data).toEqual({ id, quantity: "3" });
-    expect((await call("DELETE", `/meals/shopping/items/${id}`)).data).toEqual({ deleted: id });
-    expect((await call("GET", "/meals/shopping/nothing")).status).toBe(404);
+    for (const [method, path] of [
+      ["GET", "/meals/shopping/lists/x"],
+      ["GET", "/meals/shopping/units"],
+      ["POST", "/meals/shopping/check"],
+      ["PATCH", "/meals/shopping/items/x"],
+      ["DELETE", "/meals/shopping/items/x"],
+      ["POST", "/meals/shopping/items/x/move"],
+    ]) {
+      expect((await call(method, path, method === "GET" || method === "DELETE" ? undefined : {})).status, path).toBe(404);
+    }
     expect((await call("DELETE", "/meals/plan")).data).toEqual({ ok: true });
   });
 });

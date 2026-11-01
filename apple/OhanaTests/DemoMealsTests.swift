@@ -34,8 +34,6 @@ struct DemoMealsTests {
         #expect(catalog.units.map(\.abbreviation) == ["g", "kg", "ml", "l", "Stk", "EL", "TL", "Prise"])
         #expect(catalog.ingredients.contains { $0.nameEn == "lasagne sheets" })
         #expect(Set(catalog.ingredients.map(\.id)).count == catalog.ingredients.count)
-        let units = try get("/meals/shopping/units", as: ShoppingUnitsResponse.self).units
-        #expect(units.map(\.id) == catalog.units.map(\.id))
     }
 
     @Test func theRecipeListFiltersSortsAndPages() throws {
@@ -100,15 +98,13 @@ struct DemoMealsTests {
         #expect(MealPlanWeekday.validShoppingDays(plan.shoppingDays))
         let active = try #require(plan.activeIteration)
         #expect(!plan.activeEnded(today: today))
-        let rows = active.dayRows(shoppingDays: plan.shoppingDays, away: response.away)
+        let rows = active.dayRows(away: response.away)
         #expect(rows.count == 7)
         #expect(rows.first { $0.day == today }?.entry?.recipeTitle == "Vegetable lasagne")
-        #expect(rows.first { $0.day == today.adding(days: 1) }?.shoppingList?.id == "list-1")
-        #expect(rows.first { $0.day == today.adding(days: 4) }?.shoppingList?.id == "list-2")
-        #expect(rows.filter(\.isShoppingDay).count == 2)
+        #expect(rows.filter(\.isShoppingDay).map(\.day) == [today.adding(days: 1), today.adding(days: 4)])
         #expect(plan.pastIterations.map(\.id) == ["iteration-1"])
-        let past = plan.pastIterations[0].dayRows(shoppingDays: plan.shoppingDays, away: response.away)
-        #expect(past.first { $0.day == today.adding(days: -3) }?.shoppingList?.id == "list-0")
+        let past = plan.pastIterations[0].dayRows(away: response.away)
+        #expect(past.filter(\.isShoppingDay).map(\.day) == [today.adding(days: -3)])
         // Leftovers point at their cooking day.
         let entries = plan.iterations.flatMap(\.entries)
         for leftover in entries where leftover.isLeftover {
@@ -117,33 +113,21 @@ struct DemoMealsTests {
         #expect(!response.tags.isEmpty)
     }
 
-    @Test func theShoppingListsOfThePlan() throws {
-        let overview = try get("/meals/shopping", ["lang": "en"], as: ShoppingOverview.self)
-        #expect(overview.lists.map(\.id) == ["list-2", "list-1", "list-0"])
-        let latest = try #require(overview.latest)
-        #expect(latest.id == "list-1")
-        #expect(latest.shoppingDate == today.adding(days: 1))
-        #expect(latest.items.count == 12)
-        #expect(latest.items.filter(\.isChecked).count == 4)
-        #expect(overview.lists[1].itemCount == 12 && overview.lists[1].checkedCount == 4)
-        #expect(latest.items.map(\.ingredientName) == latest.items.map(\.ingredientName).sorted())
-        #expect(latest.items.contains { $0.ingredientName == "Cod fillet" && $0.label(locale: Locale(identifier: "en")) == "500 g Cod fillet" })
-
-        let german = try get("/meals/shopping/lists/list-1", ["lang": "de"], as: ShoppingListResponse.self).list
-        #expect(german.items.contains { $0.ingredientName == "Kabeljaufilet" })
-        #expect(german.items.count == 12)
-
-        for summary in overview.lists {
-            let list = try get("/meals/shopping/lists/\(summary.id)", ["lang": "en"], as: ShoppingListResponse.self).list
-            #expect(list.items.count == summary.itemCount)
-            #expect(list.items.filter(\.isChecked).count == summary.checkedCount)
-            #expect(list.shoppingDate == summary.shoppingDate)
-            let spend = try get("/meals/shopping/lists/\(summary.id)/spent", as: ShoppingSpend.self)
-            #expect(spend.category?.id == "groceries")
-            #expect(spend.from == summary.shoppingDate?.adding(days: -1))
-            #expect(spend.totalCents == -spend.transactions.map(\.amountCents).reduce(0, +))
+    @Test func whatThePlanNeedsByShoppingDay() throws {
+        let needs = try get("/meals/shopping", ["lang": "en", "from": today.description], as: ShoppingNeeds.self)
+        #expect(needs.days.map(\.date) == [today.adding(days: 1), today.adding(days: 4)])
+        #expect(needs.days.map(\.items.count) == [12, 19])
+        for day in needs.days {
+            #expect(day.items.map(\.name) == day.items.map(\.name).sorted())
+            #expect(Set(day.items.map(\.key)).count == day.items.count)
         }
-        let spent = try get("/meals/shopping/lists/list-0/spent", as: ShoppingSpend.self)
-        #expect(spent.transactions.map(\.payee) == ["REWE"])
+        let cod = try #require(needs.days[0].items.first { $0.name == "Cod fillet" })
+        #expect(cod.label(locale: Locale(identifier: "en")) == "500 g Cod fillet")
+
+        let german = try get("/meals/shopping", ["lang": "de"], as: ShoppingNeeds.self)
+        #expect(german.days[0].items.contains { $0.name == "Kabeljaufilet" })
+        // From a later day on, the earlier ones are left out.
+        let later = try get("/meals/shopping", ["from": today.adding(days: 2).description], as: ShoppingNeeds.self)
+        #expect(later.days.map(\.date) == [today.adding(days: 4)])
     }
 }

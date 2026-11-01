@@ -1,7 +1,7 @@
 import Foundation
 
 /// A place in a family the app can send the user to: a module, or something inside one (a
-/// recipe, a shopping list, an appointment slot, a page of the settings). Screens open one with
+/// recipe, the meal plan, an appointment slot, a page of the settings). Screens open one with
 /// `family.open(_:)`; the shell switches to its module, and the module's root takes it with
 /// `family.takeRoute(for:)` and pushes what it names. Web links (`/f/{id}/…`, also as
 /// `ohana://f/{id}/…`) map onto routes with `AppRoute(webPath:)`.
@@ -20,8 +20,6 @@ enum AppRoute: Hashable {
     case cook(recipeID: String)
     case newRecipe
     case mealPlan
-    /// A shopping list; nil: the latest one.
-    case shoppingList(id: String?)
     case mealTags
     // Appointments
     case appointmentSearch(id: String)
@@ -39,7 +37,7 @@ enum AppRoute: Hashable {
         case let .module(module): module
         case .calendarDay: .calendar
         case .financeTransactions, .financeTransaction: .finance
-        case .recipe, .cook, .newRecipe, .mealPlan, .shoppingList, .mealTags: .meals
+        case .recipe, .cook, .newRecipe, .mealPlan, .mealTags: .meals
         case .appointmentSearch, .appointmentSlot, .newAppointmentSearch: .appointments
         case .assistantChat: .assistant
         case .settings: .settings
@@ -56,13 +54,14 @@ enum AppRoute: Hashable {
 
 /// The pages of the family's settings a route can open.
 enum SettingsPage: String, Hashable, CaseIterable {
-    case members, home, notifications, calendar, finance, assistant, data
+    case members, home, notifications, calendar, finance, shopping, assistant, data
 
     /// The module whose settings the page holds; nil for the family's own pages.
     var module: Module? {
         switch self {
         case .calendar: .calendar
         case .finance: .finance
+        case .shopping: .meals
         case .assistant: .assistant
         case .members, .home, .notifications, .data: nil
         }
@@ -109,8 +108,9 @@ extension AppRoute {
                 if let id = at(2), id != "new", id != "generate" { return .recipe(id: id) }
                 return at(2) == "new" ? .newRecipe : .module(.meals)
             case "cook": return at(2).map { .cook(recipeID: $0) } ?? .module(.meals)
-            case "plan": return .mealPlan
-            case "shopping": return .shoppingList(id: at(2))
+            // The shopping list lives in Reminders now: old links (and the reminders' own) open
+            // the plan it comes from.
+            case "plan", "shopping": return .mealPlan
             case "tags": return .mealTags
             default: return .module(.meals)
             }

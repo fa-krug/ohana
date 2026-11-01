@@ -83,7 +83,8 @@ data on it. We have no access to servers run by others.
 What a server sends to other services depends on what its families set up, for example:
 
 - the **AI provider** a family chooses for the assistant (the chat, the family members' names
-  and ages and the data the assistant reads to answer),
+  and ages, the data the assistant reads to answer and, if you let the app use Reminders, your
+  open reminders; see *Permissions*),
 - a **web search provider** (Tavily or Brave) for the assistant's searches,
 - **Doctolib** and **jameda** for appointment searches (the specialities, practices and places
   searched),
@@ -124,16 +125,15 @@ turn them off for the whole server.
 The app stores on your device only what it needs to work: the **API token** for your server
 and, so the *Save to Ohana* share extension can reach it, the server's address and the selected
 family, and with notifications on the key for them (in the Keychain), app settings such as the
-selected family (in the app's preferences), a **copy of what your server last sent** (your
-account, your families and the screens you opened, and what it loads ahead in the background:
-calendar, meal plan, recipes, shopping lists and so on), so the app opens on it at once and you
-can read it without a connection, changes made offline (calendar days and notes, ticked and
-added shopping items) until they're sent, and the cook view's running timers. The copy is kept
-in the app's cache, which the system may empty when space runs low. If you use the
-**widgets**, they load your family's overview from the same server with the same token and keep
-a copy of it on your device (today's and tomorrow's calendar, tonight's dinner, the number of
-items on the shopping list, found appointments), so they can show it while the server is out of
-reach; no other service or permission is involved. The names, tags and short descriptions of
+selected family and the Reminders list for each family's shopping (in the app's preferences), a
+**copy of what your server last sent** (your account, your families and the screens you opened,
+and what it loads ahead in the background: calendar, meal plan, recipes and so on), so the app
+opens on it at once and you can read it without a connection, changes made offline (calendar
+days and notes) until they're sent, and the cook view's running timers. The copy is kept in the
+app's cache, which the system may empty when space runs low. If you use the **widgets**, they
+load your family's overview from the same server with the same token and keep a copy of it on
+your device (today's and tomorrow's calendar, tonight's dinner, found appointments), so they can
+show it while the server is out of reach; no other service or permission is involved. The names, tags and short descriptions of
 your recipes are added to the device's **Spotlight** index, so you can find them in the system
 search; the index stays on the device. Signing out deletes the token on the server and on the
 device, the app's copy and the changes not sent yet, and removes the recipes from Spotlight;
@@ -161,10 +161,23 @@ The app only asks for these permissions, and only when you use the feature:
   device. The sync runs on the device; your calendar account (iCloud, Google, …) syncs that
   calendar as it does any other. Stopping the sync can remove Ohana's events from the calendar;
   signing out forgets the setting.
+- **Reminders:** asked when you pick a Reminders list for a family's shopping. The app then
+  writes what the meal plan needs (item, amount, shopping day) into that list on your device and
+  keeps those items up to date; it gets them from your server, but nothing from Reminders is
+  sent back for this. If your reminders sync over iCloud, Apple stores them as it does any
+  reminder ([Apple's privacy policy](https://www.apple.com/legal/privacy/)).
+  When you use the **assistant** on a device with Reminders access, each message you send
+  also carries your **open reminders** (their titles, notes, due dates and the names of their
+  lists, at most 500) to your Ohana server, which keeps the latest copy with the chat and sends
+  it to the AI provider your family set up, so the assistant can answer about them. The
+  assistant can't change your reminders on its own: it shows what it wants to change, and the
+  app changes them on your device only after you tap **Apply**. You can take the permission back
+  at any time in the system settings (*Privacy & Security → Reminders*); the assistant then no
+  longer sees your reminders.
 
-With Siri and Shortcuts (*Ask Ohana*, adding to the shopping list, adding an event, importing a
-recipe), what you say is processed by Apple as for any Siri request; the result is sent to your
-server.
+With Siri and Shortcuts (*Ask Ohana*, adding to the shopping list in Reminders, adding an event,
+importing a recipe), what you say is processed by Apple as for any Siri request; the result is
+sent to your server, or, for the shopping list, added to your Reminders list on the device.
 
 ### Importing recipes
 

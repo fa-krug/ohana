@@ -1,8 +1,0 @@
-{
-  "categoryIds": ["groceries"],
-  "lists": [
-    { "id": "list-0", "date": "{{day:-3}}" },
-    { "id": "list-1", "date": "{{day:1}}" },
-    { "id": "list-2", "date": "{{day:4}}" }
-  ]
-}

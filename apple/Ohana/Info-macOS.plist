@@ -41,9 +41,13 @@
 		<true/>
 	</dict>
 	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>Ohana syncs your family’s calendar with the Apple Calendar calendar you pick.</string>
+	<string>Ohana syncs your family’s calendar with the Apple Calendar calendar you pick, and the assistant reads and changes your calendars when you ask it to.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2026 Sascha Krug. All rights reserved.</string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>Ohana writes what the meal plan needs into the Reminders list you choose, and the assistant reads and changes your reminders when you ask it to.</string>
+	<key>NSRemindersUsageDescription</key>
+	<string>Ohana writes what the meal plan needs into the Reminders list you choose, and the assistant reads and changes your reminders when you ask it to.</string>
 	<key>OhanaPushRelay</key>
 	<string>https://ohana-push.fa-krug.de</string>
 	<key>UTExportedTypeDeclarations</key>
@@ -67,16 +71,6 @@
 			<string>Ohana calendar event</string>
 			<key>UTTypeIdentifier</key>
 			<string>de.fa-krug.ohana.calendar-event</string>
-		</dict>
-		<dict>
-			<key>UTTypeConformsTo</key>
-			<array>
-				<string>public.data</string>
-			</array>
-			<key>UTTypeDescription</key>
-			<string>Ohana shopping item</string>
-			<key>UTTypeIdentifier</key>
-			<string>de.fa-krug.ohana.shopping-item</string>
 		</dict>
 	</array>
 </dict>

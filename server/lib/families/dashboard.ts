@@ -1,8 +1,7 @@
 // The family overview (phase 7): one dashboard over all modules. Today and tomorrow (meal or
 // "away", the days' events: every occurrence covering the day, also of events that started
-// earlier or repeat), what comes up (calendar runs and booked appointments together), the
-// shopping list, this month's finances, the next birthdays and the latest finds of the
-// appointment searches.
+// earlier or repeat), what comes up (calendar runs and booked appointments together), this
+// month's finances, the next birthdays and the latest finds of the appointment searches.
 
 import type { Db } from "@/lib/db";
 import { addDays } from "@/lib/calendar/dates";

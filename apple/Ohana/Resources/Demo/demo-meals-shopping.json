@@ -1,29 +1,293 @@
 {
- "lists": [
+ "days": [
   {
-   "id": "list-2",
-   "iterationId": "iteration-2",
-   "iterationStatus": "ACTIVE",
-   "shoppingDate": "{{day:4}}",
-   "itemCount": 19,
-   "checkedCount": 0
+   "date": "{{day:1}}",
+   "items": [
+    {
+     "key": "101-1",
+     "ingredientId": 101,
+     "name": "Avocado",
+     "nameDe": "Avocado",
+     "category": "PRODUCE",
+     "quantity": "2",
+     "unit": "Stk"
+    },
+    {
+     "key": "102-2",
+     "ingredientId": 102,
+     "name": "Canned tomatoes",
+     "nameDe": "Dosentomaten",
+     "category": "PANTRY",
+     "quantity": "400",
+     "unit": "g"
+    },
+    {
+     "key": "103-2",
+     "ingredientId": 103,
+     "name": "Cherry tomato",
+     "nameDe": "Kirschtomate",
+     "category": "PRODUCE",
+     "quantity": "200",
+     "unit": "g"
+    },
+    {
+     "key": "104-2",
+     "ingredientId": 104,
+     "name": "Chickpeas",
+     "nameDe": "Kichererbsen",
+     "category": "PANTRY",
+     "quantity": "800",
+     "unit": "g"
+    },
+    {
+     "key": "105-3",
+     "ingredientId": 105,
+     "name": "Coconut milk",
+     "nameDe": "Kokosmilch",
+     "category": "PANTRY",
+     "quantity": "400",
+     "unit": "ml"
+    },
+    {
+     "key": "106-2",
+     "ingredientId": 106,
+     "name": "Cod fillet",
+     "nameDe": "Kabeljaufilet",
+     "category": "MEAT",
+     "quantity": "500",
+     "unit": "g"
+    },
+    {
+     "key": "107-2",
+     "ingredientId": 107,
+     "name": "Ginger",
+     "nameDe": "Ingwer",
+     "category": "PRODUCE",
+     "quantity": "20",
+     "unit": "g"
+    },
+    {
+     "key": "108-1",
+     "ingredientId": 108,
+     "name": "Lime",
+     "nameDe": "Limette",
+     "category": "PRODUCE",
+     "quantity": "2",
+     "unit": "Stk"
+    },
+    {
+     "key": "109-2",
+     "ingredientId": 109,
+     "name": "Red cabbage",
+     "nameDe": "Rotkohl",
+     "category": "PRODUCE",
+     "quantity": "250",
+     "unit": "g"
+    },
+    {
+     "key": "110-2",
+     "ingredientId": 110,
+     "name": "Sour cream",
+     "nameDe": "Schmand",
+     "category": "DAIRY",
+     "quantity": "150",
+     "unit": "g"
+    },
+    {
+     "key": "111-2",
+     "ingredientId": 111,
+     "name": "Spinach",
+     "nameDe": "Spinat",
+     "category": "PRODUCE",
+     "quantity": "150",
+     "unit": "g"
+    },
+    {
+     "key": "112-1",
+     "ingredientId": 112,
+     "name": "Tortilla wraps",
+     "nameDe": "Tortilla-Wraps",
+     "category": "PANTRY",
+     "quantity": "8",
+     "unit": "Stk"
+    }
+   ]
   },
   {
-   "id": "list-1",
-   "iterationId": "iteration-2",
-   "iterationStatus": "ACTIVE",
-   "shoppingDate": "{{day:1}}",
-   "itemCount": 12,
-   "checkedCount": 4
-  },
-  {
-   "id": "list-0",
-   "iterationId": "iteration-1",
-   "iterationStatus": "ARCHIVED",
-   "shoppingDate": "{{day:-3}}",
-   "itemCount": 19,
-   "checkedCount": 19
+   "date": "{{day:4}}",
+   "items": [
+    {
+     "key": "113-2",
+     "ingredientId": 113,
+     "name": "Arborio rice",
+     "nameDe": "Risottoreis",
+     "category": "PANTRY",
+     "quantity": "320",
+     "unit": "g"
+    },
+    {
+     "key": "114-1",
+     "ingredientId": 114,
+     "name": "Bell pepper",
+     "nameDe": "Paprika",
+     "category": "PRODUCE",
+     "quantity": "1",
+     "unit": "Stk"
+    },
+    {
+     "key": "102-2",
+     "ingredientId": 102,
+     "name": "Canned tomatoes",
+     "nameDe": "Dosentomaten",
+     "category": "PANTRY",
+     "quantity": "800",
+     "unit": "g"
+    },
+    {
+     "key": "115-1",
+     "ingredientId": 115,
+     "name": "Carrot",
+     "nameDe": "Karotte",
+     "category": "PRODUCE",
+     "quantity": "1",
+     "unit": "Stk"
+    },
+    {
+     "key": "116-1",
+     "ingredientId": 116,
+     "name": "Cucumber",
+     "nameDe": "Gurke",
+     "category": "PRODUCE",
+     "quantity": "1",
+     "unit": "Stk"
+    },
+    {
+     "key": "117-2",
+     "ingredientId": 117,
+     "name": "Feta",
+     "nameDe": "Feta",
+     "category": "DAIRY",
+     "quantity": "200",
+     "unit": "g"
+    },
+    {
+     "key": "118-2",
+     "ingredientId": 118,
+     "name": "Fresh basil",
+     "nameDe": "Frisches Basilikum",
+     "category": "PRODUCE",
+     "quantity": "10",
+     "unit": "g"
+    },
+    {
+     "key": "119-2",
+     "ingredientId": 119,
+     "name": "Fresh parsley",
+     "nameDe": "Frische Petersilie",
+     "category": "PRODUCE",
+     "quantity": "20",
+     "unit": "g"
+    },
+    {
+     "key": "120-2",
+     "ingredientId": 120,
+     "name": "Green beans",
+     "nameDe": "Grüne Bohnen",
+     "category": "PRODUCE",
+     "quantity": "400",
+     "unit": "g"
+    },
+    {
+     "key": "121-2",
+     "ingredientId": 121,
+     "name": "Kalamata olives",
+     "nameDe": "Kalamata-Oliven",
+     "category": "PANTRY",
+     "quantity": "100",
+     "unit": "g"
+    },
+    {
+     "key": "122-1",
+     "ingredientId": 122,
+     "name": "Lemon",
+     "nameDe": "Zitrone",
+     "category": "PRODUCE",
+     "quantity": "2",
+     "unit": "Stk"
+    },
+    {
+     "key": "123-2",
+     "ingredientId": 123,
+     "name": "Mushroom",
+     "nameDe": "Champignon",
+     "category": "PRODUCE",
+     "quantity": "400",
+     "unit": "g"
+    },
+    {
+     "key": "124-2",
+     "ingredientId": 124,
+     "name": "Parmesan",
+     "nameDe": "Parmesan",
+     "category": "DAIRY",
+     "quantity": "60",
+     "unit": "g"
+    },
+    {
+     "key": "125-4",
+     "ingredientId": 125,
+     "name": "Potato",
+     "nameDe": "Kartoffel",
+     "category": "PRODUCE",
+     "quantity": "1",
+     "unit": "kg"
+    },
+    {
+     "key": "126-1",
+     "ingredientId": 126,
+     "name": "Red onion",
+     "nameDe": "Rote Zwiebel",
+     "category": "PRODUCE",
+     "quantity": "1",
+     "unit": "Stk"
+    },
+    {
+     "key": "127-2",
+     "ingredientId": 127,
+     "name": "Salmon fillet",
+     "nameDe": "Lachsfilet",
+     "category": "MEAT",
+     "quantity": "600",
+     "unit": "g"
+    },
+    {
+     "key": "128-1",
+     "ingredientId": 128,
+     "name": "Tomato",
+     "nameDe": "Tomate",
+     "category": "PRODUCE",
+     "quantity": "4",
+     "unit": "Stk"
+    },
+    {
+     "key": "129-5",
+     "ingredientId": 129,
+     "name": "Vegetable broth",
+     "nameDe": "Gemüsebrühe",
+     "category": "PANTRY",
+     "quantity": "1.7",
+     "unit": "l"
+    },
+    {
+     "key": "130-3",
+     "ingredientId": 130,
+     "name": "White wine",
+     "nameDe": "Weißwein",
+     "category": "PANTRY",
+     "quantity": "100",
+     "unit": "ml"
+    }
+   ]
   }
- ],
- "latest": null
+ ]
 }

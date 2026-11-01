@@ -27,9 +27,12 @@ import {
   type ToolCall,
 } from "./provider";
 import {
+  cleanReminders,
   MAX_TOOL_RESULT,
   type Question,
   readsOnly,
+  type RemindersEdit,
+  type RemindersSnapshot,
   runTool,
   type ToolContext,
   toolsFor,
@@ -84,22 +87,26 @@ export function cleanPage(v: unknown): string | null {
 }
 
 /** What the instructions depend on, from the app's latest message: the page and year the user
- *  looks at, their language and their day. */
+ *  looks at, their language and their day, and the user's Reminders (the app sends them when it
+ *  may read them; the Reminders tools need them). */
 export interface ChatContext {
   page: string;
   year: number;
   lang: "en" | "de";
   today: string;
+  reminders?: RemindersSnapshot;
 }
 
 /** The context the app sent, checked; the server's day (and its year) as a fallback. */
 export function cleanContext(body: Record<string, unknown>): ChatContext {
   const today = isValidDate(body.today) ? body.today as string : formatDate(new Date());
+  const reminders = cleanReminders(body.reminders);
   return {
     page: cleanPage(body.page) ?? "overview",
     year: Number.isInteger(body.year) ? body.year as number : Number(today.slice(0, 4)),
     lang: body.lang === "de" ? "de" : "en",
     today,
+    ...(reminders ? { reminders } : {}),
   };
 }
 
@@ -114,9 +121,10 @@ about it (vacations, days off, covering gaps); bring up the finances only when a
 as being about the finances, and keep suggestions, options and next steps about them
 (categorizing, budgets, spending, transfers, balances); don't suggest calendar entries or bring
 up the calendar unless the user asks for it.`,
-  meals: `the meals: the recipes, the meal plan (lunch per day) and the shopping lists. Read
+  meals: `the meals: the recipes and the meal plan (lunch per day), with what it needs from the
+shops per shopping day (the family's shopping list itself is in the user's Reminders). Read
 requests as being about the meals, and keep suggestions, options and next steps about them
-(recipes to try, planning the next weeks, the shopping list).`,
+(recipes to try, planning the next weeks, groceries).`,
   appointments: `the doctor appointment searches (Doctolib, jameda): watchers that look for free
 slots regularly, the slots they found, and booked appointments. Read requests as being about
 them, and keep suggestions, options and next steps about them (a new search, an earlier slot,
@@ -168,6 +176,8 @@ export function systemPrompt(input: {
   /** Why the assistant can only read: the settings, or the user is a viewer of the family. */
   readOnly?: "settings" | "viewer";
   search: boolean;
+  /** The app sent the user's Reminders (the Reminders tools are there). */
+  reminders?: boolean;
 }): string {
   const { family, today, year } = input;
   const weekday = new Date(today + "T00:00:00Z").toLocaleDateString("en", {
@@ -237,7 +247,10 @@ occurrence and span "this"; "future" for this and the following ones, "all" for 
 Recipes (KNOWN: the family's own; TO_TRY: want to try) with ingredients, steps and tags. The
 meal plan plans a lunch per day in iterations of 1–3 weeks, with leftovers on later days and
 nothing on days the family is away (calendar types marked "away"); each iteration has shopping
-lists for its shopping days. Tags: ${input.mealTags || "(none)"}.
+days. Ohana keeps no shopping list: get_shopping_items works out what the plan's meals need per
+shopping day, and the app puts that into a list in the user's Reminders. Tags: ${
+    input.mealTags || "(none)"
+  }.
 "Plan next week without fish": plan_meals with action "next" and excludeTags ["Fish"] (check
 with get_meal_plan which days the next iteration covers; "again" plans an existing one anew).
 
@@ -249,6 +262,20 @@ practice (the slot's bookingUrl), then book_appointment_slot marks it as booked 
 before the last day of May (the next May from today). The family's home address: ${
     input.home ? `“${input.home}”` : "not set (searches then need a place)"
   }.
+
+## Reminders
+${
+    input.reminders
+      ? `The user's Apple Reminders (on their device; the app sent them with their message): all their
+lists, not only shopping. The family's shopping list is the Reminders list "shopping" stands for.
+get_reminders reads the lists and open reminders. edit_reminders changes them (to add groceries:
+list "shopping"); the user sees the changes and applies or declines them, so put everything into
+one call and don't ask for an OK first. What the meal plan needs comes from get_shopping_items
+(the app adds that to the shopping list by itself).`
+      : `The user's Reminders (where the family's shopping list is) aren't available in this chat: the
+app can't read them on this device (no access). If asked, say so; what the meal
+plan needs comes from get_shopping_items.`
+  }
 
 ## How to work
 - Use the tools to look things up; don't guess what's in the calendar, the finances, the meals
@@ -295,7 +322,8 @@ something only the user knows, rather than picking for them or asking in plain t
   offer the next steps as options, about what this chat's page shows.
 - You need the OK for a bigger change: options like "Yes, do it" / "No".
 Look things up with the tools first, so the options are concrete (real dates, names,
-amounts). Don't ask what the tools can tell you, or when the request is already clear.`;
+amounts). Don't ask what the tools can tell you, or when the request is already clear. Ask one
+question at a time, and not in the same step as edit_reminders (which waits for the user too).`;
 }
 
 /** Where the window of a history starts: the newest MAX_MESSAGES messages, but all of the
@@ -407,7 +435,9 @@ export function cleanParts(raw: unknown[]): ContentPart[] {
  * "text" {delta}, "tool" {id, name, args}, "tool_result" {id, name, ok, summary}, "change" {id,
  * kind, summary, undo}, "messages" {messages} (what the app appends to its history, after every
  * step), "question" {id, question, options, multiple} (the model asked the user: the turn ends
- * without the call's result, which the app adds with the answer and then continues), "usage"
+ * without the call's result, which the app adds with the answer and then continues),
+ * "reminders" {id, summary, ops} (a change of the user's Reminders waits for their OK, the same
+ * way), "usage"
  * {used, max} (the tokens of the context in use, and the window), "compacting" {} and
  * "compacted" {summary, request?, keep} (the history got too long for the context window: all but
  * its newest `keep` messages are now the summary, which the caller keeps in their place) and
@@ -437,7 +467,7 @@ export async function runChat(opts: {
   const { provider, ctx, emit, signal } = opts;
   // The model's endpoint may be allowed where pages aren't (a model on the home network).
   const modelNet = opts.modelNet ?? ctx.net;
-  const tools = toolsFor({ writes: opts.writes, search: opts.search });
+  const tools = toolsFor({ writes: opts.writes, search: opts.search, reminders: !!ctx.reminders });
   const allowed = new Set(tools.map((t) => t.function.name));
   const messages: ChatMessage[] = [{ role: "system", content: opts.system }, ...opts.history];
   const added: ChatMessage[] = [];
@@ -580,8 +610,12 @@ export async function runChat(opts: {
         break;
       }
       push({ role: "assistant", content: content || null, tool_calls: calls });
-      // A question waits for the user: its result is their answer, added by the app.
-      let question: ({ id: string } & Question) | null = null;
+      // A question (or a Reminders edit) waits for the user: its result is their answer, added
+      // by the app. One per step.
+      let waiting:
+        | ({ kind: "question"; id: string } & Question)
+        | ({ kind: "reminders"; id: string } & RemindersEdit)
+        | null = null;
       const argsOf = (call: ToolCall): unknown => {
         try {
           return JSON.parse(call.function.arguments || "{}");
@@ -597,22 +631,29 @@ export async function runChat(opts: {
         })
         : null;
       for (const [i, call] of calls.entries()) {
-        if (call.function.name === "ask_user" && question) {
+        // A question and a Reminders edit show up as themselves (not as tool calls), once
+        // they're valid.
+        const ask = call.function.name === "ask_user" || call.function.name === "edit_reminders";
+        if (ask && waiting) {
           push({
             role: "tool",
             tool_call_id: call.id,
-            content: JSON.stringify({ error: "Ask one question at a time" }),
+            content: JSON.stringify({
+              error: "Ask one question at a time (a question or a Reminders change already waits for the user)",
+            }),
           });
           continue;
         }
         const args = argsOf(call);
-        // A question shows up as the question itself (not as a tool call), once it's valid.
-        const ask = call.function.name === "ask_user";
         if (!ask && !running) emit("tool", { id: call.id, name: call.function.name, args });
         const res = await (running?.[i] ??
           runTool(call.function.name, call.function.arguments, ctx, allowed));
         if (res.question) {
-          question = { id: call.id, ...res.question };
+          waiting = { kind: "question", id: call.id, ...res.question };
+          continue;
+        }
+        if (res.reminders) {
+          waiting = { kind: "reminders", id: call.id, ...res.reminders };
           continue;
         }
         if (ask) emit("tool", { id: call.id, name: call.function.name, args });
@@ -630,8 +671,9 @@ export async function runChat(opts: {
         push({ role: "tool", tool_call_id: call.id, content });
       }
       flush();
-      if (question) {
-        emit("question", question);
+      if (waiting) {
+        const { kind, ...data } = waiting;
+        emit(kind, data);
         emit("done", {});
         return;
       }

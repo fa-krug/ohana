@@ -19,10 +19,6 @@ export const finSettings = sqliteTable("fin_settings", {
   csvMappings: text("csv_mappings").notNull().default("[]"),
   /** JSON Benchmark, or null when not set. */
   benchmark: text("benchmark"),
-  /** The category of grocery shopping (with its subcategories), for the shopping lists' "spent"
-   *  (phase 7). Null: the category named Groceries / Lebensmittel, if there is one. No foreign
-   *  key: a deleted category falls back to that default. */
-  groceriesCategoryId: text("groceries_category_id"),
 });
 
 /** A category (e.g. Groceries); a tree through parent_id, any depth. A subcategory has the kind

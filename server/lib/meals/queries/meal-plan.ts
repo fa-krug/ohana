@@ -1,18 +1,16 @@
-import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import type { Db } from "@/lib/db";
-import {
-  mealPlanEntries, mealPlanExcludedTags, mealPlans, planIterations, recipes,
-  shoppingListItems, shoppingLists,
-} from "@/lib/db/schema";
+import { mealPlanEntries, mealPlanExcludedTags, mealPlans, planIterations, recipes } from "@/lib/db/schema";
+import { iterationShoppingDates, planShoppingDays } from "../shopping/needs";
 
 export interface PlanEntryDto {
   id: string; date: string; mealType: string; recipeId: string; recipeTitle: string;
   servings: number; isLeftover: boolean; sourceEntryId: string | null; isLocked: boolean;
 }
-export interface PlanShoppingListDto { id: string; shoppingDate: string | null; itemCount: number }
 export interface PlanIterationDto {
   id: string; startDate: string; endDate: string; status: string;
-  entries: PlanEntryDto[]; shoppingLists: PlanShoppingListDto[]; createdAt: Date;
+  /** The iteration's shopping days (what each needs: GET /meals/shopping). */
+  entries: PlanEntryDto[]; shoppingDates: string[]; createdAt: Date;
 }
 export interface MealPlanView {
   id: string; iterationWeeks: number; shoppingDays: number[]; servings: number;
@@ -63,31 +61,13 @@ export function getMealPlanView(db: Db, familyId: string): MealPlanView | null {
     entriesByIteration.set(e.iterationId, list);
   }
 
-  const listRows = iterationIds.length
-    ? db
-        .select({
-          id: shoppingLists.id, iterationId: shoppingLists.iterationId,
-          shoppingDate: shoppingLists.shoppingDate,
-          itemCount: sql<number>`count(${shoppingListItems.id})`,
-        })
-        .from(shoppingLists)
-        .leftJoin(shoppingListItems, eq(shoppingListItems.shoppingListId, shoppingLists.id))
-        .where(inArray(shoppingLists.iterationId, iterationIds))
-        .groupBy(shoppingLists.id)
-        .all()
-    : [];
-  const listsByIteration = new Map<string, PlanShoppingListDto[]>();
-  for (const l of listRows) {
-    const list = listsByIteration.get(l.iterationId) ?? [];
-    list.push({ id: l.id, shoppingDate: l.shoppingDate, itemCount: l.itemCount });
-    listsByIteration.set(l.iterationId, list);
-  }
+  const shoppingDays = planShoppingDays(plan);
 
   const iterations: PlanIterationDto[] = iterationRows
     .map((i) => ({
       id: i.id, startDate: i.startDate, endDate: i.endDate, status: i.status,
       entries: entriesByIteration.get(i.id) ?? [],
-      shoppingLists: listsByIteration.get(i.id) ?? [],
+      shoppingDates: iterationShoppingDates(i.startDate, i.endDate, shoppingDays),
       createdAt: i.createdAt,
     }))
     .sort((a, b) => {
@@ -96,10 +76,6 @@ export function getMealPlanView(db: Db, familyId: string): MealPlanView | null {
       if (a.startDate !== b.startDate) return a.startDate < b.startDate ? 1 : -1;
       return +b.createdAt - +a.createdAt;
     });
-
-  const shoppingDays = [plan.shoppingDay1, plan.shoppingDay2].filter(
-    (d): d is number => d !== null && d !== undefined,
-  );
 
   return {
     id: plan.id, iterationWeeks: plan.iterationWeeks, shoppingDays, servings: plan.servings,
@@ -111,8 +87,6 @@ export function getMealPlanView(db: Db, familyId: string): MealPlanView | null {
 export interface MealsSummary {
   /** Today's (lunch) entry of the family's plan, if any. */
   today: { recipeId: string; recipeTitle: string; isLeftover: boolean } | null;
-  /** The latest shopping list: what is still to buy. */
-  shopping: { id: string; shoppingDate: string | null; open: number; total: number } | null;
 }
 
 /** What the family overview shows of the meals module. */
@@ -128,25 +102,5 @@ export function getMealsSummary(db: Db, familyId: string, todayIso: string): Mea
       .orderBy(desc(planIterations.createdAt))
       .get() ?? null;
 
-  const list = db
-    .select({ id: shoppingLists.id, shoppingDate: shoppingLists.shoppingDate })
-    .from(shoppingLists)
-    .innerJoin(planIterations, eq(planIterations.id, shoppingLists.iterationId))
-    .innerJoin(mealPlans, eq(mealPlans.id, planIterations.mealPlanId))
-    .where(eq(mealPlans.familyId, familyId))
-    .orderBy(desc(shoppingLists.createdAt), asc(shoppingLists.shoppingDate))
-    .get();
-  let shopping: MealsSummary["shopping"] = null;
-  if (list) {
-    const counts = db
-      .select({
-        total: sql<number>`count(*)`,
-        open: sql<number>`coalesce(sum(case when ${shoppingListItems.isChecked} then 0 else 1 end), 0)`,
-      })
-      .from(shoppingListItems)
-      .where(eq(shoppingListItems.shoppingListId, list.id))
-      .get();
-    shopping = { id: list.id, shoppingDate: list.shoppingDate, open: counts?.open ?? 0, total: counts?.total ?? 0 };
-  }
-  return { today, shopping };
+  return { today };
 }

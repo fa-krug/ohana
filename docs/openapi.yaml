@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Ohana API
-  version: "1"
+  version: "2"
   license:
     name: AGPL-3.0-only
     identifier: AGPL-3.0-only
@@ -47,7 +47,7 @@ info:
       account routes (`/api/v1/me/…`, `/api/v1/admin/…`, `/api/v1/invites/…`) answer errors as
       `{ "error": "<message>" }`.
     * `GET`/`DELETE /api/v1/me`, `POST /api/v1/families` and the separate family routes
-      (`/recipes`, `/recipes/{id}`, `/recipes/generate`, `/shopping/toggle`, `/geocode`,
+      (`/recipes`, `/recipes/{id}`, `/recipes/generate`, `/geocode`,
       `/appointments/doctolib-specialities`, `/appointments/jameda-terms`) answer errors as
       `{ "message": "<message>" }`.
     * `400` invalid input (the first validation problem), `401` not signed in, `403` a viewer
@@ -112,7 +112,7 @@ tags:
   - name: Meal plan
     description: The family's meal plan and its iterations (module `meals`).
   - name: Shopping
-    description: Shopping lists of the meal plan (module `meals`).
+    description: What the meal plan needs per shopping day (module `meals`); the app writes it into a Reminders list.
   - name: Appointments
     description: Doctor appointment searches on Doctolib / jameda, their runs, results and bookings (module `appointments`).
   - name: Assistant
@@ -1011,8 +1011,8 @@ paths:
       summary: The family dashboard
       description: >-
         Today and tomorrow (meal or away, the occurrences of events covering the day, also of
-        events that started earlier or repeat), what comes up in the next 30 days, the shopping
-        list, this month's finances, the appointment searches' latest finds and the birthdays
+        events that started earlier or repeat), what comes up in the next 30 days, this month's
+        finances, the appointment searches' latest finds and the birthdays
         of the next 30 days. A disabled module's part is empty.
       x-ohana-role: viewer
       parameters:
@@ -1891,7 +1891,7 @@ paths:
     patch:
       tags: [Finance]
       operationId: updateFinanceSettings
-      summary: Change currency, CSV mappings, benchmark or groceries category
+      summary: Change currency, CSV mappings or benchmark
       x-ohana-role: editor
       parameters:
         - $ref: "#/components/parameters/FamilyId"
@@ -1913,11 +1913,6 @@ paths:
                     - $ref: "#/components/schemas/BenchmarkInput"
                     - type: "null"
                   description: "`null` (or one without any amount) clears it."
-                groceriesCategoryId:
-                  type: [string, "null"]
-                  description: >-
-                    The category whose spending the shopping lists show (id, name or path);
-                    `null` or `""`: the default (the category named Groceries / Lebensmittel).
       responses:
         "200": {$ref: "#/components/responses/FinanceOverview"}
         "400": {$ref: "#/components/responses/BadRequest"}
@@ -2360,25 +2355,6 @@ paths:
         "400": {$ref: "#/components/responses/BadRequest"}
         "401": {$ref: "#/components/responses/Unauthorized"}
         "404": {$ref: "#/components/responses/NotFound"}
-  /api/v1/families/{familyId}/finance/shopping-links:
-    get:
-      tags: [Finance]
-      operationId: shoppingLinks
-      summary: Groceries categories and shopping days (to link transactions to shopping lists)
-      description: >-
-        A transaction in one of `categoryIds` belongs to the shopping list whose `date` is
-        nearest within ± 1 day (on a tie the earlier list).
-      x-ohana-role: viewer
-      parameters:
-        - $ref: "#/components/parameters/FamilyId"
-      responses:
-        "200":
-          description: The links.
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/ShoppingLinks"}
-        "401": {$ref: "#/components/responses/Unauthorized"}
-        "404": {$ref: "#/components/responses/NotFound"}
 
   # ------------------------------------------------------------------ meals
   /api/v1/families/{familyId}/meals/status:
@@ -2818,7 +2794,7 @@ paths:
     delete:
       tags: [Meal plan]
       operationId: deleteMealPlan
-      summary: Delete the meal plan with its iterations and shopping lists
+      summary: Delete the meal plan with its iterations
       x-ohana-role: editor
       responses:
         "200": {$ref: "#/components/responses/Ok"}
@@ -2888,8 +2864,7 @@ paths:
       summary: Put a recipe as the lunch on a day without one
       description: >-
         For a day of the iteration that has no lunch yet (an empty or away day): the meal gets the
-        plan's servings. The iteration's shopping lists are made anew, keeping ticks and what was
-        added by hand. A day that has a lunch answers 409 (swap it with PATCH
+        plan's servings. A day that has a lunch answers 409 (swap it with PATCH
         `…/meals/plan/entries/{entryId}` instead).
       x-ohana-role: editor
       parameters:
@@ -2926,8 +2901,7 @@ paths:
       operationId: swapMeal
       summary: Swap a meal's recipe (its leftover days follow)
       description: >-
-        A leftover day becomes a meal of its own. The iteration's shopping lists are made anew,
-        keeping ticks and what was added by hand.
+        A leftover day becomes a meal of its own.
       x-ohana-role: editor
       requestBody:
         required: true
@@ -2948,7 +2922,6 @@ paths:
       tags: [Meal plan]
       operationId: removeMeal
       summary: Remove a meal (with its leftover days)
-      description: The iteration's shopping lists are made anew, keeping ticks and what was added by hand.
       x-ohana-role: editor
       responses:
         "200": {$ref: "#/components/responses/PlanChange"}
@@ -2962,8 +2935,7 @@ paths:
       summary: Move a meal to another day of its iteration (the two days swap)
       description: >-
         The meal on that day, if any, takes the moved one's day. Afterwards a leftover day that
-        lies on or before the day of its meal becomes a meal of its own. The iteration's shopping
-        lists are made anew, keeping ticks and what was added by hand. The same day changes
+        lies on or before the day of its meal becomes a meal of its own. The same day changes
         nothing and answers `undo: null`.
       x-ohana-role: editor
       parameters:
@@ -3026,263 +2998,37 @@ paths:
   /api/v1/families/{familyId}/meals/shopping:
     get:
       tags: [Shopping]
-      operationId: shoppingOverview
-      summary: All shopping lists (summaries) and the latest list
-      x-ohana-role: viewer
-      parameters:
-        - $ref: "#/components/parameters/FamilyId"
-        - $ref: "#/components/parameters/ShoppingLang"
-      responses:
-        "200":
-          description: The lists, newest shopping day first.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [lists, latest]
-                properties:
-                  lists:
-                    type: array
-                    items: {$ref: "#/components/schemas/ShoppingListSummary"}
-                  latest:
-                    oneOf:
-                      - $ref: "#/components/schemas/ShoppingList"
-                      - type: "null"
-        "401": {$ref: "#/components/responses/Unauthorized"}
-        "404": {$ref: "#/components/responses/NotFound"}
-  /api/v1/families/{familyId}/meals/shopping/units:
-    get:
-      tags: [Shopping]
-      operationId: shoppingUnits
-      summary: All units
-      x-ohana-role: viewer
-      parameters:
-        - $ref: "#/components/parameters/FamilyId"
-      responses:
-        "200":
-          description: The units.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [units]
-                properties:
-                  units:
-                    type: array
-                    items: {$ref: "#/components/schemas/Unit"}
-        "401": {$ref: "#/components/responses/Unauthorized"}
-        "404": {$ref: "#/components/responses/NotFound"}
-  /api/v1/families/{familyId}/meals/shopping/lists/{listId}:
-    get:
-      tags: [Shopping]
-      operationId: getShoppingList
-      summary: A shopping list with its items
-      x-ohana-role: viewer
-      parameters:
-        - $ref: "#/components/parameters/FamilyId"
-        - $ref: "#/components/parameters/ListId"
-        - $ref: "#/components/parameters/ShoppingLang"
-      responses:
-        "200":
-          description: The list.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [list]
-                properties:
-                  list: {$ref: "#/components/schemas/ShoppingList"}
-        "401": {$ref: "#/components/responses/Unauthorized"}
-        "404": {$ref: "#/components/responses/NotFound"}
-  /api/v1/families/{familyId}/meals/shopping/lists/{listId}/spent:
-    get:
-      tags: [Shopping]
-      operationId: shoppingSpent
-      summary: Groceries spending around the list's shopping day (± 1 day)
-      description: 404 for a list without a shopping day.
-      x-ohana-role: viewer
-      parameters:
-        - $ref: "#/components/parameters/FamilyId"
-        - $ref: "#/components/parameters/ListId"
-      responses:
-        "200":
-          description: The spending.
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/ShoppingSpend"}
-        "401": {$ref: "#/components/responses/Unauthorized"}
-        "404": {$ref: "#/components/responses/NotFound"}
-  /api/v1/families/{familyId}/meals/shopping/lists/{listId}/items:
-    post:
-      tags: [Shopping]
-      operationId: addShoppingItem
-      summary: Add an item by name (merged with the same ingredient and unit)
-      description: An unknown ingredient name is added to the shared ingredients (with `category`).
-      x-ohana-role: editor
-      parameters:
-        - $ref: "#/components/parameters/FamilyId"
-        - $ref: "#/components/parameters/ListId"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [name, quantity, unitId]
-              properties:
-                name: {type: string, minLength: 1, maxLength: 80}
-                quantity: {type: [string, number], description: "A positive decimal; `,` is read as `.`."}
-                unitId: {type: integer}
-                category: {$ref: "#/components/schemas/IngredientCategory"}
-                clientId:
-                  type: string
-                  minLength: 1
-                  maxLength: 64
-                  description: >-
-                    A key the client makes up for this add (e.g. a UUID). An add with a key already
-                    applied to this list is not applied again: the earlier result comes back (a retry
-                    whose answer was lost, the app's offline queue). Without it every add counts.
-      responses:
-        "200":
-          description: The item (for a repeated `clientId`, the earlier result).
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [id, merged, previousQuantity]
-                properties:
-                  id: {type: string}
-                  merged: {type: boolean, description: "Added to an existing item."}
-                  previousQuantity: {type: [string, "null"], description: "The existing item's quantity before (to undo)."}
-        "400": {$ref: "#/components/responses/BadRequest"}
-        "401": {$ref: "#/components/responses/Unauthorized"}
-        "403": {$ref: "#/components/responses/Forbidden"}
-        "404": {$ref: "#/components/responses/NotFound"}
-        "422":
-          description: The quantity is not more than 0.
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-  /api/v1/families/{familyId}/meals/shopping/check:
-    post:
-      tags: [Shopping]
-      operationId: checkShoppingItems
-      summary: Tick or untick items
-      x-ohana-role: editor
-      parameters:
-        - $ref: "#/components/parameters/FamilyId"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [ids, checked]
-              properties:
-                ids:
-                  type: array
-                  minItems: 1
-                  maxItems: 500
-                  items: {type: string}
-                checked: {type: boolean}
-      responses:
-        "200": {$ref: "#/components/responses/CountResult"}
-        "400": {$ref: "#/components/responses/BadRequest"}
-        "401": {$ref: "#/components/responses/Unauthorized"}
-        "403": {$ref: "#/components/responses/Forbidden"}
-        "404": {$ref: "#/components/responses/NotFound"}
-  /api/v1/families/{familyId}/meals/shopping/items/{itemId}:
-    parameters:
-      - $ref: "#/components/parameters/FamilyId"
-      - {name: itemId, in: path, required: true, schema: {type: string}}
-    patch:
-      tags: [Shopping]
-      operationId: setShoppingItemQuantity
-      summary: Change an item's quantity
-      x-ohana-role: editor
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [quantity]
-              properties:
-                quantity: {type: string, minLength: 1, maxLength: 40}
-      responses:
-        "200":
-          description: The item's new quantity.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [id, quantity]
-                properties:
-                  id: {type: string}
-                  quantity: {type: string}
-        "400": {$ref: "#/components/responses/BadRequest"}
-        "401": {$ref: "#/components/responses/Unauthorized"}
-        "403": {$ref: "#/components/responses/Forbidden"}
-        "404": {$ref: "#/components/responses/NotFound"}
-    delete:
-      tags: [Shopping]
-      operationId: deleteShoppingItem
-      summary: Delete an item
-      x-ohana-role: editor
-      responses:
-        "200": {$ref: "#/components/responses/DeletedString"}
-        "401": {$ref: "#/components/responses/Unauthorized"}
-        "403": {$ref: "#/components/responses/Forbidden"}
-        "404": {$ref: "#/components/responses/NotFound"}
-  /api/v1/families/{familyId}/meals/shopping/items/{itemId}/move:
-    post:
-      tags: [Shopping]
-      operationId: moveShoppingItem
-      summary: Move an item (or part of it) to another shopping list
+      operationId: shoppingItems
+      summary: What the meal plan needs per shopping day (computed, nothing is stored)
       description: >-
-        To any of the family's lists. With `quantity` below the item's, only that much moves and
-        the rest stays; absent or equal, the whole item. What moves unticked (a part always does)
-        is added to an unticked item of the same ingredient and unit on the target list
-        (`merged`); otherwise the item itself moves (keeping its tick) or a new unticked item is
-        made with the part. Undo by calling it back: not merged and whole, move `id` to
-        `fromListId`; merged, move `quantity` of `id` to `fromListId`.
-      x-ohana-role: editor
+        Every shopping day on or after `from` of every plan iteration, with the ingredients of
+        the meals (no leftover days) up to the next shopping day, summed per ingredient and unit.
+        Computed on each request from the plan as it is: there are no stored lists, ticks or
+        added items (the app writes the items into a Reminders list the user picks). Days
+        without items are left out.
+      x-ohana-role: viewer
       parameters:
         - $ref: "#/components/parameters/FamilyId"
-        - {name: itemId, in: path, required: true, schema: {type: string}}
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [listId]
-              properties:
-                listId: {type: string, minLength: 1, maxLength: 64}
-                quantity: {type: [string, number], description: "How much to move: more than 0, at most the item's quantity; `,` is read as `.`."}
+        - name: from
+          in: query
+          description: The first shopping day to include (default the server's today).
+          schema: {type: string, format: date}
+        - $ref: "#/components/parameters/ShoppingLang"
       responses:
         "200":
-          description: Where it went.
+          description: The shopping days, earliest first.
           content:
             application/json:
               schema:
                 type: object
-                required: [id, merged, previousQuantity, fromListId, quantity]
+                required: [days]
                 properties:
-                  id: {type: string, description: "The moved or new item, or the item it was added to."}
-                  merged: {type: boolean, description: "Added to an existing item."}
-                  previousQuantity: {type: [string, "null"], description: "The existing item's quantity before."}
-                  fromListId: {type: string, description: "The list it came from."}
-                  quantity: {type: string, description: "How much moved."}
+                  days:
+                    type: array
+                    items: {$ref: "#/components/schemas/ShoppingDay"}
         "400": {$ref: "#/components/responses/BadRequest"}
         "401": {$ref: "#/components/responses/Unauthorized"}
-        "403": {$ref: "#/components/responses/Forbidden"}
         "404": {$ref: "#/components/responses/NotFound"}
-        "422":
-          description: The item is already on that list, or the quantity is not more than 0 or more than the item has.
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
 
   # ------------------------------------------------------------------ meals: separate routes ({message} errors)
   /api/v1/families/{familyId}/recipes:
@@ -3370,60 +3116,6 @@ paths:
                 type: string
                 description: Newline-delimited `GenerationEvent` objects.
               x-ohana-item-schema: {$ref: "#/components/schemas/GenerationEvent"}
-        "400": {$ref: "#/components/responses/MessageBadRequest"}
-        "401": {$ref: "#/components/responses/MessageUnauthorized"}
-        "403": {$ref: "#/components/responses/MessageForbidden"}
-        "404": {$ref: "#/components/responses/MessageNotFound"}
-  /api/v1/families/{familyId}/shopping/toggle:
-    post:
-      tags: [Shopping]
-      operationId: shoppingToggle
-      summary: Tick, untick or flip shopping items (offline-queue replays)
-      description: >-
-        `set` is idempotent (what the app and its offline queue send); `toggle` flips one item;
-        `uncheck-all` unticks several. Separate route, `{message}` errors.
-      x-ohana-role: editor
-      parameters:
-        - $ref: "#/components/parameters/FamilyId"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              oneOf:
-                - type: object
-                  required: [kind, itemId, checked]
-                  properties:
-                    kind: {type: string, const: set}
-                    itemId: {type: string, minLength: 1}
-                    checked: {type: boolean}
-                - type: object
-                  required: [kind, itemId]
-                  properties:
-                    kind: {type: string, const: toggle}
-                    itemId: {type: string, minLength: 1}
-                - type: object
-                  required: [kind, itemIds]
-                  properties:
-                    kind: {type: string, const: uncheck-all}
-                    itemIds:
-                      type: array
-                      items: {type: string, minLength: 1}
-      responses:
-        "200":
-          description: "`{checked}` for set/toggle, `{count}` for uncheck-all."
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - type: object
-                    required: [checked]
-                    properties:
-                      checked: {type: boolean}
-                  - type: object
-                    required: [count]
-                    properties:
-                      count: {type: integer}
         "400": {$ref: "#/components/responses/MessageBadRequest"}
         "401": {$ref: "#/components/responses/MessageUnauthorized"}
         "403": {$ref: "#/components/responses/MessageForbidden"}
@@ -4219,6 +3911,44 @@ paths:
         "401": {$ref: "#/components/responses/Unauthorized"}
         "404": {$ref: "#/components/responses/NotFound"}
         "409": {$ref: "#/components/responses/Conflict"}
+  /api/v1/families/{familyId}/ai/chats/{chatId}/reminders:
+    post:
+      tags: [Assistant]
+      operationId: answerRemindersEdit
+      summary: Report whether the user applied the assistant's reminders edit (streams the rest of the turn)
+      description: >-
+        `id` is the `reminders` item's id. With `applied: true` the client has made the changes
+        on the device and sends `results`, one per op in order; `applied: false` means the user
+        said no. `reminders` is a fresh copy of the open reminders. The turn goes on with this as
+        the tool's result. 409 when that edit doesn't wait any more.
+      x-ohana-role: viewer
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+        - $ref: "#/components/parameters/ChatId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/ChatContextInput"
+                - type: object
+                  required: [id, applied]
+                  properties:
+                    id: {type: string}
+                    applied: {type: boolean}
+                    results:
+                      type: array
+                      description: >-
+                        Required when `applied` is true: one per op, in order (a missing one
+                        counts as failed, extra ones are ignored).
+                      items: {$ref: "#/components/schemas/RemindersResult"}
+      responses:
+        "200": {$ref: "#/components/responses/ChatStream"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
   /api/v1/families/{familyId}/ai/chats/{chatId}/stop:
     post:
       tags: [Assistant]
@@ -4375,15 +4105,10 @@ components:
       name: limit
       in: query
       schema: {type: integer, minimum: 1, maximum: 100, default: 20}
-    ListId:
-      name: listId
-      in: path
-      required: true
-      schema: {type: string}
     ShoppingLang:
       name: lang
       in: query
-      description: Language of the ingredient names (default from `Accept-Language`, else en).
+      description: Language of the ingredient names and their order (default from `Accept-Language`, else en).
       schema: {type: string, enum: [en, de]}
     SearchId:
       name: searchId
@@ -4579,15 +4304,6 @@ components:
             properties:
               iterationId: {type: string}
               undo: {$ref: "#/components/schemas/PlanUndo"}
-    CountResult:
-      description: How many items changed.
-      content:
-        application/json:
-          schema:
-            type: object
-            required: [count]
-            properties:
-              count: {type: integer}
     AiSettings:
       description: "The AI settings (no keys; `Cache-Control: no-store`)."
       content:
@@ -5204,7 +4920,7 @@ components:
                   event: {$ref: "#/components/schemas/Event"}
         meals:
           type: object
-          required: [today, shopping]
+          required: [today]
           properties:
             today:
               type: [object, "null"]
@@ -5213,14 +4929,6 @@ components:
                 recipeId: {type: string}
                 recipeTitle: {type: string}
                 isLeftover: {type: boolean}
-            shopping:
-              type: [object, "null"]
-              required: [id, shoppingDate, open, total]
-              properties:
-                id: {type: string}
-                shoppingDate: {type: [string, "null"], format: date}
-                open: {type: integer}
-                total: {type: integer}
         finance:
           type: object
           required: [currency, month, incomeCents, expenseCents, count, topExpense, balanceCents]
@@ -5368,11 +5076,11 @@ components:
         enabled: {type: boolean, default: true}
     NotifyEvent:
       type: string
-      enum: [appointment_found, coverage_gap, shopping_reminder, assistant_turn_finished]
+      enum: [appointment_found, coverage_gap, assistant_turn_finished]
       description: >-
         `appointment_found` (on by default; the searches pick their channels),
-        `coverage_gap` (on; a weekday nobody covers, once a day), `shopping_reminder` (off;
-        once per shopping day), `assistant_turn_finished` (off; when nobody watches the chat).
+        `coverage_gap` (on; a weekday nobody covers, once a day), `assistant_turn_finished`
+        (off; when nobody watches the chat).
     EventPref:
       type: object
       required: [event, enabled, channelIds, app, hasChannels]
@@ -5558,7 +5266,7 @@ components:
         highCents: {type: [integer, "null"], minimum: 0}
     FinanceOverview:
       type: object
-      required: [currency, csvMappings, benchmark, groceriesCategoryId, categories, accounts]
+      required: [currency, csvMappings, benchmark, categories, accounts]
       properties:
         currency: {type: string, description: "ISO 4217 (default EUR)."}
         csvMappings:
@@ -5568,7 +5276,6 @@ components:
           oneOf:
             - $ref: "#/components/schemas/Benchmark"
             - type: "null"
-        groceriesCategoryId: {type: [string, "null"], description: "null = the default (Groceries / Lebensmittel)."}
         categories:
           type: array
           items: {$ref: "#/components/schemas/Category"}
@@ -5603,49 +5310,6 @@ components:
               incomeCents: {type: integer}
               expenseCents: {type: integer}
               count: {type: integer}
-    ShoppingLinks:
-      type: object
-      required: [categoryIds, lists]
-      properties:
-        categoryIds:
-          type: array
-          description: The groceries category and its subcategories.
-          items: {type: string}
-        lists:
-          type: array
-          items:
-            type: object
-            required: [date, id]
-            properties:
-              date: {type: string, format: date}
-              id: {type: string}
-    ShoppingSpend:
-      type: object
-      required: [currency, category, from, to, transactions, totalCents]
-      properties:
-        currency: {type: string}
-        category:
-          type: [object, "null"]
-          required: [id, name, icon, color]
-          properties:
-            id: {type: string}
-            name: {type: string}
-            icon: {type: string}
-            color: {type: string}
-        from: {type: string, format: date}
-        to: {type: string, format: date}
-        transactions:
-          type: array
-          items:
-            type: object
-            required: [id, date, payee, description, amountCents]
-            properties:
-              id: {type: string}
-              date: {type: string, format: date}
-              payee: {type: string}
-              description: {type: string}
-              amountCents: {type: integer}
-        totalCents: {type: integer, description: "Spent (expenses minus refunds); positive."}
     CategorizeResult:
       type: object
       required: [changed, matched, considered, remaining, ai, inverse, assignments]
@@ -5957,7 +5621,7 @@ components:
         isLocked: {type: boolean}
     PlanIteration:
       type: object
-      required: [id, startDate, endDate, status, entries, shoppingLists, createdAt]
+      required: [id, startDate, endDate, status, entries, shoppingDates, createdAt]
       properties:
         id: {type: string}
         startDate: {type: string, format: date}
@@ -5966,15 +5630,10 @@ components:
         entries:
           type: array
           items: {$ref: "#/components/schemas/PlanEntry"}
-        shoppingLists:
+        shoppingDates:
           type: array
-          items:
-            type: object
-            required: [id, shoppingDate, itemCount]
-            properties:
-              id: {type: string}
-              shoppingDate: {type: [string, "null"], format: date}
-              itemCount: {type: integer}
+          description: The iteration's shopping days (what each needs is `GET …/meals/shopping`).
+          items: {type: string, format: date}
         createdAt: {type: string, format: date-time}
     MealPlan:
       type: object
@@ -6015,8 +5674,8 @@ components:
           items: {type: string, format: uuid}
     IterationSnapshot:
       type: object
-      description: An iteration's meals and shopping lists (ticks included), as taken before a change.
-      required: [id, startDate, endDate, status, entries, lists]
+      description: An iteration's meals, as taken before a change.
+      required: [id, startDate, endDate, status, entries]
       properties:
         id: {type: string}
         startDate: {type: string, format: date}
@@ -6037,27 +5696,6 @@ components:
               isLeftover: {type: boolean}
               sourceEntryId: {type: [string, "null"]}
               isLocked: {type: boolean}
-        lists:
-          type: array
-          maxItems: 20
-          items:
-            type: object
-            required: [id, shoppingDate, items]
-            properties:
-              id: {type: string}
-              shoppingDate: {type: [string, "null"]}
-              items:
-                type: array
-                maxItems: 1000
-                items:
-                  type: object
-                  required: [id, ingredientId, unitId, quantity, isChecked]
-                  properties:
-                    id: {type: string}
-                    ingredientId: {type: integer}
-                    unitId: {type: integer}
-                    quantity: {type: string, maxLength: 40}
-                    isChecked: {type: boolean}
     PlanUndo:
       type: object
       description: Puts iterations back as they were (`restore`) and deletes the ones a change added (`remove`).
@@ -6072,36 +5710,31 @@ components:
           maxItems: 10
           default: []
           items: {type: string}
-    ShoppingItem:
+    ShoppingDay:
       type: object
-      required: [id, ingredientName, category, quantity, unitAbbreviation, isChecked]
+      required: [date, items]
       properties:
-        id: {type: string}
-        ingredientName: {type: string}
-        category: {$ref: "#/components/schemas/IngredientCategory"}
-        quantity: {type: string}
-        unitAbbreviation: {type: string}
-        isChecked: {type: boolean}
-    ShoppingList:
-      type: object
-      required: [id, shoppingDate, createdAt, items]
-      properties:
-        id: {type: string}
-        shoppingDate: {type: [string, "null"], format: date}
-        createdAt: {type: string, format: date-time}
+        date: {type: string, format: date, description: "The shopping day."}
         items:
           type: array
-          items: {$ref: "#/components/schemas/ShoppingItem"}
-    ShoppingListSummary:
+          description: Sorted by name (in `lang`).
+          items: {$ref: "#/components/schemas/ShoppingNeed"}
+    ShoppingNeed:
       type: object
-      required: [id, iterationId, iterationStatus, shoppingDate, itemCount, checkedCount]
+      description: One ingredient in one unit, summed over the meals of that shopping day.
+      required: [key, ingredientId, name, category, quantity, unit]
       properties:
-        id: {type: string}
-        iterationId: {type: string}
-        iterationStatus: {type: string, enum: [ACTIVE, ARCHIVED]}
-        shoppingDate: {type: [string, "null"], format: date}
-        itemCount: {type: integer}
-        checkedCount: {type: integer}
+        key:
+          type: string
+          example: 12-3
+          description: >-
+            `<ingredientId>-<unitId>`: stays the same for this ingredient and unit on this day
+            while the plan changes.
+        ingredientId: {type: integer}
+        name: {type: string, description: "The ingredient's name in `lang`."}
+        category: {$ref: "#/components/schemas/IngredientCategory"}
+        quantity: {type: string, example: "150", description: "A decimal as text."}
+        unit: {type: string, example: g, description: "The unit's abbreviation."}
 
     # ---------------------------------------------------------------- appointments
     AppointmentHome:
@@ -6473,6 +6106,35 @@ components:
                 text: {type: string}
             skipped: {type: boolean}
         - type: object
+          title: reminders
+          description: >-
+            Changes to the user's reminders the assistant wants to make (`edit_reminders`). The
+            turn waits for the user: the app shows the ops with Apply / Don't apply and answers
+            with `POST …/reminders`. A new message instead marks it `skipped`.
+          required: [kind, id, summary, ops]
+          properties:
+            kind: {type: string, const: reminders}
+            id: {type: string}
+            summary: {type: string, example: Add 3 reminders to Groceries}
+            ops:
+              type: array
+              items: {$ref: "#/components/schemas/RemindersOp"}
+            answer:
+              oneOf:
+                - type: object
+                  required: [applied, results]
+                  properties:
+                    applied: {type: boolean, const: true}
+                    results:
+                      type: array
+                      description: One per op, in order.
+                      items: {$ref: "#/components/schemas/RemindersResult"}
+                - type: object
+                  required: [applied]
+                  properties:
+                    applied: {type: boolean, const: false}
+            skipped: {type: boolean}
+        - type: object
           title: compacted
           required: [kind]
           properties:
@@ -6505,6 +6167,97 @@ components:
         year: {type: integer, description: "The calendar year the user looks at."}
         lang: {type: string, enum: [en, de], default: en}
         today: {type: string, format: date, description: "The user's day."}
+        reminders: {$ref: "#/components/schemas/RemindersContext"}
+    RemindersContext:
+      type: object
+      description: >-
+        The device's open reminders, for the assistant's `get_reminders` and `edit_reminders`
+        tools (only offered when the chat's context has this). Absent: the device has no
+        Reminders access (or the app is older). The server keeps the latest one in the chat's
+        context and drops what goes beyond the limits (at most 100 lists and 500 items, titles
+        cut at 200 characters, notes at 1000; the app sends the nearest due first), items of a
+        list that isn't in `lists`, and a `shoppingListId` that isn't one of them.
+      required: [lists, items]
+      properties:
+        shoppingListId:
+          type: [string, "null"]
+          description: The list the family's shopping items go into on this device (`list` "shopping" in `edit_reminders`); null when none is picked.
+        lists:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            required: [id, title]
+            properties:
+              id: {type: string, description: "The list's identifier on the device."}
+              title: {type: string, maxLength: 200}
+        items:
+          type: array
+          maxItems: 500
+          description: Open reminders only.
+          items:
+            type: object
+            required: [id, list, title]
+            properties:
+              id: {type: string, description: "The reminder's identifier on the device."}
+              list: {type: string, description: "The id of its list."}
+              title: {type: string, maxLength: 200}
+              notes: {type: string, maxLength: 1000}
+              due:
+                type: [string, "null"]
+                description: "`YYYY-MM-DD`, `YYYY-MM-DDTHH:MM` (local time) or null."
+                example: "2026-11-07"
+              completed: {type: boolean, default: false}
+    RemindersOp:
+      description: >-
+        One change to the user's reminders as the assistant asked for it, resolved by the server:
+        `list` is always a list id (with `listTitle`), ops on an existing reminder carry
+        `itemTitle`.
+      oneOf:
+        - type: object
+          title: add
+          required: [op, list, listTitle, title]
+          properties:
+            op: {type: string, const: add}
+            list: {type: string}
+            listTitle: {type: string}
+            title: {type: string}
+            notes: {type: string}
+            due: {type: string, description: "`YYYY-MM-DD` or `YYYY-MM-DDTHH:MM`."}
+        - type: object
+          title: update
+          required: [op, id, itemTitle, list, listTitle]
+          properties:
+            op: {type: string, const: update}
+            id: {type: string}
+            itemTitle: {type: string, description: "The reminder's title before the change."}
+            title: {type: string}
+            notes: {type: string, description: "\"\" clears them."}
+            due: {type: [string, "null"], description: "`YYYY-MM-DD`, `YYYY-MM-DDTHH:MM` or null (clears it)."}
+            list: {type: string, description: "The reminder's list, or the one it moves to (different from its current list)."}
+            listTitle: {type: string}
+        - type: object
+          title: complete, uncomplete, delete
+          required: [op, id, itemTitle, list, listTitle]
+          properties:
+            op: {type: string, enum: [complete, uncomplete, delete]}
+            id: {type: string}
+            itemTitle: {type: string}
+            list: {type: string, description: "The reminder's list."}
+            listTitle: {type: string}
+    RemindersResult:
+      description: "How one op went on the device (`id`: the new reminder's id after an add)."
+      oneOf:
+        - type: object
+          required: [ok]
+          properties:
+            ok: {type: boolean, const: true}
+            id: {type: string}
+        - type: object
+          required: [ok, error]
+          properties:
+            ok: {type: boolean, const: false}
+            error: {type: string}
     ChatMessageInput:
       allOf:
         - $ref: "#/components/schemas/ChatContextInput"

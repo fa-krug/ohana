@@ -134,7 +134,7 @@ struct AssistantToolCall: Equatable {
 struct AssistantChange: Equatable {
     var id: String
     /// entries | notes | types | events | categories | transactions | benchmark | recipes |
-    /// plan | shopping | appointments (and later modules' kinds)
+    /// plan | appointments (and later modules' kinds)
     var change: String
     var summary: String
     var undo: [AssistantUndoStep]
@@ -157,14 +157,115 @@ struct AssistantQuestion: Equatable {
     }
 }
 
-/// What the chat shows: messages, tool activity, changes (with undo), questions. Decoded by
-/// `kind`; a kind this app doesn't know yet becomes `.unknown` (and isn't shown).
+/// A change of the user's Reminders the assistant suggests (`kind: "reminders"`, server
+/// lib/assistant/tools/reminders.ts): nothing changes until the user applies it on their device,
+/// which answers with one result per op.
+struct AssistantRemindersEdit: Equatable {
+    var id: String
+    /// What it does, e.g. "Add 3 reminders to Groceries".
+    var summary: String
+    var ops: [AssistantReminderOp]
+    /// Applied (with each op's result) or declined.
+    var answer: Answer?
+    /// The user wrote a new message instead.
+    var skipped: Bool
+
+    /// `{applied: true, results}` or `{applied: false}`.
+    struct Answer: Codable, Equatable {
+        var applied: Bool
+        var results: [AssistantReminderResult]?
+
+        /// How many of the ops failed.
+        var failures: Int { (results ?? []).filter { !$0.ok }.count }
+    }
+}
+
+/// One change of a Reminders edit, as the server resolved it: `list` is always a list's id
+/// (with its title); ops on an existing reminder name it (`id`, `itemTitle`).
+/// add: `list`, `title`, `notes`?, `due`?; update: `id`, `list` (the reminder's list, or the one it
+/// moves to), `title`?, `notes`? ("" clears them), `due`? (null clears it); complete | uncomplete |
+/// delete: `id`. Decoded leniently: an op this app doesn't know keeps its `op` (and fails when
+/// applied).
+struct AssistantReminderOp: Decodable, Equatable {
+    /// add | update | complete | uncomplete | delete
+    var op: String
+    var id: String?
+    var itemTitle: String?
+    var list: String
+    var listTitle: String
+    var title: String?
+    var notes: String?
+    var due: DueChange
+
+    /// What an op does to the due date.
+    enum DueChange: Equatable {
+        /// Not part of the op.
+        case keep
+        /// `due: null` (update): the reminder has no due date any more.
+        case clear
+        case set(ReminderDue)
+    }
+
+    init(op: String, id: String? = nil, itemTitle: String? = nil, list: String, listTitle: String,
+         title: String? = nil, notes: String? = nil, due: DueChange = .keep) {
+        self.op = op
+        self.id = id
+        self.itemTitle = itemTitle
+        self.list = list
+        self.listTitle = listTitle
+        self.title = title
+        self.notes = notes
+        self.due = due
+    }
+
+    private enum Keys: String, CodingKey { case op, id, itemTitle, list, listTitle, title, notes, due }
+
+    init(from decoder: any Decoder) throws {
+        guard let c = try? decoder.container(keyedBy: Keys.self) else {
+            self.init(op: "", list: "", listTitle: "")
+            return
+        }
+        func opt(_ key: Keys) -> String? { try? c.decodeIfPresent(String.self, forKey: key) }
+        let due: DueChange
+        if !c.contains(.due) {
+            due = .keep
+        } else if (try? c.decodeNil(forKey: .due)) == true {
+            due = .clear
+        } else if let text = opt(.due), let value = ReminderDue(text) {
+            due = .set(value)
+        } else {
+            due = .keep
+        }
+        self.init(op: opt(.op) ?? "", id: opt(.id), itemTitle: opt(.itemTitle), list: opt(.list) ?? "",
+                  listTitle: opt(.listTitle) ?? "", title: opt(.title), notes: opt(.notes), due: due)
+    }
+
+    /// The reminder it is about: the new one's title for add, else the reminder's.
+    var subject: String { (op == "add" ? title : itemTitle) ?? "" }
+}
+
+/// How one op went on the device: `{ok: true, id?}` or `{ok: false, error}`.
+struct AssistantReminderResult: Codable, Equatable {
+    var ok: Bool
+    /// The reminder (the new one for add).
+    var id: String?
+    var error: String?
+
+    static func done(_ id: String?) -> Self { .init(ok: true, id: id, error: nil) }
+    static func failed(_ error: String) -> Self { .init(ok: false, id: nil, error: error) }
+}
+
+/// What the chat shows: messages, tool activity, changes (with undo), questions, changes of the
+/// user's Reminders to apply. Decoded by `kind`; a kind this app doesn't know yet becomes
+/// `.unknown` (and isn't shown).
 enum AssistantItem: Decodable, Equatable {
     case user(text: String, attachments: [AssistantAttachmentRef])
     case assistant(text: String)
     case tool(AssistantToolCall)
     case change(AssistantChange)
     case question(AssistantQuestion)
+    /// A change of the user's Reminders (edit_reminders) that waits for them to apply it here.
+    case reminders(AssistantRemindersEdit)
     /// From here on, the model gets the earlier part of the chat as a summary.
     case compacted
     case error(text: String)
@@ -172,7 +273,7 @@ enum AssistantItem: Decodable, Equatable {
 
     private enum Keys: String, CodingKey {
         case kind, text, attachments, id, name, args, status, summary, result, interrupted
-        case change, undo, undone, question, options, multiple, answer, skipped
+        case change, undo, undone, question, options, multiple, answer, skipped, ops
     }
 
     init(from decoder: any Decoder) throws {
@@ -211,6 +312,12 @@ enum AssistantItem: Decodable, Equatable {
             self = .question(AssistantQuestion(
                 id: str(.id), question: str(.question), options: options ?? [], multiple: flag(.multiple),
                 answer: answer, skipped: flag(.skipped)
+            ))
+        case "reminders":
+            let ops = try? c.decodeIfPresent([AssistantReminderOp].self, forKey: .ops)
+            let answer = try? c.decodeIfPresent(AssistantRemindersEdit.Answer.self, forKey: .answer)
+            self = .reminders(AssistantRemindersEdit(
+                id: str(.id), summary: str(.summary), ops: ops ?? [], answer: answer, skipped: flag(.skipped)
             ))
         case "compacted":
             self = .compacted
@@ -314,7 +421,7 @@ struct AssistantSSEParser {
 // MARK: Requests
 
 /// A message for the assistant: the text, files as text, images as data URLs; and where the
-/// user is (the page, the year, their language and day).
+/// user is (the page, the year, their language and day) and, with access, their Reminders.
 struct AssistantChatInput: Encodable {
     var text: String?
     var attachments: [AssistantOutgoingAttachment]?
@@ -322,6 +429,8 @@ struct AssistantChatInput: Encodable {
     var year: Int
     var lang: String
     var today: String
+    /// Without it, the Reminders tools are off for the turn.
+    var reminders: AssistantRemindersContext?
 }
 
 /// POST /ai/chats/{id}/answer
@@ -333,6 +442,20 @@ struct AssistantAnswerInput: Encodable {
     var year: Int
     var lang: String
     var today: String
+    var reminders: AssistantRemindersContext?
+}
+
+/// POST /ai/chats/{id}/reminders: the waiting Reminders edit `id` applied (with one result per
+/// op, in order) or declined; `reminders` is the snapshot after applying.
+struct AssistantRemindersAnswerInput: Encodable {
+    var id: String
+    var applied: Bool
+    var results: [AssistantReminderResult]?
+    var page: String
+    var year: Int
+    var lang: String
+    var today: String
+    var reminders: AssistantRemindersContext?
 }
 
 nonisolated struct AssistantOutgoingAttachment: Encodable, Equatable {

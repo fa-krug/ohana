@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Deleting a recipe or a shopping item waits a few seconds so it can be undone (the web's
+/// Deleting a recipe waits a few seconds so it can be undone (the web's
 /// lib/meals/recipes/pending-delete.ts and the list's undo toast). It is hidden from the lists
 /// meanwhile; the banner offers "Undo", and so does the window's undo manager (Edit → Undo, ⌘Z)
 /// while the delete waits.
@@ -10,12 +10,11 @@ final class MealsPendingDeletes {
 
     /// What is deleted.
     enum Kind: Equatable {
-        case recipe, shoppingItem
+        case recipe
 
         func path(_ id: String) -> String {
             switch self {
             case .recipe: "/meals/recipes/\(id)"
-            case .shoppingItem: "/meals/shopping/items/\(id)"
             }
         }
 
@@ -23,7 +22,6 @@ final class MealsPendingDeletes {
         var areas: [DataArea] {
             switch self {
             case .recipe: [.recipes, .meals, .mealPlan]
-            case .shoppingItem: [.shopping]
             }
         }
 
@@ -31,7 +29,6 @@ final class MealsPendingDeletes {
         var message: LocalizedStringKey {
             switch self {
             case .recipe: "Recipe deleted."
-            case .shoppingItem: "Item deleted."
             }
         }
 
@@ -39,7 +36,6 @@ final class MealsPendingDeletes {
         var actionName: String {
             switch self {
             case .recipe: String(localized: "Delete Recipe")
-            case .shoppingItem: String(localized: "Delete Item")
             }
         }
     }

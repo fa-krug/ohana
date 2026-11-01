@@ -10,7 +10,9 @@
 	<true/>
 	<key>com.apple.security.files.user-selected.read-write</key>
 	<true/>
-	<!-- The sync with an Apple Calendar calendar (EventKit). -->
+	<!-- EventKit: the shopping list in Reminders (Core/Reminders), the sync with an Apple Calendar
+	     calendar (Features/Calendar/AppleCalendarSync.swift) and the assistant's Reminders and
+	     Calendar tools. The sandbox's "Calendars" covers reminders as well. -->
 	<key>com.apple.security.personal-information.calendars</key>
 	<true/>
 	<!-- A finished cook timer's notification comes through a Focus. -->

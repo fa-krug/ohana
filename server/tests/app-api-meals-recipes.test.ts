@@ -267,7 +267,8 @@ describe("app meals: photos", () => {
 describe("app meals: other paths", () => {
   it("leaves shopping and unknown paths to the other routes", async () => {
     const { call } = setup();
-    expect((await call("POST", "/meals/shopping/check", { ids: ["x"], checked: true })).data).toEqual({ count: 0 });
+    expect((await call("GET", "/meals/shopping")).data).toEqual({ days: [] });
+    expect((await call("POST", "/meals/shopping/check", { ids: ["x"], checked: true })).status).toBe(404);
     expect((await call("GET", "/meals/recipes/x/y/z")).status).toBe(404);
     expect((await call("PUT", "/meals/tags")).status).toBe(404);
   });

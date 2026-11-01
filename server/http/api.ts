@@ -28,7 +28,6 @@ import { requireFamilyApi } from "@/lib/families/api";
 import { createFamilyForUser, handleFamilyApp } from "@/lib/families/app-routes";
 import { handleInvitesApp } from "@/lib/families/invite-routes";
 import { listFamiliesOf } from "@/lib/families/manage";
-import { handleFinanceApp } from "@/lib/finance/app-routes";
 import { handleFinance } from "@/lib/finance/finance";
 import { generationStream } from "@/lib/meals/ai/stream";
 import { handleMealsApp } from "@/lib/meals/app-routes";
@@ -38,8 +37,6 @@ import { serveRecipeImage } from "@/lib/meals/images/serve";
 import { getRecipe, listIngredients, listRecipes, listUnits } from "@/lib/meals/queries/recipes";
 import { requireFamilyRequest } from "@/lib/meals/route-auth";
 import { generateRecipesSchema } from "@/lib/meals/schemas/generate";
-import { shoppingSyncSchema } from "@/lib/meals/schemas/shopping";
-import { setShoppingItemsChecked, toggleShoppingItem } from "@/lib/meals/shopping/items";
 import { type ModuleName, moduleEnabled, serverInfo } from "@/lib/server-info";
 
 const API_TOKEN_REQUIRED = "A valid API token is required (Authorization: Bearer …).";
@@ -157,23 +154,6 @@ export function apiRoutes(db: Db): Hono {
       return { recipe, ingredients: listIngredients(db), units: listUnits(db) };
     }),
   );
-  // Ticks / unticks a shopping item, or unticks several (the app's offline queue replays here).
-  api.post("/v1/families/:familyId/shopping/toggle", (c) =>
-    handle(async () => {
-      requireModule("meals");
-      const familyId = c.req.param("familyId");
-      await requireFamilyRequest(c.req.raw, familyId, "editor");
-      const body = shoppingSyncSchema.parse(await c.req.raw.json().catch(() => null));
-      if (body.kind === "toggle") return { checked: toggleShoppingItem(db, familyId, body.itemId) };
-      if (body.kind === "set") {
-        if (setShoppingItemsChecked(db, familyId, [body.itemId], body.checked) === 0) {
-          throw new AuthError(404, "Item not found");
-        }
-        return { checked: body.checked };
-      }
-      return { count: setShoppingItemsChecked(db, familyId, body.itemIds, false) };
-    }),
-  );
   // Place autocomplete via Photon (search locations, the family's home address).
   api.get("/v1/families/:familyId/geocode", (c) =>
     handle(async () => {
@@ -219,7 +199,6 @@ export function apiRoutes(db: Db): Hono {
       handleFamily,
       handleCalendar,
       handleEvents,
-      handleFinanceApp,
       handleFinance,
       handleMealsApp,
       handleMealPlanApp,

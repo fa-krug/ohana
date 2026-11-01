@@ -81,8 +81,12 @@ targets:
         NSCameraUsageDescription: "Ohana uses the camera for recipe pictures and to scan receipts."
         NSMicrophoneUsageDescription: "Ohana listens when you dictate a message to the assistant."
         NSSpeechRecognitionUsageDescription: "Ohana turns what you dictate to the assistant into text."
-        # The sync with an Apple Calendar calendar (Features/Calendar/AppleCalendarSync.swift).
-        NSCalendarsFullAccessUsageDescription: "Ohana syncs your family’s calendar with the Apple Calendar calendar you pick."
+        # The shopping list in Reminders (Core/Reminders), and the assistant's Reminders tools.
+        NSRemindersFullAccessUsageDescription: "Ohana writes what the meal plan needs into the Reminders list you choose, and the assistant reads and changes your reminders when you ask it to."
+        NSRemindersUsageDescription: "Ohana writes what the meal plan needs into the Reminders list you choose, and the assistant reads and changes your reminders when you ask it to."
+        # The sync with an Apple Calendar calendar (Features/Calendar/AppleCalendarSync.swift), and
+        # the assistant's Calendar tools.
+        NSCalendarsFullAccessUsageDescription: "Ohana syncs your family’s calendar with the Apple Calendar calendar you pick, and the assistant reads and changes your calendars when you ask it to."
         # The cook view's timers on the Lock Screen and in the Dynamic Island.
         NSSupportsLiveActivities: true
         CFBundleURLTypes:
@@ -98,9 +102,6 @@ targets:
             UTTypeConformsTo: [public.data]
           - UTTypeIdentifier: de.fa-krug.ohana.calendar-event
             UTTypeDescription: Ohana calendar event
-            UTTypeConformsTo: [public.data]
-          - UTTypeIdentifier: de.fa-krug.ohana.shopping-item
-            UTTypeDescription: Ohana shopping item
             UTTypeConformsTo: [public.data]
     settings:
       base:
@@ -216,9 +217,12 @@ targets:
         ITSAppUsesNonExemptEncryption: false
         NSHumanReadableCopyright: "Copyright © 2026 Sascha Krug. All rights reserved."
         LSApplicationCategoryType: public.app-category.lifestyle
+        # The shopping list in Reminders (Core/Reminders), and the assistant's Reminders tools.
+        NSRemindersFullAccessUsageDescription: "Ohana writes what the meal plan needs into the Reminders list you choose, and the assistant reads and changes your reminders when you ask it to."
+        NSRemindersUsageDescription: "Ohana writes what the meal plan needs into the Reminders list you choose, and the assistant reads and changes your reminders when you ask it to."
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
-        NSCalendarsFullAccessUsageDescription: "Ohana syncs your family’s calendar with the Apple Calendar calendar you pick."
+        NSCalendarsFullAccessUsageDescription: "Ohana syncs your family’s calendar with the Apple Calendar calendar you pick, and the assistant reads and changes your calendars when you ask it to."
         CFBundleURLTypes:
           - CFBundleURLName: de.fa-krug.Ohana.pairing
             CFBundleURLSchemes: [ohana]
@@ -230,9 +234,6 @@ targets:
             UTTypeConformsTo: [public.data]
           - UTTypeIdentifier: de.fa-krug.ohana.calendar-event
             UTTypeDescription: Ohana calendar event
-            UTTypeConformsTo: [public.data]
-          - UTTypeIdentifier: de.fa-krug.ohana.shopping-item
-            UTTypeDescription: Ohana shopping item
             UTTypeConformsTo: [public.data]
     settings:
       base:

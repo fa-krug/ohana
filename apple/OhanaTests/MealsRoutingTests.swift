@@ -29,15 +29,6 @@ struct MealsRoutingTests {
         #expect(route.destination == nil)
     }
 
-    @Test func picksAShoppingList() throws {
-        let list = try #require(MealsRouting(.shoppingList(id: "l2")))
-        #expect(list.segment == .shopping)
-        #expect(list.shoppingListID == "l2")
-        let latest = try #require(MealsRouting(.shoppingList(id: nil)))
-        #expect(latest.segment == .shopping)
-        #expect(latest.shoppingListID == nil)
-    }
-
     @Test func followsWebLinks() throws {
         func routing(_ path: String) -> MealsRouting? {
             AppRoute.parse(webPath: path).flatMap { MealsRouting($0.route) }
@@ -45,7 +36,7 @@ struct MealsRoutingTests {
         #expect(routing("/f/fam/meals/recipes/r9")?.destination == .recipe(id: "r9"))
         #expect(routing("/f/fam/meals/recipes/new")?.createsRecipe == true)
         #expect(routing("/f/fam/meals/cook/r9")?.destination == .cook(recipeID: "r9"))
-        #expect(routing("/f/fam/meals/shopping/l1")?.shoppingListID == "l1")
+        #expect(routing("/f/fam/meals/shopping/l1")?.segment == .plan)
         #expect(routing("/f/fam/meals/plan")?.segment == .plan)
         #expect(routing("/f/fam/meals")?.segment == nil)
     }

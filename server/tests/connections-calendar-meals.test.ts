@@ -5,7 +5,7 @@
 import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Db } from "@/lib/db";
-import { calEntries, calEntryTypes, ingredients, mealPlanEntries, recipeIngredients, recipes, shoppingLists, units } from "@/lib/db/schema";
+import { calEntries, calEntryTypes, ingredients, mealPlanEntries, recipeIngredients, recipes, units } from "@/lib/db/schema";
 import { createFamilyApi } from "@/lib/api/family-api";
 import { createToken } from "@/lib/auth/tokens";
 import { handleFamily } from "@/lib/calendar/family-routes";
@@ -15,6 +15,7 @@ import { mulberry32 } from "@/lib/meals/domain/rng";
 import { awayDays } from "@/lib/meals/meal-plan/away";
 import { setupMealPlan } from "@/lib/meals/meal-plan/setup";
 import { renewIteration } from "@/lib/meals/meal-plan/iterations";
+import { shoppingNeeds } from "@/lib/meals/shopping/needs";
 import { familyDashboard } from "@/lib/families/dashboard";
 import { createTestDb } from "@/lib/test/db";
 import { NOW, makeFamily, makeUser } from "@/lib/test/factories";
@@ -107,8 +108,9 @@ describe("meal plan and away days", () => {
         .map((e) => e.date)
         .sort();
     expect(days()).toEqual(["2026-06-01", "2026-06-02", "2026-06-06", "2026-06-07"]);
-    // The shopping list only has what the days at home need.
-    expect(db.select().from(shoppingLists).where(eq(shoppingLists.iterationId, iterationId)).all().length).toBeGreaterThan(0);
+    // What the plan needs is only what the days at home need.
+    const needed = shoppingNeeds(db, familyId, { from: "2026-01-01", locale: "en" });
+    expect(needed.length).toBeGreaterThan(0);
 
     // A trip planned later is respected when the plan is renewed.
     mark("trip", ["2026-06-07"]);

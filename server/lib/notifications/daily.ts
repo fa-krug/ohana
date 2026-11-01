@@ -1,17 +1,14 @@
-// The worker's daily notifications (phase 7), one check per family and kind:
+// The worker's daily notifications (phase 7), one check per family:
 //
 // - coverage_gap: weekdays in the next 14 days that need cover (e.g. a day-care closure) but
 //   have none. One message listing them, at most once a day (from NOTIFY_HOUR), and only when
 //   a day is among them that wasn't notified before: the days already told about are kept
 //   (and dropped once covered, so a day that loses its cover again is told again).
-// - shopping_reminder: the evening before a shopping day (from SHOPPING_REMINDER_HOUR), what is
-//   still on that day's shopping list; once per shopping day.
 //
 // Days are the server's local days (the container's TZ), like the backup hour.
 
-import { and, asc, desc, eq } from "drizzle-orm";
 import type { Db } from "@/lib/db";
-import { families, ingredients, mealPlans, planIterations, shoppingListItems, shoppingLists, units } from "@/lib/db/schema";
+import { families } from "@/lib/db/schema";
 import { getAppUrl } from "@/lib/auth/config";
 import { addDays, consecutiveRuns } from "@/lib/calendar/dates";
 import { gapDays } from "@/lib/calendar/gaps";
@@ -19,12 +16,9 @@ import { DrizzleCalendarStore } from "@/lib/calendar/store";
 import type { Sender } from "./index";
 import { familyLocale, translator } from "./locale";
 import { notifyEvent, readState, writeState } from "./prefs";
-import { formatQuantity } from "@/lib/meals/display/format";
-import { moduleEnabled } from "@/lib/server-info";
 import type { RelayClient } from "@/lib/push/relay";
 
 export const COVERAGE_DAYS = 14;
-const MAX_ITEMS = 30;
 
 /** The server's local calendar day ("YYYY-MM-DD"). */
 export function localDay(now: Date): string {
@@ -108,80 +102,16 @@ export async function checkCoverage(
   return sent ? days : [];
 }
 
-type ShoppingState = { lastDate: string };
-
-/** The shopping list of `day` (the newest, if a plan was renewed), with what is still to buy. */
-export function shoppingListFor(db: Db, familyId: string, day: string, locale: "en" | "de") {
-  const list = db
-    .select({ id: shoppingLists.id })
-    .from(shoppingLists)
-    .innerJoin(planIterations, eq(planIterations.id, shoppingLists.iterationId))
-    .innerJoin(mealPlans, eq(mealPlans.id, planIterations.mealPlanId))
-    .where(and(eq(mealPlans.familyId, familyId), eq(shoppingLists.shoppingDate, day)))
-    .orderBy(desc(shoppingLists.createdAt))
-    .get();
-  if (!list) return null;
-  const items = db
-    .select({
-      name: locale === "de" ? ingredients.nameDe : ingredients.nameEn,
-      quantity: shoppingListItems.quantity,
-      unit: units.abbreviation,
-    })
-    .from(shoppingListItems)
-    .innerJoin(ingredients, eq(ingredients.id, shoppingListItems.ingredientId))
-    .innerJoin(units, eq(units.id, shoppingListItems.unitId))
-    .where(and(eq(shoppingListItems.shoppingListId, list.id), eq(shoppingListItems.isChecked, false)))
-    .orderBy(asc(locale === "de" ? ingredients.nameDe : ingredients.nameEn))
-    .all();
-  return { id: list.id, items };
-}
-
-/** The evening reminder of one family: tomorrow's shopping list, once per shopping day. */
-export async function remindShopping(
-  db: Db,
-  familyId: string,
-  now: Date,
-  opts: { send?: Sender; push?: RelayClient; today?: string } = {},
-): Promise<boolean> {
-  const tomorrow = addDays(opts.today ?? localDay(now), 1);
-  const state = readState<ShoppingState>(db, familyId, "shopping_reminder");
-  if (state.lastDate === tomorrow) return false;
-  const locale = familyLocale(db, familyId);
-  const list = shoppingListFor(db, familyId, tomorrow, locale);
-  if (!list || !list.items.length) return false;
-  const t = translator(locale);
-  const shown = list.items.slice(0, MAX_ITEMS).map((i) => `• ${[formatQuantity(i.quantity), i.unit, i.name].filter(Boolean).join(" ")}`);
-  if (list.items.length > MAX_ITEMS) shown.push(t("notifications.shopping.more", { count: list.items.length - MAX_ITEMS }));
-  const res = await notifyEvent(
-    db,
-    familyId,
-    "shopping_reminder",
-    {
-      title: t("notifications.shopping.title", { count: list.items.length }),
-      body: shown.join("\n"),
-      url: `${getAppUrl()}/f/${familyId}/meals/shopping/${list.id}`,
-      collapseKey: `shopping:${list.id}`,
-    },
-    { send: opts.send, push: opts.push },
-  );
-  if (!res) return false; // turned off: nothing remembered, so turning it on still reminds
-  writeState(db, familyId, "shopping_reminder", { lastDate: tomorrow }, now);
-  return res.sent > 0;
-}
-
 /** Hour of day (server time) from which the coverage check runs. */
 const NOTIFY_HOUR = Number(process.env.NOTIFY_HOUR ?? 7);
-/** Hour of day (server time) from which tomorrow's shopping list is sent. */
-const SHOPPING_REMINDER_HOUR = Number(process.env.SHOPPING_REMINDER_HOUR ?? 18);
 
 /** One worker tick: the due checks of every family. A failing family doesn't stop the others. */
 export async function dailyNotifications(db: Db, now: Date): Promise<void> {
   const hour = now.getHours();
-  if (hour < NOTIFY_HOUR && hour < SHOPPING_REMINDER_HOUR) return;
+  if (hour < NOTIFY_HOUR) return;
   for (const { id } of db.select({ id: families.id }).from(families).all()) {
     try {
-      if (hour >= NOTIFY_HOUR) await checkCoverage(db, id, now);
-      if (hour >= SHOPPING_REMINDER_HOUR && moduleEnabled("meals")) await remindShopping(db, id, now);
+      await checkCoverage(db, id, now);
     } catch (e) {
       console.error(`[notifications] daily check of family ${id} failed:`, e);
     }

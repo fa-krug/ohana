@@ -66,7 +66,7 @@ enum AssistantPages {
             return [String(localized: "How much did we spend on groceries this year, per month?"),
                     String(localized: "Sort our uncategorized transactions into categories.")]
         case "meals":
-            return [planWithout, String(localized: "What’s still on the shopping list? Add 2 l of milk.")]
+            return [planWithout, String(localized: "What do we need to buy for this week’s meals?")]
         case "appointments":
             return [String(localized: "Find a dermatologist appointment before June."),
                     String(localized: "Which searches found something, and what is the earliest slot?")]

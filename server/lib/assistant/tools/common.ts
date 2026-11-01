@@ -1,7 +1,7 @@
 // What every tool file shares: the shapes of a tool, its result and its context, the phrases
 // of the change summaries, and the checks and limits the tools have in common (ported from
 // family-planner's ai/tools.ts, which is split by module here: calendar.ts, finance.ts,
-// general.ts, web.ts; a module adds its own file and registers it in index.ts).
+// general.ts, web.ts, reminders.ts; a module adds its own file and registers it in index.ts).
 
 import { HttpError } from "@/lib/api/http";
 import type { CalendarStore } from "@/lib/calendar/store";
@@ -11,6 +11,7 @@ import type { FinanceStore } from "@/lib/finance/store";
 import type { NetOptions } from "../net";
 import type { ToolSpec } from "../provider";
 import type { SearchProvider } from "../store";
+import type { RemindersEdit, RemindersSnapshot } from "./reminders";
 
 export interface UndoStep {
   method: "POST" | "PATCH" | "DELETE";
@@ -37,6 +38,9 @@ export interface ToolResult {
   summary: string;
   change?: Change;
   question?: Question;
+  /** A change of the user's Reminders (edit_reminders): the turn stops until they apply or
+   *  decline it in the app. */
+  reminders?: RemindersEdit;
 }
 
 export interface ToolContext {
@@ -58,6 +62,9 @@ export interface ToolContext {
   lookups?: Partial<Lookups>;
   net: NetOptions;
   search: { provider: Exclude<SearchProvider, "none">; key: string } | null;
+  /** The user's Reminders as the app sent them with the latest message; undefined: the app
+   *  can't reach them (no access on the device), and the Reminders tools are off. */
+  reminders?: RemindersSnapshot;
   signal?: AbortSignal;
 }
 
@@ -71,6 +78,8 @@ export interface Tool {
   spec: ToolSpec["function"];
   write?: boolean;
   needsSearch?: boolean;
+  /** Offered only when the app sent the user's Reminders (ToolContext.reminders). */
+  needsReminders?: boolean;
   run(args: Record<string, unknown>, ctx: ToolContext): Promise<ToolResult>;
 }
 

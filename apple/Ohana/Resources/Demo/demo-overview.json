@@ -140,8 +140,7 @@
     { "kind": "entry", "date": "{{day:24}}", "to": "{{day:26}}", "name": "Grandma visits", "color": "#f97316" }
   ],
   "meals": {
-    "today": { "recipeId": "recipe-lasagne", "recipeTitle": "Vegetable lasagne", "isLeftover": false },
-    "shopping": { "id": "list-1", "shoppingDate": "{{day:1}}", "open": 8, "total": 12 }
+    "today": { "recipeId": "recipe-lasagne", "recipeTitle": "Vegetable lasagne", "isLeftover": false }
   },
   "finance": {
     "currency": "EUR",

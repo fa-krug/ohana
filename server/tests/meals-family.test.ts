@@ -7,7 +7,7 @@ import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import * as schema from "@/lib/db/schema";
-import { families, mealPlanEntries, mealPlans, mealTags, planIterations, recipes, shoppingListItems, shoppingLists, ingredients, units } from "@/lib/db/schema";
+import { families, mealPlanEntries, mealPlans, mealTags, planIterations, recipes, ingredients, units } from "@/lib/db/schema";
 import { createTestDb } from "@/lib/test/db";
 import { makeFamily, makeUser, NOW } from "@/lib/test/factories";
 import { DEFAULT_TAG_COUNT } from "@/lib/meals/recipes/tag-defaults";
@@ -77,19 +77,13 @@ describe("getMealsSummary", () => {
     db.insert(mealPlans).values({ id: "mp", familyId: family.id, createdAt: NOW }).run();
     db.insert(planIterations).values({ id: "it", mealPlanId: "mp", startDate: "2026-11-01", endDate: "2026-11-07", createdAt: NOW }).run();
     db.insert(mealPlanEntries).values({ id: "e1", iterationId: "it", date: "2026-11-02", mealType: "LUNCH", recipeId: "r1", servings: 2 }).run();
-    db.insert(shoppingLists).values({ id: "sl", iterationId: "it", shoppingDate: "2026-11-06", createdAt: NOW }).run();
-    db.insert(shoppingListItems).values([
-      { id: "i1", shoppingListId: "sl", ingredientId: 1, quantity: "100", unitId: 1, isChecked: true },
-      { id: "i2", shoppingListId: "sl", ingredientId: 2, quantity: "200", unitId: 1 },
-    ]).run();
     return { db, family };
   }
 
-  it("shows today's meal and what is left to buy", () => {
+  it("shows today's meal", () => {
     const { db, family } = setup();
     expect(getMealsSummary(db, family.id, "2026-11-02")).toEqual({
       today: { recipeId: "r1", recipeTitle: "Soup", isLeftover: false },
-      shopping: { id: "sl", shoppingDate: "2026-11-06", open: 1, total: 2 },
     });
   });
 
@@ -97,6 +91,6 @@ describe("getMealsSummary", () => {
     const { db, family } = setup();
     expect(getMealsSummary(db, family.id, "2026-11-03").today).toBeNull();
     const other = makeFamily(db, makeUser(db).id);
-    expect(getMealsSummary(db, other.id, "2026-11-02")).toEqual({ today: null, shopping: null });
+    expect(getMealsSummary(db, other.id, "2026-11-02")).toEqual({ today: null });
   });
 });

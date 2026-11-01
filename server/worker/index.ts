@@ -1,7 +1,7 @@
 // The worker process: everything that runs in the background, apart from the HTTP server,
 // so that a slow job never blocks a request. Same image as the server, started with
 // `docker-entrypoint.sh worker`. Today: cleanup, the nightly backup and the appointment
-// searches (every APPT_TICK_SECONDS), the daily notifications (coverage, shopping reminder)
+// searches (every APPT_TICK_SECONDS), the daily notifications (coverage)
 // and the assistant's chat turns (looked for every ASSISTANT_TICK_MS, a cheap indexed query).
 import { setTimeout as sleep } from "node:timers/promises";
 import { db, sqlite } from "../lib/db/client";
@@ -50,7 +50,7 @@ async function tick(now: Date): Promise<void> {
     const { file, removed: old } = await backupDatabase(sqlite, BACKUP_DIR, now, BACKUP_KEEP);
     console.log(`[worker] backup written to ${file}${old.length ? `, removed ${old.join(", ")}` : ""}`);
   }
-  // Uncovered days in the next two weeks, tomorrow's shopping list (phase 7).
+  // Uncovered days in the next two weeks (phase 7).
   await dailyNotifications(db, now);
 }
 

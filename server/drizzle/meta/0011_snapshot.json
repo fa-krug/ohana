@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "03aa8a2e-c688-4cf6-99f8-7d3ea63ef57c",
+  "id": "54f47b8c-bf29-4a00-8fcf-b9aa7368ff04",
   "prevId": "22bb1e11-18c0-4c19-890d-ddf66570e75e",
   "tables": {
     "auth_tokens": {
@@ -373,6 +373,20 @@
           "notNull": true,
           "autoincrement": false
         },
+        "feed_id": {
+          "name": "feed_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "legacy_id": {
+          "name": "legacy_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "home_address": {
           "name": "home_address",
           "type": "text",
@@ -409,7 +423,22 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "families_feed_id_unique": {
+          "name": "families_feed_id_unique",
+          "columns": [
+            "feed_id"
+          ],
+          "isUnique": true
+        },
+        "families_legacy_id_unique": {
+          "name": "families_legacy_id_unique",
+          "columns": [
+            "legacy_id"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
@@ -2844,234 +2873,6 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "shopping_item_adds": {
-      "name": "shopping_item_adds",
-      "columns": {
-        "shopping_list_id": {
-          "name": "shopping_list_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "client_id": {
-          "name": "client_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "item_id": {
-          "name": "item_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "merged": {
-          "name": "merged",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "previous_quantity": {
-          "name": "previous_quantity",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "shopping_item_adds_shopping_list_id_shopping_lists_id_fk": {
-          "name": "shopping_item_adds_shopping_list_id_shopping_lists_id_fk",
-          "tableFrom": "shopping_item_adds",
-          "tableTo": "shopping_lists",
-          "columnsFrom": [
-            "shopping_list_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "shopping_item_adds_shopping_list_id_client_id_pk": {
-          "columns": [
-            "shopping_list_id",
-            "client_id"
-          ],
-          "name": "shopping_item_adds_shopping_list_id_client_id_pk"
-        }
-      },
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "shopping_list_items": {
-      "name": "shopping_list_items",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "shopping_list_id": {
-          "name": "shopping_list_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "ingredient_id": {
-          "name": "ingredient_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "quantity": {
-          "name": "quantity",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "unit_id": {
-          "name": "unit_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "is_checked": {
-          "name": "is_checked",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": false
-        }
-      },
-      "indexes": {
-        "shopping_list_items_shopping_list_id_idx": {
-          "name": "shopping_list_items_shopping_list_id_idx",
-          "columns": [
-            "shopping_list_id"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "shopping_list_items_shopping_list_id_shopping_lists_id_fk": {
-          "name": "shopping_list_items_shopping_list_id_shopping_lists_id_fk",
-          "tableFrom": "shopping_list_items",
-          "tableTo": "shopping_lists",
-          "columnsFrom": [
-            "shopping_list_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "shopping_list_items_ingredient_id_ingredients_id_fk": {
-          "name": "shopping_list_items_ingredient_id_ingredients_id_fk",
-          "tableFrom": "shopping_list_items",
-          "tableTo": "ingredients",
-          "columnsFrom": [
-            "ingredient_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "shopping_list_items_unit_id_units_id_fk": {
-          "name": "shopping_list_items_unit_id_units_id_fk",
-          "tableFrom": "shopping_list_items",
-          "tableTo": "units",
-          "columnsFrom": [
-            "unit_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "shopping_lists": {
-      "name": "shopping_lists",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "iteration_id": {
-          "name": "iteration_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "shopping_date": {
-          "name": "shopping_date",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "shopping_lists_iteration_id_idx": {
-          "name": "shopping_lists_iteration_id_idx",
-          "columns": [
-            "iteration_id"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "shopping_lists_iteration_id_plan_iterations_id_fk": {
-          "name": "shopping_lists_iteration_id_plan_iterations_id_fk",
-          "tableFrom": "shopping_lists",
-          "tableTo": "plan_iterations",
-          "columnsFrom": [
-            "iteration_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
     "step_ingredients": {
       "name": "step_ingredients",
       "columns": {
@@ -3452,13 +3253,6 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
-        },
-        "groceries_category_id": {
-          "name": "groceries_category_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
         }
       },
       "indexes": {},
@@ -3733,13 +3527,6 @@
           "notNull": true,
           "autoincrement": false
         },
-        "end_day": {
-          "name": "end_day",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
         "start": {
           "name": "start",
           "type": "text",
@@ -3793,35 +3580,6 @@
           "autoincrement": false,
           "default": "''"
         },
-        "rrule": {
-          "name": "rrule",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "exdates": {
-          "name": "exdates",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'[]'"
-        },
-        "series_id": {
-          "name": "series_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "occurrence": {
-          "name": "occurrence",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
         "source": {
           "name": "source",
           "type": "text",
@@ -3867,14 +3625,6 @@
             "day"
           ],
           "isUnique": false
-        },
-        "cal_events_series_occurrence_idx": {
-          "name": "cal_events_series_occurrence_idx",
-          "columns": [
-            "series_id",
-            "occurrence"
-          ],
-          "isUnique": true
         }
       },
       "foreignKeys": {
@@ -3884,19 +3634,6 @@
           "tableTo": "families",
           "columnsFrom": [
             "family_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "cal_events_series_id_cal_events_id_fk": {
-          "name": "cal_events_series_id_cal_events_id_fk",
-          "tableFrom": "cal_events",
-          "tableTo": "cal_events",
-          "columnsFrom": [
-            "series_id"
           ],
           "columnsTo": [
             "id"

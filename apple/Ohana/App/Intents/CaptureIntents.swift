@@ -2,16 +2,17 @@ import AppIntents
 import Foundation
 
 // Siri / Shortcuts actions that put something into Ohana without opening the app: an item on the
-// shopping list, an event in the calendar, a recipe from a web page. They talk to the server like
-// the app (`IntentConnection`), with the family the app shows.
+// shopping list (in Reminders), an event in the calendar, a recipe from a web page. The calendar
+// and recipes talk to the server like the app (`IntentConnection`), with the family the app shows.
 
 // MARK: Shopping list
 
-/// "Add milk to the shopping list": adds an item to the newest shopping list
-/// (POST …/meals/shopping/lists/{id}/items, as the shopping page's Add item).
-struct AddToShoppingListIntent: AppIntent {
+/// "Add milk to the shopping list": adds a reminder to the Reminders list the family's shopping
+/// goes to on this device (`ShoppingReminders`; chosen in the app). Works offline: it needs no
+/// server.
+struct AddShoppingReminderIntent: AppIntent {
     static let title: LocalizedStringResource = "Add to Shopping List"
-    static let description = IntentDescription("Adds an item to the family’s shopping list in Ohana.")
+    static let description = IntentDescription("Adds an item to the family’s shopping list in Reminders, the list chosen in Ohana.")
     static let openAppWhenRun = false
 
     @Parameter(title: "Item", requestValueDialog: "What should go on the shopping list?")
@@ -31,53 +32,36 @@ struct AddToShoppingListIntent: AppIntent {
         let name = item.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { throw OhanaIntentError.emptyText }
         guard let amount = ShoppingIntentLogic.quantityText(quantity) else { throw OhanaIntentError.badQuantity }
-        let connection = try await IntentConnection.load(requiring: [.meals])
-        let api = connection.api
-        let overview: ShoppingIntentLogic.Overview = try await OhanaIntentError.wrapping {
-            try await api.get("/meals/shopping")
+        let title = ShoppingIntentLogic.title(name: name, quantity: amount, unit: unit)
+        let list = try await Self.add(title)
+        return .result(dialog: IntentDialog("Added \(title) to \(list)."))
+    }
+
+    /// Adds `title` to the family's shopping list in Reminders; the list's name.
+    @MainActor
+    private static func add(_ title: String) throws -> String {
+        guard let connection = SharedConnection.load(),
+              let familyID = connection.familyID ?? UserDefaults.standard.string(forKey: "selectedFamilyID")
+        else { throw OhanaIntentError.notConnected }
+        guard let listID = ShoppingReminders.shared.settings(server: connection.server, familyID: familyID).listID else {
+            throw OhanaIntentError.noRemindersList
         }
-        guard let list = overview.latest else { throw OhanaIntentError.noShoppingList }
-        let units: ShoppingIntentLogic.Units = try await OhanaIntentError.wrapping {
-            try await api.get("/meals/shopping/units")
+        let store = RemindersStore.shared
+        store.refreshAccess()
+        guard store.access.isGranted else { throw OhanaIntentError.noRemindersAccess }
+        guard let list = store.list(listID) else { throw OhanaIntentError.noRemindersList }
+        do {
+            try store.add(ReminderDraft(title: title), to: listID)
+        } catch {
+            throw OhanaIntentError.server(error.localizedDescription)
         }
-        guard let chosen = ShoppingIntentLogic.unit(named: unit, in: units.units) else {
-            throw OhanaIntentError.unknownUnit(unit ?? "")
-        }
-        let input = ShoppingIntentLogic.AddItem(name: name, quantity: amount, unitId: chosen.id)
-        try await OhanaIntentError.wrapping {
-            try await api.perform(.post, "/meals/shopping/lists/\(list.id)/items", body: input)
-        }
-        return .result(dialog: IntentDialog("Added \(name) to the shopping list."))
+        return list.title
     }
 }
 
-/// The shopping intent's pieces that don't need the server.
+/// The shopping intent's pieces that don't need Reminders.
 nonisolated enum ShoppingIntentLogic {
-    /// GET /meals/shopping, the part the intent needs.
-    struct Overview: Decodable {
-        struct List: Decodable { let id: String }
-        let latest: List?
-    }
-
-    /// GET /meals/shopping/units
-    struct Units: Decodable { let units: [Unit] }
-
-    struct Unit: Decodable, Equatable {
-        let id: Int
-        let abbreviation: String
-        let nameEn: String
-        let nameDe: String
-    }
-
-    /// POST /meals/shopping/lists/{id}/items (server/lib/meals/app-routes-plan.ts addItemSchema).
-    struct AddItem: Encodable, Equatable {
-        let name: String
-        /// A decimal string: "1", "2.5".
-        let quantity: String
-        let unitId: Int
-    }
-
-    /// The quantity as the server takes it ("1", "2.5", "0.333"); nil when it isn't above 0.
+    /// The quantity as a decimal ("1", "2.5", "0.333"); nil when it isn't above 0.
     static func quantityText(_ value: Double) -> String? {
         guard value.isFinite, value > 0 else { return nil }
         let rounded = (value * 1000).rounded() / 1000
@@ -85,26 +69,12 @@ nonisolated enum ShoppingIntentLogic {
         return rounded.formatted(.number.locale(Locale(identifier: "en_US_POSIX")).grouping(.never).precision(.fractionLength(0...3)))
     }
 
-    /// The unit called `name` (its abbreviation, English or German name, also in the plural); with
-    /// no name the shopping page's default, pieces ("Stk"), else the first. Nil for a name Ohana
-    /// doesn't know.
-    static func unit(named name: String?, in units: [Unit]) -> Unit? {
-        let wanted = normalize(name ?? "")
-        guard !wanted.isEmpty else { return units.first { $0.abbreviation == "Stk" } ?? units.first }
-        return units.first { $0.abbreviation.lowercased() == wanted }
-            ?? units.first { unit in
-                let en = unit.nameEn.lowercased(), de = unit.nameDe.lowercased()
-                return [en, en + "s", en + "es", de, de + "e", de + "n"].contains(wanted)
-            }
-            ?? (["pieces", "piece", "pcs", "pc", "stück", "stk"].contains(wanted)
-                ? units.first { $0.abbreviation == "Stk" } : nil)
-    }
-
-    private static func normalize(_ name: String) -> String {
-        var text = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        if text.hasSuffix(".") { text.removeLast() }
-        // British spellings of the seeded units.
-        return text.replacing("litre", with: "liter").replacing("gramme", with: "gram")
+    /// The reminder's title: "Milk" for one without a unit, else like the shopping sync's,
+    /// "2 l Milk", "1 kg Flour".
+    static func title(name: String, quantity: String, unit: String?, locale: Locale = .current) -> String {
+        let unit = unit?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if unit.isEmpty, quantity == "1" { return name }
+        return [ShoppingQuantity.format(quantity, locale: locale), unit, name].filter { !$0.isEmpty }.joined(separator: " ")
     }
 }
 

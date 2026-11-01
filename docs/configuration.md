@@ -47,7 +47,6 @@ Only `APP_URL` and `AUTH_SECRET` are required. Developers running from source us
 | Variable | Default | |
 | --- | --- | --- |
 | `NOTIFY_HOUR` | `7` | From this hour: days nobody covers in the next two weeks. |
-| `SHOPPING_REMINDER_HOUR` | `18` | From this hour: tomorrow's shopping list (if the family turned the reminder on). |
 
 ## Assistant
 

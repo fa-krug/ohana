@@ -161,7 +161,6 @@ final class FinanceStore {
     /// The columns the overview compares, for the period of `summary`.
     var comparisons: [FinanceComparison]?
     var balances: FinanceBalances?
-    var shoppingLinks = FinanceShoppingLinks.none
     /// Whether the assistant is set up: auto-categorize uses the AI too.
     var aiConfigured = false
     /// A list request is on its way and what's shown isn't its copy on the device (the list dims).
@@ -294,13 +293,11 @@ final class FinanceStore {
         }
     }
 
-    /// The assistant's status and the shopping links: nice to have, so failures stay quiet. Not
-    /// asked for a module the server has off.
+    /// The assistant's status: nice to have, so failures stay quiet. Not asked when the server has
+    /// the assistant off.
     private func loadExtras() async {
         if family.isEnabled(.assistant),
            let status = try? await api.get("/ai/settings", as: FinanceAIStatus.self) { aiConfigured = status.configured }
-        if family.isEnabled(.meals),
-           let links = try? await api.get("/finance/shopping-links", as: FinanceShoppingLinks.self) { shoppingLinks = links }
     }
 
     func loadList() async {
@@ -836,15 +833,9 @@ final class FinanceStore {
     /// Whether a new transaction left without a category can be sorted when it is saved.
     var sortsOnSave: Bool { family.isEnabled(.assistant) && !categories.isEmpty }
 
-    /// The category a groceries purchase goes to (the setting, else the default one).
-    var groceriesCategory: FinanceCategory? {
-        category(overview?.groceriesCategoryId) ?? defaultGroceries
-    }
-
     /// Sorts a scanned receipt's new transaction into a category (POST /ai/categorize: like
-    /// similar ones, else the AI); the toast names it and the shopping list the transaction now
-    /// links to (a groceries category near a shopping day). Quiet when nothing fits.
-    func categorizeReceipt(_ id: String, date: String) async {
+    /// similar ones, else the AI); the toast names it. Quiet when nothing fits.
+    func categorizeReceipt(_ id: String) async {
         do {
             let res: FinanceCategorizeResult = try await api.send(.post, "/ai/categorize", body: JSONValue.object([
                 "ids": FinanceJSON.ids([id]), "lang": .string(language),
@@ -853,11 +844,7 @@ final class FinanceStore {
             await changed()
             let categoryId = res.assignments?.first { $0.id == id }?.categoryId
             let name = category(categoryId)?.label ?? ""
-            if let trip = shoppingLinks.list(for: date, categoryId: categoryId), let day = Day(trip.date) {
-                show(String(localized: "Sorted into \(name), linked to the shopping of \(day.formatted())"), undo: res.inverse)
-            } else {
-                show(String(localized: "Sorted into \(name)"), undo: res.inverse)
-            }
+            show(String(localized: "Sorted into \(name)"), undo: res.inverse)
         } catch is CancellationError {
         } catch {
             ErrorBanner.shared.show(String(localized: "The AI couldn’t sort: \(error.localizedDescription)"))
@@ -929,19 +916,9 @@ final class FinanceStore {
 
     func setCurrency(_ currency: String) async { await saveSettings(["currency": .string(currency)]) }
 
-    /// The category the shopping lists read their spending from; nil: the default.
-    func setGroceriesCategory(_ id: String?) async { await saveSettings(["groceriesCategoryId": FinanceJSON.string(id)]) }
-
     /// Sets the statistic average the overview compares with; nil removes it.
     func setBenchmark(_ benchmark: FinanceBenchmark?) async {
         await saveSettings(["benchmark": benchmark.map { FinanceJSON.encode($0) } ?? .null])
-    }
-
-    /// The default category, as lib/finance/groceries.ts picks it.
-    var defaultGroceries: FinanceCategory? {
-        categories.filter { $0.id == "groceries" || ["groceries", "lebensmittel"].contains($0.name.trimmingCharacters(in: .whitespaces).lowercased()) }
-            .sorted { ($0.parentId == nil ? 0 : 1, $0.position) < ($1.parentId == nil ? 0 : 1, $1.position) }
-            .first
     }
 
     /// A new category at the top level or (with its color and kind) under `parent`.

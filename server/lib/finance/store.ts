@@ -76,9 +76,6 @@ export interface FinanceSettingsRow {
   csv_mappings: unknown[];
   /** Not set: null. */
   benchmark?: Benchmark | null;
-  /** The groceries category for the shopping lists (phase 7); null: the default (the category
-   *  named Groceries / Lebensmittel). Left as it is when undefined. */
-  groceries_category_id?: string | null;
 }
 
 /** Everything of the finances, for an import that replaces them. */
@@ -332,7 +329,6 @@ export class DrizzleFinanceStore implements FinanceStore {
       currency: row.currency,
       csv_mappings: parseJson<unknown[]>(row.csvMappings, []),
       benchmark: parseJson<Benchmark | null>(row.benchmark, null),
-      groceries_category_id: row.groceriesCategoryId,
     };
   }
 
@@ -341,7 +337,6 @@ export class DrizzleFinanceStore implements FinanceStore {
       currency: row.currency,
       csvMappings: JSON.stringify(row.csv_mappings ?? []),
       benchmark: row.benchmark ? JSON.stringify(row.benchmark) : null,
-      ...(row.groceries_category_id !== undefined ? { groceriesCategoryId: row.groceries_category_id } : {}),
     };
     this.db
       .insert(finSettings)

@@ -5,7 +5,7 @@ import Testing
 struct MealPlanTests {
     /// GET /meals/plan as server/lib/meals/app-routes-plan.ts answers it (trimmed).
     static let planJSON = """
-    {"plan":{"id":"3516752d","iterationWeeks":1,"shoppingDays":[0,3],"servings":2,"knownRatio":"1","defaultLeftoverDays":0,"excludedTagIds":[],"iterations":[{"id":"it-2","startDate":"2026-11-01","endDate":"2026-11-07","status":"ACTIVE","entries":[{"id":"e1","date":"2026-11-01","mealType":"LUNCH","recipeId":"r2","recipeTitle":"Recipe 2","servings":2,"isLeftover":false,"sourceEntryId":null,"isLocked":false},{"id":"e2","date":"2026-11-02","mealType":"LUNCH","recipeId":"r2","recipeTitle":"Recipe 2","servings":2,"isLeftover":true,"sourceEntryId":"e1","isLocked":false}],"shoppingLists":[{"id":"l2","shoppingDate":"2026-11-05","itemCount":3},{"id":"l1","shoppingDate":"2026-11-02","itemCount":4}],"createdAt":"2026-11-01T12:00:00.000Z"},{"id":"it-1","startDate":"2026-10-25","endDate":"2026-10-31","status":"ARCHIVED","entries":[],"shoppingLists":[],"createdAt":"2026-10-25T12:00:00.000Z"}],"createdAt":"2026-11-01T12:00:00.000Z"},"away":{"2026-11-05":["Vacation"]},"tags":[{"id":"t1","category":"CUISINE","nameEn":"American","nameDe":"Amerikanisch"}]}
+    {"plan":{"id":"3516752d","iterationWeeks":1,"shoppingDays":[0,3],"servings":2,"knownRatio":"1","defaultLeftoverDays":0,"excludedTagIds":[],"iterations":[{"id":"it-2","startDate":"2026-11-01","endDate":"2026-11-07","status":"ACTIVE","entries":[{"id":"e1","date":"2026-11-01","mealType":"LUNCH","recipeId":"r2","recipeTitle":"Recipe 2","servings":2,"isLeftover":false,"sourceEntryId":null,"isLocked":false},{"id":"e2","date":"2026-11-02","mealType":"LUNCH","recipeId":"r2","recipeTitle":"Recipe 2","servings":2,"isLeftover":true,"sourceEntryId":"e1","isLocked":false}],"shoppingDates":["2026-11-02","2026-11-05"],"createdAt":"2026-11-01T12:00:00.000Z"},{"id":"it-1","startDate":"2026-10-25","endDate":"2026-10-31","status":"ARCHIVED","entries":[],"shoppingDates":[],"createdAt":"2026-10-25T12:00:00.000Z"}],"createdAt":"2026-11-01T12:00:00.000Z"},"away":{"2026-11-05":["Vacation"]},"tags":[{"id":"t1","category":"CUISINE","nameEn":"American","nameDe":"Amerikanisch"}]}
     """
 
     static func decodePlan() throws -> MealPlanResponse {
@@ -22,7 +22,7 @@ struct MealPlanTests {
         #expect(plan.pastIterations.map(\.id) == ["it-1"])
         let leftover = plan.iterations[0].entries[1]
         #expect(leftover.isLeftover && leftover.sourceEntryId == "e1" && leftover.date == Day("2026-11-02"))
-        #expect(plan.iterations[0].shoppingLists[1].shoppingDate == Day("2026-11-02"))
+        #expect(plan.iterations[0].shoppingDates == [Day("2026-11-02")!, Day("2026-11-05")!])
         #expect(response.away["2026-11-05"] == ["Vacation"])
         #expect(response.tags.first?.nameDe == "Amerikanisch")
         #expect(plan.recipeIDs(in: "it-2") == ["r2"])
@@ -46,14 +46,12 @@ struct MealPlanTests {
     @Test func buildsTheDaysOfAnIteration() throws {
         let response = try Self.decodePlan()
         let plan = try #require(response.plan)
-        let rows = plan.iterations[0].dayRows(shoppingDays: plan.shoppingDays, away: response.away)
+        let rows = plan.iterations[0].dayRows(away: response.away)
         #expect(rows.count == 7)
         #expect(rows.first?.day == Day("2026-11-01"))
         #expect(rows.last?.day == Day("2026-11-07"))
-        // Monday 2 Nov and Thursday 5 Nov are the shopping days, with their lists.
+        // Monday 2 Nov and Thursday 5 Nov are the iteration's shopping days.
         #expect(rows.filter(\.isShoppingDay).map(\.day.description) == ["2026-11-02", "2026-11-05"])
-        #expect(rows[1].shoppingList?.id == "l1")
-        #expect(rows[4].shoppingList?.id == "l2")
         #expect(rows[0].entry?.id == "e1")
         #expect(rows[1].entry?.isLeftover == true)
         // Away and nothing planned.
@@ -98,7 +96,7 @@ struct MealPlanTests {
         let response = try Self.decodePlan()
         let plan = try #require(response.plan)
         let iteration = plan.iterations[0]
-        let rows = iteration.dayRows(shoppingDays: plan.shoppingDays, away: response.away)
+        let rows = iteration.dayRows(away: response.away)
         let recipe = MealDragItem(familyID: "f1", recipeID: "r9", title: "Soup")
         // A recipe onto a day with a lunch replaces it; onto an empty or away day adds it.
         #expect(MealPlanDrop(recipe, onto: rows[1], of: iteration, familyID: "f1")
@@ -117,7 +115,7 @@ struct MealPlanTests {
         let response = try Self.decodePlan()
         let plan = try #require(response.plan)
         let iteration = plan.iterations[0]
-        let rows = iteration.dayRows(shoppingDays: plan.shoppingDays, away: response.away)
+        let rows = iteration.dayRows(away: response.away)
         let meal = MealDragItem(familyID: "f1", recipeID: "r2", title: "Recipe 2", entryID: "e1")
         // Onto a day with a lunch: the two swap; onto an empty day: it moves.
         #expect(MealPlanDrop(meal, onto: rows[1], of: iteration, familyID: "f1")
@@ -127,7 +125,7 @@ struct MealPlanTests {
         // Its own day, or a day of another iteration: nothing.
         #expect(MealPlanDrop(meal, onto: rows[0], of: iteration, familyID: "f1") == nil)
         let past = plan.iterations[1]
-        let pastRows = past.dayRows(shoppingDays: plan.shoppingDays, away: response.away)
+        let pastRows = past.dayRows(away: response.away)
         #expect(MealPlanDrop(meal, onto: pastRows[0], of: past, familyID: "f1") == nil)
     }
 

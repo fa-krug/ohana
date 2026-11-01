@@ -1,5 +1,4 @@
 {
-  "%lld left to buy": "%lld noch zu kaufen",
   "+ %lld more": "+ %lld weitere",
   "Appointment found": "Termin gefunden",
   "Appointments are turned off on this server.": "Arzttermine sind auf diesem Server ausgeschaltet.",
@@ -9,7 +8,6 @@
   "Dr. Weber": "Dr. Weber",
   "Football practice": "Fußballtraining",
   "Grandma": "Oma",
-  "How many items are left on the shopping list.": "Wie viel noch auf der Einkaufsliste steht.",
   "Meals are turned off on this server.": "Essen ist auf diesem Server ausgeschaltet.",
   "Open Ohana to connect your family.": "Öffne Ohana, um deine Familie zu verbinden.",
   "Parents' evening": "Elternabend",
@@ -23,6 +21,5 @@
   "Tonight": "Heute Abend",
   "Tonight's dinner": "Abendessen heute",
   "Vegetable lasagne": "Gemüselasagne",
-  "What's for dinner today, from the meal plan.": "Was es heute zu essen gibt, aus dem Essensplan.",
-  "of %lld left to buy": "von %lld noch zu kaufen"
+  "What's for dinner today, from the meal plan.": "Was es heute zu essen gibt, aus dem Essensplan."
 }
