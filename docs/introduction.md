@@ -33,6 +33,8 @@ Ready to try it? Go to the [quick start](/quickstart).
 - Transactions, accounts and a **category tree**, transfers between accounts and **split
   bookings**.
 - **CSV import** of bank statements with saved formats per bank, duplicates recognized.
+- **Scan a receipt** in the app: amount, date and shop are read on the device, the category
+  filled in, and a grocery receipt linked to its shopping day.
 - Monthly overviews, comparisons and a benchmark.
 - Categorizing with the assistant, and grocery spending matched to your shopping trips.
 

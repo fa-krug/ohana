@@ -634,6 +634,37 @@ final class FinanceStore {
         }
     }
 
+    /// Whether a new transaction left without a category can be sorted when it is saved.
+    var sortsOnSave: Bool { family.isEnabled(.assistant) && !categories.isEmpty }
+
+    /// The category a groceries purchase goes to (the setting, else the default one).
+    var groceriesCategory: FinanceCategory? {
+        category(overview?.groceriesCategoryId) ?? defaultGroceries
+    }
+
+    /// Sorts a scanned receipt's new transaction into a category (POST /ai/categorize: like
+    /// similar ones, else the AI); the toast names it and the shopping list the transaction now
+    /// links to (a groceries category near a shopping day). Quiet when nothing fits.
+    func categorizeReceipt(_ id: String, date: String) async {
+        do {
+            let res: FinanceCategorizeResult = try await api.send(.post, "/ai/categorize", body: JSONValue.object([
+                "ids": FinanceJSON.ids([id]), "lang": .string(language),
+            ]))
+            guard res.changed > 0 else { return }
+            await changed()
+            let categoryId = res.assignments?.first { $0.id == id }?.categoryId
+            let name = category(categoryId)?.label ?? ""
+            if let trip = shoppingLinks.list(for: date, categoryId: categoryId), let day = Day(trip.date) {
+                show(String(localized: "Sorted into \(name), linked to the shopping of \(day.formatted())"), undo: res.inverse)
+            } else {
+                show(String(localized: "Sorted into \(name)"), undo: res.inverse)
+            }
+        } catch is CancellationError {
+        } catch {
+            ErrorBanner.shared.show(String(localized: "The AI couldn’t sort: \(error.localizedDescription)"))
+        }
+    }
+
     /// Runs one categorize job after the ones before it; reports with a toast whose undo
     /// reverts all of the job's calls.
     private func categorize(_ run: @escaping (_ call: @escaping ([String: JSONValue]) async throws -> FinanceCategorizeResult) async throws -> Void) async {

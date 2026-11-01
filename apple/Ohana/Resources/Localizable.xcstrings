@@ -1161,6 +1161,16 @@
         }
       }
     },
+    "Add a transaction from a receipt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Buchung von einem Kassenbon hinzufügen"
+          }
+        }
+      }
+    },
     "Add account": {
       "localizations": {
         "de": {
@@ -5233,6 +5243,16 @@
         }
       }
     },
+    "Filled in from the receipt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vom Kassenbon ausgefüllt"
+          }
+        }
+      }
+    },
     "Filter": {
       "localizations": {
         "de": {
@@ -5689,6 +5709,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lebensmittel-Kategorie"
+          }
+        }
+      }
+    },
+    "Groceries of the shopping on %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lebensmittel vom Einkauf am %@"
           }
         }
       }
@@ -6637,6 +6667,16 @@
         }
       }
     },
+    "Left without one, it is sorted into a category when you save.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohne Kategorie wird sie beim Speichern einsortiert."
+          }
+        }
+      }
+    },
     "Leftover days": {
       "localizations": {
         "de": {
@@ -6733,6 +6773,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Link"
+          }
+        }
+      }
+    },
+    "Linked to the shopping of %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit dem Einkauf vom %@ verknüpft"
           }
         }
       }
@@ -8077,6 +8127,16 @@
         }
       }
     },
+    "No total found: type in the amount.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Summe gefunden: Gib den Betrag ein."
+          }
+        }
+      }
+    },
     "No transaction could be sorted": {
       "localizations": {
         "de": {
@@ -8303,6 +8363,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Notiz"
+          }
+        }
+      }
+    },
+    "Nothing could be read from the receipt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vom Kassenbon ließ sich nichts lesen"
           }
         }
       }
@@ -9809,6 +9879,16 @@
         }
       }
     },
+    "Read on this device. Check the amount and the date before saving.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf diesem Gerät gelesen. Prüfe Betrag und Datum vor dem Speichern."
+          }
+        }
+      }
+    },
     "Read with the format saved for this bank.": {
       "localizations": {
         "de": {
@@ -9885,6 +9965,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Liest den Essensplan"
+          }
+        }
+      }
+    },
+    "Reading the receipt…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kassenbon wird gelesen …"
           }
         }
       }
@@ -10845,6 +10935,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Speichert …"
+          }
+        }
+      }
+    },
+    "Scan Receipt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kassenbon scannen"
+          }
+        }
+      }
+    },
+    "Scan Receipt…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kassenbon scannen …"
           }
         }
       }
@@ -12041,6 +12151,26 @@
         }
       }
     },
+    "Sorted into %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In %@ einsortiert"
+          }
+        }
+      }
+    },
+    "Sorted into %@, linked to the shopping of %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In %1$@ einsortiert, mit dem Einkauf vom %2$@ verknüpft"
+          }
+        }
+      }
+    },
     "Sorting…": {
       "localizations": {
         "de": {
@@ -13019,6 +13149,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Die Menge muss eine Zahl über 0 sein."
+          }
+        }
+      }
+    },
+    "The receipt couldn’t be read.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Kassenbon konnte nicht gelesen werden."
           }
         }
       }
