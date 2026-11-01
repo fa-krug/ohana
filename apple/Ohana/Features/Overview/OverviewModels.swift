@@ -26,7 +26,7 @@ extension OverviewDashboard {
         todayEvents = try c.decode([OverviewEvent].self, forKey: .todayEvents)
         upcoming = try c.decode([OverviewUpcomingItem].self, forKey: .upcoming)
         meals = try c.decodeIfPresent(OverviewMealsSummary.self, forKey: .meals)
-            ?? OverviewMealsSummary(today: nil, shopping: nil)
+            ?? OverviewMealsSummary(today: nil)
         finance = try c.decodeIfPresent(OverviewMonthSummary.self, forKey: .finance)
             ?? OverviewMonthSummary(currency: "EUR", month: "", incomeCents: 0, expenseCents: 0, count: 0,
                                     topExpense: nil, balanceCents: nil)
@@ -128,18 +128,7 @@ struct OverviewMealsSummary: Codable, Hashable {
         let isLeftover: Bool
     }
 
-    struct Shopping: Codable, Hashable {
-        let id: String
-        let shoppingDate: Day?
-        let open: Int
-        let total: Int
-
-        /// The share already bought, 0…1.
-        var progress: Double { total > 0 ? Double(total - open) / Double(total) : 0 }
-    }
-
     let today: Today?
-    let shopping: Shopping?
 }
 
 /// server/lib/finance/summary.ts `MonthSummary`.
@@ -254,11 +243,6 @@ enum OverviewLinks {
         meals.today.map { .recipe(id: $0.recipeId) } ?? .mealPlan
     }
 
-    /// The overview's shopping list, or the latest one.
-    static func shopping(_ meals: OverviewMealsSummary) -> AppRoute {
-        .shoppingList(id: meals.shopping?.id)
-    }
-
     /// The transactions of the category most money went to this month.
     static func topExpense(_ summary: OverviewMonthSummary) -> AppRoute {
         .financeTransactions(categoryID: summary.topExpense?.categoryId)
@@ -277,11 +261,6 @@ extension OverviewFormat {
     /// "Dr. Weber and 2 more doctors" (`home.searchFirst`).
     static func doctorAndMore(_ name: String, more: Int) -> AttributedString {
         AttributedString(localized: "\(name) and ^[\(more) more doctor](inflect: true)")
-    }
-
-    /// "3 of 12 items left to buy" (`meals.overview.toBuy`).
-    static func itemsLeft(open: Int, total: Int) -> AttributedString {
-        AttributedString(localized: "\(open) of ^[\(total) item](inflect: true) left to buy")
     }
 }
 

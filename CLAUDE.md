@@ -112,7 +112,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `requireUser()`, `load(need)` / `loadWith(need, query)` with `need` = `edit` | `view` | `feed`
   (404 for non-members — admins too —, 403 "You can only view this family" for viewers).
   Signed in by an API token (Bearer; the session cookie is still accepted, writes with it need
-  a same-origin request). The separate routes (`/recipes`, `/shopping/toggle`, `/geocode`, the
+  a same-origin request). The separate routes (`/recipes`, `/geocode`, the
   autocompletes, `/api/images`) take API tokens only (`lib/families/api.ts`
   `requireApiUser` / `requireFamilyApi`). `HttpError` / `AuthError` / `ZodError` become
   `{ "error": … }`. Input helpers in `lib/api/http.ts`. Paths and JSON shapes are
@@ -151,7 +151,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `POST …/ai/categorize` (so it's off with the assistant). Receipts are scanned and read in
   the app only (`apple/…/Finance/ReceiptScanner.swift`: VisionKit's document camera, Vision
   text recognition, `ReceiptParser`); it saves a plain transaction, then sorts it with
-  `…/ai/categorize` (`ids`); the shopping-day link is the usual groceries category + day ± 1.
+  `…/ai/categorize` (`ids`).
 - **Assistant (`lib/assistant/`):** family-planner's `ai/*`. Tables
   `ai_settings` (keys sealed with `getSecretBox()`), `chats` (status, lease `run_token` /
   `run_until`, `stop`, JSON `context` / `activity` / `notes` / `usage` / `queue`, `rev`),
@@ -170,13 +170,20 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `index.ts`; `runTool` turns `HttpError` / `AuthError` / `ZodError` into the model's
   `{"error"}`); every change returns undo steps (requests on the family API the client
   replays; meals' and appointments' undo routes are `lib/meals/family-routes.ts`
-  `handleMeals` (`/meals/recipes/{id}`, `/meals/shopping/check|items/{id}`,
+  `handleMeals` (`/meals/recipes/{id}`,
   `/meals/plan/restore` with `meal-plan/snapshot.ts`, `/meals/plan`) and
   `lib/appointments/family-routes.ts` (`/appointments/searches/{id}`); POST `/events` with
   `searchId` + `resultId` puts a booking back). `ToolContext` carries `userId` (the chat's
   user: the lib functions' `Actor`), `today`, `now` and `lookups` (Doctolib / Photon; tests
   fake them via `AiEnv.lookups`). The system prompt (`chat.ts`) lists the meal tags and the
-  home address. `notify.ts` is the "assistant turn finished" notification (`RunnerEnv.turnEnded`
+  home address. **Reminders** (`tools/reminders.ts`, phase 10): the app sends the device's open
+  reminders with each message (`reminders` in the chat context: lists, items, the family's shopping
+  list id; `cleanReminders` caps it; each message replaces it, so without it the tools are off);
+  `get_reminders` reads it, `edit_reminders` resolves ops against it and, like `ask_user`'s
+  question, ends the step with a `kind: "reminders"` item the app shows as a confirmation card;
+  the app applies the ops through EventKit and answers `POST /ai/chats/{id}/reminders`
+  (`{id, applied, results, reminders}`), which becomes the tool's result (a new message instead
+  marks it `skipped`). `notify.ts` is the "assistant turn finished" notification (`RunnerEnv.turnEnded`
   from the `ChatRunner`; `chats.seen_at`, set every 15 s by a follower, says someone looks).
   `net.ts` refuses private addresses (`AiEnv.modelNet` may allow them for the endpoint with
   `AI_ALLOW_PRIVATE_ENDPOINT`). `toolsFor` leaves out the tools of turned-off modules
@@ -252,17 +259,11 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
     import; `TypeRow.away?`). `lib/meals/meal-plan/away.ts` `awayDays`; `populateIteration`
     passes them as `assignSchedule({ skipDates })` and counts cooking sessions from the days
     at home; the plan page shows "Away · Type".
-  - *Meals → Finance:* `fin_settings.groceries_category_id` (null: the category named
-    Groceries / Lebensmittel; PATCH `/finance/settings` `groceriesCategoryId`, GET
-    `/finance` returns it). `lib/finance/groceries.ts` (`shoppingSpend`: `findTransactions`
-    in the category's subtree on the shopping day ± 1, net totals; `shoppingLinks` for the
-    finance page, `GET /finance/shopping-links`) and `groceries-links.ts` (`listForTransaction`).
   - *Notifications:* `notification_prefs` (family + event: enabled, `channel_ids` JSON or
     null = all, `state` JSON memory). `lib/notifications/prefs.ts` (`getPrefs`, `setPref`,
     `notifyEvent`; events and defaults in `prefs-shared.ts`), `daily.ts` (`checkCoverage`
-    from `NOTIFY_HOUR`: once a day, only when a gap day wasn't told before;
-    `remindShopping` from `SHOPPING_REMINDER_HOUR`: once per shopping day; server-local
-    days; the shopping reminder only with meals on). `notifyRun` skips when `appointment_found`
+    from `NOTIFY_HOUR`: once a day, only when a gap day wasn't told before; server-local
+    days). `notifyRun` skips when `appointment_found`
     is off.
   - *Overview:* `lib/families/dashboard.ts` (`familyDashboard`, `GET /overview`; no searches
     with appointments off).
@@ -271,19 +272,21 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
     caller's own chats whose text holds every word (`normalizeForSearch`: case and accents
     ignored), grouped by kind, per kind title matches first then nearest to `today`, `limit` per
     kind (`more` counts the rest); turned-off modules are left out. The app's search tab.
-- **Meals (`lib/meals/`, ported from cookless):** recipes, meal plan, shopping lists, cook
-  view, tags. Tables in `lib/db/schema/meals.ts` (re-exported by `schema.ts`): `ingredients`
+- **Meals (`lib/meals/`, ported from cookless):** recipes, meal plan, cook view, tags. Tables in `lib/db/schema/meals.ts` (re-exported by `schema.ts`): `ingredients`
   and `units` are shared seed data (`lib/meals/seed.ts`, run by `scripts/seed.ts` at every
   server boot and by `npm run db:migrate`; test DBs aren't seeded, tests insert their own),
-  everything else belongs to a family (`meal_plans` → `plan_iterations` → entries and
-  shopping lists). Pure logic in `lib/meals/domain/` (selection, schedule, aggregation, units,
+  everything else belongs to a family (`meal_plans` → `plan_iterations` → entries).
+  **No stored shopping list** (phase 10: it lives in the user's Apple Reminders):
+  `shopping/needs.ts` (`shoppingNeeds`) computes live what the plan needs per shopping day
+  (`computeShoppingSegments` + `aggregateShoppingItems`, leftovers left out), `GET
+  /meals/shopping?from=&lang=` → `{days: [{date, items: [{key, ingredientId, name, category,
+  quantity, unit}]}]}`; iterations carry `shoppingDates`.
+  Pure logic in `lib/meals/domain/` (selection, schedule, aggregation, units,
   scaling), DB work in `recipes/`, `meal-plan/`, `shopping/`, reads in `queries/`; every
   function takes `familyId` and only touches that family's rows (404 otherwise).
   `createFamily` seeds the default `meal_tags`. App routes in `lib/meals/app-routes.ts` and
   `app-routes-plan.ts` (changes need an editor). REST in `http/api.ts`:
-  `/api/v1/families/{id}/{recipes,recipes/{id},shopping/toggle}` (API token,
-  `lib/meals/route-auth.ts`; the app's offline shopping queue replays idempotent `set` ops to
-  `shopping/toggle`). Photos: `sharp` → WebP under `MEDIA_ROOT` (`recipes/<id>_<ts>.webp`),
+  `/api/v1/families/{id}/{recipes,recipes/{id}}` (API token, `lib/meals/route-auth.ts`). Photos: `sharp` → WebP under `MEDIA_ROOT` (`recipes/<id>_<ts>.webp`),
   served by `/api/images/…` to members of the recipe's family only
   (`lib/meals/images/serve.ts`). **AI** (`lib/meals/ai/`, from cookless's `lib/ai`): `prompt.ts`
   (ported), `recipes.ts` (prompt context, tag/unit ids, `generateRecipeImage`), `generate.ts`
@@ -308,9 +311,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   The app requires its `requiredAPIVersion` (apple `Core/Models/ServerInfo.swift`); raise
   `API_VERSION` only for a change an older app can't handle — otherwise the API only grows.
   `DISABLED_MODULES` (finance, meals, appointments, assistant; never calendar):
-  `moduleEnabled()`; `moduleOfFamilyPath` maps family API paths (finance, meals / recipes /
-  shopping, appointments, ai / agent) for `handleDisabledModules`; the worker, the daily
-  shopping reminder, the dashboard's searches, `mealsAi` and the assistant's tools check it.
+  `moduleEnabled()`; `moduleOfFamilyPath` maps family API paths (finance, meals / recipes,
+  appointments, ai / agent) for `handleDisabledModules`; the worker, the dashboard's searches, `mealsAi` and the assistant's tools check it.
 - **Native app (`apple/`):** SwiftUI, one source tree `apple/Ohana/` for two XcodeGen targets
   (`Ohana` iOS 26, `Ohana-macOS` macOS 26; `project.yml`, the `.xcodeproj` is generated and not
   committed: `cd apple && xcodegen generate`). Pairing: the app opens `/device/pair?state=…&deviceName=…`
@@ -350,9 +352,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   not in Low Data Mode) through the screens' own request builders (`OverviewView.request`,
   `FinanceStore.listRequest`, …: keep them shared, or the screen won't find the copy). Offline
   writes, server wins (a refusal drops the change and reloads): the calendar's queue of entry /
-  note ops is kept on disk (`CalendarStore.queueFile`, shown on top of what's loaded); the
-  shopping queue holds ticks and adds (`ShoppingTickQueue`, adds carry a `clientId` the server
-  applies once: `shopping_item_adds`)),
+  note ops is kept on disk (`CalendarStore.queueFile`, shown on top of what's loaded)),
   `Shell/` (sidebar-adaptable `TabView`; on iPhone five tabs, overview, calendar, finance, meals and
   search: more would go under iOS's "More" with a second navigation bar, so appointments and settings
   open as sheets from the family button there, `Module.phonePages`; family switcher, assistant `.inspector` ⌘J (a `.sheet` on
@@ -368,14 +368,24 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   declared in `project.yml`, each naming its family): a recipe or a planned meal onto a day of the
   meal plan (`MealPlanDrop`; the plan's recipe column, `MealPlanRecipeColumn.swift`), a calendar
   event onto another day (`CalendarEventDrag.swift`, `CalendarStore.moveEvent`; the grids' selection
-  gestures step aside on an event label), a shopping item onto another list's chip (`ShoppingMove`).
+  gestures step aside on an event label).
+  The shopping list is a Reminders list (`Core/Reminders/`: `RemindersStore` wraps one
+  `EKEventStore`; `ShoppingReminders` per server + family on this device, in `UserDefaults`: the
+  chosen list and the keys already written). `sync` writes `GET /meals/shopping?from=today` one-way
+  into it (`ShoppingReminderPlan`, pure: one reminder per item, due on its shopping day, url
+  `ohana://f/{id}/meals/shopping/{date}/{key}?q=&t=` as the marker; quantity changes update a
+  reminder only while its title is still Ohana's, items gone from the plan are removed likewise,
+  deleted ones don't come back); `ShoppingRemindersUpdates` in `AppShell` syncs on becoming
+  active, a family switch and meals changes; set up in `Features/Meals/Reminders/` (Settings →
+  Shopping List, the meal plan's toolbar). Off in the demo. The assistant's Reminders card
+  (`edit_reminders`) applies its ops through `RemindersStore` too.
   The assistant: `family.ask(prompt, send:, newChat:)` opens it ready to type from anywhere (⇧⌘J, the overview's field, the Mac's menu bar item (`MenuBarItem`, an AppKit status item: SwiftUI's `MenuBarExtra` re-sets its icon on every window redraw and crashed the app), the
   `AskOhanaIntent` App Shortcut). Recipes are in Spotlight (`RecipeSpotlight.swift`: every family's,
   after loading the account and after recipe changes; emptied in the demo / with Meals off; a result
   opens `ohana://f/{id}/meals/recipes/{id}`). The recipe list's *Import from Web* sheet
   (`RecipeImportView`, editors, with the meals AI) posts a URL to `…/meals/recipes/import`, then
   offers to open the recipe or undo (DELETE it); so does the share extension. From outside the app: Siri / Shortcuts actions without opening it
-  (`App/Intents/CaptureIntents.swift`: add to the shopping list, add an event, import a recipe;
+  (`App/Intents/CaptureIntents.swift`: add to the shopping list (a reminder in the family's Reminders list), add an event, import a recipe;
   `IntentConnection`) and the *Save to Ohana* Safari share extension (`apple/ShareExtension/`,
   targets `OhanaShare` / `OhanaShare-macOS`, bundle id `de.fa-krug.Ohana.Share`; iOS sends the
   page's text via `Preprocess.js`). Code both use is in `apple/Shared/` (`Keychain`,
@@ -391,7 +401,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   in the Mac app, without the Live Activity; one bundle id `de.fa-krug.Ohana.Widgets`; both
   nonisolated by default and compiling `Shared/`, `Core/Widgets/WidgetFeed.swift`,
   `Core/Support/Day.swift`, `DesignSystem/Tints.swift` and `Localizable.xcstrings`): Today,
-  Tomorrow, Tonight's dinner, Shopping list, Appointment found (Lock Screen families on iOS only).
+  Tomorrow, Tonight's dinner, Appointment found (Lock Screen families on iOS only).
   They show the family the app shows: the extension reads `SharedConnection` (no App Group
   either), loads `GET /families/{id}/overview?today=` into a `WidgetSnapshot` and keeps the last
   one in its own container for when the server can't be reached (`WidgetStore`; the modules the

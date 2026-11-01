@@ -1,7 +1,7 @@
 import Foundation
 
 /// Where the app shows what a tool call was about: the recipe it saved or read, the calendar day
-/// it changed, the appointment slot it booked, the shopping list, the finance category (the
+/// it changed, the appointment slot it booked, the meal plan, the finance category (the
 /// result shapes of server/lib/assistant/tools/*). The chat makes such a call's row tappable.
 enum AssistantToolLinks {
     /// The route of a successful tool call, or nil when there is nothing to show.
@@ -36,13 +36,7 @@ enum AssistantToolLinks {
             if let search = field("searchId"), let result = number(a["resultId"]) {
                 return .appointmentSlot(searchID: search, resultID: result)
             }
-        case "get_shopping_list":
-            return .shoppingList(id: field("id"))
-        case "add_shopping_items":
-            return .shoppingList(id: field("listId") ?? text(a["list"]))
-        case "tick_shopping_items":
-            return .shoppingList(id: text(a["list"]))
-        case "get_meal_plan", "plan_meals":
+        case "get_meal_plan", "plan_meals", "get_shopping_items":
             return .mealPlan
         case "manage_categories":
             // Added or changed (a deleted one is gone).

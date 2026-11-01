@@ -57,7 +57,7 @@ describe("GET /overview", () => {
     );
     expect(res.data.birthdays).toEqual([{ day: "2026-11-20", name: "Anna", age: 36 }]);
     expect(res.data.finance).toMatchObject({ month: "2026-11", incomeCents: 0, expenseCents: 0, count: 0, balanceCents: null });
-    expect(res.data.meals).toEqual({ today: null, shopping: null });
+    expect(res.data.meals).toEqual({ today: null });
     expect(res.data.calendar).toHaveProperty("nextGap");
   });
 
@@ -86,7 +86,6 @@ describe("GET /household", () => {
     expect(res.data.events.map((e: any) => [e.event, e.enabled, e.channelIds, e.hasChannels])).toEqual([
       ["appointment_found", true, null, false],
       ["coverage_gap", true, null, true],
-      ["shopping_reminder", false, null, true],
       ["assistant_turn_finished", false, null, true],
     ]);
   });
@@ -228,18 +227,20 @@ describe("notifications", () => {
   it("turns events on and off and picks their channels", async () => {
     const s = setup();
     const ch = (await s.asEditor("POST", `${s.f}/household/notifications/channels`, { name: "P", provider: "PUSHBULLET", token: "x" })).data;
-    const res = await s.asEditor("PUT", `${s.f}/household/notifications/events/shopping_reminder`, {
+    const res = await s.asEditor("PUT", `${s.f}/household/notifications/events/assistant_turn_finished`, {
       enabled: true,
       channelIds: [ch.id],
     });
-    expect(res.data).toEqual({ event: "shopping_reminder", enabled: true, channelIds: [ch.id], app: true, hasChannels: true });
+    expect(res.data).toEqual({ event: "assistant_turn_finished", enabled: true, channelIds: [ch.id], app: true, hasChannels: true });
+    // The shopping reminder is gone (the shopping list lives in Reminders).
+    expect((await s.asEditor("PUT", `${s.f}/household/notifications/events/shopping_reminder`, { enabled: true, channelIds: null })).status).toBe(404);
     expect((await s.asEditor("PUT", `${s.f}/household/notifications/events/nonsense`, { enabled: true, channelIds: null })).status).toBe(404);
     expect(
       (await s.asEditor("PUT", `${s.f}/household/notifications/events/coverage_gap`, { enabled: true, channelIds: ["other"] })).status,
     ).toBe(404);
     expect((await s.asViewer("PUT", `${s.f}/household/notifications/events/coverage_gap`, { enabled: false, channelIds: null })).status).toBe(403);
     const events = (await s.asEditor("GET", `${s.f}/household`)).data.events;
-    expect(events.find((e: any) => e.event === "shopping_reminder")).toMatchObject({ enabled: true, channelIds: [ch.id] });
+    expect(events.find((e: any) => e.event === "assistant_turn_finished")).toMatchObject({ enabled: true, channelIds: [ch.id] });
   });
 });
 

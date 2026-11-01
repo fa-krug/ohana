@@ -137,11 +137,6 @@
         "title": "Ohana test message"
       }
     },
-    "shopping": {
-      "more": "… and {{count}} more",
-      "title_one": "Shopping tomorrow: {{count}} item",
-      "title_other": "Shopping tomorrow: {{count}} items"
-    },
     "test": {
       "body": "The channel \"{{channel}}\" works.",
       "title": "Ohana test message"

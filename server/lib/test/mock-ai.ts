@@ -25,9 +25,12 @@
 //   "meal plan" / "essensplan"            -> get_meal_plan
 //   "set up a meal plan"                  -> plan_meals setup (1 week, shopping on Saturday)
 //   "plan next week [without <tag>]"      -> plan_meals next (excludeTags)
-//   "shopping list" / "einkaufsliste"     -> get_shopping_list
-//   "buy <n> <unit> <name>"               -> add_shopping_items
-//   "tick <name>"                         -> tick_shopping_items
+//   "shopping list" / "einkaufsliste"     -> get_shopping_items
+//   "reminders" / "erinnerungen"          -> get_reminders
+//   "buy <name>"                          -> edit_reminders: add <name> to the shopping list
+//   "remind me to <x> [in <list>]"        -> edit_reminders: add <x> (default list "shopping")
+//   "complete <id>"                       -> edit_reminders: complete the reminder <id>
+//   "ask and remind me to <x>"            -> edit_reminders and ask_user in one step (one waits)
 //   "find a <speciality> before <day>"    -> create_appointment_search
 //   "appointment searches"                -> list_appointment_searches
 //   "book <resultId> of <search>"         -> book_appointment_slot
@@ -61,39 +64,42 @@ function chunk(delta: Record<string, unknown>, finish: string | null = null) {
   return `data: ${JSON.stringify({ choices: [{ index: 0, delta, finish_reason: finish }] })}\n\n`;
 }
 
-function reply(stream: boolean, content: string, call?: { name: string; args: unknown }) {
-  const toolCall = call && {
+type Call = { name: string; args: unknown };
+
+/** An answer with its text and tool calls (one, or several in one step). */
+function reply(stream: boolean, content: string, call?: Call | Call[]) {
+  const calls = (Array.isArray(call) ? call : call ? [call] : []).map((c) => ({
     id: `call_${crypto.randomUUID().slice(0, 8)}`,
     type: "function",
-    function: { name: call.name, arguments: JSON.stringify(call.args) },
-  };
+    function: { name: c.name, arguments: JSON.stringify(c.args) },
+  }));
   if (!stream) {
     return Response.json({
       choices: [{
         index: 0,
-        message: { role: "assistant", content, ...(toolCall ? { tool_calls: [toolCall] } : {}) },
-        finish_reason: toolCall ? "tool_calls" : "stop",
+        message: { role: "assistant", content, ...(calls.length ? { tool_calls: calls } : {}) },
+        finish_reason: calls.length ? "tool_calls" : "stop",
       }],
     });
   }
   let body = "";
   for (const word of content.match(/\S+\s*/g) ?? []) body += chunk({ content: word });
-  if (toolCall) {
+  for (const [index, toolCall] of calls.entries()) {
     // Arguments arrive in pieces, like real servers send them.
     const args = toolCall.function.arguments;
     body += chunk({
       tool_calls: [{
-        index: 0,
+        index,
         id: toolCall.id,
         type: "function",
-        function: { name: call!.name, arguments: "" },
+        function: { name: toolCall.function.name, arguments: "" },
       }],
     });
     for (let i = 0; i < args.length; i += 12) {
-      body += chunk({ tool_calls: [{ index: 0, function: { arguments: args.slice(i, i + 12) } }] });
+      body += chunk({ tool_calls: [{ index, function: { arguments: args.slice(i, i + 12) } }] });
     }
   }
-  body += chunk({}, toolCall ? "tool_calls" : "stop") + "data: [DONE]\n\n";
+  body += chunk({}, calls.length ? "tool_calls" : "stop") + "data: [DONE]\n\n";
   return new Response(body, { headers: { "content-type": "text/event-stream" } });
 }
 
@@ -324,6 +330,16 @@ async function respond(req: Request, body: any): Promise<Response> {
     if (result.error) return reply(stream, `That didn't work: ${result.error}`);
     const text = result.skipped
       ? "You skipped my question."
+      : result.applied === true
+      ? `Done: ${result.results?.filter((r: { ok?: boolean }) => r.ok).length ?? 0} of ${
+        result.results?.length ?? 0
+      } reminder changes applied.`
+      : result.applied === false
+      ? "OK, I left your Reminders as they were."
+      : Array.isArray(result.days) && result.days.every((d: { items?: unknown }) => Array.isArray(d.items))
+      ? `${result.days.reduce((n: number, d: { items: unknown[] }) => n + d.items.length, 0)} items to buy on ${result.days.length} shopping days.`
+      : Array.isArray(result.lists) && Array.isArray(result.items)
+      ? `You have ${result.items.length} open reminders in ${result.lists.length} lists.`
       : result.selected || result.ownAnswer
       ? `You answered: ${
         [...(result.selected ?? []), result.ownAnswer].filter(Boolean).join(", ")
@@ -401,18 +417,31 @@ async function respond(req: Request, body: any): Promise<Response> {
     });
   }
   if (/meal plan|essensplan/.test(lower)) return reply(stream, "", { name: "get_meal_plan", args: {} });
-  const buy = /^buy (\d+) (\S+) (.+)$/i.exec(text);
-  if (buy && tools.has("add_shopping_items")) {
+  const askAndRemind = /^ask and remind me to (.+)$/i.exec(text);
+  if (askAndRemind && tools.has("edit_reminders")) {
+    return reply(stream, "", [
+      { name: "edit_reminders", args: { ops: [{ op: "add", list: "shopping", title: askAndRemind[1] }] } },
+      { name: "ask_user", args: { question: "Anything else?", options: ["Yes", "No"] } },
+    ]);
+  }
+  const buy = /^buy (.+)$/i.exec(text);
+  const remind = /^remind me to (.+?)(?: (?:in|on) (\S+))?$/i.exec(text);
+  if ((buy || remind) && tools.has("edit_reminders")) {
     return reply(stream, "", {
-      name: "add_shopping_items",
-      args: { items: [{ name: buy[3], quantity: Number(buy[1]), unit: buy[2] }] },
+      name: "edit_reminders",
+      args: { ops: [{ op: "add", list: remind?.[2] ?? "shopping", title: buy?.[1] ?? remind![1] }] },
     });
   }
-  const tick = /^tick (.+)$/i.exec(text);
-  if (tick && tools.has("tick_shopping_items")) {
-    return reply(stream, "", { name: "tick_shopping_items", args: { items: [tick[1]], checked: true } });
+  const complete = /^complete (\S+)$/i.exec(text);
+  if (complete && tools.has("edit_reminders")) {
+    return reply(stream, "", { name: "edit_reminders", args: { ops: [{ op: "complete", id: complete[1] }] } });
   }
-  if (/shopping list|einkaufsliste/.test(lower)) return reply(stream, "", { name: "get_shopping_list", args: {} });
+  if (/shopping list|einkaufsliste/.test(lower) && tools.has("get_shopping_items")) {
+    return reply(stream, "", { name: "get_shopping_items", args: {} });
+  }
+  if (/reminders|erinnerungen/.test(lower) && tools.has("get_reminders")) {
+    return reply(stream, "", { name: "get_reminders", args: {} });
+  }
   const recipesWith = /^(?:recipes|rezepte)(?: with (.+))?$/i.exec(text);
   if (recipesWith) {
     return reply(stream, "", { name: "list_recipes", args: recipesWith[1] ? { tags: [recipesWith[1]] } : {} });

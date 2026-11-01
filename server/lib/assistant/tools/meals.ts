@@ -1,6 +1,6 @@
 // The assistant's meal tools: recipes (search, read, create, change), the meal plan (read,
-// plan the next weeks or plan again, e.g. without fish) and the shopping lists (read, tick,
-// add). They work through lib/meals (every function scoped to the family); every change comes
+// plan the next weeks or plan again, e.g. without fish) and what it needs from the shops (the
+// shopping list itself is in the user's Reminders: reminders.ts). They work through lib/meals (every function scoped to the family); every change comes
 // with undo steps against the family API's /meals routes (lib/meals/family-routes.ts).
 
 import { and, eq, inArray, sql } from "drizzle-orm";
@@ -15,11 +15,9 @@ import { setupMealPlan } from "@/lib/meals/meal-plan/setup";
 import { type IterationSnapshot, snapshotIteration } from "@/lib/meals/meal-plan/snapshot";
 import { getMealPlanView } from "@/lib/meals/queries/meal-plan";
 import { getRecipe, listRecipes, listTags, type RecipeDetail, type RecipeTagDto } from "@/lib/meals/queries/recipes";
-import { getLatestShoppingList, getShoppingListById, type ShoppingListView } from "@/lib/meals/queries/shopping";
-import { findOrCreateIngredient } from "@/lib/meals/recipes/ingredients";
 import { recipeToInput } from "@/lib/meals/recipes/input";
 import { upsertRecipe, type UpsertRecipeInput } from "@/lib/meals/recipes/upsert";
-import { addShoppingItem, setShoppingItemsChecked } from "@/lib/meals/shopping/items";
+import { shoppingNeeds } from "@/lib/meals/shopping/needs";
 import { fitting, type Tool, type ToolContext, type UndoStep } from "./common";
 
 const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -33,9 +31,6 @@ const PHRASES = {
     planNext: (from: string, to: string) => `Planned the meals ${from} – ${to}`,
     planAgain: (from: string, to: string) => `Planned the meals ${from} – ${to} again`,
     planSetUp: "Set up the meal plan",
-    ticked: (n: number) => `${n} ${n === 1 ? "item" : "items"} ticked off`,
-    unticked: (n: number) => `${n} ${n === 1 ? "item" : "items"} unticked`,
-    added: (n: number) => `${n} ${n === 1 ? "item" : "items"} added to the shopping list`,
   },
   de: {
     recipeAdded: (t: string) => `Rezept „${t}“ hinzugefügt`,
@@ -43,9 +38,6 @@ const PHRASES = {
     planNext: (from: string, to: string) => `Essen geplant: ${from} – ${to}`,
     planAgain: (from: string, to: string) => `Essen neu geplant: ${from} – ${to}`,
     planSetUp: "Essensplan eingerichtet",
-    ticked: (n: number) => `${n} ${n === 1 ? "Eintrag" : "Einträge"} abgehakt`,
-    unticked: (n: number) => `${n} ${n === 1 ? "Eintrag" : "Einträge"} wieder offen`,
-    added: (n: number) => `${n} ${n === 1 ? "Eintrag" : "Einträge"} zur Einkaufsliste hinzugefügt`,
   },
 };
 
@@ -162,11 +154,6 @@ function existingIngredient(db: Db, arg: IngredientArg): number | null {
   return null;
 }
 
-/** The shared ingredient by English or German name, added when there is none. */
-function ingredientId(db: Db, arg: IngredientArg): number {
-  return existingIngredient(db, arg) ?? findOrCreateIngredient(db, arg).id;
-}
-
 function quantityOf(v: unknown): string {
   const s = String(v ?? "").trim().replace(",", ".");
   if (!/^\d+(\.\d+)?$/.test(s) || Number(s) <= 0) {
@@ -249,29 +236,6 @@ function mealsBetween(db: Db, familyId: string, from: string, to: string, lang: 
     }));
   const away = [...awayDays(db, familyId, from, to)].map(([date, types]) => ({ date, types }));
   return { view, meals, away, lang };
-}
-
-function shoppingView(list: ShoppingListView) {
-  return {
-    id: list.id,
-    shoppingDate: list.shoppingDate,
-    items: list.items.map((i) => ({
-      id: i.id,
-      name: i.ingredientName,
-      quantity: i.quantity,
-      unit: i.unitAbbreviation,
-      category: i.category,
-      checked: i.isChecked,
-    })),
-  };
-}
-
-/** The list asked for, or the latest one. */
-function shoppingList(db: Db, familyId: string, ref: unknown, lang: "en" | "de"): ShoppingListView {
-  const id = str(ref);
-  const list = id ? getShoppingListById(db, familyId, id, lang) : getLatestShoppingList(db, familyId, lang);
-  if (!list) throw new HttpError(404, id ? `No shopping list "${id}"` : "The family has no shopping list yet (it comes with the meal plan)");
-  return list;
 }
 
 const ingredientSpec = {
@@ -471,7 +435,7 @@ export const mealTools: Record<string, Tool> = {
     spec: {
       name: "get_meal_plan",
       description:
-        "Reads the meal plan (lunch per day) between two days, default the next 14 days from today: the meals (leftover: cooked on an earlier day), the days the family is away (no meal), the plan's iterations and shopping lists, and its settings (weeks per iteration, shopping days, servings, share of known recipes, excluded tags).",
+        "Reads the meal plan (lunch per day) between two days, default the next 14 days from today: the meals (leftover: cooked on an earlier day), the days the family is away (no meal), the plan's iterations with their shopping days, and its settings (weeks per iteration, shopping days, servings, share of known recipes, excluded tags).",
       parameters: {
         type: "object",
         properties: {
@@ -510,7 +474,7 @@ export const mealTools: Record<string, Tool> = {
               from: it.startDate,
               to: it.endDate,
               status: it.status,
-              shoppingLists: it.shoppingLists.map((l) => ({ id: l.id, date: l.shoppingDate, items: l.itemCount })),
+              shoppingDates: it.shoppingDates,
             })),
           latestIterationEnds: view.iterations.reduce((m, it) => (it.endDate > m ? it.endDate : m), ""),
           meals,
@@ -526,7 +490,7 @@ export const mealTools: Record<string, Tool> = {
     spec: {
       name: "plan_meals",
       description:
-        'Plans meals. "next": the next iteration after the latest one (e.g. next week). "again": plans an iteration again with other recipes (default the latest; its shopping list is made new). excludeTags leave recipes with those tags out of this planning only (e.g. ["Fish"] for "next week without fish"). "setup": creates the plan when the family has none (weeks 1–3, shoppingDays as weekdays, servings, knownRatio 0–1, leftoverDays 0–3, excludeTags for good). Days the family is away get no meal.',
+        'Plans meals. "next": the next iteration after the latest one (e.g. next week). "again": plans an iteration again with other recipes (default the latest). excludeTags leave recipes with those tags out of this planning only (e.g. ["Fish"] for "next week without fish"). "setup": creates the plan when the family has none (weeks 1–3, shoppingDays as weekdays, servings, knownRatio 0–1, leftoverDays 0–3, excludeTags for good). Days the family is away get no meal.',
       parameters: {
         type: "object",
         properties: {
@@ -620,111 +584,22 @@ export const mealTools: Record<string, Tool> = {
     },
   },
 
-  get_shopping_list: {
+  get_shopping_items: {
     spec: {
-      name: "get_shopping_list",
+      name: "get_shopping_items",
       description:
-        "Reads a shopping list with its items (id, name, quantity, unit, category, checked): the latest one, or the one with this id (get_meal_plan lists them).",
-      parameters: { type: "object", properties: { list: { type: "string", description: "A list id" } } },
+        "Works out what the meal plan needs from the shops: per shopping day from `from` on (default today), the ingredients of the meals until the next shopping day (not the leftovers), summed (name, quantity, unit, category). Ohana keeps no shopping list: the app puts these items into the shopping list in the user's Reminders.",
+      parameters: { type: "object", properties: { from: { type: "string", description: "YYYY-MM-DD" } } },
     },
-    async run(args, { db, familyId, lang }) {
-      const list = shoppingList(db, familyId, args.list, lang);
-      const view = shoppingView(list);
-      const open = view.items.filter((i) => !i.checked).length;
-      return { result: { ...view, open }, summary: `${open} of ${view.items.length} open` };
-    },
-  },
-
-  tick_shopping_items: {
-    write: true,
-    spec: {
-      name: "tick_shopping_items",
-      description: "Ticks items of a shopping list off (checked: true) or unticks them (false). items: ids or names.",
-      parameters: {
-        type: "object",
-        properties: {
-          items: { type: "array", items: { type: "string" } },
-          checked: { type: "boolean" },
-          list: { type: "string", description: "A list id (default the latest)" },
-        },
-        required: ["items", "checked"],
-      },
-    },
-    async run(args, { db, familyId, lang }) {
-      if (typeof args.checked !== "boolean") throw new HttpError(400, "checked must be true or false");
-      const list = shoppingList(db, familyId, args.list, lang);
-      const refs = (Array.isArray(args.items) ? args.items : [args.items]).map((r) => str(r)).filter(Boolean);
-      if (!refs.length) throw new HttpError(400, "items is required");
-      const ids = new Set<string>();
-      const unknown: string[] = [];
-      for (const ref of refs) {
-        const low = ref.toLowerCase();
-        const matches = list.items.filter((i) => i.id === ref || i.ingredientName.toLowerCase() === low);
-        const loose = matches.length ? matches : list.items.filter((i) => i.ingredientName.toLowerCase().includes(low));
-        if (!loose.length) unknown.push(ref);
-        for (const m of loose) ids.add(m.id);
-      }
-      if (unknown.length) throw new HttpError(404, `Not on the list: ${unknown.join(", ")}`);
-      const changed = list.items.filter((i) => ids.has(i.id) && i.isChecked !== args.checked).map((i) => i.id);
-      if (changed.length) setShoppingItemsChecked(db, familyId, changed, args.checked);
-      const n = changed.length;
+    async run(args, ctx) {
+      const from = /^\d{4}-\d{2}-\d{2}$/.test(str(args.from)) ? str(args.from) : today(ctx);
+      const days = shoppingNeeds(ctx.db, ctx.familyId, { from, locale: ctx.lang });
+      const items = days.reduce((n, d) => n + d.items.length, 0);
       return {
-        result: { ok: true, changed: n, items: list.items.filter((i) => ids.has(i.id)).map((i) => i.ingredientName) },
-        summary: `${n} items`,
-        change: n
-          ? {
-              kind: "shopping",
-              summary: args.checked ? PHRASES[lang].ticked(n) : PHRASES[lang].unticked(n),
-              undo: [{ method: "POST", path: "/meals/shopping/check", body: { ids: changed, checked: !args.checked } }],
-            }
-          : undefined,
-      };
-    },
-  },
-
-  add_shopping_items: {
-    write: true,
-    spec: {
-      name: "add_shopping_items",
-      description:
-        "Adds items to a shopping list (default the latest). An open item of the same ingredient and unit gets the quantity added.",
-      parameters: {
-        type: "object",
-        properties: {
-          items: { type: "array", items: ingredientSpec },
-          list: { type: "string", description: "A list id" },
-        },
-        required: ["items"],
-      },
-    },
-    async run(args, { db, familyId, lang }) {
-      const list = shoppingList(db, familyId, args.list, lang);
-      if (!Array.isArray(args.items) || !args.items.length || args.items.length > 50) {
-        throw new HttpError(400, "items must be a list of 1 to 50 items");
-      }
-      const parsed = args.items.map((raw) => {
-        const o = (raw ?? {}) as Record<string, unknown>;
-        return { arg: ingredientArg(o), quantity: quantityOf(o.quantity), unit: resolveUnit(db, o.unit) };
-      });
-      const undo: UndoStep[] = [];
-      const added: string[] = [];
-      for (const p of parsed) {
-        const res = addShoppingItem(db, familyId, list.id, {
-          ingredientId: ingredientId(db, p.arg),
-          unitId: p.unit.id,
-          quantity: p.quantity,
-        });
-        undo.unshift(
-          res.merged
-            ? { method: "PATCH", path: `/meals/shopping/items/${enc(res.id)}`, body: { quantity: res.previousQuantity } }
-            : { method: "DELETE", path: `/meals/shopping/items/${enc(res.id)}` },
-        );
-        added.push(`${p.quantity} ${p.unit.abbreviation} ${p.arg.name}`);
-      }
-      return {
-        result: { ok: true, listId: list.id, added },
-        summary: added.join(", ").slice(0, 80),
-        change: { kind: "shopping", summary: PHRASES[lang].added(added.length), undo },
+        result: days.length
+          ? { from, days }
+          : { from, days, note: planOf(ctx.db, ctx.familyId) ? "Nothing to buy for the planned meals from then on." : "The family has no meal plan yet." },
+        summary: `${items} ${items === 1 ? "item" : "items"}, ${days.length} ${days.length === 1 ? "day" : "days"}`,
       };
     },
   },

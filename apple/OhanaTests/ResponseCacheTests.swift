@@ -136,7 +136,6 @@ struct ResponseCacheTests {
         let api = FamilyAPI(client: client, familyID: DemoServer.familyID)
         let family = FamilyContext(family: FamilySummary(id: DemoServer.familyID, name: "Demo", role: .editor,
                                                          memberCount: 1), api: api)
-        defer { ShoppingOfflineStore.removeAll(server: client.baseURL) }
 
         let answered = await Prefetch.load(family)
         ResponseCache.waitForWrites()
@@ -185,12 +184,6 @@ struct ResponseCacheTests {
         let settings = FamilySettingsModel()
         await settings.load(api)
         #expect(settings.state.isSaved)
-
-        let shopping = ShoppingOfflineStore(api: api)
-        let latest = try #require(shopping.loadOverview()?.latest)
-        #expect(shopping.savedList(latest.id) != nil)
-        // As the shopping page asks for the units.
-        #expect(api.cached("/meals/shopping/units", as: ShoppingUnitsResponse.self).saved() != nil)
     }
 
     @Test func noPrefetchInTheDemo() {

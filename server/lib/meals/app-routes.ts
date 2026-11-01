@@ -1,7 +1,7 @@
 // Routes of the family API for the native app (apple/): the recipes, tags, cook view and AI
 // generation the web's meals pages do with server actions (app/actions/meals.ts). Same lib
 // functions and checks: members read, editors change. Registered before the module's other
-// routes; null for paths that aren't its own (the meal plan's and shopping lists' routes, and
+// routes; null for paths that aren't its own (the meal plan's and shopping routes, and
 // family-routes.ts's PATCH / DELETE /meals/recipes/{id}, which the app uses to save and delete).
 //
 //   GET    /meals/status                      {generate, photos, recipeCount}: the family's AI (lib/meals/ai/status.ts)

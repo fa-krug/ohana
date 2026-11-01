@@ -6,7 +6,7 @@ import Foundation
 // and keeps the last one (`WidgetSnapshot`, `WidgetStore`).
 
 /// The family's overview (GET /overview) cut down to what the widgets show: today and tomorrow,
-/// tonight's dinner, the shopping list and the appointments the searches found.
+/// tonight's dinner and the appointments the searches found.
 struct WidgetSnapshot: Codable, Hashable, Sendable {
     /// One line of a day: a run of a calendar type, an event, a birthday.
     struct Item: Codable, Hashable, Sendable, Identifiable {
@@ -37,16 +37,6 @@ struct WidgetSnapshot: Codable, Hashable, Sendable {
         var isLeftover: Bool
     }
 
-    struct Shopping: Codable, Hashable, Sendable {
-        var listID: String
-        var date: Day?
-        var open: Int
-        var total: Int
-
-        /// The share already bought, 0…1.
-        var progress: Double { total > 0 ? Double(total - open) / Double(total) : 0 }
-    }
-
     /// The earliest appointment a search found.
     struct Find: Codable, Hashable, Sendable, Identifiable {
         var searchID: String
@@ -68,7 +58,6 @@ struct WidgetSnapshot: Codable, Hashable, Sendable {
     /// Names of today's "away" types (no meal is planned then).
     var awayToday: [String]
     var dinner: Dinner?
-    var shopping: Shopping?
     /// Of the enabled searches, by slot (earliest first); slots already past are left out.
     var finds: [Find]
     var mealsEnabled = true
@@ -175,7 +164,6 @@ extension WidgetSnapshot {
             items: items,
             awayToday: wire.awayToday,
             dinner: wire.meals?.today.map { Dinner(recipeID: $0.recipeId, title: $0.recipeTitle, isLeftover: $0.isLeftover) },
-            shopping: wire.meals?.shopping.map { Shopping(listID: $0.id, date: $0.shoppingDate, open: $0.open, total: $0.total) },
             finds: finds.sorted { $0.slot < $1.slot },
             mealsEnabled: !disabledModules.contains("meals"),
             appointmentsEnabled: !disabledModules.contains("appointments")
@@ -224,15 +212,7 @@ private struct OverviewWire: Decodable {
             let isLeftover: Bool
         }
 
-        struct Shopping: Decodable {
-            let id: String
-            let shoppingDate: Day?
-            let open: Int
-            let total: Int
-        }
-
         let today: Today?
-        let shopping: Shopping?
     }
 
     struct Search: Decodable {
@@ -272,7 +252,6 @@ enum WidgetStore {
     static let todayKind = "de.fa-krug.Ohana.today"
     static let tomorrowKind = "de.fa-krug.Ohana.tomorrow"
     static let dinnerKind = "de.fa-krug.Ohana.dinner"
-    static let shoppingKind = "de.fa-krug.Ohana.shopping"
     static let appointmentKind = "de.fa-krug.Ohana.appointment"
 
     /// The Keychain account (service `de.fa-krug.Ohana`).

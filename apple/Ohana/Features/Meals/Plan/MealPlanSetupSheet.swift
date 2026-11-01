@@ -85,7 +85,7 @@ struct MealPlanSetupSheet: View {
 
                 if replacesPlan {
                     Section {
-                        Label("Saving plans anew from today: the current meals and shopping lists are replaced.",
+                        Label("Saving plans anew from today: the current meals are replaced.",
                               systemImage: "exclamationmark.triangle")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
@@ -112,7 +112,7 @@ struct MealPlanSetupSheet: View {
             .confirmationDialog("Replace the current plan?", isPresented: $confirmReplace, titleVisibility: .visible) {
                 Button("Replace Plan", role: .destructive) { submit() }
             } message: {
-                Text("The meals and shopping lists of every iteration, ticks included, are deleted and planned anew from today. This can’t be undone.")
+                Text("The meals of every iteration are deleted and planned anew from today. This can’t be undone.")
             }
         }
         .errorBanner()

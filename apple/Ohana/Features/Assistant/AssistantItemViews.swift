@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// One item of the chat: a message, a tool call, a change with undo, a question, a note.
+/// One item of the chat: a message, a tool call, a change with undo, a question, a Reminders
+/// edit to apply, a note.
 /// Equal for the same item (`.equatable()`): the closure would otherwise draw every item again
 /// whenever the chat does (a keystroke, another module beside the panel).
 struct AssistantItemView: View, Equatable {
@@ -31,6 +32,8 @@ struct AssistantItemView: View, Equatable {
             }
         case let .question(question):
             AssistantQuestionCard(question: question, store: store)
+        case let .reminders(edit):
+            AssistantRemindersCard(edit: edit, store: store)
         case .compacted:
             HStack(spacing: 8) {
                 VStack { Divider() }
@@ -340,6 +343,159 @@ struct AssistantQuestionCard: View {
 
     private func submit() {
         store.answer(selected: question.multiple ? picked : [], text: text)
+    }
+}
+
+/// A change of the user's Reminders the assistant suggests: what it does, op by op in plain
+/// words (deletes in red), and **Apply** / **Don't apply** while it waits. Apply asks for the
+/// access to Reminders first when it wasn't asked for yet (and points to the Settings when it was
+/// refused). Once answered, each op shows how it went and the card how it ended.
+struct AssistantRemindersCard: View {
+    let edit: AssistantRemindersEdit
+    let store: AssistantChatStore
+    @State private var reminders = RemindersStore.shared
+    @State private var posting = false
+    /// Apply found no access.
+    @State private var refused = false
+
+    private var isOpen: Bool { store.openRemindersEdit()?.edit.id == edit.id }
+
+    var body: some View {
+        let open = isOpen
+        let active = open && !store.busy && !posting
+        VStack(alignment: .leading, spacing: 8) {
+            Label {
+                Text(verbatim: edit.summary).font(.callout.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
+            } icon: {
+                Image(systemName: "checklist").foregroundStyle(ModuleTint.assistant)
+            }
+            if open {
+                Text("Nothing changes in your Reminders until you apply it.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(Array(edit.ops.enumerated()), id: \.offset) { index, op in
+                    row(op, index: index, open: open)
+                }
+            }
+            .padding(.vertical, 2)
+            if open || posting {
+                if open, refused || reminders.access == .denied || reminders.access == .restricted
+                    || reminders.access == .writeOnly {
+                    noAccess
+                }
+                HStack(spacing: 8) {
+                    Spacer(minLength: 0)
+                    Button("Don’t Apply") {
+                        store.declineReminders(edit.id)
+                    }
+                    .buttonStyle(.bordered)
+                    Button {
+                        apply()
+                    } label: {
+                        if posting {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Text("Apply")
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(ModuleTint.assistant)
+                    .accessibilityLabel(Text("Apply: \(edit.summary)"))
+                }
+                .disabled(!active)
+            }
+            if let outcome = edit.outcome {
+                outcomeLabel(outcome)
+            }
+        }
+        .contentCard(cornerRadius: 18, padding: 12)
+        .task(id: reminders.revision) { reminders.refreshAccess() }
+    }
+
+    private func row(_ op: AssistantReminderOp, index: Int, open: Bool) -> some View {
+        // While it waits, an update to another list reads as a move (the reminder's list now).
+        let currentList = open && op.op == "update" && reminders.access.isGranted
+            ? op.id.flatMap { reminders.reminder($0)?.listID } : nil
+        let line = AssistantReminderOpLine.make(op, currentListID: currentList)
+        let result = edit.answer?.results.flatMap { index < $0.count ? $0[index] : nil }
+        let declined = edit.answer?.applied == false || edit.skipped
+        return HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: line.icon)
+                .foregroundStyle(line.destructive ? Color.red : .secondary)
+                .frame(width: 18)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(verbatim: line.text)
+                    .foregroundStyle(line.destructive ? Color.red : .primary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let detail = line.detail, !detail.isEmpty {
+                    Text(verbatim: detail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(3)
+                }
+                if let error = result?.error, result?.ok == false {
+                    Text(verbatim: error)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if let result {
+                Image(systemName: result.ok ? "checkmark" : "exclamationmark.circle.fill")
+                    .font(.caption.bold())
+                    .foregroundStyle(result.ok ? Color.green : .red)
+                    .accessibilityLabel(result.ok ? Text("Done") : Text("Failed"))
+            }
+        }
+        .font(.callout)
+        .opacity(declined ? 0.6 : 1)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var noAccess: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label(reminders.access == .restricted
+                  ? "Reminders aren’t allowed on this device."
+                  : "Ohana has no access to your reminders.",
+                  systemImage: "exclamationmark.triangle")
+                .foregroundStyle(.orange)
+            if reminders.access != .restricted, let url = RemindersStore.settingsURL {
+                Link(destination: url) {
+                    Label("Open Settings", systemImage: "gear")
+                }
+            }
+        }
+        .font(.caption)
+    }
+
+    private func outcomeLabel(_ text: String) -> some View {
+        let applied = edit.answer?.applied == true
+        let failed = (edit.answer?.failures ?? 0) > 0
+        return Label {
+            Text(verbatim: text)
+        } icon: {
+            if applied {
+                Image(systemName: failed ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                    .foregroundStyle(failed ? Color.orange : .green)
+            } else if edit.answer != nil {
+                Image(systemName: "xmark.circle")
+            }
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
+    }
+
+    private func apply() {
+        posting = true
+        Task {
+            defer { posting = false }
+            refused = await store.applyReminders(edit.id) == .noAccess
+        }
     }
 }
 

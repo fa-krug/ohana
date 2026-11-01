@@ -357,7 +357,6 @@ describe("finance transactions", () => {
       benchmark: null,
       accounts: [],
       categories: [],
-      groceriesCategoryId: null,
     });
     expect((await call("GET", `${f}/transactions`)).data.total).toBe(0);
     // Other families keep theirs.

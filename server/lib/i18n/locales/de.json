@@ -137,11 +137,6 @@
         "title": "Ohana-Testnachricht"
       }
     },
-    "shopping": {
-      "more": "… und {{count}} weitere",
-      "title_one": "Morgen einkaufen: {{count}} Artikel",
-      "title_other": "Morgen einkaufen: {{count}} Artikel"
-    },
     "test": {
       "body": "Der Kanal „{{channel}}“ funktioniert.",
       "title": "Ohana-Testnachricht"

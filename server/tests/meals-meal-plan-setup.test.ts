@@ -3,11 +3,12 @@ import { describe, expect, it } from "vitest";
 import { createTestDb } from "@/lib/test/db";
 import {
   families, recipes, recipeIngredients, recipeTags, mealTags, ingredients, units,
-  mealPlans, mealPlanExcludedTags, planIterations, mealPlanEntries, shoppingLists,
+  mealPlans, mealPlanExcludedTags, planIterations, mealPlanEntries,
 } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { mulberry32 } from "@/lib/meals/domain/rng";
 import { setupMealPlan, loadSelectablePools } from "@/lib/meals/meal-plan/setup";
+import { shoppingNeeds } from "@/lib/meals/shopping/needs";
 import { AuthError } from "@/lib/auth/errors";
 
 const now = new Date("2026-06-27T12:00:00Z"); // a Saturday
@@ -44,7 +45,7 @@ describe("loadSelectablePools", () => {
 });
 
 describe("setupMealPlan", () => {
-  it("creates the plan, one active iteration, entries, and shopping lists", () => {
+  it("creates the plan, one active iteration and entries (what they need is computed)", () => {
     const db = seed();
     const { iterationId } = setupMealPlan(
       db, "h1",
@@ -59,7 +60,7 @@ describe("setupMealPlan", () => {
     expect(entries.length).toBeGreaterThan(0);
     expect(entries.every((e) => e.mealType === "LUNCH")).toBe(true);
     expect(entries.every((e) => e.servings === 4)).toBe(true);
-    expect(db.select().from(shoppingLists).where(eq(shoppingLists.iterationId, iterationId)).all().length).toBeGreaterThan(0);
+    expect(shoppingNeeds(db, "h1", { from: "2000-01-01", locale: "en" }).length).toBeGreaterThan(0);
   });
 
   it("is idempotent: a second setup replaces (one plan, one iteration)", () => {

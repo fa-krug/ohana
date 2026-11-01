@@ -78,6 +78,8 @@ struct AppShell: View {
             }
             // The family's recipes in Spotlight, again after they change.
             .modifier(RecipeSpotlightFamilyUpdates())
+            // The shopping list in Reminders: at becoming active, on showing the family, after changes.
+            .modifier(ShoppingRemindersUpdates())
             .environment(context)
             .id(family.id)
             .focusedSceneValue(\.shell, ShellFocus(module: selection, assistant: $showAssistant,

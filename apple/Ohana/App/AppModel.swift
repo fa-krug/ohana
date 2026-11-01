@@ -298,7 +298,7 @@ final class AppModel {
         await whileSwitching(.demo) {
             Keychain.delete(Keys.token)
             client.cache?.clear()
-            ShoppingOfflineStore.removeAll(server: client.baseURL)
+            ShoppingReminders.forget(server: client.baseURL)
             CalendarStore.removeQueues(server: client.baseURL)
             SharedConnection.forget()
             if syncsWidgets { WidgetSync.reload() }
@@ -494,5 +494,5 @@ extension Notification.Name {
 
 /// What a change can touch, for `FamilyContext.didChange`.
 enum DataArea: String, CaseIterable, Hashable {
-    case family, calendar, events, finance, meals, recipes, shopping, mealPlan, appointments, settings
+    case family, calendar, events, finance, meals, recipes, mealPlan, appointments, settings
 }

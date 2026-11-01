@@ -56,7 +56,6 @@
   "events": [
     { "event": "appointment_found", "enabled": true, "channelIds": null, "hasChannels": false },
     { "event": "coverage_gap", "enabled": true, "channelIds": ["channel-telegram"], "hasChannels": true },
-    { "event": "shopping_reminder", "enabled": true, "channelIds": null, "hasChannels": true },
     { "event": "assistant_turn_finished", "enabled": false, "channelIds": null, "hasChannels": true }
   ]
 }

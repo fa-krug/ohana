@@ -60,8 +60,7 @@ export function renewIteration(
   // A2: exclude the DATE-PREVIOUS iteration's recipes (Django parity), not this
   // iteration's own set. For the first/only iteration this is empty.
   const exclude = previousIterationRecipeIds(db, it.planId, it.startDate);
-  // Entries + shopping lists are replaced inside populateIteration (entries deleted here,
-  // shopping lists deleted by generateShoppingListsForIteration).
+  // The entries are made anew by populateIteration.
   db.delete(mealPlanEntries).where(eq(mealPlanEntries.iterationId, iterationId)).run();
   const plan = db.select().from(mealPlans).where(eq(mealPlans.id, it.planId)).get()!;
   populateIteration(db, {

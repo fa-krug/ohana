@@ -48,11 +48,8 @@ struct AssistantToolLinkTests {
     }
 
     @Test func shoppingMealsAndFinance() {
-        #expect(route(tool("add_shopping_items", result: #"{"ok":true,"listId":"l1","added":["Milk"]}"#)) == .shoppingList(id: "l1"))
-        #expect(route(tool("tick_shopping_items", args: ["items": .array([.string("Milk")])], result: #"{"ok":true}"#))
-                == .shoppingList(id: nil))
-        #expect(route(tool("get_shopping_list", result: #"{"id":"l2","shoppingDate":"2026-11-01","items":[]}"#))
-                == .shoppingList(id: "l2"))
+        #expect(route(tool("get_shopping_items", result: #"{"days":[]}"#)) == .mealPlan)
+        #expect(route(tool("get_reminders", result: #"{"lists":[],"items":[]}"#)) == nil)
         #expect(route(tool("plan_meals", result: #"{"ok":true}"#)) == .mealPlan)
         #expect(route(tool("manage_categories", args: ["action": .string("add")],
                            result: #"{"id":"c1","name":"Bakery","parentId":null}"#))

@@ -79,8 +79,13 @@ final class AssistantChatStore {
     /// Grows with every chat the user opens or starts.
     @ObservationIgnored private var picks = 0
 
+    /// What every request of a turn tells about the user's Reminders (nil: nothing, so the
+    /// Reminders tools are off); tests replace it.
+    @ObservationIgnored var remindersContext: () async -> AssistantRemindersContext?
+
     init(api: FamilyAPI) {
         self.api = api
+        remindersContext = { await AssistantRemindersContext.current(for: api) }
     }
 
     /// One store per family and session, so the open chat survives closing the panel.
@@ -294,11 +299,12 @@ final class AssistantChatStore {
         return preferred?.hasPrefix("de") == true ? "de" : "en"
     }
 
-    private func input(text: String, attachments: [AssistantOutgoingAttachment]) -> AssistantChatInput {
+    private func input(text: String, attachments: [AssistantOutgoingAttachment]) async -> AssistantChatInput {
+        let reminders = await remindersContext()
         let here = context()
         return AssistantChatInput(
             text: text, attachments: attachments, page: current?.page ?? here.page, year: here.year,
-            lang: language, today: AssistantDates.day()
+            lang: language, today: AssistantDates.day(), reminders: reminders
         )
     }
 
@@ -307,7 +313,7 @@ final class AssistantChatStore {
     func send(_ text: String, attachments: [AssistantOutgoingAttachment] = []) async throws {
         let message = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !message.isEmpty || !attachments.isEmpty else { return }
-        let input = input(text: message, attachments: attachments)
+        let input = await input(text: message, attachments: attachments)
         if busy {
             let shown = AssistantQueued(
                 id: "local-\(UUID().uuidString)", text: message,
@@ -327,11 +333,18 @@ final class AssistantChatStore {
             )
         }
         guard var c = current else { return }
-        // A new message instead of an answer: the question stays unanswered.
-        if let open = openQuestion() {
-            var skipped = open.question
-            skipped.skipped = true
-            c.items[open.index] = .question(skipped)
+        // A new message instead of an answer: the question (or Reminders edit) stays unanswered.
+        if let open = openWaiting() {
+            switch c.items[open] {
+            case var .question(q):
+                q.skipped = true
+                c.items[open] = .question(q)
+            case var .reminders(edit):
+                edit.skipped = true
+                c.items[open] = .reminders(edit)
+            default:
+                break
+            }
         }
         c.items.append(item)
         current = c
@@ -379,14 +392,35 @@ final class AssistantChatStore {
         }
     }
 
-    /// The open chat's question that waits for an answer, with its position.
-    func openQuestion() -> (index: Int, question: AssistantQuestion)? {
+    /// The position of the open chat's question or Reminders edit that waits for the user (the
+    /// last of them, as on the server: one waits at a time).
+    private func openWaiting() -> Int? {
         guard let items = current?.items, !busy, savedCopy == nil,
-              let index = items.lastIndex(where: { if case .question = $0 { true } else { false } }),
-              case let .question(q) = items[index], q.answer == nil, !q.skipped,
+              let index = items.lastIndex(where: {
+                  switch $0 {
+                  case .question, .reminders: true
+                  default: false
+                  }
+              }),
               !items[(index + 1)...].contains(where: \.isUser)
         else { return nil }
+        switch items[index] {
+        case let .question(q) where q.answer == nil && !q.skipped: return index
+        case let .reminders(edit) where edit.answer == nil && !edit.skipped: return index
+        default: return nil
+        }
+    }
+
+    /// The open chat's question that waits for an answer, with its position.
+    func openQuestion() -> (index: Int, question: AssistantQuestion)? {
+        guard let index = openWaiting(), case let .question(q) = current?.items[index] else { return nil }
         return (index, q)
+    }
+
+    /// The open chat's Reminders edit that waits for the user to apply or decline it.
+    func openRemindersEdit() -> (index: Int, edit: AssistantRemindersEdit)? {
+        guard let index = openWaiting(), case let .reminders(edit) = current?.items[index] else { return nil }
+        return (index, edit)
     }
 
     /// Answers the open question of the current chat, and the assistant goes on.
@@ -398,14 +432,92 @@ final class AssistantChatStore {
         var answered = q
         answered.answer = .init(selected: selected, text: own.isEmpty ? nil : own)
         current?.items[index] = .question(answered)
+        // Nothing else is sent while the Reminders are read.
+        sending = true
+        Task {
+            let reminders = await remindersContext()
+            let here = context()
+            let body = AssistantAnswerInput(
+                id: q.id, selected: selected, text: own.isEmpty ? nil : own, page: c.page ?? here.page,
+                year: here.year, lang: language, today: AssistantDates.day(), reminders: reminders
+            )
+            post(c.id, "answer", body: body)
+        }
+    }
+
+    /// How applying a Reminders edit started.
+    enum RemindersApplyStart: Equatable {
+        /// Applied (as far as it went) and answered; the assistant goes on.
+        case answered
+        /// Ohana may not use Reminders (asked, and the user said no, or not allowed before).
+        case noAccess
+        /// It doesn't wait any more (answered elsewhere, a turn runs).
+        case notWaiting
+    }
+
+    /// Applies the open Reminders edit `id` on this device (asking for the access first when it
+    /// wasn't asked for yet), then answers with each op's result and the Reminders after it.
+    func applyReminders(_ id: String, store: RemindersStore = .shared) async -> RemindersApplyStart {
+        guard let open = openRemindersEdit(), open.edit.id == id, let chatID = current?.id, !chatID.isEmpty else {
+            return .notWaiting
+        }
+        store.refreshAccess()
+        if store.access == .notDetermined {
+            do {
+                try await store.requestAccess()
+            } catch {
+                ErrorBanner.shared.show(error)
+            }
+        }
+        guard store.access.isGranted else { return .noAccess }
+        // Asking for the access took a while: still the same chat, still waiting?
+        guard current?.id == chatID, let again = openRemindersEdit(), again.edit.id == id else { return .notWaiting }
+        sending = true
+        let results = AssistantRemindersApply.perform(again.edit.ops, on: store)
+        answerReminders(again, chatID: chatID, answer: .init(applied: true, results: results))
+        return .answered
+    }
+
+    /// Declines the open Reminders edit `id`: nothing changes, and the assistant hears so.
+    func declineReminders(_ id: String) {
+        guard let open = openRemindersEdit(), open.edit.id == id, let chatID = current?.id, !chatID.isEmpty else { return }
+        sending = true
+        answerReminders(open, chatID: chatID, answer: .init(applied: false, results: nil))
+    }
+
+    private func answerReminders(_ open: (index: Int, edit: AssistantRemindersEdit), chatID: String,
+                                 answer: AssistantRemindersEdit.Answer) {
+        var answered = open.edit
+        answered.answer = answer
+        current?.items[open.index] = .reminders(answered)
         let here = context()
-        let body = AssistantAnswerInput(
-            id: q.id, selected: selected, text: own.isEmpty ? nil : own, page: c.page ?? here.page,
-            year: here.year, lang: language, today: AssistantDates.day()
+        let page = current?.page ?? here.page
+        Task {
+            // After the change: what the assistant reads next is how the Reminders are now.
+            let reminders = await remindersContext()
+            post(chatID, "reminders", body: Self.remindersAnswer(
+                id: open.edit.id, answer: answer, page: page, year: here.year,
+                lang: language, today: AssistantDates.day(), reminders: reminders
+            ))
+        }
+    }
+
+    /// The body of POST /ai/chats/{id}/reminders.
+    static func remindersAnswer(id: String, answer: AssistantRemindersEdit.Answer, page: String, year: Int,
+                                lang: String, today: String,
+                                reminders: AssistantRemindersContext?) -> AssistantRemindersAnswerInput {
+        AssistantRemindersAnswerInput(
+            id: id, applied: answer.applied, results: answer.applied ? answer.results ?? [] : nil, page: page,
+            year: year, lang: lang, today: today, reminders: reminders
         )
+    }
+
+    /// Sends an answer (POST /ai/chats/{id}/{route}) and follows the turn it goes on with.
+    private func post(_ chatID: String, _ route: String, body: some Encodable) {
         do {
-            start(c.id, request: try jsonRequest(.post, "/ai/chats/\(Self.enc(c.id))/answer", body: body))
+            start(chatID, request: try jsonRequest(.post, "/ai/chats/\(Self.enc(chatID))/\(route)", body: body))
         } catch {
+            sending = false
             ErrorBanner.shared.show(error)
         }
     }

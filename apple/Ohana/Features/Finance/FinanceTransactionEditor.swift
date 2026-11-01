@@ -76,7 +76,6 @@ struct FinanceTransactionEditor: View {
     @Bindable var store: FinanceStore
     let target: FinanceEditTarget
     @Environment(\.dismiss) private var dismiss
-    @Environment(FamilyContext.self) private var family
 
     @State private var draft = FinanceTransactionDraft()
     @State private var original = FinanceTransactionDraft()
@@ -193,7 +192,6 @@ struct FinanceTransactionEditor: View {
                 Text("Left without one, it is sorted into a category when you save.")
             }
         }
-        if existing == nil && !draft.income { shoppingDay }
         Section("Note") {
             TextField("Note", text: $draft.note, axis: .vertical)
                 .lineLimit(2...6)
@@ -220,24 +218,6 @@ struct FinanceTransactionEditor: View {
                 Text("No total found: type in the amount.")
             } else {
                 Text("Read on this device. Check the amount and the date before saving.")
-            }
-        }
-    }
-
-    /// A purchase near a shopping day: booked as groceries, it links to that day's list.
-    @ViewBuilder
-    private var shoppingDay: some View {
-        if let trip = store.shoppingLinks.trip(near: Day(draft.date).description), let day = Day(trip.date),
-           let groceries = store.groceriesCategory {
-            Section {
-                if store.shoppingLinks.categoryIds.contains(draft.categoryId ?? "") {
-                    Label("Linked to the shopping of \(day.formatted())", systemImage: "cart")
-                        .foregroundStyle(.secondary)
-                } else {
-                    Button("Groceries of the shopping on \(day.formatted())", systemImage: "cart.badge.plus") {
-                        draft.categoryId = groceries.id
-                    }
-                }
             }
         }
     }
@@ -270,15 +250,6 @@ struct FinanceTransactionEditor: View {
         } else if t.imported {
             Section { Label("Imported from a bank statement", systemImage: "square.and.arrow.down").foregroundStyle(.secondary) }
         }
-        // A groceries transaction near a shopping day links to that day's list.
-        if let trip = store.shoppingLinks.list(for: t.date, categoryId: t.categoryId) {
-            Section {
-                Button("Shopping list of this day", systemImage: "cart") {
-                    dismiss()
-                    family.open(.shoppingList(id: trip.id))
-                }
-            }
-        }
     }
 
     private func fill() {
@@ -310,7 +281,7 @@ struct FinanceTransactionEditor: View {
         guard let added else { return }
         // A receipt left without a category: sorted after the sheet closes (the AI can take a while).
         if scan != nil, fields.categoryId == nil, store.sortsOnSave, let id = added.first {
-            Task { await store.categorizeReceipt(id, date: fields.date) }
+            Task { await store.categorizeReceipt(id) }
         }
         dismiss()
     }

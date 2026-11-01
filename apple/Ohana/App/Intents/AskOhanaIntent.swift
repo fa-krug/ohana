@@ -44,7 +44,7 @@ struct OhanaShortcuts: AppShortcutsProvider {
         )
         // String parameters can't be part of a phrase: Siri asks for the item, the title, the page.
         AppShortcut(
-            intent: AddToShoppingListIntent(),
+            intent: AddShoppingReminderIntent(),
             phrases: [
                 "Add to the shopping list in \(.applicationName)",
                 "Add something to the \(.applicationName) shopping list",

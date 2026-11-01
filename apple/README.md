@@ -64,7 +64,8 @@ Ohana/
   Core/           APIClient + FamilyAPI (JSON over /api/v1), APIError, JSONValue, Keychain,
                   DevicePairing, ServerAccountPage, ServerInfo (version, modules), DemoServer
                   (the demo), account models, Day / Money helpers, Widgets (WidgetFeed: the
-                  widgets' snapshot and store, shared with the extension)
+                  widgets' snapshot and store, shared with the extension), Reminders (EventKit,
+                  the shopping list's sync)
   DesignSystem/   Content surfaces (contentCard, CardSection, chip, TintedIcon), OhanaBackground,
                   LoadState / LoadStateView, ErrorBanner, CancelButton / discardGuard, RemoteImage,
                   Tints (Color.ohana, ModuleTint; shared with the widgets)
@@ -91,7 +92,9 @@ OhanaTests/       Swift Testing unit tests
 - **Siri, Shortcuts, Spotlight** (`App/Intents/`): *Ask Ohana* opens the assistant; *Add to
   Shopping List*, *Add Event* and *Import Recipe* (a URL, also from the share sheet in a shortcut)
   run without opening the app and answer in a sentence. They use the server, token and family the
-  app stored (`IntentConnection`). The phrases' German is in `Resources/AppShortcuts.xcstrings`.
+  app stored (`IntentConnection`); *Add to Shopping List* adds a reminder to the family's shopping
+  list in Reminders (see below) and needs no server. The phrases' German is in
+  `Resources/AppShortcuts.xcstrings`.
 - **Share extension** (`ShareExtension/`): sharing a web page (Safari, or any app sharing a URL) to
   Ohana has the server read its recipe and save it to "Want to try"; *Undo* deletes it again, and
   cancelling while it works saves nothing (the server notices the request go away). The app's
@@ -111,7 +114,7 @@ OhanaTests/       Swift Testing unit tests
 
 Home Screen and Lock Screen widgets on iPhone and iPad, desktop widgets on the Mac: **Today** and
 **Tomorrow** (calendar entries, events, birthdays; today's events drop off once they end),
-**Tonight's dinner**, **Shopping list** (what's left to buy) and **Appointment found** (the
+**Tonight's dinner** and **Appointment found** (the
 earliest slot the enabled searches found). The Lock Screen sizes exist on iOS only.
 
 They show the family the app shows. Like the share extension they need no App Group: the
@@ -121,8 +124,22 @@ own container for when the server can't be reached (`Core/Widgets/WidgetFeed.swi
 leaves the modules the server turned off in the Keychain too and reloads the widgets after loading
 the account, on a family switch, after a change and when it goes to the background
 (`WidgetSync`); on their own they refresh every 30 minutes, when an event of today ends and at
-midnight. Signed out or in the demo they ask to open the app. A tap opens the day, recipe,
-shopping list or appointment in the app (`ohana://f/{familyId}/…`).
+midnight. Signed out or in the demo they ask to open the app. A tap opens the day, recipe or
+appointment in the app (`ohana://f/{familyId}/…`).
+
+## The shopping list in Reminders
+
+Ohana has no shopping list of its own: the server works out what the meal plan needs per shopping
+day (`GET …/meals/shopping?from=`), and the app writes it into a Reminders list the user picks for
+the family on this device (Settings → Shopping List, or the meal plan's toolbar), one item per
+reminder ("150 g Tomato"), due on its shopping day. It only goes one way: ticking off, editing and
+adding happen in Reminders, and Ohana never brings back what was deleted there nor overwrites a
+title the user changed (`Core/Reminders/ShoppingReminderPlan.swift` has the rules; each reminder's
+url, `ohana://f/{familyId}/meals/shopping/{date}/{key}?q=…&t=…`, marks it as Ohana's). It syncs when
+it is turned on, when the app becomes active or shows another family, a few seconds after the meal
+plan or recipes change, and with *Sync now* (`ShoppingReminders`). `RemindersStore` wraps EventKit
+(one `EKEventStore`, full access to reminders); the Mac app has the sandbox's Calendars
+entitlement, which covers reminders. Not in the demo.
 
 ## Building and testing from the command line
 

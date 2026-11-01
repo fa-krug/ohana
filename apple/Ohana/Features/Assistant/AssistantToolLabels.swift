@@ -41,9 +41,9 @@ enum AssistantToolLabels {
         case "save_recipe": return String(localized: "Saving a recipe")
         case "get_meal_plan": return String(localized: "Reading the meal plan")
         case "plan_meals": return String(localized: "Planning meals")
-        case "get_shopping_list": return String(localized: "Reading the shopping list")
-        case "tick_shopping_items": return String(localized: "Ticking off the shopping list")
-        case "add_shopping_items": return String(localized: "Adding to the shopping list")
+        case "get_shopping_items": return String(localized: "Reading what the meal plan needs")
+        case "get_reminders": return String(localized: "Reading your reminders")
+        case "edit_reminders": return String(localized: "Suggesting changes to your reminders")
         case "list_appointment_searches": return String(localized: "Reading the appointment searches")
         case "find_doctor_specialities": return String(localized: "Looking up specialities")
         case "create_appointment_search": return String(localized: "Creating an appointment search")
@@ -69,7 +69,8 @@ enum AssistantToolLabels {
              "change_transactions", "combine_transfers", "set_statistic_average":
             "banknote"
         case "list_recipes", "get_recipe", "save_recipe", "get_meal_plan", "plan_meals": "fork.knife"
-        case "get_shopping_list", "tick_shopping_items", "add_shopping_items": "cart"
+        case "get_shopping_items": "cart"
+        case "get_reminders", "edit_reminders": "checklist"
         case "list_appointment_searches", "find_doctor_specialities", "create_appointment_search",
              "change_appointment_search", "run_appointment_search", "get_appointment_slot",
              "book_appointment_slot":
@@ -250,11 +251,17 @@ enum AssistantToolLabels {
                 let names = tags.map { named($0) }.filter { !$0.isEmpty }.joined(separator: ", ")
                 parts.append(String(localized: "without \(names)"))
             }
-        case "tick_shopping_items", "add_shopping_items":
-            let items = (a["items"]?.arrayValue ?? []).map { i in
-                i.stringValue != nil ? named(i) : str(i["name"])
-            }.filter { !$0.isEmpty }
-            parts.append(list(items, max: 3))
+        case "get_shopping_items":
+            parts.append(span(date(a["from"]), ""))
+        case "get_reminders":
+            if !named(a["list"]).isEmpty { parts.append(quoted(named(a["list"]))) }
+        case "edit_reminders":
+            let titles = ops.map { str($0["title"]) }.filter { !$0.isEmpty }
+            if !ops.isEmpty {
+                let n = ops.count
+                parts.append(String(AttributedString(localized: "^[\(n) change](inflect: true)").characters))
+            }
+            parts.append(list(titles, max: 3))
         case "find_doctor_specialities":
             parts.append(quoted(str(a["query"])))
         case "create_appointment_search":

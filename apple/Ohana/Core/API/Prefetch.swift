@@ -1,7 +1,7 @@
 import Foundation
 
 /// Loads the selected family's main screens in the background, so their copies on the device
-/// (`ResponseCache`, the shopping lists' `ShoppingOfflineStore`) are there before they're opened,
+/// (`ResponseCache`) are there before they're opened,
 /// offline too. The app model starts it once the server answered, when the family changes and
 /// when the connection comes back; at most every `interval` per family, never in the demo nor in
 /// Low Data Mode. A new family or server stops the one under way.
@@ -83,9 +83,6 @@ enum Prefetch {
                 fetch(RecipeTagsView.request(api)),
                 fetch(RecipeListModel.statusRequest(api)),
                 Job { _ = try await RecipeCatalogCache.load(api); return [] },
-                Job { try await shopping(api); return [] },
-                // As the shopping page asks, for adding items offline.
-                fetch(api.cached("/meals/shopping/units", as: ShoppingUnitsResponse.self)),
             ]
         }
         if family.isEnabled(.finance) { jobs += finance(api) }
@@ -143,23 +140,5 @@ enum Prefetch {
         if let at = period.balanceDay() { jobs.append(fetch(FinanceStore.balancesRequest(api, at: at))) }
         jobs += FinanceStore.summaryQueries(period).map { fetch(FinanceStore.summaryRequest(api, $0)) }
         return jobs
-    }
-
-    /// The shopping overview and its latest list into the lists' own store, as
-    /// `ShoppingListsView` and its list page keep them. Not while ticks or added items wait to be
-    /// sent, nor when one went through meanwhile: the answer may not have it.
-    private static func shopping(_ api: FamilyAPI) async throws {
-        let queue = ShoppingTickQueue.for(api)
-        func settled() -> Bool { queue.pending.isEmpty && queue.pendingAdds.isEmpty }
-        guard settled() else { return }
-        let (confirmed, adds) = (queue.confirmed, queue.addsSettled)
-        // As `ShoppingListsView.load` asks.
-        let overview = try await api.get("/meals/shopping", query: ["lang": MealPlanLanguage.current],
-                                         as: ShoppingOverview.self)
-        guard settled(), queue.confirmed == confirmed, queue.addsSettled == adds else { return }
-        let store = ShoppingOfflineStore(api: api)
-        store.saveOverview(overview)
-        if let latest = overview.latest { store.saveList(latest) }
-        store.prune(keeping: Set(overview.lists.map(\.id)))
     }
 }

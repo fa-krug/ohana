@@ -1,12 +1,10 @@
 {
   "Add to Shopping List": "Zur Einkaufsliste hinzufügen",
-  "Adds an item to the family’s shopping list in Ohana.": "Setzt etwas auf die Einkaufsliste der Familie in Ohana.",
   "Item": "Artikel",
   "What should go on the shopping list?": "Was soll auf die Einkaufsliste?",
   "Quantity": "Menge",
   "Unit": "Einheit",
   "An abbreviation like l, g or kg; without one, pieces.": "Eine Abkürzung wie l, g oder kg; ohne: Stück.",
-  "Added %@ to the shopping list.": "%@ steht jetzt auf der Einkaufsliste.",
   "Add Event": "Termin hinzufügen",
   "Adds an event to the family calendar in Ohana.": "Trägt einen Termin in den Familienkalender in Ohana ein.",
   "Title": "Titel",
@@ -27,11 +25,13 @@
   "Connect your Ohana server in the app first.": "Verbinde zuerst in der App deinen Ohana-Server.",
   "Meals are turned off on your Ohana server.": "Die Mahlzeiten sind auf deinem Ohana-Server ausgeschaltet.",
   "This needs the assistant, which is turned off on your Ohana server.": "Dafür braucht es den Assistenten, und der ist auf deinem Ohana-Server ausgeschaltet.",
-  "There’s no shopping list yet: it comes with the meal plan.": "Es gibt noch keine Einkaufsliste: Sie kommt mit dem Essensplan.",
-  "Ohana doesn’t know the unit “%@”.": "Ohana kennt die Einheit „%@“ nicht.",
   "The quantity must be a number above 0.": "Die Menge muss eine Zahl über 0 sein.",
   "That’s empty.": "Da steht ja nichts.",
   "Add ${quantity} ${unit} ${item} to the shopping list": "${quantity} ${unit} ${item} auf die Einkaufsliste setzen",
   "Add ${eventTitle} on ${date}": "${eventTitle} am ${date} eintragen",
-  "Import the recipe from ${url}": "Rezept von ${url} importieren"
+  "Import the recipe from ${url}": "Rezept von ${url} importieren",
+  "Adds an item to the family’s shopping list in Reminders, the list chosen in Ohana.": "Setzt etwas auf die Einkaufsliste der Familie in Erinnerungen, die Liste, die in Ohana ausgewählt ist.",
+  "Added %@ to %@.": "%1$@ zu %2$@ hinzugefügt.",
+  "Choose a Reminders list for the shopping list in Ohana first: Meals → Plan → Shopping List.": "Wähle zuerst in Ohana eine Erinnerungsliste für die Einkaufsliste: Essen → Planung → Einkaufsliste.",
+  "Ohana has no access to your reminders. You can allow it in the Settings.": "Ohana hat keinen Zugriff auf deine Erinnerungen. Du kannst ihn in den Einstellungen erlauben."
 }

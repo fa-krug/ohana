@@ -12,7 +12,6 @@
       { "categoryId": "leisure", "lowCents": 30000, "highCents": 45000 }
     ]
   },
-  "groceriesCategoryId": "groceries",
   "categories": [
     { "id": "salary", "name": "Salary", "color": "#22c55e", "icon": "💼", "kind": "income", "position": 0, "parentId": null },
     { "id": "child-benefit", "name": "Child benefit", "color": "#14b8a6", "icon": "👶", "kind": "income", "position": 1, "parentId": null },

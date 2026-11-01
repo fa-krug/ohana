@@ -104,7 +104,6 @@ struct FinanceOverview: Codable, Hashable {
     /// Saved bank formats; kept as JSON so ones this app can't read survive a save.
     var csvMappings: [JSONValue]
     var benchmark: FinanceBenchmark?
-    var groceriesCategoryId: String?
     var categories: [FinanceCategory]
     var accounts: [FinanceAccount]
 
@@ -212,44 +211,6 @@ struct FinanceCategorizeResult: Codable {
 /// GET /ai/settings, the one field the finances need: whether the assistant is set up.
 struct FinanceAIStatus: Codable {
     var configured: Bool
-}
-
-/// GET /finance/shopping-links (lib/finance/app-routes.ts): the groceries categories and the
-/// family's shopping days.
-struct FinanceShoppingLinks: Codable, Hashable {
-    struct Trip: Codable, Hashable {
-        var id: String
-        var date: String
-    }
-
-    var categoryIds: [String]
-    var lists: [Trip]
-
-    static let none = FinanceShoppingLinks(categoryIds: [], lists: [])
-
-    /// The shopping list a transaction belongs to: one in a groceries category whose day is
-    /// within ± 1 day of a shopping day (the nearest; on a tie the earlier list).
-    func list(for date: String, categoryId: String?) -> Trip? {
-        guard let categoryId, categoryIds.contains(categoryId) else { return nil }
-        return trip(near: date)
-    }
-
-    /// The shopping day within ± 1 day of the date, whatever the category (the nearest; on a
-    /// tie the earlier list).
-    func trip(near date: String) -> Trip? {
-        guard let day = Day(date) else { return nil }
-        var best: Trip?
-        var bestDistance = Int.max
-        for trip in lists {
-            guard let other = Day(trip.date) else { continue }
-            let distance = abs(FinanceDates.days(from: other, to: day))
-            if distance <= 1 && distance < bestDistance {
-                best = trip
-                bestDistance = distance
-            }
-        }
-        return best
-    }
 }
 
 /// Building JSON bodies: amounts go as whole numbers.

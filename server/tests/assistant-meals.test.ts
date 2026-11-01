@@ -1,5 +1,5 @@
 // The assistant's meal tools (lib/assistant/tools/meals.ts) against the in-memory database:
-// recipes, the meal plan ("next week without fish") and the shopping list, every change with
+// recipes, the meal plan ("next week without fish") and what it needs from the shops, every change with
 // undo steps that are replayed through the family API (lib/meals/family-routes.ts); viewers
 // and families with changes off get only the tools that read. One chat runs through the
 // worker with the mock AI.
@@ -11,10 +11,9 @@ import { DrizzleCalendarStore } from "@/lib/calendar/store";
 import { DrizzleFinanceStore } from "@/lib/finance/store";
 import { runTool, type ToolContext, TOOLS, toolsFor } from "@/lib/assistant/tools";
 import {
-  calEntries, calEntryTypes, mealPlanEntries, planIterations, recipeTags, recipes, shoppingListItems,
+  calEntries, calEntryTypes, mealPlanEntries, planIterations, recipeTags, recipes,
 } from "@/lib/db/schema";
 import { getRecipe, listTags } from "@/lib/meals/queries/recipes";
-import { getLatestShoppingList } from "@/lib/meals/queries/shopping";
 import { seed } from "@/lib/meals/seed";
 import { type AssistantTest, assistantTest, configure, type Event, net } from "@/lib/test/assistant";
 
@@ -202,13 +201,10 @@ describe("meal plan tools", () => {
     expect((await f.tool("get_meal_plan", {})).result.plan).toBeNull();
   });
 
-  it("plan an iteration again; undo brings its meals and ticks back", async () => {
+  it("plan an iteration again; undo brings its meals back", async () => {
     const f = family();
     await withRecipes(f);
     await f.tool("plan_meals", { action: "setup", shoppingDays: ["Monday"] });
-    const list = getLatestShoppingList(f.t.db, f.t.familyId, "en")!;
-    const ticked = list.items[0];
-    expect((await f.tool("tick_shopping_items", { items: [ticked.ingredientName], checked: true })).ok).toBe(true);
     const it = f.t.db.select().from(planIterations).get()!;
     const before = f.t.db.select().from(mealPlanEntries).where(eq(mealPlanEntries.iterationId, it.id)).all();
 
@@ -216,13 +212,23 @@ describe("meal plan tools", () => {
     expect(again.ok, JSON.stringify(again.result)).toBe(true);
     // Only the fish dishes are left (plus the gap-fill, which leaves out the excluded tags too).
     expect(again.result.meals.every((m: { recipe: string }) => m.recipe.startsWith("Fish"))).toBe(true);
-    expect(getLatestShoppingList(f.t.db, f.t.familyId, "en")!.items.every((i) => !i.isChecked)).toBe(true);
+    const needs = (await f.tool("get_shopping_items", {})).result.days.flatMap((d: { items: { name: string }[] }) => d.items.map((i) => i.name));
+    expect(needs).toContain("Salmon");
+    expect(needs).not.toContain("Tomato");
 
     await f.undo(again.change);
     const back = f.t.db.select().from(mealPlanEntries).where(eq(mealPlanEntries.iterationId, it.id)).all();
     expect(back.map((e) => [e.id, e.recipeId, e.sourceEntryId])).toEqual(before.map((e) => [e.id, e.recipeId, e.sourceEntryId]));
-    const restored = getLatestShoppingList(f.t.db, f.t.familyId, "en")!;
-    expect(restored.items.find((i) => i.id === ticked.id)?.isChecked).toBe(true);
+  });
+
+  it("put back a snapshot from before the shopping lists moved to Reminders", async () => {
+    const f = family();
+    await withRecipes(f);
+    await f.tool("plan_meals", { action: "setup", shoppingDays: ["Monday"] });
+    const again = await f.tool("plan_meals", { action: "again" });
+    const step = again.change.undo[0];
+    const old = { ...step, body: { ...step.body, restore: step.body.restore.map((s: object) => ({ ...s, lists: [{ id: "l", shoppingDate: TODAY, items: [] }] })) } };
+    await f.undo({ undo: [old] });
   });
 
   it("leave away days out and show them", async () => {
@@ -246,61 +252,40 @@ describe("meal plan tools", () => {
   });
 });
 
-describe("shopping list tools", () => {
-  it("read, tick and untick items (by name), and undo", async () => {
+describe("shopping items", () => {
+  it("work out what the plan needs per shopping day", async () => {
     const f = family();
     await withRecipes(f);
-    expect((await f.tool("get_shopping_list", {})).result.error).toMatch(/no shopping list yet/);
-    await f.tool("plan_meals", { action: "setup", shoppingDays: ["Monday"] });
-    const read = await f.tool("get_shopping_list", {});
-    expect(read.result.items.length).toBeGreaterThan(0);
-    const onion = read.result.items.find((i: { name: string }) => i.name === "onion");
-    const res = await f.tool("tick_shopping_items", { items: ["onion"], checked: true });
-    expect(res.result.changed).toBe(1);
-    expect(res.change.summary).toBe("1 item ticked off");
-    expect(f.t.db.select().from(shoppingListItems).where(eq(shoppingListItems.id, onion.id)).get()!.isChecked).toBe(true);
-    // Again: nothing changes, nothing to undo.
-    expect((await f.tool("tick_shopping_items", { items: [onion.id], checked: true })).change).toBeUndefined();
-    await f.undo(res.change);
-    expect(f.t.db.select().from(shoppingListItems).where(eq(shoppingListItems.id, onion.id)).get()!.isChecked).toBe(false);
-    expect((await f.tool("tick_shopping_items", { items: ["Caviar"], checked: true })).result.error).toBe("Not on the list: Caviar");
-  });
-
-  it("add items, merging with an open one of the same unit; undo takes them back", async () => {
-    const f = family();
-    await withRecipes(f);
-    await f.tool("plan_meals", { action: "setup", shoppingDays: ["Monday"] });
-    const before = getLatestShoppingList(f.t.db, f.t.familyId, "en")!;
-    const onion = before.items.find((i) => i.ingredientName === "onion")!;
-    const res = await f.tool("add_shopping_items", {
-      items: [
-        { name: "Milk", nameDe: "Milch", quantity: 1, unit: "l" },
-        { name: "Onion", quantity: 2, unit: "Stk" },
-      ],
-    });
+    expect((await f.tool("get_shopping_items", {})).result).toMatchObject({ days: [], note: "The family has no meal plan yet." });
+    await f.tool("plan_meals", { action: "setup", shoppingDays: ["Monday", "Thursday"] });
+    const res = await f.tool("get_shopping_items", {});
     expect(res.ok, JSON.stringify(res.result)).toBe(true);
-    expect(res.change.summary).toBe("2 items added to the shopping list");
-    const after = getLatestShoppingList(f.t.db, f.t.familyId, "en")!;
-    expect(after.items).toHaveLength(before.items.length + 1);
-    expect(after.items.find((i) => i.id === onion.id)!.quantity).toBe(String(Number(onion.quantity) + 2));
-    await f.undo(res.change);
-    const back = getLatestShoppingList(f.t.db, f.t.familyId, "en")!;
-    expect(back.items.map((i) => [i.id, i.quantity])).toEqual(before.items.map((i) => [i.id, i.quantity]));
+    expect(res.result.from).toBe(TODAY);
+    expect(res.result.days.map((d: { date: string }) => d.date)).toEqual(["2026-11-02", "2026-11-05"]);
+    const onion = res.result.days[0].items.find((i: { name: string }) => i.name === "onion");
+    expect(onion).toMatchObject({ key: expect.stringMatching(new RegExp(`^${onion.ingredientId}-\\d+$`)), quantity: expect.any(String), unit: expect.any(String) });
+    expect(res.summary).toMatch(/items?, 2 days$/);
+    // From a later day on, and in German.
+    const later = await f.tool("get_shopping_items", { from: "2026-11-03" }, { ...f.ctx(), lang: "de" });
+    expect(later.result.days.map((d: { date: string }) => d.date)).toEqual(["2026-11-05"]);
+    expect(later.result.days[0].items.map((i: { name: string }) => i.name)).toContain("Zwiebel");
+    expect((await f.tool("get_shopping_items", { from: "2026-12-01" })).result.note).toMatch(/Nothing to buy/);
   });
 });
 
 describe("permissions", () => {
   it("viewers and families with changes off get only the reading meal tools", () => {
     const names = toolsFor({ writes: false, search: false }).map((t) => t.function.name);
-    for (const n of ["list_recipes", "get_recipe", "get_meal_plan", "get_shopping_list"]) expect(names).toContain(n);
-    for (const n of ["save_recipe", "plan_meals", "tick_shopping_items", "add_shopping_items"]) expect(names).not.toContain(n);
+    for (const n of ["list_recipes", "get_recipe", "get_meal_plan", "get_shopping_items"]) expect(names).toContain(n);
+    for (const n of ["save_recipe", "plan_meals"]) expect(names).not.toContain(n);
+    for (const n of ["get_shopping_list", "tick_shopping_items", "add_shopping_items"]) expect(TOOLS[n]).toBeUndefined();
   });
 
   it("the undo routes are for editors of the family only", async () => {
     const f = family();
     const [id] = await withRecipes(f);
     expect((await f.t.view("DELETE", `${f.t.f}/meals/recipes/${id}`)).status).toBe(403);
-    expect((await f.t.view("POST", `${f.t.f}/meals/shopping/check`, { ids: ["x"], checked: true })).status).toBe(403);
+    expect((await f.t.view("DELETE", `${f.t.f}/meals/plan`)).status).toBe(403);
     const other = family();
     expect((await other.t.call("DELETE", `${other.t.f}/meals/recipes/${id}`)).status).toBe(404);
     expect(f.t.db.select().from(recipes).where(eq(recipes.id, id)).get()).toBeDefined();

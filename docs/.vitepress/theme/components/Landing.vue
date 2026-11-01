@@ -32,9 +32,10 @@ const month: (string | null)[] = [
 ]
 const dayNumber = (i: number) => i - 2
 
+// The meal plan's shopping items as they land in Reminders, due on their shopping day.
 const shopping = [
-  { aisle: "Fruit & vegetables", items: [["Tomatoes", true], ["Basil", true], ["Lemons", false]] },
-  { aisle: "Dairy", items: [["Mozzarella", false], ["Greek yogurt", false]] },
+  { day: "Due Saturday", items: [["500 g Tomatoes", true], ["1 bunch Basil", true], ["3 Lemons", false]] },
+  { day: "Due Tuesday", items: [["2 Mozzarella", false], ["500 g Greek yogurt", false]] },
 ]
 
 const spending = [
@@ -240,10 +241,10 @@ const faqs = [
         <div class="feature-copy">
           <span class="badge meal"><svg viewBox="0 0 24 24" class="icon"><path v-for="d in icons.utensils" :key="d" :d="d" /></svg>Meals</span>
           <h3>Dinner, planned. Shopping, sorted.</h3>
-          <p>Your recipes, a meal plan that picks dishes sharing ingredients and skips the days you're away, and a shopping list that works even with no signal in the store.</p>
+          <p>Your recipes, a meal plan that picks dishes sharing ingredients and skips the days you're away, and everything it needs on your shopping list in Apple Reminders.</p>
           <ul class="checks">
             <li>Recipes with photos, tags and kitchen-machine steps</li>
-            <li>Shopping lists grouped by aisle, checked off together</li>
+            <li>Groceries in a Reminders list the family shares</li>
             <li>New recipes and photos with AI, if you like</li>
           </ul>
         </div>
@@ -260,9 +261,9 @@ const faqs = [
               </div>
             </div>
             <div>
-              <div class="panel-head"><b>Shopping</b><span class="chip">5 items</span></div>
-              <div v-for="g in shopping" :key="g.aisle" class="aisle">
-                <small>{{ g.aisle }}</small>
+              <div class="panel-head"><b>Groceries</b><span class="chip">Reminders</span></div>
+              <div v-for="g in shopping" :key="g.day" class="aisle">
+                <small>{{ g.day }}</small>
                 <div v-for="[name, done] in g.items" :key="String(name)" class="item" :class="{ done }">
                   <span class="box"><svg v-if="done" viewBox="0 0 24 24" class="icon"><path v-for="d in icons.check" :key="d" :d="d" /></svg></span>{{ name }}
                 </div>
@@ -281,7 +282,7 @@ const faqs = [
           <ul class="checks">
             <li>CSV import for any bank, duplicates recognized</li>
             <li>Transfers, split bookings and your own categories</li>
-            <li>Grocery spending matched to your shopping trips</li>
+            <li>Receipts scanned with your phone's camera</li>
           </ul>
         </div>
         <div class="feature-visual">
@@ -333,7 +334,7 @@ const faqs = [
         <div class="feature-copy">
           <span class="badge ai"><svg viewBox="0 0 24 24" class="icon"><path v-for="d in icons.sparkles" :key="d" :d="d" /></svg>Assistant</span>
           <h3>An assistant that knows your family</h3>
-          <p>Ask in plain words. The assistant reads and changes your calendar, finances, meals and appointments, and every change it makes can be undone with a tap.</p>
+          <p>Ask in plain words. The assistant reads and changes your calendar, finances, meals and appointments, and every change it makes can be undone with a tap. It even keeps your reminders in order, once you say OK.</p>
           <ul class="checks">
             <li>Any AI you like, in the cloud or running at home</li>
             <li>Read-only for viewers, so nothing changes by accident</li>
@@ -346,11 +347,11 @@ const faqs = [
             <div class="msg ai">
               <span class="ai-mark"><svg viewBox="0 0 24 24" class="icon"><path v-for="d in icons.sparkles" :key="d" :d="d" /></svg></span>
               <div>
-                Done! I marked <b>Sat–Sun</b> as away, moved the lasagne to Friday and added 4 items to the shopping list.
+                Done! I marked <b>Sat–Sun</b> as away, moved the lasagne to Friday and, as you said OK, added 4 items to your shopping list.
                 <div class="changes">
                   <span class="chip">Calendar · 2 days</span>
                   <span class="chip">Meal plan · 1 change</span>
-                  <span class="chip">Shopping · 4 items</span>
+                  <span class="chip">Reminders · 4 items</span>
                 </div>
                 <span class="undo">Undo</span>
               </div>
@@ -370,8 +371,8 @@ const faqs = [
       <div class="links">
         <div class="link-card"><div class="flow"><span class="sq cal" />→<span class="sq meal" /></div><b>Away days skip the meal plan</b><p>Off to Grandma's? No groceries bought for meals you won't cook.</p></div>
         <div class="link-card"><div class="flow"><span class="sq appt" />→<span class="sq cal" /></div><b>Booked appointments land in the calendar</b><p>With the time, the practice and who it's for.</p></div>
-        <div class="link-card"><div class="flow"><span class="sq meal" />→<span class="sq fin" /></div><b>Shopping trips meet your spending</b><p>See what each week's groceries really cost.</p></div>
-        <div class="link-card"><div class="flow"><span class="sq ai" />→<span class="sq ov" /></div><b>One assistant for all of it</b><p>One question can touch the calendar, the meal plan and the shopping list.</p></div>
+        <div class="link-card"><div class="flow"><span class="sq meal" />→<span class="sq rem" /></div><b>The meal plan writes your shopping list</b><p>What the week's dinners need lands in Reminders, due on shopping day.</p></div>
+        <div class="link-card"><div class="flow"><span class="sq ai" />→<span class="sq ov" /></div><b>One assistant for all of it</b><p>One question can touch the calendar, the meal plan and your reminders.</p></div>
       </div>
     </section>
 
@@ -431,11 +432,11 @@ const faqs = [
         <div class="how-step">
           <span class="how-num">3</span>
           <h3>Plan together</h3>
-          <p>Everyone works from the same calendar, meal plan and shopping list, each on their own iPhone, iPad or Mac.</p>
+          <p>Everyone works from the same calendar and meal plan, each on their own iPhone, iPad or Mac.</p>
           <div class="how-visual">
             <div class="together">
               <div class="avatars"><span style="background:#0d9488">A</span><span style="background:#f97316">T</span><span style="background:#8b5cf6">E</span><span style="background:#0ea5e9">N</span></div>
-              <div><b>Tom checked off 3 items</b><small>Shopping list · just now</small></div>
+              <div><b>Tom moved Tuesday's dinner</b><small>Meal plan · just now</small></div>
             </div>
           </div>
         </div>
@@ -576,6 +577,7 @@ h1 { font-size: clamp(42px, 6.2vw, 70px); line-height: 1.04; font-weight: 800; m
 .sq { display: inline-block; width: 12px; height: 12px; border-radius: 4px; }
 .sq.ov { background: var(--teal); } .sq.cal { background: var(--cal); } .sq.fin { background: var(--fin); }
 .sq.meal { background: var(--meal); } .sq.appt { background: var(--appt); } .sq.ai { background: var(--ai); }
+.sq.rem { background: #64748b; }
 .mac-main { padding: 16px 18px; }
 .mac-title { font-size: 20px; font-weight: 700; margin-bottom: 10px; }
 .mac-title small { color: var(--muted); font-weight: 500; font-size: 14px; }

@@ -47,13 +47,28 @@
   "Debit and credit": "Soll und Haben",
   "No readable rows yet: check the columns.": "Noch keine lesbaren Zeilen: Prüfe die Spalten.",
   "First rows": "Erste Zeilen",
-  "^[%lld row](inflect: true) read": {"one": "%lld Zeile gelesen", "other": "%lld Zeilen gelesen"},
+  "^[%lld row](inflect: true) read": {
+    "one": "%lld Zeile gelesen",
+    "other": "%lld Zeilen gelesen"
+  },
   ", %lld couldn’t be read": ", %lld nicht lesbar",
-  "^[%lld new transaction](inflect: true)": {"one": "%lld neue Buchung", "other": "%lld neue Buchungen"},
+  "^[%lld new transaction](inflect: true)": {
+    "one": "%lld neue Buchung",
+    "other": "%lld neue Buchungen"
+  },
   "%lld already imported – skipped": "%lld schon importiert – übersprungen",
-  "^[%lld row](inflect: true) without a date or amount – skipped": {"one": "%lld Zeile ohne Datum oder Betrag – übersprungen", "other": "%lld Zeilen ohne Datum oder Betrag – übersprungen"},
-  "^[%lld transfer](inflect: true) will be combined": {"one": "%lld Umbuchung wird zusammengefasst", "other": "%lld Umbuchungen werden zusammengefasst"},
-  "^[%lld split booking](inflect: true) will be combined": {"one": "%lld Aufteilung wird zusammengefasst", "other": "%lld Aufteilungen werden zusammengefasst"},
+  "^[%lld row](inflect: true) without a date or amount – skipped": {
+    "one": "%lld Zeile ohne Datum oder Betrag – übersprungen",
+    "other": "%lld Zeilen ohne Datum oder Betrag – übersprungen"
+  },
+  "^[%lld transfer](inflect: true) will be combined": {
+    "one": "%lld Umbuchung wird zusammengefasst",
+    "other": "%lld Umbuchungen werden zusammengefasst"
+  },
+  "^[%lld split booking](inflect: true) will be combined": {
+    "one": "%lld Aufteilung wird zusammengefasst",
+    "other": "%lld Aufteilungen werden zusammengefasst"
+  },
   "Set up the assistant to sort the rest too": "Assistenten einrichten, um auch den Rest einzusortieren",
   "Sort the new transactions into categories (like similar ones, the rest with AI)": "Die neuen Buchungen in Kategorien einsortieren (wie ähnliche, den Rest mit KI)",
   "Sort the new transactions into categories like similar earlier ones": "Die neuen Buchungen wie ähnliche frühere in Kategorien einsortieren",
@@ -70,7 +85,10 @@
   "Last month": "Letzter Monat",
   "This year": "Dieses Jahr",
   "Last year": "Letztes Jahr",
-  "^[%lld month](inflect: true)": {"one": "%lld Monat", "other": "%lld Monate"},
+  "^[%lld month](inflect: true)": {
+    "one": "%lld Monat",
+    "other": "%lld Monate"
+  },
   "%lld %% above": "%lld %% darüber",
   "above": "darüber",
   "%lld %% below": "%lld %% darunter",
@@ -97,11 +115,6 @@
   "Figures the overview measures your months against, e.g. household spending according to the statistics office.": "Zahlen, an denen die Übersicht eure Monate misst, z. B. die Haushaltsausgaben laut Statistikamt.",
   "Danger zone": "Gefahrenzone",
   "Deletes all transactions, accounts, categories and saved bank formats of this family and resets the currency. The calendar stays as it is.": "Löscht alle Buchungen, Konten, Kategorien und gespeicherten Bankformate dieser Familie und setzt die Währung zurück. Der Kalender bleibt unverändert.",
-  "Groceries category": "Lebensmittel-Kategorie",
-  "Automatic: %@": "Automatisch: %@",
-  "Automatic (a category called Groceries)": "Automatisch (eine Kategorie namens Lebensmittel)",
-  "Groceries": "Lebensmittel",
-  "The category of your grocery shopping (with its subcategories): a shopping list shows what was spent in it on the shopping day (± 1 day), and those transactions link to the list.": "Die Kategorie eurer Lebensmitteleinkäufe (mit ihren Unterkategorien): Eine Einkaufsliste zeigt, was am Einkaufstag (± 1 Tag) darin ausgegeben wurde, und diese Buchungen verlinken auf die Liste.",
   "No accounts yet.": "Noch keine Konten.",
   "Add account": "Konto hinzufügen",
   "Opening balance %@": "Anfangsstand %@",
@@ -150,21 +163,45 @@
   "Redone": "Wiederhergestellt",
   "Saved": "Gespeichert",
   "Transaction deleted": "Buchung gelöscht",
-  "^[%lld transaction](inflect: true) deleted": {"one": "%lld Buchung gelöscht", "other": "%lld Buchungen gelöscht"},
+  "^[%lld transaction](inflect: true) deleted": {
+    "one": "%lld Buchung gelöscht",
+    "other": "%lld Buchungen gelöscht"
+  },
   "Combined into a transfer": "Als Umbuchung zusammengefasst",
-  "^[%lld transfer](inflect: true) combined": {"one": "%lld Umbuchung zusammengefasst", "other": "%lld Umbuchungen zusammengefasst"},
+  "^[%lld transfer](inflect: true) combined": {
+    "one": "%lld Umbuchung zusammengefasst",
+    "other": "%lld Umbuchungen zusammengefasst"
+  },
   "Transfer split up": "Umbuchung aufgelöst",
   "Combined into a split booking": "Als Aufteilung zusammengefasst",
   "Taken out of the split": "Aus der Aufteilung genommen",
   "Split booking undone": "Aufteilung aufgehoben",
   "No transfers or split bookings found": "Keine Umbuchungen oder Aufteilungen gefunden",
-  "^[%lld transfer](inflect: true)": {"one": "%lld Umbuchung", "other": "%lld Umbuchungen"},
-  "^[%lld split booking](inflect: true)": {"one": "%lld Aufteilung", "other": "%lld Aufteilungen"},
+  "^[%lld transfer](inflect: true)": {
+    "one": "%lld Umbuchung",
+    "other": "%lld Umbuchungen"
+  },
+  "^[%lld split booking](inflect: true)": {
+    "one": "%lld Aufteilung",
+    "other": "%lld Aufteilungen"
+  },
   "%@ combined": "%@ zusammengefasst",
-  "Imported ^[%lld transaction](inflect: true)": {"one": "%lld Buchung importiert", "other": "%lld Buchungen importiert"},
-  "(%lld already there)": {"one": "(%lld war schon da)", "other": "(%lld waren schon da)"},
-  "Nothing new: ^[%lld transaction](inflect: true) already there": {"one": "Nichts Neues: %lld Buchung war schon da", "other": "Nichts Neues: alle %lld waren schon da"},
-  "Sorted ^[%lld transaction](inflect: true) into categories": {"one": "%lld Buchung in eine Kategorie einsortiert", "other": "%lld Buchungen in Kategorien einsortiert"},
+  "Imported ^[%lld transaction](inflect: true)": {
+    "one": "%lld Buchung importiert",
+    "other": "%lld Buchungen importiert"
+  },
+  "(%lld already there)": {
+    "one": "(%lld war schon da)",
+    "other": "(%lld waren schon da)"
+  },
+  "Nothing new: ^[%lld transaction](inflect: true) already there": {
+    "one": "Nichts Neues: %lld Buchung war schon da",
+    "other": "Nichts Neues: alle %lld waren schon da"
+  },
+  "Sorted ^[%lld transaction](inflect: true) into categories": {
+    "one": "%lld Buchung in eine Kategorie einsortiert",
+    "other": "%lld Buchungen in Kategorien einsortiert"
+  },
   "(%lld like similar ones)": "(%lld wie ähnliche)",
   "The AI couldn’t sort: %@": "Die KI konnte nicht einsortieren: %@",
   "No transaction could be sorted": "Keine Buchung konnte einsortiert werden",
@@ -198,13 +235,15 @@
   "Transfer": "Umbuchung",
   "Part of a split booking": "Teil einer Aufteilung",
   "Part of %@": "Teil von %@",
-  "Split into ^[%lld part](inflect: true)": {"one": "Aufgeteilt in %lld Teil", "other": "Aufgeteilt in %lld Teile"},
+  "Split into ^[%lld part](inflect: true)": {
+    "one": "Aufgeteilt in %lld Teil",
+    "other": "Aufgeteilt in %lld Teile"
+  },
   "remainder %@": "Rest %@",
   "Show more (%lld left)": "Mehr anzeigen (noch %lld)",
   "No transactions": "Keine Buchungen",
   "No transactions in this period. Add one or import a bank statement (CSV).": "Keine Buchungen in diesem Zeitraum. Füge eine hinzu oder importiere einen Kontoauszug (CSV).",
   "No transactions in this period.": "Keine Buchungen in diesem Zeitraum.",
-  "Shopping list of this day": "Einkaufsliste dieses Tages",
   "Part of a transfer: it counts only once, as the sum of its transactions": "Teil einer Umbuchung: Sie zählt nur einmal, als Summe ihrer Buchungen",
   "Split booking: it counts only through its parts and what they leave over": "Aufgeteilte Buchung: Sie zählt nur über ihre Teile und den Rest, den diese übrig lassen",
   "Take out of the split": "Aus der Aufteilung nehmen",
@@ -243,7 +282,10 @@
   "Combine automatically": "Automatisch zusammenfassen",
   "More": "Mehr",
   "Select": "Auswählen",
-  "^[%lld filter](inflect: true) on": {"one": "%lld Filter aktiv", "other": "%lld Filter aktiv"},
+  "^[%lld filter](inflect: true) on": {
+    "one": "%lld Filter aktiv",
+    "other": "%lld Filter aktiv"
+  },
   "better": "besser",
   "Change mapping": "Zuordnung ändern",
   "Combine": "Zusammenfassen",
@@ -282,8 +324,5 @@
   "No total found: type in the amount.": "Keine Summe gefunden: Gib den Betrag ein.",
   "Read on this device. Check the amount and the date before saving.": "Auf diesem Gerät gelesen. Prüfe Betrag und Datum vor dem Speichern.",
   "Left without one, it is sorted into a category when you save.": "Ohne Kategorie wird sie beim Speichern einsortiert.",
-  "Linked to the shopping of %@": "Mit dem Einkauf vom %@ verknüpft",
-  "Groceries of the shopping on %@": "Lebensmittel vom Einkauf am %@",
-  "Sorted into %@, linked to the shopping of %@": "In %1$@ einsortiert, mit dem Einkauf vom %2$@ verknüpft",
   "Sorted into %@": "In %@ einsortiert"
 }

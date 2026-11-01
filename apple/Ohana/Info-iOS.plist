@@ -44,6 +44,10 @@
 	<string>Ohana listens when you dictate a message to the assistant.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Ohana uses your photos for recipe pictures.</string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>Ohana writes what the meal plan needs into the Reminders list you choose, and the assistant reads and changes your reminders when you ask it to.</string>
+	<key>NSRemindersUsageDescription</key>
+	<string>Ohana writes what the meal plan needs into the Reminders list you choose, and the assistant reads and changes your reminders when you ask it to.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Ohana turns what you dictate to the assistant into text.</string>
 	<key>NSSupportsLiveActivities</key>
@@ -91,16 +95,6 @@
 			<string>Ohana calendar event</string>
 			<key>UTTypeIdentifier</key>
 			<string>de.fa-krug.ohana.calendar-event</string>
-		</dict>
-		<dict>
-			<key>UTTypeConformsTo</key>
-			<array>
-				<string>public.data</string>
-			</array>
-			<key>UTTypeDescription</key>
-			<string>Ohana shopping item</string>
-			<key>UTTypeIdentifier</key>
-			<string>de.fa-krug.ohana.shopping-item</string>
 		</dict>
 	</array>
 </dict>

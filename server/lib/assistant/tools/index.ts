@@ -12,10 +12,12 @@ import { appointmentTools } from "./appointments";
 import { eventTools } from "./events";
 import { generalTools } from "./general";
 import { mealTools } from "./meals";
+import { reminderTools } from "./reminders";
 import { webTools } from "./web";
 import { type ModuleName, moduleEnabled } from "@/lib/server-info";
 
 export * from "./common";
+export { cleanReminders, type ReminderOp, type RemindersEdit, type RemindersSnapshot } from "./reminders";
 
 export const TOOLS: Record<string, Tool> = {
   ...calendarTools,
@@ -24,6 +26,7 @@ export const TOOLS: Record<string, Tool> = {
   ...mealTools,
   ...appointmentTools,
   ...generalTools,
+  ...reminderTools,
   ...webTools,
 };
 
@@ -40,11 +43,18 @@ export function toolEnabled(name: string): boolean {
   return !m || moduleEnabled(m);
 }
 
-/** The tools for a chat: without writes if they're off, without search if it isn't set up, and
- *  without those of modules the server turned off. */
-export function toolsFor(opts: { writes: boolean; search: boolean }): ToolSpec[] {
+/** The tools for a chat: without writes if they're off, without search if it isn't set up,
+ *  without the Reminders tools unless the app sent the user's Reminders, and without those of
+ *  modules the server turned off. */
+export function toolsFor(opts: { writes: boolean; search: boolean; reminders?: boolean }): ToolSpec[] {
   return Object.values(TOOLS)
-    .filter((t) => (opts.writes || !t.write) && (opts.search || !t.needsSearch) && toolEnabled(t.spec.name))
+    .filter(
+      (t) =>
+        (opts.writes || !t.write) &&
+        (opts.search || !t.needsSearch) &&
+        (opts.reminders || !t.needsReminders) &&
+        toolEnabled(t.spec.name),
+    )
     .map((t) => ({ type: "function", function: t.spec }));
 }
 

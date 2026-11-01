@@ -38,7 +38,8 @@ struct MealPlanIteration: Codable, Identifiable, Hashable {
     /// ACTIVE | ARCHIVED
     let status: String
     let entries: [MealPlanEntry]
-    let shoppingLists: [MealPlanShoppingListRef]
+    /// The iteration's shopping days (what each needs: GET /meals/shopping, into Reminders).
+    let shoppingDates: [Day]
     let createdAt: String?
 
     var isActive: Bool { status == "ACTIVE" }
@@ -55,12 +56,6 @@ struct MealPlanEntry: Codable, Identifiable, Hashable {
     let isLeftover: Bool
     let sourceEntryId: String?
     let isLocked: Bool
-}
-
-struct MealPlanShoppingListRef: Codable, Identifiable, Hashable {
-    let id: String
-    let shoppingDate: Day?
-    let itemCount: Int
 }
 
 struct MealPlanTag: Codable, Identifiable, Hashable {
@@ -241,8 +236,6 @@ struct MealPlanDayRow: Identifiable, Hashable {
     /// The day's lunch.
     let entry: MealPlanEntry?
     let isShoppingDay: Bool
-    /// The shopping list of this shopping day, if it has one.
-    let shoppingList: MealPlanShoppingListRef?
     /// The calendar types that make the family away, if it is.
     let awayTypes: [String]?
 
@@ -252,21 +245,20 @@ struct MealPlanDayRow: Identifiable, Hashable {
 }
 
 extension MealPlanIteration {
-    /// Every day from start to end with its lunch, shopping list and away types.
-    func dayRows(shoppingDays: [Int], away: [String: [String]]) -> [MealPlanDayRow] {
+    /// Every day from start to end with its lunch, whether it's one of the iteration's shopping
+    /// days, and its away types.
+    func dayRows(away: [String: [String]]) -> [MealPlanDayRow] {
         let lunches = Dictionary(entries.filter { $0.mealType == "LUNCH" }.map { ($0.date, $0) },
                                  uniquingKeysWith: { first, _ in first })
-        let lists = Dictionary(shoppingLists.compactMap { list in list.shoppingDate.map { ($0, list) } },
-                               uniquingKeysWith: { first, _ in first })
+        let dates = Set(shoppingDates)
         var rows: [MealPlanDayRow] = []
         var day = startDate
         while day <= endDate {
-            let isShoppingDay = shoppingDays.contains(MealPlanWeekday.index(of: day))
+            let isShoppingDay = dates.contains(day)
             rows.append(MealPlanDayRow(
                 day: day,
                 entry: lunches[day],
                 isShoppingDay: isShoppingDay,
-                shoppingList: isShoppingDay ? lists[day] : nil,
                 awayTypes: away[day.description]
             ))
             day = day.adding(days: 1)
