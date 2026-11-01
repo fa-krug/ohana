@@ -189,7 +189,7 @@ empty Ohana database. It has a **dry run** that only reports what it would do.
 | 6  | Import + cut-over  | `import-legacy.ts` with dry run, a rehearsal on a copy, then the real import; old apps shut down, Supabase set read-only, old repos archived |
 | 7  | Connections ✅     | The cross-module features above, the assistant's tools everywhere (item 4) with phase 3 part B |
 | 8  | Headless, open source | No web UI: the native app is the client; a lean server (Hono) with only the sign-in pages; self-hosting docs, GHCR images, AGPL / MPL (see Phase 8) |
-| 9  | Push to the app (draft) | Notifications straight to the app from any self-hosted server, through a push relay run by fa-krug that holds the APNs key and sees only ciphertext (see Phase 9) |
+| 9  | Push to the app ✅ | Notifications straight to the app from any self-hosted server, through a push relay run by fa-krug that holds the APNs key and sees only ciphertext (see Phase 9) |
 
 ### Phase 8: headless, open source, self-hosted
 
@@ -229,7 +229,7 @@ Steps:
    `.env.example`, reverse proxy, HTTPS for passkeys, backups, local AI with Ollama), GHCR
    publishing, `docs/openapi.yaml`.
 
-### Phase 9: push to the app through a relay (draft)
+### Phase 9: push to the app through a relay
 
 Today a family gets notifications only through the channels it sets up (ntfy, Pushover,
 Pushbullet, Telegram, email): a second app, and a tap doesn't open Ohana. Apple delivers
@@ -375,6 +375,18 @@ Open questions:
   channels still work without it; watch `/health` with the server's uptime check.
 - **Time-sensitive notifications** for "appointment found" (`interruption-level`, needs an
   entitlement and a payload field the relay sets): later, if wanted.
+
+Built as planned (step 1, the Apple Developer setup, and deploying the relay are left to do by
+hand). Deviations and details:
+
+- A relay token the relay can't open (a removed `RELAY_SECRET`) answers `invalid`, not `gone`;
+  the server forgets the device on both, and the app registers again at its next start (or
+  when the settings show it on but the server doesn't know it).
+- The relay checks the per-IP limit first (every message counts), a wrong type is a 400 for the
+  whole request, a bad value only that message's `invalid`; collapse ids must be printable ASCII.
+- The test push (`POST /api/v1/me/push/test`) runs in the request, like the channels' test.
+- `aps-environment` is `development` in the entitlements; exporting for TestFlight / the App
+  Store signs it as production. The app tells the relay `sandbox` in Debug builds.
 
 ### Phase 7 notes (connections)
 

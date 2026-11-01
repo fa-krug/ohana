@@ -5,8 +5,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Ohana** is one app for a family: calendar, finance, meals, doctor appointments and an
 AI assistant. It is **open source and self-hosted** (server AGPL-3.0, app MPL-2.0). The
 repository holds **`server/`**, the server (JSON API, the few sign-in pages, worker; Hono +
-SQLite, one Docker image on GHCR) and **`apple/`**, the native SwiftUI app for iOS/iPadOS and
-macOS, the **only client**: there is no web UI (see *Native app* below). Paths in this file are
+SQLite, one Docker image on GHCR), **`apple/`**, the native SwiftUI app for iOS/iPadOS and
+macOS, the **only client**: there is no web UI (see *Native app* below), and **`relay/`**, the
+push relay fa-krug runs for every server's notifications to the app (see *Push to the app*). Paths in this file are
 relative to `server/` unless they start with `apple/`. It replaced `fa-krug/family-planner`,
 `fa-krug/cookless` and `fa-krug/findmyappointment`; [docs/plan.md](docs/plan.md) has the
 decisions and the phases (all done, phase 8: headless, open source, self-hosted).
@@ -191,6 +192,28 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   family's language (its longest-standing editor's). **ntfy** (`NTFY`): `target` is the topic
   URL (`validNtfyTopicUrl`), `token` an optional access token; `ntfyRequest` builds the publish
   request (title RFC 2047-encoded when not ASCII). Set up in the app (Settings → Household).
+  `notifyFamily`'s `app` option (`true` or `{ userIds }`) also pushes to the members' app
+  devices (`lib/push`); `notifyEvent` passes the pref's `app`, `notifyRun` the search's
+  `notifyApp`, the assistant's turn notification only the chat user's devices.
+- **Push to the app (`lib/push/`, `relay/`, phase 9):** APNs needs the app developer's key, so
+  every server sends through fa-krug's relay (`PUSH_RELAY_URL`, default
+  `https://ohana-push.fa-krug.de`, empty = off; `GET /api/v1/server` `push: { relay } | null`).
+  The app registers its APNs token with the relay (`POST /v1/register` → sealed `relayToken`),
+  then `PUT /api/v1/me/push` (`lib/push/app-routes.ts`, on the account router) gives the server
+  the relay token and a per-device AES-256 key; `push_devices` (one per API token, cascade: sign
+  out removes it; both secrets sealed; `muted_family_ids`). `deliver.ts` `pushToFamily` seals
+  `payload.ts` `{v, title, body, path, familyId, event}` per device (12-byte IV + ciphertext +
+  tag, base64 = CryptoKit's combined box; shortened to 3000 bytes), opaque collapse ids
+  (hash of key + `Message.collapseKey`), sends through `relay.ts` (`RelayClient`, injected in
+  tests as `push`/`relay`); `gone` / `invalid` deletes the device (the app registers again at
+  start). Prefs: `notification_prefs.app`, `appt_searches.notify_app` (both optional in input:
+  an older app keeps them). `relay/` is its own Hono service (stateless, AGPL, image
+  `ghcr.io/fa-krug/ohana-relay`, `.github/workflows/relay.yml`, tests with a fake APNs client;
+  `relay/README.md` has the protocol). App: `Core/Push/` (`PushNotifications`: enable / renew
+  at start / mute / test, tap → `AppModel.open`; `PushPayload` + `PushKey`, shared with the
+  `OhanaNotificationService(-macOS)` extension targets, which decrypt with the key from the
+  shared Keychain group), `App/AppDelegate.swift` (the APNs token), `Shell/PushSettingsSection`,
+  `OhanaPushRelay` in the Info.plists; `PUSH_FALLBACK` is the relay's visible fallback string.
 - **Appointments (`lib/appointments/`)**, port of findmyappointment: `doctolib/` (JSON client,
   profile cache), `jameda/` (HTML client, offline term list), `sources/` (fan-out, dedup,
   ignore keys), `pipeline.ts` (`runPipeline`: never throws once the run exists; per-provider
