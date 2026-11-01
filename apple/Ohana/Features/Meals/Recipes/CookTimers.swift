@@ -141,15 +141,8 @@ struct CookTimer: Codable, Hashable, Identifiable {
         }
     }
 
-    /// Shows a finished timer's notification while the app is open, with its sound.
-    nonisolated final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate, Sendable {
-        static let shared = NotificationDelegate()
-
-        func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification)
-            async -> UNNotificationPresentationOptions {
-            [.banner, .list, .sound]
-        }
-    }
+    // A finished timer's notification shows while the app is open, with its sound: the notification
+    // center's delegate is `PushNotifications` (Core/Push), which presents every notification so.
 
     // MARK: Live Activity
 

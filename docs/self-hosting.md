@@ -37,6 +37,7 @@ Edit `.env`:
 | `ENCRYPTION_KEY` | Optional key for stored secrets (`openssl rand -base64 32`); else derived from `AUTH_SECRET`. |
 | `DISABLED_MODULES` | Optional: `finance`, `meals`, `appointments`, `assistant` (comma list). |
 | `AI_ALLOW_PRIVATE_ENDPOINT` | `1` to allow an AI endpoint on your own network (Ollama, LM Studio). |
+| `PUSH_RELAY_URL` | Notifications to the app go through fa-krug's push relay by default; empty turns them off (see *Notifications*). |
 | `TZ` | Time zone of the daily jobs (in `docker-compose.yml`, default `Europe/Berlin`). |
 | `OHANA_VERSION` | Image tag to run (in `docker-compose.yml`, default `latest`; `sha-<commit>` pins one version). |
 
@@ -145,8 +146,27 @@ Pushbullet, Telegram, email over SMTP, or **ntfy**. For ntfy, enter the topic UR
 protected topic, an access token; subscribe to the topic in the ntfy app. *Settings → Household
 → What Ohana tells you* chooses which events go where.
 
-The server can't send Apple push notifications itself (that needs the app developer's key), so
-the app's own notifications go through these channels.
+### Notifications in the app
+
+The app can get notifications itself, without a second app. Apple delivers them only when
+they're signed with the app developer's key, which can't be part of an open-source server. So
+every server sends them through a small **push relay** run by the project
+(`https://ohana-push.fa-krug.de`, the code is [relay/](../relay/README.md)) that holds the key:
+
+- Each person turns them on per device in the app (*Settings → Notifications on this device*),
+  and can leave out families there. *Settings → Household → Notifications* chooses which
+  events also go to the app (all of them by default); each appointment search has its own
+  *Ohana app* switch. "Assistant finished" goes only to the person whose chat it was.
+- What a notification says is **encrypted end to end**: the app makes a key and gives it only to
+  your server, the server encrypts every notification with it, and only the device can read it.
+  The relay and Apple see that a notification goes to a device, from which server and when,
+  never its text or its link.
+- Your server needs outbound HTTPS to the relay. It sends nothing when nobody turned
+  notifications on.
+
+To turn notifications to the app off on your server, set `PUSH_RELAY_URL=` (empty) in `.env`;
+the app then hides the switch and the channels work as before. Someone who builds the app under
+their own Apple developer account runs their own relay and sets `PUSH_RELAY_URL` to it.
 
 ## Backups
 

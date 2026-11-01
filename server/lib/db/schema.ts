@@ -51,6 +51,30 @@ export const authTokens = sqliteTable(
   }),
 );
 
+/** A device of the app that gets push notifications through the relay (phase 9). Tied to the
+ *  API token that registered it: signing out or revoking the token removes it. `relay_token`
+ *  (what the relay sends to) and `key` (the device's AES-256 key for the payloads) are sealed
+ *  with lib/secrets.ts. */
+export const pushDevices = sqliteTable("push_devices", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  tokenId: text("token_id")
+    .notNull()
+    .unique()
+    .references(() => authTokens.id, { onDelete: "cascade" }),
+  platform: text("platform").notNull(), // ios | macos
+  relayToken: text("relay_token").notNull(),
+  key: text("key").notNull(),
+  /** JSON array of family ids this device doesn't want pushes for. */
+  mutedFamilyIds: text("muted_family_ids").notNull().default("[]"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+  lastSentAt: integer("last_sent_at", { mode: "timestamp" }),
+  lastError: text("last_error"),
+});
+
 export const passkeyCredentials = sqliteTable("passkey_credentials", {
   id: text("id").primaryKey(),
   userId: text("user_id")

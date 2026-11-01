@@ -25,4 +25,6 @@ export interface EventPref {
   enabled: boolean;
   /** null: all of the family's enabled channels. */
   channelIds: string[] | null;
+  /** Also push to the members' app devices (phase 9). */
+  app: boolean;
 }

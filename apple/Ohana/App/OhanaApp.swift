@@ -6,12 +6,18 @@ import UserNotifications
 struct OhanaApp: App {
     @State private var app: AppModel
     @Environment(\.scenePhase) private var scenePhase
+    #if canImport(UIKit)
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var delegate
+    #else
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
+    #endif
 
     init() {
         let app = AppModel()
         _app = State(initialValue: app)
-        // A cook timer's notification shows while the app is open too.
-        UNUserNotificationCenter.current().delegate = CookTimers.NotificationDelegate.shared
+        // The notification center's delegate: every notification (a push, a cook timer's) shows
+        // while the app is open too, and a push's tap opens its page.
+        PushNotifications.shared.start(app)
         #if os(macOS)
         // The assistant in the menu bar: a click away while the window is hidden or another app
         // is in front.

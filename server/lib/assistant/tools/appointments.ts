@@ -107,6 +107,7 @@ function searchView(s: SearchListItem, familyId: string) {
     enabled: s.enabled,
     every: s.scheduleType === "MINUTES" ? `${s.scheduleMinutes} min` : s.scheduleType === "CRON" ? `cron ${s.cron}` : s.scheduleType,
     notifyOnlyEarlier: s.notifyOnlyEarlier,
+    notifyApp: s.notifyApp,
     runRequested: s.runRequested,
     lastRun: s.latestRun
       ? { status: s.latestRun.status, at: s.latestRun.startedAt, slots: s.latestRun.slotsFound, error: s.latestRun.errorMessage || undefined }
@@ -185,6 +186,7 @@ const searchProps = {
   kidsFriendly: { type: "boolean", description: "jameda: only child-friendly practices" },
   everyMinutes: { type: "integer", description: "How often to look (minutes, default 30)" },
   notifyOnlyEarlier: { type: "boolean", description: "Notify only when a slot beats the earliest one seen so far" },
+  notifyApp: { type: "boolean", description: "Also notify the family members' Ohana apps (push); default true" },
 };
 
 /** The search's input with the asked-for changes of the shared fields. */
@@ -211,6 +213,7 @@ async function applyCommon(input: SearchInput, args: Record<string, unknown>, ct
     input.scheduleMinutes = n;
   }
   if (typeof args.notifyOnlyEarlier === "boolean") input.notifyOnlyEarlier = args.notifyOnlyEarlier;
+  if (typeof args.notifyApp === "boolean") input.notifyApp = args.notifyApp;
 }
 
 export const appointmentTools: Record<string, Tool> = {

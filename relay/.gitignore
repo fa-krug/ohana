@@ -1,0 +1,5 @@
+node_modules
+.env*
+!.env.example
+*.p8
+*.tsbuildinfo

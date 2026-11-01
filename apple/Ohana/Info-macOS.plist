@@ -42,6 +42,8 @@
 	</dict>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2026 Sascha Krug. All rights reserved.</string>
+	<key>OhanaPushRelay</key>
+	<string>https://ohana-push.fa-krug.de</string>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>

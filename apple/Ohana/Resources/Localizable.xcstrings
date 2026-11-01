@@ -8989,6 +8989,26 @@
         }
       }
     },
+    "Notifications are turned off for Ohana. Turn them on in the system settings.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benachrichtigungen sind für Ohana ausgeschaltet. Schalte sie in den Systemeinstellungen ein."
+          }
+        }
+      }
+    },
+    "Notifications on this device": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benachrichtigungen auf diesem Gerät"
+          }
+        }
+      }
+    },
     "Now %@": {
       "localizations": {
         "de": {
@@ -9055,6 +9075,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ohana"
+          }
+        }
+      }
+    },
+    "Ohana app": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohana-App"
           }
         }
       }
@@ -9165,6 +9195,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Auf den Konten: %@"
+          }
+        }
+      }
+    },
+    "On the devices that have notifications turned on": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf den Geräten, auf denen Benachrichtigungen eingeschaltet sind"
           }
         }
       }
@@ -9605,6 +9645,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "PDF"
+          }
+        }
+      }
+    },
+    "PUSH_FALLBACK": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Benachrichtigung von Ohana"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New notification from Ohana"
           }
         }
       }
@@ -12009,6 +12065,16 @@
         }
       }
     },
+    "Send a test notification": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Testbenachrichtigung senden"
+          }
+        }
+      }
+    },
     "Send after this answer": {
       "localizations": {
         "de": {
@@ -13473,6 +13539,16 @@
         }
       }
     },
+    "Test notification sent": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Testbenachrichtigung gesendet"
+          }
+        }
+      }
+    },
     "Text": {
       "localizations": {
         "de": {
@@ -13639,6 +13715,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Die Aktionen des Tages: Details, Notiz, Termin, Wiederholen, Leeren"
+          }
+        }
+      }
+    },
+    "The device couldn’t register for notifications. Try again later.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Gerät konnte sich nicht für Benachrichtigungen anmelden. Versuch es später noch einmal."
           }
         }
       }
@@ -13839,6 +13925,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Beim nächsten Import der Dateien dieser Bank wird wieder nach der Zuordnung der Spalten gefragt."
+          }
+        }
+      }
+    },
+    "The notification service couldn’t be reached: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Benachrichtigungsdienst war nicht erreichbar: %@"
           }
         }
       }
@@ -14063,6 +14159,16 @@
         }
       }
     },
+    "They go through Ohana’s notification service, which can’t read them: only this device can. What is sent is chosen under Household → Notifications.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sie laufen über Ohanas Benachrichtigungsdienst, der sie nicht lesen kann: Das kann nur dieses Gerät. Was gesendet wird, legst du unter Haushalt → Benachrichtigungen fest."
+          }
+        }
+      }
+    },
     "Thinking…": {
       "localizations": {
         "de": {
@@ -14189,6 +14295,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dieses Rezept hat noch keine Schritte."
+          }
+        }
+      }
+    },
+    "This server doesn’t send notifications to the app.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieser Server sendet keine Benachrichtigungen an die App."
           }
         }
       }

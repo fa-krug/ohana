@@ -21,6 +21,7 @@ import { familyLocale, translator } from "./locale";
 import { notifyEvent, readState, writeState } from "./prefs";
 import { formatQuantity } from "@/lib/meals/display/format";
 import { moduleEnabled } from "@/lib/server-info";
+import type { RelayClient } from "@/lib/push/relay";
 
 export const COVERAGE_DAYS = 14;
 const MAX_ITEMS = 30;
@@ -67,7 +68,7 @@ export async function checkCoverage(
   db: Db,
   familyId: string,
   now: Date,
-  opts: { send?: Sender; today?: string } = {},
+  opts: { send?: Sender; push?: RelayClient; today?: string } = {},
 ): Promise<string[]> {
   const today = opts.today ?? localDay(now);
   const state = readState<CoverageState>(db, familyId, "coverage_gap");
@@ -97,8 +98,9 @@ export async function checkCoverage(
       title: t("notifications.coverage.title", { count: days.length }),
       body: lines.join("\n"),
       url: `${getAppUrl()}/f/${familyId}/calendar`,
+      collapseKey: `coverage:${familyId}`,
     },
-    { send: opts.send },
+    { send: opts.send, push: opts.push },
   );
   const sent = !!res && res.sent > 0;
   // Told: remember the days. Not told (off, no channel or all failed): try again tomorrow.
@@ -139,7 +141,7 @@ export async function remindShopping(
   db: Db,
   familyId: string,
   now: Date,
-  opts: { send?: Sender; today?: string } = {},
+  opts: { send?: Sender; push?: RelayClient; today?: string } = {},
 ): Promise<boolean> {
   const tomorrow = addDays(opts.today ?? localDay(now), 1);
   const state = readState<ShoppingState>(db, familyId, "shopping_reminder");
@@ -158,8 +160,9 @@ export async function remindShopping(
       title: t("notifications.shopping.title", { count: list.items.length }),
       body: shown.join("\n"),
       url: `${getAppUrl()}/f/${familyId}/meals/shopping/${list.id}`,
+      collapseKey: `shopping:${list.id}`,
     },
-    { send: opts.send },
+    { send: opts.send, push: opts.push },
   );
   if (!res) return false; // turned off: nothing remembered, so turning it on still reminds
   writeState(db, familyId, "shopping_reminder", { lastDate: tomorrow }, now);

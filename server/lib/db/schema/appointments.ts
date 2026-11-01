@@ -35,6 +35,8 @@ export const apptSearches = sqliteTable(
     scheduleMinutes: integer("schedule_minutes").default(30),
     cron: text("cron").notNull().default(""),
     notifyOnlyEarlier: integer("notify_only_earlier", { mode: "boolean" }).notNull().default(false),
+    /** Also push to the members' app devices (phase 9). */
+    notifyApp: integer("notify_app", { mode: "boolean" }).notNull().default(true),
     earliestSeen: integer("earliest_seen", { mode: "timestamp" }),
     lastRunAt: integer("last_run_at", { mode: "timestamp" }),
     /** Interval schedules: when the worker runs it next. CRON: not before (the next minute

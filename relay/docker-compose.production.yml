@@ -1,0 +1,46 @@
+# docker-compose.production.yml: fa-krug's push relay (Arcane project `ohana-relay` on the Raspberry
+# Pi, next to the server), from ghcr.io/fa-krug/ohana-relay:main. Every Ohana server sends its
+# pushes here (PUSH_RELAY_URL, default https://ohana-push.fa-krug.de). Stateless: no volume.
+# Redeployed by hand in Arcane for now (.github/workflows/relay.yml only publishes the image).
+services:
+  relay:
+    image: ghcr.io/fa-krug/ohana-relay:main
+    container_name: ohana-relay
+    restart: always
+    expose:
+      - "8080"
+    environment:
+      NODE_ENV: production
+      PORT: "8080"
+      # The APNs auth key (.p8 file's text; literal \n line breaks work too), its id and the team.
+      APNS_KEY: ${APNS_KEY:?set APNS_KEY (the .p8 file's text)}
+      APNS_KEY_ID: ${APNS_KEY_ID:?set APNS_KEY_ID}
+      APNS_TEAM_ID: ${APNS_TEAM_ID:?set APNS_TEAM_ID (HS26J3YA63)}
+      APNS_TOPIC: ${APNS_TOPIC:-de.fa-krug.Ohana}
+      # Seals the relay tokens: 32 random bytes, base64 (openssl rand -base64 32).
+      RELAY_SECRET: ${RELAY_SECRET:?set RELAY_SECRET (openssl rand -base64 32)}
+      # Only while rotating RELAY_SECRET: the previous one, still opened.
+      RELAY_SECRET_OLD: ${RELAY_SECRET_OLD:-}
+      # Behind Traefik: the caller's IP is the last X-Forwarded-For entry.
+      TRUST_PROXY: "1"
+    networks:
+      - gitops_default
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8080/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 256M }
+        reservations: { cpus: "0.1", memory: 64M }
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ohana-relay.rule=Host(`${RELAY_DOMAIN:-ohana-push.fa-krug.de}`)"
+      - "traefik.http.routers.ohana-relay.entrypoints=web"
+      - "traefik.http.services.ohana-relay.loadbalancer.server.port=8080"
+
+networks:
+  gitops_default:
+    external: true

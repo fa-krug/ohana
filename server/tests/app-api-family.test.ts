@@ -232,7 +232,7 @@ describe("notifications", () => {
       enabled: true,
       channelIds: [ch.id],
     });
-    expect(res.data).toEqual({ event: "shopping_reminder", enabled: true, channelIds: [ch.id], hasChannels: true });
+    expect(res.data).toEqual({ event: "shopping_reminder", enabled: true, channelIds: [ch.id], app: true, hasChannels: true });
     expect((await s.asEditor("PUT", `${s.f}/household/notifications/events/nonsense`, { enabled: true, channelIds: null })).status).toBe(404);
     expect(
       (await s.asEditor("PUT", `${s.f}/household/notifications/events/coverage_gap`, { enabled: true, channelIds: ["other"] })).status,

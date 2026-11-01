@@ -494,6 +494,116 @@ paths:
                   ok: {type: boolean, const: true}
                   count: {type: integer, description: "Sessions that were open."}
         "401": {$ref: "#/components/responses/Unauthorized"}
+  /api/v1/me/push:
+    description: >-
+      Push notifications to this device of the app (the calling API token) through the push
+      relay (`GET /api/v1/server` → `push.relay`). The app registers with the relay, then gives
+      the server the relay's token for it and a key for the payloads, which the server seals
+      (AES-256-GCM: 12-byte IV + ciphertext + 16-byte tag, base64) so the relay sees only
+      ciphertext. Signing out (deleting the token) removes the device. 404 when push is off on
+      this server (`PUSH_RELAY_URL` empty).
+    get:
+      tags: [Account]
+      operationId: getPushDevice
+      summary: Whether this device gets push notifications
+      security: [{bearerAuth: []}]
+      x-ohana-role: token
+      responses:
+        "200":
+          description: This device.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/PushDevice"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+    put:
+      tags: [Account]
+      operationId: registerPushDevice
+      summary: Register or renew this device for push notifications
+      security: [{bearerAuth: []}]
+      x-ohana-role: token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [relay, relayToken, key, platform]
+              properties:
+                relay: {type: string, format: uri, description: "The relay the app registered with; must be this server's."}
+                relayToken: {type: string, pattern: "^r1\\.[A-Za-z0-9_-]+$", maxLength: 2000}
+                key: {type: string, description: "The device's AES-256 key (32 bytes), base64."}
+                platform: {type: string, enum: [ios, macos]}
+                mutedFamilyIds:
+                  type: array
+                  maxItems: 500
+                  items: {type: string}
+                  description: Families this device doesn't want pushes for (kept when left out).
+      responses:
+        "200":
+          description: Registered.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/PushDevice"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+    patch:
+      tags: [Account]
+      operationId: mutePushFamilies
+      summary: Choose the families this device doesn't want pushes for
+      security: [{bearerAuth: []}]
+      x-ohana-role: token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mutedFamilyIds]
+              properties:
+                mutedFamilyIds:
+                  type: array
+                  maxItems: 500
+                  items: {type: string}
+      responses:
+        "200":
+          description: This device.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/PushDevice"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    delete:
+      tags: [Account]
+      operationId: unregisterPushDevice
+      summary: Stop push notifications to this device
+      security: [{bearerAuth: []}]
+      x-ohana-role: token
+      responses:
+        "200":
+          description: "Unregistered (`registered: false`)."
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/PushDevice"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+  /api/v1/me/push/test:
+    post:
+      tags: [Account]
+      operationId: testPushDevice
+      summary: Send a test push to this device right away
+      security: [{bearerAuth: []}]
+      x-ohana-role: token
+      responses:
+        "200":
+          description: The relay accepted it.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/PushDevice"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "502": {$ref: "#/components/responses/BadGateway"}
 
   # ------------------------------------------------------------------ admin
   /api/v1/admin/users:
@@ -1339,6 +1449,7 @@ paths:
                   type: [array, "null"]
                   maxItems: 50
                   items: {type: string}
+                app: {type: boolean, description: "Also push to the members' app devices (kept when left out)."}
       responses:
         "200":
           description: The event's setting.
@@ -4525,7 +4636,7 @@ components:
     # ---------------------------------------------------------------- server / account
     ServerInfo:
       type: object
-      required: [name, version, apiVersion, modules]
+      required: [name, version, apiVersion, modules, push]
       properties:
         name: {type: string, const: Ohana}
         version: {type: string, description: "The server release, e.g. `0.1.0`."}
@@ -4536,6 +4647,23 @@ components:
           items:
             type: string
             enum: [calendar, finance, meals, appointments, assistant]
+        push:
+          description: Push to the app through a relay; null when the server turned it off.
+          oneOf:
+            - type: object
+              required: [relay]
+              properties:
+                relay: {type: string, format: uri, description: "The relay the app registers with."}
+            - type: "null"
+    PushDevice:
+      type: object
+      required: [registered, platform, mutedFamilyIds, lastSentAt, lastError]
+      properties:
+        registered: {type: boolean}
+        platform: {type: [string, "null"], enum: [ios, macos, null]}
+        mutedFamilyIds: {type: array, items: {type: string}}
+        lastSentAt: {type: [string, "null"], format: date-time}
+        lastError: {type: [string, "null"], description: "The relay's answer to the last failed push (`limited`, `error`)."}
     User:
       type: object
       required: [id, email, name, preferredLanguage, onboardingStep, isAdmin, hasPassword, hasPasskey]
@@ -5104,7 +5232,7 @@ components:
         once per shopping day), `assistant_turn_finished` (off; when nobody watches the chat).
     EventPref:
       type: object
-      required: [event, enabled, channelIds, hasChannels]
+      required: [event, enabled, channelIds, app, hasChannels]
       properties:
         event: {$ref: "#/components/schemas/NotifyEvent"}
         enabled: {type: boolean}
@@ -5112,6 +5240,7 @@ components:
           type: [array, "null"]
           description: null = all of the family's enabled channels.
           items: {type: string}
+        app: {type: boolean, description: "Also pushed to the members' app devices (default true)."}
         hasChannels: {type: boolean, description: "Whether the event picks its channels here."}
 
     # ---------------------------------------------------------------- finance
@@ -5882,6 +6011,7 @@ components:
         scheduleMinutes: {type: [integer, "null"], minimum: 1, maximum: 1440, default: 30}
         cron: {type: string, maxLength: 100, default: ""}
         notifyOnlyEarlier: {type: boolean, default: false, description: "Notify only when a slot is earlier than any seen before."}
+        notifyApp: {type: boolean, description: "Also push to the members' app devices (new searches: true; an edit without it keeps it)."}
         channelIds:
           type: array
           default: []
@@ -5933,7 +6063,7 @@ components:
     Search:
       type: object
       description: A search with its schedule and the latest run's finds.
-      required: [id, name, sources, specialitySlug, specialityLabel, jamedaSpecialitySlug, jamedaSpecialityLabel, jamedaSpecialityType, jamedaInsuranceType, jamedaKidsFriendly, jamedaVideo, locationLabel, latitude, longitude, insuranceSector, dayLimit, maxPages, enabled, scheduleType, scheduleMinutes, cron, notifyOnlyEarlier, lastRunAt, lastStatus, nextRunAt, runRequested, channelIds, latestRun, doctors, ignored]
+      required: [id, name, sources, specialitySlug, specialityLabel, jamedaSpecialitySlug, jamedaSpecialityLabel, jamedaSpecialityType, jamedaInsuranceType, jamedaKidsFriendly, jamedaVideo, locationLabel, latitude, longitude, insuranceSector, dayLimit, maxPages, enabled, scheduleType, scheduleMinutes, cron, notifyOnlyEarlier, notifyApp, lastRunAt, lastStatus, nextRunAt, runRequested, channelIds, latestRun, doctors, ignored]
       properties:
         id: {type: string}
         name: {type: string}
@@ -5957,6 +6087,7 @@ components:
         scheduleMinutes: {type: [integer, "null"]}
         cron: {type: string}
         notifyOnlyEarlier: {type: boolean}
+        notifyApp: {type: boolean}
         lastRunAt: {type: [string, "null"], format: date-time}
         lastStatus: {type: string, description: "The latest run's status (\"\" before the first)."}
         nextRunAt: {type: [string, "null"], format: date-time}
