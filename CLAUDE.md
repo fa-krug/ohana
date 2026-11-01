@@ -147,7 +147,10 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   day transactions list newest created first, then in insertion order (rowid); one request's
   ops share one `created_at`. CSV files are parsed by the app; the server stores the saved
   formats (`fin_settings.csv_mappings`). Auto-categorize calls the assistant's
-  `POST …/ai/categorize` (so it's off with the assistant).
+  `POST …/ai/categorize` (so it's off with the assistant). Receipts are scanned and read in
+  the app only (`apple/…/Finance/ReceiptScanner.swift`: VisionKit's document camera, Vision
+  text recognition, `ReceiptParser`); it saves a plain transaction, then sorts it with
+  `…/ai/categorize` (`ids`); the shopping-day link is the usual groceries category + day ± 1.
 - **Assistant (`lib/assistant/`):** family-planner's `ai/*`. Tables
   `ai_settings` (keys sealed with `getSecretBox()`), `chats` (status, lease `run_token` /
   `run_until`, `stop`, JSON `context` / `activity` / `notes` / `usage` / `queue`, `rev`),

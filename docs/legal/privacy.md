@@ -103,6 +103,8 @@ the server and on the device. Deleting the app removes the rest.
 The app only asks for these permissions, and only when you use the feature:
 
 - **Camera and photos:** to add pictures to recipes. The picture is uploaded to your server.
+  And to scan receipts: the receipt is read on your device (Apple's text recognition); the
+  picture stays there, only the amount, date and shop you save are sent to your server.
 - **Microphone and speech recognition:** to dictate messages to the assistant. The speech is
   turned into text by Apple's speech recognition, which may process it on Apple's servers
   ([Apple's privacy policy](https://www.apple.com/legal/privacy/)); the text is sent to your
