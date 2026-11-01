@@ -82,7 +82,7 @@ private enum FamilyPickerAction {
 }
 
 /// The family menu's items, a plain list: the families (the current one checked), creating or
-/// joining one, then scanning a letter and the pages.
+/// joining one, then scanning a letter and the pages, each with its icon.
 private struct FamilyMenu: View {
     @Environment(AppModel.self) private var app
     let showsPages: Bool
@@ -99,20 +99,20 @@ private struct FamilyMenu: View {
         }
         Divider()
         if app.isDemo {
-            Button("Connect your Ohana") { choose(.connect) }
+            Button("Connect your Ohana", systemImage: "server.rack") { choose(.connect) }
         } else {
-            Button("New family") { choose(.create) }
-            Button("Join a family") { choose(.join) }
+            Button("New family", systemImage: "plus") { choose(.create) }
+            Button("Join a family", systemImage: "person.badge.plus") { choose(.join) }
         }
         if scans || showsPages {
             Divider()
         }
         if scans {
-            Button("Scan letter") { choose(.scanLetter) }
+            Button("Scan letter", systemImage: "doc.text.viewfinder") { choose(.scanLetter) }
         }
         if showsPages {
             ForEach(pages) { page in
-                Button(page.title) { choose(.page(page)) }
+                Button(page.title, systemImage: page.systemImage) { choose(.page(page)) }
             }
         }
     }
