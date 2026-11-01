@@ -3,7 +3,9 @@ import SwiftUI
 
 /// One slot (slot-detail.tsx): the doctor, time, practice and address on a map, the distance
 /// from home; book on the provider's page, mark as booked (a calendar event), ignore. Its
-/// commands are in the Appointments menu too while it's on screen.
+/// commands are in the Appointments menu too while it's on screen. Back from the provider's page
+/// (an in-app Safari view on iOS; the browser on the Mac, back when the app is active again), an
+/// editor gets the booking sheet as "Did you book it?", filled in and stopping the search.
 struct AppointmentSlotView: View {
     @Environment(FamilyContext.self) private var family
     @Environment(\.dismiss) private var dismiss
@@ -12,6 +14,14 @@ struct AppointmentSlotView: View {
     let resultID: Int
     @State private var state: LoadState<AppointmentSlotDetail> = .idle
     @State private var booking = false
+    /// The booking sheet opened on the way back from the provider's page.
+    @State private var askBooked = false
+    #if os(iOS)
+    @State private var provider: ProviderPage?
+    #else
+    /// The provider's page is open in the browser: ask when the app is active again.
+    @State private var awaitingReturn = false
+    #endif
     @State private var confirmRemove = false
     /// On screen (not covered by a pushed page): only then it sets the module menu.
     @State private var onScreen = false
@@ -45,11 +55,22 @@ struct AppointmentSlotView: View {
         .onAppear { onScreen = true }
         .onDisappear { onScreen = false }
         .focusedSceneValue(\.moduleMenu, onScreen ? state.value.map(menu) : nil)
-        .sheet(isPresented: $booking) {
+        .sheet(isPresented: $booking, onDismiss: { askBooked = false }) {
             if let detail = state.value {
-                AppointmentBookSheet(detail: detail) { await load() }
+                AppointmentBookSheet(detail: detail, afterVisit: askBooked) { await load() }
             }
         }
+        #if os(iOS)
+        .fullScreenCover(item: $provider, onDismiss: returnedFromProvider) { page in
+            SafariView(url: page.url).ignoresSafeArea()
+        }
+        #else
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            guard awaitingReturn else { return }
+            awaitingReturn = false
+            returnedFromProvider()
+        }
+        #endif
         .confirmationDialog(Text("Remove the appointment with \(state.value?.slot.doctorName ?? "")?"),
                             isPresented: $confirmRemove, titleVisibility: .visible) {
             Button("Remove", role: .destructive) {
@@ -61,6 +82,24 @@ struct AppointmentSlotView: View {
         }
     }
 
+    /// Opens the provider's booking page (in the app on iOS).
+    private func openProvider(_ url: URL) {
+        #if os(iOS)
+        provider = ProviderPage(url: url)
+        #else
+        awaitingReturn = true
+        openURL(url)
+        #endif
+    }
+
+    /// Back from the provider's page: did they book it? Only for editors, and only while the
+    /// slot isn't marked as booked.
+    private func returnedFromProvider() {
+        guard family.canEdit, state.value?.booking == nil else { return }
+        askBooked = true
+        booking = true
+    }
+
     private func load() async {
         await LoadState.run($state) { try await family.api.get("/appointments/searches/\(searchID)/slots/\(resultID)") }
     }
@@ -69,7 +108,7 @@ struct AppointmentSlotView: View {
     private func menu(_ detail: AppointmentSlotDetail) -> ModuleMenu {
         ModuleMenu(title: "Appointments") {
             if let url = detail.slot.bookingURL {
-                Button("Book on \(detail.slot.sourceName)") { openURL(url) }
+                Button("Book on \(detail.slot.sourceName)") { openProvider(url) }
             }
             if family.canEdit {
                 Button("Mark as Booked…") { booking = true }
@@ -214,7 +253,7 @@ struct AppointmentSlotView: View {
 
     @ViewBuilder private func actionButtons(_ detail: AppointmentSlotDetail, _ slot: AppointmentDoctorSlot) -> some View {
         if let url = slot.bookingURL {
-            Button("Book", systemImage: "arrow.up.right.square") { openURL(url) }
+            Button("Book", systemImage: "arrow.up.right.square") { openProvider(url) }
                 .buttonStyle(.borderedProminent)
                 .help("Open the provider’s page")
         }
@@ -235,12 +274,23 @@ struct AppointmentSlotView: View {
     }
 }
 
+#if os(iOS)
+/// The provider's page in the Safari view.
+private struct ProviderPage: Identifiable {
+    let url: URL
+    var id: URL { url }
+}
+#endif
+
 /// "Booked this appointment?" (book-dialog.tsx): the day and time (the slot's, changeable),
-/// optional end, for whom (the family's names as chips), a note, and whether to stop the search.
+/// optional end, for whom (the family's names as chips, the likely one chosen), a note, and
+/// whether to stop the search (ticked). After a visit to the provider's page it asks "Did you
+/// book it?", and its Cancel is "Not Yet".
 struct AppointmentBookSheet: View {
     @Environment(FamilyContext.self) private var family
     @Environment(\.dismiss) private var dismiss
     let detail: AppointmentSlotDetail
+    var afterVisit = false
     let saved: () async -> Void
 
     @State private var day: Date
@@ -252,10 +302,14 @@ struct AppointmentBookSheet: View {
     @State private var stop: Bool
     @State private var saving = false
     private let slotDate: Date
+    private let suggestedPerson: String
 
-    init(detail: AppointmentSlotDetail, saved: @escaping () async -> Void) {
+    init(detail: AppointmentSlotDetail, afterVisit: Bool = false, saved: @escaping () async -> Void) {
         self.detail = detail
+        self.afterVisit = afterVisit
         self.saved = saved
+        suggestedPerson = detail.suggestedPerson ?? ""
+        _person = State(initialValue: suggestedPerson)
         let slotDate = detail.slot.date ?? Date()
         self.slotDate = slotDate
         _day = State(initialValue: slotDate)
@@ -265,7 +319,8 @@ struct AppointmentBookSheet: View {
     }
 
     private var hasChanges: Bool {
-        day != slotDate || start != slotDate || hasEnd || !person.isEmpty || !note.isEmpty || stop != detail.searchEnabled
+        day != slotDate || start != slotDate || hasEnd || person != suggestedPerson || !note.isEmpty
+            || stop != detail.searchEnabled
     }
 
     private var endBeforeStart: Bool {
@@ -286,6 +341,8 @@ struct AppointmentBookSheet: View {
                     if endBeforeStart {
                         Label("The end is before the start.", systemImage: "exclamationmark.circle.fill")
                             .foregroundStyle(.red)
+                    } else if afterVisit {
+                        Text("Check the day and time the practice confirmed. Ohana then shows it in the calendar (and in the calendar feed, if you subscribed with booked appointments).")
                     } else {
                         Text("Book it on the practice’s page first. Ohana then shows it in the calendar (and in the calendar feed, if you subscribed with booked appointments).")
                     }
@@ -315,13 +372,13 @@ struct AppointmentBookSheet: View {
                 }
             }
             .formStyle(.grouped)
-            .navigationTitle("Booked this appointment?")
+            .navigationTitle(afterVisit ? Text("Did you book it?") : Text("Booked this appointment?"))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    CancelButton(hasChanges: hasChanges)
+                    CancelButton(title: afterVisit ? "Not Yet" : "Cancel", hasChanges: hasChanges)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Add to calendar") { save() }

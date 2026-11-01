@@ -23,7 +23,7 @@ private enum AppointmentSamples {
     static let detail = #"{"search":\#(search),"home":null}"#
     static let runs = #"{"runs":[{"run":\#(run),"doctors":[\#(doctor)]}]}"#
     static let slot = """
-    {"slot":\(doctor),"searchId":"6313f745","searchName":"Derm","specialityLabel":"Dermatologe","insuranceSector":"","homeLat":48.137,"homeLng":11.575,"booking":{"eventId":"93e8aff5","date":"2026-11-03","start":"09:30","end":null,"person":"Oma"},"searchEnabled":true,"people":["Sascha"]}
+    {"slot":\(doctor),"searchId":"6313f745","searchName":"Derm","specialityLabel":"Dermatologe","insuranceSector":"","homeLat":48.137,"homeLng":11.575,"booking":{"eventId":"93e8aff5","date":"2026-11-03","start":"09:30","end":null,"person":"Oma"},"searchEnabled":true,"people":["Sascha"],"suggestedPerson":"Oma"}
     """
     static let book = #"{"eventId":"93e8aff5","event":\#(event)}"#
 
@@ -67,6 +67,7 @@ struct AppointmentDecodingTests {
         #expect(slot.booking?.person == "Oma")
         #expect(slot.searchEnabled)
         #expect(slot.people == ["Sascha"])
+        #expect(slot.suggestedPerson == "Oma")
         let booked: AppointmentBookingResponse = try AppointmentSamples.decode(AppointmentSamples.book)
         #expect(booked.eventId == "93e8aff5")
     }

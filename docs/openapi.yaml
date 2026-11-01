@@ -5733,7 +5733,7 @@ components:
           items: {$ref: "#/components/schemas/DoctorSlot"}
     SlotDetail:
       type: object
-      required: [slot, searchId, searchName, specialityLabel, insuranceSector, homeLat, homeLng, booking, searchEnabled, people]
+      required: [slot, searchId, searchName, specialityLabel, insuranceSector, homeLat, homeLng, booking, searchEnabled, people, suggestedPerson]
       properties:
         slot: {$ref: "#/components/schemas/DoctorSlot"}
         searchId: {type: string}
@@ -5756,6 +5756,11 @@ components:
         people:
           type: array
           items: {type: string}
+        suggestedPerson:
+          type: string
+          description: >-
+            Whom a booking is likely for: the person of the search's latest booking, else the one
+            name of `people` the search's name holds as a word, else the only name; "" otherwise.
     BookingInput:
       type: object
       required: [date, start]
