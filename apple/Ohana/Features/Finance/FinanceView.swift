@@ -83,6 +83,14 @@ struct FinanceScreen: View {
                         .padding(.vertical, 6)
                 }
             }
+            #if os(iOS)
+            // On the iPhone the view's segments sit under the navigation bar (as in Meals): in
+            // it they can't shrink, and iOS put the buttons that didn't fit beside them into a
+            // menu of its own, with More as a submenu.
+            .safeAreaBar(edge: .top) {
+                if compact && !selecting { viewPicker.padding(.horizontal).padding(.vertical, 8) }
+            }
+            #endif
             // Beside the period; on the iPhone at the bottom (its period scrolls with the list).
             .overlay(alignment: compact ? .bottom : .topTrailing) { savedCopyBadge }
             .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar }
@@ -293,14 +301,17 @@ struct FinanceScreen: View {
 
     // MARK: Toolbar and menus
 
+    private var viewPicker: some View {
+        Picker("View", selection: $tab) {
+            ForEach(FinanceTab.allCases, id: \.self) { Text($0.title).tag($0) }
+        }
+        .pickerStyle(.segmented)
+    }
+
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
-        ToolbarItem(placement: .principal) {
-            Picker("View", selection: $tab) {
-                ForEach(FinanceTab.allCases, id: \.self) { Text($0.title).tag($0) }
-            }
-            .pickerStyle(.segmented)
-            .fixedSize()
+        if !compact {
+            ToolbarItem(placement: .principal) { viewPicker.fixedSize() }
         }
         #if os(iOS)
         if selecting && tab == .transactions {
@@ -344,13 +355,6 @@ struct FinanceScreen: View {
         if compact && tab == .transactions {
             ToolbarItem(placement: .primaryAction) { FinanceFilterMenu(store: store) }
         }
-        #if os(iOS)
-        if store.canEdit && tab == .transactions {
-            ToolbarItem(placement: .primaryAction) {
-                Button("Select") { withAnimation { editMode = .active } }
-            }
-        }
-        #endif
         ToolbarItem(placement: .primaryAction) { moreMenu }
     }
 
@@ -403,15 +407,28 @@ struct FinanceScreen: View {
     }
     #endif
 
+    /// Everything the toolbar has no button for, in one list: selecting, adding, tidying up,
+    /// the settings.
     private var moreMenu: some View {
         Menu {
             if store.canEdit {
-                if compact {
-                    Button("Import CSV", systemImage: "square.and.arrow.down") { chooseFile(receipt: false) }
+                #if os(iOS)
+                if tab == .transactions {
+                    Section {
+                        Button("Select", systemImage: "checkmark.circle") { withAnimation { editMode = .active } }
+                    }
                 }
-                editActions
+                #endif
+                if compact {
+                    Section {
+                        Button("Import CSV", systemImage: "square.and.arrow.down") { chooseFile(receipt: false) }
+                    }
+                }
+                Section { editActions }
             }
-            Button("Finance settings", systemImage: "gearshape") { family.open(.settings(.finance)) }
+            Section {
+                Button("Finance settings", systemImage: "gearshape") { family.open(.settings(.finance)) }
+            }
         } label: {
             Label("More", systemImage: "ellipsis")
         }
@@ -442,7 +459,6 @@ struct FinanceScreen: View {
             Label("Combine automatically", systemImage: "wand.and.stars")
             Text("All split bookings and likely transfers of this period, without review")
         }
-        Divider()
     }
 
     /// The Finance menu (Mac menu bar, the iPad's ⌘-hold list).

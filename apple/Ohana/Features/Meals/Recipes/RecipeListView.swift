@@ -6,6 +6,9 @@ struct RecipeListView: View {
     @Environment(FamilyContext.self) private var family
     @Environment(\.undoManager) private var undoManager
     @Environment(\.mealsOnScreen) private var onScreen
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    #endif
     @ScaledMetric(relativeTo: .body) private var cardWidth: CGFloat = 250
     @AppStorage(RecipeListModel.listKey) private var list = RecipeListModel.defaultList
     @AppStorage(RecipeListModel.sortKey) private var sort = RecipeListModel.defaultSort
@@ -235,26 +238,50 @@ struct RecipeListView: View {
             #if os(iOS)
             ToolbarSpacer(.fixed, placement: .primaryAction)
             #endif
-            ToolbarItemGroup(placement: .primaryAction) {
-                if ai.generate {
-                    Button {
-                        generating = true
+            if compact && ai.generate {
+                // On the iPhone the three ways to add a recipe are one menu: as buttons they didn't
+                // fit beside the others and iOS put the rest into a menu of its own.
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        Button("Add Recipe", systemImage: "plus") { creating = true }
+                        Section {
+                            Button("Generate with AI", systemImage: "sparkles") { generating = true }
+                            Button("Import from Web", systemImage: "globe") { importing = true }
+                        }
                     } label: {
-                        Label("Generate with AI", systemImage: "sparkles")
-                    }
-                    Button {
-                        importing = true
-                    } label: {
-                        Label("Import from Web", systemImage: "globe")
+                        Label("Add Recipe", systemImage: "plus")
                     }
                 }
-                Button {
-                    creating = true
-                } label: {
-                    Label("Add Recipe", systemImage: "plus")
+            } else {
+                ToolbarItemGroup(placement: .primaryAction) {
+                    if ai.generate {
+                        Button {
+                            generating = true
+                        } label: {
+                            Label("Generate with AI", systemImage: "sparkles")
+                        }
+                        Button {
+                            importing = true
+                        } label: {
+                            Label("Import from Web", systemImage: "globe")
+                        }
+                    }
+                    Button {
+                        creating = true
+                    } label: {
+                        Label("Add Recipe", systemImage: "plus")
+                    }
                 }
             }
         }
+    }
+
+    private var compact: Bool {
+        #if os(iOS)
+        sizeClass == .compact
+        #else
+        false
+        #endif
     }
 }
 
