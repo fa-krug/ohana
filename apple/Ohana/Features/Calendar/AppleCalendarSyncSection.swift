@@ -1,14 +1,24 @@
 import EventKit
 import SwiftUI
 
+/// What the Apple Calendar section asks to show: the calendar picker, the stop dialog. They are
+/// presented from the form (`appleCalendarSyncPrompts`), not from the section: a section hands
+/// its modifiers to its header, rows and footer, and several presenters of one sheet dismissed it
+/// at once, and the settings sheet with it.
+@Observable
+final class AppleCalendarSyncPrompts {
+    var picking = false
+    var stopping = false
+}
+
 /// Settings → Calendar: this device syncs the family's calendar with an Apple Calendar calendar
-/// (`AppleCalendarSync`): which one, the day entries too, its state, sync now, stop. Not in the demo.
+/// (`AppleCalendarSync`): which one, the day entries too, its state, sync now, stop. Not in the
+/// demo. The form presents its `prompts`.
 struct AppleCalendarSyncSection: View {
+    let prompts: AppleCalendarSyncPrompts
     @Environment(FamilyContext.self) private var family
     @Environment(\.openURL) private var openURL
     @State private var sync = AppleCalendarSync.shared
-    @State private var picking = false
-    @State private var stopping = false
 
     var body: some View {
         if !family.api.client.isDemo {
@@ -21,7 +31,7 @@ struct AppleCalendarSyncSection: View {
                     Button("Open Settings", systemImage: "gear") { openURL(Self.settingsURL) }
                 } else {
                     Button("Sync with Apple Calendar…", systemImage: "arrow.triangle.2.circlepath") {
-                        Task { if await sync.requestAccess() { picking = true } }
+                        Task { if await sync.requestAccess() { prompts.picking = true } }
                     }
                 }
             } header: {
@@ -30,19 +40,6 @@ struct AppleCalendarSyncSection: View {
                 Text(family.canEdit
                      ? "Events go both ways between Ohana and the calendar you pick, repeating ones and edits and deletions too; when both changed, Ohana’s wins. Day entries go to Apple Calendar only, as all-day events. It syncs on this device while Ohana is open."
                      : "You can view this family only: its events and day entries go to the calendar you pick, nothing comes back. It syncs on this device while Ohana is open.")
-            }
-            .sheet(isPresented: $picking) {
-                AppleCalendarPicker(familyName: family.family.name) { calendar, entries in
-                    Task { await sync.enable(family, calendar: calendar, entries: entries) }
-                }
-            }
-            .confirmationDialog("Stop syncing with Apple Calendar?", isPresented: $stopping, titleVisibility: .visible) {
-                Button("Stop and remove Ohana’s events from it", role: .destructive) {
-                    sync.disable(family, removeCopies: true)
-                }
-                Button("Stop, keep the events") { sync.disable(family, removeCopies: false) }
-            } message: {
-                Text("Events that came from Apple Calendar stay in both.")
             }
         }
     }
@@ -79,10 +76,10 @@ struct AppleCalendarSyncSection: View {
             .disabled(sync.isRunning(family.api))
         if calendar == nil {
             Button("Pick another calendar", systemImage: "calendar") {
-                Task { if await sync.requestAccess() { picking = true } }
+                Task { if await sync.requestAccess() { prompts.picking = true } }
             }
         }
-        Button("Stop syncing", systemImage: "xmark.circle", role: .destructive) { stopping = true }
+        Button("Stop syncing", systemImage: "xmark.circle", role: .destructive) { prompts.stopping = true }
     }
 
     private static var settingsURL: URL {
@@ -91,6 +88,36 @@ struct AppleCalendarSyncSection: View {
         #else
         URL(string: UIApplication.openSettingsURLString)!
         #endif
+    }
+}
+
+extension View {
+    /// Presents the Apple Calendar section's picker and stop dialog; on the form around it.
+    func appleCalendarSyncPrompts(_ prompts: AppleCalendarSyncPrompts) -> some View {
+        modifier(AppleCalendarSyncPromptsModifier(prompts: prompts))
+    }
+}
+
+private struct AppleCalendarSyncPromptsModifier: ViewModifier {
+    @Bindable var prompts: AppleCalendarSyncPrompts
+    @Environment(FamilyContext.self) private var family
+
+    func body(content: Content) -> some View {
+        let sync = AppleCalendarSync.shared
+        content
+            .sheet(isPresented: $prompts.picking) {
+                AppleCalendarPicker(familyName: family.family.name) { calendar, entries in
+                    Task { await sync.enable(family, calendar: calendar, entries: entries) }
+                }
+            }
+            .confirmationDialog("Stop syncing with Apple Calendar?", isPresented: $prompts.stopping, titleVisibility: .visible) {
+                Button("Stop and remove Ohana’s events from it", role: .destructive) {
+                    sync.disable(family, removeCopies: true)
+                }
+                Button("Stop, keep the events") { sync.disable(family, removeCopies: false) }
+            } message: {
+                Text("Events that came from Apple Calendar stay in both.")
+            }
     }
 }
 

@@ -27,6 +27,7 @@ private struct CalendarSettingsContent: View {
     @Bindable var store: CalendarStore
     @State private var editing: CalendarEntryType?
     @State private var deleting: CalendarEntryType?
+    @State private var appleSync = AppleCalendarSyncPrompts()
     @AppStorage("ohana.calendar.showWeekdays") private var alwaysWeekdays = false
 
     var body: some View {
@@ -35,9 +36,10 @@ private struct CalendarSettingsContent: View {
                 typesSection
                 rolesSection
                 viewSection
-                AppleCalendarSyncSection()
+                AppleCalendarSyncSection(prompts: appleSync)
             }
             .formStyle(.grouped)
+            .appleCalendarSyncPrompts(appleSync)
         }
         .overlay(alignment: .topTrailing) {
             if let copy = store.savedCopy {
