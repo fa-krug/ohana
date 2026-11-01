@@ -56,9 +56,14 @@ final class AppModel {
     /// No server connected: the screens show the demo's data.
     var isDemo: Bool { client?.isDemo ?? true }
 
-    /// The family on screen; remembered per device (the demo's isn't).
+    /// The family on screen; remembered per device (the demo's isn't), in the Keychain too for the
+    /// share extensions (`SharedConnection`).
     var selectedFamilyID: String? {
-        didSet { if !isDemo { UserDefaults.standard.set(selectedFamilyID, forKey: Keys.family) } }
+        didSet {
+            guard !isDemo, selectedFamilyID != oldValue else { return }
+            UserDefaults.standard.set(selectedFamilyID, forKey: Keys.family)
+            SharedConnection.remember(familyID: selectedFamilyID)
+        }
     }
 
     var selectedFamily: FamilySummary? {
@@ -76,7 +81,7 @@ final class AppModel {
     private enum Keys {
         static let server = "serverURL"
         static let family = "selectedFamilyID"
-        static let token = "apiToken"
+        static let token = SharedConnection.Account.token
     }
 
     init() {
@@ -94,6 +99,8 @@ final class AppModel {
         if let text = UserDefaults.standard.string(forKey: Keys.server), let url = URL(string: text),
            let token = Keychain.load(Keys.token) {
             connect(server: url, token: token)
+            // Also for installs from before the share extensions: they read it from the Keychain.
+            SharedConnection.remember(server: url, familyID: selectedFamilyID)
         } else {
             connectDemo()
         }
@@ -134,6 +141,7 @@ final class AppModel {
             UserDefaults.standard.set(server.absoluteString, forKey: Keys.server)
             Keychain.save(token, for: Keys.token)
             connect(server: server, token: token)
+            SharedConnection.remember(server: server, familyID: selectedFamilyID)
             await refresh()
         }
     }
@@ -232,6 +240,7 @@ final class AppModel {
         guard let client, !client.isDemo else { return }
         await whileSwitching(.demo) {
             Keychain.delete(Keys.token)
+            SharedConnection.forget()
             connectDemo()
             if signingOut {
                 _ = try? await client.send(.delete, "/api/v1/me", as: JSONValue.self)

@@ -1,6 +1,46 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Add an event in ${applicationName}": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Füge in ${applicationName} einen Termin hinzu"
+          }
+        }
+      }
+    },
+    "Add an event to the ${applicationName} calendar": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trag einen Termin in den ${applicationName}-Kalender ein"
+          }
+        }
+      }
+    },
+    "Add something to the ${applicationName} shopping list": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Setz etwas auf die ${applicationName}-Einkaufsliste"
+          }
+        }
+      }
+    },
+    "Add to the shopping list in ${applicationName}": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Füge in ${applicationName} etwas zur Einkaufsliste hinzu"
+          }
+        }
+      }
+    },
     "Ask ${applicationName}": {
       "localizations": {
         "de": {
@@ -11,12 +51,52 @@
         }
       }
     },
+    "Import a recipe into ${applicationName}": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importiere ein Rezept in ${applicationName}"
+          }
+        }
+      }
+    },
+    "New ${applicationName} event": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neuer ${applicationName}-Termin"
+          }
+        }
+      }
+    },
     "Open the ${applicationName} assistant": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Öffne den ${applicationName}-Assistenten"
+          }
+        }
+      }
+    },
+    "Put something on the ${applicationName} shopping list": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schreib etwas auf die ${applicationName}-Einkaufsliste"
+          }
+        }
+      }
+    },
+    "Save a recipe in ${applicationName}": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speichere ein Rezept in ${applicationName}"
           }
         }
       }

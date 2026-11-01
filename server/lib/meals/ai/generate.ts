@@ -16,17 +16,19 @@ export const TEXT_TIMEOUT_MS = 120_000;
 export const IMAGE_TIMEOUT_MS = 90_000;
 const MAX_IMAGE_RESPONSE = 30_000_000;
 
-/** Asks the model for recipes (the prompt from prompt.ts) and returns the valid ones. */
+/** Asks the model for recipes (a prompt from prompt.ts) and returns the valid ones. The
+ *  generator wants ideas (temperature 0.9), the import a faithful copy (lower). */
 export async function generateRecipeData(
   p: Provider,
   prompt: string,
   net: NetOptions,
   signal?: AbortSignal,
+  { temperature = 0.9 }: { temperature?: number } = {},
 ): Promise<VerifiedRecipe[]> {
   const sig = AbortSignal.any([AbortSignal.timeout(TEXT_TIMEOUT_MS), ...(signal ? [signal] : [])]);
   let content = "";
   try {
-    for await (const ev of streamChat(p, { messages: [{ role: "user", content: prompt }], temperature: 0.9 }, net, sig)) {
+    for await (const ev of streamChat(p, { messages: [{ role: "user", content: prompt }], temperature }, net, sig)) {
       if (ev.type === "done") content = ev.content;
     }
   } catch (err) {

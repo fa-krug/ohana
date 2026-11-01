@@ -267,7 +267,11 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   (one chat completion through `lib/assistant/provider.ts` with the family's model —
   `familyModel()` in `lib/assistant/routes.ts` —; photos via `POST {base}/images/generations`
   with `ai_settings.image_model`, or Gemini's native `generateContent` for a Gemini image model
-  on Gemini's endpoint), `verify.ts` (zod check of the answer), `stream.ts` (the NDJSON stream
+  on Gemini's endpoint), `verify.ts` (zod check of the answer), `import.ts` (one recipe from a
+  web page, `POST …/meals/recipes/import`: the browser's text or the page fetched with `net`
+  (never private), JSON-LD / og:image read before `htmlToText`, `buildImportPrompt`, saved
+  TO_TRY with "Source: <url>" in the description, the photo best effort; nothing is saved once the
+  request's signal aborted, i.e. the client went away), `stream.ts` (the NDJSON stream
   of `POST /api/v1/families/{id}/recipes/generate`, inline in the server process: one
   user-started call with timeouts, cancelled with the request), `status.ts` (`mealsAi`: show
   the buttons; off with the assistant). Saving: `recipes/bulk-create.ts`; photo: the meals
@@ -327,7 +331,18 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   event onto another day (`CalendarEventDrag.swift`, `CalendarStore.moveEvent`; the grids' selection
   gestures step aside on an event label), a shopping item onto another list's chip (`ShoppingMove`).
   The assistant: `family.ask(prompt, send:, newChat:)` opens it ready to type from anywhere (⇧⌘J, the overview's field, the Mac's menu bar item (`MenuBarItem`, an AppKit status item: SwiftUI's `MenuBarExtra` re-sets its icon on every window redraw and crashed the app), the
-  `AskOhanaIntent` App Shortcut). The cook view (`MealsCookView`) turns durations in a step's
+  `AskOhanaIntent` App Shortcut). Recipes are in Spotlight (`RecipeSpotlight.swift`: every family's,
+  after loading the account and after recipe changes; emptied in the demo / with Meals off; a result
+  opens `ohana://f/{id}/meals/recipes/{id}`). The recipe list's *Import from Web* sheet
+  (`RecipeImportView`, editors, with the meals AI) posts a URL to `…/meals/recipes/import`, then
+  offers to open the recipe or undo (DELETE it); so does the share extension. From outside the app: Siri / Shortcuts actions without opening it
+  (`App/Intents/CaptureIntents.swift`: add to the shopping list, add an event, import a recipe;
+  `IntentConnection`) and the *Save to Ohana* Safari share extension (`apple/ShareExtension/`,
+  targets `OhanaShare` / `OhanaShare-macOS`, bundle id `de.fa-krug.Ohana.Share`; iOS sends the
+  page's text via `Preprocess.js`). Code both use is in `apple/Shared/` (`Keychain`,
+  `SharedConnection`): no App Group — the app mirrors the server URL and selected family into the
+  shared Keychain access group next to the token, and removes them on sign out.
+  The cook view (`MealsCookView`) turns durations in a step's
   text into timer links (`StepDurations`, English and German); `CookTimers` (app-wide, kept in
   `UserDefaults`) schedules a time-sensitive local notification per timer (shown in the
   foreground too: `CookTimers.NotificationDelegate`) and keeps one Live Activity for all running

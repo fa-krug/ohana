@@ -7,6 +7,7 @@ struct MealsWelcomeView: View {
     let ai: MealsAIStatus
     var addRecipe: () -> Void
     var generate: () -> Void
+    var importFromWeb: () -> Void = {}
 
     @Environment(FamilyContext.self) private var family
     @ScaledMetric(relativeTo: .largeTitle) private var iconSize: CGFloat = 52
@@ -31,6 +32,8 @@ struct MealsWelcomeView: View {
                 if ai.generate {
                     step("Generate with AI", "Let the assistant suggest recipes to try", systemImage: "sparkles",
                          action: generate)
+                    step("Import from the web", "Turn a recipe page into a recipe", systemImage: "globe",
+                         action: importFromWeb)
                 }
                 step("Create a meal plan", "Plan your meals for the week", systemImage: "calendar") {
                     family.open(.mealPlan)

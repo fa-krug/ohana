@@ -34,6 +34,9 @@
 //   "events"                              -> list_events for this month
 // Asked for recipes (the meals generator's prompt) it answers with that many recipes as JSON in
 // a Markdown block; POST /images/generations answers with a small PNG (b64_json).
+// Asked to import a web page's recipe (the import prompt), it answers with one recipe titled
+// like the page (tomatoes and the family's tags the page names) when the page mentions
+// ingredients / Zutaten / recipe / Rezept, else with [].
 // Asked to sort transactions into categories (the categorize prompt), it picks the category
 // whose id or name occurs in a row's payee or description, searching the web once for a payee
 // it can't place.
@@ -165,6 +168,36 @@ function recipes(stream: boolean, prompt: string) {
   return reply(stream, "Here you go:\n```json\n" + JSON.stringify(list, null, 1) + "\n```");
 }
 
+/** The import prompt: one recipe from the page's title, or [] for a page without a recipe. */
+function importRecipe(stream: boolean, prompt: string) {
+  const end = prompt.lastIndexOf("\n\nConvert the recipe of this page");
+  // The page's URL is left out (a page called /recipe/… without one is still no recipe).
+  const page = prompt.slice(prompt.indexOf("WEB PAGE:"), end < 0 ? undefined : end).replace(/^URL: .*$/m, "");
+  if (!/ingredients|zutaten|recipe|rezept/i.test(page)) return reply(stream, "[]");
+  const de = /in German\)/.test(prompt);
+  const title = /^Title: (.+)$/m.exec(page)?.[1]?.trim() || (de ? "Importiertes Rezept" : "Imported Recipe");
+  const tags = (/ALL AVAILABLE TAGS:\n([^\n]+)/.exec(prompt)?.[1] ?? "")
+    .split(/,\s*/)
+    .map((t) => t.replace(/\s*\([^)]*\)$/, "").trim())
+    .filter((t) => t && page.toLowerCase().includes(t.toLowerCase()));
+  const recipe = {
+    title,
+    description: de ? "Von einer Webseite." : "From a web page.",
+    default_servings: 4,
+    prep_time_minutes: 15,
+    cook_time_minutes: 30,
+    leftover_days: 1,
+    ingredients: [
+      { name_en: "Tomato", name_de: "Tomate", category: "PRODUCE", quantity: 400, unit_abbreviation: "g", order: 0 },
+      { name_en: "Onion", name_de: "Zwiebel", category: "PRODUCE", quantity: 1, unit_abbreviation: "pc", order: 1 },
+    ],
+    manual_steps: [{ step_number: 1, instruction: de ? "Alles kochen." : "Cook everything." }],
+    machine_steps: [],
+    tag_names_en: tags,
+  };
+  return reply(stream, "```json\n" + JSON.stringify([recipe]) + "\n```");
+}
+
 /** How often the conversation looked at the calendar: in the summary, and after it. */
 function looks(messages: Msg[]) {
   const before = messages.map((m) => /Looked (\d+) times/.exec(textOf(m.content))?.[1])
@@ -241,6 +274,7 @@ async function respond(req: Request, body: any): Promise<Response> {
   if (textOf(messages[0]?.content).startsWith("You are a professional recipe creator")) {
     return recipes(stream, textOf(messages[0]?.content));
   }
+  if (system.startsWith("You are a professional recipe editor")) return importRecipe(stream, system);
   if (system.startsWith("You sort bank transactions into categories.")) {
     return categorize(
       stream,

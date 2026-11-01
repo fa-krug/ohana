@@ -94,9 +94,13 @@ Ask your server's operator about their privacy policy.
 ### On your device
 
 The app stores on your device only what it needs to work: the **API token** for your server
-(in the Keychain), app settings such as the selected family (in the app's preferences) and
-changes to the shopping list made offline until they're sent, and the cook view's running timers. Signing out deletes the token on
-the server and on the device. Deleting the app removes the rest.
+and, so the *Save to Ohana* share extension can reach it, the server's address and the selected
+family (in the Keychain), app settings such as the selected family (in the app's preferences),
+changes to the shopping list made offline until they're sent, and the cook view's running
+timers. The names, tags and short descriptions of your recipes are added to the device's
+**Spotlight** index, so you can find them in the system search; the index stays on the device.
+Signing out deletes the token on the server and on the device and removes the recipes from
+Spotlight. Deleting the app removes the rest.
 
 ### Permissions
 
@@ -113,8 +117,17 @@ The app only asks for these permissions, and only when you use the feature:
   when it's done. The timer runs on the device; nothing is sent to your server. Running timers
   also show as a Live Activity on the Lock Screen and in the Dynamic Island.
 
-With Siri and Shortcuts (*Ask Ohana*), what you say is processed by Apple as for any Siri
-request.
+With Siri and Shortcuts (*Ask Ohana*, adding to the shopping list, adding an event, importing a
+recipe), what you say is processed by Apple as for any Siri request; the result is sent to your
+server.
+
+### Importing recipes
+
+When you import a recipe from a web page (the *Save to Ohana* share extension in Safari, the
+Shortcuts action or the address field in the app), the page's address and, from Safari on iPhone
+and iPad, its text are sent to your server. The server loads the page and its photo itself when
+needed and sends the page's content to the AI provider your family set up for the assistant, as
+for any request to the assistant.
 
 ### Demo mode
 
