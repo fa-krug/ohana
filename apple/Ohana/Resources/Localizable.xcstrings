@@ -1,6 +1,7 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ %@": {},
     "%@ (%@) becomes the booking, the others its parts": {
       "localizations": {
         "de": {
@@ -231,6 +232,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld Termine fehlen auf einmal in Apple Kalender. Sicherheitshalber wurden sie in Ohana nicht gelöscht."
+          }
+        }
+      }
+    },
+    "%lld failed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld fehlgeschlagen"
           }
         }
       }
@@ -901,6 +912,16 @@
         }
       }
     },
+    "A searchable PDF in the folder you choose. It stays with you: it never goes to the server.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein durchsuchbares PDF im Ordner deiner Wahl. Es bleibt bei dir: Es geht nie an den Server."
+          }
+        }
+      }
+    },
     "A subcategory has the kind of its top-level category.": {
       "localizations": {
         "de": {
@@ -1137,6 +1158,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ hinzufügen"
+          }
+        }
+      }
+    },
+    "Add %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld hinzufügen"
+          }
+        }
+      }
+    },
+    "Add %lld: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld hinzufügen: %@"
           }
         }
       }
@@ -1501,12 +1542,32 @@
         }
       }
     },
+    "Added": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hinzugefügt"
+          }
+        }
+      }
+    },
     "Added %@ to %@.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ zu %2$@ hinzugefügt."
+          }
+        }
+      }
+    },
+    "Added %lld of %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld von %lld hinzugefügt"
           }
         }
       }
@@ -3033,12 +3094,32 @@
         }
       }
     },
+    "Choose Folder…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ordner wählen …"
+          }
+        }
+      }
+    },
     "Choose a Reminders list for the shopping list in Ohana first: Meals → Plan → Shopping List.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Wähle zuerst in Ohana eine Erinnerungsliste für die Einkaufsliste: Essen → Planung → Einkaufsliste."
+          }
+        }
+      }
+    },
+    "Choose a folder for the PDF first.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle zuerst einen Ordner für das PDF."
           }
         }
       }
@@ -3443,7 +3524,7 @@
         }
       }
     },
-    "Connect any OpenAI-compatible AI (OpenAI, OpenRouter, Mistral, Gemini, a local model …) in the settings. It can then look things up on the web and plan in your calendar and finances.": {
+    "Connect any OpenAI-compatible AI (OpenAI, OpenRouter, Mistral, Gemini, a local model …) in the settings. It can then look things up on the web and plan in your calendar and finances.": {
       "localizations": {
         "de": {
           "stringUnit": {
@@ -4773,6 +4854,16 @@
         }
       }
     },
+    "Don’t Add": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht hinzufügen"
+          }
+        }
+      }
+    },
     "Don’t Apply": {
       "localizations": {
         "de": {
@@ -5583,7 +5674,7 @@
         }
       }
     },
-    "Every recipe should be …": {
+    "Every recipe should be …": {
       "localizations": {
         "de": {
           "stringUnit": {
@@ -5973,6 +6064,16 @@
         }
       }
     },
+    "Folder": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ordner"
+          }
+        }
+      }
+    },
     "Football practice": {
       "localizations": {
         "de": {
@@ -6173,7 +6274,7 @@
         }
       }
     },
-    "Generating recipes …": {
+    "Generating recipes …": {
       "localizations": {
         "de": {
           "stringUnit": {
@@ -6439,6 +6540,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "I / Zeilenschalter / ⌘I"
+          }
+        }
+      }
+    },
+    "I scanned this letter. Suggest the events, tasks and deadlines in it so I can add them.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ich habe diesen Brief gescannt. Schlag mir die Termine, Aufgaben und Fristen darin vor, damit ich sie hinzufügen kann."
           }
         }
       }
@@ -6725,7 +6836,7 @@
         }
       }
     },
-    "Importing the recipe …": {
+    "Importing the recipe …": {
       "localizations": {
         "de": {
           "stringUnit": {
@@ -6785,7 +6896,7 @@
         }
       }
     },
-    "Including the version, e.g. …/v1. A model on your home network works only if the server allows it (AI_ALLOW_PRIVATE_ENDPOINT).": {
+    "Including the version, e.g. …/v1. A model on your home network works only if the server allows it (AI_ALLOW_PRIVATE_ENDPOINT).": {
       "localizations": {
         "de": {
           "stringUnit": {
@@ -7033,16 +7144,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Einer Familie beitreten"
-          }
-        }
-      }
-    },
-    "Join a family…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Einer Familie beitreten …"
           }
         }
       }
@@ -7527,7 +7628,7 @@
         }
       }
     },
-    "Making photos …": {
+    "Making photos …": {
       "localizations": {
         "de": {
           "stringUnit": {
@@ -8187,16 +8288,6 @@
         }
       }
     },
-    "New family…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Neue Familie …"
-          }
-        }
-      }
-    },
     "New password": {
       "localizations": {
         "de": {
@@ -8557,6 +8648,16 @@
         }
       }
     },
+    "No folder chosen yet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch kein Ordner gewählt"
+          }
+        }
+      }
+    },
     "No home address yet.": {
       "localizations": {
         "de": {
@@ -8727,6 +8828,16 @@
         }
       }
     },
+    "No text found in the scan.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Im Scan wurde kein Text gefunden."
+          }
+        }
+      }
+    },
     "No total found: type in the amount.": {
       "localizations": {
         "de": {
@@ -8887,6 +8998,16 @@
         }
       }
     },
+    "Not added": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht hinzugefügt"
+          }
+        }
+      }
+    },
     "Not answered": {
       "localizations": {
         "de": {
@@ -8997,6 +9118,16 @@
         }
       }
     },
+    "Nothing added": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nichts hinzugefügt"
+          }
+        }
+      }
+    },
     "Nothing changes in your Reminders until you apply it.": {
       "localizations": {
         "de": {
@@ -9043,6 +9174,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nichts ignoriert."
+          }
+        }
+      }
+    },
+    "Nothing is added until you choose.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Es wird nichts hinzugefügt, bis du auswählst."
           }
         }
       }
@@ -9851,6 +9992,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "New notification from Ohana"
+          }
+        }
+      }
+    },
+    "Page %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seite %lld"
           }
         }
       }
@@ -10785,6 +10936,16 @@
         }
       }
     },
+    "Reading the letter…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brief wird gelesen …"
+          }
+        }
+      }
+    },
     "Reading the meal plan": {
       "localizations": {
         "de": {
@@ -10855,12 +11016,32 @@
         }
       }
     },
+    "Receipt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beleg"
+          }
+        }
+      }
+    },
     "Recently updated": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Zuletzt bearbeitet"
+          }
+        }
+      }
+    },
+    "Recently used": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zuletzt verwendet"
           }
         }
       }
@@ -11275,7 +11456,7 @@
         }
       }
     },
-    "Removing “%@” …": {
+    "Removing “%@” …": {
       "localizations": {
         "de": {
           "stringUnit": {
@@ -11785,6 +11966,16 @@
         }
       }
     },
+    "Save as PDF": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Als PDF sichern"
+          }
+        }
+      }
+    },
     "Save for future events": {
       "localizations": {
         "de": {
@@ -11851,6 +12042,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wird auf diesem Gerät gespeichert. Wochenenden werden beim Füllen, Einfügen und Umschalten von Bereichen ausgelassen."
+          }
+        }
+      }
+    },
+    "Saved “%@”": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ gesichert"
           }
         }
       }
@@ -11925,6 +12126,16 @@
         }
       }
     },
+    "Scan Letter": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brief scannen"
+          }
+        }
+      }
+    },
     "Scan Receipt": {
       "localizations": {
         "de": {
@@ -11941,6 +12152,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kassenbon scannen …"
+          }
+        }
+      }
+    },
+    "Scan letter": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brief scannen"
+          }
+        }
+      }
+    },
+    "Scanned Letter": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gescannter Brief"
+          }
+        }
+      }
+    },
+    "Scanned letter.txt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gescannter Brief.txt"
+          }
+        }
+      }
+    },
+    "Scans a letter and saves it as a PDF, or has the assistant suggest the dates and tasks in it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scannt einen Brief und sichert ihn als PDF oder lässt den Assistenten die Termine und Aufgaben darin vorschlagen."
           }
         }
       }
@@ -13569,6 +13820,26 @@
         }
       }
     },
+    "Suggest dates and tasks": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termine und Aufgaben vorschlagen"
+          }
+        }
+      }
+    },
+    "Suggesting a name and tags…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name und Tags werden vorgeschlagen …"
+          }
+        }
+      }
+    },
     "Suggesting changes to your Apple calendars": {
       "localizations": {
         "de": {
@@ -13585,6 +13856,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Schlägt Änderungen an deinen Erinnerungen vor"
+          }
+        }
+      }
+    },
+    "Suggesting what to add": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schlägt Termine und Aufgaben vor"
           }
         }
       }
@@ -13989,6 +14270,16 @@
         }
       }
     },
+    "The assistant gets the letter’s text and suggests events, tasks and deadlines to add.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Assistent bekommt den Text des Briefs und schlägt Termine, Aufgaben und Fristen zum Hinzufügen vor."
+          }
+        }
+      }
+    },
     "The assistant is turned off on your Ohana server.": {
       "localizations": {
         "de": {
@@ -14129,6 +14420,26 @@
         }
       }
     },
+    "The folder can’t be found any more.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Ordner ist nicht mehr auffindbar."
+          }
+        }
+      }
+    },
+    "The folder can’t be found any more. Choose it again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Ordner ist nicht mehr auffindbar. Wähle ihn erneut."
+          }
+        }
+      }
+    },
     "The image is no longer stored.": {
       "localizations": {
         "de": {
@@ -14155,6 +14466,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Die Sprache der Benachrichtigungen und von dem, was Ohana für dich benennt, etwa die Kalenderarten einer neuen Familie."
+          }
+        }
+      }
+    },
+    "The letter couldn’t be read.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Brief konnte nicht gelesen werden."
           }
         }
       }
@@ -14539,6 +14860,16 @@
         }
       }
     },
+    "There’s no default Reminders list on this device.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf diesem Gerät gibt es keine Standardliste für Erinnerungen."
+          }
+        }
+      }
+    },
     "These open your Ohana server in the browser.": {
       "localizations": {
         "de": {
@@ -14775,6 +15106,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Auf diesem Server läuft eine ältere Version von Ohana. Bitte die Person, die ihn betreut, um ein Update."
+          }
+        }
+      }
+    },
+    "This version of Ohana can’t add this.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Version von Ohana kann das nicht hinzufügen."
           }
         }
       }
@@ -16665,6 +17006,28 @@
         }
       }
     },
+    "^[%lld page](inflect: true)": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Seite"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Seiten"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "^[%lld query](inflect: true)": {
       "localizations": {
         "de": {
@@ -16768,6 +17131,28 @@
                 "stringUnit": {
                   "state": "translated",
                   "value": "%lld Aufteilungen werden zusammengefasst"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "^[%lld suggestion](inflect: true)": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Vorschlag"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Vorschläge"
                 }
               }
             }
@@ -16995,6 +17380,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "besser"
+          }
+        }
+      }
+    },
+    "by %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "bis %@"
           }
         }
       }

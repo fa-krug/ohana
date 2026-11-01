@@ -64,6 +64,15 @@ struct OhanaShortcuts: AppShortcutsProvider {
             systemImageName: "calendar.badge.plus"
         )
         AppShortcut(
+            intent: ScanLetterIntent(),
+            phrases: [
+                "Scan a letter with \(.applicationName)",
+                "Scan a letter in \(.applicationName)",
+            ],
+            shortTitle: "Scan Letter",
+            systemImageName: "doc.text.viewfinder"
+        )
+        AppShortcut(
             intent: ImportRecipeIntent(),
             phrases: [
                 "Import a recipe into \(.applicationName)",

@@ -45,6 +45,7 @@ struct AssistantChatView: View {
     @State private var dropping = false
     @State private var photos: [PhotosPickerItem] = []
     @State private var pickingPhotos = false
+    @State private var scanningLetter = false
     @State private var dictation = AssistantDictation()
     @FocusState private var composerFocused: Bool
     @State private var scroll = ScrollPosition(edge: .bottom)
@@ -179,8 +180,8 @@ struct AssistantChatView: View {
 
     // MARK: Requests
 
-    /// `family.ask(…)`: a new chat if asked (an empty one is reused), the prompt in the composer,
-    /// sent if asked, and the composer focused.
+    /// `family.ask(…)`: a new chat if asked (an empty one is reused), the prompt in the composer
+    /// and the attachments with it, sent if asked, and the composer focused.
     private func takeRequest() {
         guard takesRequests, visible, family.assistantRequest != nil, let request = family.takeAssistantRequest() else { return }
         showChats = false
@@ -188,14 +189,14 @@ struct AssistantChatView: View {
             store.newChatUnlessEmpty()
             attachments = []
         }
-        if let prompt = request.prompt, !prompt.isEmpty {
-            text = prompt
-            if request.send {
-                Task {
-                    // The settings first: sending needs to know the assistant is set up.
-                    if store.settings == nil { await store.loadSettings() }
-                    send()
-                }
+        attachments.append(contentsOf: request.attachments)
+        let prompt = request.prompt ?? ""
+        if !prompt.isEmpty { text = prompt }
+        if request.send, !prompt.isEmpty || !request.attachments.isEmpty {
+            Task {
+                // The settings first: sending needs to know the assistant is set up.
+                if store.settings == nil { await store.loadSettings() }
+                send()
             }
         }
         focusComposer()
@@ -590,6 +591,8 @@ struct AssistantChatView: View {
         .padding(.horizontal, 12)
         .padding(.top, 6)
         .padding(.bottom, 10)
+        // Here, not beside the attachments' file picker: two on one view don't both work.
+        .letterScanFlow(isPresented: $scanningLetter, offersAssistant: false) { outcome in attachLetter(outcome) }
     }
 
     private var attachMenu: some View {
@@ -598,6 +601,8 @@ struct AssistantChatView: View {
             // the system) as soon as the menu is built, which held up the panel's opening.
             Button("Photo library", systemImage: "photo.on.rectangle") { pickingPhotos = true }
             Button("Choose files", systemImage: "folder") { importing = true }
+            // Only the text read on the device is attached, never the picture.
+            Button("Scan Letter", systemImage: "doc.text.viewfinder") { scanningLetter = true }
             #if os(iOS)
             // ⌘V pastes pictures from iOS 27 on; this works everywhere.
             Button("Paste image", systemImage: "doc.on.clipboard") { pasteImages() }
@@ -753,6 +758,17 @@ struct AssistantChatView: View {
             }
             return try await Task.detached { try AssistantAttachments.image(data, name: name) }.value
         }
+    }
+
+    /// A scanned letter's text (read on the device; its PDF saved by the review sheet), with the
+    /// request to find what to add in it when nothing is typed yet (sent once the user taps Send).
+    private func attachLetter(_ outcome: LetterScanOutcome) {
+        guard let letter = outcome.text else { return }
+        prepare(1) { _ in
+            if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { text = AssistantLetter.prompt }
+            return AssistantLetter.attachment(letter)
+        }
+        focusComposer()
     }
 
     /// Images from the clipboard.

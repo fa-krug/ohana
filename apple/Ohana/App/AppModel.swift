@@ -460,16 +460,34 @@ final class FamilyContext {
     private(set) var assistantRequest: AssistantRequest?
 
     /// Opens the assistant with the composer focused, from anywhere: optionally on a new chat,
-    /// with `prompt` typed in, and sent right away with `send`. The shell shows the panel (or the
-    /// assistant's page when it's on screen).
-    func ask(_ prompt: String? = nil, send: Bool = false, newChat: Bool = false) {
+    /// with `prompt` typed in and `attachments` attached (a scanned letter), and sent right away
+    /// with `send`. The shell shows the panel (or the assistant's page when it's on screen).
+    func ask(_ prompt: String? = nil, send: Bool = false, newChat: Bool = false,
+             attachments: [AssistantPendingAttachment] = []) {
         guard isEnabled(.assistant) else { return }
-        assistantRequest = AssistantRequest(prompt: prompt, send: send, newChat: newChat)
+        assistantRequest = AssistantRequest(prompt: prompt, send: send, newChat: newChat, attachments: attachments)
     }
 
     func takeAssistantRequest() -> AssistantRequest? {
         defer { assistantRequest = nil }
         return assistantRequest
+    }
+
+    // MARK: Scanning a letter
+
+    /// Set by `scanLetter()`; the shell takes it (`takeLetterScanRequest`) and opens the scanner.
+    private(set) var letterScanRequest: UUID?
+
+    /// Opens the letter scanner over whatever shows (the shell hosts it: `ShellLetterScan`), from
+    /// the family menu or "Scan Letter" in Spotlight, Siri and Shortcuts. Needs no server: the
+    /// PDF is saved on the device; the assistant is offered where it can help.
+    func scanLetter() {
+        letterScanRequest = UUID()
+    }
+
+    func takeLetterScanRequest() -> Bool {
+        defer { letterScanRequest = nil }
+        return letterScanRequest != nil
     }
 
     /// The pending route if `module` shows it; it's taken (cleared) then. Module roots call this
@@ -487,6 +505,8 @@ struct AssistantRequest: Equatable, Identifiable {
     var prompt: String?
     var send: Bool
     var newChat: Bool
+    /// Attached to the message (added to what the composer has).
+    var attachments: [AssistantPendingAttachment] = []
 }
 
 extension Notification.Name {

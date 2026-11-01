@@ -175,8 +175,8 @@ struct AssistantRemindersEdit: Equatable {
         var applied: Bool
         var results: [AssistantReminderResult]?
 
-        /// How many of the ops failed.
-        var failures: Int { (results ?? []).filter { !$0.ok }.count }
+        /// How many of the ops failed (ops the user left out don't count).
+        var failures: Int { (results ?? []).filter(\.failed).count }
     }
 }
 
@@ -244,16 +244,23 @@ struct AssistantReminderOp: Decodable, Equatable {
     var subject: String { (op == "add" ? title : itemTitle) ?? "" }
 }
 
-/// How one op went on the device: `{ok: true, id?}` or `{ok: false, error}` (a calendar edit's
-/// too).
+/// How one op went on the device: `{ok: true, id?}`, `{ok: false, error}`, or `{ok: false,
+/// declined: true}` for a suggestion the user left out (a calendar edit's and suggestions' too).
 struct AssistantReminderResult: Codable, Equatable {
     var ok: Bool
     /// The reminder (the new one for add).
     var id: String?
     var error: String?
+    /// The user left it out (suggestions): not a failure.
+    var declined: Bool?
 
     static func done(_ id: String?) -> Self { .init(ok: true, id: id, error: nil) }
     static func failed(_ error: String) -> Self { .init(ok: false, id: nil, error: error) }
+    static let declined = Self(ok: false, id: nil, error: nil, declined: true)
+
+    var isDeclined: Bool { !ok && declined == true }
+    /// It was tried and didn't go through.
+    var failed: Bool { !ok && declined != true }
 }
 
 /// A change of the device's calendars the assistant suggests (`kind: "calendar"`, server
@@ -356,7 +363,7 @@ struct AssistantCalendarOp: Decodable, Equatable {
 }
 
 /// What the chat shows: messages, tool activity, changes (with undo), questions, changes of the
-/// user's Reminders and calendars to apply. Decoded by `kind`; a kind this app doesn't know yet becomes
+/// user's Reminders and calendars to apply, suggestions to add. Decoded by `kind`; a kind this app doesn't know yet becomes
 /// `.unknown` (and isn't shown).
 enum AssistantItem: Decodable, Equatable {
     case user(text: String, attachments: [AssistantAttachmentRef])
@@ -368,6 +375,9 @@ enum AssistantItem: Decodable, Equatable {
     case reminders(AssistantRemindersEdit)
     /// A change of the device's calendars (edit_apple_calendar) that waits for them to apply it here.
     case calendar(AssistantCalendarEdit)
+    /// Events, tasks and deadlines the assistant found (suggest_items, e.g. in a scanned letter)
+    /// that wait for the user to pick which to add.
+    case suggestions(AssistantSuggestions)
     /// From here on, the model gets the earlier part of the chat as a summary.
     case compacted
     case error(text: String)
@@ -375,7 +385,7 @@ enum AssistantItem: Decodable, Equatable {
 
     private enum Keys: String, CodingKey {
         case kind, text, attachments, id, name, args, status, summary, result, interrupted
-        case change, undo, undone, question, options, multiple, answer, skipped, ops
+        case change, undo, undone, question, options, multiple, answer, skipped, ops, source
     }
 
     init(from decoder: any Decoder) throws {
@@ -426,6 +436,14 @@ enum AssistantItem: Decodable, Equatable {
             let answer = try? c.decodeIfPresent(AssistantCalendarEdit.Answer.self, forKey: .answer)
             self = .calendar(AssistantCalendarEdit(
                 id: str(.id), summary: str(.summary), ops: ops ?? [], answer: answer, skipped: flag(.skipped)
+            ))
+        case "suggestions":
+            let ops = try? c.decodeIfPresent([AssistantSuggestionOp].self, forKey: .ops)
+            let answer = try? c.decodeIfPresent(AssistantSuggestions.Answer.self, forKey: .answer)
+            let source = opt(.source)
+            self = .suggestions(AssistantSuggestions(
+                id: str(.id), summary: str(.summary), source: source?.isEmpty == false ? source : nil, ops: ops ?? [],
+                answer: answer, skipped: flag(.skipped)
             ))
         case "compacted":
             self = .compacted
@@ -557,8 +575,9 @@ struct AssistantAnswerInput: Encodable {
     var appleCalendar: AssistantCalendarContext?
 }
 
-/// POST /ai/chats/{id}/reminders: the waiting Reminders edit `id` applied (with one result per
-/// op, in order) or declined; `reminders` is the snapshot after applying.
+/// POST /ai/chats/{id}/reminders (and /suggestions): the waiting Reminders edit (or
+/// suggestions) `id` applied (with one result per op, in order) or declined; `reminders` is the
+/// snapshot after applying.
 struct AssistantRemindersAnswerInput: Encodable {
     var id: String
     var applied: Bool

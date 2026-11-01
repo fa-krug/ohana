@@ -10,6 +10,10 @@
 	<true/>
 	<key>com.apple.security.files.user-selected.read-write</key>
 	<true/>
+	<!-- Scanned letters and receipts are saved as PDFs in the folder the user chose last
+	     (Core/Scanning/ScanPDF.swift): a security-scoped bookmark brings the app back into it. -->
+	<key>com.apple.security.files.bookmarks.app-scope</key>
+	<true/>
 	<!-- EventKit: the shopping list in Reminders (Core/Reminders), the sync with an Apple Calendar
 	     calendar (Features/Calendar/AppleCalendarSync.swift) and the assistant's Reminders and
 	     Calendar tools. The sandbox's "Calendars" covers reminders as well. -->

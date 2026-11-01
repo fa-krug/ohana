@@ -3,7 +3,7 @@ import SwiftUI
 /// What the editor sheet shows: a new transaction, one read from a receipt, or one of the list.
 enum FinanceEditTarget: Identifiable {
     case new
-    case scanned(ReceiptScan)
+    case scanned(ScannedReceipt)
     case existing(FinanceTransaction)
 
     var id: String {
@@ -12,6 +12,36 @@ enum FinanceEditTarget: Identifiable {
         case .scanned: "scan"
         case let .existing(t): t.id
         }
+    }
+}
+
+/// A scanned receipt: what was read from it, its pages, and saving them as a PDF (off at first).
+struct ScannedReceipt {
+    let scan: ReceiptScan
+    let pages: [ScanPage]
+    let filing: ScanFiling
+
+    init(scan: ReceiptScan, pages: [ScanPage], filing: ScanFiling = ScanFiling(kind: .receipt)) {
+        self.scan = scan
+        self.pages = pages
+        self.filing = filing
+    }
+
+    /// The PDF's name: "YYYY-MM-DD Shop 12,34 EUR" from what the transaction says.
+    static func fileName(day: Day, payee: String, amountCents: Int?, currency: String,
+                         locale: Locale = .autoupdatingCurrent) -> String {
+        var parts = [day.description]
+        let shop = payee.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !shop.isEmpty { parts.append(shop) }
+        if let amountCents, amountCents != 0 {
+            parts.append("\(FinanceMoney.input(amountCents, locale: locale)) \(currency)")
+        }
+        return parts.joined(separator: " ")
+    }
+
+    /// The PDF's tags: "Receipt" and the category, if one is chosen.
+    static func tags(category: String?) -> [String] {
+        [String(localized: "Receipt", comment: "A tag of a scanned receipt's PDF")] + [category].compactMap { $0 }
     }
 }
 
@@ -88,9 +118,11 @@ struct FinanceTransactionEditor: View {
         if case let .existing(t) = target { t } else { nil }
     }
 
-    private var scan: ReceiptScan? {
-        if case let .scanned(scan) = target { scan } else { nil }
+    private var scanned: ScannedReceipt? {
+        if case let .scanned(scanned) = target { scanned } else { nil }
     }
+
+    private var scan: ReceiptScan? { scanned?.scan }
 
     private var hasChanges: Bool { store.canEdit && draft != original }
 
@@ -120,6 +152,26 @@ struct FinanceTransactionEditor: View {
         .presentationDetents([.large])
         .financeSheetFrame(minWidth: 420, minHeight: 520)
         .onAppear(perform: fill)
+        .onChange(of: draft, initial: true) { suggestFiling() }
+    }
+
+    /// The receipt PDF's name and tags follow the fields until the user edits them.
+    private func suggestFiling() {
+        guard let scanned else { return }
+        scanned.filing.suggest(
+            name: ScannedReceipt.fileName(day: Day(draft.date), payee: draft.payee, amountCents: draft.cents,
+                                          currency: store.currency),
+            tags: ScannedReceipt.tags(category: store.category(draft.categoryId)?.name))
+    }
+
+    /// The receipt's PDF first when it's to be saved (a folder asked for if there's none; an
+    /// error keeps the sheet open), then the transaction.
+    private func saveTapped() {
+        guard let scanned, scanned.filing.savesPDF else {
+            Task { await save() }
+            return
+        }
+        scanned.filing.saveThen({ scanned.pages }) { Task { await save() } }
     }
 
     @ToolbarContentBuilder
@@ -127,9 +179,9 @@ struct FinanceTransactionEditor: View {
         if store.canEdit {
             ToolbarItem(placement: .cancellationAction) { CancelButton(hasChanges: hasChanges) }
             ToolbarItem(placement: .confirmationAction) {
-                Button("Save") { Task { await save() } }
+                Button("Save", action: saveTapped)
                     .keyboardShortcut(.defaultAction)
-                    .disabled(busy || draft.fields == nil)
+                    .disabled(busy || draft.fields == nil || scanned?.filing.saving == true)
             }
         } else {
             ToolbarItem(placement: .confirmationAction) {
@@ -197,6 +249,7 @@ struct FinanceTransactionEditor: View {
                 .lineLimit(2...6)
                 .labelsHidden()
         }
+        if let scanned { ScanFilingSection(filing: scanned.filing) }
         if let existing { links(existing) }
         if existing != nil {
             Section {

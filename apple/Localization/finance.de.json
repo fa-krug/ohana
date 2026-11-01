@@ -324,5 +324,6 @@
   "No total found: type in the amount.": "Keine Summe gefunden: Gib den Betrag ein.",
   "Read on this device. Check the amount and the date before saving.": "Auf diesem Gerät gelesen. Prüfe Betrag und Datum vor dem Speichern.",
   "Left without one, it is sorted into a category when you save.": "Ohne Kategorie wird sie beim Speichern einsortiert.",
-  "Sorted into %@": "In %@ einsortiert"
+  "Sorted into %@": "In %@ einsortiert",
+  "Receipt": "Beleg"
 }

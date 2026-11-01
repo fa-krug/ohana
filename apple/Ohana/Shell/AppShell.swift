@@ -72,6 +72,8 @@ struct AppShell: View {
             .tabBarMinimizeBehavior(.onScrollDown)
             #endif
             .modifier(AssistantPresentation(isPresented: $showAssistant, enabled: assistantOn))
+            // The letter scanner over everything (the family menu, Spotlight / Siri / Shortcuts).
+            .modifier(ShellLetterScan(context: context, assistantSheet: $showAssistant, phonePage: $phonePage))
             // The panel's settings and chats before it first opens, so it doesn't wait for them.
             .task(id: assistantOn) {
                 if assistantOn { await AssistantChatStore.shared(for: context.api).preload() }
@@ -396,7 +398,7 @@ struct NoFamilyView: View {
                     VStack(spacing: 12) {
                         Button("Create a family") { creating = true }
                             .buttonStyle(.glassProminent)
-                        Button("Join a family…") { joining = InviteRequest() }
+                        Button("Join a family") { joining = InviteRequest() }
                             .buttonStyle(.glass)
                         Button("Reload") { Task { await app.refresh() } }
                             .buttonStyle(.glass)

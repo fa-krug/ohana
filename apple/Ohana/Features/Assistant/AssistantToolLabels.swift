@@ -46,6 +46,7 @@ enum AssistantToolLabels {
         case "edit_reminders": return String(localized: "Suggesting changes to your reminders")
         case "get_apple_calendar": return String(localized: "Reading your Apple calendars")
         case "edit_apple_calendar": return String(localized: "Suggesting changes to your Apple calendars")
+        case "suggest_items": return String(localized: "Suggesting what to add")
         case "list_appointment_searches": return String(localized: "Reading the appointment searches")
         case "find_doctor_specialities": return String(localized: "Looking up specialities")
         case "create_appointment_search": return String(localized: "Creating an appointment search")
@@ -74,6 +75,7 @@ enum AssistantToolLabels {
         case "get_shopping_items": "cart"
         case "get_reminders", "edit_reminders": "checklist"
         case "get_apple_calendar", "edit_apple_calendar": "calendar.badge.checkmark"
+        case "suggest_items": "doc.text.viewfinder"
         case "list_appointment_searches", "find_doctor_specialities", "create_appointment_search",
              "change_appointment_search", "run_appointment_search", "get_appointment_slot",
              "book_appointment_slot":
@@ -273,6 +275,14 @@ enum AssistantToolLabels {
             if !ops.isEmpty {
                 let n = ops.count
                 parts.append(String(AttributedString(localized: "^[\(n) change](inflect: true)").characters))
+            }
+            parts.append(list(titles, max: 3))
+        case "suggest_items":
+            let items = (a["items"]?.arrayValue ?? []).compactMap(\.objectValue)
+            let titles = items.map { str($0["title"]) }.filter { !$0.isEmpty }
+            if !items.isEmpty {
+                let n = items.count
+                parts.append(String(AttributedString(localized: "^[\(n) suggestion](inflect: true)").characters))
             }
             parts.append(list(titles, max: 3))
         case "find_doctor_specialities":

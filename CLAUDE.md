@@ -148,8 +148,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   formats (`fin_settings.csv_mappings`). Auto-categorize calls the assistant's
   `POST …/ai/categorize` (so it's off with the assistant). Receipts are scanned and read in
   the app only (`apple/…/Finance/ReceiptScanner.swift`: VisionKit's document camera, Vision
-  text recognition, `ReceiptParser`); it saves a plain transaction, then sorts it with
-  `…/ai/categorize` (`ids`).
+  text recognition, `ReceiptParser`; optionally also a PDF, see Scanning); it saves a plain
+  transaction, then sorts it with `…/ai/categorize` (`ids`).
 - **Assistant (`lib/assistant/`):** family-planner's `ai/*`. Tables
   `ai_settings` (keys sealed with `getSecretBox()`), `chats` (status, lease `run_token` /
   `run_until`, `stop`, JSON `context` / `activity` / `notes` / `usage` / `queue`, `rev`),
@@ -187,7 +187,13 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `get_apple_calendar`, `edit_apple_calendar` (add / update / delete, `span` this | future on an
   occurrence "id@day", `rrule` via `lib/calendar/rrule.ts`) → `kind: "calendar"` card →
   `POST /ai/chats/{id}/calendar`; the waiting-item code (`openEdit`, `waitingFor`) is shared by
-  both. `notify.ts` is the "assistant turn finished" notification (`RunnerEnv.turnEnded`
+  both. **Suggestions** (`tools/suggestions.ts`): from a letter, school note or invitation (the
+  app scans it and sends only its text, as a text attachment) `suggest_items` offers events
+  (checked with `lib/calendar/events.ts` `checkEventFields`, so `POST /events` takes them),
+  tasks and deadlines (Reminders, so only with the `reminders` context; `list` null = the
+  device's default list) → `kind: "suggestions"` card, the user ticks which to add, the app adds
+  them (events via `POST /events`, the rest through EventKit) and answers
+  `POST /ai/chats/{id}/suggestions`; an unticked one is `{ok: false, declined: true}`. `notify.ts` is the "assistant turn finished" notification (`RunnerEnv.turnEnded`
   from the `ChatRunner`; `chats.seen_at`, set every 15 s by a follower, says someone looks).
   `net.ts` refuses private addresses (`AiEnv.modelNet` may allow them for the endpoint with
   `AI_ALLOW_PRIVATE_ENDPOINT`). `toolsFor` leaves out the tools of turned-off modules
@@ -368,7 +374,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   note ops is kept on disk (`CalendarStore.queueFile`, shown on top of what's loaded)),
   `Shell/` (sidebar-adaptable `TabView`; on iPhone five tabs, overview, calendar, finance, meals and
   search: more would go under iOS's "More" with a second navigation bar, so appointments and settings
-  open as sheets from the family button there, `Module.phonePages`; family switcher, assistant `.inspector` ⌘J (a `.sheet` on
+  open as sheets from the family button there, `Module.phonePages`; family switcher (one system `Menu`, `FamilyMenu`, on every platform: no custom menus), assistant `.inspector` ⌘J (a `.sheet` on
   iPhone: an inspector there breaks the tabs' navigation bars), toggled by the ✨ button at the top
   right of every page: module roots get it from `shellToolbar()`, a page pushed onto a module's
   stack adds `.assistantButton()`; and its own
@@ -399,7 +405,21 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   (`edit_apple_calendar`, `Features/Assistant/AssistantAppleCalendar.swift`) applies through
   `Core/Calendar/DeviceCalendarStore.swift` (EventKit behind a protocol; read-only access check,
   the assistant never asks for it); every chat request carries `appleCalendar` next to `reminders`.
-  The assistant: `family.ask(prompt, send:, newChat:)` opens it ready to type from anywhere (⇧⌘J, the overview's field, the Mac's menu bar item (`MenuBarItem`, an AppKit status item: SwiftUI's `MenuBarExtra` re-sets its icon on every window redraw and crashed the app), the
+  Scanning (`Core/Scanning/`): `DocumentCamera` (VisionKit; elsewhere and on the Mac a photo /
+  PDF picker whose pages `ScanPages` crops: Vision's document detection + `CIPerspectiveCorrection`),
+  text with line boxes read on the device, and `ScanPDF` / `ScanFiling`: any scan (letters and
+  receipts) can be saved as a searchable PDF (invisible text layer, Title / Keywords) into the
+  folder chosen last (a bookmark in `UserDefaults`, security-scoped on the Mac: entitlement
+  `files.bookmarks.app-scope`), with an editable name and tags (Finder / Files tags, the
+  `_kMDItemUserTags` xattr). Letters (`Features/Letters/`): *Scan letter* in the family menu, the
+  `ScanLetterIntent` App Shortcut (Spotlight, `LetterScanInbox`) and the assistant's paperclip,
+  all through `FamilyContext.scanLetter()` / `ShellLetterScan` → `LetterReviewSheet` (name, date
+  and tags suggested by `LetterSuggestions`: Apple's on-device model, else rules; never over the
+  user's edits) → optionally a new chat with only the text as an attachment (the paperclip
+  attaches it instead). The assistant's `suggest_items` card (`AssistantSuggestions.swift`,
+  `AssistantSuggestionsCard`) ticks each suggestion; Add creates the events (`POST /events`) and
+  the reminders (`RemindersStore`), then answers `…/suggestions`.
+  The assistant: `family.ask(prompt, send:, newChat:, attachments:)` opens it ready to type from anywhere (⇧⌘J, the overview's field, the Mac's menu bar item (`MenuBarItem`, an AppKit status item: SwiftUI's `MenuBarExtra` re-sets its icon on every window redraw and crashed the app), the
   `AskOhanaIntent` App Shortcut). Recipes are in Spotlight (`RecipeSpotlight.swift`: every family's,
   after loading the account and after recipe changes; emptied in the demo / with Meals off; a result
   opens `ohana://f/{id}/meals/recipes/{id}`). The recipe list's *Import from Web* sheet

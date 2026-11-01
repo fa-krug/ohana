@@ -33,5 +33,6 @@
   "Adds an item to the family’s shopping list in Reminders, the list chosen in Ohana.": "Setzt etwas auf die Einkaufsliste der Familie in Erinnerungen, die Liste, die in Ohana ausgewählt ist.",
   "Added %@ to %@.": "%1$@ zu %2$@ hinzugefügt.",
   "Choose a Reminders list for the shopping list in Ohana first: Meals → Plan → Shopping List.": "Wähle zuerst in Ohana eine Erinnerungsliste für die Einkaufsliste: Essen → Planung → Einkaufsliste.",
-  "Ohana has no access to your reminders. You can allow it in the Settings.": "Ohana hat keinen Zugriff auf deine Erinnerungen. Du kannst ihn in den Einstellungen erlauben."
+  "Ohana has no access to your reminders. You can allow it in the Settings.": "Ohana hat keinen Zugriff auf deine Erinnerungen. Du kannst ihn in den Einstellungen erlauben.",
+  "Scans a letter and saves it as a PDF, or has the assistant suggest the dates and tasks in it.": "Scannt einen Brief und sichert ihn als PDF oder lässt den Assistenten die Termine und Aufgaben darin vorschlagen."
 }

@@ -3,9 +3,6 @@ import ImageIO
 import SwiftUI
 import UniformTypeIdentifiers
 import Vision
-#if os(iOS)
-import VisionKit
-#endif
 
 /// Reads a receipt on the device: Vision's text recognition, page by page, then
 /// `ReceiptParser` for the total, the date and the shop. Nothing leaves the device.
@@ -15,34 +12,20 @@ nonisolated enum ReceiptReader {
     /// A long receipt can take a few pages; more aren't read.
     static let maxPages = 5
 
-    /// The receipt's text pieces, per page.
-    @concurrent
-    static func pieces(of images: [CGImage]) async throws -> [[ReceiptTextPiece]] {
-        var request = RecognizeTextRequest()
-        request.recognitionLevel = .accurate
+    /// The receipt's pages with their text (cropped first when picked, not from the camera).
+    static func read(_ images: [CGImage], needsCrop: Bool) async throws -> [ScanPage] {
+        let images = needsCrop ? await ScanCrop.cropped(Array(images.prefix(maxPages))) : images
         // Amounts and dates read better without the dictionary.
-        request.usesLanguageCorrection = false
-        request.recognitionLanguages = [Locale.Language(identifier: "de-DE"), Locale.Language(identifier: "en-US")]
-        var pages: [[ReceiptTextPiece]] = []
-        for image in images.prefix(maxPages) {
-            let observations = try await request.perform(on: image)
-            pages.append(observations.compactMap { observation in
-                guard let text = observation.topCandidates(1).first?.string else { return nil }
-                // Vision's origin is at the bottom left.
-                let box = observation.boundingBox.cgRect
-                return ReceiptTextPiece(text: text, x: box.minX, y: 1 - box.midY, height: box.height)
-            })
-        }
-        return pages
+        return try await ScanReader.read(images, maxPages: maxPages, languageCorrection: false)
     }
 
     /// The pages of a picked photo (turned upright) or PDF.
     @concurrent
-    static func images(at url: URL) async throws -> [CGImage] {
+    static func images(at url: URL, maxPages: Int = maxPages) async throws -> [CGImage] {
         let access = url.startAccessingSecurityScopedResource()
         defer { if access { url.stopAccessingSecurityScopedResource() } }
         if UTType(filenameExtension: url.pathExtension)?.conforms(to: .pdf) == true {
-            return pdfPages(url)
+            return pdfPages(url, maxPages: maxPages)
         }
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
               let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [
@@ -55,7 +38,7 @@ nonisolated enum ReceiptReader {
     }
 
     /// A PDF's first pages, drawn on white about 2000 pixels wide.
-    private static func pdfPages(_ url: URL) -> [CGImage] {
+    private static func pdfPages(_ url: URL, maxPages: Int) -> [CGImage] {
         guard let document = CGPDFDocument(url as CFURL) else { return [] }
         return (1...max(1, min(document.numberOfPages, maxPages))).compactMap { number in
             guard let page = document.page(at: number) else { return nil }
@@ -84,50 +67,11 @@ enum ReceiptError: LocalizedError {
 }
 
 extension ReceiptParser {
-    /// Reads the pages' text (off the main actor), then the receipt's total, date and shop.
-    static func scan(_ images: [CGImage], today: Day = .today) async throws -> ReceiptScan {
-        let pages = try await ReceiptReader.pieces(of: images)
+    /// The receipt's total, date and shop from its read pages.
+    static func scan(_ pages: [ScanPage], today: Day = .today) -> ReceiptScan {
         // An ambiguous "1/2/2026" is read the way the device writes dates.
         let format = DateFormatter.dateFormat(fromTemplate: "Md", options: 0, locale: .current) ?? ""
         let monthFirst = (format.firstIndex(of: "M") ?? format.endIndex) < (format.firstIndex(of: "d") ?? format.endIndex)
-        return parse(pages.flatMap(lines), today: today, monthFirst: monthFirst)
+        return parse(pages.flatMap { lines($0.lines.map(\.piece)) }, today: today, monthFirst: monthFirst)
     }
 }
-
-#if os(iOS)
-/// VisionKit's document camera: finds the receipt's edges, straightens it and takes one or more
-/// pages. Hands over the pages, or none when cancelled.
-struct ReceiptCamera: UIViewControllerRepresentable {
-    var done: ([CGImage]) -> Void
-
-    /// Not in the Simulator or on devices without a camera: the file picker then.
-    static var isSupported: Bool { VNDocumentCameraViewController.isSupported }
-
-    func makeUIViewController(context: Context) -> VNDocumentCameraViewController {
-        let controller = VNDocumentCameraViewController()
-        controller.delegate = context.coordinator
-        return controller
-    }
-
-    func updateUIViewController(_ controller: VNDocumentCameraViewController, context: Context) {}
-
-    func makeCoordinator() -> Coordinator { Coordinator(done: done) }
-
-    final class Coordinator: NSObject, VNDocumentCameraViewControllerDelegate {
-        let done: ([CGImage]) -> Void
-
-        init(done: @escaping ([CGImage]) -> Void) { self.done = done }
-
-        func documentCameraViewController(_ controller: VNDocumentCameraViewController, didFinishWith scan: VNDocumentCameraScan) {
-            done((0..<min(scan.pageCount, ReceiptReader.maxPages)).compactMap { scan.imageOfPage(at: $0).cgImage })
-        }
-
-        func documentCameraViewControllerDidCancel(_ controller: VNDocumentCameraViewController) { done([]) }
-
-        func documentCameraViewController(_ controller: VNDocumentCameraViewController, didFailWithError error: any Error) {
-            ErrorBanner.shared.show(error)
-            done([])
-        }
-    }
-}
-#endif

@@ -1,0 +1,24 @@
+{
+  "Scanned Letter": "Gescannter Brief",
+  "Reading the letter…": "Brief wird gelesen …",
+  "The letter couldn’t be read.": "Der Brief konnte nicht gelesen werden.",
+  "^[%lld page](inflect: true)": {
+    "one": "%lld Seite",
+    "other": "%lld Seiten"
+  },
+  "Page %lld": "Seite %lld",
+  "Suggest dates and tasks": "Termine und Aufgaben vorschlagen",
+  "The assistant gets the letter’s text and suggests events, tasks and deadlines to add.": "Der Assistent bekommt den Text des Briefs und schlägt Termine, Aufgaben und Fristen zum Hinzufügen vor.",
+  "Save as PDF": "Als PDF sichern",
+  "A searchable PDF in the folder you choose. It stays with you: it never goes to the server.": "Ein durchsuchbares PDF im Ordner deiner Wahl. Es bleibt bei dir: Es geht nie an den Server.",
+  "Suggesting a name and tags…": "Name und Tags werden vorgeschlagen …",
+  "Recently used": "Zuletzt verwendet",
+  "Folder": "Ordner",
+  "No folder chosen yet": "Noch kein Ordner gewählt",
+  "Choose Folder…": "Ordner wählen …",
+  "The folder can’t be found any more.": "Der Ordner ist nicht mehr auffindbar.",
+  "The folder can’t be found any more. Choose it again.": "Der Ordner ist nicht mehr auffindbar. Wähle ihn erneut.",
+  "Choose a folder for the PDF first.": "Wähle zuerst einen Ordner für das PDF.",
+  "Saved “%@”": "„%@“ gesichert",
+  "Scan letter": "Brief scannen"
+}

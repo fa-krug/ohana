@@ -128,7 +128,7 @@ struct FinanceScreen: View {
                 do {
                     let url = try result.get()
                     if choosingReceipt {
-                        read { try await ReceiptReader.images(at: url) }
+                        read(needsCrop: true) { try await ReceiptReader.images(at: url) }
                     } else {
                         importing = try FinanceImportFile(url: url)
                     }
@@ -138,9 +138,9 @@ struct FinanceScreen: View {
             }
             #if os(iOS)
             .fullScreenCover(isPresented: $scanningReceipt) {
-                ReceiptCamera { pages in
+                DocumentCamera(maxPages: ReceiptReader.maxPages) { pages in
                     scanningReceipt = false
-                    if !pages.isEmpty { read { pages } }
+                    if !pages.isEmpty { read(needsCrop: false) { pages } }
                 }
                 .ignoresSafeArea()
             }
@@ -174,7 +174,7 @@ struct FinanceScreen: View {
     /// The document camera, or the file picker where there is none (the Mac, the Simulator).
     private func scanReceipt() {
         #if os(iOS)
-        if ReceiptCamera.isSupported {
+        if DocumentCamera.isSupported {
             scanningReceipt = true
             return
         }
@@ -187,13 +187,15 @@ struct FinanceScreen: View {
         choosingFile = true
     }
 
-    /// Reads the receipt's pages on the device, then opens the editor filled in with them.
-    private func read(_ pages: @escaping () async throws -> [CGImage]) {
+    /// Reads the receipt's pages on the device (cropped to the paper when picked: the camera
+    /// crops itself), then opens the editor filled in with them.
+    private func read(needsCrop: Bool, _ images: @escaping () async throws -> [CGImage]) {
         readingReceipt = true
         Task {
             defer { readingReceipt = false }
             do {
-                editing = .scanned(try await ReceiptParser.scan(pages()))
+                let pages = try await ReceiptReader.read(images(), needsCrop: needsCrop)
+                editing = .scanned(ScannedReceipt(scan: ReceiptParser.scan(pages), pages: pages))
             } catch {
                 ErrorBanner.shared.show(error)
             }

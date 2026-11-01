@@ -94,7 +94,15 @@ OhanaTests/       Swift Testing unit tests
   run without opening the app and answer in a sentence. They use the server, token and family the
   app stored (`IntentConnection`); *Add to Shopping List* adds a reminder to the family's shopping
   list in Reminders (see below) and needs no server. The phrases' German is in
-  `Resources/AppShortcuts.xcstrings`.
+  `Resources/AppShortcuts.xcstrings`. *Scan Letter* (also in Spotlight, so the Home Screen search
+  finds it) opens the app with the letter scanner (`ScanLetterIntent` → `FamilyContext.scanLetter()`,
+  hosted by the shell like the family menu's *Scan letter*).
+- **Scanning paper** (`Core/Scanning/`, `Features/Letters/`): letters (the family menu, *Scan Letter*,
+  the assistant's attach menu) and receipts (Finance) come from the document camera, or a picked
+  photo / PDF that Vision crops to the paper (`ScanCrop`). Their text is read on the device; the
+  review can save the pages as a searchable PDF (invisible text layer, Finder / Files tags, name
+  and tags suggested on the device, Apple's on-device model where available) into a folder the
+  app remembers as a bookmark. Only the text ever goes to the assistant.
 - **Share extension** (`ShareExtension/`): sharing a web page (Safari, or any app sharing a URL) to
   Ohana has the server read its recipe and save it to "Want to try"; *Undo* deletes it again, and
   cancelling while it works saves nothing (the server notices the request go away). The app's

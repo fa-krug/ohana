@@ -55,6 +55,9 @@ final class AssistantChatStore {
     private(set) var activity: AssistantActivityState?
     /// A message is on its way to the server.
     private(set) var sending = false
+    /// Which suggestions the user ticked, per suggestions item (until they're answered; kept here
+    /// so a card rebuilt while scrolling keeps them).
+    private(set) var suggestionPicks: [String: Set<Int>] = [:]
 
     @ObservationIgnored let api: FamilyAPI
     /// Called after the assistant (or an undo) changed something, so the screens reload it.
@@ -337,8 +340,8 @@ final class AssistantChatStore {
             )
         }
         guard var c = current else { return }
-        // A new message instead of an answer: the question (or Reminders or calendar edit) stays
-        // unanswered.
+        // A new message instead of an answer: the question (or Reminders or calendar edit, or the
+        // suggestions) stays unanswered.
         if let open = openWaiting() {
             switch c.items[open] {
             case var .question(q):
@@ -350,6 +353,9 @@ final class AssistantChatStore {
             case var .calendar(edit):
                 edit.skipped = true
                 c.items[open] = .calendar(edit)
+            case var .suggestions(edit):
+                edit.skipped = true
+                c.items[open] = .suggestions(edit)
             default:
                 break
             }
@@ -400,13 +406,13 @@ final class AssistantChatStore {
         }
     }
 
-    /// The position of the open chat's question, Reminders or calendar edit that waits for the
-    /// user (the last of them, as on the server: one waits at a time).
+    /// The position of the open chat's question, Reminders or calendar edit or suggestions that
+    /// wait for the user (the last of them, as on the server: one waits at a time).
     private func openWaiting() -> Int? {
         guard let items = current?.items, !busy, savedCopy == nil,
               let index = items.lastIndex(where: {
                   switch $0 {
-                  case .question, .reminders, .calendar: true
+                  case .question, .reminders, .calendar, .suggestions: true
                   default: false
                   }
               }),
@@ -416,6 +422,7 @@ final class AssistantChatStore {
         case let .question(q) where q.answer == nil && !q.skipped: return index
         case let .reminders(edit) where edit.answer == nil && !edit.skipped: return index
         case let .calendar(edit) where edit.answer == nil && !edit.skipped: return index
+        case let .suggestions(edit) where edit.answer == nil && !edit.skipped: return index
         default: return nil
         }
     }
@@ -435,6 +442,12 @@ final class AssistantChatStore {
     /// The open chat's calendar edit that waits for the user to apply or decline it.
     func openCalendarEdit() -> (index: Int, edit: AssistantCalendarEdit)? {
         guard let index = openWaiting(), case let .calendar(edit) = current?.items[index] else { return nil }
+        return (index, edit)
+    }
+
+    /// The open chat's suggestions that wait for the user to add (some of) them or none.
+    func openSuggestions() -> (index: Int, edit: AssistantSuggestions)? {
+        guard let index = openWaiting(), case let .suggestions(edit) = current?.items[index] else { return nil }
         return (index, edit)
     }
 
@@ -578,6 +591,88 @@ final class AssistantChatStore {
             id: id, applied: answer.applied, results: answer.applied ? answer.results ?? [] : nil, page: page,
             year: year, lang: lang, today: today, reminders: reminders, appleCalendar: appleCalendar
         )
+    }
+
+    // MARK: Suggestions
+
+    /// The suggestions of `edit` the user ticked (at first every one this app can add).
+    func picks(_ edit: AssistantSuggestions) -> Set<Int> {
+        suggestionPicks[edit.id] ?? edit.initialPicks
+    }
+
+    /// Ticks or unticks suggestion `index` of `edit`.
+    func togglePick(_ edit: AssistantSuggestions, _ index: Int) {
+        var picks = picks(edit)
+        if picks.contains(index) { picks.remove(index) } else { picks.insert(index) }
+        suggestionPicks[edit.id] = picks
+    }
+
+    /// Adds the picked suggestions of the open suggestions `id` (asking for the access to
+    /// Reminders first when a task or deadline is among them and it wasn't asked for yet), then
+    /// answers with each one's result (the others declined) and the Reminders after it.
+    func applySuggestions(_ id: String, selected: Set<Int>, reminders: RemindersStore = .shared,
+                          events: (any AssistantEventCreating)? = nil) async -> RemindersApplyStart {
+        guard let open = openSuggestions(), open.edit.id == id, let chatID = current?.id, !chatID.isEmpty else {
+            return .notWaiting
+        }
+        let needsReminders = open.edit.needsReminders(selected)
+        if needsReminders {
+            reminders.refreshAccess()
+            if reminders.access == .notDetermined {
+                do {
+                    try await reminders.requestAccess()
+                } catch {
+                    ErrorBanner.shared.show(error)
+                }
+            }
+            guard reminders.access.isGranted else { return .noAccess }
+            // Asking for the access took a while: still the same chat, still waiting?
+            guard current?.id == chatID, let again = openSuggestions(), again.edit.id == id else { return .notWaiting }
+        }
+        sending = true
+        let results = await AssistantSuggestionsApply.perform(
+            open.edit.ops, picks: selected, events: events ?? FamilyEventCreator(api: api),
+            reminders: needsReminders ? reminders : nil, defaultListID: needsReminders ? reminders.defaultListID : nil
+        )
+        if results.indices.contains(where: { results[$0].ok && open.edit.ops[$0].kind == .event }) {
+            onChange([.events])
+        }
+        // Adding took a while: the item may have moved (a reload), so it's looked up again.
+        let index = current?.id == chatID
+            ? current?.items.firstIndex { if case let .suggestions(e) = $0 { e.id == id } else { false } }
+            : nil
+        answerSuggestions((index ?? open.index, open.edit), chatID: chatID,
+                          answer: .init(applied: true, results: results))
+        return .answered
+    }
+
+    /// Adds none of the open suggestions `id`, and the assistant hears so.
+    func declineSuggestions(_ id: String) {
+        guard let open = openSuggestions(), open.edit.id == id, let chatID = current?.id, !chatID.isEmpty else { return }
+        sending = true
+        answerSuggestions(open, chatID: chatID, answer: .init(applied: false, results: nil))
+    }
+
+    private func answerSuggestions(_ open: (index: Int, edit: AssistantSuggestions), chatID: String,
+                                   answer: AssistantSuggestions.Answer) {
+        if current?.id == chatID, let items = current?.items, open.index < items.count,
+           case .suggestions = items[open.index] {
+            var answered = open.edit
+            answered.answer = answer
+            current?.items[open.index] = .suggestions(answered)
+        }
+        suggestionPicks[open.edit.id] = nil
+        let here = context()
+        let page = current?.page ?? here.page
+        Task {
+            // After the change: what the assistant reads next is how the Reminders are now.
+            let reminders = await remindersContext()
+            let calendar = await calendarContext()
+            post(chatID, "suggestions", body: Self.remindersAnswer(
+                id: open.edit.id, answer: answer, page: page, year: here.year,
+                lang: language, today: AssistantDates.day(), reminders: reminders, appleCalendar: calendar
+            ))
+        }
     }
 
     /// Sends an answer (POST /ai/chats/{id}/{route}) and follows the turn it goes on with.

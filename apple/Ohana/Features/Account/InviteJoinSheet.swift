@@ -214,7 +214,7 @@ struct InviteJoinSheet: View {
     }
 }
 
-/// Shows `InviteJoinSheet` for the "Join a family…" entries and for invite links the app was
+/// Shows `InviteJoinSheet` for the "Join a family" entries and for invite links the app was
 /// opened with. `claimsLinks`: this screen takes links from `InviteInbox` while it is visible.
 struct InviteJoinPresenter: ViewModifier {
     @Binding var request: InviteRequest?

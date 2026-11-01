@@ -100,6 +100,26 @@
           }
         }
       }
+    },
+    "Scan a letter in ${applicationName}": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scanne einen Brief in ${applicationName}"
+          }
+        }
+      }
+    },
+    "Scan a letter with ${applicationName}": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scanne einen Brief mit ${applicationName}"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

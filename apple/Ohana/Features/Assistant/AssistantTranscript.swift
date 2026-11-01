@@ -39,7 +39,7 @@ enum AssistantTranscript {
                 var lines = ["**☑️ \(edit.summary)**"]
                 for (index, op) in edit.ops.enumerated() {
                     let result = edit.answer?.results.flatMap { index < $0.count ? $0[index] : nil }
-                    let mark = result.map { $0.ok ? " ✓" : " ✗ \($0.error ?? "")" } ?? ""
+                    let mark = result.map(Self.mark) ?? ""
                     lines.append("- " + AssistantReminderOpLine.make(op).text + mark)
                 }
                 if let outcome = edit.outcome { lines.append("(\(outcome))") }
@@ -48,9 +48,20 @@ enum AssistantTranscript {
                 var lines = ["**📅 \(edit.summary)**"]
                 for (index, op) in edit.ops.enumerated() {
                     let result = edit.answer?.results.flatMap { index < $0.count ? $0[index] : nil }
-                    let mark = result.map { $0.ok ? " ✓" : " ✗ \($0.error ?? "")" } ?? ""
+                    let mark = result.map(Self.mark) ?? ""
                     let line = AssistantCalendarOpLine.make(op)
                     lines.append("- " + ([line.text, line.detail ?? ""].filter { !$0.isEmpty }.joined(separator: " · ")) + mark)
+                }
+                if let outcome = edit.outcome { lines.append("(\(outcome))") }
+                out.append(lines.joined(separator: "\n"))
+            case let .suggestions(edit):
+                var lines = ["**📄 \(edit.summary)**"]
+                if let source = edit.source { lines.append("*\(source)*") }
+                for (index, op) in edit.ops.enumerated() {
+                    let result = edit.answer?.results.flatMap { index < $0.count ? $0[index] : nil }
+                    let line = AssistantSuggestionLine.make(op)
+                    let text = [line.title, line.when, line.detail].compactMap { $0 }.filter { !$0.isEmpty }
+                    lines.append("- " + text.joined(separator: " · ") + (result.map(Self.mark) ?? ""))
                 }
                 if let outcome = edit.outcome { lines.append("(\(outcome))") }
                 out.append(lines.joined(separator: "\n"))
@@ -63,6 +74,13 @@ enum AssistantTranscript {
             }
         }
         return out.joined(separator: "\n\n")
+    }
+
+    /// How an op went: ✓, – (left out) or ✗ with the error.
+    private static func mark(_ result: AssistantReminderResult) -> String {
+        if result.ok { return " ✓" }
+        if result.isDeclined { return " –" }
+        return " ✗ \(result.error ?? "")"
     }
 
     private static func pretty(_ value: JSONValue) -> String? {
