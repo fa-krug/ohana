@@ -230,8 +230,13 @@ private struct AssistantSettingsForm: View {
                             Label("Load models", systemImage: "arrow.clockwise")
                         }
                     }
+                    #if os(iOS)
+                    // Just the icon: the label wraps next to the model on an iPhone.
+                    .labelStyle(.iconOnly)
+                    #endif
                     .buttonStyle(.bordered)
                     .controlSize(.small)
+                    .help("Load models")
                     .disabled(baseUrl.isEmpty || busy != nil)
                 }
                 Text("Load the list from the API, or type a model name. It needs to support tool calls.")

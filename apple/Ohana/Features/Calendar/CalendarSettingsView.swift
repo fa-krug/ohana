@@ -148,7 +148,7 @@ private struct CalendarSettingsContent: View {
                 }
             }
         } header: {
-            Text("Entry types \(String(store.year))")
+            Text("Entry types")
         } footer: {
             if store.isViewer {
                 Text("Only editors of the family can change entry types.")
@@ -199,17 +199,23 @@ private struct CalendarSettingsContent: View {
             CalendarSwatch(type: type, size: 22)
             VStack(alignment: .leading, spacing: 2) {
                 Text(type.name).foregroundStyle(.primary)
-                HStack(spacing: 6) {
-                    Text(type.role.title)
-                    if type.isAway { Text("· Away") }
+                Text(type.isAway ? "\(type.role.title) · \(String(localized: "Away"))" : type.role.title)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 8)
+            // The counts stacked and on one line each, so they don't squeeze the name; none
+            // for a type without days.
+            if stats.days > 0 {
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(CalendarText.days(stats.days)).font(.subheadline)
+                    Text(CalendarText.workdays(stats.workdays)).font(.caption)
                 }
-                .font(.caption)
+                .monospacedDigit()
+                .lineLimit(1)
+                .fixedSize()
                 .foregroundStyle(.secondary)
             }
-            Spacer()
-            Text(verbatim: "\(CalendarText.days(stats.days)) · \(CalendarText.workdays(stats.workdays))")
-                .font(.caption.monospacedDigit())
-                .foregroundStyle(.secondary)
         }
     }
 

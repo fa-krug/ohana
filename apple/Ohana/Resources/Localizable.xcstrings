@@ -5224,12 +5224,12 @@
         }
       }
     },
-    "Entry types %@": {
+    "Entry types": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Eintragsarten %@"
+            "value": "Eintragsarten"
           }
         }
       }
