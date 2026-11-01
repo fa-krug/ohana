@@ -138,11 +138,6 @@ private struct FamilySidebar: View {
             // Rows read as text, not as links: only their icons and the check take the app's color.
             .tint(.primary)
             .navigationTitle(Text(verbatim: "Ohana"))
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Back", systemImage: "chevron.forward") { close() }
-                }
-            }
         }
         // Swiping back to the tabs; vertical drags stay the list's.
         .simultaneousGesture(
