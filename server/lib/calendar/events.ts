@@ -131,6 +131,13 @@ function cleanFields(raw: unknown): Fields {
   };
 }
 
+/** Throws (a ZodError) unless `raw` holds fields of an event POST /events accepts (date,
+ *  endDate?, start?, end?, title, location?, person?, note?, url?): the assistant's
+ *  suggestions (suggest_items) check theirs with it. */
+export function checkEventFields(raw: unknown): void {
+  cleanFields(raw);
+}
+
 const fieldsOf = (r: EventRow): Fields => ({
   day: r.day,
   endDay: r.endDay,

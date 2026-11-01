@@ -378,7 +378,7 @@ describe("a turn of the assistant", () => {
   });
 
   it("condenses the conversation when the endpoint says the context is full", async () => {
-    // The model list doesn't tell this model's window (10,000): only its error does.
+    // The model list doesn't tell this model's window (12,000): only its error does.
     const t = await configured({}, { model: "mock-tiny" });
     const ev = await chat(t, "keep looking 50 times");
     expect(addedOf(ev).at(-1)).toEqual({ role: "assistant", content: "Done looking: 50 times." });
@@ -386,7 +386,7 @@ describe("a turn of the assistant", () => {
     expect(ev.some((e) => e.event === "continue")).toBe(false);
     const usage = ev.filter((e) => e.event === "usage").map((e) => e.data);
     expect(usage[0].max).toBe(128000);
-    expect(usage.at(-1).max).toBe(10000);
+    expect(usage.at(-1).max).toBe(12000);
   });
 
   it("hands a turn on when its time is up (family-planner's limit; the worker passes none)", async () => {

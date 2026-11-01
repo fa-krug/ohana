@@ -3988,6 +3988,47 @@ paths:
         "401": {$ref: "#/components/responses/Unauthorized"}
         "404": {$ref: "#/components/responses/NotFound"}
         "409": {$ref: "#/components/responses/Conflict"}
+  /api/v1/families/{familyId}/ai/chats/{chatId}/suggestions:
+    post:
+      tags: [Assistant]
+      operationId: answerSuggestions
+      summary: Report which of the assistant's suggestions the user added (streams the rest of the turn)
+      description: >-
+        Like `POST …/reminders`, for a `suggestions` item: `id` is its id. With `applied: true`
+        the client has added the suggestions the user picked (events with `POST
+        …/families/{familyId}/events`, tasks and deadlines as reminders on the device) and sends
+        `results`, one per op in order: `{ok: true, id?}` for an added one, `{ok: false,
+        declined: true}` for one the user didn't pick, `{ok: false, error}` for one that failed.
+        `applied: false` means the user added none. The turn goes on with this as the tool's
+        result. 409 when those suggestions don't wait any more.
+      x-ohana-role: viewer
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+        - $ref: "#/components/parameters/ChatId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/ChatContextInput"
+                - type: object
+                  required: [id, applied]
+                  properties:
+                    id: {type: string}
+                    applied: {type: boolean}
+                    results:
+                      type: array
+                      description: >-
+                        Required when `applied` is true: one per op, in order (a missing one
+                        counts as failed, extra ones are ignored).
+                      items: {$ref: "#/components/schemas/RemindersResult"}
+      responses:
+        "200": {$ref: "#/components/responses/ChatStream"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
   /api/v1/families/{familyId}/ai/chats/{chatId}/stop:
     post:
       tags: [Assistant]
@@ -6204,6 +6245,40 @@ components:
                     applied: {type: boolean, const: false}
             skipped: {type: boolean}
         - type: object
+          title: suggestions
+          description: >-
+            Events, tasks and deadlines the assistant suggests adding (`suggest_items`), e.g.
+            from a letter or school note the user scanned. The turn waits for the user, as for
+            `reminders`: the app shows the suggestions to tick, adds the picked ones (events to
+            the family's calendar with `POST …/events`, tasks and deadlines to the user's
+            Reminders) and answers with `POST …/suggestions`. A new message instead marks it
+            `skipped`.
+          required: [kind, id, summary, ops]
+          properties:
+            kind: {type: string, const: suggestions}
+            id: {type: string}
+            summary: {type: string, example: "From “Elternbrief 3b”: 2 events, 1 task, 1 deadline"}
+            source: {type: string, maxLength: 200, description: "What the document is.", example: Elternbrief 3b}
+            ops:
+              type: array
+              maxItems: 30
+              items: {$ref: "#/components/schemas/SuggestionOp"}
+            answer:
+              oneOf:
+                - type: object
+                  required: [applied, results]
+                  properties:
+                    applied: {type: boolean, const: true}
+                    results:
+                      type: array
+                      description: One per op, in order.
+                      items: {$ref: "#/components/schemas/RemindersResult"}
+                - type: object
+                  required: [applied]
+                  properties:
+                    applied: {type: boolean, const: false}
+            skipped: {type: boolean}
+        - type: object
           title: compacted
           required: [kind]
           properties:
@@ -6340,6 +6415,37 @@ components:
             eventAllDay: {type: boolean}
             calendar: {type: string}
             calendarTitle: {type: string}
+    SuggestionOp:
+      description: >-
+        One suggestion of `suggest_items`, checked by the server. An `event` holds fields `POST
+        …/events` accepts as they are (`endDate` only when it differs from `date`; no `start`:
+        all day; `end` is the time on `endDate`). A `task` or `deadline` is a reminder to add:
+        `due` is `YYYY-MM-DD` or `YYYY-MM-DDTHH:MM` (always there for a deadline), `list` a
+        Reminders list id with its `listTitle`, or both null for the device's default list.
+      oneOf:
+        - type: object
+          title: event
+          required: [op, title, date]
+          properties:
+            op: {type: string, const: event}
+            title: {type: string, maxLength: 200}
+            date: {type: string, format: date}
+            endDate: {type: string, format: date}
+            start: {type: string, description: "HH:MM", example: "15:00"}
+            end: {type: string, description: "HH:MM", example: "17:00"}
+            location: {type: string, maxLength: 200}
+            person: {type: string, maxLength: 80, description: "A family member's name."}
+            note: {type: string, maxLength: 1000}
+        - type: object
+          title: task or deadline
+          required: [op, title, list, listTitle]
+          properties:
+            op: {type: string, enum: [task, deadline]}
+            title: {type: string, maxLength: 200}
+            due: {type: string, description: "`YYYY-MM-DD` or `YYYY-MM-DDTHH:MM`.", example: "2026-11-05T12:00"}
+            note: {type: string, maxLength: 1000}
+            list: {type: [string, "null"]}
+            listTitle: {type: [string, "null"]}
     RemindersContext:
       type: object
       description: >-
@@ -6418,7 +6524,9 @@ components:
             list: {type: string, description: "The reminder's list."}
             listTitle: {type: string}
     RemindersResult:
-      description: "How one op went on the device (`id`: the new reminder's or event's id after an add)."
+      description: >-
+        How one op went on the device (`id`: the new reminder's or event's id after an add;
+        `declined`: a suggestion the user didn't pick).
       oneOf:
         - type: object
           required: [ok]
@@ -6430,6 +6538,11 @@ components:
           properties:
             ok: {type: boolean, const: false}
             error: {type: string}
+        - type: object
+          required: [ok, declined]
+          properties:
+            ok: {type: boolean, const: false}
+            declined: {type: boolean, const: true}
     ChatMessageInput:
       allOf:
         - $ref: "#/components/schemas/ChatContextInput"

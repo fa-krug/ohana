@@ -161,7 +161,7 @@ describe("assistant chats", () => {
   });
 
   it("are condensed for the model when long, and the next message still knows", async () => {
-    const t = await setup({}, { contextWindow: 20000 });
+    const t = await setup({}, { contextWindow: 22000 });
     const { ev, id } = await start(t, "keep looking 40 times");
     let s = await state(t, id);
     expect(shown(s.items).at(-1)).toBe("assistant: Done looking: 40 times.");
@@ -170,8 +170,8 @@ describe("assistant chats", () => {
     expect(s.items.some((it) => it.kind === "compacted")).toBe(true);
     expect(shown(replay(ev))).toEqual(shown(s.items));
     // How full the context is, kept with the chat.
-    expect(s.chat.usage.max).toBe(20000);
-    expect(s.chat.usage.used > 0 && s.chat.usage.used < 20000).toBe(true);
+    expect(s.chat.usage.max).toBe(22000);
+    expect(s.chat.usage.used > 0 && s.chat.usage.used < 22000).toBe(true);
     // The summary is kept among the messages; the next message builds on it.
     const stored = await t.store.listChatMessages(id);
     const marks = stored.filter((r) => r.message.role === "summary");

@@ -14,6 +14,7 @@ import { eventTools } from "./events";
 import { generalTools } from "./general";
 import { mealTools } from "./meals";
 import { reminderTools } from "./reminders";
+import { suggestionTools } from "./suggestions";
 import { webTools } from "./web";
 import { type ModuleName, moduleEnabled } from "@/lib/server-info";
 
@@ -25,6 +26,7 @@ export {
   cleanAppleCalendar,
 } from "./apple-calendar";
 export { cleanReminders, type ReminderOp, type RemindersEdit, type RemindersSnapshot } from "./reminders";
+export { type SuggestionOp, type SuggestionsEdit } from "./suggestions";
 
 export const TOOLS: Record<string, Tool> = {
   ...calendarTools,
@@ -35,6 +37,7 @@ export const TOOLS: Record<string, Tool> = {
   ...generalTools,
   ...reminderTools,
   ...appleCalendarTools,
+  ...suggestionTools,
   ...webTools,
 };
 

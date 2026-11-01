@@ -37,6 +37,7 @@ import {
   type RemindersEdit,
   type RemindersSnapshot,
   runTool,
+  type SuggestionsEdit,
   type ToolContext,
   toolsFor,
 } from "./tools";
@@ -78,8 +79,9 @@ You ended without answering. Don't use tools now: tell the user what you found a
 
 export type Emit = (event: string, data: unknown) => void;
 
-/** The tools that wait for the user (a question, an edit of their Reminders or calendars). */
-const WAITS = new Set(["ask_user", "edit_reminders", "edit_apple_calendar"]);
+/** The tools that wait for the user (a question, an edit of their Reminders or calendars,
+ *  suggestions to add). */
+const WAITS = new Set(["ask_user", "edit_reminders", "edit_apple_calendar", "suggest_items"]);
 
 /** The pages a chat can belong to: Ohana's modules, the family overview and the settings. */
 export const PAGES = ["overview", "calendar", "finance", "meals", "appointments", "settings"];
@@ -298,7 +300,21 @@ OK first. They aren't the family's calendar: use Ohana's event tools for that, a
 device calendar marked "ohana" (it mirrors the family's).`
       : "The user's device calendars aren't available in this chat (no calendar access on this device)."
   }
-
+${input.writes ? `
+## Letters, notes and invitations
+When the user shares a letter, a notice, an invitation or the like (often scanned: an attached
+file), find what belongs in the family's calendar or to-dos: events (with times and places as
+written), tasks (things to bring, buy or sign) and deadlines (reply, pay or hand in by). Offer
+them all with one suggest_items call instead of adding them yourself: the user picks which to
+add. A date without a year is the next such date from today. Name the person (a family member)
+an item is for when the letter says so. Keep titles short and plain, in the letter's language.${
+      input.reminders
+        ? ""
+        : `
+The user's Reminders aren't available: suggest only events (a deadline as an all-day event) and
+mention the tasks in your answer.`
+    }
+` : ""}
 ## How to work
 - Use the tools to look things up; don't guess what's in the calendar, the finances, the meals
   or the appointment searches.
@@ -345,8 +361,8 @@ something only the user knows, rather than picking for them or asking in plain t
 - You need the OK for a bigger change: options like "Yes, do it" / "No".
 Look things up with the tools first, so the options are concrete (real dates, names,
 amounts). Don't ask what the tools can tell you, or when the request is already clear. Ask one
-question at a time, and not in the same step as edit_reminders or edit_apple_calendar (which
-wait for the user too).`;
+question at a time, and not in the same step as edit_reminders, edit_apple_calendar or
+suggest_items (which wait for the user too).`;
 }
 
 /** Where the window of a history starts: the newest MAX_MESSAGES messages, but all of the
@@ -460,7 +476,8 @@ export function cleanParts(raw: unknown[]): ContentPart[] {
  * step), "question" {id, question, options, multiple} (the model asked the user: the turn ends
  * without the call's result, which the app adds with the answer and then continues),
  * "reminders" {id, summary, ops} (a change of the user's Reminders waits for their OK, the same
- * way), "calendar" {id, summary, ops} (the same for their device calendars), "usage"
+ * way), "calendar" {id, summary, ops} (the same for their device calendars), "suggestions"
+ * {id, summary, source?, ops} (events, tasks and deadlines the user picks to add), "usage"
  * {used, max} (the tokens of the context in use, and the window), "compacting" {} and
  * "compacted" {summary, request?, keep} (the history got too long for the context window: all but
  * its newest `keep` messages are now the summary, which the caller keeps in their place) and
@@ -638,12 +655,13 @@ export async function runChat(opts: {
         break;
       }
       push({ role: "assistant", content: content || null, tool_calls: calls });
-      // A question (or an edit of the user's Reminders or calendars) waits for the user: its
-      // result is their answer, added by the app. One per step.
+      // A question (an edit of the user's Reminders or calendars, suggestions to add) waits for
+      // the user: its result is their answer, added by the app. One per step.
       let waiting:
         | ({ kind: "question"; id: string } & Question)
         | ({ kind: "reminders"; id: string } & RemindersEdit)
         | ({ kind: "calendar"; id: string } & AppleCalendarEdit)
+        | ({ kind: "suggestions"; id: string } & SuggestionsEdit)
         | null = null;
       const argsOf = (call: ToolCall): unknown => {
         try {
@@ -667,7 +685,7 @@ export async function runChat(opts: {
             role: "tool",
             tool_call_id: call.id,
             content: JSON.stringify({
-              error: "Ask one question at a time (a question or a change of the user's Reminders or calendars already waits for the user)",
+              error: "Ask one question at a time (a question, a change of the user's Reminders or calendars, or suggestions already wait for the user)",
             }),
           });
           continue;
@@ -686,6 +704,10 @@ export async function runChat(opts: {
         }
         if (res.appleCalendar) {
           waiting = { kind: "calendar", id: call.id, ...res.appleCalendar };
+          continue;
+        }
+        if (res.suggestions) {
+          waiting = { kind: "suggestions", id: call.id, ...res.suggestions };
           continue;
         }
         if (ask) emit("tool", { id: call.id, name: call.function.name, args });

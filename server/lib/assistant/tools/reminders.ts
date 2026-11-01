@@ -116,7 +116,7 @@ function snapshotOf(ctx: ToolContext): RemindersSnapshot {
 }
 
 /** A list by id, title (case ignored) or "shopping" (the family's shopping list). */
-function resolveList(r: RemindersSnapshot, ref: unknown): { id: string; title: string } {
+export function resolveList(r: RemindersSnapshot, ref: unknown): { id: string; title: string } {
   const s = typeof ref === "string" ? ref.trim() : "";
   if (!s) throw new HttpError(400, "list is required");
   const byId = r.lists.find((l) => l.id === s);

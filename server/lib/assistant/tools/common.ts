@@ -1,7 +1,8 @@
 // What every tool file shares: the shapes of a tool, its result and its context, the phrases
 // of the change summaries, and the checks and limits the tools have in common (ported from
 // family-planner's ai/tools.ts, which is split by module here: calendar.ts, finance.ts,
-// general.ts, web.ts, reminders.ts; a module adds its own file and registers it in index.ts).
+// general.ts, web.ts, reminders.ts, suggestions.ts; a module adds its own file and registers it
+// in index.ts).
 
 import { HttpError } from "@/lib/api/http";
 import type { CalendarStore } from "@/lib/calendar/store";
@@ -13,6 +14,7 @@ import type { ToolSpec } from "../provider";
 import type { SearchProvider } from "../store";
 import type { AppleCalendarEdit, AppleCalendarSnapshot } from "./apple-calendar";
 import type { RemindersEdit, RemindersSnapshot } from "./reminders";
+import type { SuggestionsEdit } from "./suggestions";
 
 export interface UndoStep {
   method: "POST" | "PATCH" | "DELETE";
@@ -44,6 +46,8 @@ export interface ToolResult {
   reminders?: RemindersEdit;
   /** A change of the user's device calendars (edit_apple_calendar), the same way. */
   appleCalendar?: AppleCalendarEdit;
+  /** Events, tasks and deadlines to add (suggest_items), the same way: the user picks which. */
+  suggestions?: SuggestionsEdit;
 }
 
 export interface ToolContext {

@@ -35,6 +35,10 @@
 //   "schedule <title> at <start> [in <calendar>]" -> edit_apple_calendar: add it (start
 //                                            "YYYY-MM-DD[THH:MM]", default calendar "Family")
 //   "cancel event <id>"                   -> edit_apple_calendar: delete it (span "future")
+//   "letter" / "elternbrief" (also in an attached file) -> suggest_items from "Elternbrief": an
+//                                            event in 7 days 15:00–17:00 at the school, and with
+//                                            the user's Reminders (edit_reminders offered) a
+//                                            task due in 5 days and a deadline in 3 days at 12:00
 //   "find a <speciality> before <day>"    -> create_appointment_search
 //   "appointment searches"                -> list_appointment_searches
 //   "book <resultId> of <search>"         -> book_appointment_slot
@@ -52,7 +56,7 @@
 // Asked to condense a conversation, it says how often it looked so far ("Looked 12 times.").
 // It reports the tokens used (a token is 4 characters) when asked to (stream_options). The model
 // "mock-large" has a context window of 64,000 tokens (in the model list), "mock-tiny" one of
-// 10,000 that only its errors tell. Under .../v1/strict it refuses options it doesn't know
+// 12,000 that only its errors tell. Under .../v1/strict it refuses options it doesn't know
 // (stream_options), like Mistral.
 
 type Part = { type: string; text?: string };
@@ -152,7 +156,7 @@ function wait(ms: number, signal: AbortSignal) {
 /** How often a "then fail N times" message failed so far. */
 const failed = new Map<string, number>();
 
-const TINY_WINDOW = 10_000;
+const TINY_WINDOW = 12_000;
 
 /** A 16×16 orange PNG: the mock's "photo". */
 export const MOCK_PNG =
@@ -341,8 +345,13 @@ async function respond(req: Request, body: any): Promise<Response> {
     const device = called?.function.name === "edit_apple_calendar"
       ? { changes: "calendar", left: "calendars" }
       : { changes: "reminder", left: "Reminders" };
+    const suggested = called?.function.name === "suggest_items";
     const text = result.skipped
       ? "You skipped my question."
+      : suggested && result.applied === true
+      ? `Added ${result.results?.filter((r: { ok?: boolean }) => r.ok).length ?? 0} of ${result.results?.length ?? 0} suggestions.`
+      : suggested && result.applied === false
+      ? "OK, I added nothing."
       : result.applied === true
       ? `Done: ${result.results?.filter((r: { ok?: boolean }) => r.ok).length ?? 0} of ${
         result.results?.length ?? 0
@@ -461,6 +470,23 @@ async function respond(req: Request, body: any): Promise<Response> {
   const cancel = /^cancel event (\S+)$/i.exec(text);
   if (cancel && tools.has("edit_apple_calendar")) {
     return reply(stream, "", { name: "edit_apple_calendar", args: { ops: [{ op: "delete", id: cancel[1], span: "future" }] } });
+  }
+  if (/\bletter\b|elternbrief/.test(lower) && tools.has("suggest_items")) {
+    const day = (n: number) => {
+      const d = new Date(today + "T00:00:00Z");
+      d.setUTCDate(d.getUTCDate() + n);
+      return d.toISOString().slice(0, 10);
+    };
+    const items: Record<string, unknown>[] = [
+      { kind: "event", title: "School party", date: day(7), start: "15:00", end: "17:00", location: "Schoolyard" },
+    ];
+    if (tools.has("edit_reminders")) {
+      items.push(
+        { kind: "task", title: "Bring a cake", date: day(5) },
+        { kind: "deadline", title: "Return the consent form", date: day(3), start: "12:00", note: "Signed by a parent" },
+      );
+    }
+    return reply(stream, "", { name: "suggest_items", args: { source: "Elternbrief", items } });
   }
   if (/my calendars/.test(lower) && tools.has("get_apple_calendar")) {
     return reply(stream, "", { name: "get_apple_calendar", args: {} });

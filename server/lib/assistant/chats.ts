@@ -19,7 +19,7 @@ import { type StoredMessage, type SummaryMark, viewOf } from "./context";
 import type { ChatMessage, Provider, ToolCall } from "./provider";
 import type { AssistantStore, ChatRow } from "./store";
 import type { NetOptions } from "./net";
-import type { AppleCalendarOp, ReminderOp, ToolContext } from "./tools";
+import type { AppleCalendarOp, ReminderOp, SuggestionOp, ToolContext } from "./tools";
 
 /** What a turn needs from the family's AI settings. */
 export interface Turn {
@@ -106,14 +106,26 @@ export type Item =
       answer?: EditAnswer;
       skipped?: boolean;
     }
+  /** Events, tasks and deadlines to add (suggest_items, e.g. from a scanned letter): the user
+   *  picks which in the app, which adds them and answers (POST …/suggestions), the same way. */
+  | {
+      kind: "suggestions";
+      id: string;
+      summary: string;
+      /** What the document is ("Elternbrief Klasse 3b"). */
+      source?: string;
+      ops: SuggestionOp[];
+      answer?: EditAnswer;
+      skipped?: boolean;
+    }
   /** The older part of the chat was condensed for the model from here on. */
   | { kind: "compacted" }
   | { kind: "error"; text: string };
 
 export type Attachment = { kind: "image" | "file"; name: string; url?: string };
 /** What the app reports per op of an edit of the device's data (Reminders, calendars) it
- *  applied. */
-export type EditResult = { ok: true; id?: string } | { ok: false; error: string };
+ *  applied; `declined`: the user left this one out (suggestions they didn't pick). */
+export type EditResult = { ok: true; id?: string } | { ok: false; error: string } | { ok: false; declined: true };
 /** @deprecated The old name of EditResult. */
 export type ReminderResult = EditResult;
 /** The user's answer to an edit of the device's data: applied (how each op went) or declined. */
@@ -132,14 +144,20 @@ type ToolItem = Item & { kind: "tool" };
 export type QuestionItem = Item & { kind: "question" };
 export type RemindersItem = Item & { kind: "reminders" };
 export type CalendarItem = Item & { kind: "calendar" };
-/** An edit of the device's data that waits for the user's OK. */
-export type EditItem = RemindersItem | CalendarItem;
+export type SuggestionsItem = Item & { kind: "suggestions" };
+/** An edit of the device's data (or suggestions to add) that waits for the user's OK. */
+export type EditItem = RemindersItem | CalendarItem | SuggestionsItem;
 export type EditKind = EditItem["kind"];
-/** What waits for the user: a question, or an edit of their Reminders or calendars. */
+/** What waits for the user: a question, an edit of their Reminders or calendars, or
+ *  suggestions to add. */
 export type WaitingItem = QuestionItem | EditItem;
-const WAITING_KINDS = new Set<string>(["question", "reminders", "calendar"] satisfies WaitingItem["kind"][]);
+const WAITING_KINDS = new Set<string>(["question", "reminders", "calendar", "suggestions"] satisfies WaitingItem["kind"][]);
 /** Where the changes of an edit would have gone, for what the model hears about it. */
-export const EDIT_PLACE: Record<EditKind, string> = { reminders: "their Reminders", calendar: "their calendars" };
+export const EDIT_PLACE: Record<EditKind, string> = {
+  reminders: "their Reminders",
+  calendar: "their calendars",
+  suggestions: "their calendar or Reminders",
+};
 
 /** What a running turn does right now. */
 type Activity =
@@ -168,7 +186,10 @@ const SKIPPED = JSON.stringify({
 const skippedEdit = (kind: EditKind) =>
   JSON.stringify({
     skipped: true,
-    note: `The user neither applied nor declined these changes and wrote a new message instead: nothing was changed in ${EDIT_PLACE[kind]}.`,
+    note:
+      kind === "suggestions"
+        ? `The user neither added nor declined these suggestions and wrote a new message instead: nothing was added to ${EDIT_PLACE[kind]}.`
+        : `The user neither applied nor declined these changes and wrote a new message instead: nothing was changed in ${EDIT_PLACE[kind]}.`,
   });
 /** What the model learns about a tool that was running when its turn broke off. */
 const INTERRUPTED = JSON.stringify({
@@ -567,8 +588,15 @@ export class Runner {
           break;
         case "reminders":
         case "calendar":
+        case "suggestions":
           this.answer = null;
-          this.add({ kind: event, id: data.id, summary: data.summary, ops: data.ops });
+          this.add({
+            kind: event,
+            id: data.id,
+            summary: data.summary,
+            ...(event === "suggestions" && typeof data.source === "string" ? { source: data.source } : {}),
+            ops: data.ops,
+          });
           this.saveItems();
           outcome = { kind: "done" };
           break;
