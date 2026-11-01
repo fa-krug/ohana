@@ -57,6 +57,7 @@ struct DemoServer {
         DemoServer.appointments,
         DemoServer.assistant,
         DemoServer.overview,
+        DemoServer.search,
     ]
 
     static let readOnlyMessage = String(localized: "This is demo data. Connect your Ohana server to make changes.")

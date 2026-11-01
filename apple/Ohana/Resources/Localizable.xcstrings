@@ -417,6 +417,16 @@
         }
       }
     },
+    "%lld more – add a word to narrow it down.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld weitere – ein weiteres Wort grenzt die Suche ein."
+          }
+        }
+      }
+    },
     "%lld of %lld": {
       "localizations": {
         "de": {
@@ -3513,6 +3523,16 @@
         }
       }
     },
+    "Couldn’t search": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche fehlgeschlagen"
+          }
+        }
+      }
+    },
     "Couldn’t share the recipe. Try again?": {
       "localizations": {
         "de": {
@@ -4873,6 +4893,16 @@
         }
       }
     },
+    "Events": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termine"
+          }
+        }
+      }
+    },
     "Every (minutes)": {
       "localizations": {
         "de": {
@@ -5289,6 +5319,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Such mir einen Hautarzttermin vor Juni."
+          }
+        }
+      }
+    },
+    "Find recipes, calendar events and notes, transactions, appointment searches, people and chats.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finde Rezepte, Termine und Notizen im Kalender, Buchungen, Terminsuchen, Personen und Chats."
           }
         }
       }
@@ -8307,6 +8347,16 @@
         }
       }
     },
+    "Notes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notizen"
+          }
+        }
+      }
+    },
     "Nothing found yet": {
       "localizations": {
         "de": {
@@ -9199,6 +9249,16 @@
         }
       }
     },
+    "People": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Personen"
+          }
+        }
+      }
+    },
     "Per category": {
       "localizations": {
         "de": {
@@ -10005,6 +10065,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rezepte mit diesen Tags werden nicht eingeplant."
+          }
+        }
+      }
+    },
+    "Recipes, events, transactions, people…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rezepte, Termine, Buchungen, Personen …"
           }
         }
       }
@@ -10995,6 +11065,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Suchen durchsuchen"
+          }
+        }
+      }
+    },
+    "Search the family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Familie durchsuchen"
           }
         }
       }
