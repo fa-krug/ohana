@@ -14,5 +14,9 @@
 	<array>
 		<string>$(AppIdentifierPrefix)de.fa-krug.Ohana</string>
 	</array>
+	<!-- Push notifications (through the relay, Core/Push). "development" while built from Xcode;
+	     exporting for TestFlight / the App Store signs it as production. -->
+	<key>com.apple.developer.aps-environment</key>
+	<string>development</string>
 </dict>
 </plist>

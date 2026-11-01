@@ -77,6 +77,11 @@ targets:
         CFBundleURLTypes:
           - CFBundleURLName: de.fa-krug.Ohana.pairing
             CFBundleURLSchemes: [ohana]
+        # The push relay that holds this app's APNs key (relay/; Core/Push). A fork with its own
+        # bundle id runs its own relay and names it here.
+        OhanaPushRelay: https://ohana-push.fa-krug.de
+    dependencies:
+      - target: OhanaNotificationService
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: de.fa-krug.Ohana
@@ -108,6 +113,9 @@ targets:
         CFBundleURLTypes:
           - CFBundleURLName: de.fa-krug.Ohana.pairing
             CFBundleURLSchemes: [ohana]
+        OhanaPushRelay: https://ohana-push.fa-krug.de
+    dependencies:
+      - target: OhanaNotificationService-macOS
     settings:
       base:
         # Both targets build "Ohana.app" with one bundle id, so the Keychain item is shared.
@@ -119,6 +127,64 @@ targets:
         COMBINE_HIDPI_IMAGES: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+
+  # Opens the sealed payload of a push (Core/Push/PushPayload.swift) with the key the app keeps
+  # in the shared Keychain group, so the relay and Apple never see what a notification says.
+  OhanaNotificationService:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: OhanaNotificationService
+        excludes:
+          - "*.entitlements"
+          - "Info-*.plist"
+      - Ohana/Core/Push/PushPayload.swift
+      - Ohana/Core/Auth/Keychain.swift
+    info:
+      path: OhanaNotificationService/Info-iOS.plist
+      properties:
+        CFBundleDisplayName: Ohana
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.usernotifications.service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).NotificationService
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: de.fa-krug.Ohana.NotificationService
+        GENERATE_INFOPLIST_FILE: false
+        CODE_SIGN_ENTITLEMENTS: OhanaNotificationService/NotificationService-iOS.entitlements
+        # Called by the system off the main thread.
+        SWIFT_DEFAULT_ACTOR_ISOLATION: nonisolated
+        TARGETED_DEVICE_FAMILY: "1,2"
+
+  OhanaNotificationService-macOS:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: OhanaNotificationService
+        excludes:
+          - "*.entitlements"
+          - "Info-*.plist"
+      - Ohana/Core/Push/PushPayload.swift
+      - Ohana/Core/Auth/Keychain.swift
+    info:
+      path: OhanaNotificationService/Info-macOS.plist
+      properties:
+        CFBundleDisplayName: Ohana
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.usernotifications.service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).NotificationService
+    settings:
+      base:
+        PRODUCT_NAME: OhanaNotificationService
+        PRODUCT_BUNDLE_IDENTIFIER: de.fa-krug.Ohana.NotificationService
+        GENERATE_INFOPLIST_FILE: false
+        CODE_SIGN_ENTITLEMENTS: OhanaNotificationService/NotificationService-macOS.entitlements
+        ENABLE_HARDENED_RUNTIME: YES
+        SWIFT_DEFAULT_ACTOR_ISOLATION: nonisolated
 
   OhanaTests:
     type: bundle.unit-test

@@ -221,6 +221,8 @@ struct FamilyEventPref: Codable, Hashable, Identifiable {
     var enabled: Bool
     /// nil: all of the family's enabled channels.
     var channelIds: [String]?
+    /// Also pushed to the members' app devices; nil from a server without push to the app.
+    var app: Bool?
     let hasChannels: Bool
 
     var id: String { event }
@@ -273,16 +275,19 @@ struct FamilyEventPref: Codable, Hashable, Identifiable {
     struct Input: Encodable {
         let enabled: Bool
         let channelIds: [String]?
+        /// Left out when unknown: the server keeps it.
+        let app: Bool?
 
         func encode(to encoder: any Encoder) throws {
             var c = encoder.container(keyedBy: CodingKeys.self)
             try c.encode(enabled, forKey: .enabled)
             try c.encode(channelIds, forKey: .channelIds)
+            try c.encodeIfPresent(app, forKey: .app)
         }
 
-        private enum CodingKeys: String, CodingKey { case enabled, channelIds }
+        private enum CodingKeys: String, CodingKey { case enabled, channelIds, app }
     }
-    var input: Input { Input(enabled: enabled, channelIds: channelIds) }
+    var input: Input { Input(enabled: enabled, channelIds: channelIds, app: app) }
 }
 
 // MARK: Bodies

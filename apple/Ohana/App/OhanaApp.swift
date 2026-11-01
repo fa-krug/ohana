@@ -3,10 +3,17 @@ import SwiftUI
 @main
 struct OhanaApp: App {
     @State private var app: AppModel
+    #if canImport(UIKit)
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var delegate
+    #else
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
+    #endif
 
     init() {
         let app = AppModel()
         _app = State(initialValue: app)
+        // Notification taps open their page.
+        PushNotifications.shared.start(app)
         #if os(macOS)
         // The assistant in the menu bar: a click away while the window is hidden or another app
         // is in front.

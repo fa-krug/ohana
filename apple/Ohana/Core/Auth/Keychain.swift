@@ -3,8 +3,9 @@ import Security
 
 /// The device's API token, in the Keychain (never synced: each device pairs on its own).
 /// Uses the data protection keychain; an unsigned development build of the Mac app has no
-/// entitlement for it, and falls back to the login keychain.
-enum Keychain {
+/// entitlement for it, and falls back to the login keychain. Also compiled into the Notification
+/// Service Extension, which reads the push key (`PushKey`).
+nonisolated enum Keychain {
     private static let service = "de.fa-krug.Ohana"
 
     static func save(_ value: String, for account: String) {

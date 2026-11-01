@@ -46,6 +46,8 @@
 	<string>Ohana uses your photos for recipe pictures.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Ohana turns what you dictate to the assistant into text.</string>
+	<key>OhanaPushRelay</key>
+	<string>https://ohana-push.fa-krug.de</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

@@ -201,6 +201,9 @@ final class AppModel {
                 selectedFamilyID = families.first?.id
             }
             phase = .ready
+            // Push: a new APNs token, a new relay token (while it's on for this device).
+            let info = serverInfo
+            Task { await PushNotifications.shared.renew(client: client, info: info) }
         } catch is CancellationError {
         } catch APIError.unauthorized {
             await useDemo(signingOut: false)
@@ -232,6 +235,8 @@ final class AppModel {
         guard let client, !client.isDemo else { return }
         await whileSwitching(.demo) {
             Keychain.delete(Keys.token)
+            // The server drops the device's push with its token.
+            PushNotifications.shared.forget()
             connectDemo()
             if signingOut {
                 _ = try? await client.send(.delete, "/api/v1/me", as: JSONValue.self)

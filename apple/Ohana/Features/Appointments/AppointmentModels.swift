@@ -93,6 +93,8 @@ struct AppointmentSearch: Codable, Hashable, Identifiable {
     let scheduleMinutes: Int?
     let cron: String
     let notifyOnlyEarlier: Bool
+    /// Also pushed to the app (servers from before push to the app don't send it).
+    let notifyApp: Bool?
     let lastRunAt: String?
     let lastStatus: String
     let nextRunAt: String?
@@ -269,6 +271,9 @@ struct AppointmentSearchInput: Codable, Hashable {
     var scheduleMinutes: Int? = 30
     var cron = ""
     var notifyOnlyEarlier = false
+    /// Also push to the family's app devices; nil: the server's (on for a new search, unchanged
+    /// for an edit).
+    var notifyApp: Bool?
     var channelIds: [String] = []
 
     init() {}
@@ -296,6 +301,7 @@ struct AppointmentSearchInput: Codable, Hashable {
         scheduleMinutes = s.scheduleMinutes
         cron = s.cron
         notifyOnlyEarlier = s.notifyOnlyEarlier
+        notifyApp = s.notifyApp
         channelIds = s.channelIds
     }
 
@@ -303,7 +309,7 @@ struct AppointmentSearchInput: Codable, Hashable {
         case name, sources, specialitySlug, specialityLabel, jamedaSpecialitySlug, jamedaSpecialityLabel,
              jamedaSpecialityType, jamedaInsuranceType, jamedaKidsFriendly, jamedaVideo, latitude, longitude,
              locationLabel, insuranceSector, dayLimit, maxPages, enabled, scheduleType, scheduleMinutes, cron,
-             notifyOnlyEarlier, channelIds
+             notifyOnlyEarlier, notifyApp, channelIds
     }
 
     init(from decoder: any Decoder) throws {
@@ -329,6 +335,7 @@ struct AppointmentSearchInput: Codable, Hashable {
         scheduleMinutes = try c.decodeIfPresent(Int.self, forKey: .scheduleMinutes)
         cron = try c.decodeIfPresent(String.self, forKey: .cron) ?? ""
         notifyOnlyEarlier = try c.decodeIfPresent(Bool.self, forKey: .notifyOnlyEarlier) ?? false
+        notifyApp = try c.decodeIfPresent(Bool.self, forKey: .notifyApp)
         channelIds = try c.decodeIfPresent([String].self, forKey: .channelIds) ?? []
     }
 
@@ -360,6 +367,7 @@ struct AppointmentSearchInput: Codable, Hashable {
         }
         try c.encode(cron, forKey: .cron)
         try c.encode(notifyOnlyEarlier, forKey: .notifyOnlyEarlier)
+        try c.encodeIfPresent(notifyApp, forKey: .notifyApp)
         try c.encode(channelIds, forKey: .channelIds)
     }
 
