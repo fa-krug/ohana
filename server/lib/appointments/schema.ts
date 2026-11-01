@@ -31,6 +31,8 @@ export const searchInputSchema = z
     scheduleMinutes: z.coerce.number().int().min(1).max(1440).nullable().default(30),
     cron: z.string().trim().max(100).default(""),
     notifyOnlyEarlier: z.boolean().default(false),
+    /** Also push to the app (phase 9). Optional: an older app leaves it as it is. */
+    notifyApp: z.boolean().optional(),
     channelIds: z.array(z.string()).default([]),
   })
   .superRefine((v, ctx) => {

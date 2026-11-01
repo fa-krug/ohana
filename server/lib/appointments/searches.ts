@@ -50,6 +50,8 @@ const searchColumns = (input: SearchInput) => ({
   scheduleMinutes: input.scheduleMinutes,
   cron: input.cron,
   notifyOnlyEarlier: input.notifyOnlyEarlier,
+  // Unset (an older app): on for a new search, unchanged for an edit.
+  ...(input.notifyApp === undefined ? {} : { notifyApp: input.notifyApp }),
 });
 
 export function createSearch(db: Db, actor: Actor, familyId: string, input: SearchInput, now: Date): { id: string } {
@@ -187,6 +189,7 @@ export function searchInputOf(db: Db, s: SearchRow): SearchInput {
     scheduleMinutes: s.scheduleMinutes,
     cron: s.cron,
     notifyOnlyEarlier: s.notifyOnlyEarlier,
+    notifyApp: s.notifyApp,
     channelIds: channelIdsForSearch(db, s.id),
   };
 }

@@ -5,6 +5,7 @@
 // tools; its data stays in the database.
 
 import pkg from "../package.json";
+import { pushRelayUrl } from "./push/config";
 
 /** Raised when a change to the API would break an older app: the app refuses older servers. */
 export const API_VERSION = 1;
@@ -40,10 +41,19 @@ export interface ServerInfo {
   version: string;
   apiVersion: number;
   modules: ModuleName[];
+  /** Push to the app (phase 9): the relay the app registers with; null when it's off. */
+  push: { relay: string } | null;
 }
 
 export function serverInfo(env: Record<string, string | undefined> = process.env): ServerInfo {
-  return { name: "Ohana", version: serverVersion(env), apiVersion: API_VERSION, modules: enabledModules(env) };
+  const relay = pushRelayUrl(env);
+  return {
+    name: "Ohana",
+    version: serverVersion(env),
+    apiVersion: API_VERSION,
+    modules: enabledModules(env),
+    push: relay ? { relay } : null,
+  };
 }
 
 /** The module a family API path belongs to (its first part), if it can be turned off. */

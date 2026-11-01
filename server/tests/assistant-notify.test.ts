@@ -70,7 +70,12 @@ describe("notifyTurnFinished", () => {
     setPref(t.db, { id: t.editor.id }, t.familyId, { event: "assistant_turn_finished", enabled: true, channelIds: null }, NOW);
     expect(await notifyTurnFinished(t.db, chat(t), long, { now, send, afterMs: 30_000 })).toBe(true);
     expect(sent).toEqual([
-      { title: "The assistant has answered", body: "Plan next week", url: expect.stringMatching(new RegExp(`/f/${t.familyId}/meals$`)) },
+      {
+        title: "The assistant has answered",
+        body: "Plan next week",
+        url: expect.stringMatching(new RegExp(`/f/${t.familyId}/meals$`)),
+        collapseKey: expect.stringMatching(/^chat:/),
+      },
     ]);
     // A failed turn says so.
     await notifyTurnFinished(t.db, chat(t, { title: "" }), { ...long, outcome: "failed" }, { now, send, afterMs: 30_000 });

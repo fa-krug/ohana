@@ -8,6 +8,7 @@ import type { Db } from "@/lib/db";
 import { notificationPrefs } from "@/lib/db/schema";
 import { type Actor, requireRole } from "@/lib/families/roles";
 import { getChannelRow } from "./channels";
+import type { RelayClient } from "@/lib/push/relay";
 import { type NotifyResult, type Message, type Sender, notifyFamily } from "./index";
 
 export { DEFAULT_ENABLED, EVENT_HAS_CHANNELS, type EventPref, NOTIFY_EVENTS, type NotifyEvent } from "./prefs-shared";
@@ -38,6 +39,7 @@ export function getPref(db: Db, familyId: string, event: NotifyEvent): EventPref
     event,
     enabled: r ? r.enabled : DEFAULT_ENABLED[event],
     channelIds: r ? parse<string[] | null>(r.channelIds, null) : null,
+    app: r ? r.app : true,
   };
 }
 
@@ -49,6 +51,8 @@ export const prefInputSchema = z.object({
   event: z.enum(NOTIFY_EVENTS),
   enabled: z.boolean(),
   channelIds: z.array(z.string()).max(50).nullable(),
+  /** Optional: an older app leaves it as it is. */
+  app: z.boolean().optional(),
 });
 
 /** Turns an event on or off and picks its channels (editors only; the channels must be the
@@ -58,7 +62,12 @@ export function setPref(db: Db, actor: Actor, familyId: string, raw: unknown, no
   const input = prefInputSchema.parse(raw);
   const ids = input.channelIds && [...new Set(input.channelIds)];
   for (const id of ids ?? []) getChannelRow(db, familyId, id);
-  const values = { enabled: input.enabled, channelIds: ids ? JSON.stringify(ids) : null, updatedAt: now };
+  const values = {
+    enabled: input.enabled,
+    channelIds: ids ? JSON.stringify(ids) : null,
+    ...(input.app === undefined ? {} : { app: input.app }),
+    updatedAt: now,
+  };
   db.insert(notificationPrefs)
     .values({ familyId, event: input.event, ...values })
     .onConflictDoUpdate({ target: [notificationPrefs.familyId, notificationPrefs.event], set: values })
@@ -82,15 +91,22 @@ export function writeState(db: Db, familyId: string, event: NotifyEvent, state: 
     .run();
 }
 
-/** Sends `message` for `event` to its channels; null when the family turned the event off. */
+/** Sends `message` for `event` to its channels and, unless the family turned that off, the
+ *  members' app devices (`userIds`: only these accounts'); null when the event is off. */
 export async function notifyEvent(
   db: Db,
   familyId: string,
   event: NotifyEvent,
   message: Message,
-  opts: { send?: Sender } = {},
+  opts: { send?: Sender; push?: RelayClient; userIds?: string[] } = {},
 ): Promise<NotifyResult | null> {
   const pref = getPref(db, familyId, event);
   if (!pref.enabled) return null;
-  return notifyFamily(db, familyId, message, { channelIds: pref.channelIds ?? undefined, send: opts.send });
+  return notifyFamily(db, familyId, message, {
+    channelIds: pref.channelIds ?? undefined,
+    send: opts.send,
+    app: pref.app ? (opts.userIds ? { userIds: opts.userIds } : true) : false,
+    event,
+    push: opts.push,
+  });
 }

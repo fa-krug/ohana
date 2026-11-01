@@ -48,6 +48,8 @@ export const notificationPrefs = sqliteTable(
     enabled: integer("enabled", { mode: "boolean" }).notNull(),
     /** JSON array of channel ids; null: all of the family's enabled channels. */
     channelIds: text("channel_ids"),
+    /** Also push to the members' app devices (phase 9). */
+    app: integer("app", { mode: "boolean" }).notNull().default(true),
     /** JSON: the event's memory (e.g. the days already notified, the last check). */
     state: text("state").notNull().default("{}"),
     updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),

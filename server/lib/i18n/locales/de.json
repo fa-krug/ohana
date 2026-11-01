@@ -131,6 +131,12 @@
       "title_one": "{{count}} Tag ohne Betreuung in den nächsten zwei Wochen",
       "title_other": "{{count}} Tage ohne Betreuung in den nächsten zwei Wochen"
     },
+    "push": {
+      "test": {
+        "body": "Benachrichtigungen funktionieren auf diesem Gerät.",
+        "title": "Ohana-Testnachricht"
+      }
+    },
     "shopping": {
       "more": "… und {{count}} weitere",
       "title_one": "Morgen einkaufen: {{count}} Artikel",

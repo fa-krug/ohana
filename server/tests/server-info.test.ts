@@ -32,6 +32,7 @@ describe("server info", () => {
       version: "1.2.3",
       apiVersion: API_VERSION,
       modules: ["calendar", "finance", "appointments", "assistant"],
+      push: { relay: "https://ohana-push.fa-krug.de" },
     });
   });
 
