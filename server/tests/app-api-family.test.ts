@@ -53,12 +53,13 @@ describe("GET /overview", () => {
     expect(res.status).toBe(200);
     expect(res.data.today).toBe("2026-11-02");
     expect(Object.keys(res.data).sort()).toEqual(
-      ["awayToday", "birthdays", "calendar", "finance", "meals", "searches", "today", "todayEvents", "tomorrowEvents", "upcoming"].sort(),
+      ["awayToday", "birthdays", "calendar", "finance", "meals", "searches", "today", "todayEvents", "tomorrowEvents", "upcoming", "weekAhead"].sort(),
     );
     expect(res.data.birthdays).toEqual([{ day: "2026-11-20", name: "Anna", age: 36 }]);
     expect(res.data.finance).toMatchObject({ month: "2026-11", incomeCents: 0, expenseCents: 0, count: 0, balanceCents: null });
     expect(res.data.meals).toEqual({ today: null });
     expect(res.data.calendar).toHaveProperty("nextGap");
+    expect(res.data.weekAhead).toEqual({ conflicts: 0, warnings: 0, top: [] });
   });
 
   it("uses the server's day for a missing or odd day, and hides the family from others", async () => {
@@ -87,6 +88,7 @@ describe("GET /household", () => {
       ["appointment_found", true, null, false],
       ["coverage_gap", true, null, true],
       ["assistant_turn_finished", false, null, true],
+      ["weekly_digest", true, null, true],
     ]);
   });
 

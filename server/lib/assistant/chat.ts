@@ -253,6 +253,8 @@ endDate), and may repeat: rrule is an RFC 5545 RRULE value such as "FREQ=WEEKLY;
 lists occurrences; a repeating event's occurrence is its id plus its original date
 (occurrence). To change or remove one occurrence use update_event / remove_event with
 occurrence and span "this"; "future" for this and the following ones, "all" for the series.
+check_schedule finds what doesn't work out (clashes, too little time between places, packed
+days, long drives); use it when asked whether plans work, and rely on its findings.
 
 ## Meals
 Recipes (KNOWN: the family's own; TO_TRY: want to try) with ingredients, steps and tags. The

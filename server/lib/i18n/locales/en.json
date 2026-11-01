@@ -131,6 +131,34 @@
       "title_one": "{{count}} day without cover in the next two weeks",
       "title_other": "{{count}} days without cover in the next two weeks"
     },
+    "digest": {
+      "title_one": "Week ahead: {{count}} thing to check",
+      "title_other": "Week ahead: {{count}} things to check",
+      "clear": "Week ahead: all clear",
+      "allClear": "Nothing clashes in the next two weeks.",
+      "more": "… and {{count}} more in the app",
+      "events_one": "{{count}} event",
+      "events_other": "{{count}} events",
+      "birthdays_one": "{{count}} birthday",
+      "birthdays_other": "{{count}} birthdays",
+      "away_one": "{{count}} day away",
+      "away_other": "{{count}} days away",
+      "and": "and",
+      "issue": {
+        "overlap": "{{who}}: “{{a}}” and “{{b}}” at the same time ({{minutes}} min)",
+        "tight_transfer": "{{who}}: {{gapMinutes}} min from “{{a}}” to “{{b}}”, the drive takes about {{travelMinutes}} min",
+        "tight_transfer_nearby": "{{who}}: only {{gapMinutes}} min from “{{a}}” to “{{b}}” somewhere else",
+        "during_trip": "{{who}}: “{{a}}” during “{{trip}}”, somewhere else",
+        "packed_day": "{{who}}: {{events}} things on, {{hours}} hours booked",
+        "long_travel_day": "{{who}}: about {{minutes}} min on the road ({{km}} km)",
+        "travel_week": "{{who}}: far from home on {{days}} days that week",
+        "short_night": "{{who}}: only {{hours}} hours between “{{a}}” and “{{b}}”",
+        "away_clash": "“{{a}}” while you're away ({{away}})",
+        "drivers_needed": "{{who}}: different places at the same time, {{adults}} adults free to drive",
+        "birthday_away": "{{who}}: away on {{name}}'s birthday ({{age}})",
+        "unassigned_overlap": "“{{a}}” and “{{b}}” overlap: who goes?"
+      }
+    },
     "push": {
       "test": {
         "body": "Push notifications work on this device.",

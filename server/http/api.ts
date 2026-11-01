@@ -23,6 +23,7 @@ import { getApiUser } from "@/lib/auth/session";
 import { deleteToken, findToken } from "@/lib/auth/tokens";
 import { handleEvents } from "@/lib/calendar/events";
 import { handleFamily } from "@/lib/calendar/family-routes";
+import { handleDigest } from "@/lib/digest/routes";
 import { handleCalendar } from "@/lib/calendar/vacation";
 import { requireFamilyApi } from "@/lib/families/api";
 import { createFamilyForUser, handleFamilyApp } from "@/lib/families/app-routes";
@@ -199,6 +200,7 @@ export function apiRoutes(db: Db): Hono {
       handleFamily,
       handleCalendar,
       handleEvents,
+      handleDigest,
       handleFinance,
       handleMealsApp,
       handleMealPlanApp,

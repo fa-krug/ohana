@@ -274,12 +274,26 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
     at home; the plan page shows "Away · Type".
   - *Notifications:* `notification_prefs` (family + event: enabled, `channel_ids` JSON or
     null = all, `state` JSON memory). `lib/notifications/prefs.ts` (`getPrefs`, `setPref`,
-    `notifyEvent`; events and defaults in `prefs-shared.ts`), `daily.ts` (`checkCoverage`
+    `notifyEvent`; events and defaults in `prefs-shared.ts`; `weekly_digest`: see Week ahead), `daily.ts` (`checkCoverage`
     from `NOTIFY_HOUR`: once a day, only when a gap day wasn't told before; server-local
     days). `notifyRun` skips when `appointment_found`
     is off.
   - *Overview:* `lib/families/dashboard.ts` (`familyDashboard`, `GET /overview`; no searches
     with appointments off).
+  - *Week ahead (phase 11):* `lib/digest/`. `checks.ts` `checkSchedule` (pure, thresholds as
+    constants): per person over the next 14 days `overlap`, `tight_transfer`, `during_trip`,
+    `packed_day`, `long_travel_day`, `travel_week`, `short_night`, `away_clash`,
+    `drivers_needed` (children by birthday), `birthday_away`, `unassigned_overlap`; who an event
+    is for comes from its `person` text (`attribution.ts` against `familyNames`), travel is an
+    estimate (`travel.ts`) over event locations the worker geocodes with Photon into `geo_places`
+    (`geo.ts`, at most 25 per family and day, `DIGEST_GEOCODE=0` off; requests read the cache
+    only). `digest.ts`: `buildDigest` (`GET /digest?today=`, `routes.ts`; editors hide an issue
+    with `POST /digest/dismiss {key}`, `DELETE /digest/dismiss/{key}`, `digest_dismissals`),
+    the overview's `weekAhead`, the assistant's `check_schedule` (`tools/schedule.ts`) and the
+    `weekly_digest` notification (`weeklyDigests` in the worker on `DIGEST_WEEKDAY` from
+    `DIGEST_HOUR`: channels get everything, each account's app only its own issues, the
+    children's and unassigned ones). App: `Features/Overview/WeekAhead*.swift` (route
+    `.weekAhead`, `/f/{id}/digest`; the sentence per kind is the app's, `WeekAheadText`).
   - *Search:* `lib/families/search.ts` (`searchFamily`, `GET /search?q=&today=&limit=`): recipes,
     events, notes, transactions, appointment searches, people (members + `family_people`) and the
     caller's own chats whose text holds every word (`normalizeForSearch`: case and accents

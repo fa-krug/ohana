@@ -4,24 +4,18 @@ extension DemoServer {
     /// The demo's overview (`/overview`): `demo-overview.json` with the birthdays of the next 30
     /// days worked out from the household's members and people (`demo-household.json`), like
     /// the server's `birthdaysIn`, so the ages and the members' fixed birthdays stay right
-    /// whatever day it is.
+    /// whatever day it is; the week ahead's counts from the demo's digest (`Demo+Digest.swift`).
     static func overview(_ request: Request) -> JSONValue? {
         guard request.familyPath == "/overview", case var .object(dashboard)? = request.json("overview") else {
             return nil
         }
-        let household = request.json("household")
-        let people = (household?["members"]?.arrayValue ?? []) + (household?["people"]?.arrayValue ?? [])
-        let named = people.compactMap { person -> (name: String, birthday: Day)? in
-            guard let name = person["name"]?.stringValue,
-                  let birthday = person["birthday"]?.stringValue.flatMap(Day.init) else { return nil }
-            return (name, birthday)
-        }
-        let days = birthdays(named, from: request.today, to: request.today.adding(days: 29))
+        let days = birthdays(householdBirthdays(request), from: request.today, to: request.today.adding(days: 29))
         dashboard["birthdays"] = .array(days.map { day in
             .object(["day": .string(day.day.description), "name": .string(day.name), "age": .number(Double(day.age))])
         })
         if let finance = monthSummary(request) { dashboard["finance"] = finance }
         if let searches = searchFinds(request) { dashboard["searches"] = searches }
+        if let weekAhead = weekAheadSummary(request) { dashboard["weekAhead"] = weekAhead }
         return .object(dashboard)
     }
 

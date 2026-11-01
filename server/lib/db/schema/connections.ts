@@ -51,7 +51,8 @@ export const calEvents = sqliteTable(
   }),
 );
 
-/** Per family and event kind (appointment_found, coverage_gap, assistant_turn_finished): whether it
+/** Per family and event kind (appointment_found, coverage_gap, assistant_turn_finished,
+ *  weekly_digest): whether it
  *  is sent and to which channels, plus what was sent last (so nothing repeats). A missing row
  *  means the defaults (lib/notifications/prefs.ts). */
 export const notificationPrefs = sqliteTable(

@@ -1,7 +1,8 @@
 // The family overview (phase 7): one dashboard over all modules. Today and tomorrow (meal or
 // "away", the days' events: every occurrence covering the day, also of events that started
 // earlier or repeat), what comes up (calendar runs and booked appointments together), this
-// month's finances, the next birthdays and the latest finds of the appointment searches.
+// month's finances, the next birthdays, the latest finds of the appointment searches and the week
+// ahead's open issues (phase 11).
 
 import type { Db } from "@/lib/db";
 import { addDays } from "@/lib/calendar/dates";
@@ -14,6 +15,8 @@ import { listSearchesWithLatest } from "@/lib/appointments/serialize";
 import { type BirthdayDay, birthdaysIn } from "./birthdays";
 import { familyNames } from "./people";
 import { moduleEnabled } from "@/lib/server-info";
+import type { Issue } from "@/lib/digest/checks";
+import { weekAhead } from "@/lib/digest/digest";
 
 /** One line of "coming up": a run of a calendar type, or an event's occurrence starting after
  *  today. */
@@ -47,6 +50,8 @@ export interface Dashboard {
   searches: SearchFind[];
   /** Birthdays from today to 29 days on, by day (with the age they turn). */
   birthdays: BirthdayDay[];
+  /** The week ahead (next 14 days): open conflicts and warnings, the three most pressing issues. */
+  weekAhead: { conflicts: number; warnings: number; top: Issue[] };
 }
 
 const UPCOMING_DAYS = 30;
@@ -96,5 +101,6 @@ export async function familyDashboard(
     finance,
     searches,
     birthdays: birthdaysIn(familyNames(db, familyId), today, addDays(today, UPCOMING_DAYS - 1)),
+    weekAhead: weekAhead(db, familyId, today),
   };
 }

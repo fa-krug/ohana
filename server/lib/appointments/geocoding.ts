@@ -24,8 +24,7 @@ export function parseLocationSuggestions(
     const coords = (geometry.coordinates ?? []) as number[];
     if (coords.length < 2) continue; // Photon is [lng, lat]; skip malformed features
     const props = (feat.properties ?? {}) as Record<string, unknown>;
-    const parts = [props.name, props.street, props.postcode, props.city].filter(Boolean);
-    const label = parts.join(", ");
+    const label = suggestionLabel(props);
     out.push({
       label: label || "(unnamed)",
       latitude: String(coords[1]),
@@ -33,6 +32,18 @@ export function parseLocationSuggestions(
     });
   }
   return out;
+}
+
+const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+
+/** "Name, Street 5, 12345 City": the house number goes with the street (an address picked
+ *  from the list keeps it), a name that only repeats the street is left out. */
+export function suggestionLabel(props: Record<string, unknown>): string {
+  const name = str(props.name);
+  const street = [str(props.street), str(props.housenumber)].filter(Boolean).join(" ");
+  const place = [str(props.postcode), str(props.city)].filter(Boolean).join(" ");
+  const showName = name && ![str(props.street), street, str(props.city)].includes(name);
+  return [showName ? name : "", street, place].filter(Boolean).join(", ");
 }
 
 export async function suggestLocations(query: string, limit = 5): Promise<LocationSuggestion[]> {

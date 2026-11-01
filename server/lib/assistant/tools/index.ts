@@ -14,6 +14,7 @@ import { eventTools } from "./events";
 import { generalTools } from "./general";
 import { mealTools } from "./meals";
 import { reminderTools } from "./reminders";
+import { scheduleTools } from "./schedule";
 import { webTools } from "./web";
 import { type ModuleName, moduleEnabled } from "@/lib/server-info";
 
@@ -29,6 +30,7 @@ export { cleanReminders, type ReminderOp, type RemindersEdit, type RemindersSnap
 export const TOOLS: Record<string, Tool> = {
   ...calendarTools,
   ...eventTools,
+  ...scheduleTools,
   ...financeTools,
   ...mealTools,
   ...appointmentTools,

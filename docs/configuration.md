@@ -47,6 +47,9 @@ Only `APP_URL` and `AUTH_SECRET` are required. Developers running from source us
 | Variable | Default | |
 | --- | --- | --- |
 | `NOTIFY_HOUR` | `7` | From this hour: days nobody covers in the next two weeks. |
+| `DIGEST_WEEKDAY` | `0` | The day of the week ahead (the weekly digest): 0 = Sunday … 6 = Saturday. |
+| `DIGEST_HOUR` | `18` | From this hour (server time) on that day the week ahead is sent. |
+| `DIGEST_GEOCODE` | on | `0` stops the worker from looking up event locations with Photon (photon.komoot.io). The week ahead's travel checks then only compare the locations' text. |
 
 ## Assistant
 

@@ -88,7 +88,9 @@ What a server sends to other services depends on what its families set up, for e
 - a **web search provider** (Tavily or Brave) for the assistant's searches,
 - **Doctolib** and **jameda** for appointment searches (the specialities, practices and places
   searched),
-- **Photon** by komoot to find addresses (the address typed),
+- **Photon** by komoot to find addresses (the address typed) and, for the *Week ahead*'s travel
+  checks, where the next two weeks' events are (their locations, unless the server turned that
+  off),
 - the **notification services** a family sets up (Pushover, Pushbullet, Telegram, an email
   provider, ntfy) with the text of the notifications.
 

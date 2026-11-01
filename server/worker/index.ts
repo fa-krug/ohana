@@ -1,8 +1,8 @@
 // The worker process: everything that runs in the background, apart from the HTTP server,
 // so that a slow job never blocks a request. Same image as the server, started with
 // `docker-entrypoint.sh worker`. Today: cleanup, the nightly backup and the appointment
-// searches (every APPT_TICK_SECONDS), the daily notifications (coverage)
-// and the assistant's chat turns (looked for every ASSISTANT_TICK_MS, a cheap indexed query).
+// searches (every APPT_TICK_SECONDS), the daily notifications (coverage), the week ahead
+// (geocoding event locations daily, the weekly digest) and the assistant's chat turns (looked for every ASSISTANT_TICK_MS, a cheap indexed query).
 import { setTimeout as sleep } from "node:timers/promises";
 import { db, sqlite } from "../lib/db/client";
 import { backupDatabase, hasBackupFor } from "../lib/maintenance/backup";
@@ -12,6 +12,7 @@ import { ChatRunner } from "../lib/assistant/runner";
 import { defaultAiEnv } from "../lib/assistant/routes";
 import { migrationsApplied } from "../lib/maintenance/migrations";
 import { dailyNotifications } from "../lib/notifications/daily";
+import { weeklyDigests } from "../lib/digest/digest";
 import { enabledModules, moduleEnabled } from "../lib/server-info";
 
 const TICK_MS = Number(process.env.WORKER_TICK_SECONDS ?? 60) * 1000;
@@ -43,7 +44,7 @@ async function waitForMigrations(): Promise<void> {
 
 async function tick(now: Date): Promise<void> {
   const removed = cleanup(db, now);
-  if (removed.tokens + removed.invites + removed.rateLimits > 0) {
+  if (removed.tokens + removed.invites + removed.rateLimits + removed.dismissals > 0) {
     console.log("[worker] cleanup", removed);
   }
   if (BACKUP_KEEP > 0 && now.getHours() >= BACKUP_HOUR && !hasBackupFor(BACKUP_DIR, now)) {
@@ -52,6 +53,8 @@ async function tick(now: Date): Promise<void> {
   }
   // Uncovered days in the next two weeks (phase 7).
   await dailyNotifications(db, now);
+  // The week ahead (phase 11): places geocoded daily, the digest on DIGEST_WEEKDAY from DIGEST_HOUR.
+  await weeklyDigests(db, now);
 }
 
 async function main(): Promise<void> {

@@ -32,6 +32,10 @@ curl -H "Authorization: Bearer $OHANA_TOKEN" \
 # The overview: what's coming up across all modules
 curl -H "Authorization: Bearer $OHANA_TOKEN" \
   "https://ohana.example.com/api/v1/families/$FAMILY_ID/overview"
+
+# The week ahead: the next two weeks and what doesn't work out (clashes, tight transfers, …)
+curl -H "Authorization: Bearer $OHANA_TOKEN" \
+  "https://ohana.example.com/api/v1/families/$FAMILY_ID/digest"
 ```
 
 `GET /api/v1/server` (no token needed) tells you the server's version, its API version and which

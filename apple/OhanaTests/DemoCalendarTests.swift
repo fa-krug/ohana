@@ -37,7 +37,8 @@ struct DemoCalendarTests {
 
         let events = try #require(state.events)
         #expect(Set(events.values.flatMap { $0 }.map(\.id))
-            == ["event-dentist", "event-parents-evening", "event-pediatrician", "event-swim", "event-class-trip"])
+            == ["event-dentist", "event-parents-evening", "event-pediatrician", "event-swim", "event-class-trip",
+                "event-football", "event-piano"])
         // Swimming every week from tomorrow, twelve times: nine of them in 2026.
         let swims = events.values.flatMap { $0 }.filter { $0.id == "event-swim" }
         #expect(swims.count == 9 && swims.allSatisfy { $0.repeats && $0.occurrence == $0.date })
@@ -108,11 +109,11 @@ struct DemoCalendarTests {
         let swim = try get("/events/event-swim", as: CalendarEventSeries.self)
         #expect(swim.rrule == "FREQ=WEEKLY;COUNT=12" && swim.date == today.adding(days: 1) && swim.exdates.isEmpty)
         let raw = try get("/events", ["raw": "1"], as: CalendarEventSeriesResponse.self)
-        #expect(raw.events.count == 5)
+        #expect(raw.events.count == 7)
         let week = try get("/events", ["from": today.description, "to": today.adding(days: 9).description],
                            as: CalendarEventsResponse.self)
         #expect(week.events.map(\.id) == ["event-dentist", "event-swim", "event-pediatrician", "event-parents-evening",
-                                         "event-swim", "event-class-trip"])
+                                         "event-swim", "event-football", "event-piano", "event-class-trip"])
     }
 
     @Test func withoutAYearItIsThisYear() throws {
