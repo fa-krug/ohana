@@ -63,6 +63,8 @@ struct AppShell: View {
             .task(id: assistantOn) {
                 if assistantOn { await AssistantChatStore.shared(for: context.api).preload() }
             }
+            // The family's recipes in Spotlight, again after they change.
+            .modifier(RecipeSpotlightFamilyUpdates())
             .environment(context)
             .id(family.id)
             .focusedSceneValue(\.shell, ShellFocus(module: selection, assistant: $showAssistant,
