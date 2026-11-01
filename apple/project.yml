@@ -127,6 +127,9 @@ targets:
         excludes:
           - "Info-*.plist"
       - path: Shared
+        excludes:
+          # The cook timers' Live Activity: the iOS app and its widgets only.
+          - "CookTimerAttributes.swift"
     dependencies:
       - target: OhanaShare-macOS
     info:
@@ -167,6 +170,9 @@ targets:
         excludes:
           - "Info-*.plist"
       - path: Shared
+        excludes:
+          # The cook timers' Live Activity: the iOS app and its widgets only.
+          - "CookTimerAttributes.swift"
       # The app's strings (the extension's are among them).
       - path: Ohana/Resources/Localizable.xcstrings
     info:
@@ -205,6 +211,9 @@ targets:
           # Safari on the Mac doesn't run a preprocessing script: the server fetches the page.
           - "Preprocess.js"
       - path: Shared
+        excludes:
+          # The cook timers' Live Activity: the iOS app and its widgets only.
+          - "CookTimerAttributes.swift"
       - path: Ohana/Resources/Localizable.xcstrings
     info:
       path: ShareExtension/Info-macOS.plist
