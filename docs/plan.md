@@ -189,6 +189,7 @@ empty Ohana database. It has a **dry run** that only reports what it would do.
 | 6  | Import + cut-over  | `import-legacy.ts` with dry run, a rehearsal on a copy, then the real import; old apps shut down, Supabase set read-only, old repos archived |
 | 7  | Connections ✅     | The cross-module features above, the assistant's tools everywhere (item 4) with phase 3 part B |
 | 8  | Headless, open source | No web UI: the native app is the client; a lean server (Hono) with only the sign-in pages; self-hosting docs, GHCR images, AGPL / MPL (see Phase 8) |
+| 9  | Push to the app (draft) | Notifications straight to the app from any self-hosted server, through a push relay run by fa-krug that holds the APNs key and sees only ciphertext (see Phase 9) |
 
 ### Phase 8: headless, open source, self-hosted
 
@@ -202,7 +203,7 @@ Ohana is not sold. It is an open-source app the family runs on its own server; t
 | Links | Notification links keep `/f/{id}/…`; the server answers them with a page that opens `ohana://f/{id}/…` (no universal links, see above). |
 | Compatibility | `GET /api/v1/server` (public): name, version, API version, enabled modules. The app refuses a server with an API version older than it needs, and hides turned-off modules. Changes to the API add, they don't remove. |
 | Modules | `DISABLED_MODULES` (comma list of `finance`, `meals`, `appointments`, `assistant`; the calendar is always on): their routes answer 404, the worker skips their jobs, the assistant loses their tools. |
-| Push | A new channel **ntfy** (topic URL, optional access token): self-hostable push with an iOS app. A server can't use APNs without the developer's key, so no relay. |
+| Push | A new channel **ntfy** (topic URL, optional access token): self-hostable push with an iOS app. A server can't use APNs without the developer's key, so no relay. *Revised in phase 9: an opt-in relay with end-to-end encrypted payloads, ntfy and the other channels stay.* |
 | API description | `docs/openapi.yaml` (OpenAPI 3.1), written by hand from the route modules. |
 | License | Server (`server/`) **AGPL-3.0**, app (`apple/`) **MPL-2.0** (fits App Store distribution). |
 | Images | **GHCR** only: `ghcr.io/fa-krug/ohana`. Every push to `main` is a release (`:latest`, `:main`, `:sha-<commit>`); no release tags. |
@@ -227,6 +228,153 @@ Steps:
 7. Open source: LICENSE files, CONTRIBUTING, SECURITY, a self-hosting guide (compose file,
    `.env.example`, reverse proxy, HTTPS for passkeys, backups, local AI with Ollama), GHCR
    publishing, `docs/openapi.yaml`.
+
+### Phase 9: push to the app through a relay (draft)
+
+Today a family gets notifications only through the channels it sets up (ntfy, Pushover,
+Pushbullet, Telegram, email): a second app, and a tap doesn't open Ohana. Apple delivers
+notifications to an app only through APNs, and APNs takes a push for `de.fa-krug.Ohana` only
+when it is signed with an auth key of the team that owns the bundle id (HS26J3YA63). That key
+can't be in the open-source server or with self-hosters: it reaches every install of the app.
+So, like Nextcloud, Bitwarden, Home Assistant or Matrix's Sygnal, fa-krug runs a small **push
+relay** that holds the key, and every self-hosted server sends through it. The relay never
+sees what a notification says: the app and its own server share a key, the server encrypts,
+the app's Notification Service Extension decrypts on the device.
+
+```
+ app ── POST /v1/register {APNs token} ──▶ relay ─── relayToken ──▶ app
+ app ── PUT /api/v1/me/push {relayToken, key} ──▶ its server
+ server (worker) ── POST /v1/send {relayToken, ciphertext} ──▶ relay ──▶ APNs ──▶ device
+                                                    the extension decrypts and shows it ◀──┘
+```
+
+Decisions:
+
+| Topic | Decision |
+| ----- | -------- |
+| Relay | A new service **`relay/`** in this repository (Hono on Node 22 like the server, AGPL-3.0, image `ghcr.io/fa-krug/ohana-relay`, its own workflow on `relay/**` changes). **Stateless**: no database, only its secrets and in-memory rate limits. fa-krug's runs at `https://ohana-push.fa-krug.de` on the Pi (Traefik, Arcane, like the server). |
+| APNs | Token-based auth (`.p8` key, `APNS_KEY_ID`, `APNS_TEAM_ID`), HTTP/2 to `api.push.apple.com` / `api.sandbox.push.apple.com` with `node:http2`, the ES256 JWT renewed every 50 min. Topic `de.fa-krug.Ohana` for iOS and macOS (one bundle id). |
+| Opt-in | Twice. The **server operator** can turn it off (`PUSH_RELAY_URL=` empty; default fa-krug's relay), then nothing changes for that server. Each **person** turns it on per device in the app (and iOS asks for permission). The channels stay as they are, as the fallback and for anyone who doesn't want the relay. |
+| Privacy | The payload is **end-to-end encrypted** (AES-256-GCM with a key per device the app made and gave only to its server). The relay and Apple see: the device token, the server's IP, when and how big. The visible fallback text and the collapse id carry nothing either (below). The relay logs no tokens and no payloads, only counters. |
+| Device identity | The relay hands out the token servers send to: `relayToken` = the APNs token, environment and platform sealed with the relay's own key (AES-256-GCM). Servers never see an APNs token, the relay stays without a database, and it only takes tokens it issued. |
+| Who gets it | The devices of the family's **members** (editors and viewers) that turned push on and didn't mute that family on that device. "Assistant turn finished" goes only to the devices of the chat's own user (the chat is one person's; the channels can't do that). |
+| Which events | As the channels: `notification_prefs` gets an **`app`** flag per event (default on), appointment searches a **`notifyApp`** flag (default on). Not a new channel provider: older apps decode `provider` as a closed enum and would fail on the channel list. |
+| Compatibility | Only additions (a table, routes under `/api/v1/me/push`, fields in the prefs, the searches and `GET /api/v1/server`); no `API_VERSION` raise. An older app just never registers. |
+| Forks | Someone who builds the app under their own bundle id runs `relay/` with their own key and sets the relay URL in the app's `Info.plist` and `PUSH_RELAY_URL` on their server. |
+
+**The relay** (`relay/`):
+
+- `POST /v1/register` (from the app): `{ apnsToken (hex), environment: production | sandbox,
+  platform: ios | macos }` → `{ relayToken }` (`r1.` + base64url of iv + ciphertext + tag;
+  a fresh IV each time). Rate limited per IP.
+- `POST /v1/send` (from servers): `{ messages: [{ relayToken, payload, collapseId?, ttl? }] }`,
+  up to 100 per request → `{ results: [{ status }] }` per message: `ok`, `gone` (APNs 410 /
+  `BadDeviceToken` / `Unregistered`: the server forgets the device), `invalid` (a token it
+  can't open, a payload too big), `limited` (with `retryAfter`), `error` (APNs failed; the
+  server counts it as a failed send). `payload` is opaque base64, at most 3 000 bytes;
+  `collapseId` opaque, at most 64 bytes; `ttl` at most 24 h (default 24 h).
+- It builds the APNs request itself, so a server can't put text of its own on a lock screen:
+  `{"aps":{"alert":{"loc-key":"PUSH_FALLBACK"},"mutable-content":1,"sound":"default"},"o":"<payload>"}`
+  with `apns-push-type: alert`, `apns-priority: 10`, `apns-expiration`, `apns-collapse-id`.
+  `PUSH_FALLBACK` ("New notification from Ohana" / "Neue Mitteilung von Ohana") is in the
+  app's strings: shown only when the extension can't decrypt.
+- Limits in memory: per relay token 30 a minute and 500 a day, per source IP 1 000 a minute,
+  64 KB bodies. `GET /health`. One instance; limits don't need to survive a restart.
+- Env: `APNS_KEY` (the `.p8`'s text), `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_TOPIC`
+  (`de.fa-krug.Ohana`), `RELAY_SECRET` (32 bytes, base64) and `RELAY_SECRET_OLD` while
+  rotating (tokens of the old key are still opened; once it's gone, sends answer `gone`, the
+  servers forget those devices and the apps register again at their next start).
+- Tests with a fake APNs client: sealing, tampered tokens, size and rate limits, the APNs
+  answers mapped to the statuses.
+
+**The server:**
+
+- `PUSH_RELAY_URL` (default `https://ohana-push.fa-krug.de`; empty turns push off). `GET
+  /api/v1/server` adds `push: { relay: "<url>" }` or `push: null`, so the app shows the
+  switch only where it works.
+- Table `push_devices` (account data, `lib/db/schema.ts`): `id`, `user_id` (cascade),
+  `token_id` → `auth_tokens` (cascade, unique: the API token that registered it, so the app's
+  sign out (`DELETE /api/v1/me`) and revoking a device on the account page remove its push
+  too), `platform`, `relay_token` and `key` (both sealed with `getSecretBox()`),
+  `muted_family_ids` (JSON, default `[]`), `created_at`, `last_sent_at`, `last_error`.
+- Routes (`lib/push/app-routes.ts`, on the app router; API token only, the device is the
+  calling token): `GET /api/v1/me/push` → `{ registered, mutedFamilyIds }`; `PUT` `{ relay,
+  relayToken, key (base64, 32 bytes), platform, mutedFamilyIds? }` (idempotent; 409 when
+  `relay` isn't this server's `PUSH_RELAY_URL`: the server only ever posts to its own relay,
+  never to a URL a client names; 404 when push is off); `PATCH` `{ mutedFamilyIds }`;
+  `DELETE`; `POST /api/v1/me/push/test` (one push to this device, in the request with a 10 s
+  timeout, like the channels' test).
+- `lib/push/`: `relay.ts` (the client, 10 s timeout, batches of 100), `payload.ts` (the
+  plaintext `{ v: 1, title, body, path, familyId, event? }` where `path` is the message's URL
+  without `APP_URL` (`/f/{id}/…`, which the app already routes); sealed with the device key:
+  12-byte IV + ciphertext + 16-byte tag, base64, the layout CryptoKit's `AES.GCM.SealedBox
+  (combined:)` reads; the body shortened until it fits 3 000 bytes), `deliver.ts`
+  (`pushToFamily(db, familyId, message, { userIds?, collapseKey?, push? })`: the members'
+  unmuted devices, `gone` deletes the device, a failure is logged in `last_error`, never
+  thrown). The collapse id is `base64url(SHA-256(key ‖ collapseKey))` cut to 22 characters, so
+  it says nothing either (collapse keys: the chat for the assistant, family + day for the
+  shopping reminder, the family for the coverage alert, the search for appointments).
+- `notifyFamily` gets `app?: boolean | { userIds: string[] }` and counts pushes in
+  `NotifyResult`, so "advance `earliestSeen` only after a successful send" and the coverage
+  alert's "remember only what was told" also hold when the app is the only way out.
+  `notifyEvent` passes the pref's `app`, `notifyRun` the search's `notifyApp`,
+  `notifyTurnFinished` `{ userIds: [chat.user_id] }`. Everything still runs in the worker.
+- Migration: `push_devices`, `notification_prefs.app` (default 1), `appt_searches.notify_app`
+  (default 1). The prefs and search routes, the assistant's search tools and
+  `docs/openapi.yaml` take the new fields.
+- Tests (`send` / `push` injected, no network): registration and its 409 / 404, sign out
+  removes the device, payload sealing against a fixed vector (the app's tests use the same),
+  member / mute / `userIds` selection, `gone` deletes, prefs and searches with `app` off.
+
+**The app:**
+
+- Push Notifications capability (`aps-environment`: development for Debug, production for
+  TestFlight / App Store) on both targets. New XcodeGen targets **`OhanaNotificationService`**
+  (iOS) and **`OhanaNotificationService-macOS`**, app extensions embedded in their apps, with
+  the same `keychain-access-groups` entry, so they read the device key from the Keychain
+  (no App Group needed). The relay URL is `OhanaPushRelay` in both `Info.plist`s.
+- The extension: decrypts `o` with CryptoKit, sets title, body, `threadIdentifier` (the
+  family, so notifications group by family) and `userInfo["path"]`; on any failure it leaves
+  the fallback text. The decryption is a plain function in the shared sources, tested with
+  the server's vector.
+- Turning it on: Account → *Notifications on this device* (and a one-time card on the
+  overview after pairing, not a prompt at launch): permission → `registerForRemoteNotifications`
+  → `POST /v1/register` with the token and the build's environment → a new random key in the
+  Keychain → `PUT /api/v1/me/push`. While on, the app registers again at every start (APNs
+  tokens change; the PUT is idempotent). Per family a switch (`mutedFamilyIds`), a *Send a test*
+  button. Off, sign out and switching servers: `DELETE /api/v1/me/push` first, then the key is
+  deleted. Hidden in the demo and when `push` is null.
+- A tap: `UNUserNotificationCenterDelegate` → `AppModel`'s link handling with `path` (switches
+  the family if it's another one). In the foreground: banner and sound.
+- Strings in `apple/Localization/*.de.json` (`PUSH_FALLBACK` among them); the privacy
+  manifest needs nothing new.
+
+**Docs:** `docs/self-hosting.md` (what push is, what the relay sees, `PUSH_RELAY_URL`, the
+server needs outbound HTTPS to the relay, how to turn it off, running your own relay for a
+fork), the privacy policy (a *Push notifications* section: the relay run by fa-krug and Apple's
+APNs get the device token, the server's address and the timing, never the content), a page for
+`relay/` (`relay/README.md`), `docs/openapi.yaml`, CLAUDE.md.
+
+Steps:
+
+1. Apple Developer: enable Push Notifications for the App ID `de.fa-krug.Ohana`, create an
+   APNs auth key, put it with `RELAY_SECRET` in the relay's Arcane environment.
+2. `relay/` with its tests, image workflow and compose service; deploy, check `/health`.
+3. Server: migration, `lib/push/`, routes, the hooks in `notifyFamily` / `notifyEvent` /
+   `notifyRun` / `notifyTurnFinished`, `GET /api/v1/server`, openapi, tests.
+4. App: entitlements, the two extension targets, registration and settings, tap routing,
+   strings; check on a device with a Debug build (sandbox) and in TestFlight (production).
+5. Docs and privacy policy, released together with the app version that turns it on.
+
+Open questions:
+
+- **Abuse of `/v1/register`:** anyone can get relay tokens for their own devices, which lets
+  them push only the fallback text to themselves. If it's abused anyway (APNs throttling the
+  key), add App Attest (iOS) / DeviceCheck to registration.
+- **The relay as a single point of failure** for every server's pushes: acceptable while the
+  channels still work without it; watch `/health` with the server's uptime check.
+- **Time-sensitive notifications** for "appointment found" (`interruption-level`, needs an
+  entitlement and a payload field the relay sets): later, if wanted.
 
 ### Phase 7 notes (connections)
 
