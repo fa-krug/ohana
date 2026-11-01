@@ -187,6 +187,7 @@ describe("app routes: appointments", () => {
       booking: null,
       searchEnabled: true,
       people: ["Oma", "Sascha"],
+      suggestedPerson: "",
       homeLat: null,
       slot: { resultId: result.id, practiceCity: "München", source: "doctolib" },
     });
@@ -207,6 +208,8 @@ describe("app routes: appointments", () => {
 
     const after = await s.view("GET", path);
     expect(after.data.booking).toEqual({ eventId: booked.data.eventId, date: "2026-11-03", start: "09:30", end: "10:00", person: "Oma" });
+    // The next booking of the search is likely for the same person.
+    expect(after.data.suggestedPerson).toBe("Oma");
     const list = await s.view("GET", s.p);
     expect(list.data.booked.map((e: { id: string }) => e.id)).toEqual([booked.data.eventId]);
 
@@ -216,6 +219,16 @@ describe("app routes: appointments", () => {
     expect((await s.edit("DELETE", `${s.p}/bookings/${booked.data.eventId}`)).status).toBe(404);
     expect((await s.view("GET", `${s.p}/searches/${search.id}/slots/999`)).status).toBe(404);
     expect((await s.view("GET", `${s.p}/searches/${search.id}/slots/x`)).status).toBe(404);
+  });
+
+  it("suggests whom a booking is for from the search's name", async () => {
+    const s = setup();
+    const { search, result } = withSlot(s, { name: "Hautarzt für Oma" });
+    const res = await s.view("GET", `${s.p}/searches/${search.id}/slots/${result.id}`);
+    expect(res.data.suggestedPerson).toBe("Oma");
+    const both = withSlot(s, { name: "Oma und Sascha" });
+    const two = await s.view("GET", `${s.p}/searches/${both.search.id}/slots/${both.result.id}`);
+    expect(two.data.suggestedPerson).toBe("");
   });
 
   it("ignores a practice's motive and takes it back", async () => {

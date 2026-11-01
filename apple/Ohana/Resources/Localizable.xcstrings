@@ -437,6 +437,16 @@
         }
       }
     },
+    "%lld more – add a word to narrow it down.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld weitere – ein weiteres Wort grenzt die Suche ein."
+          }
+        }
+      }
+    },
     "%lld of %lld": {
       "localizations": {
         "de": {
@@ -1177,6 +1187,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Einen Termin mit Uhrzeit am ersten ausgewählten Tag hinzufügen"
+          }
+        }
+      }
+    },
+    "Add a transaction from a receipt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Buchung von einem Kassenbon hinzufügen"
           }
         }
       }
@@ -2813,6 +2833,16 @@
         }
       }
     },
+    "Check the day and time the practice confirmed. Ohana then shows it in the calendar (and in the calendar feed, if you subscribed with booked appointments).": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prüfe Tag und Uhrzeit, die die Praxis bestätigt hat. Ohana zeigt ihn dann im Kalender (und im Kalender-Feed, wenn du ihn mit gebuchten Terminen abonniert hast)."
+          }
+        }
+      }
+    },
     "Child-friendly only": {
       "localizations": {
         "de": {
@@ -3539,6 +3569,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Speichern fehlgeschlagen: %@"
+          }
+        }
+      }
+    },
+    "Couldn’t search": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche fehlgeschlagen"
           }
         }
       }
@@ -4363,6 +4403,16 @@
         }
       }
     },
+    "Did you book it?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hast du ihn gebucht?"
+          }
+        }
+      }
+    },
     "Dietary": {
       "localizations": {
         "de": {
@@ -4429,6 +4479,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Schließen"
+          }
+        }
+      }
+    },
+    "Dismiss timer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timer ausblenden"
           }
         }
       }
@@ -4549,6 +4609,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dauer (Sek.)"
+          }
+        }
+      }
+    },
+    "Durations start a timer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeitangaben starten einen Timer"
           }
         }
       }
@@ -4913,6 +4983,16 @@
         }
       }
     },
+    "Events": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termine"
+          }
+        }
+      }
+    },
     "Every (minutes)": {
       "localizations": {
         "de": {
@@ -5273,6 +5353,16 @@
         }
       }
     },
+    "Filled in from the receipt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vom Kassenbon ausgefüllt"
+          }
+        }
+      }
+    },
     "Filter": {
       "localizations": {
         "de": {
@@ -5329,6 +5419,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Such mir einen Hautarzttermin vor Juni."
+          }
+        }
+      }
+    },
+    "Find recipes, calendar events and notes, transactions, appointment searches, people and chats.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finde Rezepte, Termine und Notizen im Kalender, Buchungen, Terminsuchen, Personen und Chats."
           }
         }
       }
@@ -5729,6 +5829,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lebensmittel-Kategorie"
+          }
+        }
+      }
+    },
+    "Groceries of the shopping on %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lebensmittel vom Einkauf am %@"
           }
         }
       }
@@ -6677,6 +6787,16 @@
         }
       }
     },
+    "Left without one, it is sorted into a category when you save.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohne Kategorie wird sie beim Speichern einsortiert."
+          }
+        }
+      }
+    },
     "Leftover days": {
       "localizations": {
         "de": {
@@ -6773,6 +6893,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Link"
+          }
+        }
+      }
+    },
+    "Linked to the shopping of %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit dem Einkauf vom %@ verknüpft"
           }
         }
       }
@@ -8167,6 +8297,16 @@
         }
       }
     },
+    "No total found: type in the amount.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Summe gefunden: Gib den Betrag ein."
+          }
+        }
+      }
+    },
     "No transaction could be sorted": {
       "localizations": {
         "de": {
@@ -8317,6 +8457,16 @@
         }
       }
     },
+    "Not Yet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch nicht"
+          }
+        }
+      }
+    },
     "Not answered": {
       "localizations": {
         "de": {
@@ -8393,6 +8543,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Notiz"
+          }
+        }
+      }
+    },
+    "Notes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notizen"
+          }
+        }
+      }
+    },
+    "Nothing could be read from the receipt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vom Kassenbon ließ sich nichts lesen"
           }
         }
       }
@@ -9289,6 +9459,16 @@
         }
       }
     },
+    "People": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Personen"
+          }
+        }
+      }
+    },
     "Per category": {
       "localizations": {
         "de": {
@@ -9899,6 +10079,16 @@
         }
       }
     },
+    "Read on this device. Check the amount and the date before saving.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf diesem Gerät gelesen. Prüfe Betrag und Datum vor dem Speichern."
+          }
+        }
+      }
+    },
     "Read with the format saved for this bank.": {
       "localizations": {
         "de": {
@@ -9975,6 +10165,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Liest den Essensplan"
+          }
+        }
+      }
+    },
+    "Reading the receipt…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kassenbon wird gelesen …"
           }
         }
       }
@@ -10105,6 +10305,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rezepte mit diesen Tags werden nicht eingeplant."
+          }
+        }
+      }
+    },
+    "Recipes, events, transactions, people…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rezepte, Termine, Buchungen, Personen …"
           }
         }
       }
@@ -10949,6 +11159,26 @@
         }
       }
     },
+    "Scan Receipt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kassenbon scannen"
+          }
+        }
+      }
+    },
+    "Scan Receipt…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kassenbon scannen …"
+          }
+        }
+      }
+    },
     "Schedule": {
       "localizations": {
         "de": {
@@ -11095,6 +11325,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Suchen durchsuchen"
+          }
+        }
+      }
+    },
+    "Search the family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Familie durchsuchen"
           }
         }
       }
@@ -11829,6 +12069,16 @@
         }
       }
     },
+    "Shows the step": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeigt den Schritt"
+          }
+        }
+      }
+    },
     "Sign in": {
       "localizations": {
         "de": {
@@ -12137,6 +12387,26 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "Sorted into %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In %@ einsortiert"
+          }
+        }
+      }
+    },
+    "Sorted into %@, linked to the shopping of %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In %1$@ einsortiert, mit dem Einkauf vom %2$@ verknüpft"
           }
         }
       }
@@ -12459,6 +12729,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Das Ziehen des Anfassers abbrechen oder die Auswahl aufheben"
+          }
+        }
+      }
+    },
+    "Stop timer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timer stoppen"
           }
         }
       }
@@ -13123,6 +13403,16 @@
         }
       }
     },
+    "The receipt couldn’t be read.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Kassenbon konnte nicht gelesen werden."
+          }
+        }
+      }
+    },
     "The requests go to %@.": {
       "localizations": {
         "de": {
@@ -13469,6 +13759,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Termine mit Uhrzeit, z. B. gebuchte Arzttermine; sie nennen Arzt und Praxis"
+          }
+        }
+      }
+    },
+    "Timer done: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timer fertig: %@"
           }
         }
       }
