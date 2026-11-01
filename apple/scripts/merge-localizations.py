@@ -13,6 +13,8 @@ A value is a string, or for plurals an object of plural categories, e.g.
 {"one": "%lld day", "other": "%lld days"}. When the English text needs plural forms too, the
 value is an object by language: {"en": {"one": "%lld day", "other": "%lld days"},
 "de": {"one": "%lld Tag", "other": "%lld Tage"}} ("de" a string or plural object as above).
+The space before a German "…" is a no-break space (U+00A0), or a line breaks before the "…" and
+leaves it alone; --check fails on a plain one.
 """
 import glob
 import json
@@ -32,6 +34,19 @@ for path in sorted(glob.glob(os.path.join(ROOT, "Localization", "*.de.json"))):
                 print(f"note: {os.path.basename(path)} translates {key!r} differently; keeping the first", file=sys.stderr)
                 continue
             translations[key] = value
+
+def texts(value):
+    """Every text of a translation: a string, or the strings of a plural or by-language object."""
+    if isinstance(value, dict):
+        for v in value.values():
+            yield from texts(v)
+    else:
+        yield value
+
+
+loose = sorted(k for k, v in translations.items() if any(" …" in t for t in texts(v)))
+for key in loose:
+    print(f"plain space before …: {key!r} (use U+00A0)", file=sys.stderr)
 
 keys = set()
 if ARGS:
@@ -75,7 +90,7 @@ text = json.dumps({"sourceLanguage": "en", "strings": strings, "version": "1.0"}
 if CHECK:
     with open(CATALOG, encoding="utf-8") as f:
         current = f.read()
-    problems = (len(missing) if ARGS else 0) + (current != text)
+    problems = (len(missing) if ARGS else 0) + len(loose) + (current != text)
     if current != text:
         print("Localizable.xcstrings is out of date: run scripts/merge-localizations.py", file=sys.stderr)
     sys.exit(1 if problems else 0)
