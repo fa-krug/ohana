@@ -13,6 +13,8 @@ enum AppRoute: Hashable {
     // Finance
     /// The transactions, optionally of one category.
     case financeTransactions(categoryID: String?)
+    /// One transaction (its editor), over its month's transactions.
+    case financeTransaction(id: String, day: Day)
     // Meals
     case recipe(id: String)
     case cook(recipeID: String)
@@ -36,7 +38,7 @@ enum AppRoute: Hashable {
         switch self {
         case let .module(module): module
         case .calendarDay: .calendar
-        case .financeTransactions: .finance
+        case .financeTransactions, .financeTransaction: .finance
         case .recipe, .cook, .newRecipe, .mealPlan, .shoppingList, .mealTags: .meals
         case .appointmentSearch, .appointmentSlot, .newAppointmentSearch: .appointments
         case .assistantChat: .assistant

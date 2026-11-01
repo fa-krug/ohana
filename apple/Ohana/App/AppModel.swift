@@ -357,6 +357,18 @@ final class FamilyContext {
         pendingRoute = route
     }
 
+    // MARK: Searching
+
+    /// Grows each time the search should take the keyboard (⌘K); the search page focuses its
+    /// field when it changes.
+    private(set) var searchRequest = 0
+
+    /// Shows the search ready to type (the shell switches to its tab).
+    func startSearch() {
+        searchRequest += 1
+        open(.module(.search))
+    }
+
     // MARK: Asking the assistant
 
     /// What the assistant should do when it shows next (`ask`): the panel or the assistant's page
