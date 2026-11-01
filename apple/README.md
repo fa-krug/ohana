@@ -60,19 +60,43 @@ domain: the account page opens `{server}/account?state=…` in the same browser 
 ```
 Ohana/
   App/            OhanaApp (scenes, commands), AppModel (server, token, account, families,
-                  FamilyContext: the family's API and change signals)
+                  FamilyContext: the family's API and change signals), WidgetSync
   Core/           APIClient + FamilyAPI (JSON over /api/v1), APIError, JSONValue, Keychain,
                   DevicePairing, ServerAccountPage, ServerInfo (version, modules), DemoServer
-                  (the demo), account models, Day / Money helpers
+                  (the demo), account models, Day / Money helpers, Widgets (WidgetFeed: the
+                  widgets' source, snapshot and store, shared with the extension)
   DesignSystem/   Content surfaces (contentCard, CardSection, chip, TintedIcon), OhanaBackground,
-                  LoadState / LoadStateView, ErrorBanner, CancelButton / discardGuard, RemoteImage
+                  LoadState / LoadStateView, ErrorBanner, CancelButton / discardGuard, RemoteImage,
+                  Tints (Color.ohana, ModuleTint; shared with the widgets)
   Shell/          RootView, LoadingScreen, ConnectServerView (pairing), DemoBanner, AppShell
                   (sidebar-adaptable TabView, family switcher, assistant inspector ⌘J), AccountView
   Features/       One folder per module: Overview, Calendar, Finance, Meals, Appointments,
                   Assistant, Settings
   Resources/      Assets (app icon, accent color), Localizable.xcstrings (en + de), Demo (demo data)
+OhanaWidgets/     The widget extension (OhanaWidgets / OhanaWidgets-macOS): the widgets, their
+                  TimelineProvider + WidgetLoader, shared views and links, entitlements
 OhanaTests/       Swift Testing unit tests
 ```
+
+## Widgets
+
+Home Screen and Lock Screen widgets on iPhone and iPad, desktop widgets on the Mac: **Today** and
+**Tomorrow** (calendar entries, events, birthdays; today's events drop off once they end),
+**Tonight's dinner**, **Shopping list** (what's left to buy) and **Appointment found** (the
+earliest slot the enabled searches found). The Lock Screen sizes exist on iOS only.
+
+They show the family selected in the app. The app writes which server and family that is (and
+the modules the server turned off) to the App Group (`WidgetSync`); the extension loads the
+family's overview (`GET /api/v1/families/{id}/overview`) from the server itself, with the device's
+API token from the shared Keychain group, and keeps the last answer in the App Group for when the
+server can't be reached. They refresh every 30 minutes, when an event of today ends and at
+midnight, and the app asks them to reload after a change and when it goes to the background.
+Signed out or in the demo they ask to open the app. A tap opens the day, recipe, shopping list or
+appointment in the app (`ohana://f/{familyId}/…`).
+
+The App Group comes from the `OhanaAppGroup` Info.plist key (build setting `OHANA_APP_GROUP`):
+`group.de.fa-krug.Ohana` on iOS, `$(TeamIdentifierPrefix)de.fa-krug.Ohana` on macOS (a `group.`
+id there makes macOS ask the user for access).
 
 ## Building and testing from the command line
 
@@ -102,7 +126,11 @@ Connect). The workflow needs one Archive action per platform, each with its own 
 it finds no destination). `ci_scripts/ci_post_clone.sh` generates the project with XcodeGen there, since
 `Ohana.xcodeproj` isn't committed. `MARKETING_VERSION` in `project.yml` is the version people see;
 raise it for a new release. The build number (`CURRENT_PROJECT_VERSION`) doesn't need editing:
-Xcode Cloud gives every build its own. The app declares no encryption beyond HTTPS
+Xcode Cloud gives every build its own. The widget extension (`de.fa-krug.Ohana.Widgets`) is
+embedded in both apps, so each archive includes it without a scheme of its own; its bundle id and
+the App Group (`group.de.fa-krug.Ohana`, and the team-prefixed one of the Mac) must be registered
+for the team: a signed build in Xcode with automatic signing does that, Xcode Cloud needs them to
+exist. The app declares no encryption beyond HTTPS
 (`ITSAppUsesNonExemptEncryption`) and its use of `UserDefaults` in
 `Ohana/Resources/PrivacyInfo.xcprivacy`; the iOS icon (`icon-1024.png`) must stay without an
 alpha channel.

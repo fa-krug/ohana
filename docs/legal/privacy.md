@@ -9,7 +9,7 @@ This policy explains which personal data is processed when you visit **ohana.fa-
 when you use the **Ohana app** for iPhone, iPad and Mac. In short: this website doesn't track
 you, and the app sends your data only to the Ohana server you connect it to.
 
-*Last updated: 31 October 2026*
+*Last updated: 1 November 2026*
 
 ## Who is responsible
 
@@ -95,8 +95,12 @@ Ask your server's operator about their privacy policy.
 
 The app stores on your device only what it needs to work: the **API token** for your server
 (in the Keychain), app settings such as the selected family (in the app's preferences) and
-changes to the shopping list made offline until they're sent. Signing out deletes the token on
-the server and on the device. Deleting the app removes the rest.
+changes to the shopping list made offline until they're sent. If you use the **widgets**, they
+load your family's overview from the same server with the same token and keep a copy of it in
+the app's container on your device (today's and tomorrow's calendar, tonight's dinner, the
+number of items on the shopping list, found appointments), so they can show it while the server
+is out of reach; no other service or permission is involved. Signing out deletes the token on
+the server and on the device, and the widgets' copy. Deleting the app removes the rest.
 
 ### Permissions
 

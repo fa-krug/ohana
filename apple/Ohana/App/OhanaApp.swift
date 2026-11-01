@@ -3,6 +3,7 @@ import SwiftUI
 @main
 struct OhanaApp: App {
     @State private var app: AppModel
+    @Environment(\.scenePhase) private var scenePhase
 
     init() {
         let app = AppModel()
@@ -26,6 +27,10 @@ struct OhanaApp: App {
                 // Server links (a notification's "open in Ohana") arrive as web browsing.
                 .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
                     if let url = activity.webpageURL { app.open(url) }
+                }
+                // What changed while the app was open shows on the widgets.
+                .onChange(of: scenePhase) { _, phase in
+                    if phase == .background, !app.isDemo { WidgetSync.reload() }
                 }
         }
         #if os(macOS)

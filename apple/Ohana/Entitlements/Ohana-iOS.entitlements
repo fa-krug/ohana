@@ -2,10 +2,16 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- Identical in Ohana-macOS.entitlements: shares the API token Keychain item. -->
+	<!-- Identical in Ohana-macOS.entitlements: shares the API token Keychain item (with the
+	     widgets too, OhanaWidgets). -->
 	<key>keychain-access-groups</key>
 	<array>
 		<string>$(AppIdentifierPrefix)de.fa-krug.Ohana</string>
+	</array>
+	<!-- Shared with the widgets: the server and family they show (WidgetStore). -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>$(OHANA_APP_GROUP)</string>
 	</array>
 </dict>
 </plist>

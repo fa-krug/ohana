@@ -312,7 +312,22 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   with `family.takeRoute(for:)`; server paths `/f/{id}/…` and `ohana://f/{id}/…` map onto routes),
   `DesignSystem/` (solid content cards — Liquid Glass only on bars and floating controls —, error banner, `CancelButton`/`discardGuard`; the module sets `newItem`/`moduleMenu` focused values for File ▸ New and its menu), `Features/<Module>/` (plus `Account/`, `Admin/`).
   The assistant: `family.ask(prompt, send:, newChat:)` opens it ready to type from anywhere (⇧⌘J, the overview's field, the Mac's menu bar item (`MenuBarItem`, an AppKit status item: SwiftUI's `MenuBarExtra` re-sets its icon on every window redraw and crashed the app), the
-  `AskOhanaIntent` App Shortcut). German strings: per-module
+  `AskOhanaIntent` App Shortcut). Widgets (`apple/OhanaWidgets/`, targets `OhanaWidgets` /
+  `OhanaWidgets-macOS`, bundle id `de.fa-krug.Ohana.Widgets`, embedded in the apps, nonisolated
+  by default; they also compile `Core/Widgets/WidgetFeed.swift`, `Core/Auth/Keychain.swift`,
+  `Core/Support/Day.swift`, `DesignSystem/Tints.swift` and `Localizable.xcstrings`): Today,
+  Tomorrow, Tonight's dinner, Shopping list, Appointment found (Lock Screen families on iOS
+  only). `App/WidgetSync.swift` (from `AppModel`: account loaded, family switch, modules
+  changed; removed on sign out) writes `WidgetSource` (server, the family selected in the app,
+  turned-off modules) to the App Group (`Widgets/source.json`; id from the Info.plist key
+  `OhanaAppGroup` = `OHANA_APP_GROUP`: `group.de.fa-krug.Ohana` on iOS,
+  `$(TeamIdentifierPrefix)de.fa-krug.Ohana` on macOS, where a `group.` id makes macOS ask for
+  access); the extension loads `GET /families/{id}/overview?today=` itself with the token from
+  the shared Keychain group into a `WidgetSnapshot`, kept in `Widgets/snapshot.json` for when
+  the server can't be reached; timelines every 30 min plus each of today's event ends and
+  midnight, the app reloads them on `didChange` (debounced 3 s) and in the background. Taps open
+  `ohana://f/{id}/…` (`/calendar/{YYYY-MM-DD}` is a day of the calendar in `AppRoute.parse`).
+  German strings: per-module
   `apple/Localization/*.de.json`, merged into `Resources/Localizable.xcstrings` by
   `apple/scripts/merge-localizations.py` (`--check` in CI). Build/test: `apple/README.md`; CI:
   `.github/workflows/apple.yml` (macOS unit tests, iOS build, strings; only on `apple/**` changes).

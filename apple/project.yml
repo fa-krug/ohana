@@ -77,11 +77,15 @@ targets:
         CFBundleURLTypes:
           - CFBundleURLName: de.fa-krug.Ohana.pairing
             CFBundleURLSchemes: [ohana]
+        OhanaAppGroup: $(OHANA_APP_GROUP)
+    dependencies:
+      - target: OhanaWidgets
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: de.fa-krug.Ohana
         GENERATE_INFOPLIST_FILE: false
         CODE_SIGN_ENTITLEMENTS: Ohana/Entitlements/Ohana-iOS.entitlements
+        OHANA_APP_GROUP: group.de.fa-krug.Ohana
         TARGETED_DEVICE_FAMILY: "1,2"
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: false
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
@@ -108,6 +112,9 @@ targets:
         CFBundleURLTypes:
           - CFBundleURLName: de.fa-krug.Ohana.pairing
             CFBundleURLSchemes: [ohana]
+        OhanaAppGroup: $(OHANA_APP_GROUP)
+    dependencies:
+      - target: OhanaWidgets-macOS
     settings:
       base:
         # Both targets build "Ohana.app" with one bundle id, so the Keychain item is shared.
@@ -115,10 +122,68 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: de.fa-krug.Ohana
         GENERATE_INFOPLIST_FILE: false
         CODE_SIGN_ENTITLEMENTS: Ohana/Entitlements/Ohana-macOS.entitlements
+        # The Mac's App Groups are team-prefixed (a "group." one asks the user for access).
+        OHANA_APP_GROUP: $(TeamIdentifierPrefix)de.fa-krug.Ohana
         ENABLE_HARDENED_RUNTIME: YES
         COMBINE_HIDPI_IMAGES: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+
+  # The widgets (OhanaWidgets/), one extension per platform over the same sources, embedded in
+  # the app. They share a few of the app's files: the widget data (Core/Widgets), the Keychain,
+  # Day, the colors and the strings.
+  OhanaWidgets:
+    type: app-extension
+    platform: iOS
+    sources: &widgetSources
+      - path: OhanaWidgets
+        excludes:
+          - "Info-*.plist"
+          - "Entitlements"
+      - path: Ohana/Core/Widgets
+      - path: Ohana/Core/Auth/Keychain.swift
+      - path: Ohana/Core/Support/Day.swift
+      - path: Ohana/DesignSystem/Tints.swift
+      - path: Ohana/Resources/Localizable.xcstrings
+    info:
+      path: OhanaWidgets/Info-iOS.plist
+      properties: &widgetInfo
+        CFBundleDisplayName: Ohana
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        OhanaAppGroup: $(OHANA_APP_GROUP)
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: de.fa-krug.Ohana.Widgets
+        GENERATE_INFOPLIST_FILE: false
+        CODE_SIGN_ENTITLEMENTS: OhanaWidgets/Entitlements/OhanaWidgets-iOS.entitlements
+        OHANA_APP_GROUP: group.de.fa-krug.Ohana
+        TARGETED_DEVICE_FAMILY: "1,2"
+        # WidgetKit's providers aren't on the main actor.
+        SWIFT_DEFAULT_ACTOR_ISOLATION: nonisolated
+        SKIP_INSTALL: YES
+
+  OhanaWidgets-macOS:
+    type: app-extension
+    platform: macOS
+    sources: *widgetSources
+    info:
+      path: OhanaWidgets/Info-macOS.plist
+      properties: *widgetInfo
+    settings:
+      base:
+        PRODUCT_NAME: OhanaWidgets
+        PRODUCT_BUNDLE_IDENTIFIER: de.fa-krug.Ohana.Widgets
+        GENERATE_INFOPLIST_FILE: false
+        CODE_SIGN_ENTITLEMENTS: OhanaWidgets/Entitlements/OhanaWidgets-macOS.entitlements
+        OHANA_APP_GROUP: $(TeamIdentifierPrefix)de.fa-krug.Ohana
+        ENABLE_HARDENED_RUNTIME: YES
+        SWIFT_DEFAULT_ACTOR_ISOLATION: nonisolated
+        SKIP_INSTALL: YES
 
   OhanaTests:
     type: bundle.unit-test

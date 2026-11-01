@@ -97,7 +97,8 @@ extension AppRoute {
         let at = { (i: Int) in rest.count > i ? rest[i] : nil }
         switch first {
         case "calendar":
-            return .module(.calendar)
+            // `/calendar/{YYYY-MM-DD}`: a day (the widgets' links).
+            return at(1).flatMap { Day($0) }.map { .calendarDay($0) } ?? .module(.calendar)
         case "finance":
             return .module(.finance)
         case "meals":

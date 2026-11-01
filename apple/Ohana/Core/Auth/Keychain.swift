@@ -6,6 +6,8 @@ import Security
 /// entitlement for it, and falls back to the login keychain.
 enum Keychain {
     private static let service = "de.fa-krug.Ohana"
+    /// The account of the device's API token (the app's and the widgets' `Keychain.load`).
+    static let apiTokenAccount = "apiToken"
 
     static func save(_ value: String, for account: String) {
         delete(account)

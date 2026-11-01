@@ -43,6 +43,7 @@ final class AppModel {
             for context in contexts.values { context.serverInfo = serverInfo }
             AssistantInbox.shared.available = isEnabled(.assistant)
             NotificationCenter.default.post(name: .serverModulesChanged, object: nil)
+            syncWidgets()
         }
     }
 
@@ -58,7 +59,11 @@ final class AppModel {
 
     /// The family on screen; remembered per device (the demo's isn't).
     var selectedFamilyID: String? {
-        didSet { if !isDemo { UserDefaults.standard.set(selectedFamilyID, forKey: Keys.family) } }
+        didSet {
+            guard !isDemo else { return }
+            UserDefaults.standard.set(selectedFamilyID, forKey: Keys.family)
+            syncWidgets()
+        }
     }
 
     var selectedFamily: FamilySummary? {
@@ -76,10 +81,15 @@ final class AppModel {
     private enum Keys {
         static let server = "serverURL"
         static let family = "selectedFamilyID"
-        static let token = "apiToken"
+        static let token = Keychain.apiTokenAccount
     }
 
+    /// Whether this model tells the widgets what to show (`WidgetSync`): the app's, not the
+    /// previews' and tests'.
+    private var syncsWidgets = false
+
     init() {
+        syncsWidgets = true
         selectedFamilyID = UserDefaults.standard.string(forKey: Keys.family)
         #if DEBUG
         // Development: `-OHANA_DEV_SERVER http://localhost:3000 -OHANA_DEV_TOKEN ohana_…` as launch
@@ -201,6 +211,7 @@ final class AppModel {
                 selectedFamilyID = families.first?.id
             }
             phase = .ready
+            syncWidgets()
         } catch is CancellationError {
         } catch APIError.unauthorized {
             await useDemo(signingOut: false)
@@ -232,12 +243,22 @@ final class AppModel {
         guard let client, !client.isDemo else { return }
         await whileSwitching(.demo) {
             Keychain.delete(Keys.token)
+            if syncsWidgets { WidgetSync.show(nil) }
             connectDemo()
             if signingOut {
                 _ = try? await client.send(.delete, "/api/v1/me", as: JSONValue.self)
             }
             await refresh()
         }
+    }
+
+    /// Tells the widgets the server and family on screen; with no family they ask to open the app.
+    private func syncWidgets() {
+        guard syncsWidgets, !isDemo, phase == .ready, let serverURL else { return }
+        WidgetSync.show(selectedFamily.map { family in
+            WidgetSource(server: serverURL, familyID: family.id, familyName: family.name,
+                         disabledModules: Module.allCases.filter { !isEnabled($0) }.map(\.rawValue))
+        })
     }
 
     /// The server a link brought in the demo, once.
@@ -333,11 +354,13 @@ final class FamilyContext {
 
     /// Something changed `areas` (the assistant, another screen): views showing them reload.
     func didChange(_ areas: DataArea...) {
-        for area in areas { revisions[area, default: 0] += 1 }
+        didChange(areas)
     }
 
+    /// The widgets reload too (`WidgetSync`).
     func didChange(_ areas: [DataArea]) {
         for area in areas { revisions[area, default: 0] += 1 }
+        if !api.client.isDemo { WidgetSync.reloadSoon() }
     }
 
     fileprivate func adoptRevisions(from other: FamilyContext) {

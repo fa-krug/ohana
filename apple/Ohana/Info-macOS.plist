@@ -42,5 +42,7 @@
 	</dict>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2026 Sascha Krug. All rights reserved.</string>
+	<key>OhanaAppGroup</key>
+	<string>$(OHANA_APP_GROUP)</string>
 </dict>
 </plist>
