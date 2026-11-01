@@ -7,8 +7,8 @@ struct RecipeListView: View {
     @Environment(\.undoManager) private var undoManager
     @Environment(\.mealsOnScreen) private var onScreen
     @ScaledMetric(relativeTo: .body) private var cardWidth: CGFloat = 250
-    @AppStorage("meals.recipes.list") private var list: RecipeListType = .known
-    @AppStorage("meals.recipes.sort") private var sort: RecipeSort = .nameAsc
+    @AppStorage(RecipeListModel.listKey) private var list = RecipeListModel.defaultList
+    @AppStorage(RecipeListModel.sortKey) private var sort = RecipeListModel.defaultSort
     @State private var query = ""
     @State private var tagFilter: Set<String> = []
     @State private var model = RecipeListModel()
@@ -36,6 +36,11 @@ struct RecipeListView: View {
             .padding(.bottom, 24)
         }
         .scrollDismissesKeyboard(.interactively)
+        .overlay(alignment: .topTrailing) {
+            if let saved = model.saved {
+                SavedCopyBadge(date: saved.date, updating: saved.updating) { await model.reload(family.api, key) }
+            }
+        }
         .searchable(text: $query, prompt: Text("Search recipes"))
         .refreshable { await model.reload(family.api, key) }
         .task(id: RecipeListModel.Load(query: key, revision: family.revision(.recipes))) {
@@ -47,8 +52,8 @@ struct RecipeListView: View {
             await model.reload(family.api, key)
         }
         .task(id: family.revision(.recipes)) {
-            tags = (try? await family.api.get("/meals/tags", as: RecipeTagsResponse.self).tags) ?? tags
-            ai = (try? await family.api.get("/meals/status", as: MealsAIStatus.self)) ?? ai
+            tags = (try? await RecipeTagsView.request(family.api).fetchOrSaved().tags) ?? tags
+            ai = (try? await RecipeListModel.statusRequest(family.api).fetchOrSaved()) ?? ai
         }
         .toolbar { toolbar }
         .focusedSceneValue(\.newItem, onScreen && family.canEdit
@@ -188,7 +193,8 @@ struct RecipeListView: View {
         } label: {
             Label("Let’s cook!", systemImage: "frying.pan")
         }
-        if family.canEdit {
+        // Changes wait for the server's latest list, not the copy on the device.
+        if family.canEdit, model.saved == nil {
             Button {
                 perform {
                     let _: RecipeMoveResponse = try await family.api.send(.post, "/meals/recipes/\(recipe.id)/move")
@@ -340,13 +346,46 @@ final class RecipeListModel {
 
     static let pageSize = 20
 
+    /// Where the page keeps its list and sort (`@AppStorage`), and what they start as.
+    static let listKey = "meals.recipes.list"
+    static let sortKey = "meals.recipes.sort"
+    static let defaultList = RecipeListType.known
+    static let defaultSort = RecipeSort.nameAsc
+
+    /// What the page opens on: the list and sort chosen last, no search, no tags (the prefetch
+    /// loads its first page).
+    static var opening: Query {
+        let defaults = UserDefaults.standard
+        return Query(list: defaults.string(forKey: listKey).flatMap(RecipeListType.init(rawValue:)) ?? defaultList,
+                     query: "",
+                     sort: defaults.string(forKey: sortKey).flatMap(RecipeSort.init(rawValue:)) ?? defaultSort,
+                     tags: [])
+    }
+
+    /// Whether the AI buttons show (the prefetch asks the same).
+    static func statusRequest(_ api: FamilyAPI) -> CachedGet<MealsAIStatus> {
+        api.cached("/meals/status")
+    }
+
     private(set) var items: [RecipeSummary] = []
     private(set) var totalCount = 0
     private(set) var loadedQuery: Query?
     private(set) var error: String?
+    /// While the items are the copy on the device: from when, and whether the server is being
+    /// asked (`LoadState.saved`).
+    private(set) var saved: (date: Date, updating: Bool)?
     private var loadingMore = false
 
     var hasMore: Bool { items.count < totalCount }
+
+    /// The first page of a query, kept on the device; not for searches (a copy per text typed).
+    static func firstPage(_ api: FamilyAPI, _ q: Query, limit: Int) -> CachedGet<RecipeListPage> {
+        let path = api.path("/meals/recipes")
+        // Filed without the page's size: a reload keeping more rows replaces the same copy.
+        let key = parameters(q, offset: 0).filter { $0.key != "offset" && $0.key != "limit" }
+        return api.client.cached(path, query: parameters(q, offset: 0, limit: limit),
+                                 key: api.client.url(path, query: key).absoluteString)
+    }
 
     static func parameters(_ q: Query, offset: Int, limit: Int = pageSize) -> [String: String?] {
         [
@@ -361,17 +400,37 @@ final class RecipeListModel {
     }
 
     /// The first page again (keeping as many rows as were loaded, so a reload doesn't jump).
+    /// Another query, or nothing loaded yet, shows its copy on the device meanwhile.
     func reload(_ api: FamilyAPI, _ q: Query) async {
         let limit = q == loadedQuery ? min(100, max(Self.pageSize, items.count)) : Self.pageSize
+        let get = Self.firstPage(api, q, limit: limit)
+        if let shown = saved, loadedQuery == q {
+            saved = (shown.date, true)
+        } else if loadedQuery != q || items.isEmpty, q.query.isEmpty, let copy = get.saved() {
+            items = copy.value.items
+            totalCount = copy.value.totalCount
+            loadedQuery = q
+            error = nil
+            saved = (copy.date, true)
+        }
         do {
-            let page: RecipeListPage = try await api.get("/meals/recipes", query: Self.parameters(q, offset: 0, limit: limit))
+            let page: RecipeListPage = if q.query.isEmpty {
+                try await get.fetch()
+            } else {
+                try await api.get("/meals/recipes", query: get.query)
+            }
             items = page.items
             totalCount = page.totalCount
             loadedQuery = q
             error = nil
+            saved = nil
         } catch is CancellationError {
+            if let shown = saved, loadedQuery == q { saved = (shown.date, false) }
         } catch {
-            if items.isEmpty || loadedQuery != q {
+            if let shown = saved, loadedQuery == q, APIError.isTemporary(error) {
+                saved = (shown.date, false)
+            } else if items.isEmpty || loadedQuery != q || saved != nil {
+                saved = nil
                 self.error = error.localizedDescription
                 items = []
                 loadedQuery = q
@@ -382,7 +441,7 @@ final class RecipeListModel {
     }
 
     func loadMore(_ api: FamilyAPI) async {
-        guard let q = loadedQuery, hasMore, !loadingMore else { return }
+        guard let q = loadedQuery, hasMore, !loadingMore, saved == nil else { return }
         loadingMore = true
         defer { loadingMore = false }
         do {

@@ -15,10 +15,12 @@
 //   GET    /meals/shopping?lang=                {lists: [summary], latest: ShoppingListView | null}
 //   GET    /meals/shopping/lists/{id}?lang=     {list: ShoppingListView}
 //   GET    /meals/shopping/lists/{id}/spent     ShoppingSpend (groceries spend of its shopping day ± 1)
-//   POST   /meals/shopping/lists/{id}/items     {name, quantity, unitId, category?} → {id, merged, previousQuantity}
+//   POST   /meals/shopping/lists/{id}/items     {name, quantity, unitId, category?, clientId?} → {id, merged, previousQuantity}
 //   POST   /meals/shopping/items/{id}/move      {listId, quantity?} → {id, merged, previousQuantity, fromListId, quantity}
 //   GET    /meals/shopping/units                {units: [{id, abbreviation, nameEn, nameDe}]}
 //
+// `clientId` (the app's, e.g. a UUID) makes an add apply once: sent again (a retry whose answer
+// was lost), it returns the earlier result instead of adding the quantity again.
 // `undo` is the body for POST /meals/plan/restore that puts the plan back as it was.
 // Viewers read; changes need an editor. Adding, swapping, moving or removing a meal makes the
 // iteration's shopping lists new from its meals, keeping ticks and what was added by hand.
@@ -68,6 +70,7 @@ const addItemSchema = z.object({
   quantity: z.union([z.string(), z.number()]).transform((v) => String(v).trim().replace(",", ".")),
   unitId: z.number().int(),
   category: z.enum(CATEGORIES).optional(),
+  clientId: z.string().min(1).max(64).optional(),
 });
 
 export function handleMealPlanApp(ctx: Ctx): Promise<Response> | null {
@@ -496,5 +499,7 @@ function addItem(db: Db, familyId: string, listId: string, input: z.infer<typeof
   const ingredientId =
     existing?.id ??
     findOrCreateIngredient(db, { nameEn: input.name, nameDe: input.name, category: input.category ?? "OTHER" }).id;
-  return addShoppingItem(db, familyId, listId, { ingredientId, unitId: input.unitId, quantity: input.quantity });
+  return addShoppingItem(db, familyId, listId, {
+    ingredientId, unitId: input.unitId, quantity: input.quantity, clientId: input.clientId,
+  });
 }

@@ -14,6 +14,9 @@ struct AppointmentsView: View {
     /// Pushed from code: a search just created, a context menu's "Open".
     @State private var pushed: AppointmentRoute?
 
+    /// Changes to what's shown wait while it's the copy on the device.
+    private var canEdit: Bool { family.canEdit && !state.isSaved }
+
     var body: some View {
         LoadStateView(state: state, retry: load) { overview in
             content(overview)
@@ -31,7 +34,7 @@ struct AppointmentsView: View {
         }
         .focusedSceneValue(\.newItem, family.canEdit ? NewItemAction(title: "New Search") { creating = true } : nil)
         .task(id: [family.revision(.appointments), family.revision(.events)]) { await load() }
-        .appointmentPolling(busy: state.value?.searches.contains(where: \.isBusy) ?? false) { await load() }
+        .appointmentPolling(busy: !state.isSaved && state.value?.searches.contains(where: \.isBusy) == true) { await load() }
         .navigationDestination(for: AppointmentRoute.self) { AppointmentRouteView(route: $0).assistantButton() }
         // `.id`: another route replaces the pushed page with a fresh one.
         .navigationDestination(item: $pushed) { AppointmentRouteView(route: $0).id($0).assistantButton() }
@@ -74,7 +77,12 @@ struct AppointmentsView: View {
     }
 
     private func load() async {
-        await LoadState.run($state) { try await family.api.get("/appointments") }
+        await LoadState.run($state, Self.request(family.api))
+    }
+
+    /// The searches' and bookings' GET (the prefetch asks the same).
+    static func request(_ api: FamilyAPI) -> CachedGet<AppointmentsOverview> {
+        api.cached("/appointments")
     }
 
     private func filtered(_ searches: [AppointmentSearch]) -> [AppointmentSearch] {
@@ -105,7 +113,7 @@ struct AppointmentsView: View {
                 } else {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 340), spacing: 16, alignment: .top)], spacing: 16) {
                         ForEach(searches) { search in
-                            AppointmentSearchCard(search: search, reload: load)
+                            AppointmentSearchCard(search: search, canEdit: canEdit, reload: load)
                                 .contextMenu { menu(for: search) }
                         }
                     }
@@ -136,7 +144,7 @@ struct AppointmentsView: View {
     @ViewBuilder private func menu(for search: AppointmentSearch) -> some View {
         Button("Open", systemImage: "arrow.right.circle") { pushed = .search(search.id) }
         Button("History", systemImage: "clock.arrow.circlepath") { pushed = .history(search.id) }
-        if family.canEdit {
+        if canEdit {
             Divider()
             Button("Run now", systemImage: "arrow.clockwise") {
                 perform {
@@ -167,7 +175,7 @@ struct AppointmentsView: View {
                 .foregroundStyle(.secondary)
             ForEach(Array(events.enumerated()), id: \.element.id) { index, event in
                 if index > 0 { Divider() }
-                AppointmentBookedRow(event: event, canEdit: family.canEdit, open: { pushed = $0 },
+                AppointmentBookedRow(event: event, canEdit: canEdit, open: { pushed = $0 },
                                      showDay: { family.open($0) }) { removing = event }
             }
         }
@@ -252,9 +260,9 @@ struct AppointmentBookedRow: View {
 /// A search as a card (search-list.tsx `SearchCard`): name, criteria, status, schedule, last
 /// run, the first three doctors, "run now".
 struct AppointmentSearchCard: View {
-    @Environment(FamilyContext.self) private var family
     @Environment(\.dynamicTypeSize) private var typeSize
     let search: AppointmentSearch
+    let canEdit: Bool
     let reload: () async -> Void
 
     private static let inline = 3
@@ -293,7 +301,7 @@ struct AppointmentSearchCard: View {
                 }
             }
 
-            if family.canEdit {
+            if canEdit {
                 AppointmentRunNowButton(search: search, reload: reload)
             }
         }

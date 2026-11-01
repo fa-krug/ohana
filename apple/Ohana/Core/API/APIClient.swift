@@ -17,6 +17,8 @@ final class APIClient {
     private let session: URLSession
     /// The demo's stand-in for the server (`init(demo:)`); nil for a server.
     private let demo: DemoServer?
+    /// Where the last answers of `CachedGet`s are kept; nil for the demo (and previews, tests).
+    let cache: ResponseCache?
     var onUnauthorized: (() -> Void)?
 
     static let decoder = JSONDecoder()
@@ -26,10 +28,11 @@ final class APIClient {
         return e
     }()
 
-    init(baseURL: URL, token: String?, session: URLSession = .shared) {
+    init(baseURL: URL, token: String?, session: URLSession = .shared, cache: ResponseCache? = nil) {
         self.baseURL = baseURL
         self.token = token
         self.session = session
+        self.cache = cache
         demo = nil
     }
 
@@ -38,6 +41,7 @@ final class APIClient {
         baseURL = DemoServer.baseURL
         token = nil
         session = .shared
+        cache = nil
         self.demo = demo
     }
 

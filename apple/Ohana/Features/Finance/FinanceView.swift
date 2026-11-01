@@ -83,6 +83,8 @@ struct FinanceScreen: View {
                         .padding(.vertical, 6)
                 }
             }
+            // Beside the period; on the iPhone at the bottom (its period scrolls with the list).
+            .overlay(alignment: compact ? .bottom : .topTrailing) { savedCopyBadge }
             .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar }
             .overlay { if dropping { dropHint } }
             // A bank statement dragged from the Finder or Files opens the import with it.
@@ -140,6 +142,8 @@ struct FinanceScreen: View {
             .environment(\.editMode, $editMode)
             .onChange(of: editMode.isEditing) { _, editing in if !editing { store.selected = [] } }
             .onChange(of: tab) { editMode = .inactive }
+            // A copy on the device that can't be updated takes the changes away.
+            .onChange(of: store.canEdit) { _, canEdit in if !canEdit { editMode = .inactive } }
             // Selecting on the iPhone: the selection's actions take the tab bar's place.
             .toolbar(compact && selecting ? .hidden : .automatic, for: .tabBar)
             #endif
@@ -239,6 +243,14 @@ struct FinanceScreen: View {
             }
             .allowsHitTesting(false)
             .transition(.opacity)
+    }
+
+    /// What's shown is the copy on the device: from when, a tap reloads.
+    @ViewBuilder
+    private var savedCopyBadge: some View {
+        if let copy = store.savedCopy {
+            SavedCopyBadge(date: copy.date, updating: copy.updating, retry: { await store.reloadAll() })
+        }
     }
 
     @ViewBuilder

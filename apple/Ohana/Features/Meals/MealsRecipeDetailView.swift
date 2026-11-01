@@ -87,9 +87,13 @@ struct MealsRecipeDetailView: View {
     }
 
     private func load() async {
-        await LoadState.run($state) {
-            RecipeResolved(try await family.api.get("/meals/recipes/\(recipeID)", as: RecipeDetailResponse.self))
-        }
+        await LoadState.run($state, Self.request(family.api, recipeID: recipeID), RecipeResolved.init)
+    }
+
+    /// A recipe's GET, for its page and the cook view (the prefetch asks the same): one copy, so
+    /// a recipe opened once cooks offline too.
+    static func request(_ api: FamilyAPI, recipeID: String) -> CachedGet<RecipeDetailResponse> {
+        api.cached("/meals/recipes/\(recipeID)")
     }
 
     // MARK: Page
@@ -239,7 +243,8 @@ struct MealsRecipeDetailView: View {
 
     @ToolbarContentBuilder
     private func toolbar(_ recipe: RecipeResolved) -> some ToolbarContent {
-        if family.canEdit {
+        // Changes wait for the server's latest recipe, not the copy on the device.
+        if family.canEdit, !state.isSaved {
             ToolbarItemGroup(placement: .primaryAction) {
                 Button {
                     editing = true

@@ -11,6 +11,9 @@ struct RecipeTagsView: View {
     @State private var deleting: RecipeTag?
     @State private var confirmReset = false
 
+    /// Changes need an editor and the server's latest tags, not the copy on the device.
+    private var canEdit: Bool { family.canEdit && !state.isSaved }
+
     var body: some View {
         LoadStateView(state: state, retry: load) { tags in
             list(tags)
@@ -18,7 +21,7 @@ struct RecipeTagsView: View {
         .ohanaBackground(ModuleTint.meals)
         .task(id: family.revision(.recipes)) { await load() }
         .toolbar {
-            if family.canEdit {
+            if canEdit {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
                         adding = true
@@ -28,7 +31,7 @@ struct RecipeTagsView: View {
                 }
             }
         }
-        .focusedSceneValue(\.newItem, onScreen && family.canEdit ? NewItemAction(title: "New Tag") { adding = true } : nil)
+        .focusedSceneValue(\.newItem, onScreen && canEdit ? NewItemAction(title: "New Tag") { adding = true } : nil)
         .sheet(isPresented: $adding) {
             RecipeTagSheet(tag: nil) { await load() }
         }
@@ -49,9 +52,13 @@ struct RecipeTagsView: View {
     }
 
     private func load() async {
-        await LoadState.run($state) {
-            try await family.api.get("/meals/tags", as: RecipeTagsResponse.self).tags
-        }
+        await LoadState.run($state, Self.request(family.api)) { $0.tags }
+    }
+
+    /// The tags' GET, for this page, the recipe list's filter and the editor (the prefetch asks
+    /// the same).
+    static func request(_ api: FamilyAPI) -> CachedGet<RecipeTagsResponse> {
+        api.cached("/meals/tags")
     }
 
     private func list(_ tags: [RecipeTag]) -> some View {
@@ -78,7 +85,7 @@ struct RecipeTagsView: View {
                     }
                 }
             }
-            if family.canEdit {
+            if canEdit {
                 Section {
                     Button(role: .destructive) {
                         confirmReset = true
@@ -102,7 +109,7 @@ struct RecipeTagsView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
-        if family.canEdit {
+        if canEdit {
             Button { renaming = tag } label: { content.contentShape(.rect) }
                 .tint(.primary)
                 .accessibilityHint(Text("Renames the tag"))

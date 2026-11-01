@@ -3115,9 +3115,17 @@ paths:
                 quantity: {type: [string, number], description: "A positive decimal; `,` is read as `.`."}
                 unitId: {type: integer}
                 category: {$ref: "#/components/schemas/IngredientCategory"}
+                clientId:
+                  type: string
+                  minLength: 1
+                  maxLength: 64
+                  description: >-
+                    A key the client makes up for this add (e.g. a UUID). An add with a key already
+                    applied to this list is not applied again: the earlier result comes back (a retry
+                    whose answer was lost, the app's offline queue). Without it every add counts.
       responses:
         "200":
-          description: The item.
+          description: The item (for a repeated `clientId`, the earlier result).
           content:
             application/json:
               schema:

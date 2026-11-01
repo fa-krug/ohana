@@ -64,14 +64,24 @@ struct ServerInfo: Codable, Equatable {
         }
     }
 
-    /// Asks `client`'s server; a 404 (a server from before the route) is `legacy`. Other failures
-    /// (offline, not an Ohana server) throw.
+    /// Asks `client`'s server (kept on the device with the client's cache, `saved`); a 404 (a
+    /// server from before the route) is `legacy`. Other failures (offline, not an Ohana server)
+    /// throw.
     static func fetch(from client: APIClient) async throws -> ServerInfo {
         do {
-            return try await client.get("/api/v1/server", as: ServerInfo.self)
+            return try await request(client).fetch()
         } catch APIError.http(status: 404, message: _) {
             return .legacy
         }
+    }
+
+    /// The info as last loaded from `client`'s server.
+    static func saved(from client: APIClient) -> ServerInfo? {
+        request(client).saved()?.value
+    }
+
+    private static func request(_ client: APIClient) -> CachedGet<ServerInfo> {
+        client.cached("/api/v1/server")
     }
 
     /// Said when a server's API is older than the app needs.

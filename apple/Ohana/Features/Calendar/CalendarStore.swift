@@ -4,7 +4,9 @@ import Observation
 
 /// One open family calendar: the types, entries, notes, events and birthdays of one year, the
 /// queue that saves local edits, undo / redo and the day selection (the web app's
-/// components/calendar/planner-store.ts).
+/// components/calendar/planner-store.ts). Edits work offline: the queue is kept on the device
+/// (`queueFile`) until the server took it, and shows on top of what's loaded meanwhile. The
+/// server wins: what it refuses is dropped, and the calendar loads its state again.
 @Observable
 final class CalendarStore {
     enum Phase: Equatable {
@@ -16,6 +18,13 @@ final class CalendarStore {
         case idle, saving, retrying
     }
 
+    /// The year shows the copy kept on the device (`ResponseCache`), from `date`, until the server
+    /// answers: `updating` while it's asked, false once it couldn't be reached.
+    struct SavedCopy: Equatable {
+        var date: Date
+        var updating: Bool
+    }
+
     /// An undoable change: the days' values before and after, a deleted event or one moved to
     /// another day.
     enum Step {
@@ -25,7 +34,7 @@ final class CalendarStore {
         case movedEvent(id: String, from: Day, to: Day)
     }
 
-    private enum Batch {
+    private enum Batch: Codable {
         case entries([CalendarEntryOp])
         case notes([CalendarNoteOp])
 
@@ -55,7 +64,13 @@ final class CalendarStore {
     private(set) var notes: CalendarNotes = [:]
     private(set) var events: [Day: [CalendarEvent]] = [:]
     private(set) var birthdays: [Day: [CalendarBirthday]] = [:]
+    /// Nothing can be changed: a viewer. On the copy on the device changes are queued like any
+    /// other and sent once the server can be reached.
     private(set) var readOnly: Bool
+    /// A viewer of the family (by the app's role or the server's answer): it stays read-only.
+    private(set) var isViewer: Bool
+    /// What's shown is the copy on the device, not the server's latest; nil once it answered.
+    private(set) var savedCopy: SavedCopy?
 
     private(set) var selection: Set<Day> = []
     private(set) var anchor: Day?
@@ -102,20 +117,78 @@ final class CalendarStore {
     private var clipboard: (pattern: CalendarPattern, text: String, year: Int)?
     private var version = 0
     private var queue: [Batch] = []
+    /// Where the queue is kept while it holds changes; nil: only in memory (the demo, tests,
+    /// Settings → Calendar, which changes no days).
+    private let queueFile: URL?
+    /// Counts the batches the server took or refused: a load asked before one of them may not
+    /// have it yet.
+    private var sent = 0
     private var flushing = false
     private var retryDelay: Double = 2
+    /// The wait before trying again; cancelled when the connection comes back.
+    private var retryWait: Task<Void, Never>?
     private var reloadAfterSave = false
     private var toastTask: Task<Void, Never>?
+    /// The role the screen opened the calendar with (`FamilyContext.canEdit`).
+    private let ownReadOnly: Bool
+    /// The year whose state (the server's or the saved copy) is shown; nil before the first.
+    private var shownYear: Int?
 
-    init(api: FamilyAPI, year: Int? = nil, readOnly: Bool) {
+    /// `queueFile` keeps the queue on the device (`CalendarStore.queueFile(for:)`): changes not
+    /// sent before the app quit are read back and sent again.
+    init(api: FamilyAPI, year: Int? = nil, readOnly: Bool, queueFile: URL? = nil) {
         self.api = api
         self.year = year ?? Self.lastYear ?? Day.today.year
         self.readOnly = readOnly
+        self.isViewer = readOnly
+        ownReadOnly = readOnly
+        self.queueFile = queueFile
         skipWeekends = UserDefaults.standard.bool(forKey: Self.skipWeekendsKey)
+        if let queueFile, let data = try? Data(contentsOf: queueFile),
+           let saved = try? JSONDecoder().decode([Batch].self, from: data), !saved.isEmpty {
+            queue = saved
+            Task { await flush() }
+        }
+        Connectivity.shared.whenReconnected { [weak self] in self?.retryNow() }
+    }
+
+    /// Where a family's queue is kept: Application Support, `Ohana/Calendar/<server>_<family>/
+    /// queue.json`; nil in the demo.
+    static func queueFile(for api: FamilyAPI) -> URL? {
+        guard !api.client.isDemo else { return nil }
+        return queueBase.appending(path: safe(serverPrefix(api.client.baseURL) + api.familyID), directoryHint: .isDirectory)
+            .appending(path: "queue.json")
+    }
+
+    /// Signing out: the queues of every family on `server` are removed.
+    static func removeQueues(server: URL) {
+        let prefix = safe(serverPrefix(server))
+        let folders = (try? FileManager.default.contentsOfDirectory(at: queueBase, includingPropertiesForKeys: nil)) ?? []
+        for folder in folders where folder.lastPathComponent.hasPrefix(prefix) {
+            try? FileManager.default.removeItem(at: folder)
+        }
+    }
+
+    private static var queueBase: URL {
+        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        return support.appending(path: "Ohana/Calendar", directoryHint: .isDirectory)
+    }
+
+    private static func serverPrefix(_ server: URL) -> String {
+        "\(server.host() ?? "server")\(server.port.map { "-\($0)" } ?? "")_"
+    }
+
+    /// A file name of letters, digits, dots, dashes and underscores.
+    private static func safe(_ name: String) -> String {
+        String(name.map { $0.isLetter || $0.isNumber || $0 == "." || $0 == "-" || $0 == "_" ? $0 : "-" })
     }
 
     var isLoaded: Bool { phase == .loaded }
     var pending: Bool { !queue.isEmpty || flushing }
+    /// Types and feed links are changed on the server at once, not queued: not while the copy
+    /// on the device shows.
+    var typesReadOnly: Bool { readOnly || savedCopy != nil }
     var canUndo: Bool { !readOnly && !undoStack.isEmpty }
     var canRedo: Bool { !readOnly && !redoStack.isEmpty }
 
@@ -174,22 +247,38 @@ final class CalendarStore {
 
     // MARK: Loading and saving
 
-    /// Takes a loaded state. Only what changed is assigned: polling brings the same state every
-    /// 15 seconds, and an equal value would still redraw everything that reads it.
-    func apply(_ state: CalendarState) {
+    /// Takes a loaded state, the server's or (with its date) the copy on the device, with the
+    /// queued changes on top until they're sent. Only what changed is assigned: polling brings
+    /// the same state every 15 seconds, and an equal value would still redraw everything that
+    /// reads it.
+    func apply(_ state: CalendarState, savedAt date: Date? = nil) {
+        shownYear = year
+        update(\.savedCopy, date.map { SavedCopy(date: $0, updating: true) })
         update(\.family, state.family)
-        update(\.readOnly, readOnly || state.family.readOnly)
+        update(\.isViewer, ownReadOnly || state.family.readOnly)
+        updateReadOnly()
         update(\.types, state.types
             .filter { $0.year == nil || $0.year == year }
             .enumerated()
             .sorted { ($0.element.position ?? $0.offset, $0.offset) < ($1.element.position ?? $1.offset, $1.offset) }
             .map(\.element))
         update(\.typeYears, state.typeYears)
-        update(\.entries, Self.byDay(state.entries))
-        update(\.notes, Self.byDay(state.notes ?? [:]))
+        var entries = Self.byDay(state.entries), notes = Self.byDay(state.notes ?? [:])
+        for batch in queue {
+            switch batch {
+            case let .entries(ops): CalendarMath.apply(ops, to: &entries, year: year)
+            case let .notes(ops): CalendarMath.apply(ops, to: &notes, year: year)
+            }
+        }
+        update(\.entries, entries)
+        update(\.notes, notes)
         update(\.events, Self.byDay(state.events ?? [:]))
         update(\.birthdays, Self.byDay(state.birthdays ?? [:]))
         update(\.phase, .loaded)
+    }
+
+    private func updateReadOnly() {
+        update(\.readOnly, isViewer)
     }
 
     private func update<V: Equatable>(_ path: ReferenceWritableKeyPath<CalendarStore, V>, _ value: V) {
@@ -202,23 +291,45 @@ final class CalendarStore {
         return out
     }
 
-    /// Fetches the year. A quiet load (polling, another screen's change) shows no errors.
+    /// Fetches the year. A quiet load (polling, another screen's change) shows no errors. With
+    /// nothing of the year shown yet, its copy on the device shows meanwhile, and stays while the
+    /// server can't be reached.
     func load(quiet: Bool = false) async {
-        let (version, year) = (self.version, self.year)
+        let (version, sent, year) = (self.version, self.sent, self.year)
+        let get = api.cached("", query: ["year": String(year)], as: CalendarState.self)
+        if shownYear != year, let copy = get.saved() {
+            apply(copy.value, savedAt: copy.date)
+        } else if !quiet, savedCopy != nil {
+            savedCopy?.updating = true
+        }
         do {
-            let state: CalendarState = try await api.get("", query: ["year": String(year)])
-            // Ignore it if something changed meanwhile or the year switched.
-            guard version == self.version, year == self.year, !pending else {
-                reloadAfterSave = true
+            let state = try await get.fetch()
+            // The year switched: its own load is under way.
+            guard year == self.year else { return }
+            // Something changed or was sent meanwhile, which the answer may miss: ask again, now
+            // or once the queue is sent.
+            guard version == self.version, sent == self.sent else {
+                if pending { reloadAfterSave = true } else { await load(quiet: quiet) }
                 return
             }
-            reloadAfterSave = false
+            // What's still queued shows on top of it; once it's sent, the server's state alone.
+            reloadAfterSave = pending
             apply(state)
-        } catch is CancellationError {
         } catch let error as APIError where error.status == 404 {
             phase = .notFound
+            dropSavedCopy()
         } catch {
-            if phase != .loaded {
+            guard year == self.year else { return }
+            if let copy = savedCopy {
+                // The copy stays while the failure may pass (offline, the server down).
+                if APIError.isTemporary(error) {
+                    update(\.savedCopy, SavedCopy(date: copy.date, updating: false))
+                } else {
+                    phase = .failed(error.localizedDescription)
+                    dropSavedCopy()
+                }
+            } else if error is CancellationError {
+            } else if phase != .loaded {
                 phase = .failed(error.localizedDescription)
             } else if !quiet {
                 ErrorBanner.shared.show(error)
@@ -226,7 +337,14 @@ final class CalendarStore {
         }
     }
 
-    /// Reloads every 15 seconds while nothing is being saved (other people's changes).
+    private func dropSavedCopy() {
+        savedCopy = nil
+        shownYear = nil
+        updateReadOnly()
+    }
+
+    /// Reloads every 15 seconds while nothing is being saved (other people's changes, or the
+    /// server's state in place of the copy on the device once it can be reached again).
     func poll() async {
         while !Task.isCancelled {
             try? await Task.sleep(for: .seconds(15))
@@ -238,7 +356,38 @@ final class CalendarStore {
     private func enqueue(_ batch: Batch) {
         if batch.days == 0 { return }
         queue.append(batch)
+        saveQueue()
         Task { await flush() }
+    }
+
+    /// Keeps the queue on the device while it holds changes.
+    private func saveQueue() {
+        guard let queueFile else { return }
+        do {
+            if queue.isEmpty {
+                try? FileManager.default.removeItem(at: queueFile)
+            } else {
+                try FileManager.default.createDirectory(at: queueFile.deletingLastPathComponent(),
+                                                        withIntermediateDirectories: true)
+                try JSONEncoder().encode(queue).write(to: queueFile, options: .atomic)
+            }
+        } catch {
+            // The queue in memory is still sent; only quitting before that would lose it.
+        }
+    }
+
+    /// Takes the batches the server took or refused off the queue.
+    private func dequeue(_ n: Int) {
+        queue.removeFirst(min(n, queue.count))
+        sent += 1
+        saveQueue()
+    }
+
+    /// The connection is back: what waits is sent now, not after the backoff.
+    func retryNow() {
+        retryDelay = 2
+        retryWait?.cancel()
+        if !flushing && !queue.isEmpty { Task { await flush() } }
     }
 
     private func flush() async {
@@ -246,7 +395,8 @@ final class CalendarStore {
         flushing = true
         var saved = false, resync = false
         while let first = queue.first {
-            sync = .saving
+            // While retrying the badge stays: each try would flash "Saving…".
+            if sync != .retrying { sync = .saving }
             // Send consecutive batches of one kind as one request: ops apply in order.
             var n = 0, days = 0
             var entryOps: [CalendarEntryOp] = [], noteOps: [CalendarNoteOp] = []
@@ -266,24 +416,31 @@ final class CalendarStore {
                 } else {
                     try await api.perform(.post, "/notes", body: CalendarOpsBody(ops: noteOps))
                 }
-                queue.removeFirst(min(n, queue.count))
+                dequeue(n)
                 retryDelay = 2
+                sync = .saving
                 saved = true
             } catch let error as APIError where Self.isRejection(error) {
-                // The server refused (e.g. a type was deleted elsewhere): drop it and resync.
-                queue.removeFirst(min(n, queue.count))
+                // The server refused (e.g. a type was deleted elsewhere): it wins, drop it and resync.
+                dequeue(n)
                 ErrorBanner.shared.show(String(localized: "Couldn’t save: \(error.localizedDescription)"))
                 resync = true
             } catch {
+                // Offline or the server down: try again after a while, or once the connection is back.
                 sync = .retrying
-                try? await Task.sleep(for: .seconds(retryDelay))
+                let delay = retryDelay
                 retryDelay = min(retryDelay * 2, 30)
+                let wait = Task { _ = try? await Task.sleep(for: .seconds(delay)) }
+                retryWait = wait
+                await wait.value
+                retryWait = nil
             }
         }
         flushing = false
         sync = .idle
         if saved { notify?(.calendar) }
-        if resync || reloadAfterSave { await load(quiet: !resync) }
+        // The copy on the device shows: the server's state now has the changes.
+        if resync || reloadAfterSave || (saved && savedCopy != nil) { await load(quiet: !resync) }
     }
 
     private static func sameKind(_ a: Batch, _ b: Batch) -> Bool {
@@ -293,10 +450,10 @@ final class CalendarStore {
         }
     }
 
-    /// A refusal that won't change by trying again (unlike 429, 5xx and network errors).
+    /// A refusal that won't change by trying again (unlike 408, 429, 5xx and network errors).
     private static func isRejection(_ error: APIError) -> Bool {
         guard let status = error.status else { return false }
-        return status < 500 && status != 429
+        return !APIError.isTemporary(error) && status < 500
     }
 
     // MARK: Editing
@@ -630,6 +787,9 @@ final class CalendarStore {
         notes = [:]
         events = [:]
         birthdays = [:]
+        // The new year shows its own copy on the device, if it has one, or nothing until loaded.
+        savedCopy = nil
+        updateReadOnly()
         Task { await load() }
     }
 

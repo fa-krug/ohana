@@ -1,12 +1,12 @@
 import Foundation
-import Network
 import Observation
 import SwiftUI
 
 /// What the shopping lists keep on the device, per server and family, so they work in the shop
 /// without a connection (the app's version of the web's IndexedDB queue and the service
-/// worker's page cache, server/lib/offline and public/sw.js): the ticks not sent yet, and the
-/// lists as last loaded (shown read-only while offline). Files under Application Support:
+/// worker's page cache, server/lib/offline and public/sw.js): the ticks and adds not sent yet, and the
+/// lists as last loaded (shown at once on a cold start, and read-only while offline). Files under
+/// Application Support:
 /// `Ohana/Shopping/<server>_<family>/`.
 struct ShoppingOfflineStore {
     let directory: URL
@@ -17,12 +17,27 @@ struct ShoppingOfflineStore {
 
     /// The store of a family on a server.
     init(api: FamilyAPI) {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+        directory = Self.base.appending(path: Self.safe(Self.prefix(api.client.baseURL) + api.familyID),
+                                        directoryHint: .isDirectory)
+    }
+
+    private static var base: URL {
+        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
-        let server = api.client.baseURL.host() ?? "server"
-        let port = api.client.baseURL.port.map { "-\($0)" } ?? ""
-        directory = base.appending(path: "Ohana/Shopping/\(Self.safe("\(server)\(port)_\(api.familyID)"))",
-                                   directoryHint: .isDirectory)
+        return support.appending(path: "Ohana/Shopping", directoryHint: .isDirectory)
+    }
+
+    private static func prefix(_ server: URL) -> String {
+        "\(server.host() ?? "server")\(server.port.map { "-\($0)" } ?? "")_"
+    }
+
+    /// Signing out: every family's store on `server` is removed (the ticks, too).
+    static func removeAll(server: URL) {
+        let prefix = safe(prefix(server))
+        let folders = (try? FileManager.default.contentsOfDirectory(at: base, includingPropertiesForKeys: nil)) ?? []
+        for folder in folders where folder.lastPathComponent.hasPrefix(prefix) {
+            try? FileManager.default.removeItem(at: folder)
+        }
     }
 
     /// A file name of letters, digits, dots and dashes.
@@ -31,6 +46,7 @@ struct ShoppingOfflineStore {
     }
 
     private var ticksFile: URL { directory.appending(path: "ticks.json") }
+    private var addsFile: URL { directory.appending(path: "adds.json") }
     private var overviewFile: URL { directory.appending(path: "overview.json") }
     private func listFile(_ id: String) -> URL { directory.appending(path: "list-\(Self.safe(id)).json") }
 
@@ -49,6 +65,21 @@ struct ShoppingOfflineStore {
         }
     }
 
+    // MARK: Adds
+
+    /// The adds waiting to be sent, oldest first.
+    func loadAdds() -> [ShoppingPendingAdd] {
+        read([ShoppingPendingAdd].self, from: addsFile) ?? []
+    }
+
+    func saveAdds(_ adds: [ShoppingPendingAdd]) {
+        if adds.isEmpty {
+            try? FileManager.default.removeItem(at: addsFile)
+        } else {
+            write(adds, to: addsFile)
+        }
+    }
+
     // MARK: Lists
 
     func saveOverview(_ overview: ShoppingOverview) {
@@ -60,12 +91,22 @@ struct ShoppingOfflineStore {
         read(ShoppingOverview.self, from: overviewFile)
     }
 
+    /// The overview as last loaded, and when.
+    func savedOverview() -> Saved<ShoppingOverview>? {
+        saved(ShoppingOverview.self, from: overviewFile)
+    }
+
     func saveList(_ list: ShoppingList) {
         write(list, to: listFile(list.id))
     }
 
     func loadList(_ id: String) -> ShoppingList? {
         read(ShoppingList.self, from: listFile(id))
+    }
+
+    /// A list as last loaded, and when.
+    func savedList(_ id: String) -> Saved<ShoppingList>? {
+        saved(ShoppingList.self, from: listFile(id))
     }
 
     /// Lists no longer among the family's are removed.
@@ -84,6 +125,12 @@ struct ShoppingOfflineStore {
         return try? JSONDecoder().decode(type, from: data)
     }
 
+    private func saved<T: Decodable>(_ type: T.Type, from url: URL) -> Saved<T>? {
+        guard let value = read(type, from: url) else { return nil }
+        let date = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+        return Saved(value: value, date: date ?? .distantPast)
+    }
+
     private func write(_ value: some Encodable, to url: URL) {
         do {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -91,42 +138,6 @@ struct ShoppingOfflineStore {
         } catch {
             // Only a convenience: the server keeps the real state.
         }
-    }
-}
-
-/// Whether the device has a connection (the web's `navigator.onLine`); queues send what they
-/// hold when it comes back.
-@Observable
-final class ShoppingConnectivity {
-    static let shared = ShoppingConnectivity()
-
-    private(set) var isOnline = true
-    @ObservationIgnored private var monitor: NWPathMonitor?
-    @ObservationIgnored private var onReconnect: [() -> Void] = []
-
-    private init() {}
-
-    /// Starts watching (once).
-    func start() {
-        guard monitor == nil else { return }
-        let monitor = NWPathMonitor()
-        monitor.pathUpdateHandler = { path in
-            let online = path.status == .satisfied
-            Task { @MainActor in ShoppingConnectivity.shared.update(online) }
-        }
-        monitor.start(queue: DispatchQueue(label: "ohana.shopping.connectivity"))
-        self.monitor = monitor
-    }
-
-    /// Called every time the connection comes back.
-    func whenReconnected(_ action: @escaping () -> Void) {
-        onReconnect.append(action)
-    }
-
-    private func update(_ online: Bool) {
-        guard online != isOnline else { return }
-        isOnline = online
-        if online { onReconnect.forEach { $0() } }
     }
 }
 
@@ -149,12 +160,12 @@ enum ShoppingSyncStatus: Equatable {
 }
 
 /// The bar above a shopping list while offline, while the server can't be reached, or while
-/// sending what was ticked meanwhile (the web's offline-indicator.tsx).
+/// sending what was ticked or added meanwhile (the web's offline-indicator.tsx).
 struct ShoppingOfflineBanner: View {
     let queue: ShoppingTickQueue
     /// The list shown is the copy kept on the device.
     var showsSavedCopy = false
-    @State private var connectivity = ShoppingConnectivity.shared
+    @State private var connectivity = Connectivity.shared
 
     private var status: ShoppingSyncStatus? {
         .current(isOnline: connectivity.isOnline, waiting: queue.isWaiting, savedCopy: showsSavedCopy,
@@ -194,6 +205,11 @@ struct ShoppingOfflineBanner: View {
                 text
                 if showsSavedCopy {
                     Text("Showing the list as it was last loaded.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                if !queue.pendingAdds.isEmpty {
+                    Text("New items show a clock until they’re sent.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

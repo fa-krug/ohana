@@ -7997,6 +7997,16 @@
         }
       }
     },
+    "New items show a clock until they’re sent.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Artikel zeigen eine Uhr, bis sie gesendet sind."
+          }
+        }
+      }
+    },
     "New password": {
       "localizations": {
         "de": {
@@ -8985,6 +8995,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aus"
+          }
+        }
+      }
+    },
+    "Offline · as of %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Offline · Stand %@"
           }
         }
       }
@@ -11475,6 +11495,16 @@
         }
       }
     },
+    "Saved on this device – will sync": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf diesem Gerät gespeichert – wird synchronisiert"
+          }
+        }
+      }
+    },
     "Saved on this device. Weekends are left out when filling, pasting or toggling ranges.": {
       "localizations": {
         "de": {
@@ -12051,6 +12081,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Server"
+          }
+        }
+      }
+    },
+    "Server unreachable · as of %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server nicht erreichbar · Stand %@"
           }
         }
       }
@@ -14599,6 +14639,16 @@
         }
       }
     },
+    "Tries again": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Versucht es erneut"
+          }
+        }
+      }
+    },
     "Try again": {
       "localizations": {
         "de": {
@@ -14879,6 +14929,16 @@
         }
       }
     },
+    "Updating…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird aktualisiert …"
+          }
+        }
+      }
+    },
     "Upload Photo": {
       "localizations": {
         "de": {
@@ -15035,6 +15095,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ansehen"
+          }
+        }
+      }
+    },
+    "Waiting to be sent": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wartet aufs Senden"
           }
         }
       }

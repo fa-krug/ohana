@@ -26,6 +26,9 @@ struct AppointmentSlotView: View {
     /// On screen (not covered by a pushed page): only then it sets the module menu.
     @State private var onScreen = false
 
+    /// Booking, removing and ignoring wait while what's shown is the copy on the device.
+    private var canEdit: Bool { family.canEdit && !state.isSaved }
+
     var body: some View {
         LoadStateView(state: state, retry: load) { detail in
             ScrollView {
@@ -101,7 +104,7 @@ struct AppointmentSlotView: View {
     }
 
     private func load() async {
-        await LoadState.run($state) { try await family.api.get("/appointments/searches/\(searchID)/slots/\(resultID)") }
+        await LoadState.run($state, family.api.cached("/appointments/searches/\(searchID)/slots/\(resultID)"))
     }
 
     /// The Appointments menu: the page's actions, Mark as Booked with ⌘B.
@@ -110,7 +113,7 @@ struct AppointmentSlotView: View {
             if let url = detail.slot.bookingURL {
                 Button("Book on \(detail.slot.sourceName)") { openProvider(url) }
             }
-            if family.canEdit {
+            if canEdit {
                 Button("Mark as Booked…") { booking = true }
                     .keyboardShortcut("b", modifiers: .command)
                     .disabled(detail.booking != nil)
@@ -233,7 +236,7 @@ struct AppointmentSlotView: View {
                     family.open(AppointmentLogic.calendarRoute(date: booked.date))
                 }
                 .buttonStyle(.bordered)
-                if family.canEdit {
+                if canEdit {
                     Button("Remove", systemImage: "trash", role: .destructive) { confirmRemove = true }
                         .buttonStyle(.bordered)
                 }
@@ -261,12 +264,12 @@ struct AppointmentSlotView: View {
             openURL(AppointmentLogic.googleSearchURL([slot.doctorName, slot.doctorSubtitle, slot.address]))
         }
         .buttonStyle(.bordered)
-        if detail.booking == nil && family.canEdit {
+        if detail.booking == nil && canEdit {
             Button("Mark as booked", systemImage: "calendar.badge.checkmark") { booking = true }
                 .buttonStyle(.bordered)
                 .help("Mark as booked (⌘B)")
         }
-        if family.canEdit {
+        if canEdit {
             Button("Ignore", systemImage: "eye.slash") { ignore(slot) }
                 .buttonStyle(.bordered)
                 .help("Skip this doctor with this reason for the visit in this search from now on")

@@ -449,6 +449,207 @@ struct CalendarEventDragTests {
     }
 }
 
+/// Answers the saved copy's and the queue's requests as set (GETs: 503 or `state`; POST /entries:
+/// `entriesStatus`) and records them; nothing leaves the test.
+nonisolated final class CalendarQueueStubProtocol: URLProtocol {
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var log: [String] = []
+    nonisolated(unsafe) private static var getBody: String?
+    nonisolated(unsafe) private static var postStatus = 200
+
+    static var requests: [String] { lock.withLock { log } }
+    /// The GETs' answer; nil: 503 (the server down).
+    static var state: String? {
+        get { lock.withLock { getBody } }
+        set { lock.withLock { getBody = newValue } }
+    }
+    static var entriesStatus: Int {
+        get { lock.withLock { postStatus } }
+        set { lock.withLock { postStatus = newValue } }
+    }
+    static func reset() { lock.withLock { log = []; getBody = nil; postStatus = 200 } }
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override func startLoading() {
+        let method = request.httpMethod ?? "GET"
+        let path = request.url?.path ?? ""
+        Self.lock.withLock { Self.log.append("\(method) \(path)") }
+        var status = 200
+        var body = "{}"
+        if method == "GET" {
+            if let state = Self.state { body = state } else { status = 503 }
+        } else if path.hasSuffix("/entries") {
+            status = Self.entriesStatus
+            if status >= 400 { body = #"{"error":"Unknown type"}"# }
+        }
+        let response = HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil,
+                                       headerFields: ["Content-Type": "application/json"])!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: Data(body.utf8))
+        client?.urlProtocolDidFinishLoading(self)
+    }
+    override func stopLoading() {}
+}
+
+/// The copy on the device and the queue of changes kept there (offline editing; the server wins).
+@Suite(.serialized)
+struct CalendarSavedCopyTests {
+    private static let json = #"""
+    {"family":{"id":"f1","feedId":"Abc123Def456","name":"Krug","access":"edit","readOnly":false},
+     "types":[{"id":"sick","year":2026,"name":"Sick","color":"#ef4444","role":"none","position":0}],
+     "entries":{"2026-03-02":["sick"]}}
+    """#
+
+    private var state: CalendarState { try! JSONDecoder().decode(CalendarState.self, from: Data(Self.json.utf8)) }
+
+    private func temporaryDirectory() -> URL {
+        FileManager.default.temporaryDirectory.appending(path: "ohana-calendar-\(UUID().uuidString)")
+    }
+
+    private func client(cache: ResponseCache? = nil) -> APIClient {
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [CalendarQueueStubProtocol.self]
+        return APIClient(baseURL: URL(string: "https://x.example")!, token: nil,
+                         session: URLSession(configuration: config), cache: cache)
+    }
+
+    private func until(_ condition: () -> Bool) async -> Bool {
+        for _ in 0..<300 {
+            if condition() { return true }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        return condition()
+    }
+
+    @Test func showsTheCopyOnTheDeviceWhileTheServerIsDownAndQueuesChanges() async throws {
+        CalendarQueueStubProtocol.reset()
+        CalendarQueueStubProtocol.entriesStatus = 503
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let cache = ResponseCache(directory: directory.appending(path: "responses"))
+        let queueFile = directory.appending(path: "queue/queue.json")
+        let store = CalendarStore(api: FamilyAPI(client: client(cache: cache), familyID: "f1"), year: 2026,
+                                  readOnly: false, queueFile: queueFile)
+        let key = store.api.cached("", query: ["year": "2026"], as: CalendarState.self).key
+        cache.write(Data(Self.json.utf8), for: key)
+        ResponseCache.waitForWrites()
+
+        // GETs answer 503: the copy stays, without an error, and can be changed.
+        await store.load()
+        #expect(store.phase == .loaded)
+        #expect(store.types(on: d("2026-03-02")).map(\.id) == ["sick"])
+        #expect(store.savedCopy?.updating == false)
+        #expect(!store.readOnly && !store.isViewer)
+        // Types are changed on the server at once: not on the copy.
+        #expect(store.typesReadOnly)
+        store.select(d("2026-03-03"))
+        store.toggleOnSelection("sick")
+        #expect(store.entries[d("2026-03-03")] == ["sick"])
+        #expect(FileManager.default.fileExists(atPath: queueFile.path()))
+        #expect(await until { store.sync == .retrying })
+
+        // The server's answer replaces the copy; what's still queued shows on top of it.
+        store.apply(state)
+        #expect(store.savedCopy == nil)
+        #expect(!store.typesReadOnly)
+        #expect(store.entries[d("2026-03-03")] == ["sick"])
+        CalendarQueueStubProtocol.entriesStatus = 200
+        store.retryNow()
+        #expect(await until { !store.pending })
+        #expect(!FileManager.default.fileExists(atPath: queueFile.path()))
+    }
+
+    @Test func readsTheQueueBackAndSendsItWhenTheServerAnswers() async throws {
+        CalendarQueueStubProtocol.reset()
+        CalendarQueueStubProtocol.entriesStatus = 503
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let queueFile = directory.appending(path: "queue.json")
+        let api = FamilyAPI(client: client(), familyID: "f1")
+        let first = CalendarStore(api: api, year: 2026, readOnly: false, queueFile: queueFile)
+        first.skipWeekends = false
+        first.apply(state)
+        first.select(d("2026-03-02"))
+        first.toggleOnSelection("sick")
+        first.setNote(CalendarNote(icon: "🎈", comment: "Party"), on: [d("2026-03-04")])
+        #expect(first.entries[d("2026-03-02")] == nil)
+        #expect(FileManager.default.fileExists(atPath: queueFile.path()))
+
+        // The app quit and starts again: the changes show on top of the loaded state.
+        let second = CalendarStore(api: api, year: 2026, readOnly: false, queueFile: queueFile)
+        second.apply(state)
+        #expect(second.entries[d("2026-03-02")] == nil)
+        #expect(second.notes[d("2026-03-04")] == CalendarNote(icon: "🎈", comment: "Party"))
+        #expect(second.pending)
+
+        // The server answers again: what was queued is sent and the file removed; the server's
+        // state is then the truth.
+        CalendarQueueStubProtocol.entriesStatus = 200
+        CalendarQueueStubProtocol.state = Self.json
+        second.retryNow()
+        #expect(await until { !second.pending })
+        #expect(!FileManager.default.fileExists(atPath: queueFile.path()))
+        #expect(CalendarQueueStubProtocol.requests.contains("POST /api/v1/families/f1/entries"))
+        #expect(CalendarQueueStubProtocol.requests.contains("POST /api/v1/families/f1/notes"))
+        first.retryNow()
+        #expect(await until { !first.pending })
+    }
+
+    @Test func aLoadWhileChangesWaitShowsThemOnTop() async throws {
+        CalendarQueueStubProtocol.reset()
+        CalendarQueueStubProtocol.entriesStatus = 503
+        CalendarQueueStubProtocol.state = Self.json
+        let store = CalendarStore(api: FamilyAPI(client: client(), familyID: "f1"), year: 2026, readOnly: false)
+        store.skipWeekends = false
+        store.apply(state)
+        store.select(d("2026-03-05"))
+        store.toggleOnSelection("sick")
+        #expect(await until { store.sync == .retrying })
+        await store.load()
+        #expect(store.entries[d("2026-03-02")] == ["sick"])
+        #expect(store.entries[d("2026-03-05")] == ["sick"])
+        CalendarQueueStubProtocol.entriesStatus = 200
+        store.retryNow()
+        #expect(await until { !store.pending })
+    }
+
+    @Test func aRefusalDropsTheBatchAlsoFromTheDevice() async throws {
+        CalendarQueueStubProtocol.reset()
+        CalendarQueueStubProtocol.entriesStatus = 400
+        CalendarQueueStubProtocol.state = Self.json
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let queueFile = directory.appending(path: "queue.json")
+        let store = CalendarStore(api: FamilyAPI(client: client(), familyID: "f1"), year: 2026,
+                                  readOnly: false, queueFile: queueFile)
+        store.skipWeekends = false
+        store.apply(state)
+        store.select(d("2026-03-06"))
+        store.toggleOnSelection("sick")
+        #expect(store.entries[d("2026-03-06")] == ["sick"])
+        // The server wins: the change is dropped, the file removed, the server's state loaded.
+        #expect(await until { !store.pending && store.entries[d("2026-03-06")] == nil })
+        #expect(!FileManager.default.fileExists(atPath: queueFile.path()))
+        #expect(CalendarQueueStubProtocol.requests.filter { $0 == "GET /api/v1/families/f1" }.count >= 1)
+    }
+
+    @Test func appliesOpsLikeTheServer() {
+        var entries: CalendarEntries = [d("2026-03-02"): ["a"], d("2026-03-03"): ["a", "b"]]
+        CalendarMath.apply([CalendarEntryOp(action: .add, type: "b", dates: [d("2026-03-02"), d("2027-01-01")]),
+                            CalendarEntryOp(action: .remove, type: "a", dates: [d("2026-03-03")])],
+                           to: &entries, year: 2026)
+        // Days of another year are left to that year.
+        #expect(entries == [d("2026-03-02"): ["a", "b"], d("2026-03-03"): ["b"]])
+        CalendarMath.apply([CalendarEntryOp(action: .remove, type: "b", dates: [d("2026-03-03")])], to: &entries, year: 2026)
+        #expect(entries[d("2026-03-03")] == nil)
+        var notes: CalendarNotes = [d("2026-03-02"): CalendarNote(icon: "🎈", comment: "")]
+        CalendarMath.apply([CalendarNoteOp(action: .clear, dates: [d("2026-03-02")]),
+                            CalendarNoteOp(action: .set, dates: [d("2026-03-04")], icon: "", comment: "Trip")],
+                           to: &notes, year: 2026)
+        #expect(notes == [d("2026-03-04"): CalendarNote(icon: "", comment: "Trip")])
+    }
+}
 
 struct CalendarRouteTests {
     @Test func showsADayOfTheYear() {

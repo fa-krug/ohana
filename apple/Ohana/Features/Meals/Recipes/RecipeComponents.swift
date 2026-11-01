@@ -226,16 +226,23 @@ struct RecipePhotoPlaceholder: View {
 
 // MARK: Shared lists, cached
 
-/// The shared ingredients and units (the same for every family), loaded once per session.
+/// The shared ingredients and units (the same for every family), loaded once per session; the
+/// copy on the device when the server can't be reached.
 enum RecipeCatalogCache {
     private static var cached: (server: String, catalog: RecipeCatalog)?
 
     static func load(_ api: FamilyAPI, refresh: Bool = false) async throws -> RecipeCatalog {
         let server = api.client.baseURL.absoluteString
         if !refresh, let cached, cached.server == server { return cached.catalog }
-        let catalog: RecipeCatalog = try await api.get("/meals/catalog")
-        cached = (server, catalog)
-        return catalog
+        let get = api.cached("/meals/catalog", as: RecipeCatalog.self)
+        do {
+            let catalog = try await get.fetch()
+            cached = (server, catalog)
+            return catalog
+        } catch {
+            // Not kept for the session: the next time asks the server again.
+            return try get.savedIfTemporary(error)
+        }
     }
 }
 

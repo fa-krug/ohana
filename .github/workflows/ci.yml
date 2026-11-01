@@ -183,7 +183,9 @@ jobs:
       - name: Redeploy Arcane project
         env:
           ARCANE_URL: https://arcane.fa-krug.de
-          PROJECT: ohana
+          # The Arcane project `ohana` by its ID: its name also matches `ohana-relay` (the push
+          # relay's project), and arcane-cli refuses an ambiguous name.
+          PROJECT: 551344d3-cdc5-4ba9-a597-676a8c95d6b2
         run: |
           set -euo pipefail
           arcane-cli config set server-url "$ARCANE_URL"

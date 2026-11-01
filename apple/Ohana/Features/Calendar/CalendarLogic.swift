@@ -235,6 +235,30 @@ enum CalendarMath {
         }
     }
 
+    // MARK: Ops not sent yet
+
+    /// Entry ops as the server applies them (vacation.ts `applyEntryOps`), on the days of `year`.
+    static func apply(_ ops: [CalendarEntryOp], to entries: inout CalendarEntries, year: Int) {
+        for op in ops {
+            for d in op.dates where d.year == year {
+                var ids = entries[d] ?? []
+                switch op.action {
+                case .add: if !ids.contains(op.type) { ids.append(op.type) }
+                case .remove: ids.removeAll { $0 == op.type }
+                }
+                entries[d] = ids.isEmpty ? nil : ids
+            }
+        }
+    }
+
+    /// Note ops as the server applies them (`applyNoteOps`), on the days of `year`.
+    static func apply(_ ops: [CalendarNoteOp], to notes: inout CalendarNotes, year: Int) {
+        for op in ops {
+            let note = op.action == .set ? noteOrNil(CalendarNote(icon: op.icon ?? "", comment: op.comment ?? "")) : nil
+            for d in op.dates where d.year == year { notes[d] = note }
+        }
+    }
+
     // MARK: Copy and paste
 
     static func pattern(_ entries: CalendarEntries, days: [Day]) -> CalendarPattern {

@@ -108,5 +108,9 @@
     }
   },
   "Settings…": "Einstellungen …",
-  "Account, sign-in and security": "Konto, Anmeldung und Sicherheit"
+  "Account, sign-in and security": "Konto, Anmeldung und Sicherheit",
+  "Offline · as of %@": "Offline · Stand %@",
+  "Server unreachable · as of %@": "Server nicht erreichbar · Stand %@",
+  "Updating…": "Wird aktualisiert …",
+  "Tries again": "Versucht es erneut"
 }

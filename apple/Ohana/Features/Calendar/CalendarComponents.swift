@@ -276,10 +276,10 @@ struct CalendarEmptyTypes: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Text(store.readOnly ? LocalizedStringKey("No entry types for \(String(store.year)).") : LocalizedStringKey("No entry types for \(String(store.year)) yet."))
+            Text(store.typesReadOnly ? LocalizedStringKey("No entry types for \(String(store.year)).") : LocalizedStringKey("No entry types for \(String(store.year)) yet."))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-            if !store.readOnly {
+            if !store.typesReadOnly {
                 if let source = store.copySource {
                     Button("Copy types from \(String(source))") {
                         perform { try await store.copyTypes(from: source) }

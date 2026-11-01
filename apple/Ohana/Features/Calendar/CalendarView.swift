@@ -21,7 +21,10 @@ struct CalendarView: View {
         .ohanaBackground(ModuleTint.calendar)
         .navigationTitle("Calendar")
         .onAppear {
-            if store == nil { store = CalendarStore(api: family.api, readOnly: !family.canEdit) }
+            if store == nil {
+                store = CalendarStore(api: family.api, readOnly: !family.canEdit,
+                                      queueFile: CalendarStore.queueFile(for: family.api))
+            }
         }
     }
 }
@@ -93,7 +96,14 @@ struct CalendarPlannerView: View {
         }
         .environment(actions)
         .environment(\.calendarGridFocused, focused)
-        .overlay(alignment: .topTrailing) { syncBadge }
+        .overlay(alignment: .topTrailing) {
+            VStack(alignment: .trailing, spacing: 0) {
+                if let copy = store.savedCopy {
+                    SavedCopyBadge(date: copy.date, updating: copy.updating, retry: { await store.load() })
+                }
+                syncBadge
+            }
+        }
         .background { zoomShortcuts }
         .focusedSceneValue(\.newItem, store.readOnly ? nil : NewItemAction(title: "New Event") {
             actions.addEvent(on: store.selection.isEmpty ? nil : store.focus)
@@ -115,6 +125,7 @@ struct CalendarPlannerView: View {
         .background { CalendarFocusedMonth(store: store, month: $month) }
     }
 
+    /// The saved copy shows as loaded: its badge is the calendar's own, beside `syncBadge`.
     private var loadState: LoadState<Bool> {
         switch store.phase {
         case .loading: .loading
@@ -169,7 +180,7 @@ struct CalendarPlannerView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    if store.readOnly { readOnlyNote }
+                    if store.isViewer { readOnlyNote }
                     CalendarCoveragePill(store: store, onJump: { reveal = CalendarReveal($0) })
                 }
                 .padding(.horizontal)
@@ -247,7 +258,7 @@ struct CalendarPlannerView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     HStack {
-                        if store.readOnly { readOnlyNote }
+                        if store.isViewer { readOnlyNote }
                         Spacer(minLength: 0)
                         CalendarCoveragePill(store: store, onJump: { reveal = CalendarReveal($0) })
                     }
@@ -318,7 +329,8 @@ struct CalendarPlannerView: View {
     }
 
     /// "Saving…" while changes are on their way, "Offline – retrying" while the server can't
-    /// be reached (the changes stay and are sent again).
+    /// be reached (the changes stay on the device and are sent again). Under the saved copy's
+    /// badge, which already says the server can't be reached, only that the changes wait.
     @ViewBuilder
     private var syncBadge: some View {
         switch store.sync {
@@ -331,11 +343,20 @@ struct CalendarPlannerView: View {
                 .chip()
                 .padding(8)
         case .retrying:
-            Label("Offline – retrying", systemImage: "wifi.slash")
-                .font(.caption)
-                .foregroundStyle(.red)
-                .chip(tint: .red)
-                .padding(8)
+            if store.savedCopy != nil {
+                Label("Saved on this device – will sync", systemImage: "tray.and.arrow.up")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .chip()
+                    .padding(.horizontal, 8)
+                    .padding(.bottom, 8)
+            } else {
+                Label("Offline – retrying", systemImage: "wifi.slash")
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .chip(tint: .red)
+                    .padding(8)
+            }
         }
     }
 
