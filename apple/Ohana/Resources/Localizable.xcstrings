@@ -4403,6 +4403,16 @@
         }
       }
     },
+    "Dismiss timer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timer ausblenden"
+          }
+        }
+      }
+    },
     "Distance from home": {
       "localizations": {
         "de": {
@@ -4509,6 +4519,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dauer (Sek.)"
+          }
+        }
+      }
+    },
+    "Durations start a timer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeitangaben starten einen Timer"
           }
         }
       }
@@ -11729,6 +11749,16 @@
         }
       }
     },
+    "Shows the step": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeigt den Schritt"
+          }
+        }
+      }
+    },
     "Sign in": {
       "localizations": {
         "de": {
@@ -12359,6 +12389,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Das Ziehen des Anfassers abbrechen oder die Auswahl aufheben"
+          }
+        }
+      }
+    },
+    "Stop timer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timer stoppen"
           }
         }
       }
@@ -13369,6 +13409,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Termine mit Uhrzeit, z. B. gebuchte Arzttermine; sie nennen Arzt und Praxis"
+          }
+        }
+      }
+    },
+    "Timer done: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timer fertig: %@"
           }
         }
       }

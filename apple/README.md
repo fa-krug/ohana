@@ -71,6 +71,8 @@ Ohana/
   Features/       One folder per module: Overview, Calendar, Finance, Meals, Appointments,
                   Assistant, Settings
   Resources/      Assets (app icon, accent color), Localizable.xcstrings (en + de), Demo (demo data)
+Shared/           Types the iOS app shares with the widget extension (CookTimerAttributes)
+OhanaWidgets/     Widget extension (iOS, embedded in the app): the cook timers' Live Activity
 OhanaTests/       Swift Testing unit tests
 ```
 
@@ -102,7 +104,9 @@ Connect). The workflow needs one Archive action per platform, each with its own 
 it finds no destination). `ci_scripts/ci_post_clone.sh` generates the project with XcodeGen there, since
 `Ohana.xcodeproj` isn't committed. `MARKETING_VERSION` in `project.yml` is the version people see;
 raise it for a new release. The build number (`CURRENT_PROJECT_VERSION`) doesn't need editing:
-Xcode Cloud gives every build its own. The app declares no encryption beyond HTTPS
+Xcode Cloud gives every build its own. The iOS app embeds a widget extension
+(`de.fa-krug.Ohana.Widgets`, the cook timers' Live Activity), signed with it; the app has the
+Time Sensitive Notifications capability (finished timers come through a Focus). The app declares no encryption beyond HTTPS
 (`ITSAppUsesNonExemptEncryption`) and its use of `UserDefaults` in
 `Ohana/Resources/PrivacyInfo.xcprivacy`; the iOS icon (`icon-1024.png`) must stay without an
 alpha channel.
