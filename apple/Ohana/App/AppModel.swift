@@ -43,6 +43,7 @@ final class AppModel {
             for context in contexts.values { context.serverInfo = serverInfo }
             AssistantInbox.shared.available = isEnabled(.assistant)
             NotificationCenter.default.post(name: .serverModulesChanged, object: nil)
+            syncWidgets()
         }
     }
 
@@ -63,6 +64,7 @@ final class AppModel {
             guard !isDemo, selectedFamilyID != oldValue else { return }
             UserDefaults.standard.set(selectedFamilyID, forKey: Keys.family)
             SharedConnection.remember(familyID: selectedFamilyID)
+            syncWidgets()
         }
     }
 
@@ -84,7 +86,12 @@ final class AppModel {
         static let token = SharedConnection.Account.token
     }
 
+    /// Whether this model tells the widgets what to show (`WidgetSync`): the app's, not the
+    /// previews' and tests'.
+    private var syncsWidgets = false
+
     init() {
+        syncsWidgets = true
         selectedFamilyID = UserDefaults.standard.string(forKey: Keys.family)
         #if DEBUG
         // Development: `-OHANA_DEV_SERVER http://localhost:3000 -OHANA_DEV_TOKEN ohana_…` as launch
@@ -209,6 +216,7 @@ final class AppModel {
                 selectedFamilyID = families.first?.id
             }
             phase = .ready
+            syncWidgets()
             // Push: a new APNs token, a new relay token (while it's on for this device).
             let info = serverInfo
             Task { await PushNotifications.shared.renew(client: client, info: info) }
@@ -244,6 +252,7 @@ final class AppModel {
         await whileSwitching(.demo) {
             Keychain.delete(Keys.token)
             SharedConnection.forget()
+            if syncsWidgets { WidgetSync.reload() }
             // The server drops the device's push with its token.
             PushNotifications.shared.forget()
             connectDemo()
@@ -252,6 +261,13 @@ final class AppModel {
             }
             await refresh()
         }
+    }
+
+    /// The widgets show the family on screen (`SharedConnection`): they reload, and learn which
+    /// modules the server has off.
+    private func syncWidgets() {
+        guard syncsWidgets, !isDemo, phase == .ready else { return }
+        WidgetSync.show(disabledModules: Module.allCases.filter { !isEnabled($0) }.map(\.rawValue))
     }
 
     /// The server a link brought in the demo, once.
@@ -347,11 +363,13 @@ final class FamilyContext {
 
     /// Something changed `areas` (the assistant, another screen): views showing them reload.
     func didChange(_ areas: DataArea...) {
-        for area in areas { revisions[area, default: 0] += 1 }
+        didChange(areas)
     }
 
+    /// The widgets reload too (`WidgetSync`).
     func didChange(_ areas: [DataArea]) {
         for area in areas { revisions[area, default: 0] += 1 }
+        if !api.client.isDemo { WidgetSync.reloadSoon() }
     }
 
     fileprivate func adoptRevisions(from other: FamilyContext) {

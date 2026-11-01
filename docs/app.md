@@ -45,6 +45,14 @@ The ✨ button at the top right of every page opens the assistant next to what y
 (⌘J on the Mac and iPad keyboards, ⇧⌘J for a new question). On the Mac it's also in the menu bar,
 and *Ask Ohana* is available as a Shortcut and to Siri.
 
+## Widgets
+
+Add Ohana's widgets to the Home Screen, the Lock Screen (iPhone and iPad) or the Mac's desktop:
+**Today** and **Tomorrow** (calendar, events, birthdays), **Tonight's dinner**, **Shopping
+list** and **Appointment found** (the earliest slot your searches found). They show the family
+selected in the app, load it from your server with the app's token and refresh on their own; a
+tap opens the same thing in the app. Before you connect a server they ask you to open the app.
+
 ## Notifications and links
 
 Ohana's notifications reach you through the channels your family set up (Pushover, Pushbullet,
