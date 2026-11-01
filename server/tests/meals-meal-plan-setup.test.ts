@@ -14,7 +14,7 @@ const now = new Date("2026-06-27T12:00:00Z"); // a Saturday
 
 function seed() {
   const db = createTestDb();
-  db.insert(families).values({ id: "h1", feedId: "feedh1", name: "Home", createdAt: now, updatedAt: now }).run();
+  db.insert(families).values({ id: "h1", name: "Home", createdAt: now, updatedAt: now }).run();
   db.insert(units).values({ id: 1, nameEn: "gram", nameDe: "Gramm", abbreviation: "g", conversionFactor: "1" }).run();
   db.insert(ingredients).values([
     { id: 1, nameEn: "Tomato", nameDe: "Tomate", category: "PRODUCE" },
@@ -108,7 +108,7 @@ describe("populateIteration gap-fill (A1)", () => {
   // no crash, all days filled, only that recipe used.
   it("falls back to the full pool when no other recipes exist", () => {
     const db = createTestDb();
-    db.insert(families).values({ id: "h1", feedId: "feedh1", name: "Home", createdAt: now, updatedAt: now }).run();
+    db.insert(families).values({ id: "h1", name: "Home", createdAt: now, updatedAt: now }).run();
     db.insert(units).values({ id: 1, nameEn: "gram", nameDe: "Gramm", abbreviation: "g", conversionFactor: "1" }).run();
     db.insert(ingredients).values({ id: 1, nameEn: "Tomato", nameDe: "Tomate", category: "PRODUCE" }).run();
     db.insert(recipes).values({ id: "only", familyId: "h1", title: "only", description: "", listType: "KNOWN", defaultServings: 2, createdAt: now, updatedAt: now }).run();
@@ -128,7 +128,7 @@ describe("populateIteration gap-fill (A1)", () => {
   // recipe, r2 must appear on gap-fill days.
   it("ignores excluded tags in the gap-fill pool (Django parity)", () => {
     const db = createTestDb();
-    db.insert(families).values({ id: "h1", feedId: "feedh1", name: "Home", createdAt: now, updatedAt: now }).run();
+    db.insert(families).values({ id: "h1", name: "Home", createdAt: now, updatedAt: now }).run();
     db.insert(units).values({ id: 1, nameEn: "gram", nameDe: "Gramm", abbreviation: "g", conversionFactor: "1" }).run();
     db.insert(ingredients).values({ id: 1, nameEn: "Tomato", nameDe: "Tomate", category: "PRODUCE" }).run();
     db.insert(mealTags).values({ id: "tEx", familyId: "h1", category: "DIETARY", nameEn: "Spicy", nameDe: "Scharf" }).run();

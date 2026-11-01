@@ -191,13 +191,21 @@ struct CalendarDayCell: View, Equatable {
                         .foregroundStyle(CalendarMath.prefersDarkText(on: type.color) ? Color.black : Color.white)
                         .background(Color(calendarHex: type.color), in: .capsule)
                 }
-                ForEach(events) { event in
-                    Label(event.line, systemImage: event.isAppointment ? "stethoscope" : "clock")
-                        .font(.caption2)
-                        .lineLimit(1)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .modifier(CalendarEventDragSource(store: store, event: event, enabled: !info.readOnly,
-                                                          inGrid: true))
+                ForEach(events, id: \.uid) { event in
+                    Label {
+                        if event.repeats {
+                            Text("\(event.line(on: day)) \(Image(systemName: "repeat"))")
+                        } else {
+                            Text(event.line(on: day))
+                        }
+                    } icon: {
+                        Image(systemName: event.isAppointment ? "stethoscope" : "clock")
+                    }
+                    .font(.caption2)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .modifier(CalendarEventDragSource(store: store, event: event, day: day, enabled: !info.readOnly,
+                                                      inGrid: true))
                 }
                 ForEach(birthdays, id: \.self) { b in
                     Text(CalendarText.birthday(b)).font(.caption2).lineLimit(1)
@@ -285,7 +293,7 @@ struct CalendarDayCell: View, Equatable {
         var parts = [CalendarText.longDay(day)]
         parts += types.map(\.name)
         if let note, !note.text.isEmpty { parts.append(note.text) }
-        parts += events.map(\.line)
+        parts += events.map { $0.line(on: day) }
         parts += birthdays.map(CalendarText.birthday)
         if gap { parts.append(String(localized: "Not covered")) }
         return parts.joined(separator: ", ")
@@ -297,7 +305,7 @@ struct CalendarDayCell: View, Equatable {
         var lines = [CalendarText.longDay(day)]
         if !types.isEmpty { lines.append(types.map(\.name).joined(separator: ", ")) }
         if let note, !note.text.isEmpty { lines.append(note.text) }
-        lines += events.map { "🕑 " + $0.line }
+        lines += events.map { "🕑 " + $0.line(on: day) }
         lines += birthdays.map(CalendarText.birthday)
         return lines.joined(separator: "\n")
     }
@@ -344,8 +352,8 @@ struct CalendarDayAccessibilityActions: ViewModifier {
                     Button("Edit note") { onDay { actions?.editNote() } }
                     Button("Add event") { actions?.addEvent(on: day) }
                 }
-                ForEach(info.events) { event in
-                    Button(String(localized: "Open event \(event.line)")) {
+                ForEach(info.events, id: \.uid) { event in
+                    Button(String(localized: "Open event \(event.line(on: day))")) {
                         if !store.readOnly { actions?.editEvent(event) } else { onDay { actions?.showDetails() } }
                     }
                 }

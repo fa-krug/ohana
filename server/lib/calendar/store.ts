@@ -1,8 +1,7 @@
 // Storage of the calendar: family-planner's `Store` interface (the calendar part of
-// _shared/store.ts) over Drizzle/SQLite, so vacation.ts and ics.ts work on it as they did on
-// Supabase. Rows keep family-planner's snake_case shapes.
+// _shared/store.ts) over Drizzle/SQLite, so vacation.ts works on it as it did on Supabase. Rows keep family-planner's snake_case shapes.
 
-import { and, asc, eq, gte, inArray, lte, or } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
 import type { Db } from "@/lib/db";
 import { calEntries, calEntryTypes, calNotes, families } from "@/lib/db/schema";
 import { type FinanceContents, replaceFinance } from "@/lib/finance/store";
@@ -16,16 +15,12 @@ export function isRole(v: unknown): v is Role {
 
 export interface FamilyRow {
   id: string;
-  /** Calendar feed token: only calendar.ics, without signing in. */
-  feed_id: string;
-  /** The view token of a planner from before families: its calendar feed. */
-  legacy_id: string | null;
   name: string;
   created_at: string;
   updated_at: string;
 }
 
-export type FamilyPatch = Partial<Pick<FamilyRow, "name" | "feed_id" | "legacy_id">>;
+export type FamilyPatch = Partial<Pick<FamilyRow, "name">>;
 
 /** An entry type belongs to one year; each year of a family has its own set. */
 export interface TypeRow {
@@ -54,8 +49,6 @@ export interface NoteRow {
 }
 
 export interface CalendarStore {
-  /** The family whose feed id or legacy id this is. */
-  findFeed(token: string): Promise<FamilyRow | null>;
   getFamily(id: string): Promise<FamilyRow | null>;
   updateFamily(id: string, patch: FamilyPatch): Promise<void>;
 
@@ -98,8 +91,6 @@ type FamilyRecord = typeof families.$inferSelect;
 export function familyRow(f: FamilyRecord): FamilyRow {
   return {
     id: f.id,
-    feed_id: f.feedId,
-    legacy_id: f.legacyId,
     name: f.name,
     created_at: f.createdAt.toISOString(),
     updated_at: f.updatedAt.toISOString(),
@@ -127,15 +118,6 @@ export class DrizzleCalendarStore implements CalendarStore {
     private now: () => Date = () => new Date(),
   ) {}
 
-  async findFeed(token: string) {
-    const f = this.db
-      .select()
-      .from(families)
-      .where(or(eq(families.feedId, token), eq(families.legacyId, token)))
-      .get();
-    return f ? familyRow(f) : null;
-  }
-
   async getFamily(id: string) {
     const f = this.db.select().from(families).where(eq(families.id, id)).get();
     return f ? familyRow(f) : null;
@@ -146,8 +128,6 @@ export class DrizzleCalendarStore implements CalendarStore {
       .update(families)
       .set({
         ...(patch.name !== undefined ? { name: patch.name } : {}),
-        ...(patch.feed_id !== undefined ? { feedId: patch.feed_id } : {}),
-        ...(patch.legacy_id !== undefined ? { legacyId: patch.legacy_id } : {}),
         updatedAt: this.now(),
       })
       .where(eq(families.id, id))

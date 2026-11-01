@@ -1,8 +1,7 @@
 // The REST API of a family: /api/v1/families/{familyId}/... (family-planner's handler.ts,
 // family part). Every module plugs a route function into the dispatcher: it gets a `Ctx` (who
 // asks, the family lookup with access checks, the store) and answers, or returns null for paths
-// that aren't its own. Signed in by the session cookie or an API token (Authorization: Bearer);
-// the calendar feed (GET .../{feedId}/calendar.ics) is public and looked up by its feed id only.
+// that aren't its own. Signed in by the session cookie or an API token (Authorization: Bearer).
 
 import { ZodError } from "zod";
 import type { Db } from "@/lib/db";
@@ -20,11 +19,10 @@ import { CORS, HttpError, json } from "./http";
  * What a request may do, from most to least:
  * - `edit`: everything (an editor of the family)
  * - `view`: read everything (a viewer)
- * - `feed`: only the calendar feed (the feed id, or the legacy id, without signing in)
  */
-export type Access = "edit" | "view" | "feed";
+export type Access = "edit" | "view";
 
-export const ACCESS_RANK: Record<Access, number> = { feed: 0, view: 1, edit: 2 };
+export const ACCESS_RANK: Record<Access, number> = { view: 1, edit: 2 };
 
 export interface Loaded {
   family: FamilyRow;
@@ -42,13 +40,13 @@ export interface Ctx {
   req: Request;
   url: URL;
   method: string;
-  /** The id in the path: /families/{id}/... (the feed or legacy id for calendar.ics). */
+  /** The id in the path: /families/{id}/... */
   token: string;
   /** The path parts after the id. */
   rest: string[];
   /** Absolute API base for links, e.g. https://ohana.example/api/v1 */
   publicBase: string;
-  /** Who is asking; null without signing in (only the calendar feed allows that). */
+  /** Who is asking; null without signing in (`requireUser` / `load` then answer 401). */
   principal: User | null;
   now: Date;
   /** The signed-in user; 401 without one. */
@@ -69,10 +67,9 @@ export interface FamilyApiOptions {
   now?: () => Date;
 }
 
-// Family ids are UUIDs (or family-planner's 20-character ids after the import); feed and legacy
-// ids are alphanumeric. Anything else can't be one.
+// Family ids are UUIDs (or family-planner's 20-character ids after the import). Anything else
+// can't be one.
 const FAMILY_ID_RE = /^[A-Za-z0-9-]{10,64}$/;
-const FEED_ID_RE = /^[A-Za-z0-9]{10,64}$/;
 
 const DENIED: Partial<Record<Access, string>> = { view: "You can only view this family" };
 
@@ -125,20 +122,15 @@ export function createFamilyApi(routes: FamilyRoute[], options: FamilyApiOptions
     const method = req.method;
     const token = parts[1];
     const rest = parts.slice(2);
-    // The calendar feed is public and never sends a cookie or token: no account lookups for it.
-    const isFeed = rest.length === 1 && rest[0] === "calendar.ics" && method === "GET";
-
     let principal: User | null = null;
-    if (!isFeed) {
-      const auth = authenticate(db, req, now);
-      if (auth) {
-        // A page of another site can't change anything with the visitor's cookie.
-        if (auth.via === "cookie" && method !== "GET" && method !== "HEAD") assertSameOrigin(req);
-        if (auth.user.onboardingStep === "SET_CREDENTIALS") {
-          throw new HttpError(403, "Set your password first");
-        }
-        principal = auth.user;
+    const auth = authenticate(db, req, now);
+    if (auth) {
+      // A page of another site can't change anything with the visitor's cookie.
+      if (auth.via === "cookie" && method !== "GET" && method !== "HEAD") assertSameOrigin(req);
+      if (auth.user.onboardingStep === "SET_CREDENTIALS") {
+        throw new HttpError(403, "Set your password first");
       }
+      principal = auth.user;
     }
 
     const requireUser = (): User => {
@@ -147,12 +139,6 @@ export function createFamilyApi(routes: FamilyRoute[], options: FamilyApiOptions
     };
 
     async function load(need: Access): Promise<Loaded> {
-      if (need === "feed") {
-        if (!FEED_ID_RE.test(token)) throw new HttpError(404, "Family not found");
-        const family = await store.findFeed(token);
-        if (!family) throw new HttpError(404, "Family not found");
-        return { family, access: "feed" };
-      }
       if (!FAMILY_ID_RE.test(token)) throw new HttpError(404, "Family not found");
       const user = requireUser();
       // Not a member reads the same as no such family: ids don't reveal anything. Being an

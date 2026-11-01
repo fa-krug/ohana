@@ -237,7 +237,7 @@ struct CalendarStoreSelectionTests {
     @Test func jumpsToTheNextGap() throws {
         let s = store()
         let json = """
-        {"family":{"id":"f1","feedId":"feed1234567","name":"Krug","access":"view","readOnly":true,"updatedAt":"2026-01-01T00:00:00.000Z"},
+        {"family":{"id":"f1","name":"Krug","access":"view","readOnly":true,"updatedAt":"2026-01-01T00:00:00.000Z"},
          "types":[{"id":"kita","year":2026,"name":"Kita closed","color":"#ef4444","role":"needs_cover","position":0,"away":false}],
          "typeYears":[2026],
          "entries":{"2026-01-05":["kita"],"2026-01-07":["kita"],"2026-01-10":["kita"]},

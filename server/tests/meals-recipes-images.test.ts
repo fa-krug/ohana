@@ -24,8 +24,8 @@ afterEach(() => {
 
 function seed() {
   const db = createTestDb();
-  db.insert(families).values({ id: "h1", feedId: "feedh1", name: "Home", createdAt: now, updatedAt: now }).run();
-  db.insert(families).values({ id: "h2", feedId: "feedh2", name: "Other", createdAt: now, updatedAt: now }).run();
+  db.insert(families).values({ id: "h1", name: "Home", createdAt: now, updatedAt: now }).run();
+  db.insert(families).values({ id: "h2", name: "Other", createdAt: now, updatedAt: now }).run();
   db.insert(recipes)
     .values({ id: "r1", familyId: "h1", title: "Soup", listType: "KNOWN", createdAt: now, updatedAt: now })
     .run();

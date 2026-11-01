@@ -154,6 +154,13 @@ The app only asks for these permissions, and only when you use the feature:
   app*), or when you start your first timer in a recipe's cook view, to tell you when it's done.
   The timer runs on the device; nothing is sent to your server. Running timers also show as a
   Live Activity on the Lock Screen and in the Dynamic Island.
+- **Calendars:** asked when you turn on the sync with Apple Calendar (Settings → Calendar). The
+  app reads and writes only the one calendar you pick: your family's events and day entries are
+  written into it, and its events are sent to your server as events of the family (title,
+  times, place, notes, a link). Which calendar and which events belong together is kept on the
+  device. The sync runs on the device; your calendar account (iCloud, Google, …) syncs that
+  calendar as it does any other. Stopping the sync can remove Ohana's events from the calendar;
+  signing out forgets the setting.
 
 With Siri and Shortcuts (*Ask Ohana*, adding to the shopping list, adding an event, importing a
 recipe), what you say is processed by Apple as for any Siri request; the result is sent to your

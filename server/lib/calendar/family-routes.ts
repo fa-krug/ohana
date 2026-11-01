@@ -1,17 +1,17 @@
 // The family-wide routes of family-planner's API that belong to the calendar (from its
-// _shared/families.ts): the family with its calendar (GET /families/{id}), renaming it, a new
-// feed link, and export / import of the calendar. Members, invites, creating and deleting
+// _shared/families.ts): the family with its calendar (GET /families/{id}), renaming it, and
+// export / import of the calendar. Members, invites, creating and deleting
 // families are Ohana's own (server actions), so they aren't here.
 
 import type { Ctx, Loaded } from "@/lib/api/family-api";
-import { HttpError, json, NO_STORE, randomToken, readBody, slug } from "@/lib/api/http";
+import { HttpError, json, NO_STORE, readBody, slug } from "@/lib/api/http";
 import { renameFamily } from "@/lib/families/manage";
 import { exportFinance, parseFinanceImport } from "@/lib/finance/finance";
-import type { FamilyPatch, FamilyRow } from "./store";
+import type { FamilyRow } from "./store";
 import type { Db } from "@/lib/db";
 import { type BirthdayDay, birthdaysIn } from "@/lib/families/birthdays";
 import { familyNames } from "@/lib/families/people";
-import { type EventRow, eventsByDay, listEvents } from "./events";
+import { eventRange, eventsByDay, listOccurrences, type PublicEvent } from "./events";
 import { EXPORT_FORMAT, EXPORT_VERSION, isExportFormat } from "./export-file";
 import {
   groupEntries,
@@ -25,15 +25,10 @@ import {
   vacationState,
 } from "./vacation";
 
-/** Links that rotate: the feed link, and the legacy link (only removed). */
-const LINKS = ["feed", "legacy"] as const;
-
 /** The family as the app sees it. */
 export function publicFamily({ family, access }: Loaded) {
   return {
     id: family.id,
-    feedId: family.feed_id,
-    ...(access === "edit" && family.legacy_id ? { legacyId: family.legacy_id } : {}),
     name: family.name,
     access,
     readOnly: access !== "edit",
@@ -41,23 +36,29 @@ export function publicFamily({ family, access }: Loaded) {
   };
 }
 
-/** What the calendar shows next to the entries: timed events and the members' birthdays. */
+/** What the calendar shows next to the entries: events and the members' birthdays. */
 export interface DayExtras {
-  events: EventRow[];
+  /** The days the events were listed for. */
+  range: { from: string; to: string };
+  /** The occurrences overlapping `range`. */
+  events: PublicEvent[];
   birthdays: BirthdayDay[];
 }
 
-/** The range's timed events, and its birthdays when the range has both ends. */
-export function dayExtras(db: Db, familyId: string, range: Range): DayExtras {
+/** The range's events (a missing end: the year of the other one, else the current year; at
+ *  most 3 years), and its birthdays when the range has both ends. */
+export function dayExtras(db: Db, familyId: string, range: Range, now?: Date): DayExtras {
+  const events = eventRange(range, now);
   return {
-    events: listEvents(db, familyId, range),
+    range: events,
+    events: listOccurrences(db, familyId, events),
     birthdays: range.from && range.to ? birthdaysIn(familyNames(db, familyId), range.from, range.to) : [],
   };
 }
 
-/** GET /families/{id}: the family and its calendar in the range, with the timed events
- *  (`events`, phase 7) and the members' birthdays (`birthdays`: day -> [{name, age}]) of the
- *  range by day when given. */
+/** GET /families/{id}: the family and its calendar in the range, with the events (`events`:
+ *  day -> the occurrences covering it) and the members' birthdays (`birthdays`: day ->
+ *  [{name, age}]) of the range by day when given. */
 export function familyState(loaded: Loaded, range: Range, data: VacationData, extras?: DayExtras) {
   const family = publicFamily(loaded);
   // "session" is the name from before families, kept for scripts that read it.
@@ -65,7 +66,7 @@ export function familyState(loaded: Loaded, range: Range, data: VacationData, ex
     family,
     session: family,
     ...vacationState(range, data),
-    ...(extras ? { events: eventsByDay(extras.events), birthdays: birthdaysByDay(extras.birthdays) } : {}),
+    ...(extras ? { events: eventsByDay(extras.events, extras.range), birthdays: birthdaysByDay(extras.birthdays) } : {}),
   };
 }
 
@@ -122,7 +123,6 @@ export function handleFamily(ctx: Ctx): Promise<Response> | null {
     {
       export: { GET: exportFamily },
       import: { POST: importFamily },
-      links: { POST: rotateLink },
     } as Record<string, Record<string, (ctx: Ctx) => Promise<Response>>>
   )[rest[0]];
   if (!route) return null;
@@ -130,10 +130,10 @@ export function handleFamily(ctx: Ctx): Promise<Response> | null {
   return fn ? fn(ctx) : Promise.reject(new HttpError(405, "Method not allowed"));
 }
 
-async function read({ db, store, url, loadWith }: Ctx): Promise<Response> {
+async function read({ db, store, url, loadWith, now }: Ctx): Promise<Response> {
   const range = rangeFromQuery(url);
   const [loaded, data] = await loadWith("view", (id) => listVacation(store, id, range));
-  return json(familyState(loaded, range, data, dayExtras(db, loaded.family.id, range)));
+  return json(familyState(loaded, range, data, dayExtras(db, loaded.family.id, range, now)));
 }
 
 async function rename({ db, store, req, url, loadWith, now, requireUser }: Ctx): Promise<Response> {
@@ -143,22 +143,7 @@ async function rename({ db, store, req, url, loadWith, now, requireUser }: Ctx):
   if (typeof name !== "string") throw new HttpError(400, "name is required");
   renameFamily(db, { id: requireUser().id }, loaded.family.id, name, now);
   const family = (await store.getFamily(loaded.family.id))!;
-  return json(familyState({ ...loaded, family }, range, data, dayExtras(db, family.id, range)));
-}
-
-/** POST /families/{id}/links {"link": "feed" | "legacy"}: a new feed id (the old one stops
- *  working), or removes the legacy link. Answers like GET. */
-async function rotateLink({ db, store, req, url, loadWith }: Ctx): Promise<Response> {
-  const range = rangeFromQuery(url);
-  const [loaded, data] = await loadWith("edit", (id) => listVacation(store, id, range));
-  const link = (await readBody(req)).link;
-  if (!LINKS.includes(link as (typeof LINKS)[number])) {
-    throw new HttpError(400, `link must be one of ${LINKS.join(", ")}`);
-  }
-  const patch: FamilyPatch = link === "feed" ? { feed_id: randomToken(20) } : { legacy_id: null };
-  await store.updateFamily(loaded.family.id, patch);
-  const family = (await store.getFamily(loaded.family.id))!;
-  return json(familyState({ ...loaded, family }, range, data, dayExtras(db, family.id, range)));
+  return json(familyState({ ...loaded, family }, range, data, dayExtras(db, family.id, range, now)));
 }
 
 /** Viewers may export too: they can read all of that anyway. */
@@ -171,8 +156,8 @@ async function exportFamily({ store, finance, loadWith, now }: Ctx): Promise<Res
 }
 
 /** Replaces all years, types, entries and notes, and the finances if the file has them, with
- *  those of an export file; the name and the links stay. Answers like GET /families/{id} (with ?year= etc.). */
-async function importFamily({ db, store, req, url, load }: Ctx): Promise<Response> {
+ *  those of an export file; the name stays. Answers like GET /families/{id} (with ?year= etc.). */
+async function importFamily({ db, store, req, url, load, now }: Ctx): Promise<Response> {
   const range = rangeFromQuery(url);
   const loaded = await load("edit");
   const { family } = loaded;
@@ -181,6 +166,6 @@ async function importFamily({ db, store, req, url, load }: Ctx): Promise<Respons
   await store.replaceContents(family.id, types, data.entries, data.notes, data.finance);
   const updated = (await store.getFamily(family.id))!;
   return json(
-    familyState({ ...loaded, family: updated }, range, await listVacation(store, family.id, range), dayExtras(db, family.id, range)),
+    familyState({ ...loaded, family: updated }, range, await listVacation(store, family.id, range), dayExtras(db, family.id, range, now)),
   );
 }

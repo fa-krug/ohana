@@ -52,12 +52,15 @@ struct CaptureTests {
         #expect(json["location"] == nil)
     }
 
-    @Test func endOnAnotherDayOrBeforeTheStartIsLeftOut() {
+    @Test func endOnAnotherDaySpansDaysAndOneBeforeTheStartIsLeftOut() {
         let calendar = Self.calendar()
         let nextDay = EventIntentBody(title: "Party", start: Self.date("2026-11-06 20:00"),
                                       end: Self.date("2026-11-07 01:00"), allDay: false, location: nil, calendar: calendar)
-        #expect(nextDay.start == "20:00")
-        #expect(nextDay.end == nil)
+        #expect(nextDay.start == "20:00" && nextDay.end == "01:00")
+        #expect(nextDay.date == "2026-11-06" && nextDay.endDate == "2026-11-07")
+        let trip = EventIntentBody(title: "Trip", start: Self.date("2026-11-06 00:00"),
+                                   end: Self.date("2026-11-08 00:00"), allDay: true, location: nil, calendar: calendar)
+        #expect(trip.endDate == "2026-11-08" && trip.start == nil && trip.end == nil)
         let before = EventIntentBody(title: "Oops", start: Self.date("2026-11-06 20:00"),
                                      end: Self.date("2026-11-06 19:00"), allDay: false, location: nil, calendar: calendar)
         #expect(before.end == nil)

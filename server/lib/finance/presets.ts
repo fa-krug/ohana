@@ -1,4 +1,4 @@
-import type { Lang } from "@/lib/calendar/ics";
+import type { Lang } from "@/lib/i18n/config";
 import { defaultCategories } from "./finance";
 import { insertCategories } from "./store";
 

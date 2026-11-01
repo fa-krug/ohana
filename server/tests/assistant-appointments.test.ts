@@ -9,7 +9,7 @@ import type { NetOptions } from "@/lib/assistant/net";
 import { runTool, type ToolContext, TOOLS, toolsFor } from "@/lib/assistant/tools";
 import { DrizzleCalendarStore } from "@/lib/calendar/store";
 import { DrizzleFinanceStore } from "@/lib/finance/store";
-import { findBooking, listEvents } from "@/lib/calendar/events";
+import { createEvent, findBooking, findExternalEvent, loadSeries, seriesJson } from "@/lib/calendar/events";
 import { apptSearchChannels, apptSearches, families, notificationChannels } from "@/lib/db/schema";
 import { type AssistantTest, assistantTest, configure, type Event } from "@/lib/test/assistant";
 import { makeResult, makeRun, makeSearch } from "@/lib/test/appointments";
@@ -229,7 +229,7 @@ describe("calendar events", () => {
     const list = await f.tool("list_events", { from: "2026-11-01", to: "2026-11-30" });
     expect(list.result.events.map((e: { title: string }) => e.title)).toEqual(["Parents' evening"]);
     await f.undo(add.change);
-    expect(listEvents(f.t.db, f.t.familyId)).toHaveLength(0);
+    expect(loadSeries(f.t.db, f.t.familyId)).toHaveLength(0);
     expect((await f.tool("add_event", { date: "2026-11-10", start: "25:00", title: "x" })).result.error).toMatch(/start/);
 
     const s = makeSearch(f.t.db, f.t.familyId, { name: "Derm" });
@@ -243,6 +243,90 @@ describe("calendar events", () => {
     await f.undo(removed.change);
     expect(findBooking(f.t.db, f.t.familyId, s.id, r.id)?.title).toBe("Dr A");
     expect((await f.tool("remove_event", { id: "nope" })).result.error).toBe('No event "nope"');
+  });
+
+  it("removing an event from Apple Calendar and undoing keeps its externalId", async () => {
+    const f = family();
+    const e = createEvent(f.t.db, f.t.familyId, { date: "2026-11-12", title: "Swimming" }, { source: "apple", sourceItem: "EK-1" }, NOW);
+    const list = await f.tool("list_events", { from: "2026-11-01", to: "2026-11-30" });
+    expect(list.result.events[0]).toMatchObject({ source: "apple", externalId: "EK-1" });
+    const removed = await f.tool("remove_event", { id: e.id });
+    expect(removed.ok).toBe(true);
+    expect(findExternalEvent(f.t.db, f.t.familyId, "EK-1")).toBeNull();
+    await f.undo(removed.change);
+    expect(findExternalEvent(f.t.db, f.t.familyId, "EK-1")?.title).toBe("Swimming");
+  });
+});
+
+describe("repeating and multi-day events", () => {
+  const swim = { date: "2026-11-02", start: "17:00", end: "18:00", title: "Swimming", rrule: "FREQ=WEEKLY;COUNT=4" };
+  const raw = (f: ReturnType<typeof family>) => loadSeries(f.t.db, f.t.familyId).map(seriesJson);
+
+  it("adds them and lists their occurrences", async () => {
+    const f = family();
+    const add = await f.tool("add_event", swim);
+    expect(add.ok, JSON.stringify(add.result)).toBe(true);
+    expect(add.result).toMatchObject({ rrule: "FREQ=WEEKLY;COUNT=4", exdates: [], overrides: [] });
+    const trip = await f.tool("add_event", { date: "2026-11-20", endDate: "2026-11-22", title: "Trip" });
+    expect(trip.result.endDate).toBe("2026-11-22");
+    const list = await f.tool("list_events", { from: "2026-11-10", to: "2026-11-21" });
+    expect(list.result.events.map((e: { date: string; occurrence: string | null; title: string }) => [e.date, e.occurrence, e.title])).toEqual([
+      ["2026-11-16", "2026-11-16", "Swimming"],
+      ["2026-11-20", null, "Trip"],
+    ]);
+    expect((await f.tool("add_event", { ...swim, rrule: "FREQ=OFTEN" })).result.error).toMatch(/^rrule: /);
+    expect((await f.tool("list_events", { from: "2026-01-01", to: "2030-01-01" })).result.error).toMatch(/too long/);
+  });
+
+  it("changes one occurrence, this and the following ones, or all; undo puts the series back", async () => {
+    const f = family();
+    const id = (await f.tool("add_event", { ...swim, exdates: ["2026-11-23"] })).result.id;
+    const before = raw(f);
+
+    const one = await f.tool("update_event", { id, occurrence: "2026-11-09", span: "this", start: "16:00" });
+    expect(one.ok, JSON.stringify(one.result)).toBe(true);
+    expect(one.result.overrides).toEqual([expect.objectContaining({ occurrence: "2026-11-09", start: "16:00" })]);
+    await f.undo(one.change);
+    expect(raw(f)).toEqual(before);
+
+    const split = await f.tool("update_event", { id, occurrence: "2026-11-16", span: "future", title: "Swim club" });
+    expect(split.ok, JSON.stringify(split.result)).toBe(true);
+    expect(split.result).toMatchObject({ date: "2026-11-16", title: "Swim club", rrule: "FREQ=WEEKLY;COUNT=2", exdates: ["2026-11-23"] });
+    expect(raw(f)).toHaveLength(2);
+    await f.undo(split.change);
+    expect(raw(f)).toEqual(before);
+
+    const all = await f.tool("update_event", { id, date: "2026-11-03", rrule: null });
+    expect(all.result).toMatchObject({ date: "2026-11-03", rrule: null, exdates: [] });
+    await f.undo(all.change);
+    expect(raw(f)).toEqual(before);
+
+    expect((await f.tool("update_event", { id, occurrence: "2026-11-23", span: "this", title: "x" })).result.error).toMatch(/not an occurrence/);
+    expect((await f.tool("update_event", { id: "nope", title: "x" })).result.error).toBe('No event "nope"');
+  });
+
+  it("removes one occurrence, the following ones or all; undo puts them back", async () => {
+    const f = family();
+    const id = (await f.tool("add_event", { ...swim, overrides: [{ occurrence: "2026-11-09", date: "2026-11-10", title: "Moved" }] })).result.id;
+    const before = raw(f);
+
+    const one = await f.tool("remove_event", { id, occurrence: "2026-11-09", span: "this" });
+    expect(one.result).toMatchObject({ exdates: ["2026-11-09"], overrides: [] });
+    await f.undo(one.change);
+    expect(raw(f)).toEqual(before);
+
+    const rest = await f.tool("remove_event", { id, occurrence: "2026-11-16", span: "future" });
+    expect(rest.result.rrule).toBe("FREQ=WEEKLY;UNTIL=20261115");
+    await f.undo(rest.change);
+    expect(raw(f)).toEqual(before);
+
+    const all = await f.tool("remove_event", { id });
+    expect(all.result).toEqual({ deleted: id });
+    expect(raw(f)).toEqual([]);
+    await f.undo(all.change);
+    // Back under a new id, otherwise as it was.
+    const back = raw(f);
+    expect(back.map(({ id: _id, ...rest }) => rest)).toEqual(before.map(({ id: _id, ...rest }) => rest));
   });
 });
 

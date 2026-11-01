@@ -176,7 +176,7 @@ struct CalendarSelectionBar: View {
         guard days.count == 1, let day = days.first else { return nil }
         var parts: [String] = []
         if let note = store.notes[day], !note.text.isEmpty { parts.append(note.text) }
-        parts += (store.events[day] ?? []).map { "🕑 " + $0.line }
+        parts += (store.events[day] ?? []).map { "🕑 " + $0.line(on: day) }
         parts += (store.birthdays[day] ?? []).map(CalendarText.birthday)
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }

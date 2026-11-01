@@ -429,7 +429,7 @@ struct CalendarPlannerView: View {
                 } label: {
                     Label("Calendar settings", systemImage: "slider.horizontal.3")
                 }
-                .help("Entry types and the calendar feed")
+                .help("Entry types, view and Apple Calendar")
             }
         }
     }

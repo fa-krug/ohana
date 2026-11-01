@@ -5,13 +5,15 @@ import AppKit
 #endif
 
 /// Makes an event draggable onto another day of a grid (iPad, Mac; editors only), shown as a
-/// chip with its title (`CalendarEventDragItem`). In the month in detail (`inGrid`) its label
-/// also tells the grid where it is (`CalendarStore.eventLabels`), so a press there drags the
-/// event instead of selecting days; on the Mac a click on it then does what a click on its day
-/// does, a double click opens the event.
+/// chip with its title (`CalendarEventDragItem`). `day` is the one of its days it shows on: an
+/// event that spans days moves by as many days as it is dragged. In the month in detail
+/// (`inGrid`) its label also tells the grid where it is (`CalendarStore.eventLabels`), so a press
+/// there drags the event instead of selecting days; on the Mac a click on it then does what a
+/// click on its day does, a double click opens the event.
 struct CalendarEventDragSource: ViewModifier {
     let store: CalendarStore
     let event: CalendarEvent
+    var day: Day?
     let enabled: Bool
     var inGrid = false
     @Environment(CalendarActions.self) private var actions: CalendarActions?
@@ -21,13 +23,13 @@ struct CalendarEventDragSource: ViewModifier {
 
     func body(content: Content) -> some View {
         if enabled {
-            let item = store.dragItem(event)
+            let day = day ?? event.date
+            let item = store.dragItem(event, on: day)
             let dragged = content
                 .contentShape(.rect)
                 .draggable(item) { CalendarEventDragPreview(event: event) }
             if inGrid {
-                let key = "\(event.id)@\(event.date)"
-                let day = event.date
+                let key = "\(event.uid)@\(day)"
                 let space = CalendarMonthGrid.space(year: day.year, month: day.month)
                 dragged
                     .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(space)) } action: { frame in
@@ -56,7 +58,7 @@ struct CalendarEventDragSource: ViewModifier {
         }
         lastClick = now
         let modifiers = CalendarModifiers.current
-        store.tap(event.date, extend: modifiers.contains(.shift), toggle: modifiers.contains(.command))
+        store.tap(day ?? event.date, extend: modifiers.contains(.shift), toggle: modifiers.contains(.command))
     }
     #endif
 }

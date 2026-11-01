@@ -18,6 +18,8 @@ struct OhanaApp: App {
         // The notification center's delegate: every notification (a push, a cook timer's) shows
         // while the app is open too, and a push's tap opens its page.
         PushNotifications.shared.start(app)
+        // Apple Calendar syncs (Settings → Calendar), per device and family.
+        AppleCalendarSync.shared.start(app)
         #if os(macOS)
         // The assistant in the menu bar: a click away while the window is hidden or another app
         // is in front.
@@ -53,7 +55,10 @@ struct OhanaApp: App {
         // Cook timers that finished while the app was away leave the Live Activity; what changed
         // while the app was open shows on the widgets.
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { CookTimers.shared.refresh() }
+            if phase == .active {
+                CookTimers.shared.refresh()
+                AppleCalendarSync.shared.syncAllSoon()
+            }
             if phase == .background, !app.isDemo { WidgetSync.reload() }
         }
     }

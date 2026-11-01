@@ -23,13 +23,33 @@
       "searchId": null
     }
   ],
+  "tomorrowEvents": [
+    {
+      "id": "event-swim",
+      "occurrence": "{{day:1}}",
+      "date": "{{day:1}}",
+      "endDate": "{{day:1}}",
+      "start": "16:00",
+      "end": "17:00",
+      "title": "Swimming lesson",
+      "location": "Stadtbad Mitte",
+      "person": "Leo",
+      "note": "Bring the goggles",
+      "url": "",
+      "source": "manual",
+      "searchId": null,
+      "rrule": "FREQ=WEEKLY;COUNT=12"
+    }
+  ],
   "upcoming": [
     {
       "kind": "event",
       "date": "{{day:1}}",
       "event": {
         "id": "event-swim",
+        "occurrence": "{{day:1}}",
         "date": "{{day:1}}",
+        "endDate": "{{day:1}}",
         "start": "16:00",
         "end": "17:00",
         "title": "Swimming lesson",
@@ -38,7 +58,8 @@
         "note": "Bring the goggles",
         "url": "",
         "source": "manual",
-        "searchId": null
+        "searchId": null,
+        "rrule": "FREQ=WEEKLY;COUNT=12"
       }
     },
     {
@@ -73,6 +94,46 @@
         "url": "",
         "source": "manual",
         "searchId": null
+      }
+    },
+    {
+      "kind": "event",
+      "date": "{{day:8}}",
+      "event": {
+        "id": "event-swim",
+        "occurrence": "{{day:8}}",
+        "date": "{{day:8}}",
+        "endDate": "{{day:8}}",
+        "start": "16:00",
+        "end": "17:00",
+        "title": "Swimming lesson",
+        "location": "Stadtbad Mitte",
+        "person": "Leo",
+        "note": "",
+        "url": "",
+        "source": "manual",
+        "searchId": null,
+        "rrule": "FREQ=WEEKLY;COUNT=12"
+      }
+    },
+    {
+      "kind": "event",
+      "date": "{{day:9}}",
+      "event": {
+        "id": "event-class-trip",
+        "occurrence": null,
+        "date": "{{day:9}}",
+        "endDate": "{{day:11}}",
+        "start": null,
+        "end": null,
+        "title": "Class trip to the Baltic Sea",
+        "location": "Jugendherberge Prerow",
+        "person": "Mia",
+        "note": "Packing list in the school app",
+        "url": "",
+        "source": "manual",
+        "searchId": null,
+        "rrule": null
       }
     },
     { "kind": "entry", "date": "{{day:12}}", "to": "{{day:19}}", "name": "Vacation", "color": "#22c55e" },

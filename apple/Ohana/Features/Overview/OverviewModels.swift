@@ -49,10 +49,14 @@ struct OverviewEntryRun: Codable, Hashable {
     let to: Day
 }
 
-/// server/lib/calendar/events.ts `PublicEvent`.
-struct OverviewEvent: Codable, Hashable, Identifiable {
+/// server/lib/calendar/events.ts `PublicEvent`: an event, or one occurrence of a repeating one.
+struct OverviewEvent: Codable, Hashable {
     let id: String
+    /// The occurrence's original day, for an event that repeats.
+    var occurrence: Day?
     let date: Day
+    /// The last day of an event that spans days.
+    var endDate: Day?
     /// "HH:MM", or nil for all day.
     let start: String?
     let end: String?
@@ -65,9 +69,20 @@ struct OverviewEvent: Codable, Hashable, Identifiable {
     let source: String
     /// The appointment search it came from.
     let searchId: String?
+    /// How it repeats (an RRULE value); nil: it doesn't.
+    var rrule: String?
 
     /// "Title · Person", like the web's overview.
     var label: String { person.isEmpty ? title : "\(title) · \(person)" }
+
+    /// Unique in a list: occurrences of a series share its id.
+    var uid: String { occurrence.map { "\(id)@\($0)" } ?? id }
+
+    /// The time shown on `day` ("from 09:00" on the first day of one that spans days, "until
+    /// 17:00" on its last); nil: all day.
+    func time(on day: Day) -> String? {
+        CalendarEventTime.lead(date: date, endDate: endDate ?? date, start: start, end: end, on: day)
+    }
 }
 
 /// One line of "coming up": a run of a calendar type, or a timed event.
@@ -109,7 +124,7 @@ enum OverviewUpcomingItem: Codable, Hashable, Identifiable {
     var id: String {
         switch self {
         case let .entry(date, _, name, _): "entry|\(name)|\(date)"
-        case let .event(_, event): "event|\(event.id)"
+        case let .event(_, event): "event|\(event.uid)"
         }
     }
 
@@ -241,8 +256,9 @@ enum OverviewLinks {
         .calendarDay(item.date)
     }
 
-    static func route(for event: OverviewEvent) -> AppRoute {
-        .calendarDay(event.date)
+    /// Today's event: today in the calendar (an event that spans days may have started before).
+    static func route(for event: OverviewEvent, today: Day) -> AppRoute {
+        .calendarDay(event.date <= today && today <= (event.endDate ?? event.date) ? today : event.date)
     }
 
     static func route(for birthday: OverviewBirthday) -> AppRoute {

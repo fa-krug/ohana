@@ -58,10 +58,8 @@ function setup() {
 /** A new family of the owner (presets in 2026), and `view`: a call as a viewer of it. */
 function newFamily(s: ReturnType<typeof setup>) {
   const family = makeFamily(s.db, s.owner.id);
-  return { id: family.id, feedId: family.feedId, view: s.viewerOf(family.id) };
+  return { id: family.id, view: s.viewerOf(family.id) };
 }
-
-const events = (ics: string) => ics.match(/BEGIN:VEVENT/g)?.length ?? 0;
 
 describe("new families", () => {
   it("get the preset types in the current year", () => {
@@ -79,9 +77,6 @@ describe("new families", () => {
       [2026, "vacation", "Vacation", "covers", 1],
       [2026, "sick", "Sick", "none", 2],
     ]);
-    expect(f.feedId).toMatch(/^[A-Za-z0-9]{20}$/);
-    expect(f.feedId).not.toBe(f.id);
-    expect(f.legacyId).toBeNull();
   });
 
   it("name the presets in the creator's language, with the same ids", () => {
@@ -175,7 +170,6 @@ describe("calendar API", () => {
       ["DELETE", "/types/vacation?year=2026"],
       ["POST", "/types/copy", { from: 2026, to: 2027 }],
       ["POST", "/notes", { icon: "🎄", date: "2026-12-25" }],
-      ["POST", "/links", { link: "feed" }],
       ["POST", "/import", { format: "family-planner", version: 2, types: [] }],
     ];
     for (const [method, path, body] of writes) {
@@ -265,64 +259,6 @@ describe("calendar API", () => {
     expect(res.data.types.length).toBe(3);
     expect((await f.view("GET", `/families/${f.id}`)).data.family.name).toBe("Our family");
     expect((await s.call("PATCH", `/families/${f.id}`, { name: " " })).status).toBe(400);
-  });
-
-  it("serves an iCalendar feed with merged ranges and gaps", async () => {
-    const s = setup();
-    const f = newFamily(s);
-    await s.call("POST", `/families/${f.id}/types`, {
-      name: "Day care closed",
-      color: "#8b5cf6",
-      role: "needs_cover",
-      year: 2026,
-    });
-    await s.call("POST", `/families/${f.id}/entries`, {
-      ops: [
-        { action: "add", type: "day-care-closed", from: "2026-08-03", to: "2026-08-07" },
-        { action: "add", type: "vacation", from: "2026-08-03", to: "2026-08-05" },
-      ],
-    });
-    const res = await s.as(null)("GET", `/families/${f.feedId}/calendar.ics?gaps=1`);
-    expect(res.status).toBe(200);
-    expect(res.headers.get("content-type")).toMatch(/^text\/calendar/);
-    expect(res.headers.get("access-control-allow-origin")).toBe("*");
-    const ics: string = res.data;
-    expect(ics).toContain("X-WR-CALNAME:Krug\r\n");
-    expect(ics).toContain("SUMMARY:Vacation\r\n");
-    expect(ics).toContain("DTSTART;VALUE=DATE:20260803\r\nDTEND;VALUE=DATE:20260806");
-    expect(ics).toContain("SUMMARY:⚠ Not covered: Day care closed");
-    expect(ics).toContain("DTSTART;VALUE=DATE:20260806\r\nDTEND;VALUE=DATE:20260808");
-
-    const onlyVacation = (await s.call("GET", `/families/${f.feedId}/calendar.ics?types=vacation&name=Ours`)).data;
-    expect(onlyVacation).not.toContain("Day care closed");
-    expect(onlyVacation).toContain("X-WR-CALNAME:Ours\r\n");
-    expect(events(onlyVacation)).toBe(1);
-  });
-
-  it("serves a German iCalendar feed with ?lang=de", async () => {
-    const s = setup();
-    const f = newFamily(s);
-    await s.call("POST", `/families/${f.id}/types`, {
-      name: "Kita zu",
-      color: "#8b5cf6",
-      role: "needs_cover",
-      year: 2026,
-    });
-    await s.call("POST", `/families/${f.id}/entries`, {
-      ops: [
-        { action: "add", type: "kita-zu", from: "2026-08-06", to: "2026-08-07" },
-        { action: "add", type: "vacation", from: "2026-08-07", to: "2026-08-09" },
-      ],
-    });
-    const de: string = (await s.call("GET", `/families/${f.feedId}/calendar.ics?gaps=1&lang=de`)).data;
-    expect(de).toContain("SUMMARY:⚠ Nicht abgedeckt: Kita zu\r\n");
-    expect(de).toContain("DESCRIPTION:Vacation: 3 Tage (1 Arbeitstag)\r\n");
-
-    // Unknown languages fall back to English instead of breaking the feed.
-    const fallback = await s.call("GET", `/families/${f.feedId}/calendar.ics?gaps=1&lang=xx`);
-    expect(fallback.status).toBe(200);
-    expect(fallback.data).toContain("SUMMARY:⚠ Not covered: Kita zu\r\n");
-    expect(fallback.data).toContain("DESCRIPTION:Vacation: 3 days (1 workdays)\r\n");
   });
 
   it("sets, replaces and clears day notes", async () => {
@@ -439,31 +375,6 @@ describe("calendar API", () => {
     expect(Object.keys((await s.call("GET", `/families/${f.id}/notes`)).data)).toEqual(["2026-10-03"]);
   });
 
-  it("adds notes to the iCalendar feed only with ?notes=1", async () => {
-    const s = setup();
-    const f = newFamily(s);
-    await s.call("POST", `/families/${f.id}/entries`, { type: "holiday", date: "2026-12-25" });
-    await s.call("POST", `/families/${f.id}/notes`, {
-      ops: [
-        { icon: "🎄", comment: "Christmas", from: "2026-12-24", to: "2026-12-26" },
-        { icon: "🎆", comment: "New Year's Eve, party", date: "2026-12-31" },
-      ],
-    });
-    const plain: string = (await s.call("GET", `/families/${f.feedId}/calendar.ics`)).data;
-    expect(events(plain)).toBe(1);
-    expect(plain).not.toContain("Christmas");
-
-    const ics: string = (await s.call("GET", `/families/${f.feedId}/calendar.ics?notes=1`)).data;
-    expect(events(ics)).toBe(3);
-    expect(ics).toContain("SUMMARY:🎄 Christmas\r\n");
-    expect(ics).toContain("DTSTART;VALUE=DATE:20261224\r\nDTEND;VALUE=DATE:20261227");
-    expect(ics).toContain(`UID:${f.feedId}-note-2026-12-24@vacation-planner`);
-    expect(ics).toContain("SUMMARY:🎆 New Year's Eve\\, party\r\n");
-    // Type filters don't hide notes.
-    const filtered: string = (await s.call("GET", `/families/${f.feedId}/calendar.ics?types=sick&notes=1`)).data;
-    expect(events(filtered)).toBe(2);
-  });
-
   it("every year has its own entry types", async () => {
     const s = setup();
     const f = newFamily(s);
@@ -551,36 +462,6 @@ describe("calendar API", () => {
     });
   });
 
-  it("the iCalendar feed uses each year's types", async () => {
-    const s = setup();
-    const f = newFamily(s);
-    await s.call("POST", `/families/${f.id}/types/copy`, { from: 2026, to: 2027 });
-    await s.call("PATCH", `/families/${f.id}/types/vacation?year=2027`, {
-      name: "Day care closed",
-      role: "needs_cover",
-    });
-    await s.call("POST", `/families/${f.id}/entries`, {
-      ops: [
-        { type: "vacation", date: "2026-08-03" },
-        { type: "vacation", date: "2027-08-02" },
-      ],
-    });
-    const ics: string = (await s.call("GET", `/families/${f.feedId}/calendar.ics?gaps=1`)).data;
-    expect(ics).toContain("SUMMARY:Vacation\r\nDESCRIPTION:Vacation\r\n");
-    expect(ics).toContain(`UID:${f.feedId}-vacation-2027-08-02@vacation-planner`);
-    expect(ics).toContain("SUMMARY:Day care closed\r\n");
-    // Only the 2027 day needs cover.
-    expect(ics).toContain("SUMMARY:⚠ Not covered: Day care closed\r\nDESCRIPTION:⚠ Not covered: Day care closed\r\n");
-    expect(ics.match(/DTSTART;VALUE=DATE:20270802/g)!.length).toBe(2);
-
-    // A filter matches by id or name in every year.
-    const byName: string = (await s.call("GET", `/families/${f.feedId}/calendar.ics?types=day%20care%20closed`)).data;
-    expect(events(byName)).toBe(1);
-    const byId: string = (await s.call("GET", `/families/${f.feedId}/calendar.ics?types=vacation`)).data;
-    expect(events(byId)).toBe(2);
-    expect((await s.call("GET", `/families/${f.feedId}/calendar.ics?types=nope`)).status).toBe(404);
-  });
-
   it("exports a family's calendar and imports the file over another one", async () => {
     const s = setup();
     const f = newFamily(s);
@@ -604,9 +485,9 @@ describe("calendar API", () => {
     expect(file.entries).toEqual({ "2026-08-03": ["sick", "vacation"], "2027-01-01": ["holiday"] });
     expect(file.notes).toEqual({ "2026-12-25": { icon: "🎄", comment: "Xmas" } });
     const text = JSON.stringify(file);
-    expect(text.includes(f.id) || text.includes(f.feedId)).toBe(false);
+    expect(text.includes(f.id)).toBe(false);
 
-    // Importing replaces everything of the target, but keeps its name and links.
+    // Importing replaces everything of the target, but keeps its name.
     const target = newFamily(s);
     s.db.update(families).set({ name: "Other" }).where(eq(families.id, target.id)).run();
     await s.call("POST", `/families/${target.id}/types?year=2028`, { name: "Gone", color: "#000000" });
@@ -616,7 +497,6 @@ describe("calendar API", () => {
     expect(imported.status).toBe(200);
     expect(imported.data.family.id).toBe(target.id);
     expect(imported.data.family.name).toBe("Other");
-    expect(imported.data.family.feedId).toBe(target.feedId);
     expect(imported.data.typeYears).toEqual([2026, 2027]);
     expect(imported.data.entries).toEqual({ "2027-01-01": ["holiday"] });
 
@@ -692,20 +572,15 @@ describe("family API access", () => {
     const f = newFamily(s);
     const edit = (await s.call("GET", `/families/${f.id}`)).data.family;
     expect(edit.access).toBe("edit");
-    expect([edit.id, edit.feedId]).toEqual([f.id, f.feedId]);
+    expect(edit.id).toBe(f.id);
+    expect(edit).not.toHaveProperty("feedId");
 
     const view = (await f.view("GET", `/families/${f.id}`)).data.family;
     expect([view.access, view.readOnly]).toEqual(["view", true]);
-    expect([view.id, view.feedId]).toEqual([f.id, f.feedId]);
-
-    // The feed id opens the calendar feed and nothing else, signed in or not.
-    expect((await s.as(null)("GET", `/families/${f.feedId}/calendar.ics`)).status).toBe(200);
-    for (const path of ["", "/entries", "/notes", "/types", "/export"]) {
-      expect((await s.call("GET", `/families/${f.feedId}${path}`)).status, path).toBe(404);
-    }
+    expect(view.id).toBe(f.id);
   });
 
-  it("everything but the calendar feed needs signing in", async () => {
+  it("everything needs signing in", async () => {
     const s = setup();
     const f = newFamily(s);
     const anon = s.as(null);
@@ -714,8 +589,10 @@ describe("family API access", () => {
       expect([res.status, res.data.error], path).toEqual([401, "Sign in first"]);
     }
     expect((await anon("POST", `/families/${f.id}/entries`, { type: "x" })).status).toBe(401);
-    // The family id is no calendar feed: it's in every URL of the app.
+    // There is no calendar feed (any more).
     expect((await anon("GET", `/families/${f.id}/calendar.ics`)).status).toBe(404);
+    expect((await s.call("GET", `/families/${f.id}/calendar.ics`)).status).toBe(404);
+    expect((await s.call("POST", `/families/${f.id}/links`, { link: "feed" })).status).toBe(404);
     // A wrong or ended token says so.
     const bad = await s.as("ohana_nonsense")("GET", `/families/${f.id}`);
     expect([bad.status, bad.data.error]).toEqual([401, "Your session has ended, sign in again"]);
@@ -757,44 +634,6 @@ describe("family API access", () => {
     s.db.insert(familyMembers).values({ familyId: f.id, userId: pending.id, role: "editor", joinedAt: NOW }).run();
     const res = await s.as(s.apiToken(pending.id))("GET", `/families/${f.id}`);
     expect(res.status).toBe(403);
-  });
-
-  it("the legacy id of a family-planner planner keeps its calendar feed and event ids", async () => {
-    const s = setup();
-    const f = newFamily(s);
-    s.db.update(families).set({ legacyId: "OldViewId1234567890" }).where(eq(families.id, f.id)).run();
-    await s.call("POST", `/families/${f.id}/entries`, { type: "vacation", date: "2026-08-03" });
-
-    // It opens nothing but the feed.
-    expect((await s.call("GET", "/families/OldViewId1234567890?year=2026")).status).toBe(404);
-    const ics: string = (await s.as(null)("GET", "/families/OldViewId1234567890/calendar.ics")).data;
-    expect(ics).toContain("UID:OldViewId1234567890-vacation-2026-08-03@vacation-planner");
-    const viaFeed: string = (await s.call("GET", `/families/${f.feedId}/calendar.ics`)).data;
-    expect(viaFeed).toContain("UID:OldViewId1234567890-vacation-2026-08-03@vacation-planner");
-    // Editors see it, so the app can offer to remove it; viewers don't.
-    expect((await s.call("GET", `/families/${f.id}`)).data.family.legacyId).toBe("OldViewId1234567890");
-    expect((await f.view("GET", `/families/${f.id}`)).data.family.legacyId).toBeUndefined();
-  });
-
-  it("rotates the feed link and removes the legacy link", async () => {
-    const s = setup();
-    const f = newFamily(s);
-    s.db.update(families).set({ legacyId: "OldViewId1234567890" }).where(eq(families.id, f.id)).run();
-
-    const feed = await s.call("POST", `/families/${f.id}/links`, { link: "feed" });
-    expect(feed.status).toBe(200);
-    const feedId = feed.data.family.feedId;
-    expect(feedId).not.toBe(f.feedId);
-    expect((await s.call("GET", `/families/${f.feedId}/calendar.ics`)).status).toBe(404);
-    expect((await s.call("GET", `/families/${feedId}/calendar.ics`)).status).toBe(200);
-
-    const legacy = await s.call("POST", `/families/${f.id}/links`, { link: "legacy" });
-    expect(legacy.data.family.legacyId).toBeUndefined();
-    expect((await s.call("GET", "/families/OldViewId1234567890/calendar.ics")).status).toBe(404);
-
-    expect((await s.call("POST", `/families/${f.id}/links`, { link: "view" })).status).toBe(400);
-    expect((await f.view("POST", `/families/${f.id}/links`, { link: "feed" })).status).toBe(403);
-    expect((await s.call("GET", `/families/${f.id}/links`)).status).toBe(405);
   });
 
   it("answers CORS preflight and unknown paths", async () => {

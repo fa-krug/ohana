@@ -70,7 +70,7 @@ info:
     ## CORS
 
     The family API answers `OPTIONS` with 204 and allows any origin (`authorization`,
-    `content-type` headers); the calendar feed is public.
+    `content-type` headers).
 servers:
   - url: https://{host}
     description: Your Ohana server
@@ -91,7 +91,7 @@ tags:
   - name: Invites
     description: Joining a family with an invite code.
   - name: Families
-    description: Creating families, the family itself, its links and its export file.
+    description: Creating families, the family itself and its export file.
   - name: Overview
     description: The family dashboard over all modules.
   - name: Search
@@ -99,9 +99,12 @@ tags:
   - name: Household
     description: Members, people without an account, invites, home address and notifications.
   - name: Calendar
-    description: Entry types per year, day entries, day notes and the iCalendar feed.
+    description: Entry types per year, day entries and day notes.
   - name: Events
-    description: Timed events on calendar days (manual or booked appointments).
+    description: >-
+      Events on calendar days (manual, booked appointments, imported from Apple Calendar): one
+      day or several, all day or timed, once or repeating (an RFC 5545 RRULE). Calendars read
+      occurrences (`Event`), editors whole series (`EventSeries`).
   - name: Finance
     description: Accounts, categories, transactions, imports and summaries (module `finance`).
   - name: Meals
@@ -920,8 +923,10 @@ paths:
       summary: The family with its calendar in a range
       description: >-
         All entry types of the range's years (`typeYears`: every year that has types), the
-        entries and notes in the range, the timed events by day and the members' birthdays by
-        day (only when the range has both ends, e.g. `?year=`). Without a range: everything.
+        entries and notes in the range, the events by day (every occurrence under each day of
+        the range it covers) and the members' birthdays by day (only when the range has both
+        ends, e.g. `?year=`). Without a range: all entries and notes; the events then cover the
+        year of the given end, or the current year. A range longer than 3 years is a 400.
       x-ohana-role: viewer
       parameters:
         - $ref: "#/components/parameters/RangeYear"
@@ -946,35 +951,6 @@ paths:
         content:
           application/json:
             schema: {$ref: "#/components/schemas/FamilyNameInput"}
-      responses:
-        "200": {$ref: "#/components/responses/FamilyState"}
-        "400": {$ref: "#/components/responses/BadRequest"}
-        "401": {$ref: "#/components/responses/Unauthorized"}
-        "403": {$ref: "#/components/responses/Forbidden"}
-        "404": {$ref: "#/components/responses/NotFound"}
-  /api/v1/families/{familyId}/links:
-    post:
-      tags: [Families]
-      operationId: rotateLink
-      summary: A new calendar feed link, or remove the legacy link
-      description: >-
-        `feed`: a new `feedId` (the old feed URL stops working). `legacy`: removes the
-        `legacyId` (family-planner's old view id). Answers like `GET /families/{familyId}`.
-      x-ohana-role: editor
-      parameters:
-        - $ref: "#/components/parameters/FamilyId"
-        - $ref: "#/components/parameters/RangeYear"
-        - $ref: "#/components/parameters/RangeFrom"
-        - $ref: "#/components/parameters/RangeTo"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [link]
-              properties:
-                link: {type: string, enum: [feed, legacy]}
       responses:
         "200": {$ref: "#/components/responses/FamilyState"}
         "400": {$ref: "#/components/responses/BadRequest"}
@@ -1007,7 +983,7 @@ paths:
       summary: Replace the calendar (and finances) with an export file
       description: >-
         Replaces all years, types, entries and notes, and the finances if the file has them
-        (version 2), all or nothing. The name and links stay. Answers like
+        (version 2), all or nothing. The name stays. Answers like
         `GET /families/{familyId}` with the range given.
       x-ohana-role: editor
       parameters:
@@ -1034,7 +1010,8 @@ paths:
       operationId: getOverview
       summary: The family dashboard
       description: >-
-        Today (meal or away, today's events), what comes up in the next 30 days, the shopping
+        Today and tomorrow (meal or away, the occurrences of events covering the day, also of
+        events that started earlier or repeat), what comes up in the next 30 days, the shopping
         list, this month's finances, the appointment searches' latest finds and the birthdays
         of the next 30 days. A disabled module's part is empty.
       x-ohana-role: viewer
@@ -1462,59 +1439,6 @@ paths:
         "404": {$ref: "#/components/responses/NotFound"}
 
   # ------------------------------------------------------------------ calendar
-  /api/v1/families/{feedId}/calendar.ics:
-    get:
-      tags: [Calendar]
-      operationId: getCalendarFeed
-      summary: The family's calendar as an iCalendar feed (public)
-      description: >-
-        Looked up by the family's **feed id** (`feedId` of the family; or the legacy id of a
-        planner from before families), never by the family id. Needs no sign-in; anyone with
-        the link can read it, so rotate it with `POST …/links`. Entries become all-day events
-        per run of days. Cached for 5 minutes.
-      security: []
-      x-ohana-role: public
-      parameters:
-        - name: feedId
-          in: path
-          required: true
-          description: The family's `feedId` (or `legacyId`).
-          schema: {type: string, pattern: "^[A-Za-z0-9]{10,64}$"}
-        - name: types
-          in: query
-          description: Comma-separated entry types (ids or names, in every year) to include; default all. An unknown one is a 404.
-          schema: {type: string}
-        - name: notes
-          in: query
-          description: "`1` adds the day notes."
-          schema: {type: string, enum: ["1"]}
-        - name: gaps
-          in: query
-          description: "`1` adds the coverage gaps (weekdays not covered)."
-          schema: {type: string, enum: ["1"]}
-        - name: events
-          in: query
-          description: "`1` adds the timed events (booked appointments etc., floating local times)."
-          schema: {type: string, enum: ["1"]}
-        - name: birthdays
-          in: query
-          description: "`1` adds the members' birthdays (yearly events)."
-          schema: {type: string, enum: ["1"]}
-        - name: lang
-          in: query
-          description: Language of generated texts.
-          schema: {type: string, enum: [en, de], default: en}
-        - name: name
-          in: query
-          description: The calendar's name (default the family's name).
-          schema: {type: string}
-      responses:
-        "200":
-          description: The calendar.
-          content:
-            text/calendar:
-              schema: {type: string}
-        "404": {$ref: "#/components/responses/NotFound"}
   /api/v1/families/{familyId}/types:
     parameters:
       - $ref: "#/components/parameters/FamilyId"
@@ -1756,15 +1680,25 @@ paths:
     get:
       tags: [Events]
       operationId: listEvents
-      summary: Timed events in a range
+      summary: Occurrences in a range, or every series
+      description: >-
+        Every occurrence overlapping the range (`date <= to && endDate >= from`), sorted by date,
+        all-day first, start, then as the events were created. The range (`year`, or `from` and
+        `to`) is required and at most 3 years long. With `raw=1` instead: every series and single
+        event of the family as stored (`EventSeries`, no range, no expansion; overrides only
+        inside their series).
       x-ohana-role: viewer
       parameters:
         - $ref: "#/components/parameters/RangeYear"
         - $ref: "#/components/parameters/RangeFrom"
         - $ref: "#/components/parameters/RangeTo"
+        - name: raw
+          in: query
+          description: "`1`: the series as stored instead of occurrences."
+          schema: {type: string, enum: ["1"]}
       responses:
         "200":
-          description: The events by day and start (all-day first).
+          description: The occurrences (`Event`), or with `raw=1` the series (`EventSeries`).
           content:
             application/json:
               schema:
@@ -1773,18 +1707,27 @@ paths:
                 properties:
                   events:
                     type: array
-                    items: {$ref: "#/components/schemas/Event"}
+                    items:
+                      oneOf:
+                        - $ref: "#/components/schemas/Event"
+                        - $ref: "#/components/schemas/EventSeries"
         "400": {$ref: "#/components/responses/BadRequest"}
         "401": {$ref: "#/components/responses/Unauthorized"}
         "404": {$ref: "#/components/responses/NotFound"}
     post:
       tags: [Events]
       operationId: createEvent
-      summary: Add an event
+      summary: Add an event or a series
       description: >-
-        With `searchId` and `resultId` the event is that appointment search's booking of the
-        slot again (how the assistant's undo puts a booking back); the search must be the
-        family's.
+        `rrule`, `exdates` and `overrides` make it a repeating series (overrides of dates that
+        aren't occurrences, or that are in `exdates`, are dropped). With `searchId` and
+        `resultId` the event is that appointment search's booking of the slot again (how the
+        assistant's undo puts a booking back); the search must be the family's. With
+        `externalId` (the identifier of an Apple Calendar event the app imports) the event is
+        saved with source `apple`; if the family already has an event with that `externalId`,
+        it is answered unchanged with 200 and nothing is created (two devices syncing the same
+        calendar may both import it). `externalId` can't be combined with `searchId` /
+        `resultId` (400).
       x-ohana-role: editor
       requestBody:
         required: true
@@ -1797,12 +1740,22 @@ paths:
                   properties:
                     searchId: {type: string}
                     resultId: {type: [integer, string]}
+                    externalId:
+                      type: string
+                      minLength: 1
+                      maxLength: 500
+                      description: An Apple Calendar event's identifier (trimmed).
       responses:
+        "200":
+          description: The family's existing event with this `externalId`, unchanged.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/EventSeries"}
         "201":
           description: The event.
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/Event"}
+              schema: {$ref: "#/components/schemas/EventSeries"}
         "400": {$ref: "#/components/responses/BadRequest"}
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
@@ -1810,15 +1763,56 @@ paths:
   /api/v1/families/{familyId}/events/{eventId}:
     parameters:
       - $ref: "#/components/parameters/FamilyId"
-      - {name: eventId, in: path, required: true, schema: {type: string}}
+      - {name: eventId, in: path, required: true, description: "The series' (or single event's) id.", schema: {type: string}}
+    get:
+      tags: [Events]
+      operationId: getEvent
+      summary: One event or series as stored
+      x-ohana-role: viewer
+      responses:
+        "200":
+          description: The series.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/EventSeries"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
     patch:
       tags: [Events]
       operationId: updateEvent
-      summary: Change an event in place
+      summary: Change an event, one occurrence, or this and the following ones
       description: >-
-        Only the fields given change (those of `POST /events`). `start`/`end` `null` clear them;
-        clearing `start` clears the end too. The source (manual or booked appointment) stays.
+        Only the fields given change (those of `POST /events`); `start`/`end`/`rrule` `null`
+        clear them, clearing `start` clears the end too. The source (manual, booked
+        appointment, or Apple Calendar with its `externalId`) stays.
+
+
+        **All** (no `occurrence`, or `span=all`): the whole event or series. A new `date` moves
+        the series by that many days: `endDate` moves along unless given, and the exdates and
+        the overrides' `occurrence` keys (and their dates) move by the same number of days.
+        `exdates` / `overrides` in the body replace them wholesale. `rrule: null` makes it a
+        single event (no exdates, no overrides).
+
+
+        **This** (`occurrence=D&span=this`, `span` defaults to `this` with an occurrence):
+        creates or changes occurrence D's override from the occurrence as it is now and the
+        body's fields (`rrule`, `exdates`, `overrides` are ignored). Answers the series.
+
+
+        **Future** (`occurrence=D&span=future`): the series ends the day before D (`UNTIL`; a
+        `COUNT` becomes the matching `UNTIL`) and a new series (source `manual`) starts with
+        occurrence D as it is now, changed by the body: the same rule unless the body has
+        `rrule` (a `COUNT` rule keeps the count that is left), taking over the exdates and
+        overrides after D (moved along when D's date moved). Answers the new series with 201;
+        for the first occurrence it is the same as **all** (200).
+
+
+        404 when D is not an occurrence (taken out, or not produced by the rule); 400 with an
+        occurrence of an event that doesn't repeat.
       x-ohana-role: editor
+      parameters:
+        - $ref: "#/components/parameters/EventOccurrence"
+        - $ref: "#/components/parameters/EventSpan"
       requestBody:
         required: true
         content:
@@ -1826,10 +1820,15 @@ paths:
             schema: {$ref: "#/components/schemas/EventPatch"}
       responses:
         "200":
-          description: The event.
+          description: The series.
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/Event"}
+              schema: {$ref: "#/components/schemas/EventSeries"}
+        "201":
+          description: The new series (`span=future` split the series).
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/EventSeries"}
         "400": {$ref: "#/components/responses/BadRequest"}
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
@@ -1837,10 +1836,30 @@ paths:
     delete:
       tags: [Events]
       operationId: deleteEvent
-      summary: Delete an event
+      summary: Delete an event, one occurrence, or this and the following ones
+      description: >-
+        Without `occurrence` (or `span=all`): the event or series with its overrides →
+        `{deleted: id}`. `span=this`: adds D to the exdates and drops its override → the
+        series. `span=future`: the series ends the day before D, its exdates and overrides from
+        D on go → the series; for the first occurrence the whole series goes (`{deleted: id}`).
+        404 / 400 as for PATCH.
       x-ohana-role: editor
+      parameters:
+        - $ref: "#/components/parameters/EventOccurrence"
+        - $ref: "#/components/parameters/EventSpan"
       responses:
-        "200": {$ref: "#/components/responses/DeletedString"}
+        "200":
+          description: "`{deleted: id}`, or the series that is left."
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    required: [deleted]
+                    properties:
+                      deleted: {type: string}
+                  - $ref: "#/components/schemas/EventSeries"
+        "400": {$ref: "#/components/responses/BadRequest"}
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
         "404": {$ref: "#/components/responses/NotFound"}
@@ -4306,6 +4325,18 @@ components:
       in: query
       description: Last day (inclusive); open without.
       schema: {type: string, format: date}
+    EventOccurrence:
+      name: occurrence
+      in: query
+      description: An occurrence of a repeating event (its original date, `occurrence` of `Event`).
+      schema: {type: string, format: date}
+    EventSpan:
+      name: span
+      in: query
+      description: >-
+        Which occurrences: `this` (default with `occurrence`), `this` and the following ones
+        (`future`), or `all` (default without `occurrence`). `this` / `future` need `occurrence`.
+      schema: {type: string, enum: [this, future, all]}
     TypeYear:
       name: year
       in: query
@@ -4783,11 +4814,9 @@ components:
     # ---------------------------------------------------------------- family / calendar
     FamilyInfo:
       type: object
-      required: [id, feedId, name, access, readOnly, updatedAt]
+      required: [id, name, access, readOnly, updatedAt]
       properties:
         id: {type: string}
-        feedId: {type: string, description: "Secret id of the public calendar feed: `/api/v1/families/{feedId}/calendar.ics`."}
-        legacyId: {type: string, description: "Family-planner's old view id (also a feed id); editors only, when set."}
         name: {type: string}
         access: {type: string, enum: [edit, view]}
         readOnly: {type: boolean}
@@ -4812,7 +4841,7 @@ components:
         notes: {$ref: "#/components/schemas/NotesByDay"}
         events:
           type: object
-          description: Day → the timed events of that day.
+          description: Day → the occurrences covering that day (one over several days is under each of them).
           additionalProperties:
             type: array
             items: {$ref: "#/components/schemas/Event"}
@@ -4901,26 +4930,97 @@ components:
           description: "`set` needs `icon` or `comment`; a set with both empty clears the note."
     Event:
       type: object
-      description: A timed (or all-day) event on a calendar day.
-      required: [id, date, start, end, title, location, person, note, url, source, searchId]
+      description: >-
+        An occurrence of an event as calendars show it. Clients address an occurrence as
+        (`id`, `occurrence`).
+      required: [id, occurrence, date, endDate, start, end, title, location, person, note, url, source, searchId, externalId, rrule]
       properties:
-        id: {type: string}
-        date: {type: string, format: date}
+        id: {type: string, description: "The series' (or single event's) id, never an override's."}
+        occurrence:
+          type: [string, "null"]
+          format: date
+          description: "Set exactly for events that repeat: the occurrence's original date (also when an override moved it)."
+        date: {type: string, format: date, description: "The first day."}
+        endDate: {type: string, format: date, description: "The last day (inclusive; `date` for one day)."}
         start: {type: [string, "null"], pattern: "^([01]\\d|2[0-3]):[0-5]\\d$", description: "Wall-clock HH:MM; null = all day."}
-        end: {type: [string, "null"], pattern: "^([01]\\d|2[0-3]):[0-5]\\d$"}
+        end: {type: [string, "null"], pattern: "^([01]\\d|2[0-3]):[0-5]\\d$", description: "The time on `endDate`; null = none given."}
         title: {type: string}
         location: {type: string}
         person: {type: string, description: "Who it is for."}
         note: {type: string}
         url: {type: string}
-        source: {type: string, enum: [manual, appointment]}
+        source:
+          type: string
+          enum: [manual, appointment, apple]
+          description: "`apple`: imported from an Apple Calendar event by the app; otherwise like `manual`."
         searchId: {type: [string, "null"], description: "The appointment search it was booked from."}
-    EventInput:
+        externalId: {type: [string, "null"], description: "The Apple Calendar event it was imported from (source `apple`)."}
+        rrule: {$ref: "#/components/schemas/RRule"}
+    RRule:
+      type: [string, "null"]
+      description: >-
+        How the event repeats, null = once: an RFC 5545 RRULE value without "RRULE:", e.g.
+        `FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,WE;UNTIL=20270101`. Parts: FREQ (DAILY, WEEKLY,
+        MONTHLY, YEARLY; required), INTERVAL, COUNT, UNTIL (a date YYYYMMDD, inclusive, never a
+        time), BYDAY (ordinals like `2MO`, `-1FR` only with MONTHLY / YEARLY), BYMONTHDAY,
+        BYMONTH, BYYEARDAY, BYWEEKNO, BYSETPOS, WKST; not COUNT and UNTIL together. Stored
+        trimmed and upper-cased; anything else is a 400. The first occurrence is the event's
+        `date` (DTSTART), even when the rule wouldn't produce it, and it counts for COUNT.
+        Dates are plain days: no time zones.
+      examples: ["FREQ=MONTHLY;BYDAY=-1FR"]
+    EventOverride:
+      type: object
+      description: A changed single occurrence of a series.
+      required: [occurrence, date, endDate, start, end, title, location, person, note, url]
+      properties:
+        occurrence: {type: string, format: date, description: "The original date it replaces."}
+        date: {type: string, format: date}
+        endDate: {type: string, format: date}
+        start: {type: [string, "null"], pattern: "^([01]\\d|2[0-3]):[0-5]\\d$"}
+        end: {type: [string, "null"], pattern: "^([01]\\d|2[0-3]):[0-5]\\d$"}
+        title: {type: string}
+        location: {type: string}
+        person: {type: string}
+        note: {type: string}
+        url: {type: string}
+    EventSeries:
+      type: object
+      description: >-
+        An event or a series as stored: its first occurrence's fields, the rule, the
+        occurrences taken out and the changed ones.
+      required: [id, date, endDate, start, end, title, location, person, note, url, source, searchId, externalId, rrule, exdates, overrides]
+      properties:
+        id: {type: string}
+        date: {type: string, format: date}
+        endDate: {type: string, format: date}
+        start: {type: [string, "null"], pattern: "^([01]\\d|2[0-3]):[0-5]\\d$"}
+        end: {type: [string, "null"], pattern: "^([01]\\d|2[0-3]):[0-5]\\d$"}
+        title: {type: string}
+        location: {type: string}
+        person: {type: string}
+        note: {type: string}
+        url: {type: string}
+        source: {type: string, enum: [manual, appointment, apple]}
+        searchId: {type: [string, "null"]}
+        externalId: {type: [string, "null"]}
+        rrule: {$ref: "#/components/schemas/RRule"}
+        exdates:
+          type: array
+          description: Original occurrence dates removed from the series.
+          items: {type: string, format: date}
+        overrides:
+          type: array
+          description: Sorted by `occurrence`.
+          items: {$ref: "#/components/schemas/EventOverride"}
+    EventFields:
       type: object
       required: [date, title]
-      description: "`end` needs a `start` and must not be before it."
+      description: >-
+        `endDate` (default `date`) must not be before `date`; `end` needs a `start` and, on a
+        one-day event, must not be before it.
       properties:
         date: {type: string, format: date}
+        endDate: {type: [string, "null"], format: date}
         start: {type: [string, "null"], pattern: "^([01]\\d|2[0-3]):[0-5]\\d$"}
         end: {type: [string, "null"], pattern: "^([01]\\d|2[0-3]):[0-5]\\d$"}
         title: {type: string, minLength: 1, maxLength: 200}
@@ -4928,11 +5028,34 @@ components:
         person: {type: string, maxLength: 80, default: ""}
         note: {type: string, maxLength: 1000, default: ""}
         url: {type: string, maxLength: 2000, default: "", description: "http(s) only."}
+    EventInput:
+      allOf:
+        - $ref: "#/components/schemas/EventFields"
+        - type: object
+          properties:
+            rrule: {$ref: "#/components/schemas/RRule"}
+            exdates:
+              type: array
+              maxItems: 1000
+              items: {type: string, format: date}
+            overrides:
+              type: array
+              maxItems: 1000
+              description: Each occurrence at most once.
+              items: {$ref: "#/components/schemas/EventOverrideInput"}
+    EventOverrideInput:
+      allOf:
+        - $ref: "#/components/schemas/EventFields"
+        - type: object
+          required: [occurrence]
+          properties:
+            occurrence: {type: string, format: date, description: "The original date it replaces."}
     EventPatch:
       type: object
       description: Any fields of `EventInput`; the others stay.
       properties:
         date: {type: string, format: date}
+        endDate: {type: string, format: date}
         start: {type: [string, "null"], pattern: "^([01]\\d|2[0-3]):[0-5]\\d$"}
         end: {type: [string, "null"], pattern: "^([01]\\d|2[0-3]):[0-5]\\d$"}
         title: {type: string, minLength: 1, maxLength: 200}
@@ -4940,6 +5063,13 @@ components:
         person: {type: string, maxLength: 80}
         note: {type: string, maxLength: 1000}
         url: {type: string, maxLength: 2000}
+        rrule: {$ref: "#/components/schemas/RRule"}
+        exdates:
+          type: array
+          items: {type: string, format: date}
+        overrides:
+          type: array
+          items: {$ref: "#/components/schemas/EventOverrideInput"}
     ExportFile:
       type: object
       description: >-
@@ -5015,7 +5145,7 @@ components:
             The item's id (a member's user id for a person with an account); a note's is its day.
         title: {type: string}
         detail: {type: string, description: "More of the item, joined with \" · \" (may be empty)."}
-        day: {type: [string, "null"], format: date, description: "An event's, note's or transaction's day; a chat's last change."}
+        day: {type: [string, "null"], format: date, description: "A note's or transaction's day; an event's next occurrence from today on (else its last; one hit per series); a chat's last change."}
         time: {type: [string, "null"], description: "An event's start (HH:MM), null all day."}
         amountCents: {type: integer, description: "A transaction's amount; negative: money going out."}
         account: {type: boolean, description: "A person: a member with an account (else a person without one)."}
@@ -5023,7 +5153,7 @@ components:
     # ---------------------------------------------------------------- overview
     Dashboard:
       type: object
-      required: [today, calendar, awayToday, todayEvents, upcoming, meals, finance, searches, birthdays]
+      required: [today, calendar, awayToday, todayEvents, tomorrowEvents, upcoming, meals, finance, searches, birthdays]
       properties:
         today: {type: string, format: date}
         calendar:
@@ -5047,10 +5177,15 @@ components:
           items: {type: string}
         todayEvents:
           type: array
+          description: The occurrences covering today (also of events that started earlier).
+          items: {$ref: "#/components/schemas/Event"}
+        tomorrowEvents:
+          type: array
+          description: The occurrences covering tomorrow.
           items: {$ref: "#/components/schemas/Event"}
         upcoming:
           type: array
-          description: Calendar runs and timed events of the next 30 days (at most 8).
+          description: Calendar runs and the events' occurrences starting in the next 30 days after today (at most 8).
           items:
             oneOf:
               - type: object

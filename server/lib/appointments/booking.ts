@@ -3,7 +3,7 @@
 // details are copied into the event (results are pruned after 30 days; the event stays).
 // Optionally the search stops watching (it is turned off).
 
-import { and, desc, eq, ne } from "drizzle-orm";
+import { and, desc, eq, isNull, ne } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/lib/db";
 import { AuthError } from "@/lib/auth/errors";
@@ -83,7 +83,7 @@ export function removeBooking(db: Db, actor: Actor, familyId: string, eventId: s
   requireRole(db, actor, familyId, "editor");
   const res = db
     .delete(calEvents)
-    .where(and(eq(calEvents.familyId, familyId), eq(calEvents.id, eventId)))
+    .where(and(eq(calEvents.familyId, familyId), eq(calEvents.id, eventId), isNull(calEvents.seriesId)))
     .run();
   if (!res.changes) throw new AuthError(404, "Appointment not found.");
 }

@@ -12,7 +12,7 @@ const now = new Date("2026-06-27T12:00:00Z");
 
 function seed() {
   const db = createTestDb();
-  db.insert(families).values({ id: "h1", feedId: "feedh1", name: "Home", createdAt: now, updatedAt: now }).run();
+  db.insert(families).values({ id: "h1", name: "Home", createdAt: now, updatedAt: now }).run();
   db.insert(ingredients).values([
     { id: 1, nameEn: "Tomato", nameDe: "Tomate", category: "PRODUCE" },
     { id: 2, nameEn: "Pasta", nameDe: "Nudeln", category: "PANTRY" },
@@ -84,7 +84,7 @@ describe("generateShoppingListsForIteration", () => {
 
   it("creates a list for a segment even when it aggregates to zero items", () => {
     const db = createTestDb();
-    db.insert(families).values({ id: "h1", feedId: "feedh1", name: "Home", createdAt: now, updatedAt: now }).run();
+    db.insert(families).values({ id: "h1", name: "Home", createdAt: now, updatedAt: now }).run();
     db.insert(mealPlans).values({ id: "mp1", familyId: "h1", shoppingDay1: 1, servings: 4, knownRatio: "0.7", defaultLeftoverDays: 1, createdAt: now }).run();
     db.insert(planIterations).values({ id: "it1", mealPlanId: "mp1", startDate: "2026-06-22", endDate: "2026-06-28", status: "ACTIVE", createdAt: now }).run();
     // No entries at all → one segment, zero aggregated items.

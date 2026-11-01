@@ -1,7 +1,6 @@
 {
   "family": {
     "id": "demo",
-    "feedId": "demoParkerFeed",
     "name": "Parker family",
     "access": "view",
     "readOnly": true,
@@ -49,8 +48,14 @@
       "location": "", "person": "Ben", "note": "", "url": "", "source": "manual", "searchId": null
     },
     {
-      "id": "event-swim", "date": "{{day:1}}", "start": "16:00", "end": "17:00", "title": "Swimming lesson",
-      "location": "Stadtbad Mitte", "person": "Leo", "note": "", "url": "", "source": "manual", "searchId": null
+      "id": "event-swim", "date": "{{day:1}}", "endDate": "{{day:1}}", "start": "16:00", "end": "17:00",
+      "title": "Swimming lesson", "location": "Stadtbad Mitte", "person": "Leo", "note": "", "url": "",
+      "source": "manual", "searchId": null, "rrule": "FREQ=WEEKLY;COUNT=12"
+    },
+    {
+      "id": "event-class-trip", "date": "{{day:9}}", "endDate": "{{day:11}}", "start": null, "end": null,
+      "title": "Class trip to the Baltic Sea", "location": "Jugendherberge Prerow", "person": "Mia",
+      "note": "Packing list in the school app", "url": "", "source": "manual", "searchId": null
     },
     {
       "id": "event-pediatrician", "date": "{{day:3}}", "start": "08:30", "end": "09:00", "title": "Pediatrician check-up",

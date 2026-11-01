@@ -241,12 +241,12 @@ private struct OverviewTodayCard: View {
                     Text("No appointments today.")
                         .foregroundStyle(.secondary)
                 } else {
-                    ForEach(dashboard.todayEvents) { event in
-                        OverviewRow(route: OverviewLinks.route(for: event)) {
+                    ForEach(dashboard.todayEvents, id: \.uid) { event in
+                        OverviewRow(route: OverviewLinks.route(for: event, today: dashboard.today)) {
                             HStack(spacing: 10) {
-                                Image(systemName: event.searchId != nil ? "stethoscope" : "clock")
+                                Image(systemName: event.searchId != nil ? "stethoscope" : (event.rrule != nil ? "repeat" : "clock"))
                                     .foregroundStyle(ModuleTint.calendar)
-                                Text(event.start ?? String(localized: "All day"))
+                                Text(event.time(on: dashboard.today) ?? String(localized: "All day"))
                                     .monospacedDigit()
                                     .fontWeight(.medium)
                                     .frame(minWidth: 44, alignment: .leading)
@@ -401,7 +401,7 @@ private struct OverviewUpcomingCard: View {
             }
         case let .event(date, event):
             OverviewLine {
-                Image(systemName: event.searchId != nil ? "stethoscope" : "clock")
+                Image(systemName: event.searchId != nil ? "stethoscope" : (event.rrule != nil ? "repeat" : "clock"))
                     .font(.caption)
                     .foregroundStyle(ModuleTint.calendar)
                     .frame(width: 12)

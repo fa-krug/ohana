@@ -11,8 +11,8 @@ const now = new Date("2026-06-27T12:00:00Z");
 function seed() {
   const db = createTestDb();
   db.insert(families).values([
-    { id: "h1", feedId: "feedh1", name: "Home", createdAt: now, updatedAt: now },
-    { id: "h2", feedId: "feedh2", name: "Other", createdAt: now, updatedAt: now },
+    { id: "h1", name: "Home", createdAt: now, updatedAt: now },
+    { id: "h2", name: "Other", createdAt: now, updatedAt: now },
   ]).run();
   db.insert(recipes).values([
     { id: "r1", familyId: "h1", title: "Pasta", description: "", listType: "KNOWN", defaultServings: 2, createdAt: now, updatedAt: now },

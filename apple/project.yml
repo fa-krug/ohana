@@ -81,6 +81,8 @@ targets:
         NSCameraUsageDescription: "Ohana uses the camera for recipe pictures and to scan receipts."
         NSMicrophoneUsageDescription: "Ohana listens when you dictate a message to the assistant."
         NSSpeechRecognitionUsageDescription: "Ohana turns what you dictate to the assistant into text."
+        # The sync with an Apple Calendar calendar (Features/Calendar/AppleCalendarSync.swift).
+        NSCalendarsFullAccessUsageDescription: "Ohana syncs your family’s calendar with the Apple Calendar calendar you pick."
         # The cook view's timers on the Lock Screen and in the Dynamic Island.
         NSSupportsLiveActivities: true
         CFBundleURLTypes:
@@ -216,6 +218,7 @@ targets:
         LSApplicationCategoryType: public.app-category.lifestyle
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
+        NSCalendarsFullAccessUsageDescription: "Ohana syncs your family’s calendar with the Apple Calendar calendar you pick."
         CFBundleURLTypes:
           - CFBundleURLName: de.fa-krug.Ohana.pairing
             CFBundleURLSchemes: [ohana]

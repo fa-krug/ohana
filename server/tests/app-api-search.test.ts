@@ -50,8 +50,8 @@ function setup() {
     .run();
   db.insert(calEvents)
     .values([
-      { id: "e1", familyId, day: "2026-11-12", start: "09:30", title: "Pediatrician", location: "Dr. Weber, Hauptstr. 1", person: "Mia", createdAt: NOW },
-      { id: "e2", familyId, day: "2025-03-02", title: "Dr. Weber", createdAt: NOW },
+      { id: "e1", familyId, day: "2026-11-12", endDay: "2026-11-12", start: "09:30", title: "Pediatrician", location: "Dr. Weber, Hauptstr. 1", person: "Mia", createdAt: NOW },
+      { id: "e2", familyId, day: "2025-03-02", endDay: "2025-03-02", title: "Dr. Weber", createdAt: NOW },
     ])
     .run();
   db.insert(calNotes)

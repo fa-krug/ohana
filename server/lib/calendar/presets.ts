@@ -1,6 +1,6 @@
 import type { Db } from "@/lib/db";
 import { calEntryTypes } from "@/lib/db/schema";
-import type { Lang } from "./ics";
+import type { Lang } from "@/lib/i18n/config";
 import { newFamilyTypes } from "./vacation";
 
 type Tx = Pick<Db, "insert">;

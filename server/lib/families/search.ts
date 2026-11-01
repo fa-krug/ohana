@@ -7,9 +7,10 @@
 
 import { and, eq } from "drizzle-orm";
 import type { Db } from "@/lib/db";
+import { addDays } from "@/lib/calendar/dates";
+import { loadSeries, occurrencesOf, publicEvent, type Series } from "@/lib/calendar/events";
 import {
   apptSearches,
-  calEvents,
   calNotes,
   chats,
   familyMembers,
@@ -86,7 +87,7 @@ export function searchFamily(
 
   const groups: Record<SearchKind, SearchHit[]> = {
     recipe: moduleEnabled("meals") ? ranked(recipeHits(db, familyId)) : [],
-    event: ranked(eventHits(db, familyId)),
+    event: ranked(eventHits(db, familyId, today)),
     note: ranked(noteHits(db, familyId)),
     transaction: moduleEnabled("finance") ? ranked(transactionHits(db, familyId)) : [],
     search: moduleEnabled("appointments") ? ranked(appointmentSearchHits(db, familyId)) : [],
@@ -144,24 +145,36 @@ function recipeHits(db: Db, familyId: string) {
     }));
 }
 
-function eventHits(db: Db, familyId: string) {
-  return db
-    .select()
-    .from(calEvents)
-    .where(eq(calEvents.familyId, familyId))
-    .all()
-    .map((e) => ({
+/** One hit per event (a series once): at its next occurrence from `today` on, else its last. */
+function eventHits(db: Db, familyId: string, today: string) {
+  return loadSeries(db, familyId).map((s) => {
+    const e = s.rule ? shownOccurrence(s, today) : publicEvent(s.row);
+    return {
       hit: {
         kind: "event" as const,
-        id: e.id,
-        title: e.title,
-        detail: joined(e.location, e.person),
-        day: e.day,
+        id: s.row.id,
+        title: s.row.title,
+        detail: joined(s.row.location, s.row.person),
+        day: e.date,
         time: e.start,
       },
-      text: [e.location, e.person, e.note],
-    }));
+      text: [s.row.location, s.row.person, s.row.note, ...s.overrides.flatMap((o) => [o.title, o.location, o.note])],
+    };
+  });
 }
+
+/** The series' next occurrence (still going on `today` or later), else its last one, else its
+ *  first. */
+function shownOccurrence(s: Series, today: string) {
+  const next = occurrencesOf(s, today, addDays(today, NEXT_YEARS * 366), 50);
+  const upcoming = next.sort((a, b) => a.date.localeCompare(b.date))[0];
+  if (upcoming) return upcoming;
+  const past = occurrencesOf(s, s.row.day, addDays(today, -1), 100_000);
+  return past.sort((a, b) => a.date.localeCompare(b.date)).at(-1) ?? publicEvent(s.row);
+}
+
+/** How far ahead an event's next occurrence is looked for. */
+const NEXT_YEARS = 10;
 
 function noteHits(db: Db, familyId: string) {
   return db

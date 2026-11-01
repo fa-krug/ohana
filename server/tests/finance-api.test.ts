@@ -9,7 +9,6 @@ import { createFamilyApi } from "@/lib/api/family-api";
 import { createToken } from "@/lib/auth/tokens";
 import { handleFamily } from "@/lib/calendar/family-routes";
 import { handleCalendar } from "@/lib/calendar/vacation";
-import { DrizzleCalendarStore } from "@/lib/calendar/store";
 import { copyFinance, handleFinance } from "@/lib/finance/finance";
 import { DrizzleFinanceStore } from "@/lib/finance/store";
 import { monthSummary } from "@/lib/finance/summary";
@@ -63,7 +62,7 @@ function setup() {
   /** A new family of the owner, and `view`: a call as a viewer of it. */
   const newFamily = () => {
     const family = makeFamily(db, owner.id);
-    return { id: family.id, feedId: family.feedId, view: viewerOf(family.id) };
+    return { id: family.id, view: viewerOf(family.id) };
   };
   const store = new DrizzleFinanceStore(db);
   return { db, call, owner, newFamily, store };
@@ -381,17 +380,6 @@ describe("finance transactions", () => {
     expect((await s.view("POST", `/families/${s.id}/finance/transactions`, { date: "2026-02-01", amountCents: 1 })).status).toBe(
       403,
     );
-  });
-
-  it("the legacy and feed links never see finances", async () => {
-    const { db, call, s, f } = financeFamily();
-    await call("POST", `${f}/transactions`, { date: "2026-03-01", amountCents: -100, payee: "Secret" });
-    await new DrizzleCalendarStore(db).updateFamily(s.id, { legacy_id: "OldViewId1234567890" });
-    for (const token of ["OldViewId1234567890", s.feedId]) {
-      for (const path of ["/finance", "/finance/transactions", "/finance/summary", "/export"]) {
-        expect((await call("GET", `/families/${token}${path}`)).status, token + path).toBe(404);
-      }
-    }
   });
 
   it("imports statement rows once, keeping identical rows apart", async () => {

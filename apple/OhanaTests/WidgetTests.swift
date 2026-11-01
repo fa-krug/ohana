@@ -71,6 +71,26 @@ struct WidgetTests {
         #expect(s.items(on: Self.day("2026-11-02"), now: Self.at("2026-11-01", "07:00"))?.map(\.kind) == [.birthday])
     }
 
+    @Test func showsAnEventOverSeveralDaysOnEachOfThem() throws {
+        let json = """
+        {"today":"2026-11-01","calendar":{"nextGap":null,"upcoming":[]},"awayToday":[],
+         "todayEvents":[
+           {"id":"t","occurrence":null,"date":"2026-11-01","endDate":"2026-11-02","start":"20:00","end":"10:00","title":"Night train","location":"","person":"","note":"","url":"","source":"manual","searchId":null,"rrule":null}],
+         "upcoming":[],"meals":{"today":null,"shopping":null},"searches":[],"birthdays":[]}
+        """
+        // Without `tomorrowEvents` (an older server) tomorrow comes from today's events too.
+        let s = try Self.snapshot(json, loadedAt: Self.at("2026-11-01", "07:00"))
+        let withTomorrow = try Self.snapshot(json.replacingOccurrences(of: #""upcoming":[]"#, with: #""upcoming":[],"tomorrowEvents":[]"#),
+                                             loadedAt: Self.at("2026-11-01", "07:00"))
+        #expect(withTomorrow.items(on: Self.day("2026-11-02"), now: Self.at("2026-11-01", "21:00"))?.isEmpty == true)
+        // Today from 20:00 on, not over at 21:00 (it goes on); tomorrow until 10:00.
+        let today = try #require(s.items(on: Self.day("2026-11-01"), now: Self.at("2026-11-01", "21:00")))
+        #expect(today.map(\.title) == ["Night train"] && today[0].start == "20:00" && today[0].end == nil)
+        let tomorrow = try #require(s.items(on: Self.day("2026-11-02"), now: Self.at("2026-11-01", "21:00")))
+        #expect(tomorrow.map(\.id) == ["event|t"] && tomorrow[0].start == nil && tomorrow[0].end == "10:00")
+        #expect(WidgetSnapshot.endDate(of: tomorrow[0]) == Self.at("2026-11-02", "10:00"))
+    }
+
     @Test func knowsTheModulesThatAreOff() throws {
         let s = try Self.snapshot(OverviewTests.fullSample, disabledModules: ["meals"], loadedAt: Self.at("2026-11-02", "07:00"))
         #expect(!s.mealsEnabled)

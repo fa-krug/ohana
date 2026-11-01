@@ -31,8 +31,10 @@ nonisolated struct MealDragItem: Codable, Hashable, Sendable, Transferable {
 nonisolated struct CalendarEventDragItem: Codable, Hashable, Sendable, Transferable {
     let familyID: String
     let eventID: String
-    /// The day it is on now, "YYYY-MM-DD".
+    /// The day it was dragged from (one of the days it is on), "YYYY-MM-DD".
     let date: String
+    /// The occurrence of a series it is (its original day, "YYYY-MM-DD"); nil for a single event.
+    var occurrence: String? = nil
 
     static var transferRepresentation: some TransferRepresentation {
         CodableRepresentation(contentType: .ohanaCalendarEvent)

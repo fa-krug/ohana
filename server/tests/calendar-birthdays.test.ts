@@ -42,12 +42,12 @@ function call(db: Db, token: string | null) {
 }
 
 describe("the calendar", () => {
-  it("shows the members' birthdays of the year, and the feed on request every year", async () => {
+  it("shows the members' birthdays of the year", async () => {
     const db = createTestDb();
     const editor = makeUser(db, { name: "Sascha" });
     const f = makeFamily(db, editor.id);
     setMemberBirthday(db, { id: editor.id }, f.id, editor.id, "1985-06-15", NOW);
-    const mia = addPerson(db, { id: editor.id }, f.id, { name: "Mia", birthday: "2020-02-29" }, NOW).person;
+    addPerson(db, { id: editor.id }, f.id, { name: "Mia", birthday: "2020-02-29" }, NOW);
     const token = createToken(db, { userId: editor.id, kind: "api" }, NOW).token;
 
     const state = (await call(db, token)(`/families/${f.id}?year=2026`)).data;
@@ -56,13 +56,5 @@ describe("the calendar", () => {
       "2026-06-15": [{ name: "Sascha", age: 41 }],
     });
 
-    const anon = call(db, null);
-    expect((await anon(`/families/${f.feedId}/calendar.ics`)).text).not.toContain("birthday");
-    // Unfolded: long lines continue on the next one (RFC 5545 §3.1).
-    const ics = (await anon(`/families/${f.feedId}/calendar.ics?birthdays=1`)).text.replace(/\r\n /g, "");
-    expect(ics).toContain(`UID:${f.feedId}-birthday-${mia.id}@ohana`);
-    expect(ics).toContain("DTSTART;VALUE=DATE:20200229\r\nDTEND;VALUE=DATE:20200301\r\nRRULE:FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=-1\r\nSUMMARY:🎂 Mia's birthday");
-    expect(ics).toContain("DTSTART;VALUE=DATE:19850615\r\nDTEND;VALUE=DATE:19850616\r\nRRULE:FREQ=YEARLY\r\nSUMMARY:🎂 Sascha's birthday");
-    expect((await anon(`/families/${f.feedId}/calendar.ics?birthdays=1&lang=de`)).text).toContain("SUMMARY:🎂 Geburtstag Mia");
   });
 });

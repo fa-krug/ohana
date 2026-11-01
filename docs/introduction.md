@@ -24,9 +24,10 @@ Ready to try it? Go to the [quick start](/quickstart).
 
 - The family's **year at a glance**: vacation, public holidays, sick days, day-care closures.
 - Entry types per year with roles, so you see the **days nobody covers**.
-- Notes, **timed events** (e.g. a booked doctor's appointment) and **birthdays**; on iPad and
-  Mac an event is dragged onto another day to move it.
-- An **iCalendar feed** for Apple Calendar, Google Calendar or any other calendar app.
+- Notes, **events** over one day or several, repeating like in Apple Calendar (e.g. a booked
+  doctor's appointment, swimming every Thursday) and **birthdays**; on iPad and Mac an event is
+  dragged onto another day to move it.
+- A **two-way sync with Apple Calendar** on your devices (iCloud, Google or Exchange calendars).
 - Days marked as *away* are skipped by the meal plan.
 
 ## Finance

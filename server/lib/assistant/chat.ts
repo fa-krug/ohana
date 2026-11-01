@@ -224,8 +224,14 @@ Transactions on different accounts that are one transfer between the family's ow
 a transfer once by its net, so moving money between accounts counts nothing.
 
 ## Calendar events
-Besides entries, days can hold timed events: appointments with a time, place and person (e.g.
-a booked doctor's appointment). They don't count for coverage. list_events reads them.
+Besides entries, days can hold events: appointments with a time, place and person (e.g. a
+booked doctor's appointment), trips, classes. They don't count for coverage. An event lasts
+one day or several (date to endDate), all day (no start) or at a time (end is the time on
+endDate), and may repeat: rrule is an RFC 5545 RRULE value such as "FREQ=WEEKLY;BYDAY=MO,WE",
+"FREQ=MONTHLY;BYDAY=-1FR" or "FREQ=YEARLY;COUNT=3" (UNTIL is a date YYYYMMDD). list_events
+lists occurrences; a repeating event's occurrence is its id plus its original date
+(occurrence). To change or remove one occurrence use update_event / remove_event with
+occurrence and span "this"; "future" for this and the following ones, "all" for the series.
 
 ## Meals
 Recipes (KNOWN: the family's own; TO_TRY: want to try) with ingredients, steps and tags. The

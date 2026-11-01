@@ -48,9 +48,12 @@ modules are on.
 - **The API only grows.** Fields and routes are added, not removed or renamed; a change older
   apps can't handle raises `apiVersion` in `/api/v1/server`.
 
-## The calendar feed
+## Calendar events
 
-Each family has a public, unguessable **iCalendar feed** for calendar apps, with options for
-events and birthdays. Its address is in the app (the calendar's settings) and in
-`GET /api/v1/families/{id}/links`. Anyone with the link can read the calendar; a new link can be
-made in the app.
+Events may span several days (`date` to `endDate`) and repeat (`rrule`, an iCalendar RRULE
+value such as `FREQ=WEEKLY;BYDAY=MO,WE`). `GET /api/v1/families/{id}/events?from=&to=` lists
+the occurrences in a range; an occurrence of a repeating event carries its original day in
+`occurrence`, and `?occurrence=…&span=this|future` on `PATCH` / `DELETE /events/{id}` changes or
+removes only that occurrence, or it and the ones after it. `?raw=1` lists every event as stored:
+a series with its rule, the days taken out of it (`exdates`) and the occurrences changed on their
+own (`overrides`).

@@ -19,9 +19,9 @@ invite links).
   everything) or **viewer** (only looks), invite links, members without an account (children,
   grandparents) with birthdays. An administrator creates accounts with one-time setup links.
 - **Calendar:** the family's year at a glance: vacation, public holidays, sick days, day-care
-  closures; entry types per year with roles that show **days nobody covers**; notes; timed
-  events (e.g. a booked doctor's appointment); birthdays; an **iCalendar feed** for Apple,
-  Google or any calendar app.
+  closures; entry types per year with roles that show **days nobody covers**; notes; events
+  over one day or several that repeat (e.g. a booked doctor's appointment, swimming every
+  Thursday); birthdays; a **two-way sync with Apple Calendar** in the app.
 - **Finance:** transactions, accounts, a category tree, transfers and split bookings, **CSV
   import** of bank statements with saved formats, monthly overviews, comparisons and a
   benchmark; categorizing with the assistant.

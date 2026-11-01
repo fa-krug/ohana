@@ -17,8 +17,8 @@ const now = new Date("2026-06-27T12:00:00Z");
 
 function seed() {
   const db = createTestDb();
-  db.insert(families).values({ id: "h1", feedId: "feedh1", name: "Home", createdAt: now, updatedAt: now }).run();
-  db.insert(families).values({ id: "h2", feedId: "feedh2", name: "Other", createdAt: now, updatedAt: now }).run();
+  db.insert(families).values({ id: "h1", name: "Home", createdAt: now, updatedAt: now }).run();
+  db.insert(families).values({ id: "h2", name: "Other", createdAt: now, updatedAt: now }).run();
   db.insert(mealTags).values({ id: "t1", familyId: "h1", category: "CUISINE", nameEn: "Italian", nameDe: "Italienisch" }).run();
   db.insert(recipes).values([
     { id: "r1", familyId: "h1", title: "Pasta", description: "", listType: "KNOWN", defaultServings: 2, createdAt: now, updatedAt: now },
@@ -94,7 +94,7 @@ describe("listRecipes", () => {
 
   it("fuzzy search tolerates diacritics and ranks by relevance", () => {
     const db = createTestDb();
-    db.insert(families).values({ id: "h1", feedId: "feedh1", name: "Home", createdAt: now, updatedAt: now }).run();
+    db.insert(families).values({ id: "h1", name: "Home", createdAt: now, updatedAt: now }).run();
     db.insert(recipes).values([
       { id: "a", familyId: "h1", title: "Pürée Soup", description: "", listType: "KNOWN", defaultServings: 2, createdAt: now, updatedAt: now },
       { id: "b", familyId: "h1", title: "Chunky Puree Bowl", description: "", listType: "KNOWN", defaultServings: 2, createdAt: now, updatedAt: now },
@@ -110,8 +110,8 @@ function seedDetail() {
   const db = createTestDb();
   db.insert(families)
     .values([
-      { id: "h1", feedId: "feedh1", name: "Home", createdAt: now, updatedAt: now },
-      { id: "h2", feedId: "feedh2", name: "Other", createdAt: now, updatedAt: now },
+      { id: "h1", name: "Home", createdAt: now, updatedAt: now },
+      { id: "h2", name: "Other", createdAt: now, updatedAt: now },
     ])
     .run();
   db.insert(ingredients)

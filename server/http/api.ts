@@ -21,7 +21,6 @@ import { handle } from "@/lib/auth/route";
 import { serializeUser } from "@/lib/auth/serialize";
 import { getApiUser } from "@/lib/auth/session";
 import { deleteToken, findToken } from "@/lib/auth/tokens";
-import { handleCalendarApp } from "@/lib/calendar/app-routes";
 import { handleEvents } from "@/lib/calendar/events";
 import { handleFamily } from "@/lib/calendar/family-routes";
 import { handleCalendar } from "@/lib/calendar/vacation";
@@ -217,7 +216,6 @@ export function apiRoutes(db: Db): Hono {
     [
       handleDisabledModules,
       handleFamilyApp,
-      handleCalendarApp,
       handleFamily,
       handleCalendar,
       handleEvents,
