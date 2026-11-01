@@ -27,6 +27,9 @@ import {
   type ToolCall,
 } from "./provider";
 import {
+  type AppleCalendarEdit,
+  type AppleCalendarSnapshot,
+  cleanAppleCalendar,
   cleanReminders,
   MAX_TOOL_RESULT,
   type Question,
@@ -75,6 +78,9 @@ You ended without answering. Don't use tools now: tell the user what you found a
 
 export type Emit = (event: string, data: unknown) => void;
 
+/** The tools that wait for the user (a question, an edit of their Reminders or calendars). */
+const WAITS = new Set(["ask_user", "edit_reminders", "edit_apple_calendar"]);
+
 /** The pages a chat can belong to: Ohana's modules, the family overview and the settings. */
 export const PAGES = ["overview", "calendar", "finance", "meals", "appointments", "settings"];
 /** family-planner's names of pages (its chats may come with them). */
@@ -87,26 +93,29 @@ export function cleanPage(v: unknown): string | null {
 }
 
 /** What the instructions depend on, from the app's latest message: the page and year the user
- *  looks at, their language and their day, and the user's Reminders (the app sends them when it
- *  may read them; the Reminders tools need them). */
+ *  looks at, their language and their day, and the user's Reminders and device calendars (the
+ *  app sends them when it may read them; the Reminders and Apple Calendar tools need them). */
 export interface ChatContext {
   page: string;
   year: number;
   lang: "en" | "de";
   today: string;
   reminders?: RemindersSnapshot;
+  appleCalendar?: AppleCalendarSnapshot;
 }
 
 /** The context the app sent, checked; the server's day (and its year) as a fallback. */
 export function cleanContext(body: Record<string, unknown>): ChatContext {
   const today = isValidDate(body.today) ? body.today as string : formatDate(new Date());
   const reminders = cleanReminders(body.reminders);
+  const appleCalendar = cleanAppleCalendar(body.appleCalendar);
   return {
     page: cleanPage(body.page) ?? "overview",
     year: Number.isInteger(body.year) ? body.year as number : Number(today.slice(0, 4)),
     lang: body.lang === "de" ? "de" : "en",
     today,
     ...(reminders ? { reminders } : {}),
+    ...(appleCalendar ? { appleCalendar } : {}),
   };
 }
 
@@ -178,6 +187,8 @@ export function systemPrompt(input: {
   search: boolean;
   /** The app sent the user's Reminders (the Reminders tools are there). */
   reminders?: boolean;
+  /** The app sent the user's device calendars (the Apple Calendar tools are there). */
+  appleCalendar?: boolean;
 }): string {
   const { family, today, year } = input;
   const weekday = new Date(today + "T00:00:00Z").toLocaleDateString("en", {
@@ -277,6 +288,17 @@ app can't read them on this device (no access). If asked, say so; what the meal
 plan needs comes from get_shopping_items.`
   }
 
+## Apple Calendar
+${
+    input.appleCalendar
+      ? `The user's own calendars on their device (work, personal, shared …; the app sent them with
+their message). get_apple_calendar reads them; edit_apple_calendar changes them: the user sees
+the changes and applies or declines them, so put everything into one call and don't ask for an
+OK first. They aren't the family's calendar: use Ohana's event tools for that, also for the
+device calendar marked "ohana" (it mirrors the family's).`
+      : "The user's device calendars aren't available in this chat (no calendar access on this device)."
+  }
+
 ## How to work
 - Use the tools to look things up; don't guess what's in the calendar, the finances, the meals
   or the appointment searches.
@@ -323,7 +345,8 @@ something only the user knows, rather than picking for them or asking in plain t
 - You need the OK for a bigger change: options like "Yes, do it" / "No".
 Look things up with the tools first, so the options are concrete (real dates, names,
 amounts). Don't ask what the tools can tell you, or when the request is already clear. Ask one
-question at a time, and not in the same step as edit_reminders (which waits for the user too).`;
+question at a time, and not in the same step as edit_reminders or edit_apple_calendar (which
+wait for the user too).`;
 }
 
 /** Where the window of a history starts: the newest MAX_MESSAGES messages, but all of the
@@ -437,7 +460,7 @@ export function cleanParts(raw: unknown[]): ContentPart[] {
  * step), "question" {id, question, options, multiple} (the model asked the user: the turn ends
  * without the call's result, which the app adds with the answer and then continues),
  * "reminders" {id, summary, ops} (a change of the user's Reminders waits for their OK, the same
- * way), "usage"
+ * way), "calendar" {id, summary, ops} (the same for their device calendars), "usage"
  * {used, max} (the tokens of the context in use, and the window), "compacting" {} and
  * "compacted" {summary, request?, keep} (the history got too long for the context window: all but
  * its newest `keep` messages are now the summary, which the caller keeps in their place) and
@@ -467,7 +490,12 @@ export async function runChat(opts: {
   const { provider, ctx, emit, signal } = opts;
   // The model's endpoint may be allowed where pages aren't (a model on the home network).
   const modelNet = opts.modelNet ?? ctx.net;
-  const tools = toolsFor({ writes: opts.writes, search: opts.search, reminders: !!ctx.reminders });
+  const tools = toolsFor({
+    writes: opts.writes,
+    search: opts.search,
+    reminders: !!ctx.reminders,
+    appleCalendar: !!ctx.appleCalendar,
+  });
   const allowed = new Set(tools.map((t) => t.function.name));
   const messages: ChatMessage[] = [{ role: "system", content: opts.system }, ...opts.history];
   const added: ChatMessage[] = [];
@@ -610,11 +638,12 @@ export async function runChat(opts: {
         break;
       }
       push({ role: "assistant", content: content || null, tool_calls: calls });
-      // A question (or a Reminders edit) waits for the user: its result is their answer, added
-      // by the app. One per step.
+      // A question (or an edit of the user's Reminders or calendars) waits for the user: its
+      // result is their answer, added by the app. One per step.
       let waiting:
         | ({ kind: "question"; id: string } & Question)
         | ({ kind: "reminders"; id: string } & RemindersEdit)
+        | ({ kind: "calendar"; id: string } & AppleCalendarEdit)
         | null = null;
       const argsOf = (call: ToolCall): unknown => {
         try {
@@ -631,15 +660,14 @@ export async function runChat(opts: {
         })
         : null;
       for (const [i, call] of calls.entries()) {
-        // A question and a Reminders edit show up as themselves (not as tool calls), once
-        // they're valid.
-        const ask = call.function.name === "ask_user" || call.function.name === "edit_reminders";
+        // A question and an edit show up as themselves (not as tool calls), once they're valid.
+        const ask = WAITS.has(call.function.name);
         if (ask && waiting) {
           push({
             role: "tool",
             tool_call_id: call.id,
             content: JSON.stringify({
-              error: "Ask one question at a time (a question or a Reminders change already waits for the user)",
+              error: "Ask one question at a time (a question or a change of the user's Reminders or calendars already waits for the user)",
             }),
           });
           continue;
@@ -654,6 +682,10 @@ export async function runChat(opts: {
         }
         if (res.reminders) {
           waiting = { kind: "reminders", id: call.id, ...res.reminders };
+          continue;
+        }
+        if (res.appleCalendar) {
+          waiting = { kind: "calendar", id: call.id, ...res.appleCalendar };
           continue;
         }
         if (ask) emit("tool", { id: call.id, name: call.function.name, args });

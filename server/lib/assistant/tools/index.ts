@@ -5,6 +5,7 @@ import { ZodError } from "zod";
 import { HttpError, objectOf } from "@/lib/api/http";
 import { AuthError } from "@/lib/auth/errors";
 import type { ToolSpec } from "../provider";
+import { appleCalendarTools } from "./apple-calendar";
 import { calendarTools } from "./calendar";
 import { NeedsConfirmation, type Tool, type ToolContext, type ToolResult } from "./common";
 import { financeTools } from "./finance";
@@ -17,6 +18,12 @@ import { webTools } from "./web";
 import { type ModuleName, moduleEnabled } from "@/lib/server-info";
 
 export * from "./common";
+export {
+  type AppleCalendarEdit,
+  type AppleCalendarOp,
+  type AppleCalendarSnapshot,
+  cleanAppleCalendar,
+} from "./apple-calendar";
 export { cleanReminders, type ReminderOp, type RemindersEdit, type RemindersSnapshot } from "./reminders";
 
 export const TOOLS: Record<string, Tool> = {
@@ -27,6 +34,7 @@ export const TOOLS: Record<string, Tool> = {
   ...appointmentTools,
   ...generalTools,
   ...reminderTools,
+  ...appleCalendarTools,
   ...webTools,
 };
 
@@ -44,15 +52,21 @@ export function toolEnabled(name: string): boolean {
 }
 
 /** The tools for a chat: without writes if they're off, without search if it isn't set up,
- *  without the Reminders tools unless the app sent the user's Reminders, and without those of
- *  modules the server turned off. */
-export function toolsFor(opts: { writes: boolean; search: boolean; reminders?: boolean }): ToolSpec[] {
+ *  without the Reminders (Apple Calendar) tools unless the app sent the user's Reminders (device
+ *  calendars), and without those of modules the server turned off. */
+export function toolsFor(opts: {
+  writes: boolean;
+  search: boolean;
+  reminders?: boolean;
+  appleCalendar?: boolean;
+}): ToolSpec[] {
   return Object.values(TOOLS)
     .filter(
       (t) =>
         (opts.writes || !t.write) &&
         (opts.search || !t.needsSearch) &&
         (opts.reminders || !t.needsReminders) &&
+        (opts.appleCalendar || !t.needsAppleCalendar) &&
         toolEnabled(t.spec.name),
     )
     .map((t) => ({ type: "function", function: t.spec }));

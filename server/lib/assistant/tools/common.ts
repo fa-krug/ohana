@@ -11,6 +11,7 @@ import type { FinanceStore } from "@/lib/finance/store";
 import type { NetOptions } from "../net";
 import type { ToolSpec } from "../provider";
 import type { SearchProvider } from "../store";
+import type { AppleCalendarEdit, AppleCalendarSnapshot } from "./apple-calendar";
 import type { RemindersEdit, RemindersSnapshot } from "./reminders";
 
 export interface UndoStep {
@@ -41,6 +42,8 @@ export interface ToolResult {
   /** A change of the user's Reminders (edit_reminders): the turn stops until they apply or
    *  decline it in the app. */
   reminders?: RemindersEdit;
+  /** A change of the user's device calendars (edit_apple_calendar), the same way. */
+  appleCalendar?: AppleCalendarEdit;
 }
 
 export interface ToolContext {
@@ -65,6 +68,9 @@ export interface ToolContext {
   /** The user's Reminders as the app sent them with the latest message; undefined: the app
    *  can't reach them (no access on the device), and the Reminders tools are off. */
   reminders?: RemindersSnapshot;
+  /** The user's device calendars (Apple Calendar) as the app sent them; undefined: no full
+   *  calendar access on the device, and the Apple Calendar tools are off. */
+  appleCalendar?: AppleCalendarSnapshot;
   signal?: AbortSignal;
 }
 
@@ -80,6 +86,8 @@ export interface Tool {
   needsSearch?: boolean;
   /** Offered only when the app sent the user's Reminders (ToolContext.reminders). */
   needsReminders?: boolean;
+  /** Offered only when the app sent the user's device calendars (ToolContext.appleCalendar). */
+  needsAppleCalendar?: boolean;
   run(args: Record<string, unknown>, ctx: ToolContext): Promise<ToolResult>;
 }
 
@@ -215,3 +223,39 @@ export const opsSchema = (item: Record<string, unknown>) => ({
   required: ["ops"],
 });
 
+/** What the words of an edit summary are (see opsSummary). */
+export interface EditWords<O extends { op: string }> {
+  /** The thing an op changes, singular and plural. */
+  noun: { en: [string, string]; de: [string, string] };
+  /** The kinds of ops in the order a summary names them: [op, English verb, German verb]. */
+  verbs: [O["op"], string, string][];
+  /** The name of an op's thing (its new title for an add). */
+  name(op: O): string;
+  /** Where an op's thing is (or goes to): an add names it ("to Groceries"). */
+  target(op: O): { id: string; title: string };
+}
+
+/** What the card of an edit of the user's device data says it does: one op by name ("Add
+ *  “Bread” to Groceries", "„Brot“ zu Groceries hinzufügen"), several by counts ("Add 3
+ *  reminders to Groceries", "Change 2 events, delete 1 event"). */
+export function opsSummary<O extends { op: string }>(ops: O[], lang: "en" | "de", words: EditWords<O>): string {
+  const de = lang === "de";
+  const only = ops.every((o) => o.op === ops[0].op) ? ops[0] : null;
+  const target = words.target(ops[0]);
+  const sameTarget = ops.every((o) => words.target(o).id === target.id);
+  const to = (kind: string) => (kind === "add" && only && sameTarget ? (de ? ` zu ${target.title}` : ` to ${target.title}`) : "");
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  if (only && ops.length === 1) {
+    const [, en, deVerb] = words.verbs.find(([kind]) => kind === only.op)!;
+    const name = words.name(only);
+    return de ? `„${name}“${to(only.op)} ${deVerb}` : `${cap(en)} “${name}”${to(only.op)}`;
+  }
+  const [one, many] = words.noun[lang];
+  const things = (k: number) => `${k} ${k === 1 ? one : many}`;
+  const parts: string[] = [];
+  for (const [kind, en, deVerb] of words.verbs) {
+    const k = ops.filter((o) => o.op === kind).length;
+    if (k) parts.push(de ? `${things(k)}${to(kind)} ${deVerb}` : `${en} ${things(k)}${to(kind)}`);
+  }
+  return cap(parts.join(", "));
+}

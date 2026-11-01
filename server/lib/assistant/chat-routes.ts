@@ -14,6 +14,7 @@
 //   POST   {chat}/answer   the answer to the assistant's question; streams like events
 //   POST   {chat}/reminders  the user applied (with the results) or declined the waiting
 //                          Reminders edit; streams like events
+//   POST   {chat}/calendar the same for the waiting edit of their device calendars
 //   POST   {chat}/stop     stops the running turn
 //   POST   {chat}/undone   a change of the chat was undone (the model hears it next time)
 //   POST   {chat}/page     moves the chat to another page
@@ -39,11 +40,15 @@ import {
   type Item,
   leaseUntil,
   onPage,
+  EDIT_PLACE,
+  type EditAnswer,
+  type EditItem,
+  type EditKind,
+  type EditResult,
+  openEdit,
   openQuestion,
-  openRemindersEdit,
   pause,
   type Queued,
-  type ReminderResult,
   STOPPED,
   type Summary,
   summaryOf,
@@ -52,7 +57,7 @@ import {
 } from "./chats";
 import type { StoredMessage } from "./context";
 import type { ChatMessage, ContentPart } from "./provider";
-import type { ReminderOp } from "./tools";
+import type { AppleCalendarOp, ReminderOp } from "./tools";
 import type { AssistantStore, ChatRow } from "./store";
 
 /** How often followers look for news (the worker saves streaming text every 0.5 s). */
@@ -108,7 +113,9 @@ export function handleChats(
     case "POST :id/answer":
       return r.answer(id);
     case "POST :id/reminders":
-      return r.reminders(id);
+      return r.edit(id, "reminders");
+    case "POST :id/calendar":
+      return r.edit(id, "calendar");
     case "POST :id/stop":
       return r.stop(id);
     case "POST :id/undone":
@@ -388,11 +395,12 @@ class ChatRoutes {
     }
   }
 
-  /** POST /ai/chats/{id}/reminders {id, applied, results?, reminders?, page, year, lang, today}:
-   *  the user applied the waiting Reminders edit in the app (results: one per op, in order:
-   *  {ok: true, id?} or {ok: false, error}) or declined it (applied: false); the turn goes on
-   *  with that as the tool's result. `reminders` is the fresh snapshot after the change. */
-  async reminders(id: string) {
+  /** POST /ai/chats/{id}/reminders {id, applied, results?, reminders?, page, year, lang, today}
+   *  (and POST …/calendar with `appleCalendar`): the user applied the waiting edit of their
+   *  Reminders (calendars) in the app (results: one per op, in order: {ok: true, id?} or {ok:
+   *  false, error}) or declined it (applied: false); the turn goes on with that as the tool's
+   *  result. The context's snapshot is the fresh one after the change. */
+  async edit(id: string, kind: EditKind) {
     const store = this.store;
     const body = await readBody(this.ctx.req);
     if (typeof body.applied !== "boolean") throw new HttpError(400, "applied must be true or false");
@@ -405,28 +413,30 @@ class ChatRoutes {
     try {
       const [items, messages] = await Promise.all([store.listChatItems(id), store.listChatMessages(id)]);
       const shown = items.map((r) => r.item as unknown as Item);
-      const edit = openRemindersEdit(
+      const edit = openEdit(
+        kind,
         shown,
         messages.map((r) => r.message as unknown as StoredMessage),
       );
       if (!edit || edit.id !== body.id) throw new HttpError(409, "This change doesn't wait any more");
-      let answer: NonNullable<(Item & { kind: "reminders" })["answer"]>;
+      const ops: (ReminderOp | AppleCalendarOp)[] = edit.ops;
+      let answer: EditAnswer;
       let result: unknown;
       if (body.applied) {
         const raw = body.results as unknown[];
-        const results = edit.ops.map((_, i) => cleanResult(raw[i]));
+        const results = ops.map((_, i) => cleanResult(raw[i]));
         answer = { applied: true, results };
         result = {
           applied: true,
-          results: edit.ops.map((op, i) => ({
+          results: ops.map((op, i) => ({
             op: op.op,
-            title: op.op === "add" ? op.title : op.itemTitle,
+            title: op.op === "add" ? op.title : "itemTitle" in op ? op.itemTitle : op.eventTitle,
             ...results[i],
           })),
         };
       } else {
         answer = { applied: false };
-        result = { applied: false, note: "The user declined these changes: nothing was changed in their Reminders." };
+        result = { applied: false, note: `The user declined these changes: nothing was changed in ${EDIT_PLACE[kind]}.` };
       }
       return await this.begin(chat, token, {
         messages: [{ role: "tool", tool_call_id: edit.id, content: JSON.stringify(result) }],
@@ -592,8 +602,8 @@ function cleanUndo(raw: unknown): unknown[] {
 
 const str = (v: unknown, max = MAX_TEXT) => (typeof v === "string" ? v.slice(0, max) : "");
 
-/** What the app reports for one op of a Reminders edit; a missing one failed. */
-function cleanResult(raw: unknown): ReminderResult {
+/** What the app reports for one op of an edit; a missing one failed. */
+function cleanResult(raw: unknown): EditResult {
   const o = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   if (o.ok === true) return typeof o.id === "string" && o.id ? { ok: true, id: o.id.slice(0, 200) } : { ok: true };
   return { ok: false, error: str(o.error, 500) || (raw === undefined ? "No result" : "Failed") };
@@ -646,15 +656,17 @@ function cleanItems(raw: unknown): Item[] {
             ...(o.undone === true ? { undone: true } : {}),
           },
         ];
-      case "reminders": {
+      case "reminders":
+      case "calendar": {
         const ops = Array.isArray(o.ops) && JSON.stringify(o.ops).length < 100_000 ? o.ops.slice(0, 50) : [];
         const a = o.answer as { applied?: unknown; results?: unknown } | undefined;
+        // The ops are the server's own (resolved by the tool), shown by the app as they are.
         return [
           {
-            kind: "reminders",
+            kind: o.kind,
             id: str(o.id, 200),
             summary: str(o.summary, 2000),
-            ops: ops.filter((op) => op && typeof op === "object") as ReminderOp[],
+            ops: ops.filter((op) => op && typeof op === "object"),
             ...(a && typeof a === "object" && typeof a.applied === "boolean"
               ? {
                   answer: a.applied
@@ -662,7 +674,7 @@ function cleanItems(raw: unknown): Item[] {
                     : { applied: false },
                 }
               : { skipped: true }),
-          },
+          } as EditItem,
         ];
       }
       case "question": {

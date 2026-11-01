@@ -82,10 +82,13 @@ final class AssistantChatStore {
     /// What every request of a turn tells about the user's Reminders (nil: nothing, so the
     /// Reminders tools are off); tests replace it.
     @ObservationIgnored var remindersContext: () async -> AssistantRemindersContext?
+    /// The same for the device's calendars (nil: the Apple Calendar tools are off); tests replace it.
+    @ObservationIgnored var calendarContext: () async -> AssistantCalendarContext?
 
     init(api: FamilyAPI) {
         self.api = api
         remindersContext = { await AssistantRemindersContext.current(for: api) }
+        calendarContext = { await AssistantCalendarContext.current(for: api) }
     }
 
     /// One store per family and session, so the open chat survives closing the panel.
@@ -301,10 +304,11 @@ final class AssistantChatStore {
 
     private func input(text: String, attachments: [AssistantOutgoingAttachment]) async -> AssistantChatInput {
         let reminders = await remindersContext()
+        let calendar = await calendarContext()
         let here = context()
         return AssistantChatInput(
             text: text, attachments: attachments, page: current?.page ?? here.page, year: here.year,
-            lang: language, today: AssistantDates.day(), reminders: reminders
+            lang: language, today: AssistantDates.day(), reminders: reminders, appleCalendar: calendar
         )
     }
 
@@ -333,7 +337,8 @@ final class AssistantChatStore {
             )
         }
         guard var c = current else { return }
-        // A new message instead of an answer: the question (or Reminders edit) stays unanswered.
+        // A new message instead of an answer: the question (or Reminders or calendar edit) stays
+        // unanswered.
         if let open = openWaiting() {
             switch c.items[open] {
             case var .question(q):
@@ -342,6 +347,9 @@ final class AssistantChatStore {
             case var .reminders(edit):
                 edit.skipped = true
                 c.items[open] = .reminders(edit)
+            case var .calendar(edit):
+                edit.skipped = true
+                c.items[open] = .calendar(edit)
             default:
                 break
             }
@@ -392,13 +400,13 @@ final class AssistantChatStore {
         }
     }
 
-    /// The position of the open chat's question or Reminders edit that waits for the user (the
-    /// last of them, as on the server: one waits at a time).
+    /// The position of the open chat's question, Reminders or calendar edit that waits for the
+    /// user (the last of them, as on the server: one waits at a time).
     private func openWaiting() -> Int? {
         guard let items = current?.items, !busy, savedCopy == nil,
               let index = items.lastIndex(where: {
                   switch $0 {
-                  case .question, .reminders: true
+                  case .question, .reminders, .calendar: true
                   default: false
                   }
               }),
@@ -407,6 +415,7 @@ final class AssistantChatStore {
         switch items[index] {
         case let .question(q) where q.answer == nil && !q.skipped: return index
         case let .reminders(edit) where edit.answer == nil && !edit.skipped: return index
+        case let .calendar(edit) where edit.answer == nil && !edit.skipped: return index
         default: return nil
         }
     }
@@ -423,6 +432,12 @@ final class AssistantChatStore {
         return (index, edit)
     }
 
+    /// The open chat's calendar edit that waits for the user to apply or decline it.
+    func openCalendarEdit() -> (index: Int, edit: AssistantCalendarEdit)? {
+        guard let index = openWaiting(), case let .calendar(edit) = current?.items[index] else { return nil }
+        return (index, edit)
+    }
+
     /// Answers the open question of the current chat, and the assistant goes on.
     func answer(selected: [String], text: String) {
         let own = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -432,24 +447,27 @@ final class AssistantChatStore {
         var answered = q
         answered.answer = .init(selected: selected, text: own.isEmpty ? nil : own)
         current?.items[index] = .question(answered)
-        // Nothing else is sent while the Reminders are read.
+        // Nothing else is sent while the Reminders and calendars are read.
         sending = true
         Task {
             let reminders = await remindersContext()
+            let calendar = await calendarContext()
             let here = context()
             let body = AssistantAnswerInput(
                 id: q.id, selected: selected, text: own.isEmpty ? nil : own, page: c.page ?? here.page,
-                year: here.year, lang: language, today: AssistantDates.day(), reminders: reminders
+                year: here.year, lang: language, today: AssistantDates.day(), reminders: reminders,
+                appleCalendar: calendar
             )
             post(c.id, "answer", body: body)
         }
     }
 
-    /// How applying a Reminders edit started.
+    /// How applying a Reminders (or calendar) edit started.
     enum RemindersApplyStart: Equatable {
         /// Applied (as far as it went) and answered; the assistant goes on.
         case answered
-        /// Ohana may not use Reminders (asked, and the user said no, or not allowed before).
+        /// Ohana may not use Reminders (asked, and the user said no, or not allowed before), or
+        /// the calendars.
         case noAccess
         /// It doesn't wait any more (answered elsewhere, a turn runs).
         case notWaiting
@@ -495,20 +513,70 @@ final class AssistantChatStore {
         Task {
             // After the change: what the assistant reads next is how the Reminders are now.
             let reminders = await remindersContext()
+            let calendar = await calendarContext()
             post(chatID, "reminders", body: Self.remindersAnswer(
                 id: open.edit.id, answer: answer, page: page, year: here.year,
-                lang: language, today: AssistantDates.day(), reminders: reminders
+                lang: language, today: AssistantDates.day(), reminders: reminders, appleCalendar: calendar
             ))
         }
     }
 
     /// The body of POST /ai/chats/{id}/reminders.
     static func remindersAnswer(id: String, answer: AssistantRemindersEdit.Answer, page: String, year: Int,
-                                lang: String, today: String,
-                                reminders: AssistantRemindersContext?) -> AssistantRemindersAnswerInput {
+                                lang: String, today: String, reminders: AssistantRemindersContext?,
+                                appleCalendar: AssistantCalendarContext? = nil) -> AssistantRemindersAnswerInput {
         AssistantRemindersAnswerInput(
             id: id, applied: answer.applied, results: answer.applied ? answer.results ?? [] : nil, page: page,
-            year: year, lang: lang, today: today, reminders: reminders
+            year: year, lang: lang, today: today, reminders: reminders, appleCalendar: appleCalendar
+        )
+    }
+
+    /// Applies the open calendar edit `id` on this device, then answers with each op's result and
+    /// the calendars after it. The access isn't asked for here: without it there were no tools.
+    func applyCalendar(_ id: String, store: DeviceCalendarStore = .shared) -> RemindersApplyStart {
+        guard let open = openCalendarEdit(), open.edit.id == id, let chatID = current?.id, !chatID.isEmpty else {
+            return .notWaiting
+        }
+        store.refreshAccess()
+        guard store.hasAccess else { return .noAccess }
+        sending = true
+        let results = AssistantCalendarApply.perform(open.edit.ops, on: store)
+        answerCalendar(open, chatID: chatID, answer: .init(applied: true, results: results))
+        return .answered
+    }
+
+    /// Declines the open calendar edit `id`: nothing changes, and the assistant hears so.
+    func declineCalendar(_ id: String) {
+        guard let open = openCalendarEdit(), open.edit.id == id, let chatID = current?.id, !chatID.isEmpty else { return }
+        sending = true
+        answerCalendar(open, chatID: chatID, answer: .init(applied: false, results: nil))
+    }
+
+    private func answerCalendar(_ open: (index: Int, edit: AssistantCalendarEdit), chatID: String,
+                                answer: AssistantCalendarEdit.Answer) {
+        var answered = open.edit
+        answered.answer = answer
+        current?.items[open.index] = .calendar(answered)
+        let here = context()
+        let page = current?.page ?? here.page
+        Task {
+            // After the change: what the assistant reads next is how the calendars are now.
+            let reminders = await remindersContext()
+            let calendar = await calendarContext()
+            post(chatID, "calendar", body: Self.calendarAnswer(
+                id: open.edit.id, answer: answer, page: page, year: here.year,
+                lang: language, today: AssistantDates.day(), reminders: reminders, appleCalendar: calendar
+            ))
+        }
+    }
+
+    /// The body of POST /ai/chats/{id}/calendar.
+    static func calendarAnswer(id: String, answer: AssistantCalendarEdit.Answer, page: String, year: Int,
+                               lang: String, today: String, reminders: AssistantRemindersContext?,
+                               appleCalendar: AssistantCalendarContext?) -> AssistantCalendarAnswerInput {
+        AssistantCalendarAnswerInput(
+            id: id, applied: answer.applied, results: answer.applied ? answer.results ?? [] : nil, page: page,
+            year: year, lang: lang, today: today, reminders: reminders, appleCalendar: appleCalendar
         )
     }
 

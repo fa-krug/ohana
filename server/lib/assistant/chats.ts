@@ -19,7 +19,7 @@ import { type StoredMessage, type SummaryMark, viewOf } from "./context";
 import type { ChatMessage, Provider, ToolCall } from "./provider";
 import type { AssistantStore, ChatRow } from "./store";
 import type { NetOptions } from "./net";
-import type { ReminderOp, ToolContext } from "./tools";
+import type { AppleCalendarOp, ReminderOp, ToolContext } from "./tools";
 
 /** What a turn needs from the family's AI settings. */
 export interface Turn {
@@ -93,7 +93,17 @@ export type Item =
       id: string;
       summary: string;
       ops: ReminderOp[];
-      answer?: { applied: true; results: ReminderResult[] } | { applied: false };
+      answer?: EditAnswer;
+      skipped?: boolean;
+    }
+  /** A change of the user's device calendars (edit_apple_calendar), the same way (POST
+   *  …/calendar). */
+  | {
+      kind: "calendar";
+      id: string;
+      summary: string;
+      ops: AppleCalendarOp[];
+      answer?: EditAnswer;
       skipped?: boolean;
     }
   /** The older part of the chat was condensed for the model from here on. */
@@ -101,8 +111,13 @@ export type Item =
   | { kind: "error"; text: string };
 
 export type Attachment = { kind: "image" | "file"; name: string; url?: string };
-/** What the app reports per op of a Reminders edit it applied. */
-export type ReminderResult = { ok: true; id?: string } | { ok: false; error: string };
+/** What the app reports per op of an edit of the device's data (Reminders, calendars) it
+ *  applied. */
+export type EditResult = { ok: true; id?: string } | { ok: false; error: string };
+/** @deprecated The old name of EditResult. */
+export type ReminderResult = EditResult;
+/** The user's answer to an edit of the device's data: applied (how each op went) or declined. */
+export type EditAnswer = { applied: true; results: EditResult[] } | { applied: false };
 export type UserItem = Item & { kind: "user" };
 
 /** A message that waits for the running turn to end: what the chat shows, what the model gets,
@@ -116,8 +131,15 @@ export interface Queued {
 type ToolItem = Item & { kind: "tool" };
 export type QuestionItem = Item & { kind: "question" };
 export type RemindersItem = Item & { kind: "reminders" };
-/** What waits for the user: a question, or a Reminders edit. */
-export type WaitingItem = QuestionItem | RemindersItem;
+export type CalendarItem = Item & { kind: "calendar" };
+/** An edit of the device's data that waits for the user's OK. */
+export type EditItem = RemindersItem | CalendarItem;
+export type EditKind = EditItem["kind"];
+/** What waits for the user: a question, or an edit of their Reminders or calendars. */
+export type WaitingItem = QuestionItem | EditItem;
+const WAITING_KINDS = new Set<string>(["question", "reminders", "calendar"] satisfies WaitingItem["kind"][]);
+/** Where the changes of an edit would have gone, for what the model hears about it. */
+export const EDIT_PLACE: Record<EditKind, string> = { reminders: "their Reminders", calendar: "their calendars" };
 
 /** What a running turn does right now. */
 type Activity =
@@ -141,11 +163,13 @@ const SKIPPED = JSON.stringify({
   skipped: true,
   note: "The user didn't pick an answer and wrote a new message instead, which may answer it.",
 });
-/** What the model learns about a Reminders edit the user neither applied nor declined. */
-const SKIPPED_REMINDERS = JSON.stringify({
-  skipped: true,
-  note: "The user neither applied nor declined these changes and wrote a new message instead: nothing was changed in their Reminders.",
-});
+/** What the model learns about an edit (of their Reminders or calendars) the user neither
+ *  applied nor declined. */
+const skippedEdit = (kind: EditKind) =>
+  JSON.stringify({
+    skipped: true,
+    note: `The user neither applied nor declined these changes and wrote a new message instead: nothing was changed in ${EDIT_PLACE[kind]}.`,
+  });
 /** What the model learns about a tool that was running when its turn broke off. */
 const INTERRUPTED = JSON.stringify({
   error: "Interrupted: this may or may not have been done. Check before doing it again.",
@@ -202,13 +226,13 @@ export function pause(ms: number, signal?: AbortSignal) {
   });
 }
 
-/** The turn is over: answered, or a question (or Reminders edit) waits for the user. */
+/** The turn is over: answered, or a question (or an edit) waits for the user. */
 function over(items: Item[], messages: StoredMessage[]) {
   const last = messages.at(-1);
   return !last || (last.role === "assistant" && !last.tool_calls?.length) || !!waitingFor(items, messages);
 }
 
-/** What a new message adds: a question (or Reminders edit) that waits stays unanswered, the
+/** What a new message adds: a question (or an edit) that waits stays unanswered, the
  *  changes undone since are told (so the assistant doesn't assume they are still there), then
  *  the message itself. */
 export function withMessage(
@@ -221,7 +245,7 @@ export function withMessage(
   const q = waitingFor(shown, messages);
   if (q) {
     add.items.push({ seq: shown.indexOf(q), item: { ...q, skipped: true } });
-    add.messages.push({ role: "tool", tool_call_id: q.id, content: q.kind === "question" ? SKIPPED : SKIPPED_REMINDERS });
+    add.messages.push({ role: "tool", tool_call_id: q.id, content: q.kind === "question" ? SKIPPED : skippedEdit(q.kind) });
   }
   for (const note of notes) {
     add.messages.push({ role: "user", content: `(I undid this change: ${note})` }, { role: "assistant", content: "OK." });
@@ -231,11 +255,13 @@ export function withMessage(
   return add;
 }
 
-/** The question or Reminders edit that waits for its answer: the last one, unanswered, while
- *  the history ends with its call. */
+const isWaiting = (it: Item | undefined): it is WaitingItem => !!it && WAITING_KINDS.has(it.kind);
+
+/** The question or edit that waits for its answer: the last one, unanswered, while the history
+ *  ends with its call. */
 export function waitingFor(items: Item[], messages: StoredMessage[]): WaitingItem | undefined {
-  const q = items.findLast((it) => it?.kind === "question" || it?.kind === "reminders");
-  if ((q?.kind !== "question" && q?.kind !== "reminders") || q.answer || q.skipped) return undefined;
+  const q = items.findLast(isWaiting);
+  if (!q || q.answer || q.skipped) return undefined;
   const last = messages.at(-1);
   const asked = messages.findLast((m) => m.tool_calls?.some((c) => c.id === q.id));
   const answered = messages.some((m) => m.role === "tool" && m.tool_call_id === q.id);
@@ -248,10 +274,19 @@ export function openQuestion(items: Item[], messages: StoredMessage[]): Question
   return q?.kind === "question" ? q : undefined;
 }
 
+/** The edit of this kind that waits for the user to apply or decline it (see waitingFor). */
+export function openEdit<K extends EditKind>(
+  kind: K,
+  items: Item[],
+  messages: StoredMessage[],
+): (Item & { kind: K }) | undefined {
+  const q = waitingFor(items, messages);
+  return q?.kind === kind ? (q as Item & { kind: K }) : undefined;
+}
+
 /** The Reminders edit that waits for the user to apply or decline it (see waitingFor). */
 export function openRemindersEdit(items: Item[], messages: StoredMessage[]): RemindersItem | undefined {
-  const q = waitingFor(items, messages);
-  return q?.kind === "reminders" ? q : undefined;
+  return openEdit("reminders", items, messages);
 }
 
 type Outcome = { kind: "done" | "handoff" | "stopped" | "lost" } | { kind: "retry"; message: string };
@@ -422,7 +457,7 @@ export class Runner {
       return this.fail(err instanceof HttpError ? err.message : "The assistant failed");
     }
     for (;;) {
-      // Answered already, or a question (or Reminders edit) waits for the user.
+      // Answered already, or a question (or an edit) waits for the user.
       if (over(this.items, this.messages)) return this.finish();
       const outcome = await this.go(turn);
       switch (outcome.kind) {
@@ -531,8 +566,9 @@ export class Runner {
           outcome = { kind: "done" };
           break;
         case "reminders":
+        case "calendar":
           this.answer = null;
-          this.add({ kind: "reminders", id: data.id, summary: data.summary, ops: data.ops });
+          this.add({ kind: event, id: data.id, summary: data.summary, ops: data.ops });
           this.saveItems();
           outcome = { kind: "done" };
           break;

@@ -2664,6 +2664,16 @@
         }
       }
     },
+    "Calendars aren’t allowed on this device.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalender sind auf diesem Gerät nicht erlaubt."
+          }
+        }
+      }
+    },
     "Can't reach the server right now.": {
       "localizations": {
         "de": {
@@ -8988,6 +8998,16 @@
         }
       }
     },
+    "Nothing changes in your calendars until you apply it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In deinen Kalendern ändert sich nichts, bis du es anwendest."
+          }
+        }
+      }
+    },
     "Nothing could be read from the receipt": {
       "localizations": {
         "de": {
@@ -10792,6 +10812,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Liest, was der Essensplan braucht"
+          }
+        }
+      }
+    },
+    "Reading your Apple calendars": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liest deine Apple-Kalender"
           }
         }
       }
@@ -13530,6 +13560,16 @@
         }
       }
     },
+    "Suggesting changes to your Apple calendars": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schlägt Änderungen an deinen Apple-Kalendern vor"
+          }
+        }
+      }
+    },
     "Suggesting changes to your reminders": {
       "localizations": {
         "de": {
@@ -13970,6 +14010,16 @@
         }
       }
     },
+    "The calendar is gone.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Den Kalender gibt es nicht mehr."
+          }
+        }
+      }
+    },
     "The chosen list is gone. Choose another one.": {
       "localizations": {
         "de": {
@@ -14036,6 +14086,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Das Ende muss nach dem Beginn liegen."
+          }
+        }
+      }
+    },
+    "The event is gone.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Den Termin gibt es nicht mehr."
           }
         }
       }
@@ -14290,6 +14350,16 @@
         }
       }
     },
+    "The repeat rule isn’t valid.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Wiederholungsregel ist ungültig."
+          }
+        }
+      }
+    },
     "The requests go to %@.": {
       "localizations": {
         "de": {
@@ -14386,6 +14456,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Die Einkaufsliste in Erinnerungen"
+          }
+        }
+      }
+    },
+    "The time isn’t valid.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Zeit ist ungültig."
           }
         }
       }
@@ -14496,6 +14576,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Diese Erinnerungsliste lässt sich nicht ändern."
+          }
+        }
+      }
+    },
+    "This calendar can’t be changed.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieser Kalender kann nicht geändert werden."
           }
         }
       }
@@ -16830,6 +16920,16 @@
         }
       }
     },
+    "all day": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ganztägig"
+          }
+        }
+      }
+    },
     "all per month": {
       "localizations": {
         "de": {
@@ -16856,6 +16956,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "zum Ansehen: sieht alles, ändert nichts"
+          }
+        }
+      }
+    },
+    "at a set time": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "zu einer festen Zeit"
           }
         }
       }
@@ -17240,6 +17350,16 @@
         }
       }
     },
+    "location: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ort: %@"
+          }
+        }
+      }
+    },
     "move to %@": {
       "localizations": {
         "de": {
@@ -17500,6 +17620,16 @@
         }
       }
     },
+    "only this one": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "nur dieser"
+          }
+        }
+      }
+    },
     "password": {
       "localizations": {
         "de": {
@@ -17536,6 +17666,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rest %@"
+          }
+        }
+      }
+    },
+    "remove the location": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ort entfernen"
           }
         }
       }
@@ -17620,12 +17760,32 @@
         }
       }
     },
+    "this and all following": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dieser und alle folgenden"
+          }
+        }
+      }
+    },
     "to": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "bis"
+          }
+        }
+      }
+    },
+    "to %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "auf %@"
           }
         }
       }

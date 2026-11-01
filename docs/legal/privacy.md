@@ -161,6 +161,14 @@ The app only asks for these permissions, and only when you use the feature:
   device. The sync runs on the device; your calendar account (iCloud, Google, …) syncs that
   calendar as it does any other. Stopping the sync can remove Ohana's events from the calendar;
   signing out forgets the setting.
+  When you use the **assistant** on a device with calendar access, each message you send also
+  carries the **events of your calendars** from a week back to three months ahead (their titles,
+  times, places, notes, repeat rules and the names of their calendars, at most 1000) to your
+  Ohana server, which keeps the latest copy with the chat and sends it to the AI provider your
+  family set up, so the assistant can answer about them. The assistant can't change your
+  calendars on its own: it shows what it wants to change, and the app changes them on your device
+  only after you tap **Apply**. You can take the permission back at any time in the system
+  settings (*Privacy & Security → Calendars*); the assistant then no longer sees your calendars.
 - **Reminders:** asked when you pick a Reminders list for a family's shopping. The app then
   writes what the meal plan needs (item, amount, shopping day) into that list on your device and
   keeps those items up to date; it gets them from your server, but nothing from Reminders is

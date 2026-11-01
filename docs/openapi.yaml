@@ -3949,6 +3949,45 @@ paths:
         "401": {$ref: "#/components/responses/Unauthorized"}
         "404": {$ref: "#/components/responses/NotFound"}
         "409": {$ref: "#/components/responses/Conflict"}
+  /api/v1/families/{familyId}/ai/chats/{chatId}/calendar:
+    post:
+      tags: [Assistant]
+      operationId: answerCalendarEdit
+      summary: Report whether the user applied the assistant's edit of their device calendars (streams the rest of the turn)
+      description: >-
+        Like `POST …/reminders`, for a `calendar` item: `id` is its id. With `applied: true` the
+        client has made the changes in the device's calendars and sends `results`, one per op in
+        order; `applied: false` means the user said no. `appleCalendar` is a fresh copy of the
+        device calendars. The turn goes on with this as the tool's result. 409 when that edit
+        doesn't wait any more.
+      x-ohana-role: viewer
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+        - $ref: "#/components/parameters/ChatId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/ChatContextInput"
+                - type: object
+                  required: [id, applied]
+                  properties:
+                    id: {type: string}
+                    applied: {type: boolean}
+                    results:
+                      type: array
+                      description: >-
+                        Required when `applied` is true: one per op, in order (a missing one
+                        counts as failed, extra ones are ignored).
+                      items: {$ref: "#/components/schemas/RemindersResult"}
+      responses:
+        "200": {$ref: "#/components/responses/ChatStream"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
   /api/v1/families/{familyId}/ai/chats/{chatId}/stop:
     post:
       tags: [Assistant]
@@ -6135,6 +6174,36 @@ components:
                     applied: {type: boolean, const: false}
             skipped: {type: boolean}
         - type: object
+          title: calendar
+          description: >-
+            Changes to the user's device calendars the assistant wants to make
+            (`edit_apple_calendar`). The turn waits for the user, as for `reminders`: the app
+            shows the ops with Apply / Don't apply and answers with `POST …/calendar`. A new
+            message instead marks it `skipped`.
+          required: [kind, id, summary, ops]
+          properties:
+            kind: {type: string, const: calendar}
+            id: {type: string}
+            summary: {type: string, example: "Change 2 events, delete 1 event"}
+            ops:
+              type: array
+              items: {$ref: "#/components/schemas/AppleCalendarOp"}
+            answer:
+              oneOf:
+                - type: object
+                  required: [applied, results]
+                  properties:
+                    applied: {type: boolean, const: true}
+                    results:
+                      type: array
+                      description: One per op, in order.
+                      items: {$ref: "#/components/schemas/RemindersResult"}
+                - type: object
+                  required: [applied]
+                  properties:
+                    applied: {type: boolean, const: false}
+            skipped: {type: boolean}
+        - type: object
           title: compacted
           required: [kind]
           properties:
@@ -6168,6 +6237,109 @@ components:
         lang: {type: string, enum: [en, de], default: en}
         today: {type: string, format: date, description: "The user's day."}
         reminders: {$ref: "#/components/schemas/RemindersContext"}
+        appleCalendar: {$ref: "#/components/schemas/AppleCalendarContext"}
+    AppleCalendarContext:
+      type: object
+      description: >-
+        The device's calendars and their events, for the assistant's `get_apple_calendar` and
+        `edit_apple_calendar` tools (only offered when the chat's context has this). Sent only
+        with full calendar access on the device, never in the demo. Times are wall-clock times
+        of the device's time zone. The server keeps the latest one in the chat's context and
+        drops what goes beyond the limits (at most 100 calendars and 1000 events, ids up to 300
+        characters, titles cut at 200, locations at 300, notes at 1000), events of a calendar
+        that isn't in `calendars` and broken ones (no valid start or end, end before start); a
+        rule Ohana doesn't understand is left out.
+      required: [calendars, events]
+      properties:
+        from: {type: string, format: date, description: "The first day the events are from (a week back).", example: "2026-10-25"}
+        to: {type: string, format: date, description: "The last day (90 days ahead).", example: "2027-01-30"}
+        calendars:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            required: [id, title, writable]
+            properties:
+              id: {type: string, description: "EventKit's calendarIdentifier."}
+              title: {type: string, maxLength: 200}
+              account: {type: string, description: "The calendar's account (iCloud, Google, …)."}
+              writable: {type: boolean, description: "Its events can be changed (false for subscribed, birthday and read-only calendars)."}
+              ohana: {type: boolean, description: "The calendar this family's Ohana calendar is synced with on the device."}
+        events:
+          type: array
+          maxItems: 1000
+          description: Sorted by start.
+          items:
+            type: object
+            required: [id, calendar, title, allDay, start, end]
+            properties:
+              id:
+                type: string
+                description: >-
+                  EventKit's eventIdentifier; for an occurrence of a repeating event plus
+                  `@YYYY-MM-DD`, the occurrence's original day.
+              calendar: {type: string, description: "The id of its calendar."}
+              title: {type: string, maxLength: 200}
+              allDay: {type: boolean}
+              start: {type: string, description: "`YYYY-MM-DDTHH:MM`, or `YYYY-MM-DD` when all day.", example: "2026-11-05T09:00"}
+              end: {type: string, description: "Like `start`; all day: the last day (inclusive).", example: "2026-11-05T10:00"}
+              location: {type: string, maxLength: 300}
+              notes: {type: string, maxLength: 1000}
+              rrule: {type: string, description: "The series' rule (RRULE value) on each occurrence.", example: "FREQ=WEEKLY;BYDAY=TH"}
+    AppleCalendarOp:
+      description: >-
+        One change to the user's device calendars as the assistant asked for it, resolved by
+        the server: `calendar` is always a calendar id (with `calendarTitle`; an update: the
+        event's or the one it moves to), times are complete. Ops on an existing event carry its
+        current `eventTitle`, `eventStart`, `eventEnd` and `eventAllDay`, and `span` when it is
+        an occurrence of a repeating event.
+      oneOf:
+        - type: object
+          title: add
+          required: [op, calendar, calendarTitle, title, start, end, allDay]
+          properties:
+            op: {type: string, const: add}
+            calendar: {type: string}
+            calendarTitle: {type: string}
+            title: {type: string}
+            start: {type: string, description: "`YYYY-MM-DDTHH:MM`, or `YYYY-MM-DD` when all day."}
+            end: {type: string, description: "Like `start` (all day: the last day); a timed event without one given lasts an hour."}
+            allDay: {type: boolean}
+            location: {type: string}
+            notes: {type: string}
+            rrule: {type: string, description: "RRULE value, e.g. `FREQ=WEEKLY;BYDAY=MO`."}
+        - type: object
+          title: update
+          required: [op, id, eventTitle, eventStart, eventEnd, eventAllDay, calendar, calendarTitle]
+          properties:
+            op: {type: string, const: update}
+            id: {type: string}
+            span: {type: string, enum: [this, future], description: "Only for an occurrence of a repeating event: it alone, or it and the following ones."}
+            eventTitle: {type: string}
+            eventStart: {type: string}
+            eventEnd: {type: string}
+            eventAllDay: {type: boolean}
+            calendar: {type: string, description: "The event's calendar, or the one it moves to."}
+            calendarTitle: {type: string}
+            title: {type: string}
+            start: {type: string, description: "With `end` and `allDay`: the new times (all three when the event moves)."}
+            end: {type: string}
+            allDay: {type: boolean}
+            location: {type: string, description: "\"\" clears it."}
+            notes: {type: string, description: "\"\" clears them."}
+        - type: object
+          title: delete
+          required: [op, id, eventTitle, eventStart, eventEnd, eventAllDay, calendar, calendarTitle]
+          properties:
+            op: {type: string, const: delete}
+            id: {type: string}
+            span: {type: string, enum: [this, future]}
+            eventTitle: {type: string}
+            eventStart: {type: string}
+            eventEnd: {type: string}
+            eventAllDay: {type: boolean}
+            calendar: {type: string}
+            calendarTitle: {type: string}
     RemindersContext:
       type: object
       description: >-
@@ -6246,7 +6418,7 @@ components:
             list: {type: string, description: "The reminder's list."}
             listTitle: {type: string}
     RemindersResult:
-      description: "How one op went on the device (`id`: the new reminder's id after an add)."
+      description: "How one op went on the device (`id`: the new reminder's or event's id after an add)."
       oneOf:
         - type: object
           required: [ok]

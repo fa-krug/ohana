@@ -248,12 +248,17 @@ struct AssistantReminderOpLine: Equatable {
 extension AssistantRemindersEdit {
     /// How it ended, in a few words; nil while it waits.
     var outcome: String? {
+        Self.outcome(answer: answer, skipped: skipped, count: ops.count)
+    }
+
+    /// How an edit of `count` ops ended (the Apple Calendar's too); nil while it waits.
+    static func outcome(answer: Answer?, skipped: Bool, count: Int) -> String? {
         if let answer {
             guard answer.applied else { return String(localized: "Not applied") }
             let failed = answer.failures
             return failed == 0
                 ? String(localized: "Applied")
-                : String(localized: "Applied, \(failed) of \(ops.count) failed")
+                : String(localized: "Applied, \(failed) of \(count) failed")
         }
         return skipped ? String(localized: "Not answered") : nil
     }

@@ -181,7 +181,13 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   question, ends the step with a `kind: "reminders"` item the app shows as a confirmation card;
   the app applies the ops through EventKit and answers `POST /ai/chats/{id}/reminders`
   (`{id, applied, results, reminders}`), which becomes the tool's result (a new message instead
-  marks it `skipped`). `notify.ts` is the "assistant turn finished" notification (`RunnerEnv.turnEnded`
+  marks it `skipped`). **Apple Calendar** (`tools/apple-calendar.ts`) works the same way: the
+  `appleCalendar` context (the device's calendars and their events from a week back to 90 days
+  ahead, `cleanAppleCalendar`; `ohana: true` marks the calendar the family syncs with),
+  `get_apple_calendar`, `edit_apple_calendar` (add / update / delete, `span` this | future on an
+  occurrence "id@day", `rrule` via `lib/calendar/rrule.ts`) → `kind: "calendar"` card →
+  `POST /ai/chats/{id}/calendar`; the waiting-item code (`openEdit`, `waitingFor`) is shared by
+  both. `notify.ts` is the "assistant turn finished" notification (`RunnerEnv.turnEnded`
   from the `ChatRunner`; `chats.seen_at`, set every 15 s by a follower, says someone looks).
   `net.ts` refuses private addresses (`AiEnv.modelNet` may allow them for the endpoint with
   `AI_ALLOW_PRIVATE_ENDPOINT`). `toolsFor` leaves out the tools of turned-off modules
@@ -389,7 +395,10 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   deleted ones don't come back); `ShoppingRemindersUpdates` in `AppShell` syncs on becoming
   active, a family switch and meals changes; set up in `Features/Meals/Reminders/` (Settings →
   Shopping List, the meal plan's toolbar). Off in the demo. The assistant's Reminders card
-  (`edit_reminders`) applies its ops through `RemindersStore` too.
+  (`edit_reminders`) applies its ops through `RemindersStore` too. Its Calendar card
+  (`edit_apple_calendar`, `Features/Assistant/AssistantAppleCalendar.swift`) applies through
+  `Core/Calendar/DeviceCalendarStore.swift` (EventKit behind a protocol; read-only access check,
+  the assistant never asks for it); every chat request carries `appleCalendar` next to `reminders`.
   The assistant: `family.ask(prompt, send:, newChat:)` opens it ready to type from anywhere (⇧⌘J, the overview's field, the Mac's menu bar item (`MenuBarItem`, an AppKit status item: SwiftUI's `MenuBarExtra` re-sets its icon on every window redraw and crashed the app), the
   `AskOhanaIntent` App Shortcut). Recipes are in Spotlight (`RecipeSpotlight.swift`: every family's,
   after loading the account and after recipe changes; emptied in the demo / with Meals off; a result
