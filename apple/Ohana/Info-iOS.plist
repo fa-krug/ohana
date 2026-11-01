@@ -66,5 +66,38 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Ohana meal</string>
+			<key>UTTypeIdentifier</key>
+			<string>de.fa-krug.ohana.meal</string>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Ohana calendar event</string>
+			<key>UTTypeIdentifier</key>
+			<string>de.fa-krug.ohana.calendar-event</string>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Ohana shopping item</string>
+			<key>UTTypeIdentifier</key>
+			<string>de.fa-krug.ohana.shopping-item</string>
+		</dict>
+	</array>
 </dict>
 </plist>

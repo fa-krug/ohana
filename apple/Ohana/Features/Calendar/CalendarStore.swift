@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import Observation
 
@@ -15,11 +16,13 @@ final class CalendarStore {
         case idle, saving, retrying
     }
 
-    /// An undoable change: the days' values before and after, or a deleted event.
+    /// An undoable change: the days' values before and after, a deleted event or one moved to
+    /// another day.
     enum Step {
         case entries(before: CalendarEntries, after: CalendarEntries)
         case notes(before: [Day: CalendarNote?], after: [Day: CalendarNote?])
         case deletedEvent(CalendarDeletedEvent)
+        case movedEvent(id: String, from: Day, to: Day)
     }
 
     private enum Batch {
@@ -89,6 +92,12 @@ final class CalendarStore {
     /// The fill handle being dragged (or the repeat sheet open): the selection it repeats and
     /// the days it would fill.
     private(set) var fill: CalendarFill?
+    /// The day under an event being dragged over a grid (iPad, Mac): where it would land.
+    private(set) var dropTarget: Day?
+    /// Where the month in detail shows its events (by "id@day"), in the grid's coordinate space
+    /// (`CalendarMonthGrid.space`): a press there drags the event instead of selecting days.
+    /// Only the grid's gestures read it, so it isn't observed.
+    @ObservationIgnored var eventLabels: [String: (day: Day, frame: CGRect)] = [:]
 
     private var clipboard: (pattern: CalendarPattern, text: String, year: Int)?
     private var version = 0
@@ -141,7 +150,8 @@ final class CalendarStore {
         let selected = selection.contains(day)
         return CalendarDayCell.Info(
             types: dayTypes, note: notes[day], events: events[day] ?? [], birthdays: birthdays[day] ?? [],
-            selected: selected, preview: fill?.targetSet.contains(day) ?? false, focused: context.focus == day,
+            selected: selected, preview: fill?.targetSet.contains(day) ?? false, dropTarget: dropTarget == day,
+            focused: context.focus == day,
             isToday: day == context.today, gap: CalendarMath.isGap(day, entries[day], roles: context.roles),
             onTypes: selected ? context.selectionTypes : Set(dayTypes.map(\.id)),
             allTypes: types, readOnly: readOnly
@@ -362,6 +372,8 @@ final class CalendarStore {
             perform { [self] in
                 if before { try await restoreEvent(deleted) } else { try await removeEvent(deleted.event) }
             }
+        case let .movedEvent(id, from, to):
+            shiftEvent(id, from: before ? to : from, to: before ? from : to)
         }
     }
 
@@ -751,6 +763,79 @@ final class CalendarStore {
         events[event.date]?.removeAll { $0.id == event.id }
         notify?(.events)
         await load(quiet: true)
+    }
+
+    /// Moves an event to another day of the year (dropped there): here at once, then saved;
+    /// undo (⌘Z, the toast) moves it back. A booked appointment stays one.
+    func moveEvent(_ event: CalendarEvent, to day: Day) {
+        guard !readOnly, day != event.date, day.year == year, find(event.id, near: event.date) != nil else { return }
+        shiftEvent(event.id, from: event.date, to: day)
+        recordStep(.movedEvent(id: event.id, from: event.date, to: day))
+        showToast(String(localized: "Moved “\(event.title)” to \(CalendarText.day(day))"), undo: true)
+    }
+
+    /// An event dropped on `day`: moved there when it is one of this family's events.
+    func dropEvent(_ item: CalendarEventDragItem, on day: Day) {
+        guard item.familyID == api.familyID, let from = Day(item.date),
+              let found = find(item.eventID, near: from), let event = events[found]?.first(where: { $0.id == item.eventID })
+        else { return }
+        moveEvent(event, to: day)
+    }
+
+    /// The payload of an event's drag.
+    func dragItem(_ event: CalendarEvent) -> CalendarEventDragItem {
+        CalendarEventDragItem(familyID: api.familyID, eventID: event.id, date: event.date.description)
+    }
+
+    /// While an event is dragged over a grid: the day it would land on (nil: none).
+    func setDropTarget(_ day: Day?) {
+        update(\.dropTarget, readOnly ? nil : day)
+    }
+
+    /// Whether `point` (in the coordinate space of the month in detail) is on one of `day`'s
+    /// events. The day comes from the grid's layout: labels that overflow their cell don't count.
+    func isOnEvent(_ point: CGPoint, day: Day?) -> Bool {
+        guard let day else { return false }
+        return eventLabels.values.contains { $0.day == day && $0.frame.contains(point) }
+    }
+
+    /// The day an event is on: `near` when it is there, else wherever it is.
+    private func find(_ id: String, near day: Day) -> Day? {
+        if events[day]?.contains(where: { $0.id == id }) == true { return day }
+        return events.first { $0.value.contains { $0.id == id } }?.key
+    }
+
+    /// Puts an event on `to` here and saves its new date (PATCH {date}); a failure puts it
+    /// back and shows why.
+    private func shiftEvent(_ id: String, from: Day, to: Day) {
+        relocate(id, from: from, to: to)
+        Task {
+            do {
+                try await api.perform(.patch, "/events/\(id)", body: CalendarEventDateBody(date: to))
+                notify?(.events)
+            } catch {
+                relocate(id, from: to, to: from)
+                if !(error is CancellationError) { ErrorBanner.shared.show(error) }
+            }
+            await load(quiet: true)
+        }
+    }
+
+    /// Moves an event between days of `events`, in the server's order (by start time).
+    private func relocate(_ id: String, from: Day, to: Day) {
+        guard let day = find(id, near: from), var list = events[day],
+              let index = list.firstIndex(where: { $0.id == id }) else { return }
+        let event = list.remove(at: index)
+        events[day] = list.isEmpty ? nil : list
+        if to.year == year {
+            var target = events[to] ?? []
+            let moved = event.on(to)
+            let at = target.firstIndex { ($0.start ?? "") > (moved.start ?? "") } ?? target.endIndex
+            target.insert(moved, at: at)
+            events[to] = target
+        }
+        // A load that started before this would bring the old day back.
+        version += 1
     }
 
     /// Undoing a deletion: the event again with what it had (POST /events). It gets a new id,
