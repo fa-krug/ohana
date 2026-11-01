@@ -14,17 +14,15 @@ struct MealPlanSwapSheet: View {
     @State private var query = ""
 
     private var filtered: [MealPlanRecipeOption] {
-        let all = (state.value ?? []).filter { $0.id != entry.recipeId }
-        let q = query.trimmingCharacters(in: .whitespaces)
-        return q.isEmpty ? all : all.filter { $0.title.localizedStandardContains(q) }
+        (state.value ?? []).filter { $0.id != entry.recipeId }.matching(query)
     }
 
     var body: some View {
         NavigationStack {
             LoadStateView(state: state, retry: load) { _ in
                 List {
-                    let known = filtered.filter { $0.listType == "KNOWN" }
-                    let toTry = filtered.filter { $0.listType != "KNOWN" }
+                    let known = filtered.filter(\.isFavourite)
+                    let toTry = filtered.filter { !$0.isFavourite }
                     if !known.isEmpty {
                         Section("Favourites") { ForEach(known) { row($0) } }
                     }
@@ -63,24 +61,7 @@ struct MealPlanSwapSheet: View {
             choose(recipe)
             dismiss()
         } label: {
-            HStack(spacing: 12) {
-                RemoteImage(path: recipe.imagePath)
-                    .frame(width: 44, height: 44)
-                    .clipShape(.rect(cornerRadius: 10))
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(verbatim: recipe.title)
-                        .foregroundStyle(.primary)
-                        .lineLimit(2)
-                    if planned.contains(recipe.id) {
-                        Text("Planned already")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                Spacer(minLength: 0)
-            }
-            .contentShape(.rect)
+            MealPlanRecipeRow(recipe: recipe, planned: planned.contains(recipe.id))
         }
         .buttonStyle(.plain)
     }
@@ -93,18 +74,6 @@ struct MealPlanSwapSheet: View {
     }
 
     private func load() async {
-        await LoadState.run($state) {
-            var all: [MealPlanRecipeOption] = []
-            var offset = 0
-            while true {
-                let page: MealPlanRecipePage = try await family.api.get("/recipes", query: [
-                    "limit": "100", "offset": "\(offset)", "locale": MealPlanLanguage.current,
-                ])
-                all += page.items
-                offset += page.items.count
-                if page.items.isEmpty || offset >= page.totalCount { break }
-            }
-            return all
-        }
+        await LoadState.run($state) { try await MealPlanRecipes.load(family.api) }
     }
 }

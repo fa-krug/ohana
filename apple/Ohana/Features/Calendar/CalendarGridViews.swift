@@ -1,6 +1,10 @@
 import SwiftUI
+import UniformTypeIdentifiers
 #if canImport(AppKit)
 import AppKit
+#endif
+#if os(iOS)
+import UIKit.UIGestureRecognizerSubclass
 #endif
 
 /// How long two clicks on a day may be apart to count as a double click.
@@ -15,18 +19,23 @@ private var doubleClickInterval: TimeInterval {
 /// Pointer selection (Mac, iPad, grids outside of a scroll view): click selects a day, Shift
 /// extends, ⌘ adds or removes one; dragging selects a range (with ⌘ added to the selection);
 /// a double click opens the day's note. `hit` finds days in the coordinate space `space`.
+/// Over an event that can be dragged (`onEvent`) the grid's gesture steps aside while the pointer
+/// hovers there, so a drag from it moves the event (`CalendarEventDragSource`).
 struct CalendarPointerSelection: ViewModifier {
     let store: CalendarStore
     let space: String
     let hit: (CGPoint, Bool) -> Day?
     var onBegin: () -> Void = {}
     var onDoubleTap: (Day) -> Void = { _ in }
+    var onEvent: ((CGPoint) -> Bool)?
 
     @State private var start: Day?
     @State private var base: Set<Day> = []
     @State private var moved = false
     @State private var lastTap: Day?
     @State private var lastTapTime = Date.distantPast
+    /// The pointer is over an event: only the event's own gestures (its drag) get it.
+    @State private var yielding = false
 
     func body(content: Content) -> some View {
         content
@@ -35,7 +44,8 @@ struct CalendarPointerSelection: ViewModifier {
                 DragGesture(minimumDistance: 0, coordinateSpace: .named(space))
                     .onChanged { value in
                         if start == nil {
-                            guard let day = hit(value.startLocation, false) else { return }
+                            guard let day = hit(value.startLocation, false),
+                                  onEvent?(value.startLocation) != true else { return }
                             start = day
                             moved = false
                             base = CalendarModifiers.current.contains(.command) ? store.selection : []
@@ -61,19 +71,28 @@ struct CalendarPointerSelection: ViewModifier {
                         lastTapTime = now
                         let modifiers = CalendarModifiers.current
                         store.tap(start, extend: modifiers.contains(.shift), toggle: modifiers.contains(.command))
-                    }
+                    },
+                including: yielding ? .subviews : .all
             )
+            .onContinuousHover(coordinateSpace: .named(space)) { phase in
+                // Not while selecting: a range may go over events.
+                guard let onEvent, start == nil else { return }
+                let over = if case let .active(point) = phase { onEvent(point) } else { false }
+                if over != yielding { yielding = over }
+            }
     }
 }
 
 /// Touch selection inside a scroll view: tap selects, long-press and drag selects a range (in
 /// the list of months across months: `hit` and `space` cover all of them). With an iPad's
 /// keyboard, Shift-tap extends the selection and ⌘-tap adds or removes a day, as on the Mac.
+/// A long press on an event that can be dragged (`onEvent`) lifts the event instead.
 struct CalendarTouchSelection: ViewModifier {
     let store: CalendarStore
     let space: String
     let hit: (CGPoint, Bool) -> Day?
     var onBegin: () -> Void = {}
+    var onEvent: ((CGPoint) -> Bool)?
 
     @State private var start: Day?
     @State private var base: Set<Day> = []
@@ -97,7 +116,8 @@ struct CalendarTouchSelection: ViewModifier {
             // UIKit's long press, not SwiftUI's `LongPressGesture` sequenced before a
             // `DragGesture`: that one holds every touch (since iOS 18), and the scroll view
             // around the grid didn't scroll at all. A swipe fails this one and scrolls.
-            .gesture(CalendarLongPressDrag(space: space, began: began, moved: moved, ended: ended))
+            .gesture(CalendarLongPressDrag(space: space, skips: onEvent ?? { _ in false }, began: began, moved: moved,
+                                           ended: ended))
             #endif
             .sensoryFeedback(.selection, trigger: pressed)
             // A tick for every day the finger moves on to (the press itself has its own).
@@ -130,20 +150,50 @@ struct CalendarTouchSelection: ViewModifier {
 
 #if os(iOS)
 /// Long-press, then drag: where the finger is (in the coordinate space `space`) when the press
-/// is recognized and while it moves.
+/// is recognized and while it moves. A touch that starts where `skips` says (an event that can be
+/// dragged) fails it at once, so the event's drag (a UIKit drag interaction) can lift instead.
 struct CalendarLongPressDrag: UIGestureRecognizerRepresentable {
     let space: String
+    let skips: (CGPoint) -> Bool
     let began: (CGPoint) -> Void
     let moved: (CGPoint) -> Void
     let ended: () -> Void
 
-    func makeUIGestureRecognizer(context: Context) -> UILongPressGestureRecognizer {
-        let recognizer = UILongPressGestureRecognizer()
+    final class Coordinator {
+        let converter: CoordinateSpaceConverter
+        var skips: (CGPoint) -> Bool = { _ in false }
+        init(converter: CoordinateSpaceConverter) { self.converter = converter }
+    }
+
+    /// Fails when its first touch starts where it should step aside.
+    final class Recognizer: UILongPressGestureRecognizer {
+        var skipsStart: () -> Bool = { false }
+
+        override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+            super.touchesBegan(touches, with: event)
+            if state == .possible && skipsStart() { state = .failed }
+        }
+    }
+
+    func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator {
+        Coordinator(converter: converter)
+    }
+
+    func makeUIGestureRecognizer(context: Context) -> Recognizer {
+        let recognizer = Recognizer()
         recognizer.minimumPressDuration = 0.35
+        let coordinator = context.coordinator
+        let space = space
+        coordinator.skips = skips
+        recognizer.skipsStart = { coordinator.skips(coordinator.converter.location(in: .named(space))) }
         return recognizer
     }
 
-    func handleUIGestureRecognizerAction(_ recognizer: UILongPressGestureRecognizer, context: Context) {
+    func updateUIGestureRecognizer(_ recognizer: Recognizer, context: Context) {
+        context.coordinator.skips = skips
+    }
+
+    func handleUIGestureRecognizerAction(_ recognizer: Recognizer, context: Context) {
         switch recognizer.state {
         case .began: began(context.converter.location(in: .named(space)))
         case .changed: moved(context.converter.location(in: .named(space)))
@@ -162,13 +212,16 @@ struct CalendarSelectionStyle: ViewModifier {
     let hit: (CGPoint, Bool) -> Day?
     var onBegin: () -> Void = {}
     var onDoubleTap: (Day) -> Void = { _ in }
+    /// Whether a point is on an event that can be dragged: the selection leaves it to the event.
+    var onEvent: ((CGPoint) -> Bool)?
 
     func body(content: Content) -> some View {
         if touch {
-            content.modifier(CalendarTouchSelection(store: store, space: space, hit: hit, onBegin: onBegin))
+            content.modifier(CalendarTouchSelection(store: store, space: space, hit: hit, onBegin: onBegin,
+                                                    onEvent: onEvent))
         } else {
             content.modifier(CalendarPointerSelection(store: store, space: space, hit: hit, onBegin: onBegin,
-                                                      onDoubleTap: onDoubleTap))
+                                                      onDoubleTap: onDoubleTap, onEvent: onEvent))
         }
     }
 }
@@ -365,6 +418,7 @@ struct CalendarYearGrid: View {
                 .equatable()
         }
         .frame(width: cellWidth * 31, height: layout.height, alignment: .topLeading)
+        .onDrop(of: [.ohanaCalendarEvent], delegate: CalendarEventDrop(store: store) { layout.day(at: $0, year: year) })
         #if os(macOS)
         .overlay { CalendarYearPointer(store: store, layout: layout, space: Self.space) }
         #endif
@@ -432,13 +486,19 @@ struct CalendarMonthGrid: View {
     /// How high a month view's row is at least: its day number and note icon, with Dynamic Type.
     @ScaledMetric(relativeTo: .subheadline) private var minRow: CGFloat = 30
 
+    /// The coordinate space of a month's grid (its days' events report where they are in it).
+    nonisolated static func space(year: Int, month: Int) -> String { "calendar-month-\(year)-\(month)" }
+
     var body: some View {
         let row = rowHeight ?? CalendarGridLayout.Month.rowHeight(width: width, spacing: spacing, minimum: minRow)
         let layout = CalendarGridLayout.Month(year: year, month: month, firstWeekday: Calendar.current.firstWeekday,
                                               width: width, rowHeight: row, spacing: spacing)
-        let own = "calendar-month-\(year)-\(month)"
+        let own = Self.space(year: year, month: month)
         let space = list?.space ?? own
         let hit: (CGPoint, Bool) -> Day? = list?.hit ?? { layout.day(at: $0, clamp: $1) }
+        // Only the month in detail shows events to drag (in its own coordinate space).
+        let onEvent: ((CGPoint) -> Bool)? = style == .detail && list == nil && !store.readOnly
+            ? { store.isOnEvent($0, day: layout.day(at: $0)) } : nil
         let last = store.canRepeat ? store.selection.max() : nil
         let handle = last.flatMap { $0.year == year && $0.month == month ? layout.frame(of: $0) : nil }
         let context = store.cellContext(gridFocused: gridFocused)
@@ -462,8 +522,9 @@ struct CalendarMonthGrid: View {
         }
         .frame(maxWidth: .infinity, minHeight: layout.height, maxHeight: layout.height, alignment: .topLeading)
         .accessibilityElement(children: .contain)
+        .onDrop(of: [.ohanaCalendarEvent], delegate: CalendarEventDrop(store: store) { layout.day(at: $0) })
         .modifier(CalendarSelectionStyle(touch: touch, store: store, space: space, hit: hit, onBegin: onBegin,
-                                         onDoubleTap: onDoubleTap))
+                                         onDoubleTap: onDoubleTap, onEvent: onEvent))
         .calendarFillHandle(handle, store: store, space: space, touch: touch, hit: hit)
         .coordinateSpace(.named(own))
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }

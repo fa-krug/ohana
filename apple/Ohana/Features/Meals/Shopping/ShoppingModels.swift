@@ -124,6 +124,52 @@ struct ShoppingQuantityInput: Codable {
     let quantity: String
 }
 
+/// POST /meals/shopping/items/{id}/move: the item (or `quantity` of it) to another list.
+struct ShoppingMoveInput: Codable, Hashable {
+    let listId: String
+    /// Nil: the whole item.
+    var quantity: String?
+}
+
+struct ShoppingMoveResult: Codable, Hashable {
+    /// The moved item, or the open item of the same ingredient and unit it was added to.
+    let id: String
+    let merged: Bool
+    /// The quantity of the item it was added to before (merged only).
+    let previousQuantity: String?
+    let fromListId: String
+    /// What was moved.
+    let quantity: String
+}
+
+/// A move request: POST `path` with `input`.
+struct ShoppingMoveRequest: Hashable {
+    let itemID: String
+    let input: ShoppingMoveInput
+
+    var path: String { "/meals/shopping/items/\(itemID)/move" }
+}
+
+/// Dragging a shopping item onto another list (iPad, Mac).
+enum ShoppingMove {
+    /// Whether `item` dropped on the list `listID` moves: of this family, from another list.
+    static func accepts(_ item: ShoppingItemDragItem, onto listID: String, familyID: String) -> Bool {
+        item.familyID == familyID && item.listID != listID
+    }
+
+    /// Moves the whole item.
+    static func request(_ item: ShoppingItemDragItem, to listID: String) -> ShoppingMoveRequest {
+        ShoppingMoveRequest(itemID: item.itemID, input: ShoppingMoveInput(listId: listID))
+    }
+
+    /// What takes a move back: the moved item back whole, or, when it was added to an item
+    /// there, that much of the item back.
+    static func undo(of result: ShoppingMoveResult) -> ShoppingMoveRequest {
+        ShoppingMoveRequest(itemID: result.id, input: ShoppingMoveInput(
+            listId: result.fromListId, quantity: result.merged ? result.quantity : nil))
+    }
+}
+
 // MARK: Grouping and formatting
 
 /// The web's `CATEGORY_ORDER`: the aisles in shopping order.

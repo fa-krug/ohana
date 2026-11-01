@@ -79,6 +79,38 @@ struct ShoppingTests {
         #expect(body?["itemId"] as? String == "a")
         #expect(body?["checked"] as? Bool == true)
     }
+
+    @Test func takesOnlyDropsOfThisFamilyFromAnotherList() {
+        let item = ShoppingItemDragItem(familyID: "f", itemID: "a", listID: "l1")
+        #expect(ShoppingMove.accepts(item, onto: "l2", familyID: "f"))
+        #expect(!ShoppingMove.accepts(item, onto: "l1", familyID: "f")) // its own list
+        #expect(!ShoppingMove.accepts(item, onto: "l2", familyID: "other"))
+    }
+
+    @Test func movesTheWholeItem() throws {
+        let request = ShoppingMove.request(ShoppingItemDragItem(familyID: "f", itemID: "a", listID: "l1"), to: "l2")
+        #expect(request.path == "/meals/shopping/items/a/move")
+        let body = try JSONSerialization.jsonObject(with: JSONEncoder().encode(request.input)) as? [String: Any]
+        #expect(body?["listId"] as? String == "l2")
+        #expect(body?.keys.contains("quantity") == false)
+    }
+
+    @Test func undoesAMove() throws {
+        // POST /meals/shopping/items/{id}/move as server/lib/meals/app-routes-plan.ts answers it.
+        let moved = try JSONDecoder().decode(ShoppingMoveResult.self, from: Data("""
+        {"id":"a","merged":false,"previousQuantity":null,"fromListId":"l1","quantity":"100"}
+        """.utf8))
+        #expect(ShoppingMove.undo(of: moved) == ShoppingMoveRequest(itemID: "a", input: ShoppingMoveInput(listId: "l1")))
+
+        // Added to an open item there: that much of it goes back.
+        let merged = try JSONDecoder().decode(ShoppingMoveResult.self, from: Data("""
+        {"id":"b","merged":true,"previousQuantity":"200","fromListId":"l1","quantity":"100"}
+        """.utf8))
+        #expect(merged.previousQuantity == "200")
+        let undo = ShoppingMove.undo(of: merged)
+        #expect(undo == ShoppingMoveRequest(itemID: "b", input: ShoppingMoveInput(listId: "l1", quantity: "100")))
+        #expect(undo.path == "/meals/shopping/items/b/move")
+    }
 }
 
 /// Records what the queue sends and fails as told.

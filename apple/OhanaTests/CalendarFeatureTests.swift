@@ -348,6 +348,105 @@ struct CalendarEventUndoTests {
         store.redo()
         #expect(await waitFor("DELETE /api/v1/families/f1/events/e2"))
     }
+
+    @Test func movesAnEventAndUndoMovesItBack() async throws {
+        CalendarStubProtocol.reset()
+        let store = store()
+        store.apply(calendarWithEvent())
+        let event = try #require(store.events[d("2026-03-10")]?.first)
+        let patch = "PATCH /api/v1/families/f1/events/e1"
+
+        // Moved here at once, then saved; a booked appointment stays one.
+        store.moveEvent(event, to: d("2026-03-12"))
+        #expect(store.events[d("2026-03-10")] == nil)
+        #expect(store.events[d("2026-03-12")]?.map(\.id) == ["e0", "e1", "e3"])
+        #expect(store.events[d("2026-03-12")]?[1].isAppointment == true)
+        #expect(store.toast == "Moved “Dentist” to \(CalendarText.day(d("2026-03-12")))")
+        #expect(store.toastOffersUndo && store.canUndo)
+        #expect(await waitFor(patch))
+
+        store.undo()
+        #expect(store.events[d("2026-03-12")]?.map(\.id) == ["e0", "e3"])
+        #expect(store.events[d("2026-03-10")]?.map(\.id) == ["e1"])
+        #expect(store.canRedo)
+        #expect(await waitFor(patch, times: 2))
+
+        store.redo()
+        #expect(store.events[d("2026-03-12")]?.map(\.id) == ["e0", "e1", "e3"])
+        #expect(await waitFor(patch, times: 3))
+    }
+}
+
+/// A calendar with a booked appointment on 10 March 2026.
+private func calendarWithEvent(readOnly: Bool = false) -> CalendarState {
+    CalendarState(
+        family: CalendarFamilyInfo(id: "f1", feedId: "feed", legacyId: nil, name: "Family", access: "editor",
+                                   readOnly: readOnly, updatedAt: nil),
+        types: [], typeYears: [2026], entries: [:], notes: nil,
+        events: ["2026-03-10": [CalendarEvent(id: "e1", date: d("2026-03-10"), start: "09:30", end: nil, title: "Dentist",
+                                              source: "appointment", searchId: "s1")],
+                 "2026-03-12": [CalendarEvent(id: "e0", date: d("2026-03-12"), start: nil, end: nil, title: "Trip"),
+                                CalendarEvent(id: "e3", date: d("2026-03-12"), start: "11:00", end: nil, title: "Call")]],
+        birthdays: nil
+    )
+}
+
+struct CalendarEventDragTests {
+    @Test func dropsOnlyThisFamilysEventsOnOtherDays() {
+        let s = editableStore()
+        s.apply(calendarWithEvent())
+        s.dropEvent(CalendarEventDragItem(familyID: "f2", eventID: "e1", date: "2026-03-10"), on: d("2026-03-11"))
+        s.dropEvent(CalendarEventDragItem(familyID: "f1", eventID: "e1", date: "2026-03-10"), on: d("2026-03-10"))
+        s.dropEvent(CalendarEventDragItem(familyID: "f1", eventID: "gone", date: "2026-03-10"), on: d("2026-03-11"))
+        #expect(s.events[d("2026-03-10")]?.map(\.id) == ["e1"])
+        #expect(!s.canUndo)
+        // Among the day's events by start time, after the all-day ones.
+        s.dropEvent(CalendarEventDragItem(familyID: "f1", eventID: "e1", date: "2026-03-10"), on: d("2026-03-12"))
+        #expect(s.events[d("2026-03-12")]?.map(\.id) == ["e0", "e1", "e3"])
+        #expect(s.events[d("2026-03-12")]?[1].date == d("2026-03-12"))
+        #expect(s.canUndo)
+        #expect(s.dragItem(s.events[d("2026-03-12")]![1]) ==
+                CalendarEventDragItem(familyID: "f1", eventID: "e1", date: "2026-03-12"))
+    }
+
+    @Test func viewersCantMoveEvents() throws {
+        let s = CalendarStore(api: editableStore().api, year: 2026, readOnly: true)
+        s.apply(calendarWithEvent(readOnly: true))
+        let event = try #require(s.events[d("2026-03-10")]?.first)
+        s.moveEvent(event, to: d("2026-03-11"))
+        #expect(s.events[d("2026-03-10")]?.map(\.id) == ["e1"])
+        #expect(s.events[d("2026-03-11")] == nil)
+        #expect(!s.canUndo && s.toast == nil)
+        s.setDropTarget(d("2026-03-11"))
+        #expect(s.dropTarget == nil)
+    }
+
+    @Test func showsWhereItWouldLand() {
+        let s = editableStore()
+        s.apply(calendarWithEvent())
+        s.select(d("2026-03-11"))
+        s.setDropTarget(d("2026-03-11"))
+        let context = s.cellContext(gridFocused: false)
+        #expect(s.cell(d("2026-03-11"), context).dropTarget)
+        #expect(!s.cell(d("2026-03-12"), context).dropTarget)
+        s.setDropTarget(nil)
+        #expect(!s.cell(d("2026-03-11"), s.cellContext(gridFocused: false)).dropTarget)
+    }
+
+    @Test func findsTheEventUnderAPress() {
+        let s = editableStore()
+        s.eventLabels["e1@2026-03-10"] = (d("2026-03-10"), CGRect(x: 10, y: 40, width: 80, height: 14))
+        #expect(s.isOnEvent(CGPoint(x: 20, y: 45), day: d("2026-03-10")))
+        #expect(!s.isOnEvent(CGPoint(x: 20, y: 70), day: d("2026-03-10")))
+        // A label that overflows into the next week's cell doesn't count there.
+        #expect(!s.isOnEvent(CGPoint(x: 20, y: 45), day: d("2026-03-17")))
+        #expect(!s.isOnEvent(CGPoint(x: 20, y: 45), day: nil))
+    }
+
+    @Test func sendsOnlyTheNewDate() throws {
+        let body = try JSONEncoder().encode(CalendarEventDateBody(date: d("2026-03-12")))
+        #expect(String(decoding: body, as: UTF8.self) == #"{"date":"2026-03-12"}"#)
+    }
 }
 
 
