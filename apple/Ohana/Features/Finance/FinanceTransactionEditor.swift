@@ -132,6 +132,7 @@ struct FinanceTransactionEditor: View {
                 if store.canEdit { editForm } else { readOnly }
             }
             .formStyle(.grouped)
+            .scanFolderPicker(scanned?.filing)
             .navigationTitle(existing == nil ? String(localized: "New transaction") : store.canEdit ? String(localized: "Edit transaction") : String(localized: "Transaction"))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
