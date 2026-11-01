@@ -339,7 +339,9 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `App/AppModel.swift` (server, token in the Keychain, `/api/v1/me`, selected family,
   `FamilyContext`: `FamilyAPI` + `didChange`/`revision` signals between modules),
   `Core/API/APIClient.swift` (errors `{error}` / `{message}` → `APIError`, 401 signs out),
-  `Shell/` (sidebar-adaptable `TabView`, family switcher, assistant `.inspector` ⌘J (a `.sheet` on
+  `Shell/` (sidebar-adaptable `TabView`; on iPhone five tabs, overview, calendar, finance, meals and
+  search: more would go under iOS's "More" with a second navigation bar, so appointments and settings
+  open as sheets from the family button there, `Module.phonePages`; family switcher, assistant `.inspector` ⌘J (a `.sheet` on
   iPhone: an inspector there breaks the tabs' navigation bars), toggled by the ✨ button at the top
   right of every page: module roots get it from `shellToolbar()`, a page pushed onto a module's
   stack adds `.assistantButton()`; and its own

@@ -146,7 +146,7 @@ const faqs = [
             <div class="phone-screen">
               <div class="ph-head">
                 <small>Friday, 9 July</small>
-                <b>Good morning</b>
+                <b>Overview</b>
               </div>
               <div class="ph-card">
                 <span class="tag appt">Monday</span>

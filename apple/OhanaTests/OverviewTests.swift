@@ -90,14 +90,6 @@ struct OverviewTests {
         #expect(OverviewFormat.range(day, day.adding(days: 2)).contains("–"))
     }
 
-    @Test func greetsByTheTimeOfDay() {
-        #expect(OverviewFormat.greeting(hour: 8, name: "Anna").contains("Anna"))
-        #expect(OverviewFormat.greeting(hour: 8, name: " ") == OverviewFormat.greeting(hour: 9, name: ""))
-        #expect(OverviewFormat.greeting(hour: 8, name: "") != OverviewFormat.greeting(hour: 14, name: ""))
-        #expect(OverviewFormat.greeting(hour: 14, name: "") != OverviewFormat.greeting(hour: 22, name: ""))
-        #expect(OverviewFormat.greeting(hour: 2, name: "") == OverviewFormat.greeting(hour: 22, name: ""))
-    }
-
     @Test func readsHexColors() {
         #expect(Color(overviewHex: "#ff0000") == Color(red: 1, green: 0, blue: 0))
         #expect(Color(overviewHex: "0f0") == Color(red: 0, green: 1, blue: 0))
@@ -135,10 +127,5 @@ struct OverviewTests {
     @Test func asksTheAssistant() {
         #expect(OverviewAsk.question("  What's for dinner?\n") == "What's for dinner?")
         #expect(OverviewAsk.question(" \n") == nil)
-        let editor = OverviewAsk.suggestions(canEdit: true)
-        #expect(editor.count == 3 && Set(editor).count == 3)
-        #expect(editor.contains("Plan next week's meals"))
-        // Viewers can't change the plan: no suggestion that would.
-        #expect(!OverviewAsk.suggestions(canEdit: false).contains("Plan next week's meals"))
     }
 }

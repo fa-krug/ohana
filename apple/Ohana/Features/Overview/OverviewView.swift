@@ -8,7 +8,6 @@ import SwiftUI
 /// module the server has off doesn't show.
 struct OverviewView: View {
     @Environment(FamilyContext.self) private var family
-    @Environment(AppModel.self) private var app
     @State private var state: LoadState<OverviewDashboard> = .idle
 
     /// Every area's revision: anything that changes elsewhere reloads the overview.
@@ -17,9 +16,7 @@ struct OverviewView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                OverviewHeader(familyName: family.family.name, userName: app.me?.name ?? "")
                 if family.isEnabled(.assistant) { OverviewAskField() }
-                OverviewModuleChips()
                 LoadStateView(state: state, retry: load) { dashboard in
                     OverviewGrid(dashboard: dashboard)
                 }
@@ -43,29 +40,7 @@ struct OverviewView: View {
     }
 }
 
-/// "Good morning, Anna" and the family's name.
-private struct OverviewHeader: View {
-    let familyName: String
-    let userName: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(OverviewFormat.greeting(hour: Calendar.current.component(.hour, from: Date()),
-                                         name: userName.split(separator: " ").first.map(String.init) ?? ""))
-                .font(.largeTitle.bold())
-            Text("Welcome to \(familyName)")
-                .font(.title3)
-                .foregroundStyle(.secondary)
-        }
-        .padding(.horizontal, 4)
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isHeader)
-    }
-}
-
-/// "Ask Ohana…": a question typed here goes to a new chat with the assistant; the chips below
-/// put an example question in the assistant's composer, to read before sending (the assistant
-/// may change things).
+/// "Ask Ohana…": a question typed here goes to a new chat with the assistant.
 private struct OverviewAskField: View {
     @Environment(FamilyContext.self) private var family
     @State private var text = ""
@@ -74,106 +49,63 @@ private struct OverviewAskField: View {
     @ScaledMetric(relativeTo: .title3) private var iconSize: CGFloat = 28
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 12) {
+        HStack(spacing: 12) {
+            Button {
+                if let question = OverviewAsk.question(text) {
+                    send(question)
+                } else {
+                    family.ask(newChat: true)
+                }
+            } label: {
+                Image(systemName: "sparkles")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(ModuleTint.assistant)
+                    .frame(width: iconSize, height: iconSize)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("Ask the assistant"))
+            .help(Text("Ask the assistant"))
+            TextField("Ask Ohana…", text: $text)
+                .textFieldStyle(.plain)
+                .font(.body)
+                .focused($focused)
+                .submitLabel(.send)
+                .onSubmit {
+                    if let question = OverviewAsk.question(text) { send(question) }
+                }
+            if OverviewAsk.question(text) != nil {
                 Button {
-                    if let question = OverviewAsk.question(text) {
-                        send(question)
-                    } else {
-                        family.ask(newChat: true)
-                    }
+                    if let question = OverviewAsk.question(text) { send(question) }
                 } label: {
-                    Image(systemName: "sparkles")
-                        .font(.title3.weight(.semibold))
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.title2)
                         .foregroundStyle(ModuleTint.assistant)
-                        .frame(width: iconSize, height: iconSize)
                         .frame(minWidth: 44, minHeight: 44)
                         .contentShape(.rect)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(Text("Ask the assistant"))
-                .help(Text("Ask the assistant"))
-                TextField("Ask Ohana…", text: $text)
-                    .textFieldStyle(.plain)
-                    .font(.body)
-                    .focused($focused)
-                    .submitLabel(.send)
-                    .onSubmit {
-                        if let question = OverviewAsk.question(text) { send(question) }
-                    }
-                if OverviewAsk.question(text) != nil {
-                    Button {
-                        if let question = OverviewAsk.question(text) { send(question) }
-                    } label: {
-                        Image(systemName: "arrow.up.circle.fill")
-                            .font(.title2)
-                            .foregroundStyle(ModuleTint.assistant)
-                            .frame(minWidth: 44, minHeight: 44)
-                            .contentShape(.rect)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(Text("Send"))
-                    .help(Text("Send"))
-                    .transition(.scale.combined(with: .opacity))
-                }
+                .accessibilityLabel(Text("Send"))
+                .help(Text("Send"))
+                .transition(.scale.combined(with: .opacity))
             }
-            .padding(.leading, 6)
-            .padding(.trailing, 10)
-            .padding(.vertical, 4)
-            .background {
-                Capsule()
-                    .fill(Color.cardBackground)
-                    .overlay { Capsule().fill(ModuleTint.assistant.opacity(0.1)) }
-            }
-            .animation(reduceMotion ? nil : .snappy, value: OverviewAsk.question(text) == nil)
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(OverviewAsk.suggestions(canEdit: family.canEdit), id: \.self) { suggestion in
-                        Button {
-                            family.ask(suggestion, send: false, newChat: true)
-                        } label: {
-                            Text(verbatim: suggestion)
-                                .font(.subheadline)
-                        }
-                        .buttonStyle(.bordered)
-                        .accessibilityHint(Text("Opens the assistant with this question, ready to send"))
-                    }
-                }
-                .padding(.vertical, 2)
-            }
-            .scrollClipDisabled()
         }
+        .padding(.leading, 6)
+        .padding(.trailing, 10)
+        .padding(.vertical, 4)
+        .background {
+            Capsule()
+                .fill(Color.cardBackground)
+                .overlay { Capsule().fill(ModuleTint.assistant.opacity(0.1)) }
+        }
+        .animation(reduceMotion ? nil : .snappy, value: OverviewAsk.question(text) == nil)
     }
 
     private func send(_ question: String) {
         family.ask(question, send: true, newChat: true)
         text = ""
         focused = false
-    }
-}
-
-/// The modules as buttons (the web overview's module links).
-private struct OverviewModuleChips: View {
-    @Environment(FamilyContext.self) private var family
-    private let modules: [Module] = [.calendar, .finance, .meals, .appointments]
-
-    var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(modules.filter { family.isEnabled($0) }) { module in
-                    Button {
-                        family.open(.module(module))
-                    } label: {
-                        Label(module.title, systemImage: module.systemImage)
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(module.tint)
-                }
-            }
-            .padding(.vertical, 2)
-        }
-        .scrollClipDisabled()
     }
 }
 
