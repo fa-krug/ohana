@@ -1,36 +1,95 @@
 import SwiftUI
 
-/// What a screen loads: nothing yet, in flight, there, or failed with a message.
+/// What a screen loads: nothing yet, in flight, there, the copy kept on the device, or failed
+/// with a message.
 enum LoadState<Value> {
     case idle
     case loading
     case loaded(Value)
+    /// The copy kept on the device (`CachedGet.saved()`) from `date`, shown until the server
+    /// answers: `updating` while it's asked, false once it couldn't be reached.
+    case saved(Value, date: Date, updating: Bool)
     case failed(String)
 
     var value: Value? {
-        if case let .loaded(v) = self { v } else { nil }
+        switch self {
+        case let .loaded(v), let .saved(v, _, _): v
+        default: nil
+        }
     }
 
     var isLoading: Bool {
         if case .loading = self { true } else { false }
     }
+
+    /// What's shown is the copy on the device, not the server's latest: changes wait.
+    var isSaved: Bool {
+        if case .saved = self { true } else { false }
+    }
 }
 
 extension LoadState {
-    /// Runs `load`, keeping the old value on screen while reloading.
-    static func run(_ state: Binding<LoadState<Value>>, _ load: () async throws -> Value) async {
-        if state.wrappedValue.value == nil { state.wrappedValue = .loading }
+    /// Runs `load`, keeping the old value on screen while reloading. With nothing on screen yet
+    /// the copy on the device (`saved`) shows meanwhile, and stays when the server can't be
+    /// reached.
+    static func run(_ state: Binding<LoadState<Value>>, saved: () -> Saved<Value>? = { nil },
+                    _ load: () async throws -> Value) async {
+        switch state.wrappedValue {
+        case .loaded:
+            break
+        case let .saved(value, date, _):
+            state.wrappedValue = .saved(value, date: date, updating: true)
+        case .idle, .loading, .failed:
+            if let copy = saved() {
+                state.wrappedValue = .saved(copy.value, date: copy.date, updating: true)
+            } else {
+                state.wrappedValue = .loading
+            }
+        }
         do {
             state.wrappedValue = .loaded(try await load())
         } catch is CancellationError {
+            // The next load (a new task of the view) takes over.
         } catch {
-            if state.wrappedValue.value == nil { state.wrappedValue = .failed(error.localizedDescription) }
-            else { ErrorBanner.shared.show(error) }
+            state.wrappedValue = state.wrappedValue.failing(error)
+        }
+    }
+
+    /// Loads a GET kept on the device, made into what the screen shows.
+    static func run<Answer>(_ state: Binding<LoadState<Value>>, _ get: CachedGet<Answer>,
+                            _ transform: (Answer) -> Value) async {
+        await run(state, saved: { get.saved().map { Saved(value: transform($0.value), date: $0.date) } }) {
+            transform(try await get.fetch())
+        }
+    }
+
+    /// The state after a load failed: the copy on the device stays while the failure may pass
+    /// (offline, the server down), a value from the server stays with the error in the banner.
+    func failing(_ error: any Error) -> LoadState {
+        switch self {
+        case let .saved(value, date, _):
+            if APIError.isTemporary(error) {
+                return .saved(value, date: date, updating: false)
+            }
+            return .failed(error.localizedDescription)
+        case .loaded:
+            ErrorBanner.shared.show(error)
+            return self
+        case .idle, .loading, .failed:
+            return .failed(error.localizedDescription)
         }
     }
 }
 
-/// Shows a `LoadState`: a spinner, the failure with a retry, or the content.
+extension LoadState where Value: Decodable {
+    /// Loads a GET kept on the device.
+    static func run(_ state: Binding<LoadState<Value>>, _ get: CachedGet<Value>) async {
+        await run(state, saved: get.saved, get.fetch)
+    }
+}
+
+/// Shows a `LoadState`: a spinner, the failure with a retry, or the content — with
+/// `SavedCopyBadge` over it while it's the copy on the device.
 struct LoadStateView<Value, Content: View>: View {
     let state: LoadState<Value>
     var retry: (() async -> Void)?
@@ -55,7 +114,80 @@ struct LoadStateView<Value, Content: View>: View {
             }
         case let .loaded(value):
             content(value)
+        case let .saved(value, date, updating):
+            content(value)
+                .overlay(alignment: .topTrailing) {
+                    SavedCopyBadge(date: date, updating: updating, retry: retry)
+                }
         }
+    }
+}
+
+/// The quiet sign over a screen showing its copy on the device: "Updating…" while the server is
+/// asked (only after a moment, so a quick answer shows nothing), then that it's offline or the
+/// server can't be reached, and from when the copy is. A tap tries again; so does the connection
+/// coming back.
+struct SavedCopyBadge: View {
+    let date: Date
+    let updating: Bool
+    var retry: (() async -> Void)?
+    @State private var connectivity = Connectivity.shared
+    @State private var showsUpdating = false
+
+    var body: some View {
+        Group {
+            if updating {
+                if showsUpdating {
+                    Label {
+                        Text("Updating…")
+                    } icon: {
+                        ProgressView().controlSize(.mini)
+                    }
+                    .badgeStyle()
+                }
+            } else {
+                Button {
+                    if let retry { Task { await retry() } }
+                } label: {
+                    Label(problem, systemImage: connectivity.isOnline ? "exclamationmark.icloud" : "wifi.slash")
+                        .badgeStyle()
+                }
+                .buttonStyle(.plain)
+                .disabled(retry == nil)
+                .accessibilityHint(retry == nil ? "" : String(localized: "Tries again"))
+            }
+        }
+        .padding(8)
+        .animation(.snappy, value: updating)
+        .animation(.snappy, value: showsUpdating)
+        .task(id: updating) {
+            showsUpdating = false
+            guard updating else { return }
+            try? await Task.sleep(for: .milliseconds(600))
+            if !Task.isCancelled { showsUpdating = true }
+        }
+        .onChange(of: connectivity.isOnline) { _, online in
+            if online, !updating, let retry { Task { await retry() } }
+        }
+    }
+
+    private var problem: String {
+        let time = date.formatted(Calendar.current.isDateInToday(date)
+                                  ? .dateTime.hour().minute() : .dateTime.day().month().hour().minute())
+        return connectivity.isOnline
+            ? String(localized: "Server unreachable · as of \(time)")
+            : String(localized: "Offline · as of \(time)")
+    }
+}
+
+private extension View {
+    func badgeStyle() -> some View {
+        font(.caption)
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .glassEffect(.regular, in: .capsule)
+            .transition(.opacity)
     }
 }
 

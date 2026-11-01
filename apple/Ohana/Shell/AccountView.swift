@@ -103,15 +103,19 @@ private struct AccountForm: View {
 
             if needsOverview {
                 if let overview = state.value {
-                    if page == .all {
-                        profileSection(overview.user)
-                        emailSection(overview.user)
-                        passwordSection(overview)
-                        passkeysSection(overview)
-                        devicesSection(overview)
-                    } else {
-                        developerSections(overview)
+                    // The copy on the device only shows: changes wait for the server.
+                    Group {
+                        if page == .all {
+                            profileSection(overview.user)
+                            emailSection(overview.user)
+                            passwordSection(overview)
+                            passkeysSection(overview)
+                            devicesSection(overview)
+                        } else {
+                            developerSections(overview)
+                        }
                     }
+                    .disabled(state.isSaved)
                 } else if case let .failed(message) = state {
                     Section {
                         Label(message, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.red)
@@ -131,6 +135,11 @@ private struct AccountForm: View {
             }
         }
         .formStyle(.grouped)
+        .overlay(alignment: .topTrailing) {
+            if case let .saved(_, date, updating) = state {
+                SavedCopyBadge(date: date, updating: updating, retry: load)
+            }
+        }
         .navigationTitle(page == .developer ? "API tokens" : "Account")
         .toolbar {
             if inSheet {
@@ -534,7 +543,13 @@ private struct AccountForm: View {
 
     private func load() async {
         guard let client = app.client else { return }
-        await LoadState.run($state) { try await client.get("/api/v1/me/account") }
+        let get = client.cached("/api/v1/me/account", as: AccountOverview.self)
+        await LoadState.run($state, saved: {
+            // The name field shows the copy's name while the server is asked.
+            let copy = get.saved()
+            if let copy, !nameFocused { name = copy.value.user.name }
+            return copy
+        }, get.fetch)
         if let user = state.value?.user, !nameFocused { name = user.name }
     }
 

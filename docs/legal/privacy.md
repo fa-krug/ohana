@@ -123,15 +123,21 @@ turn them off for the whole server.
 
 The app stores on your device only what it needs to work: the **API token** for your server
 and, so the *Save to Ohana* share extension can reach it, the server's address and the selected
-family, and with notifications on the key for them (in the Keychain), app settings such as the selected family (in the app's preferences),
-changes to the shopping list made offline until they're sent, and the cook view's running
-timers. If you use the **widgets**, they load your family's overview from the same server with
-the same token and keep a copy of it on your device (today's and tomorrow's calendar, tonight's
-dinner, the number of items on the shopping list, found appointments), so they can show it while
-the server is out of reach; no other service or permission is involved. The names, tags and short descriptions of your recipes are added to the device's
-**Spotlight** index, so you can find them in the system search; the index stays on the device.
-Signing out deletes the token on the server and on the device and removes the recipes from
-Spotlight; the widgets then delete their copy. Deleting the app removes the rest.
+family, and with notifications on the key for them (in the Keychain), app settings such as the
+selected family (in the app's preferences), a **copy of what your server last sent** (your
+account, your families and the screens you opened, and what it loads ahead in the background:
+calendar, meal plan, recipes, shopping lists and so on), so the app opens on it at once and you
+can read it without a connection, changes made offline (calendar days and notes, ticked and
+added shopping items) until they're sent, and the cook view's running timers. The copy is kept
+in the app's cache, which the system may empty when space runs low. If you use the
+**widgets**, they load your family's overview from the same server with the same token and keep
+a copy of it on your device (today's and tomorrow's calendar, tonight's dinner, the number of
+items on the shopping list, found appointments), so they can show it while the server is out of
+reach; no other service or permission is involved. The names, tags and short descriptions of
+your recipes are added to the device's **Spotlight** index, so you can find them in the system
+search; the index stays on the device. Signing out deletes the token on the server and on the
+device, the app's copy and the changes not sent yet, and removes the recipes from Spotlight;
+the widgets then delete their copy. Deleting the app removes the rest.
 
 ### Permissions
 

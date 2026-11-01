@@ -339,6 +339,20 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `App/AppModel.swift` (server, token in the Keychain, `/api/v1/me`, selected family,
   `FamilyContext`: `FamilyAPI` + `didChange`/`revision` signals between modules),
   `Core/API/APIClient.swift` (errors `{error}` / `{message}` → `APIError`, 401 signs out),
+  `Core/API/ResponseCache.swift` (offline: the last answer of each screen's GET kept under
+  Caches per server, `api.cached("/meals/plan")` → `CachedGet` `saved()` / `fetch()`;
+  `LoadState.run($state, api.cached(…))` shows the copy at once as `.saved(…, updating:)` with
+  `SavedCopyBadge` ("Updating…", "Offline · as of …") and keeps it while the server can't be
+  reached; editing waits for the server's answer; `AppModel` opens on the saved account and
+  families; signing out or a new pairing clears it; `Core/Support/Connectivity.swift`;
+  `Core/API/Prefetch.swift` loads the selected family's main screens and the meal plan's
+  recipes in the background after launch / a family switch / reconnecting (every 15 min at most,
+  not in Low Data Mode) through the screens' own request builders (`OverviewView.request`,
+  `FinanceStore.listRequest`, …: keep them shared, or the screen won't find the copy). Offline
+  writes, server wins (a refusal drops the change and reloads): the calendar's queue of entry /
+  note ops is kept on disk (`CalendarStore.queueFile`, shown on top of what's loaded); the
+  shopping queue holds ticks and adds (`ShoppingTickQueue`, adds carry a `clientId` the server
+  applies once: `shopping_item_adds`)),
   `Shell/` (sidebar-adaptable `TabView`, family switcher, assistant `.inspector` ⌘J (a `.sheet` on
   iPhone: an inspector there breaks the tabs' navigation bars), toggled by the ✨ button at the top
   right of every page: module roots get it from `shellToolbar()`, a page pushed onto a module's

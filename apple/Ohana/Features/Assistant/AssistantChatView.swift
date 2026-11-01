@@ -366,7 +366,7 @@ struct AssistantChatView: View {
                 }
                 let items = visibleItems
                 ForEach(Array(items.enumerated()), id: \.element.offset) { index, entry in
-                    AssistantItemView(item: entry.item, store: store, open: open)
+                    AssistantItemView(item: entry.item, store: store, saved: store.savedCopy != nil, open: open)
                         .equatable()
                         .contextMenu { itemMenu(items: items, index: index) }
                 }
@@ -401,6 +401,11 @@ struct AssistantChatView: View {
         }
         .overlay(alignment: .bottomTrailing) {
             if !following { jumpToLatest }
+        }
+        .overlay(alignment: .topTrailing) {
+            if let saved = store.savedCopy {
+                SavedCopyBadge(date: saved.date, updating: saved.updating, retry: store.retrySaved)
+            }
         }
         .animation(reduceMotion ? nil : .snappy, value: following)
     }

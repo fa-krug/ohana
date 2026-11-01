@@ -17,6 +17,9 @@ struct AppointmentSearchDetailView: View {
     /// On screen (not covered by a pushed page): only then it sets the module menu.
     @State private var onScreen = false
 
+    /// Changes to what's shown wait while it's the copy on the device.
+    private var canEdit: Bool { family.canEdit && !state.isSaved }
+
     var body: some View {
         LoadStateView(state: state, retry: load) { detail in
             content(detail)
@@ -28,10 +31,10 @@ struct AppointmentSearchDetailView: View {
         #endif
         .toolbar { toolbar }
         .task(id: family.revision(.appointments)) { await load() }
-        .appointmentPolling(busy: state.value?.search.isBusy ?? false) { await load() }
+        .appointmentPolling(busy: !state.isSaved && state.value?.search.isBusy == true) { await load() }
         .onAppear { onScreen = true }
         .onDisappear { onScreen = false }
-        .focusedSceneValue(\.moduleMenu, onScreen && family.canEdit ? state.value.map { menu($0.search) } : nil)
+        .focusedSceneValue(\.moduleMenu, onScreen && canEdit ? state.value.map { menu($0.search) } : nil)
         .sheet(isPresented: $editing) {
             if let search = state.value?.search {
                 AppointmentSearchEditor(search: search) { _ in }
@@ -58,7 +61,7 @@ struct AppointmentSearchDetailView: View {
 
     private func load() async {
         guard !deleted else { return }
-        await LoadState.run($state) { try await family.api.get("/appointments/searches/\(searchID)") }
+        await LoadState.run($state, family.api.cached("/appointments/searches/\(searchID)"))
     }
 
     /// The Appointments menu (editors): Run Now ⌘R, Edit ⌘E, pause, Delete ⌘⌫.
@@ -92,7 +95,7 @@ struct AppointmentSearchDetailView: View {
                 }
                 .help("History")
             }
-            if family.canEdit {
+            if canEdit {
                 ToolbarItem(placement: .primaryAction) {
                     Button("Edit", systemImage: "pencil") { editing = true }
                         .help("Edit (⌘E)")
@@ -169,7 +172,7 @@ struct AppointmentSearchDetailView: View {
             if let run = search.latestRun, run.status != "RUNNING" {
                 AppointmentRunMessage(run: run)
             }
-            if family.canEdit {
+            if canEdit {
                 AppointmentRunNowButton(search: search, reload: load, prominent: true)
                     .help("Run now (⌘R)")
             }
@@ -215,7 +218,7 @@ struct AppointmentSearchDetailView: View {
         if let url = doctor.bookingURL {
             Button("Book on \(doctor.sourceName)", systemImage: "arrow.up.right.square") { openURL(url) }
         }
-        if family.canEdit {
+        if canEdit {
             Button("Ignore", systemImage: "eye.slash") {
                 perform { try await AppointmentActions.ignore(family, resultID: doctor.resultId) }
             }
@@ -261,7 +264,7 @@ struct AppointmentSearchDetailView: View {
     }
 
     @ViewBuilder private func showAgain(_ entry: AppointmentIgnoredItem) -> some View {
-        if family.canEdit {
+        if canEdit {
             Button("Show again", systemImage: "eye") {
                 perform { try await AppointmentActions.unignore(family, entryID: entry.id) }
             }
@@ -301,14 +304,12 @@ struct AppointmentHistoryView: View {
         .ohanaBackground(ModuleTint.appointments)
         .navigationTitle("History")
         .task(id: family.revision(.appointments)) { await load() }
-        .appointmentPolling(busy: state.value?.contains { $0.run.status == "RUNNING" } ?? false) { await load() }
+        .appointmentPolling(busy: !state.isSaved && state.value?.contains { $0.run.status == "RUNNING" } == true) { await load() }
     }
 
     private func load() async {
-        await LoadState.run($state) {
-            let response: AppointmentRunsResponse = try await family.api.get("/appointments/searches/\(searchID)/runs")
-            return response.runs
-        }
+        await LoadState.run($state, family.api.cached("/appointments/searches/\(searchID)/runs",
+                                                      as: AppointmentRunsResponse.self)) { $0.runs }
     }
 
     private func runCard(_ item: AppointmentRunWithResults) -> some View {

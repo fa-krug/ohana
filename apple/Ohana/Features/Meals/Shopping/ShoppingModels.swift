@@ -93,11 +93,38 @@ struct ShoppingUnit: Codable, Identifiable, Hashable {
 }
 
 /// POST /meals/shopping/lists/{id}/items
-struct ShoppingAddItemInput: Codable {
+struct ShoppingAddItemInput: Codable, Hashable {
     let name: String
     let quantity: String
     let unitId: Int
     let category: String?
+    /// Makes the add apply once: the server answers a repeat with the earlier result.
+    var clientId: String?
+}
+
+/// An add waiting for the server (offline, the server down): kept on the device and shown in its
+/// list until sent (`ShoppingTickQueue`).
+struct ShoppingPendingAdd: Codable, Identifiable, Hashable {
+    let listID: String
+    let input: ShoppingAddItemInput
+    /// For the row until the server's item comes.
+    let unitAbbreviation: String
+
+    /// The add's `clientId`, made when the add was.
+    var id: String { input.clientId ?? "" }
+
+    init(listID: String, name: String, quantity: String, unitID: Int, unitAbbreviation: String, category: String?,
+         clientID: String = UUID().uuidString) {
+        self.listID = listID
+        input = ShoppingAddItemInput(name: name, quantity: quantity, unitId: unitID, category: category, clientId: clientID)
+        self.unitAbbreviation = unitAbbreviation
+    }
+
+    /// The row's item ("pending-" and the client id: never a server's id).
+    var item: ShoppingItem {
+        ShoppingItem(id: "pending-\(id)", ingredientName: input.name, category: input.category ?? "OTHER",
+                     quantity: input.quantity, unitAbbreviation: unitAbbreviation, isChecked: false)
+    }
 }
 
 struct ShoppingAddItemResult: Codable {

@@ -38,11 +38,16 @@ private struct CalendarSettingsContent: View {
                 rolesSection
                 viewSection
                 CalendarFeedSection(store: store, rotating: $rotating)
-                if !store.readOnly, let legacy = store.family?.legacyId {
+                if !store.typesReadOnly, let legacy = store.family?.legacyId {
                     legacySection(legacy)
                 }
             }
             .formStyle(.grouped)
+        }
+        .overlay(alignment: .topTrailing) {
+            if let copy = store.savedCopy {
+                SavedCopyBadge(date: copy.date, updating: copy.updating, retry: { await store.load() })
+            }
         }
         .ohanaBackground(ModuleTint.calendar)
         .task(id: [family.revision(.calendar), family.revision(.family)]) { await store.load(quiet: store.isLoaded) }
@@ -122,17 +127,17 @@ private struct CalendarSettingsContent: View {
             .buttonStyle(.borderless)
 
             if store.typeYears != nil && store.types.isEmpty {
-                Text(store.readOnly ? LocalizedStringKey("No entry types for \(String(store.year)).") : LocalizedStringKey("No entry types for \(String(store.year)) yet."))
+                Text(store.typesReadOnly ? LocalizedStringKey("No entry types for \(String(store.year)).") : LocalizedStringKey("No entry types for \(String(store.year)) yet."))
                     .foregroundStyle(.secondary)
             }
             let stats = store.stats
             ForEach(Array(store.types.enumerated()), id: \.element.id) { index, type in
                 typeRow(type, index: index, stats: stats[type.id] ?? CalendarTypeStats())
             }
-            .onMove(perform: store.readOnly ? nil : { from, to in
+            .onMove(perform: store.typesReadOnly ? nil : { from, to in
                 perform { try await store.moveTypes(from: from, to: to) }
             })
-            if !store.readOnly {
+            if !store.typesReadOnly {
                 Button {
                     perform {
                         let type = try await store.addType()
@@ -167,7 +172,7 @@ private struct CalendarSettingsContent: View {
         } header: {
             Text("Entry types \(String(store.year))")
         } footer: {
-            if store.readOnly {
+            if store.isViewer {
                 Text("Only editors of the family can change entry types.")
             } else {
                 Text("These types belong to \(String(store.year)) – every year has its own. Changes are saved immediately. Copying from another year adds the types that \(String(store.year)) doesn’t have yet.")
@@ -177,7 +182,7 @@ private struct CalendarSettingsContent: View {
 
     private func typeRow(_ type: CalendarEntryType, index: Int, stats: CalendarTypeStats) -> some View {
         Group {
-            if store.readOnly {
+            if store.typesReadOnly {
                 typeLabel(type, stats: stats)
             } else {
                 NavigationLink {
@@ -188,7 +193,7 @@ private struct CalendarSettingsContent: View {
             }
         }
         .contextMenu {
-            if !store.readOnly {
+            if !store.typesReadOnly {
                 Button("Edit", systemImage: "pencil") { editing = type }
                 Button("Move up", systemImage: "arrow.up") {
                     perform { try await store.moveTypes(from: [index], to: index - 1) }
@@ -204,7 +209,7 @@ private struct CalendarSettingsContent: View {
         }
         #if os(iOS)
         .swipeActions {
-            if !store.readOnly {
+            if !store.typesReadOnly {
                 Button("Delete", systemImage: "trash", role: .destructive) { deleting = type }
             }
         }
@@ -330,7 +335,7 @@ struct CalendarFeedSection: View {
                 ShareLink(item: feed) {
                     Label("Share", systemImage: "square.and.arrow.up")
                 }
-                if !store.readOnly {
+                if !store.typesReadOnly {
                     Button("New feed address", systemImage: "arrow.triangle.2.circlepath") { rotating = "feed" }
                 }
                 DisclosureGroup("How to add it to iCloud") {

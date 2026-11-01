@@ -445,3 +445,84 @@ struct FinanceUndoTests {
         #expect(registry.register([.string("a")]) == nil)
     }
 }
+
+/// The finance page's reads kept on the device: shown at once, kept while the server is down,
+/// dropped when it refuses; changes wait meanwhile.
+@MainActor
+struct FinanceSavedCopyTests {
+    /// One answer for every read (the stub answers a host with one body): the overview's, the
+    /// list's, the balances' and the summary's fields side by side.
+    private static let body = """
+    {"currency":"EUR","csvMappings":[],"categories":[],"accounts":[],"transactions":[],"total":7,
+     "incomeCents":100,"expenseCents":0,"count":1,"months":[],"configured":false,"pairs":[]}
+    """
+
+    private func store(_ host: String, cache: ResponseCache) -> FinanceStore {
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [FinanceStubProtocol.self]
+        let client = APIClient(baseURL: URL(string: "https://\(host)")!, token: nil,
+                               session: URLSession(configuration: config), cache: cache)
+        let family = FamilySummary(id: "f1", name: "Family", role: .editor, memberCount: 1)
+        return FinanceStore(family: FamilyContext(family: family, api: FamilyAPI(client: client, familyID: "f1")))
+    }
+
+    @Test func showsTheCopyWhileTheServerIsDown() async {
+        let host = "finance-copy.example"
+        let cache = ResponseCache(directory: FileManager.default.temporaryDirectory
+            .appending(path: "ohana-finance-tests-\(UUID().uuidString)", directoryHint: .isDirectory))
+        FinanceStubProtocol.answer(host, status: 200, body: Self.body)
+        let first = store(host, cache: cache)
+        await first.reloadAll()
+        await first.loadSummary()
+        #expect(first.savedCopy == nil && first.canEdit)
+        ResponseCache.waitForWrites()
+
+        FinanceStubProtocol.answer(host, status: 503, body: #"{"error":"down"}"#)
+        let offline = store(host, cache: cache)
+        await offline.reloadAll()
+        await offline.loadSummary()
+        #expect(offline.overview?.currency == "EUR")
+        #expect(offline.list?.total == 7)
+        #expect(offline.summary?.incomeCents == 100)
+        #expect(offline.comparisons != nil)
+        #expect(offline.savedCopy?.updating == false)
+        #expect(offline.error == nil)
+        #expect(!offline.canEdit)
+
+        // Back again: the server's answers, changes allowed.
+        FinanceStubProtocol.answer(host, status: 200, body: Self.body)
+        await offline.reloadAll()
+        #expect(offline.savedCopy == nil && offline.canEdit)
+
+        // Refused: as if nothing had been kept.
+        FinanceStubProtocol.answer(host, status: 404, body: #"{"error":"Not found"}"#)
+        let refused = store(host, cache: cache)
+        await refused.reloadAll()
+        #expect(refused.overview == nil && refused.list == nil)
+        #expect(refused.savedCopy == nil)
+        #expect(refused.error != nil)
+    }
+}
+
+/// Answers every request with what `answer` set (`ResponseCacheTests`' stub isn't in the
+/// generated project yet).
+nonisolated final class FinanceStubProtocol: URLProtocol {
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var answers: [String: (Int, Data)] = [:]
+
+    static func answer(_ host: String, status: Int, body: String) {
+        lock.withLock { answers[host] = (status, Data(body.utf8)) }
+    }
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override func startLoading() {
+        let (status, body) = Self.lock.withLock { Self.answers[request.url?.host() ?? ""] } ?? (500, Data())
+        let response = HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil,
+                                       headerFields: ["Content-Type": "application/json"])!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: body)
+        client?.urlProtocolDidFinishLoading(self)
+    }
+    override func stopLoading() {}
+}

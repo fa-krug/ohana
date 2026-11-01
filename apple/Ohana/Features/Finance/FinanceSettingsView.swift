@@ -63,6 +63,11 @@ struct FinanceSettingsForm: View {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
+        .overlay(alignment: .topTrailing) {
+            if let copy = store.savedCopy {
+                SavedCopyBadge(date: copy.date, updating: copy.updating, retry: { await store.loadOverview() })
+            }
+        }
         .task(id: family.revision(.finance)) { await store.openSettings(family.revision(.finance)) }
         .sheet(item: $sheet) { sheet in
             switch sheet {
@@ -106,7 +111,8 @@ struct FinanceSettingsForm: View {
 
     private var form: some View {
         Form {
-            if !store.canEdit {
+            // Viewers (a copy on the device only waits, with its badge).
+            if !family.canEdit {
                 Section {
                     Label("You can look at the finances; only editors can change them.", systemImage: "eye")
                         .foregroundStyle(.secondary)

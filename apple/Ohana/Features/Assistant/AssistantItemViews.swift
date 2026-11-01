@@ -7,11 +7,13 @@ struct AssistantItemView: View, Equatable {
     @Environment(FamilyContext.self) private var family
     let item: AssistantItem
     let store: AssistantChatStore
+    /// The chat is its copy on the device: no undo meanwhile.
+    var saved = false
     /// Opens a place of the app a tool call names.
     var open: (AppRoute) -> Void = { _ in }
 
     static func == (a: Self, b: Self) -> Bool {
-        a.item == b.item && a.store === b.store
+        a.item == b.item && a.store === b.store && a.saved == b.saved
     }
 
     var body: some View {
@@ -24,7 +26,7 @@ struct AssistantItemView: View, Equatable {
         case let .tool(tool):
             AssistantToolRow(tool: tool, route: AssistantToolLinks.route(tool, familyID: family.family.id), open: open)
         case let .change(change):
-            AssistantChangeRow(change: change) {
+            AssistantChangeRow(change: change, canUndo: !saved) {
                 await store.undo(change.id)
             }
         case let .question(question):
@@ -219,6 +221,7 @@ struct AssistantToolRow: View {
 /// A change the assistant made, with its undo.
 struct AssistantChangeRow: View {
     let change: AssistantChange
+    var canUndo = true
     let undo: () async -> Void
     @State private var undoing = false
 
@@ -245,7 +248,7 @@ struct AssistantChangeRow: View {
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
-                .disabled(undoing)
+                .disabled(undoing || !canUndo)
                 .accessibilityLabel(Text("Undo: \(change.summary)"))
             }
         }
