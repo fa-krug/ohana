@@ -325,6 +325,11 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   the search tab (`Module.search`, `Tab(role: .search)`, ⌘K → `family.startSearch()`,
   `Features/Search/`) opens its hits the same way, a transaction as `.financeTransaction`),
   `DesignSystem/` (solid content cards — Liquid Glass only on bars and floating controls —, error banner, `CancelButton`/`discardGuard`; the module sets `newItem`/`moduleMenu` focused values for File ▸ New and its menu), `Features/<Module>/` (plus `Account/`, `Admin/`).
+  Drag and drop (iPad, Mac) carries the payloads of `Core/Support/DragItems.swift` (own UTTypes,
+  declared in `project.yml`, each naming its family): a recipe or a planned meal onto a day of the
+  meal plan (`MealPlanDrop`; the plan's recipe column, `MealPlanRecipeColumn.swift`), a calendar
+  event onto another day (`CalendarEventDrag.swift`, `CalendarStore.moveEvent`; the grids' selection
+  gestures step aside on an event label), a shopping item onto another list's chip (`ShoppingMove`).
   The assistant: `family.ask(prompt, send:, newChat:)` opens it ready to type from anywhere (⇧⌘J, the overview's field, the Mac's menu bar item (`MenuBarItem`, an AppKit status item: SwiftUI's `MenuBarExtra` re-sets its icon on every window redraw and crashed the app), the
   `AskOhanaIntent` App Shortcut). Recipes are in Spotlight (`RecipeSpotlight.swift`: every family's,
   after loading the account and after recipe changes; emptied in the demo / with Meals off; a result

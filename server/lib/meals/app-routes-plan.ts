@@ -8,17 +8,20 @@
 //   POST   /meals/plan/setup                    SetupPlanInput → {iterationId}            (the plan page's form)
 //   POST   /meals/plan/next                     → {iterationId, undo}                      ("Start next iteration")
 //   POST   /meals/plan/iterations/{id}/renew    → {iterationId, undo}                      ("Refresh")
+//   POST   /meals/plan/iterations/{id}/entries  {date, recipeId} → {iterationId, undo}     (a recipe on a day without lunch; 409 if it has one)
 //   PATCH  /meals/plan/entries/{id}             {recipeId} → {iterationId, undo}           (swap a meal)
 //   DELETE /meals/plan/entries/{id}             → {iterationId, undo}                      (remove a meal)
+//   POST   /meals/plan/entries/{id}/move        {date} → {iterationId, undo | null}        (to another day; that day's lunch takes its day)
 //   GET    /meals/shopping?lang=                {lists: [summary], latest: ShoppingListView | null}
 //   GET    /meals/shopping/lists/{id}?lang=     {list: ShoppingListView}
 //   GET    /meals/shopping/lists/{id}/spent     ShoppingSpend (groceries spend of its shopping day ± 1)
 //   POST   /meals/shopping/lists/{id}/items     {name, quantity, unitId, category?} → {id, merged, previousQuantity}
+//   POST   /meals/shopping/items/{id}/move      {listId, quantity?} → {id, merged, previousQuantity, fromListId, quantity}
 //   GET    /meals/shopping/units                {units: [{id, abbreviation, nameEn, nameDe}]}
 //
 // `undo` is the body for POST /meals/plan/restore that puts the plan back as it was.
-// Viewers read; changes need an editor. Swapping or removing a meal makes the iteration's
-// shopping lists new from its meals, keeping ticks and what was added by hand.
+// Viewers read; changes need an editor. Adding, swapping, moving or removing a meal makes the
+// iteration's shopping lists new from its meals, keeping ticks and what was added by hand.
 
 import { randomUUID } from "node:crypto";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
@@ -42,11 +45,24 @@ import { getLatestShoppingList, getShoppingListById } from "./queries/shopping";
 import { findOrCreateIngredient } from "./recipes/ingredients";
 import { setupPlanSchema } from "./schemas/mutations";
 import { generateShoppingListsForIteration } from "./shopping/generate";
-import { addShoppingItem } from "./shopping/items";
+import { addShoppingItem, moveShoppingItem } from "./shopping/items";
 
 const CATEGORIES = ["PRODUCE", "DAIRY", "MEAT", "PANTRY", "FROZEN", "OTHER"] as const;
 
 const swapSchema = z.object({ recipeId: z.string().min(1).max(64) });
+const day = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "The date must be YYYY-MM-DD")
+  .refine((d) => !Number.isNaN(Date.parse(`${d}T00:00:00Z`)) && new Date(`${d}T00:00:00Z`).toISOString().startsWith(d), "Unknown date");
+const addEntrySchema = z.object({ date: day, recipeId: z.string().min(1).max(64) });
+const moveEntrySchema = z.object({ date: day });
+const moveItemSchema = z.object({
+  listId: z.string().min(1).max(64),
+  quantity: z
+    .union([z.string().max(40), z.number()])
+    .transform((v) => String(v).trim().replace(",", "."))
+    .optional(),
+});
 const addItemSchema = z.object({
   name: z.string().trim().min(1).max(80),
   quantity: z.union([z.string(), z.number()]).transform((v) => String(v).trim().replace(",", ".")),
@@ -71,6 +87,12 @@ export function handleMealPlanApp(ctx: Ctx): Promise<Response> | null {
         renewIteration(ctx.db, familyId, id);
         return { iterationId: id, undo: { restore: [before], remove: [] } };
       });
+    }
+    if (m === "POST" && sub === "iterations" && id !== undefined && more === "entries") {
+      return edit(ctx, async (familyId) => addEntry(ctx.db, familyId, id, addEntrySchema.parse(await readBody(ctx.req))));
+    }
+    if (m === "POST" && sub === "entries" && id !== undefined && more === "move") {
+      return edit(ctx, async (familyId) => moveEntry(ctx.db, familyId, id, moveEntrySchema.parse(await readBody(ctx.req)).date));
     }
     if (sub === "entries" && id !== undefined && more === undefined) {
       if (m === "PATCH") {
@@ -113,6 +135,9 @@ export function handleMealPlanApp(ctx: Ctx): Promise<Response> | null {
       if (m === "POST" && more === "items") {
         return edit(ctx, async (familyId) => addItem(ctx.db, familyId, id, addItemSchema.parse(await readBody(ctx.req))));
       }
+    }
+    if (m === "POST" && sub === "items" && id !== undefined && more === "move") {
+      return edit(ctx, async (familyId) => moveShoppingItem(ctx.db, familyId, id, moveItemSchema.parse(await readBody(ctx.req))));
     }
     return null;
   }
@@ -202,6 +227,111 @@ function changeEntry(db: Db, familyId: string, entryId: string, change: { swap: 
           .run();
       }
       db.delete(mealPlanEntries).where(eq(mealPlanEntries.id, entryId)).run();
+    }
+    regenerate(db, familyId, entry.iterationId);
+    carryOver(db, entry.iterationId, before, generated);
+  });
+  return { iterationId: entry.iterationId, undo: { restore: [before], remove: [] } };
+}
+
+/** The family's iteration with its days and the plan's servings; else a 404. */
+function ownedIteration(db: Db, familyId: string, iterationId: string) {
+  const it = db
+    .select({ id: planIterations.id, start: planIterations.startDate, end: planIterations.endDate, servings: mealPlans.servings })
+    .from(planIterations)
+    .innerJoin(mealPlans, eq(mealPlans.id, planIterations.mealPlanId))
+    .where(and(eq(planIterations.id, iterationId), eq(mealPlans.familyId, familyId)))
+    .get();
+  if (!it) throw new AuthError(404, "Iteration not found");
+  return it;
+}
+
+function checkInIteration(it: { start: string; end: string }, date: string) {
+  if (date < it.start || date > it.end) throw new AuthError(422, "The day is not in the iteration");
+}
+
+/** Puts a recipe as the lunch on a day of the iteration that has none (409 if it has). */
+function addEntry(db: Db, familyId: string, iterationId: string, input: { date: string; recipeId: string }) {
+  const it = ownedIteration(db, familyId, iterationId);
+  const recipe = db
+    .select({ id: recipes.id })
+    .from(recipes)
+    .where(and(eq(recipes.id, input.recipeId), eq(recipes.familyId, familyId)))
+    .get();
+  if (!recipe) throw new AuthError(404, "Recipe not found");
+  checkInIteration(it, input.date);
+  const taken = db
+    .select({ id: mealPlanEntries.id })
+    .from(mealPlanEntries)
+    .where(and(eq(mealPlanEntries.iterationId, iterationId), eq(mealPlanEntries.date, input.date), eq(mealPlanEntries.mealType, "LUNCH")))
+    .get();
+  if (taken) throw new AuthError(409, "That day already has a meal");
+  const before = snapshotIteration(db, familyId, iterationId);
+  db.transaction(() => {
+    const generated = regenerate(db, familyId, iterationId);
+    db.insert(mealPlanEntries)
+      .values({
+        id: randomUUID(),
+        iterationId,
+        date: input.date,
+        mealType: "LUNCH",
+        recipeId: recipe.id,
+        servings: it.servings,
+        isLeftover: false,
+        sourceEntryId: null,
+        isLocked: false,
+      })
+      .run();
+    regenerate(db, familyId, iterationId);
+    carryOver(db, iterationId, before, generated);
+  });
+  return { iterationId, undo: { restore: [before], remove: [] } };
+}
+
+/** Moves a meal to another day of its iteration; the meal of that day, if any, takes its day.
+ *  A leftover that ends up on or before the day of its meal becomes a meal of its own. */
+function moveEntry(db: Db, familyId: string, entryId: string, date: string) {
+  const entry = db
+    .select({ id: mealPlanEntries.id, iterationId: mealPlanEntries.iterationId, date: mealPlanEntries.date, mealType: mealPlanEntries.mealType })
+    .from(mealPlanEntries)
+    .innerJoin(planIterations, eq(planIterations.id, mealPlanEntries.iterationId))
+    .innerJoin(mealPlans, eq(mealPlans.id, planIterations.mealPlanId))
+    .where(and(eq(mealPlanEntries.id, entryId), eq(mealPlans.familyId, familyId)))
+    .get();
+  if (!entry) throw new AuthError(404, "Meal not found");
+  const it = ownedIteration(db, familyId, entry.iterationId);
+  checkInIteration(it, date);
+  if (date === entry.date) return { iterationId: entry.iterationId, undo: null };
+  const before = snapshotIteration(db, familyId, entry.iterationId);
+  db.transaction(() => {
+    const generated = regenerate(db, familyId, entry.iterationId);
+    const other = db
+      .select({ id: mealPlanEntries.id })
+      .from(mealPlanEntries)
+      .where(
+        and(
+          eq(mealPlanEntries.iterationId, entry.iterationId),
+          eq(mealPlanEntries.date, date),
+          eq(mealPlanEntries.mealType, entry.mealType),
+        ),
+      )
+      .all();
+    if (other.length) {
+      db.update(mealPlanEntries).set({ date: entry.date }).where(inArray(mealPlanEntries.id, other.map((o) => o.id))).run();
+    }
+    db.update(mealPlanEntries).set({ date }).where(eq(mealPlanEntries.id, entryId)).run();
+    // Leftovers now on or before the day of their meal stand on their own.
+    const all = db
+      .select({ id: mealPlanEntries.id, date: mealPlanEntries.date, isLeftover: mealPlanEntries.isLeftover, sourceEntryId: mealPlanEntries.sourceEntryId })
+      .from(mealPlanEntries)
+      .where(eq(mealPlanEntries.iterationId, entry.iterationId))
+      .all();
+    const dateOf = new Map(all.map((e) => [e.id, e.date]));
+    const loose = all
+      .filter((e) => e.isLeftover && e.sourceEntryId !== null && dateOf.has(e.sourceEntryId) && e.date <= dateOf.get(e.sourceEntryId)!)
+      .map((e) => e.id);
+    if (loose.length) {
+      db.update(mealPlanEntries).set({ isLeftover: false, sourceEntryId: null }).where(inArray(mealPlanEntries.id, loose)).run();
     }
     regenerate(db, familyId, entry.iterationId);
     carryOver(db, entry.iterationId, before, generated);

@@ -93,6 +93,26 @@
         }
       }
     },
+    "%@ moved to %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ auf %@ verschoben"
+          }
+        }
+      }
+    },
+    "%@ planned for %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ am %@ eingeplant"
+          }
+        }
+      }
+    },
     "%@ selected (%@): %@": {
       "localizations": {
         "de": {
@@ -3023,6 +3043,16 @@
         }
       }
     },
+    "Clear search": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche leeren"
+          }
+        }
+      }
+    },
     "Clear selection": {
       "localizations": {
         "de": {
@@ -4599,6 +4629,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Doppelklick"
+          }
+        }
+      }
+    },
+    "Drag one onto a day": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zieh eins auf einen Tag"
           }
         }
       }
@@ -7377,6 +7417,16 @@
         }
       }
     },
+    "Meals swapped": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Essen getauscht"
+          }
+        }
+      }
+    },
     "Meat & Fish": {
       "localizations": {
         "de": {
@@ -7487,6 +7537,16 @@
         }
       }
     },
+    "Move Item": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Artikel verschieben"
+          }
+        }
+      }
+    },
     "Move down": {
       "localizations": {
         "de": {
@@ -7543,6 +7603,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nach oben"
+          }
+        }
+      }
+    },
+    "Moved to %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf %@ verschoben"
+          }
+        }
+      }
+    },
+    "Moved to another list": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf eine andere Liste verschoben"
+          }
+        }
+      }
+    },
+    "Moved “%@” to %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ auf %@ verschoben"
           }
         }
       }
@@ -10445,6 +10535,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rezepte"
+          }
+        }
+      }
+    },
+    "Recipes to drag onto a day": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rezepte, die du auf einen Tag ziehen kannst"
           }
         }
       }

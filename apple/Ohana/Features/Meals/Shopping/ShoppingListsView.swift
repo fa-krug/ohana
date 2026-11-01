@@ -69,10 +69,12 @@ struct ShoppingEmptyView: View {
 
 /// One shopping list: its items by aisle, ticked off at once (sent in the background, queued
 /// while offline), quantities, deleting (undoable for a few seconds) and adding items (File ▸
-/// New Item, ⌘N), and what the trip cost.
+/// New Item, ⌘N), and what the trip cost. On iPad and Mac the family's lists are a strip above
+/// the items, and an item dragged onto another list moves there (undoable for a few seconds).
 struct ShoppingListPage: View {
     @Environment(FamilyContext.self) private var family
     @Environment(\.undoManager) private var undoManager
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.mealsOnScreen) private var onScreen
     @State private var deletes = MealsPendingDeletes.shared
     let listID: String
@@ -91,6 +93,9 @@ struct ShoppingListPage: View {
     @State private var confirmReset = false
     @State private var ticks = 0
     @State private var connectivity = ShoppingConnectivity.shared
+    /// Items being moved to another list: hidden until the list loaded without them.
+    @State private var moving: Set<String> = []
+    @State private var moveUndo: ShoppingMoveUndo?
 
     private var queue: ShoppingTickQueue { .for(family.api) }
 
@@ -103,6 +108,25 @@ struct ShoppingListPage: View {
         LoadStateView(state: state, retry: load) { list in
             content(list)
         }
+        .safeAreaBar(edge: .top, spacing: 0) {
+            if showsStrip, let onSelect {
+                ShoppingListStrip(lists: lists, shownID: listID, acceptsDrops: canMove) { id in
+                    onSelect(id == latestID ? nil : id)
+                } onDrop: { item, list in
+                    drop(item, on: list)
+                }
+            }
+        }
+        .overlay(alignment: .bottom) {
+            // Not while a delete's banner (MealsUndoBanner) is in its place; back after it.
+            if let moveUndo, deletes.latest == nil {
+                ShoppingMoveUndoBar(undo: moveUndo) { take(moveUndo) } dismiss: { expire(moveUndo) }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 12)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.spring(duration: 0.35), value: moveUndo?.id)
         .task(id: LoadKey(listID: listID, revision: family.revision(.shopping))) { await load() }
         .toolbar { toolbar }
         .focusedSceneValue(\.newItem, onScreen && canChange && state.value != nil
@@ -131,6 +155,12 @@ struct ShoppingListPage: View {
     /// Editing beyond ticking needs the server.
     private var canChange: Bool { family.canEdit && !savedCopy }
 
+    /// The lists as a strip above the items (iPad, Mac), instead of the toolbar's menu.
+    private var showsStrip: Bool { sizeClass != .compact && lists.count > 1 && onSelect != nil }
+
+    /// Items can be dragged onto the strip's other lists.
+    private var canMove: Bool { canChange && showsStrip }
+
     private func load() async {
         let store = ShoppingOfflineStore(api: family.api)
         if state.value?.id != listID { state = .loading }
@@ -139,6 +169,7 @@ struct ShoppingListPage: View {
                 "/meals/shopping/lists/\(listID)", query: ["lang": MealPlanLanguage.current])
             state = .loaded(response.list)
             savedCopy = false
+            moving.formIntersection(response.list.items.map(\.id))
             store.saveList(response.list)
             queue.reconcile()
         } catch is CancellationError {
@@ -291,6 +322,8 @@ struct ShoppingListPage: View {
             Button { tick(item) } label: { label }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(item.isChecked ? .isSelected : [])
+                .modifier(ShoppingItemDrag(item: canMove ? ShoppingItemDragItem(
+                    familyID: family.family.id, itemID: item.id, listID: listID) : nil, label: item.label()))
                 .swipeActions(edge: .trailing) {
                     if canChange {
                         Button("Delete", systemImage: "trash", role: .destructive) { delete(item) }
@@ -325,7 +358,7 @@ struct ShoppingListPage: View {
 
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
-        if lists.count > 1, let onSelect {
+        if lists.count > 1, !showsStrip, let onSelect {
             ToolbarItem(placement: .navigation) {
                 Menu {
                     Picker("Shopping list", selection: Binding(get: { listID }, set: { id in
@@ -370,9 +403,9 @@ struct ShoppingListPage: View {
 
     // MARK: Actions
 
-    /// The items with their ticks, without those being deleted.
+    /// The items with their ticks, without those being deleted or moved.
     private func visibleItems(of list: ShoppingList) -> [ShoppingItem] {
-        queue.apply(to: list.items).filter { !deletes.isHidden($0.id) }
+        queue.apply(to: list.items).filter { !deletes.isHidden($0.id) && !moving.contains($0.id) }
     }
 
     private func tick(_ item: ShoppingItem) {
@@ -406,6 +439,215 @@ struct ShoppingListPage: View {
     private func delete(_ item: ShoppingItem) {
         withAnimation {
             deletes.schedule(item.id, kind: .shoppingItem, title: item.label(), family: family, undoManager: undoManager)
+        }
+    }
+
+    // MARK: Moving
+
+    /// An item dropped on a list of the strip.
+    private func drop(_ item: ShoppingItemDragItem, on list: ShoppingListSummary) -> Bool {
+        guard canMove, ShoppingMove.accepts(item, onto: list.id, familyID: family.family.id) else { return false }
+        move(item, to: list)
+        return true
+    }
+
+    /// Hidden at once, moved on the server; undoable for a few seconds (the bar's Undo, ⌘Z).
+    private func move(_ item: ShoppingItemDragItem, to list: ShoppingListSummary) {
+        let request = ShoppingMove.request(item, to: list.id)
+        let message = list.shoppingDate.map { String(localized: "Moved to \($0.formatted())") }
+            ?? String(localized: "Moved to another list")
+        let title = state.value?.items.first { $0.id == item.itemID }?.label()
+        moving.insert(item.itemID)
+        perform {
+            do {
+                let result: ShoppingMoveResult = try await family.api.send(.post, request.path, body: request.input)
+                offer(ShoppingMoveUndo(message: message, title: title, request: ShoppingMove.undo(of: result)))
+            } catch {
+                moving.remove(item.itemID)
+                throw error
+            }
+            family.didChange(.shopping)
+        }
+    }
+
+    /// Shows the bar and registers the undo with the window's undo manager.
+    private func offer(_ new: ShoppingMoveUndo) {
+        if let moveUndo { expire(moveUndo) }
+        moveUndo = new
+        undoManager?.registerUndo(withTarget: new) { [self] target in
+            take(target, fromManager: true)
+        }
+        undoManager?.setActionName(String(localized: "Move Item"))
+    }
+
+    /// The move can't be taken back any more.
+    private func expire(_ old: ShoppingMoveUndo) {
+        undoManager?.removeAllActions(withTarget: old)
+        if moveUndo === old { moveUndo = nil }
+    }
+
+    private func take(_ undo: ShoppingMoveUndo, fromManager: Bool = false) {
+        if !fromManager { undoManager?.removeAllActions(withTarget: undo) }
+        if moveUndo === undo { moveUndo = nil }
+        moving.remove(undo.request.itemID)
+        perform {
+            let _: ShoppingMoveResult = try await family.api.send(.post, undo.request.path, body: undo.request.input)
+            family.didChange(.shopping)
+        }
+    }
+}
+
+/// A move to another list that can be taken back for a few seconds.
+final class ShoppingMoveUndo: Identifiable {
+    let id = UUID()
+    let message: String
+    /// The item's label, when it was on the list shown.
+    let title: String?
+    let request: ShoppingMoveRequest
+
+    init(message: String, title: String?, request: ShoppingMoveRequest) {
+        self.message = message
+        self.title = title
+        self.request = request
+    }
+}
+
+/// "Moved to Thu, 5 Nov · Undo", for a few seconds after a move.
+struct ShoppingMoveUndoBar: View {
+    let undo: ShoppingMoveUndo
+    var action: () -> Void
+    var dismiss: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "arrow.right.circle")
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(verbatim: undo.message).font(.callout.weight(.semibold))
+                if let title = undo.title {
+                    Text(verbatim: title).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                }
+            }
+            .accessibilityElement(children: .combine)
+            Spacer(minLength: 8)
+            Button("Undo", action: action)
+                .buttonStyle(.glassProminent)
+                .tint(ModuleTint.meals)
+        }
+        .padding(.leading, 16)
+        .padding(.trailing, 8)
+        .padding(.vertical, 8)
+        .glassEffect(.regular, in: .capsule)
+        .frame(maxWidth: 440)
+        .task(id: undo.id) {
+            try? await Task.sleep(for: .seconds(8))
+            if !Task.isCancelled { dismiss() }
+        }
+    }
+}
+
+/// The family's lists side by side above the items (iPad, Mac): shopping day and how much is
+/// ticked off, the shown one highlighted. A tap shows a list; an item dropped on another list
+/// moves there.
+struct ShoppingListStrip: View {
+    let lists: [ShoppingListSummary]
+    let shownID: String
+    /// Items can be dropped on the other lists.
+    let acceptsDrops: Bool
+    var onSelect: (String) -> Void
+    var onDrop: (ShoppingItemDragItem, ShoppingListSummary) -> Bool
+
+    /// The list a dragged item is over.
+    @State private var targeted: String?
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal) {
+                HStack(spacing: 8) {
+                    ForEach(lists) { list in
+                        chip(list).id(list.id)
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 6)
+            }
+            .scrollIndicators(.hidden)
+            .onAppear { proxy.scrollTo(shownID) }
+            .onChange(of: shownID) { _, id in withAnimation { proxy.scrollTo(id) } }
+        }
+    }
+
+    @ViewBuilder
+    private func chip(_ list: ShoppingListSummary) -> some View {
+        let shown = list.id == shownID
+        let over = targeted == list.id
+        let button = Button { onSelect(list.id) } label: {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(verbatim: list.shoppingDate?.formatted() ?? "—")
+                    .font(.subheadline.weight(.semibold))
+                Text(verbatim: "\(list.checkedCount)/\(list.itemCount)")
+                    .font(.caption)
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color.cardBackground)
+                    .overlay {
+                        if shown || over {
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(ModuleTint.meals.opacity(over ? 0.3 : 0.15))
+                        }
+                    }
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(over || shown ? ModuleTint.meals : .clear, lineWidth: over ? 2 : 1)
+            }
+            .scaleEffect(over ? 1.06 : 1)
+            .animation(.snappy, value: over)
+            .contentShape(.rect(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(verbatim: list.shoppingDate?.formatted(.dateTime.weekday(.wide).day().month(.wide)) ?? "—"))
+        .accessibilityValue(Text("\(list.checkedCount) of \(list.itemCount)"))
+        .accessibilityAddTraits(shown ? .isSelected : [])
+        if acceptsDrops, !shown {
+            button
+                .dropDestination(for: ShoppingItemDragItem.self) { items, _ in
+                    targeted = nil
+                    guard let item = items.first else { return false }
+                    return onDrop(item, list)
+                } isTargeted: { isOver in
+                    if isOver { targeted = list.id } else if targeted == list.id { targeted = nil }
+                }
+        } else {
+            button
+        }
+    }
+}
+
+/// Makes an item's row draggable onto another list (nil: not), with the item as a chip.
+private struct ShoppingItemDrag: ViewModifier {
+    let item: ShoppingItemDragItem?
+    let label: String
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let item {
+            content.draggable(item) {
+                Label(label, systemImage: "cart")
+                    .font(.callout)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.cardBackground, in: .capsule)
+                    .contentShape(.dragPreview, .capsule)
+            }
+        } else {
+            content
         }
     }
 }

@@ -2751,6 +2751,42 @@ paths:
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
         "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/families/{familyId}/meals/plan/iterations/{iterationId}/entries:
+    post:
+      tags: [Meal plan]
+      operationId: addMeal
+      summary: Put a recipe as the lunch on a day without one
+      description: >-
+        For a day of the iteration that has no lunch yet (an empty or away day): the meal gets the
+        plan's servings. The iteration's shopping lists are made anew, keeping ticks and what was
+        added by hand. A day that has a lunch answers 409 (swap it with PATCH
+        `…/meals/plan/entries/{entryId}` instead).
+      x-ohana-role: editor
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+        - {name: iterationId, in: path, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [date, recipeId]
+              properties:
+                date: {type: string, format: date, description: "A day of the iteration (YYYY-MM-DD)."}
+                recipeId: {type: string, minLength: 1, maxLength: 64}
+      responses:
+        "200": {$ref: "#/components/responses/PlanChange"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+        "422":
+          description: The day is not in the iteration.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
   /api/v1/families/{familyId}/meals/plan/entries/{entryId}:
     parameters:
       - $ref: "#/components/parameters/FamilyId"
@@ -2789,6 +2825,52 @@ paths:
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
         "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/families/{familyId}/meals/plan/entries/{entryId}/move:
+    post:
+      tags: [Meal plan]
+      operationId: moveMeal
+      summary: Move a meal to another day of its iteration (the two days swap)
+      description: >-
+        The meal on that day, if any, takes the moved one's day. Afterwards a leftover day that
+        lies on or before the day of its meal becomes a meal of its own. The iteration's shopping
+        lists are made anew, keeping ticks and what was added by hand. The same day changes
+        nothing and answers `undo: null`.
+      x-ohana-role: editor
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+        - {name: entryId, in: path, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [date]
+              properties:
+                date: {type: string, format: date, description: "A day of the meal's iteration (YYYY-MM-DD)."}
+      responses:
+        "200":
+          description: The changed iteration and the body that undoes the change (null if nothing changed).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [iterationId, undo]
+                properties:
+                  iterationId: {type: string}
+                  undo:
+                    oneOf:
+                      - $ref: "#/components/schemas/PlanUndo"
+                      - type: "null"
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "422":
+          description: The day is not in the iteration.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
   /api/v1/families/{familyId}/meals/plan/restore:
     post:
       tags: [Meal plan]
@@ -3014,6 +3096,55 @@ paths:
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
         "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/families/{familyId}/meals/shopping/items/{itemId}/move:
+    post:
+      tags: [Shopping]
+      operationId: moveShoppingItem
+      summary: Move an item (or part of it) to another shopping list
+      description: >-
+        To any of the family's lists. With `quantity` below the item's, only that much moves and
+        the rest stays; absent or equal, the whole item. What moves unticked (a part always does)
+        is added to an unticked item of the same ingredient and unit on the target list
+        (`merged`); otherwise the item itself moves (keeping its tick) or a new unticked item is
+        made with the part. Undo by calling it back: not merged and whole, move `id` to
+        `fromListId`; merged, move `quantity` of `id` to `fromListId`.
+      x-ohana-role: editor
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+        - {name: itemId, in: path, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [listId]
+              properties:
+                listId: {type: string, minLength: 1, maxLength: 64}
+                quantity: {type: [string, number], description: "How much to move: more than 0, at most the item's quantity; `,` is read as `.`."}
+      responses:
+        "200":
+          description: Where it went.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, merged, previousQuantity, fromListId, quantity]
+                properties:
+                  id: {type: string, description: "The moved or new item, or the item it was added to."}
+                  merged: {type: boolean, description: "Added to an existing item."}
+                  previousQuantity: {type: [string, "null"], description: "The existing item's quantity before."}
+                  fromListId: {type: string, description: "The list it came from."}
+                  quantity: {type: string, description: "How much moved."}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "422":
+          description: The item is already on that list, or the quantity is not more than 0 or more than the item has.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
 
   # ------------------------------------------------------------------ meals: separate routes ({message} errors)
   /api/v1/families/{familyId}/recipes:

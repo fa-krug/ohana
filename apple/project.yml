@@ -85,6 +85,17 @@ targets:
         CFBundleURLTypes:
           - CFBundleURLName: de.fa-krug.Ohana.pairing
             CFBundleURLSchemes: [ohana]
+        # The app's own drag-and-drop payloads (Core/Support/DragItems.swift).
+        UTExportedTypeDeclarations:
+          - UTTypeIdentifier: de.fa-krug.ohana.meal
+            UTTypeDescription: Ohana meal
+            UTTypeConformsTo: [public.data]
+          - UTTypeIdentifier: de.fa-krug.ohana.calendar-event
+            UTTypeDescription: Ohana calendar event
+            UTTypeConformsTo: [public.data]
+          - UTTypeIdentifier: de.fa-krug.ohana.shopping-item
+            UTTypeDescription: Ohana shopping item
+            UTTypeConformsTo: [public.data]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: de.fa-krug.Ohana
@@ -146,6 +157,17 @@ targets:
         CFBundleURLTypes:
           - CFBundleURLName: de.fa-krug.Ohana.pairing
             CFBundleURLSchemes: [ohana]
+        # The app's own drag-and-drop payloads (Core/Support/DragItems.swift).
+        UTExportedTypeDeclarations:
+          - UTTypeIdentifier: de.fa-krug.ohana.meal
+            UTTypeDescription: Ohana meal
+            UTTypeConformsTo: [public.data]
+          - UTTypeIdentifier: de.fa-krug.ohana.calendar-event
+            UTTypeDescription: Ohana calendar event
+            UTTypeConformsTo: [public.data]
+          - UTTypeIdentifier: de.fa-krug.ohana.shopping-item
+            UTTypeDescription: Ohana shopping item
+            UTTypeConformsTo: [public.data]
     settings:
       base:
         # Both targets build "Ohana.app" with one bundle id, so the Keychain item is shared.

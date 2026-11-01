@@ -415,6 +415,7 @@ extension View {
 /// The selected days with their entries, notes, events and birthdays, and their actions.
 struct CalendarSelectionDetails: View {
     @Environment(FamilyContext.self) private var family
+    @Environment(\.horizontalSizeClass) private var sizeClass
     let store: CalendarStore
     let actions: CalendarActions
     @State private var deleting: CalendarEvent?
@@ -566,6 +567,8 @@ struct CalendarSelectionDetails: View {
             }
         }
         .contentShape(.rect)
+        // Onto another day of the grid (iPad, Mac: phones have no grid next to the details).
+        .modifier(CalendarEventDragSource(store: store, event: event, enabled: !store.readOnly && sizeClass != .compact))
         .contextMenu {
             if event.isAppointment, let searchID = event.searchId {
                 Button("Open the appointment search", systemImage: "stethoscope") { openSearch(searchID) }
