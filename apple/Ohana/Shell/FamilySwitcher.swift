@@ -81,8 +81,8 @@ private enum FamilyPickerAction {
     case family(String), create, join, connect, page(Module), scanLetter
 }
 
-/// The family menu's items, native ones only: the families (the current one checked), creating
-/// or joining one side by side, then scanning a letter and the pages.
+/// The family menu's items, a plain list: the families (the current one checked), creating or
+/// joining one, then scanning a letter and the pages.
 private struct FamilyMenu: View {
     @Environment(AppModel.self) private var app
     let showsPages: Bool
@@ -91,40 +91,28 @@ private struct FamilyMenu: View {
     let choose: (FamilyPickerAction) -> Void
 
     var body: some View {
-        Section("Families") {
-            ForEach(app.families) { family in
-                Toggle(isOn: Binding(
-                    get: { family.id == app.selectedFamilyID },
-                    set: { _ in choose(.family(family.id)) }
-                )) {
-                    Text(family.name)
-                    Text(family.canEdit
-                        ? "\(family.memberCount) members"
-                        : "\(family.memberCount) members · View only")
-                }
-            }
+        ForEach(app.families) { family in
+            Toggle(family.name, isOn: Binding(
+                get: { family.id == app.selectedFamilyID },
+                set: { _ in choose(.family(family.id)) }
+            ))
         }
-        Section {
-            if app.isDemo {
-                Button("Connect your Ohana", systemImage: "server.rack") { choose(.connect) }
-            } else {
-                // One row of two buttons: with large text their full titles wrapped as rows.
-                ControlGroup {
-                    Button { choose(.create) } label: { Label("New", systemImage: "plus") }
-                        .accessibilityLabel(Text("New family"))
-                    Button { choose(.join) } label: { Label("Join", systemImage: "person.badge.plus") }
-                        .accessibilityLabel(Text("Join a family"))
-                }
-            }
+        Divider()
+        if app.isDemo {
+            Button("Connect your Ohana") { choose(.connect) }
+        } else {
+            Button("New family") { choose(.create) }
+            Button("Join a family") { choose(.join) }
         }
-        Section {
-            if scans {
-                Button("Scan letter", systemImage: "doc.text.viewfinder") { choose(.scanLetter) }
-            }
-            if showsPages {
-                ForEach(pages) { page in
-                    Button(page.title, systemImage: page.systemImage) { choose(.page(page)) }
-                }
+        if scans || showsPages {
+            Divider()
+        }
+        if scans {
+            Button("Scan letter") { choose(.scanLetter) }
+        }
+        if showsPages {
+            ForEach(pages) { page in
+                Button(page.title) { choose(.page(page)) }
             }
         }
     }
