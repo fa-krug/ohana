@@ -1,7 +1,8 @@
 // The assistant's routes under /api/v1/families/{id}/ai (family-planner's _shared/ai.ts):
 // settings (keys stored sealed, never returned), the endpoint's model list, a connection test,
-// the chats (chat-routes.ts; their turns run in the worker, see runner.ts) and sorting
-// transactions into categories. Settings, models, test and categorize are for editors; viewers
+// the chats (chat-routes.ts; their turns run in the worker, see runner.ts), sorting
+// transactions into categories and reading a scanned letter (letter.ts). Settings, models,
+// test, categorize and letter are for editors; viewers
 // see whether the assistant is set up, and chat with the tools that only read.
 //
 // Not ported: family-planner's POST /ai/chat (a turn of a chat the caller keeps, run in the
@@ -27,6 +28,7 @@ import { type ChatContext, systemPrompt } from "./chat";
 import { handleChats } from "./chat-routes";
 import type { ChatEnv, RunnerEnv, Turn } from "./chats";
 import { DEFAULT_WINDOW } from "./context";
+import { letterInput, readLetter } from "./letter";
 import { checkUrl, type NetOptions } from "./net";
 import { contextWindow, listModels, type Provider, streamChat } from "./provider";
 import { type AiSettingsRow, type AssistantStore, type ChatRow, DrizzleAssistantStore, SEARCH_PROVIDERS, type SearchProvider } from "./store";
@@ -171,6 +173,8 @@ export function handleAi(env: AiEnv): FamilyRoute {
         return test(ctx, env);
       case "POST categorize":
         return categorize(ctx, env);
+      case "POST letter":
+        return letter(ctx, env);
     }
     return Promise.reject(new HttpError(404, "Not found"));
   };
@@ -418,6 +422,19 @@ async function categorize({ req, load, finance }: Ctx, env: AiEnv) {
   const ops = assignments.map(({ id, categoryId }) => ({ action: "update", id, categoryId }));
   const { inverse } = ops.length ? await applyTransactionOps(finance, family.id, ops) : { inverse: [] };
   return json({ changed: ops.length, matched: similar.size, considered: candidates.length, remaining, ai, inverse, assignments });
+}
+
+/** POST /ai/letter {text, today?, lang?}: the events, tasks and deadlines in a letter's text
+ *  (the app's letter scan), for the app to list, edit and add: `{ai, source?, items}` with
+ *  suggest_items' ops (tasks and deadlines to the default Reminders list). Without AI settings
+ *  `ai` is false and there are no items. One completion in the request (letter.ts). */
+async function letter({ req, load, db, now }: Ctx, env: AiEnv) {
+  const { family } = await load("edit");
+  const input = letterInput(await readBody(req), now);
+  const model = await familyModel(env, family.id);
+  if (!model) return json({ ai: false, items: [] }, 200, NO_STORE);
+  const result = await readLetter(model.provider, input, familyNames(db, family.id), env.modelNet, req.signal);
+  return json({ ai: true, ...result }, 200, NO_STORE);
 }
 
 /** GET /families/{id}/agent: instructions for AI agents that use the API with the user's

@@ -1,11 +1,13 @@
 import Foundation
 
-// What the assistant found to add, e.g. in a scanned letter (server: the suggest_items tool):
-// events for the family's calendar, tasks and deadlines for the user's Reminders. Like a Reminders
-// edit nothing is added until the user picks which ones on the card (`AssistantSuggestionsCard`)
-// and taps Add; the app adds them (`AssistantSuggestionsApply`: events through the family API,
-// tasks and deadlines through EventKit) and answers with one result per suggestion, the ones left
-// out `{ok: false, declined: true}`.
+// What the assistant found to add, e.g. in a letter attached to a chat (server: the suggest_items
+// tool): events for the family's calendar, tasks and deadlines for the user's Reminders. Like a
+// Reminders edit nothing is added until the user picks which ones on the card
+// (`AssistantSuggestionsCard`) and taps Add; the app adds them (`AssistantSuggestionsApply`:
+// events through the family API, tasks and deadlines through EventKit) and answers with one result
+// per suggestion, the ones left out `{ok: false, declined: true}`. The letter scan's review uses
+// the same items, line and apply for what the server finds in a letter (`POST /ai/letter`,
+// `LetterFind.swift`), without a chat.
 
 /// The suggestions of one tool call (`kind: "suggestions"`).
 struct AssistantSuggestions: Equatable {

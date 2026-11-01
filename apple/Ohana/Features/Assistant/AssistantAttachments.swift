@@ -80,9 +80,9 @@ nonisolated enum AssistantAttachments {
         return AssistantPendingAttachment(kind: "file", name: name, text: cut(text))
     }
 
-    /// Long text is cut (the server takes 50,000 characters of it).
-    static func cut(_ text: String) -> String {
-        text.count > maxTextChars ? String(text.prefix(maxTextChars)) + "\n…(cut off)" : text
+    /// Long text is cut (50,000 characters of a file; a scanned letter takes `LetterScan.maxText`).
+    static func cut(_ text: String, max: Int = maxTextChars) -> String {
+        text.count > max ? String(text.prefix(max)) + "\n…(cut off)" : text
     }
 
     /// An image (from a file, the photo library or the clipboard) as an attachment.

@@ -5,9 +5,11 @@ import SwiftUI
 // photographed with the document camera (or picked as a photo or PDF, then cropped to the paper:
 // `ScanCrop`), their text is read on the device, and a review sheet (`LetterReviewSheet`) offers
 // to save them as a searchable PDF in a folder of the user's (`ScanFiling`) and, from the shell,
-// to ask the assistant what to add from the letter (only the text goes to the server). From the
-// family menu, Spotlight / Siri / Shortcuts (`ScanLetterIntent`; both `FamilyContext.scanLetter()`,
-// hosted by the shell: `ShellLetterScan`) and the assistant composer's attach menu.
+// lists the events, tasks and deadlines the server found in the text (`LetterFind.swift`: only
+// the text goes to the server), to edit and tick; Done adds the ticked ones. From the family
+// menu, Spotlight / Siri / Shortcuts (`ScanLetterIntent`; both `FamilyContext.scanLetter()`,
+// hosted by the shell: `ShellLetterScan`) and the assistant composer's attach menu (which attaches
+// the text to the chat instead).
 
 enum LetterScanError: LocalizedError {
     case noText
@@ -21,9 +23,11 @@ enum LetterScanError: LocalizedError {
     }
 }
 
-/// A letter of a few pages; more aren't read.
+/// A letter of up to 20 pages; more aren't read.
 enum LetterScan {
-    static let maxPages = 5
+    static let maxPages = 20
+    /// The most of its text sent on (to `POST /ai/letter` or as a chat attachment): 20 dense pages.
+    static let maxText = 100_000
 }
 
 extension View {
@@ -37,11 +41,11 @@ extension View {
     }
 
     /// The whole flow for a letter: the scanner when `isPresented` turns on, then the review sheet
-    /// (saving the PDF, and with `offersAssistant` the "Suggest dates and tasks" switch). `onDone`
-    /// gets what the user chose once the sheet has gone (the PDF saved by then).
-    func letterScanFlow(isPresented: Binding<Bool>, offersAssistant: Bool,
-                        onDone: @escaping (LetterScanOutcome) -> Void) -> some View {
-        modifier(LetterScanFlow(isPresented: isPresented, offersAssistant: offersAssistant, onDone: onDone))
+    /// (saving the PDF, and with `findsItems` what the server finds in the letter to add). `onDone`
+    /// gets the letter once the sheet has gone (the PDF saved and the ticked items added by then).
+    func letterScanFlow(isPresented: Binding<Bool>, findsItems: Bool,
+                        onDone: @escaping (LetterScanOutcome) -> Void = { _ in }) -> some View {
+        modifier(LetterScanFlow(isPresented: isPresented, findsItems: findsItems, onDone: onDone))
     }
 }
 
@@ -49,8 +53,6 @@ extension View {
 struct LetterScanOutcome {
     /// The letter's text; nil when none could be read.
     let text: String?
-    /// The user wants the assistant's suggestions (only offered from the shell).
-    let askAssistant: Bool
 }
 
 private struct PaperScanner: ViewModifier {
@@ -105,7 +107,7 @@ private struct PaperScanner: ViewModifier {
 
 private struct LetterScanFlow: ViewModifier {
     @Binding var isPresented: Bool
-    let offersAssistant: Bool
+    let findsItems: Bool
     let onDone: (LetterScanOutcome) -> Void
     @Environment(FamilyContext.self) private var family
     @State private var review: LetterReview?
@@ -115,7 +117,8 @@ private struct LetterScanFlow: ViewModifier {
     func body(content: Content) -> some View {
         content
             .paperScanner(isPresented: $isPresented, maxPages: LetterScan.maxPages) { images, needsCrop in
-                let review = LetterReview(images: images, needsCrop: needsCrop, offersAssistant: offersAssistant)
+                let review = LetterReview(images: images, needsCrop: needsCrop,
+                                          finder: findsItems ? FamilyLetterFinder(api: family.api) : nil)
                 review.start(names: LetterReview.familyNames(family.api))
                 Task {
                     // After the camera or the file picker has gone: one presentation at a time.
@@ -128,14 +131,15 @@ private struct LetterScanFlow: ViewModifier {
                 finished = nil
                 onDone(outcome)
             }) { review in
-                LetterReviewSheet(review: review) { finished = $0 }
+                LetterReviewSheet(review: review, events: FamilyEventCreator(api: family.api),
+                                  eventsAdded: { family.didChange(.events) }) { finished = $0 }
                     .errorBanner()
             }
     }
 }
 
 /// The shell's letter scan (`FamilyContext.scanLetter()`, the family menu, "Scan Letter" from
-/// Spotlight, Siri or Shortcuts): the flow, then the assistant in a new chat when asked. On
+/// Spotlight, Siri or Shortcuts): the flow, with what the server finds in the letter to add. On
 /// iPhone the assistant's sheet or a page's sheet closes first: one presentation at a time.
 struct ShellLetterScan: ViewModifier {
     let context: FamilyContext
@@ -143,18 +147,14 @@ struct ShellLetterScan: ViewModifier {
     @Binding var phonePage: Module?
     @State private var scanning = false
 
-    /// The assistant can suggest what to add: on, an editor, a server (not the demo).
-    private var offersAssistant: Bool {
+    /// The server can look for what to add: the assistant on, an editor, a server (not the demo).
+    private var findsItems: Bool {
         context.isEnabled(.assistant) && context.canEdit && !context.api.client.isDemo
     }
 
     func body(content: Content) -> some View {
         content
-            .letterScanFlow(isPresented: $scanning, offersAssistant: offersAssistant) { outcome in
-                guard outcome.askAssistant, let text = outcome.text else { return }
-                context.ask(AssistantLetter.prompt, send: true, newChat: true,
-                            attachments: [AssistantLetter.attachment(text)])
-            }
+            .letterScanFlow(isPresented: $scanning, findsItems: findsItems)
             .onChange(of: context.letterScanRequest) {
                 guard context.takeLetterScanRequest() else { return }
                 var covered = phonePage != nil

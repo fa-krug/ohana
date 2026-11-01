@@ -310,7 +310,7 @@ struct AssistantSuggestionsTests {
         #expect(attachment.name == "Scanned letter.txt")
         #expect(attachment.outgoing.text == "Dear parents")
         #expect(attachment.outgoing.url == nil)
-        #expect(AssistantLetter.attachment(String(repeating: "a", count: 60_000)).text?.hasSuffix("…(cut off)") == true)
+        #expect(AssistantLetter.attachment(String(repeating: "a", count: LetterScan.maxText + 10)).text?.hasSuffix("…(cut off)") == true)
     }
 
     @Test func asksWithAttachments() {

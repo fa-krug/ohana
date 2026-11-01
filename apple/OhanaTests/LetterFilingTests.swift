@@ -128,7 +128,7 @@ struct LetterFilingTests {
     }
 
     @Test func aModelSuggestionKeepsWhatTheUserEdited() {
-        let review = LetterReview(images: [Self.image()], offersAssistant: true, settings: Self.settings(),
+        let review = LetterReview(images: [Self.image()], settings: Self.settings(),
                                   today: Day(year: 2026, month: 11, day: 1))
         review.apply(LetterSuggestion(title: "Brief", date: Day(year: 2026, month: 10, day: 2), tags: ["Kita"]))
         #expect(review.filing.name == "2026-10-02 Brief")
@@ -139,7 +139,6 @@ struct LetterFilingTests {
         #expect(review.filing.name == "Mein Name")
         #expect(review.filing.tags == ["Kita", "Wichtig"])
         #expect(review.outcome.text == nil)
-        #expect(review.outcome.askAssistant == false)
     }
 
     // MARK: File names and tags

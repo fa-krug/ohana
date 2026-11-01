@@ -83,67 +83,79 @@ function timeArg(v: unknown, field: string): string | undefined {
   return v;
 }
 
-/** The items of suggest_items, checked and resolved (tasks' and deadlines' lists against the
- *  user's Reminders). */
+/** One item of suggest_items (or of the letter route's answer, lib/assistant/letter.ts),
+ *  checked and resolved: tasks' and deadlines' lists against the user's Reminders. Without a
+ *  Reminders context a task or deadline fails (NO_REMINDERS), unless `defaultList`: then it
+ *  goes to the device's default list (list null; a `list` given is ignored). */
+export function resolveSuggestion(
+  ctx: Pick<ToolContext, "reminders">,
+  rawItem: unknown,
+  { defaultList = false }: { defaultList?: boolean } = {},
+): SuggestionOp {
+  const o = (rawItem && typeof rawItem === "object" ? rawItem : {}) as Record<string, unknown>;
+  switch (o.kind) {
+    case "event": {
+      const title = titleArg(o.title);
+      const date = dateArg(o.date, "date", true)!;
+      const endDate = dateArg(o.endDate, "endDate", false);
+      const start = timeArg(o.start, "start");
+      const end = timeArg(o.end, "end");
+      if (end && !start) throw new HttpError(400, "end needs start");
+      const op: SuggestionOp = {
+        op: "event",
+        title,
+        date,
+        ...(endDate && endDate !== date ? { endDate } : {}),
+        ...(start ? { start } : {}),
+        ...(end ? { end } : {}),
+      };
+      const location = textArg(o.location, "location", MAX_LOCATION);
+      const person = textArg(o.person, "person", MAX_PERSON);
+      const note = textArg(o.note, "note", MAX_NOTE);
+      if (location) op.location = location;
+      if (person) op.person = person;
+      if (note) op.note = note;
+      // What POST /events will get: an accepted suggestion is a valid event.
+      try {
+        checkEventFields({ ...op });
+      } catch (err) {
+        if (err instanceof ZodError) throw new HttpError(400, err.issues[0]?.message ?? "Not a valid event");
+        throw err;
+      }
+      return op;
+    }
+    case "task":
+    case "deadline": {
+      const title = titleArg(o.title);
+      const date = dateArg(o.date, "date", o.kind === "deadline");
+      const start = timeArg(o.start, "start");
+      if (start && !date) throw new HttpError(400, "start (the due time) needs date");
+      const note = textArg(o.note, "note", MAX_NOTE);
+      if (!ctx.reminders && !defaultList) throw new HttpError(400, NO_REMINDERS);
+      const list = ctx.reminders && present(o.list) ? resolveList(ctx.reminders, o.list) : null;
+      return {
+        op: o.kind,
+        title,
+        ...(date ? { due: start ? `${date}T${start}` : date } : {}),
+        ...(note ? { note } : {}),
+        list: list?.id ?? null,
+        listTitle: list?.title ?? null,
+      };
+    }
+    default:
+      throw new HttpError(400, "kind must be event, task or deadline");
+  }
+}
+
+/** The items of suggest_items, checked and resolved (resolveSuggestion); the first wrong one
+ *  fails them all, so the model can correct it. */
 export function resolveSuggestions(ctx: Pick<ToolContext, "reminders">, raw: unknown): SuggestionOp[] {
   if (!Array.isArray(raw) || !raw.length || raw.length > MAX_SUGGESTIONS) {
     throw new HttpError(400, `items must be a list of 1 to ${MAX_SUGGESTIONS} suggestions`);
   }
   return raw.map((rawItem, i): SuggestionOp => {
-    const o = (rawItem && typeof rawItem === "object" ? rawItem : {}) as Record<string, unknown>;
     try {
-      switch (o.kind) {
-        case "event": {
-          const title = titleArg(o.title);
-          const date = dateArg(o.date, "date", true)!;
-          const endDate = dateArg(o.endDate, "endDate", false);
-          const start = timeArg(o.start, "start");
-          const end = timeArg(o.end, "end");
-          if (end && !start) throw new HttpError(400, "end needs start");
-          const op: SuggestionOp = {
-            op: "event",
-            title,
-            date,
-            ...(endDate && endDate !== date ? { endDate } : {}),
-            ...(start ? { start } : {}),
-            ...(end ? { end } : {}),
-          };
-          const location = textArg(o.location, "location", MAX_LOCATION);
-          const person = textArg(o.person, "person", MAX_PERSON);
-          const note = textArg(o.note, "note", MAX_NOTE);
-          if (location) op.location = location;
-          if (person) op.person = person;
-          if (note) op.note = note;
-          // What POST /events will get: an accepted suggestion is a valid event.
-          try {
-            checkEventFields({ ...op });
-          } catch (err) {
-            if (err instanceof ZodError) throw new HttpError(400, err.issues[0]?.message ?? "Not a valid event");
-            throw err;
-          }
-          return op;
-        }
-        case "task":
-        case "deadline": {
-          const title = titleArg(o.title);
-          const date = dateArg(o.date, "date", o.kind === "deadline");
-          const start = timeArg(o.start, "start");
-          if (start && !date) throw new HttpError(400, "start (the due time) needs date");
-          const note = textArg(o.note, "note", MAX_NOTE);
-          if (!ctx.reminders) throw new HttpError(400, NO_REMINDERS);
-          const list = present(o.list) ? resolveList(ctx.reminders, o.list) : null;
-          return {
-            op: o.kind,
-            title,
-            ...(date ? { due: start ? `${date}T${start}` : date } : {}),
-            ...(note ? { note } : {}),
-            list: list?.id ?? null,
-            listTitle: list?.title ?? null,
-          };
-        }
-        default:
-          throw new HttpError(400, "kind must be event, task or deadline");
-      }
+      return resolveSuggestion(ctx, rawItem);
     } catch (err) {
       if (err instanceof HttpError) throw new HttpError(err.status, `items[${i}]: ${err.message}`);
       throw err;

@@ -3743,6 +3743,54 @@ paths:
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
         "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/families/{familyId}/ai/letter:
+    post:
+      tags: [Assistant]
+      operationId: readLetter
+      summary: Find the events, tasks and deadlines in a letter
+      description: >-
+        The app's letter scan: the text of a letter (from school or nursery, an invitation, a
+        closure notice …) goes to the family's model once (no chat), which answers with the
+        events, tasks and deadlines in it, for the app to list, edit and add. The items have the
+        shape of the assistant's `suggest_items` ops; tasks and deadlines are for the device's
+        default Reminders list (`list` and `listTitle` null). Items the model gets wrong are left
+        out one by one; at most 30. Without AI settings `ai` is false and `items` empty (no
+        error). Relative dates are resolved against the letter's own date, else `today`. Under
+        `/ai`, so it answers 404 when the server turned the `assistant` module off.
+      x-ohana-role: editor
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text: {type: string, minLength: 1, maxLength: 100000, description: "The letter's text (not blank)."}
+                today: {type: string, format: date, description: "The app's day; default the server's (UTC)."}
+                lang: {type: string, enum: [en, de], default: en, description: "The language of titles and notes."}
+      responses:
+        "200":
+          description: What the letter asks for.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ai, items]
+                properties:
+                  ai: {type: boolean, description: "False: the family hasn't set up the assistant (no items)."}
+                  source: {type: string, maxLength: 200, description: "What the document is, when the model says.", example: Elternbrief Klasse 3b}
+                  items:
+                    type: array
+                    maxItems: 30
+                    items: {$ref: "#/components/schemas/SuggestionOp"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "502": {$ref: "#/components/responses/BadGateway"}
   /api/v1/families/{familyId}/ai/chats:
     parameters:
       - $ref: "#/components/parameters/FamilyId"

@@ -7,8 +7,6 @@
     "other": "%lld Seiten"
   },
   "Page %lld": "Seite %lld",
-  "Suggest dates and tasks": "Termine und Aufgaben vorschlagen",
-  "The assistant gets the letter’s text and suggests events, tasks and deadlines to add.": "Der Assistent bekommt den Text des Briefs und schlägt Termine, Aufgaben und Fristen zum Hinzufügen vor.",
   "Save as PDF": "Als PDF sichern",
   "A searchable PDF in the folder you choose. It stays with you: it never goes to the server.": "Ein durchsuchbares PDF im Ordner deiner Wahl. Es bleibt bei dir: Es geht nie an den Server.",
   "Suggesting a name and tags…": "Name und Tags werden vorgeschlagen …",
@@ -20,5 +18,17 @@
   "The folder can’t be found any more. Choose it again.": "Der Ordner ist nicht mehr auffindbar. Wähle ihn erneut.",
   "Choose a folder for the PDF first.": "Wähle zuerst einen Ordner für das PDF.",
   "Saved “%@”": "„%@“ gesichert",
-  "Scan letter": "Brief scannen"
+  "Scan letter": "Brief scannen",
+  "Found in the Letter": "Im Brief gefunden",
+  "Looking for dates and tasks…": "Suche nach Terminen und Aufgaben …",
+  "The letter couldn’t be checked for dates and tasks.": "Der Brief konnte nicht nach Terminen und Aufgaben durchsucht werden.",
+  "No dates or tasks found.": "Keine Termine oder Aufgaben gefunden.",
+  "From %@": "Von %@",
+  "Done adds the ticked ones: events to the family’s calendar, tasks and deadlines to your Reminders.": "„Fertig“ fügt die angewählten hinzu: Termine zum Kalender der Familie, Aufgaben und Fristen zu deinen Erinnerungen.",
+  "It couldn’t be added.": "Das konnte nicht hinzugefügt werden.",
+  "Edits it": "Bearbeitet es",
+  "Task": "Aufgabe",
+  "Deadline": "Frist",
+  "Due": "Fällig",
+  "A deadline needs a date.": "Eine Frist braucht ein Datum."
 }

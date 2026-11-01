@@ -102,7 +102,11 @@ OhanaTests/       Swift Testing unit tests
   photo / PDF that Vision crops to the paper (`ScanCrop`). Their text is read on the device; the
   review can save the pages as a searchable PDF (invisible text layer, Finder / Files tags, name
   and tags suggested on the device, Apple's on-device model where available) into a folder the
-  app remembers as a bookmark. Only the text ever goes to the assistant.
+  app remembers as a bookmark. A letter's review (not from the attach menu, which attaches the
+  text to the chat) also lists the events, tasks and deadlines the server finds in the text
+  (`POST …/ai/letter`, the family's assistant model), each ticked and editable; Done adds the
+  ticked ones (events to the family's calendar, the rest to Reminders). Only the text ever goes to
+  the server.
 - **Share extension** (`ShareExtension/`): sharing a web page (Safari, or any app sharing a URL) to
   Ohana has the server read its recipe and save it to "Want to try"; *Undo* deletes it again, and
   cancelling while it works saves nothing (the server notices the request go away). The app's
