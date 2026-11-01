@@ -71,7 +71,7 @@
   "Edit types": "Arten bearbeiten",
   "End time": "Endzeit",
   "Ends": "Ende",
-  "Entry types %@": "Eintragsarten %@",
+  "Entry types": "Eintragsarten",
   "Entry types and the calendar feed": "Eintragsarten und das Kalender-Abo",
   "Esc / ⇧⌘A": "Esc / ⇧⌘A",
   "Event": "Termin",
@@ -192,7 +192,6 @@
   "You are a viewer in this family: you can look at the calendar but not change it.": "Du kannst in dieser Familie nur ansehen: Den Kalender siehst du, ändern kannst du ihn nicht.",
   "e.g. Christmas": "z. B. Weihnachten",
   "iPhone / iPad: tap “Subscribe on this device” (or Settings → Apps → Calendar → Calendar Accounts → Add Account → Other → Add Subscribed Calendar, and paste the URL).": "iPhone / iPad: auf „Auf diesem Gerät abonnieren“ tippen (oder Einstellungen → Apps → Kalender → Kalenderaccounts → Account hinzufügen → Andere → Kalenderabo hinzufügen und die URL einfügen).",
-  "· Away": "· Unterwegs",
   "“⚠ Not covered” warnings": "„⚠ Nicht abgedeckt“-Warnungen",
   "🎂 %@ turns %lld": "🎂 %@ wird %lld",
   "^[%lld day](inflect: true)": {
