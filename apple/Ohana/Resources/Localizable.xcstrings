@@ -2813,6 +2813,16 @@
         }
       }
     },
+    "Check the day and time the practice confirmed. Ohana then shows it in the calendar (and in the calendar feed, if you subscribed with booked appointments).": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prüfe Tag und Uhrzeit, die die Praxis bestätigt hat. Ohana zeigt ihn dann im Kalender (und im Kalender-Feed, wenn du ihn mit gebuchten Terminen abonniert hast)."
+          }
+        }
+      }
+    },
     "Child-friendly only": {
       "localizations": {
         "de": {
@@ -4359,6 +4369,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Diktieren ist gerade nicht möglich."
+          }
+        }
+      }
+    },
+    "Did you book it?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hast du ihn gebucht?"
           }
         }
       }
@@ -8343,6 +8363,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Normal"
+          }
+        }
+      }
+    },
+    "Not Yet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch nicht"
           }
         }
       }
