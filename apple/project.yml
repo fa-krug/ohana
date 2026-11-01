@@ -49,7 +49,7 @@ targets:
         excludes:
           - "Info-*.plist"
       # Code the app shares with its extensions: the share extension (Keychain, SharedConnection)
-      # and the widget extension (the cook timers' Live Activity).
+      # and the widget extension (those, and the cook timers' Live Activity).
       - path: Shared
     dependencies:
       - target: OhanaShare
@@ -106,15 +106,27 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
 
-  # The widget extension, embedded in the iOS app: the cook timers' Live Activity.
+  # The widget extension, embedded in the iOS app: the Home Screen and Lock Screen widgets and
+  # the cook timers' Live Activity. Besides Shared it compiles the app's widget data
+  # (Core/Widgets), Day, the colors and the strings. The widgets read the app's connection from
+  # the Keychain (SharedConnection), so it has the app's keychain access group.
   OhanaWidgets:
     type: app-extension
     platform: iOS
     sources:
       - path: OhanaWidgets
         excludes:
-          - "Info.plist"
+          - "Info*.plist"
+          - "Entitlements"
       - path: Shared
+      - &widgetData
+        path: Ohana/Core/Widgets
+      - &widgetDay
+        path: Ohana/Core/Support/Day.swift
+      - &widgetTints
+        path: Ohana/DesignSystem/Tints.swift
+      - &widgetStrings
+        path: Ohana/Resources/Localizable.xcstrings
     info:
       path: OhanaWidgets/Info.plist
       properties:
@@ -123,11 +135,55 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: de.fa-krug.Ohana.Widgets
         GENERATE_INFOPLIST_FILE: false
+        CODE_SIGN_ENTITLEMENTS: OhanaWidgets/Entitlements/OhanaWidgets-iOS.entitlements
         TARGETED_DEVICE_FAMILY: "1,2"
+        # WidgetKit's providers aren't on the main actor.
+        SWIFT_DEFAULT_ACTOR_ISOLATION: nonisolated
+        SKIP_INSTALL: YES
+
+  # The same widgets on the Mac's desktop (no Lock Screen, no Live Activity), embedded in the Mac
+  # app; one bundle id for both platforms, like the apps.
+  OhanaWidgets-macOS:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: OhanaWidgets
+        excludes:
+          - "Info*.plist"
+          - "Entitlements"
+          - "CookTimerLiveActivity.swift"
+      - path: Shared
+        excludes:
+          # The cook timers' Live Activity: the iOS app and its widgets only.
+          - "CookTimerAttributes.swift"
+      - *widgetData
+      - *widgetDay
+      - *widgetTints
+      - *widgetStrings
+    info:
+      path: OhanaWidgets/Info-macOS.plist
+      properties:
+        CFBundleDisplayName: Ohana
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    settings:
+      base:
+        PRODUCT_NAME: OhanaWidgets
+        PRODUCT_BUNDLE_IDENTIFIER: de.fa-krug.Ohana.Widgets
+        GENERATE_INFOPLIST_FILE: false
+        CODE_SIGN_ENTITLEMENTS: OhanaWidgets/Entitlements/OhanaWidgets-macOS.entitlements
+        ENABLE_HARDENED_RUNTIME: YES
+        SWIFT_DEFAULT_ACTOR_ISOLATION: nonisolated
         SKIP_INSTALL: YES
 
   Ohana-macOS:
@@ -143,6 +199,7 @@ targets:
           - "CookTimerAttributes.swift"
     dependencies:
       - target: OhanaShare-macOS
+      - target: OhanaWidgets-macOS
     info:
       path: Ohana/Info-macOS.plist
       properties:

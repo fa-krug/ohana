@@ -347,7 +347,20 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `UserDefaults`) schedules a time-sensitive local notification per timer (shown in the
   foreground too: `CookTimers.NotificationDelegate`) and keeps one Live Activity for all running
   timers (iOS: `apple/Shared/CookTimerAttributes.swift`, drawn by the widget extension
-  `apple/OhanaWidgets/`, the XcodeGen target `OhanaWidgets` embedded in `Ohana`). German strings: per-module
+  `apple/OhanaWidgets/`, the XcodeGen target `OhanaWidgets` embedded in `Ohana`). The same
+  extension has the Home Screen / Lock Screen widgets (also `OhanaWidgets-macOS`, desktop widgets
+  in the Mac app, without the Live Activity; one bundle id `de.fa-krug.Ohana.Widgets`; both
+  nonisolated by default and compiling `Shared/`, `Core/Widgets/WidgetFeed.swift`,
+  `Core/Support/Day.swift`, `DesignSystem/Tints.swift` and `Localizable.xcstrings`): Today,
+  Tomorrow, Tonight's dinner, Shopping list, Appointment found (Lock Screen families on iOS only).
+  They show the family the app shows: the extension reads `SharedConnection` (no App Group
+  either), loads `GET /families/{id}/overview?today=` into a `WidgetSnapshot` and keeps the last
+  one in its own container for when the server can't be reached (`WidgetStore`; the modules the
+  server has off are a Keychain item the app writes). `App/WidgetSync.swift`: `AppModel` writes
+  those modules and reloads the widgets after loading the account, on a family switch and on
+  sign out, `FamilyContext.didChange` (debounced 3 s) and the background reload them too;
+  timelines every 30 min plus each of today's event ends and midnight. Taps open `ohana://f/{id}/…`
+  (`/calendar/{YYYY-MM-DD}` is a day of the calendar in `AppRoute.parse`). German strings: per-module
   `apple/Localization/*.de.json`, merged into `Resources/Localizable.xcstrings` by
   `apple/scripts/merge-localizations.py` (`--check` in CI). Build/test: `apple/README.md`; CI:
   `.github/workflows/apple.yml` (macOS unit tests, iOS build, strings; only on `apple/**` changes).

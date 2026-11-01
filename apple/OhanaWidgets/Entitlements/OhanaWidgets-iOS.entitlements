@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The app's access group (Ohana-iOS.entitlements): reads the server, token and family the app
+	     keeps in the Keychain (SharedConnection). -->
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)de.fa-krug.Ohana</string>
+	</array>
+</dict>
+</plist>

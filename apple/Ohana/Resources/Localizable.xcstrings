@@ -347,6 +347,16 @@
         }
       }
     },
+    "%lld left to buy": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld noch zu kaufen"
+          }
+        }
+      }
+    },
     "%lld members": {
       "localizations": {
         "de": {
@@ -707,6 +717,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "(aus)"
+          }
+        }
+      }
+    },
+    "+ %lld more": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+ %lld weitere"
           }
         }
       }
@@ -1981,6 +2001,26 @@
         }
       }
     },
+    "Appointments are turned off on this server.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arzttermine sind auf diesem Server ausgeschaltet."
+          }
+        }
+      }
+    },
+    "Appointments found": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termine gefunden"
+          }
+        }
+      }
+    },
     "Arrow keys": {
       "localizations": {
         "de": {
@@ -2609,6 +2649,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kalender, Finanzen, Essen und Arzttermine für deine Familie."
+          }
+        }
+      }
+    },
+    "Can't reach the server right now.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Server ist gerade nicht erreichbar."
           }
         }
       }
@@ -4443,6 +4493,16 @@
         }
       }
     },
+    "Dermatologist": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hautarzt"
+          }
+        }
+      }
+    },
     "Description": {
       "localizations": {
         "de": {
@@ -4629,6 +4689,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Doppelklick"
+          }
+        }
+      }
+    },
+    "Dr. Weber": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dr. Weber"
           }
         }
       }
@@ -5583,6 +5653,16 @@
         }
       }
     },
+    "Football practice": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fußballtraining"
+          }
+        }
+      }
+    },
     "For %@": {
       "localizations": {
         "de": {
@@ -5933,6 +6013,16 @@
         }
       }
     },
+    "Grandma": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oma"
+          }
+        }
+      }
+    },
     "Groceries": {
       "localizations": {
         "de": {
@@ -6069,6 +6159,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Haushalt"
+          }
+        }
+      }
+    },
+    "How many items are left on the shopping list.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie viel noch auf der Einkaufsliste steht."
           }
         }
       }
@@ -7403,6 +7503,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Essen"
+          }
+        }
+      }
+    },
+    "Meals are turned off on this server.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Essen ist auf diesem Server ausgeschaltet."
           }
         }
       }
@@ -9189,6 +9299,16 @@
         }
       }
     },
+    "Open Ohana to connect your family.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffne Ohana, um deine Familie zu verbinden."
+          }
+        }
+      }
+    },
     "Open Recipe": {
       "localizations": {
         "de": {
@@ -9519,6 +9639,16 @@
         }
       }
     },
+    "Parents' evening": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elternabend"
+          }
+        }
+      }
+    },
     "Part of %@": {
       "localizations": {
         "de": {
@@ -9705,6 +9835,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Empfänger"
+          }
+        }
+      }
+    },
+    "Pediatrician · Leo": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kinderarzt · Leo"
           }
         }
       }
@@ -11479,6 +11619,16 @@
         }
       }
     },
+    "School": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schule"
+          }
+        }
+      }
+    },
     "Search": {
       "localizations": {
         "de": {
@@ -13143,6 +13293,16 @@
         }
       }
     },
+    "Swimming lesson · Mia": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schwimmkurs · Mia"
+          }
+        }
+      }
+    },
     "Swipe left or right to switch steps": {
       "localizations": {
         "de": {
@@ -13479,6 +13639,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Die Aktionen des Tages: Details, Notiz, Termin, Wiederholen, Leeren"
+          }
+        }
+      }
+    },
+    "The earliest appointment your searches found.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der früheste Termin, den deine Suchen gefunden haben."
           }
         }
       }
@@ -14173,6 +14343,16 @@
         }
       }
     },
+    "Today's appointments, calendar entries and birthdays.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heutige Termine, Kalendereinträge und Geburtstage."
+          }
+        }
+      }
+    },
     "Toggle that entry on the selected days": {
       "localizations": {
         "de": {
@@ -14229,6 +14409,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tokens und Passwörter werden verschlüsselt gespeichert."
+          }
+        }
+      }
+    },
+    "Tomorrow": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Morgen"
+          }
+        }
+      }
+    },
+    "Tomorrow's appointments, calendar entries and birthdays.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Morgige Termine, Kalendereinträge und Geburtstage."
+          }
+        }
+      }
+    },
+    "Tonight": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heute Abend"
+          }
+        }
+      }
+    },
+    "Tonight's dinner": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abendessen heute"
           }
         }
       }
@@ -14733,6 +14953,16 @@
         }
       }
     },
+    "Vegetable lasagne": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemüselasagne"
+          }
+        }
+      }
+    },
     "Video consultations": {
       "localizations": {
         "de": {
@@ -14979,6 +15209,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Was soll dabei sein"
+          }
+        }
+      }
+    },
+    "What's for dinner today, from the meal plan.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was es heute zu essen gibt, aus dem Essensplan."
           }
         }
       }
@@ -16549,6 +16789,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "ntfy sind Push-Benachrichtigungen, die du selbst hosten kannst, mit einer App für iPhone und iPad. Die Topic-URL ist die vollständige Adresse des Topics auf ntfy.sh oder deinem eigenen ntfy-Server; das Token brauchst du nur für ein geschütztes Topic."
+          }
+        }
+      }
+    },
+    "of %lld left to buy": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "von %lld noch zu kaufen"
           }
         }
       }

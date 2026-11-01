@@ -44,9 +44,11 @@ struct OhanaApp: App {
         .windowToolbarStyle(.unified)
         #endif
         .commands { ShellCommands() }
-        // Cook timers that finished while the app was away leave the Live Activity.
+        // Cook timers that finished while the app was away leave the Live Activity; what changed
+        // while the app was open shows on the widgets.
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { CookTimers.shared.refresh() }
+            if phase == .background, !app.isDemo { WidgetSync.reload() }
         }
     }
 }
