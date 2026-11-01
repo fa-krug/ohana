@@ -117,6 +117,7 @@ struct LetterReviewSheet: View {
                 }
             }
             .formStyle(.grouped)
+            .scanFolderPicker(review.filing)
             .navigationTitle("Scanned Letter")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)

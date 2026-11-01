@@ -160,7 +160,19 @@ enum ScanTags {
     }
 }
 
-/// The "Save as PDF" sections of a form: the switch, and when it's on the name, the tags (chips
+extension View {
+    /// The folder picker of `filing` (none without one). On the form, not in `ScanFilingSection`:
+    /// a row scrolled away (by the keyboard, editing the name) doesn't present it.
+    func scanFolderPicker(_ filing: ScanFiling?) -> some View {
+        fileImporter(isPresented: Binding(get: { filing?.choosingFolder ?? false },
+                                          set: { filing?.choosingFolder = $0 }),
+                     allowedContentTypes: [.folder]) { result in
+            filing?.folderChosen(result)
+        }
+    }
+}
+
+/// The "Save as PDF" sections of a form (its folder picker: `scanFolderPicker`): the switch, and when it's on the name, the tags (chips
 /// to remove, a field to add, the recently used ones) and the folder.
 struct ScanFilingSection: View {
     @Bindable var filing: ScanFiling
@@ -171,9 +183,6 @@ struct ScanFilingSection: View {
     var body: some View {
         Section {
             Toggle("Save as PDF", isOn: $filing.savesPDF)
-                .fileImporter(isPresented: $filing.choosingFolder, allowedContentTypes: [.folder]) { result in
-                    filing.folderChosen(result)
-                }
         } footer: {
             if filing.savesPDF {
                 Text("A searchable PDF in the folder you choose. It stays with you: it never goes to the server.")
