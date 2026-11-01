@@ -2,8 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-**Ohana** is one app for a family: calendar, finance, meals, doctor appointments and an
-AI assistant. It is **open source and self-hosted** (server AGPL-3.0, app MPL-2.0). The
+**Ohana** is one app for a family: calendar, finance, meals, chores, doctor appointments
+and an AI assistant. It is **open source and self-hosted** (server AGPL-3.0, app MPL-2.0). The
 repository holds **`server/`**, the server (JSON API, the few sign-in pages, worker; Hono +
 SQLite, one Docker image on GHCR), **`apple/`**, the native SwiftUI app for iOS/iPadOS and
 macOS, the **only client**: there is no web UI (see *Native app* below), and **`relay/`**, the
@@ -255,8 +255,19 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `lib/appointments/app-routes.ts`; autocomplete routes in `http/api.ts` (members; API token).
 - **Schema files:** `lib/db/schema.ts` holds accounts + families and re-exports one file per
   module from `lib/db/schema/` (`notifications.ts`, `appointments.ts`, `finance.ts`,
-  `meals.ts`, `connections.ts`,
+  `meals.ts`, `connections.ts`, `chores.ts`,
   `assistant.ts`).
+- **Chores (`lib/chores/`):** table `chores` (`lib/db/schema/chores.ts`): title, note, assigned to
+  one account (`assignee_user_id`) or person (`assignee_person_id`) of the family or nobody, `day`
+  (the due day / a series' first), `time` ("HH:MM" or null), `rrule` (null = once; events'
+  `lib/calendar/rrule.ts`), `done_at` (single chores only). `chores.ts` (CRUD, `nextDue`: a single
+  chore's `day` while open, a repeating one's first occurrence from `today`), `routes.ts`
+  `handleChores` (`GET/POST /chores?today=`, `GET/PATCH/DELETE /chores/{id}`, `POST
+  /chores/{id}/done {done}`; members read, editors change, viewers may tick off their own; POST
+  takes an optional `id` so the assistant's undo brings a chore back under its id). Accepting a
+  person's invite moves their chores to the account; removing a member unassigns theirs. Assistant
+  tools `tools/chores.ts` (`get_chores`, `add_chore`, `update_chore`, `remove_chore`,
+  `set_chore_done`); search kind `chore`. The app writes them into Reminders (see Native app).
 - **Connections between modules (phase 7):**
   - *Appointments → Calendar:* `cal_events` (`lib/db/schema/connections.ts`): events from
     `day` to `end_day` (wall-clock `start` on the first / `end` on the last "HH:MM", or null =
@@ -346,7 +357,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `{ name, version (OHANA_VERSION, else package.json), apiVersion: API_VERSION, modules }`.
   The app requires its `requiredAPIVersion` (apple `Core/Models/ServerInfo.swift`); raise
   `API_VERSION` only for a change an older app can't handle — otherwise the API only grows.
-  `DISABLED_MODULES` (finance, meals, appointments, assistant; never calendar):
+  `DISABLED_MODULES` (finance, meals, appointments, chores, assistant; never calendar):
   `moduleEnabled()`; `moduleOfFamilyPath` maps family API paths (finance, meals / recipes,
   appointments, ai / agent) for `handleDisabledModules`; the worker, the dashboard's searches, `mealsAi` and the assistant's tools check it.
 - **Native app (`apple/`):** SwiftUI, one source tree `apple/Ohana/` for two XcodeGen targets
@@ -390,7 +401,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   writes, server wins (a refusal drops the change and reloads): the calendar's queue of entry /
   note ops is kept on disk (`CalendarStore.queueFile`, shown on top of what's loaded)),
   `Shell/` (sidebar-adaptable `TabView`; on iPhone five tabs, overview, calendar, finance, meals and
-  search: more would go under iOS's "More" with a second navigation bar, so appointments and settings
+  search: more would go under iOS's "More" with a second navigation bar, so appointments, chores and settings
   open as sheets from the family sidebar there, `Module.phonePages`; family switcher: on iPad and Mac
   a system `Menu` (`FamilyMenu`) at the top of the sidebar, where the tab view has no sidebar (iPhone,
   a narrow iPad window) a family page behind the tabs as in Mail (`FamilySidebar.swift`:
@@ -415,6 +426,16 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   meal plan (`MealPlanDrop`; the plan's recipe column, `MealPlanRecipeColumn.swift`), a calendar
   event onto another day (`CalendarEventDrag.swift`, `CalendarStore.moveEvent`; the grids' selection
   gestures step aside on an event label).
+  Chores (`Features/Chores/`: `ChoresView` by Overdue / Today / Upcoming / Repeating / Done,
+  `ChoreEditor` with the calendar's repeat controls (`RepeatEditing`), `ChoreRemindersView`) go into a
+  Reminders list chosen per device and family (`Core/Reminders/ChoreReminders.swift`, `UserDefaults`:
+  list, whose chores (everyone's or one person's), links chore → reminder). `ChoreReminderPlan`
+  (pure, tested): one reminder per chore, a repeating chore as one repeating reminder
+  (`RepeatRule+EventKit.swift`, shared with the calendar sync), due on `next`, url
+  `ohana://f/{id}/chores/{choreId}?v=<fingerprint>` (an open reminder with another `v` is written
+  again); a single chore's done goes both ways (`POST …/done`), a deleted reminder stays deleted
+  until the chore changes, only reminders this device linked are ever removed. Syncs on becoming
+  active, a family switch, chore changes and Reminders changes.
   The shopping list is a Reminders list (`Core/Reminders/`: `RemindersStore` wraps one
   `EKEventStore`; `ShoppingReminders` per server + family on this device, in `UserDefaults`: the
   chosen list and the keys already written). `sync` writes `GET /meals/shopping?from=today` one-way

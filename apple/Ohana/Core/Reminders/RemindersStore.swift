@@ -14,8 +14,8 @@ import AppKit
 /// (`ReminderModels.swift`). Views reload on `revision`, which grows whenever the reminders
 /// database changes (here, in the Reminders app, through iCloud).
 ///
-/// Used by the shopping list's sync (`ShoppingReminders`), the Siri action that adds to it and
-/// the assistant's Reminders tools.
+/// Used by the shopping list's and the chores' syncs (`ShoppingReminders`, `ChoreReminders`), the
+/// Siri action that adds to the shopping list and the assistant's Reminders tools.
 @Observable
 final class RemindersStore {
     static let shared = RemindersStore()
@@ -209,17 +209,19 @@ final class RemindersStore {
         reminder.notes = draft.notes
         reminder.dueDateComponents = draft.due?.components
         reminder.url = draft.url
+        reminder.recurrenceRules = draft.rule.map { [$0.ekRule] }
         try eventStore.save(reminder, commit: commit)
         return reminder.calendarItemIdentifier
     }
 
-    /// Changes a reminder's title, notes, due date, list or url (`ReminderChange`).
+    /// Changes a reminder's title, notes, due date, list, url or how it repeats (`ReminderChange`).
     func update(_ id: String, _ change: ReminderChange, commit: Bool = true) throws {
         let reminder = try writable(id)
         if let title = change.title { reminder.title = title }
         if let notes = change.notes { reminder.notes = notes }
         if let due = change.due { reminder.dueDateComponents = due?.components }
         if let url = change.url { reminder.url = url }
+        if let rule = change.rule { reminder.recurrenceRules = rule.map { [$0.ekRule] } }
         if let listID = change.listID, listID != reminder.calendar?.calendarIdentifier {
             guard let calendar = calendar(listID) else { throw RemindersError.listNotFound }
             guard calendar.allowsContentModifications else { throw RemindersError.readOnlyList }

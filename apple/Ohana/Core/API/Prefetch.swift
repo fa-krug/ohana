@@ -88,6 +88,7 @@ enum Prefetch {
         }
         if family.isEnabled(.finance) { jobs += finance(api) }
         if family.isEnabled(.appointments) { jobs.append(fetch(AppointmentsView.request(api))) }
+        if family.isEnabled(.chores) { jobs.append(fetch(ChoresView.request(api))) }
         if family.isEnabled(.assistant) {
             jobs += [fetch(AssistantChatStore.chatsRequest(api)), fetch(AssistantChatStore.settingsRequest(api))]
         }

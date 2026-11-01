@@ -259,7 +259,7 @@ final class DeviceCalendarStore {
         // A changed occurrence may not carry the series' rule.
         var rules: [String: String] = [:]
         for e in found {
-            if let rule = e.recurrenceRules?.first.flatMap(AppleCalendarSync.repeatRule) {
+            if let rule = e.recurrenceRules?.first.flatMap(RepeatRule.init(eventKit:)) {
                 rules[Self.id(e)] = rules[Self.id(e)] ?? rule.string
             }
         }
@@ -300,7 +300,7 @@ final class DeviceCalendarStore {
         Self.write(draft.times, to: event)
         event.location = draft.location
         event.notes = draft.notes
-        event.recurrenceRules = draft.rule.map { [AppleCalendarSync.ekRule($0)] }
+        event.recurrenceRules = draft.rule.map { [$0.ekRule] }
         try store.save(event, span: .thisEvent, commit: commit)
         return { event.eventIdentifier ?? event.calendarItemIdentifier }
     }

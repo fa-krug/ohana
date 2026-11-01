@@ -1,6 +1,7 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ %@": {},
     "%@ (%@) becomes the booking, the others its parts": {
       "localizations": {
         "de": {
@@ -241,6 +242,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@, %2$@ Stunden verplant"
+          }
+        }
+      }
+    },
+    "%@, ended": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, beendet"
+          }
+        }
+      }
+    },
+    "%@, next %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, nächstes Mal %2$@"
           }
         }
       }
@@ -899,6 +920,16 @@
         }
       }
     },
+    "%lld ticked off or reopened": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld abgehakt oder wieder geöffnet"
+          }
+        }
+      }
+    },
     "%lld times": {
       "localizations": {
         "de": {
@@ -1247,6 +1278,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ein Passwort ist gesetzt."
+          }
+        }
+      }
+    },
+    "A repeating chore is ticked off in Reminders, occurrence by occurrence.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine wiederkehrende Aufgabe wird in Erinnerungen abgehakt, jedes Mal einzeln."
           }
         }
       }
@@ -2631,6 +2672,16 @@
         }
       }
     },
+    "Assigned to": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zuständig"
+          }
+        }
+      }
+    },
     "Assistant": {
       "localizations": {
         "de": {
@@ -2687,6 +2738,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Einstellungen des Assistenten …"
+          }
+        }
+      }
+    },
+    "At a time": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zu einer Uhrzeit"
           }
         }
       }
@@ -3583,6 +3644,76 @@
         }
       }
     },
+    "Chore": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufgabe"
+          }
+        }
+      }
+    },
+    "Chore deleted.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufgabe gelöscht."
+          }
+        }
+      }
+    },
+    "Chores": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufgaben"
+          }
+        }
+      }
+    },
+    "Chores are the family’s jobs: once or repeating, for someone or for whoever gets to it. They can go into Reminders on each device.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufgaben sind die Arbeiten der Familie: einmalig oder wiederkehrend, für jemanden oder für den, der dazu kommt. Auf jedem Gerät können sie in Erinnerungen landen."
+          }
+        }
+      }
+    },
+    "Chores in Reminders": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufgaben in Erinnerungen"
+          }
+        }
+      }
+    },
+    "Chores in Reminders…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufgaben in Erinnerungen …"
+          }
+        }
+      }
+    },
+    "Chores of": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufgaben von"
+          }
+        }
+      }
+    },
     "Clear": {
       "localizations": {
         "de": {
@@ -3999,6 +4130,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Verbinde zuerst in der App deinen Ohana-Server."
+          }
+        }
+      }
+    },
+    "Connect your Ohana server to put the chores into Reminders.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbinde deinen Ohana-Server, um die Aufgaben in Erinnerungen zu übernehmen."
           }
         }
       }
@@ -4773,6 +4914,16 @@
         }
       }
     },
+    "Delete Chore": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufgabe löschen"
+          }
+        }
+      }
+    },
     "Delete Recipe": {
       "localizations": {
         "de": {
@@ -5303,6 +5454,16 @@
         }
       }
     },
+    "Done %@.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erledigt %@."
+          }
+        }
+      }
+    },
     "Done adds the ticked ones: events to the family’s calendar, tasks and deadlines to your Reminders.": {
       "localizations": {
         "de": {
@@ -5543,6 +5704,16 @@
         }
       }
     },
+    "Each reminder says whom the chore is for.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jede Erinnerung nennt, für wen die Aufgabe ist."
+          }
+        }
+      }
+    },
     "Earlier messages condensed for the model": {
       "localizations": {
         "de": {
@@ -5579,6 +5750,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bearbeiten (⌘E)"
+          }
+        }
+      }
+    },
+    "Edit Chore": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufgabe bearbeiten"
           }
         }
       }
@@ -6189,6 +6370,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Jeder Lauf dieser Suche mit dem, was er gefunden hat. Läufe, die älter als 30 Tage sind, werden gelöscht."
+          }
+        }
+      }
+    },
+    "Everyone": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle"
           }
         }
       }
@@ -7667,6 +7858,16 @@
         }
       }
     },
+    "It syncs by itself when you open Ohana, when the chores change and when you tick one off in Reminders. A reminder you delete stays deleted until its chore changes.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Abgleich läuft von selbst, wenn du Ohana öffnest, wenn sich die Aufgaben ändern und wenn du eine in Erinnerungen abhakst. Eine gelöschte Erinnerung bleibt gelöscht, bis sich ihre Aufgabe ändert."
+          }
+        }
+      }
+    },
     "Item": {
       "localizations": {
         "de": {
@@ -8737,6 +8938,26 @@
         }
       }
     },
+    "New Chore": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Aufgabe"
+          }
+        }
+      }
+    },
+    "New Chore (⌘N)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Aufgabe (⌘N)"
+          }
+        }
+      }
+    },
     "New Event": {
       "localizations": {
         "de": {
@@ -9217,6 +9438,26 @@
         }
       }
     },
+    "No chores here": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Aufgaben"
+          }
+        }
+      }
+    },
+    "No chores yet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Aufgaben"
+          }
+        }
+      }
+    },
     "No conflicts": {
       "localizations": {
         "de": {
@@ -9597,12 +9838,42 @@
         }
       }
     },
+    "Nobody": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Niemand"
+          }
+        }
+      }
+    },
     "Nobody has set up the assistant for this family yet. Ask an editor of the family to do it in the settings.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Für diese Familie hat noch niemand den Assistenten eingerichtet. Bitte jemanden, der die Familie bearbeiten darf, das in den Einstellungen zu tun."
+          }
+        }
+      }
+    },
+    "Nobody in particular": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Niemand Bestimmtes"
+          }
+        }
+      }
+    },
+    "Nobody’s chores match the filter.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Aufgaben passen zum Filter."
           }
         }
       }
@@ -9633,6 +9904,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Normal"
+          }
+        }
+      }
+    },
+    "Not Done": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht erledigt"
           }
         }
       }
@@ -9683,6 +9964,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nicht abgedeckt"
+          }
+        }
+      }
+    },
+    "Not done": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht erledigt"
           }
         }
       }
@@ -10139,6 +10430,16 @@
         }
       }
     },
+    "Ohana needs access to your reminders to write the chores into the list you choose, to keep them up to date and to see which you ticked off. Nothing else of your reminders goes to the server.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohana braucht Zugriff auf deine Erinnerungen, um die Aufgaben in die gewählte Liste zu schreiben, sie aktuell zu halten und zu sehen, welche du abgehakt hast. Sonst geht nichts von deinen Erinnerungen an den Server."
+          }
+        }
+      }
+    },
     "Ohana needs access to your reminders to write the shopping list into the list you choose and to keep it up to date. Nothing of your reminders goes to the server.": {
       "localizations": {
         "de": {
@@ -10155,6 +10456,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ohana auf %@ wird sofort abgemeldet. Es lässt sich wieder verbinden."
+          }
+        }
+      }
+    },
+    "Ohana puts the family’s chores into a list in Reminders: each one due when it’s due next, repeating ones repeating. Tick a chore off in Reminders and it’s done in Ohana too.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohana überträgt die Aufgaben der Familie in eine Liste in Erinnerungen: jede fällig, wenn sie als Nächstes dran ist, wiederkehrende wiederkehrend. Hakst du eine Aufgabe in Erinnerungen ab, ist sie auch in Ohana erledigt."
           }
         }
       }
@@ -10299,6 +10610,16 @@
         }
       }
     },
+    "Only mine": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur meine"
+          }
+        }
+      }
+    },
     "Only notify when an appointment is earlier than the earliest seen so far": {
       "localizations": {
         "de": {
@@ -10325,6 +10646,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nur die ersten %lld Tage werden angezeigt."
+          }
+        }
+      }
+    },
+    "Only their chores; those of the others don’t go to the list.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur ihre Aufgaben; die der anderen kommen nicht in die Liste."
           }
         }
       }
@@ -10559,6 +10890,26 @@
         }
       }
     },
+    "Opens it again": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffnet sie wieder"
+          }
+        }
+      }
+    },
+    "Opens the chore": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffnet die Aufgabe"
+          }
+        }
+      }
+    },
     "Opens the invite in the browser, where you create your account. Then come back and sign in.": {
       "localizations": {
         "de": {
@@ -10645,6 +10996,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aus"
+          }
+        }
+      }
+    },
+    "Overdue": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Überfällig"
           }
         }
       }
@@ -12275,6 +12636,16 @@
         }
       }
     },
+    "Repeating": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wiederkehrend"
+          }
+        }
+      }
+    },
     "Repeats on": {
       "localizations": {
         "de": {
@@ -13635,6 +14006,16 @@
         }
       }
     },
+    "Share this week’s chores fairly between the children.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verteile die Aufgaben dieser Woche fair unter den Kindern."
+          }
+        }
+      }
+    },
     "Shift + click": {
       "localizations": {
         "de": {
@@ -13711,6 +14092,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Anzeigen"
+          }
+        }
+      }
+    },
+    "Show Everyone’s": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle zeigen"
           }
         }
       }
@@ -14071,6 +14462,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Schmoren"
+          }
+        }
+      }
+    },
+    "Someone no longer in the family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jemand, der nicht mehr zur Familie gehört"
           }
         }
       }
@@ -14755,6 +15156,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mit Apple Kalender abgleichen …"
+          }
+        }
+      }
+    },
+    "Sync with Reminders": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit Erinnerungen abgleichen"
           }
         }
       }
@@ -15459,6 +15870,16 @@
         }
       }
     },
+    "The repeat must end after the chore’s first day.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Wiederholung muss nach dem ersten Tag der Aufgabe enden."
+          }
+        }
+      }
+    },
     "The repeat must end after the event starts.": {
       "localizations": {
         "de": {
@@ -15769,6 +16190,16 @@
         }
       }
     },
+    "This device only. With a list shared in iCloud, everyone sees the chores: then turn it on on one device.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur auf diesem Gerät. Mit einer in iCloud geteilten Liste sehen alle die Aufgaben: Schalte es dann nur auf einem Gerät ein."
+          }
+        }
+      }
+    },
     "This device only. With a list shared in iCloud, everyone sees the items: then turn it on on one device.": {
       "localizations": {
         "de": {
@@ -15935,6 +16366,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dieses Jahr"
+          }
+        }
+      }
+    },
+    "Ticks it off": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hakt sie ab"
           }
         }
       }
@@ -16539,6 +16980,16 @@
         }
       }
     },
+    "Upcoming": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demnächst"
+          }
+        }
+      }
+    },
     "Update plan": {
       "localizations": {
         "de": {
@@ -17119,6 +17570,16 @@
         }
       }
     },
+    "Which chores are overdue, and whose are they?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Welche Aufgaben sind überfällig, und wessen sind sie?"
+          }
+        }
+      }
+    },
     "Which days this year still need cover, and who could take them?": {
       "localizations": {
         "de": {
@@ -17195,6 +17656,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wer ihn hat, kann damit nicht mehr beitreten."
+          }
+        }
+      }
+    },
+    "Whose Chores": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wessen Aufgaben"
+          }
+        }
+      }
+    },
+    "Whose chores": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wessen Aufgaben"
           }
         }
       }
@@ -17305,6 +17786,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Jährlich"
+          }
+        }
+      }
+    },
+    "Yesterday": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gestern"
           }
         }
       }

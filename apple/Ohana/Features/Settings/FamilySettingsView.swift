@@ -3,7 +3,7 @@ import SwiftUI
 /// All settings in one place, like the system's Settings: the account (a card that opens its
 /// page) on top, then the family's (the web app's settings page with its tabs: the name, the
 /// household (members, people without an account and invites; the home address; notifications),
-/// links to the modules' settings (the shopping list in Reminders among them, this device's), export / import, and leaving or deleting the family; viewers
+/// links to the modules' settings (the shopping list and the chores in Reminders among them, this device's), export / import, and leaving or deleting the family; viewers
 /// see them read-only), this device's, and the server's administration for administrators. The
 /// settings of a module the server has off don't show.
 struct FamilySettingsView: View {
@@ -49,6 +49,7 @@ struct FamilySettingsPageView: View {
         case .calendar: CalendarSettingsView()
         case .finance: FinanceSettingsView()
         case .shopping: ShoppingRemindersView()
+        case .chores: ChoreRemindersView()
         case .assistant: AssistantSettingsView()
         case .data: FamilyDataView(familyName: model.household?.name ?? "", canEdit: model.household?.canEdit ?? false)
         }
@@ -229,6 +230,18 @@ private struct FamilySettingsForm: View {
                             ShoppingRemindersStatus()
                         } label: {
                             FamilySettingsLabel(title: "Shopping List", systemImage: "checklist", tint: ModuleTint.meals)
+                        }
+                    }
+                }
+                if family.isEnabled(.chores), !app.isDemo {
+                    NavigationLink {
+                        FamilySettingsPageView(page: .chores, model: model).assistantButton()
+                    } label: {
+                        LabeledContent {
+                            ChoreRemindersStatus()
+                        } label: {
+                            FamilySettingsLabel(title: "Chores in Reminders", systemImage: Module.chores.systemImage,
+                                                tint: ModuleTint.chores)
                         }
                     }
                 }

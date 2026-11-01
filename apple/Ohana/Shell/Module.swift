@@ -4,10 +4,10 @@ import SwiftUI
 /// the overview, the assistant's own page and the settings), and the search across them (its
 /// own tab, ⌘K; last, so the others keep their ⌘-numbers).
 enum Module: String, CaseIterable, Identifiable, Hashable {
-    case overview, calendar, finance, meals, appointments, assistant, settings, search
+    case overview, calendar, finance, meals, appointments, chores, assistant, settings, search
 
     /// The sidebar's "Modules" section; the overview stands above it, the settings at its foot.
-    static let modules: [Module] = [.calendar, .finance, .meals, .appointments, .assistant]
+    static let modules: [Module] = [.calendar, .finance, .meals, .appointments, .chores, .assistant]
 
     var id: String { rawValue }
 
@@ -15,7 +15,7 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
     /// modules and the search): sheets opened from the family page (`FamilySidebarHost`).
     static var phonePages: [Module] {
         #if os(iOS)
-        UIDevice.current.userInterfaceIdiom == .phone ? [.appointments, .settings] : []
+        UIDevice.current.userInterfaceIdiom == .phone ? [.appointments, .chores, .settings] : []
         #else
         []
         #endif
@@ -33,6 +33,7 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
         case .finance: "Finance"
         case .meals: "Meals"
         case .appointments: "Appointments"
+        case .chores: "Chores"
         case .assistant: "Assistant"
         case .settings: "Settings"
         case .search: "Search"
@@ -46,6 +47,7 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
         case .finance: "banknote"
         case .meals: "fork.knife"
         case .appointments: "stethoscope"
+        case .chores: "checklist.checked"
         case .assistant: "sparkles"
         case .settings: "gearshape"
         case .search: "magnifyingglass"
@@ -59,13 +61,14 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
         case .finance: ModuleTint.finance
         case .meals: ModuleTint.meals
         case .appointments: ModuleTint.appointments
+        case .chores: ModuleTint.chores
         case .assistant: ModuleTint.assistant
         case .settings: ModuleTint.settings
         case .search: ModuleTint.overview
         }
     }
 
-    /// ⌘1 … ⌘7
+    /// ⌘1 … ⌘9
     var shortcut: KeyEquivalent { KeyEquivalent(Character("\(Module.allCases.firstIndex(of: self)! + 1)")) }
 
     @ViewBuilder var root: some View {
@@ -75,6 +78,7 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
         case .finance: FinanceView()
         case .meals: MealsView()
         case .appointments: AppointmentsView()
+        case .chores: ChoresView()
         case .assistant: AssistantPage()
         case .settings: FamilySettingsView()
         case .search: FamilySearchView()

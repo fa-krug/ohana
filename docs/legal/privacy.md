@@ -75,7 +75,7 @@ usage statistics. This is controlled by Apple and by your device settings
 ### Your Ohana server
 
 Ohana is self-hosted. Everything you enter in the app (calendar, finances, recipes,
-appointments, chats with the assistant, account data) is sent **directly to the Ohana server
+chores, appointments, chats with the assistant, account data) is sent **directly to the Ohana server
 you connect the app to**, over the address you enter, and stored there. The **operator of that
 server** (often you or someone in your family) decides how it is run and is responsible for the
 data on it. We have no access to servers run by others.
@@ -127,7 +127,7 @@ turn them off for the whole server.
 The app stores on your device only what it needs to work: the **API token** for your server
 and, so the *Save to Ohana* share extension can reach it, the server's address and the selected
 family, and with notifications on the key for them (in the Keychain), app settings such as the
-selected family and the Reminders list for each family's shopping (in the app's preferences), a
+selected family and the Reminders lists for each family's shopping and chores (in the app's preferences), a
 **copy of what your server last sent** (your account, your families and the screens you opened,
 and what it loads ahead in the background: calendar, meal plan, recipes and so on), so the app
 opens on it at once and you can read it without a connection, changes made offline (calendar
@@ -178,11 +178,14 @@ The app only asks for these permissions, and only when you use the feature:
   calendars on its own: it shows what it wants to change, and the app changes them on your device
   only after you tap **Apply**. You can take the permission back at any time in the system
   settings (*Privacy & Security → Calendars*); the assistant then no longer sees your calendars.
-- **Reminders:** asked when you pick a Reminders list for a family's shopping, or when you add
-  a task or deadline found in a scanned letter. For the shopping, the app
+- **Reminders:** asked when you pick a Reminders list for a family's shopping or chores, or when
+  you add a task or deadline found in a scanned letter. For the shopping, the app
   writes what the meal plan needs (item, amount, shopping day) into that list on your device and
   keeps those items up to date; it gets them from your server, but nothing from Reminders is
-  sent back for this. If your reminders sync over iCloud, Apple stores them as it does any
+  sent back for this. For the chores, the app writes the family's chores (title, note, who does
+  it, when it's due, how it repeats) into the list you chose and keeps them up to date; the only
+  thing it sends back to your server is that you ticked a one-off chore off (or on again) in
+  Reminders. If your reminders sync over iCloud, Apple stores them as it does any
   reminder ([Apple's privacy policy](https://www.apple.com/legal/privacy/)).
   When you use the **assistant** on a device with Reminders access, each message you send
   also carries your **open reminders** (their titles, notes, due dates and the names of their

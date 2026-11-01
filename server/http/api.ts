@@ -16,6 +16,7 @@ import { suggestJamedaTerms } from "@/lib/appointments/jameda/terms";
 import { handleAssistantApp } from "@/lib/assistant/app-routes";
 import { defaultAiEnv, familyModel, handleAi } from "@/lib/assistant/routes";
 import { handleAccountApp } from "@/lib/auth/app-routes";
+import { handleChores } from "@/lib/chores/routes";
 import { AuthError } from "@/lib/auth/errors";
 import { handle } from "@/lib/auth/route";
 import { serializeUser } from "@/lib/auth/serialize";
@@ -207,6 +208,7 @@ export function apiRoutes(db: Db): Hono {
       handleMeals,
       handleAppointmentsApp,
       handleAppointments,
+      handleChores,
       handleAssistantApp,
       handleAi(defaultAiEnv(db)),
     ],

@@ -1,6 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
 import type { Db } from "@/lib/db";
-import { familyMembers, users } from "@/lib/db/schema";
+import { chores, familyMembers, users } from "@/lib/db/schema";
 import { AuthError } from "@/lib/auth/errors";
 import { assertBirthday } from "./people";
 import { type Actor, type Role, isRole, requireRole } from "./roles";
@@ -104,7 +104,8 @@ export function setRole(db: Db, actor: Actor, familyId: string, userId: string, 
     .run();
 }
 
-/** Removes a member; everyone may remove themselves (leave), editors anyone. */
+/** Removes a member (their chores in the family become nobody's); everyone may remove
+ *  themselves (leave), editors anyone. */
 export function removeMember(db: Db, actor: Actor, familyId: string, userId: string): void {
   requireRole(db, actor, familyId, userId === actor.id ? "viewer" : "editor");
   const rows = memberRows(db, familyId);
@@ -119,5 +120,9 @@ export function removeMember(db: Db, actor: Actor, familyId: string, userId: str
   db.update(users)
     .set({ lastFamilyId: null })
     .where(and(eq(users.id, userId), eq(users.lastFamilyId, familyId)))
+    .run();
+  db.update(chores)
+    .set({ assigneeUserId: null })
+    .where(and(eq(chores.familyId, familyId), eq(chores.assigneeUserId, userId)))
     .run();
 }

@@ -99,6 +99,13 @@
       "when": 1793543044980,
       "tag": "0013_digest",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1793573373770,
+      "tag": "0014_chores",
+      "breakpoints": true
     }
   ]
 }

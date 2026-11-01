@@ -28,6 +28,10 @@ enum AppRoute: Hashable {
     case appointmentSearch(id: String)
     case appointmentSlot(searchID: String, resultID: String)
     case newAppointmentSearch
+    // Chores
+    /// One chore (its editor; read-only for viewers), over the list.
+    case chore(id: String)
+    case newChore
     // Assistant
     /// The assistant's page, optionally on one chat.
     case assistantChat(id: String?)
@@ -43,6 +47,7 @@ enum AppRoute: Hashable {
         case .financeTransactions, .financeTransaction: .finance
         case .recipe, .cook, .newRecipe, .mealPlan, .mealTags: .meals
         case .appointmentSearch, .appointmentSlot, .newAppointmentSearch: .appointments
+        case .chore, .newChore: .chores
         case .assistantChat: .assistant
         case .settings: .settings
         }
@@ -58,7 +63,7 @@ enum AppRoute: Hashable {
 
 /// The pages of the family's settings a route can open.
 enum SettingsPage: String, Hashable, CaseIterable {
-    case members, home, notifications, calendar, finance, shopping, assistant, data
+    case members, home, notifications, calendar, finance, shopping, chores, assistant, data
 
     /// The module whose settings the page holds; nil for the family's own pages.
     var module: Module? {
@@ -66,6 +71,7 @@ enum SettingsPage: String, Hashable, CaseIterable {
         case .calendar: .calendar
         case .finance: .finance
         case .shopping: .meals
+        case .chores: .chores
         case .assistant: .assistant
         case .members, .home, .notifications, .data: nil
         }
@@ -123,6 +129,10 @@ extension AppRoute {
             if search == "new" { return .newAppointmentSearch }
             if at(2) == "slots", let result = at(3) { return .appointmentSlot(searchID: search, resultID: result) }
             return .appointmentSearch(id: search)
+        case "chores":
+            // `/chores/{id}`: a chore (the links of the reminders the chores sync writes).
+            guard let chore = at(1) else { return .module(.chores) }
+            return chore == "new" ? .newChore : .chore(id: chore)
         case "assistant":
             return .assistantChat(id: nil)
         case "settings":

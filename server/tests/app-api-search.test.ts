@@ -11,6 +11,7 @@ import {
   calEvents,
   calNotes,
   chats,
+  chores,
   familyPeople,
   finCategories,
   finTransactions,
@@ -143,6 +144,23 @@ describe("GET /search", () => {
     expect(await kinds("lasagne")).toEqual(["note"]);
     expect(await kinds("ikea")).toEqual([]);
     expect(await kinds("hautarzt")).toEqual([]);
+  });
+
+  it("finds chores at their next day, with who does them", async () => {
+    const s = setup();
+    s.db.insert(chores)
+      .values([
+        { id: "c1", familyId: s.family.id, title: "Mow the lawn", assigneeUserId: s.viewer.id, day: "2026-10-03", time: "10:00", rrule: "FREQ=WEEKLY", createdAt: NOW, updatedAt: NOW },
+        { id: "c2", familyId: s.family.id, title: "Fix the fence", note: "Next to the lawn", day: "2026-10-20", createdAt: NOW, updatedAt: NOW },
+      ])
+      .run();
+    const { data } = await s.get(s.editor.id, "q=lawn&today=2026-11-02");
+    expect(pick(data.results, "chore")).toEqual([
+      { kind: "chore", id: "c1", title: "Mow the lawn", detail: "Ben", day: "2026-11-07", time: "10:00" },
+      { kind: "chore", id: "c2", title: "Fix the fence", detail: "Next to the lawn", day: "2026-10-20", time: null },
+    ]);
+    process.env.DISABLED_MODULES = "chores";
+    expect(pick((await s.get(s.editor.id, "q=lawn")).data.results, "chore")).toEqual([]);
   });
 
   it("is for members only", async () => {

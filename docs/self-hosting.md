@@ -35,7 +35,7 @@ Edit `.env`:
 | `APP_URL` | **Required.** The public address, e.g. `https://ohana.example.com`. Links in invites and notifications use it, passkeys are bound to its host, cookies are `Secure` when it starts with `https://`. |
 | `AUTH_SECRET` | **Required.** A long random secret: `openssl rand -hex 32`. Keep it safe and don't change it (see *Secrets*). |
 | `ENCRYPTION_KEY` | Optional key for stored secrets (`openssl rand -base64 32`); else derived from `AUTH_SECRET`. |
-| `DISABLED_MODULES` | Optional: `finance`, `meals`, `appointments`, `assistant` (comma list). |
+| `DISABLED_MODULES` | Optional: `finance`, `meals`, `appointments`, `chores`, `assistant` (comma list). |
 | `AI_ALLOW_PRIVATE_ENDPOINT` | `1` to allow an AI endpoint on your own network (Ollama, LM Studio). |
 | `PUSH_RELAY_URL` | Notifications to the app go through fa-krug's push relay by default; empty turns them off (see *Notifications*). |
 | `TZ` | Time zone of the daily jobs (in `docker-compose.yml`, default `Europe/Berlin`). |

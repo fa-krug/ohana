@@ -50,6 +50,7 @@ enum AssistantPages {
         case "finance": String(localized: "Finance")
         case "meals": String(localized: "Meals")
         case "appointments": String(localized: "Appointments")
+        case "chores": String(localized: "Chores")
         case "settings": String(localized: "Settings")
         default: String(localized: "Overview")
         }
@@ -70,6 +71,9 @@ enum AssistantPages {
         case "appointments":
             return [String(localized: "Find a dermatologist appointment before June."),
                     String(localized: "Which searches found something, and what is the earliest slot?")]
+        case "chores":
+            return [String(localized: "Which chores are overdue, and whose are they?"),
+                    String(localized: "Share this week’s chores fairly between the children.")]
         case "settings":
             return [String(localized: "Set up this year’s entry types: day care closed, each parent’s vacation and public holidays."),
                     String(localized: "Suggest categories for our finances and add them.")]

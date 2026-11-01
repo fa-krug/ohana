@@ -1,6 +1,6 @@
 // One search across the family's modules (the app's search tab, ⌘K): recipes, calendar events
-// and notes, transactions, appointment searches, the people of the family and the asking
-// user's assistant chats. Every word of the query has to appear in an item (case and accents
+// and notes, transactions, appointment searches, chores, the people of the family and the
+// asking user's assistant chats. Every word of the query has to appear in an item (case and accents
 // ignored, so "lasagne" finds "Lasagne", "muller" "Müller"). Turned-off modules are left out.
 // A family's data is small enough to filter here rather than in SQL (SQLite's LIKE folds only
 // ASCII).
@@ -9,6 +9,7 @@ import { and, eq } from "drizzle-orm";
 import type { Db } from "@/lib/db";
 import { addDays } from "@/lib/calendar/dates";
 import { loadSeries, occurrencesOf, publicEvent, type Series } from "@/lib/calendar/events";
+import { listChores } from "@/lib/chores/chores";
 import {
   apptSearches,
   calNotes,
@@ -24,20 +25,21 @@ import {
 import { normalizeForSearch } from "@/lib/meals/domain/recipes/search";
 import { moduleEnabled } from "@/lib/server-info";
 
-export const SEARCH_KINDS = ["recipe", "event", "note", "transaction", "search", "person", "chat"] as const;
+export const SEARCH_KINDS = ["recipe", "event", "note", "transaction", "search", "chore", "person", "chat"] as const;
 export type SearchKind = (typeof SEARCH_KINDS)[number];
 
 export interface SearchHit {
   kind: SearchKind;
-  /** The item's id: a recipe's, an event's, a transaction's, a search's, a chat's, a person's
-   *  (an account's user id for a member); a note's is its day. */
+  /** The item's id: a recipe's, an event's, a transaction's, a search's, a chore's, a chat's,
+   *  a person's (an account's user id for a member); a note's is its day. */
   id: string;
   title: string;
   /** More of the item, joined with " · " (location and person, category, the email…). */
   detail: string;
-  /** "YYYY-MM-DD": the event's, note's or transaction's day, the chat's last change. */
+  /** "YYYY-MM-DD": the event's, note's or transaction's day, a chore's next (else its day),
+   *  the chat's last change. */
   day: string | null;
-  /** An event's start ("HH:MM"), null all day. */
+  /** An event's start or a chore's time ("HH:MM"), null all day. */
   time?: string | null;
   /** A transaction's amount (negative: money going out). */
   amountCents?: number;
@@ -91,6 +93,7 @@ export function searchFamily(
     note: ranked(noteHits(db, familyId)),
     transaction: moduleEnabled("finance") ? ranked(transactionHits(db, familyId)) : [],
     search: moduleEnabled("appointments") ? ranked(appointmentSearchHits(db, familyId)) : [],
+    chore: moduleEnabled("chores") ? ranked(choreHits(db, familyId, today)) : [],
     person: ranked(personHits(db, familyId)),
     chat: moduleEnabled("assistant") ? ranked(chatHits(db, familyId, userId)) : [],
   };
@@ -242,6 +245,21 @@ function appointmentSearchHits(db: Db, familyId: string) {
       },
       text: [s.speciality, s.jameda, s.location],
     }));
+}
+
+/** A chore at its next due day (its own day once there is none), with who does it. */
+function choreHits(db: Db, familyId: string, today: string) {
+  return listChores(db, familyId, today).map((c) => ({
+    hit: {
+      kind: "chore" as const,
+      id: c.id,
+      title: c.title,
+      detail: joined(c.assignee?.name, line(c.note)),
+      day: c.next ?? c.day,
+      time: c.time,
+    },
+    text: [c.note],
+  }));
 }
 
 function personHits(db: Db, familyId: string) {

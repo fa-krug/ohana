@@ -55,6 +55,7 @@ struct DemoServer {
         DemoServer.finance,
         DemoServer.meals,
         DemoServer.appointments,
+        DemoServer.chores,
         DemoServer.assistant,
         DemoServer.overview,
         DemoServer.digest,

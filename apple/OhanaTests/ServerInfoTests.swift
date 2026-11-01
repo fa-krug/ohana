@@ -10,7 +10,7 @@ struct ServerInfoTests {
 
     @Test func decodesTheServersInfo() throws {
         let info = try decode("""
-        {"name":"Ohana","version":"0.2.0","apiVersion":1,"modules":["calendar","finance","meals","appointments","assistant"]}
+        {"name":"Ohana","version":"0.2.0","apiVersion":1,"modules":["calendar","finance","meals","appointments","chores","assistant"]}
         """)
         #expect(info.name == "Ohana")
         #expect(info.version == "0.2.0")
@@ -25,6 +25,7 @@ struct ServerInfoTests {
         """)
         #expect(info.isEnabled(.calendar) && info.isEnabled(.meals))
         #expect(!info.isEnabled(.finance) && !info.isEnabled(.appointments) && !info.isEnabled(.assistant))
+        #expect(!info.isEnabled(.chores))
         // The overview, the calendar and the settings are always there.
         #expect(info.isEnabled(.overview) && info.isEnabled(.settings))
         let none = try decode(#"{"name":"Ohana","version":"0.2.0","apiVersion":1,"modules":[]}"#)
@@ -35,7 +36,9 @@ struct ServerInfoTests {
         #expect(ServerInfo.requiredAPIVersion == 1)
         #expect(!ServerInfo.legacy.isSupported)
         #expect(ServerInfo.legacy.apiVersion == 0)
-        #expect(Module.allCases.allSatisfy { ServerInfo.legacy.isEnabled($0) })
+        // Everything but the chores, which came after the route.
+        #expect(Module.allCases.filter { $0 != .chores }.allSatisfy { ServerInfo.legacy.isEnabled($0) })
+        #expect(!ServerInfo.legacy.isEnabled(.chores))
         let old = try decode(#"{"name":"Ohana","version":"0.1.0","apiVersion":0,"modules":["calendar"]}"#)
         #expect(!old.isSupported)
         let newer = try decode(#"{"name":"Ohana","version":"1.0.0","apiVersion":2,"modules":["calendar"]}"#)
@@ -44,6 +47,7 @@ struct ServerInfoTests {
         let bare = try decode("{}")
         #expect(!bare.isSupported)
         #expect(bare.isEnabled(.assistant))
+        #expect(!bare.isEnabled(.chores))
         #expect(ServerInfo.outdatedMessage == "This server runs an older version of Ohana. Ask its administrator to update it.")
     }
 

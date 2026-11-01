@@ -160,7 +160,7 @@ struct AppleSyncMappingTests {
                      "FREQ=MONTHLY;BYMONTHDAY=15;COUNT=10", "FREQ=YEARLY;BYDAY=2SU;BYMONTH=3",
                      "FREQ=MONTHLY;BYDAY=MO,TU,WE,TH,FR;BYSETPOS=-1", "FREQ=WEEKLY;UNTIL=20271231"] {
             let rule = RepeatRule(text)!
-            let back = AppleCalendarSync.repeatRule(AppleCalendarSync.ekRule(rule))?.string
+            let back = RepeatRule(eventKit: rule.ekRule)?.string
             #expect(back == text, "\(text) came back as \(back ?? "nil")")
         }
     }

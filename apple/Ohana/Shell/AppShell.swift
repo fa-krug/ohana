@@ -5,8 +5,8 @@ import SwiftUI
 /// switcher, the search across the modules (its own tab, ⌘K), and the assistant as an inspector
 /// on the right (a sheet on iPhone), ⌘J. The iPhone's tab bar holds five tabs: with more, iOS
 /// puts the rest under "More", which pushes a tab's own navigation stack under a second bar. So
-/// there the appointments and the settings (`Module.phonePages`) open as sheets from the family
-/// page (`FamilySidebarHost`) instead.
+/// there the appointments, the chores and the settings (`Module.phonePages`) open as sheets from
+/// the family page (`FamilySidebarHost`) instead.
 struct AppShell: View {
     @Environment(AppModel.self) private var app
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -24,7 +24,7 @@ struct AppShell: View {
             return app.isEnabled(current) && !Module.notTabs.contains(current) ? current : .overview
         } set: { show($0) }
     }
-    /// On iPhone: the appointments or the settings, as a sheet over the tabs.
+    /// On iPhone: the appointments, the chores or the settings, as a sheet over the tabs.
     @State private var phonePage: Module?
     /// The assistant panel: each window opens it as the last one left it (on iPhone, where it
     /// is a sheet, closed).
@@ -86,6 +86,8 @@ struct AppShell: View {
             .modifier(RecipeSpotlightFamilyUpdates())
             // The shopping list in Reminders: at becoming active, on showing the family, after changes.
             .modifier(ShoppingRemindersUpdates())
+            // The chores in Reminders: the same, and when Reminders change (a chore ticked off there).
+            .modifier(ChoreRemindersUpdates())
             .environment(context)
             .id(family.id)
             .focusedSceneValue(\.shell, ShellFocus(module: selection, assistant: $showAssistant,

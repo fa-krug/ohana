@@ -33,6 +33,7 @@ enum AssistantChangeAreas {
         case "events": return [.events, .calendar]
         case "finance": return [.finance]
         case "appointments": return [.appointments]
+        case "chores": return [.chores]
         case "recipes": return [.recipes, .meals]
         case "meals":
             switch parts.dropFirst().first {

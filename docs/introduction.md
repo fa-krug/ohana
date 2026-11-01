@@ -1,7 +1,8 @@
 # What is Ohana?
 
 Ohana is one app for the whole family: a shared **calendar**, the family's **finances**,
-**meals** (recipes, meal plan, shopping in Apple Reminders), **doctor appointments** and an **AI assistant**
+**meals** (recipes, meal plan, shopping in Apple Reminders), **chores**, **doctor appointments** and an
+**AI assistant**
 that works across all of them.
 
 It is open source and **self-hosted**. You run the server (one Docker image, one SQLite file) at
@@ -52,6 +53,14 @@ Ready to try it? Go to the [quick start](/quickstart).
 - Recipes **imported from any web page** by the AI: share the page from Safari, use the Shortcut
   or paste its address in the app, and the recipe lands on your *to try* list with its photo.
 
+## Chores
+
+- **Chores** for anyone in the family, with or without an account: once, due on a day (and a
+  time, if you like), or **repeating** (daily, weekly, every second Saturday, …).
+- They go into a **Reminders list** you pick on each device (shared over iCloud if you like):
+  everyone's chores, only yours or one person's, a repeating chore as one repeating reminder.
+- Tick a one-off chore off in Reminders or in the app; the other side follows.
+
 ## Appointments
 
 - **Searches** that watch **Doctolib** and **jameda** for free appointments with the doctors you
@@ -64,7 +73,7 @@ Ready to try it? Go to the [quick start](/quickstart).
 
 - Chats with any **OpenAI-compatible** model: a cloud provider (OpenAI, Anthropic, Google,
   OpenRouter, …) or your own (Ollama, LM Studio).
-- It can **read and change** the calendar, finances, meals and appointments, and every change
+- It can **read and change** the calendar, finances, meals, chores and appointments, and every change
   can be **undone**. Viewers get a read-only assistant.
 - It can also read your **reminders** and add, change or tick them off; you confirm every such
   change in the app first.

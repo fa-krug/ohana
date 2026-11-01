@@ -5,7 +5,7 @@ info:
   license:
     name: AGPL-3.0-only
     identifier: AGPL-3.0-only
-  summary: The JSON API of a self-hosted Ohana server (calendar, finance, meals, appointments, assistant).
+  summary: The JSON API of a self-hosted Ohana server (calendar, finance, meals, appointments, chores, assistant).
   description: |
     Ohana is one app for a family: a calendar, finances, meals, doctor appointments and an AI
     assistant. A server holds any number of **families**; every piece of data belongs to one.
@@ -37,8 +37,8 @@ info:
 
     ## Modules
 
-    The calendar is always on. A server may turn off `finance`, `meals`, `appointments` and
-    `assistant` (`DISABLED_MODULES`); `GET /api/v1/server` lists the enabled ones, and the
+    The calendar is always on. A server may turn off `finance`, `meals`, `appointments`,
+    `chores` and `assistant` (`DISABLED_MODULES`); `GET /api/v1/server` lists the enabled ones, and the
     routes of a disabled module answer 404.
 
     ## Errors and status codes
@@ -119,6 +119,10 @@ tags:
     description: What the meal plan needs per shopping day (module `meals`); the app writes it into a Reminders list.
   - name: Appointments
     description: Doctor appointment searches on Doctolib / jameda, their runs, results and bookings (module `appointments`).
+  - name: Chores
+    description: >-
+      The family's chores, once or repeating, each assigned to one person of the family or to
+      nobody (module `chores`); the app writes them into a Reminders list.
   - name: Assistant
     description: The AI assistant's chats and agent instructions (module `assistant`).
   - name: AI settings
@@ -1042,8 +1046,8 @@ paths:
       operationId: search
       summary: Search across the modules
       description: >-
-        Recipes, calendar events and notes, transactions, appointment searches, the people of
-        the family and the caller's own assistant chats whose text holds every word of `q`
+        Recipes, calendar events and notes, transactions, appointment searches, chores, the
+        people of the family and the caller's own assistant chats whose text holds every word of `q`
         (case and accents ignored). Grouped by kind in the order of `SearchHit.kind`; within a
         kind title matches first, then the ones nearest to `today`. Disabled modules are left
         out.
@@ -1934,6 +1938,165 @@ paths:
         - {name: key, in: path, required: true, description: "The issue's `key` (URL-encoded).", schema: {type: string}}
       responses:
         "204": {description: Restored (also when it wasn't dismissed).}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+
+  # ------------------------------------------------------------------ chores
+  /api/v1/families/{familyId}/chores:
+    parameters:
+      - $ref: "#/components/parameters/FamilyId"
+    get:
+      tags: [Chores]
+      operationId: listChores
+      summary: The family's chores and who they can be assigned to
+      description: Sorted by `next` (chores without one last), then title.
+      x-ohana-role: viewer
+      parameters:
+        - name: today
+          in: query
+          description: "The client's day, for `next` (default the server's UTC day)."
+          schema: {type: string, format: date}
+      responses:
+        "200":
+          description: The chores.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [chores, people, canEdit]
+                properties:
+                  chores:
+                    type: array
+                    items: {$ref: "#/components/schemas/Chore"}
+                  people:
+                    type: array
+                    description: Everyone a chore can be assigned to (accounts and people without one), by name.
+                    items: {$ref: "#/components/schemas/ChorePerson"}
+                  canEdit: {type: boolean, description: "Whether the caller is an editor."}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    post:
+      tags: [Chores]
+      operationId: createChore
+      summary: Add a chore
+      description: >-
+        With `id` the chore is put back with that id (how the assistant's undo restores a removed
+        chore); 409 if a chore has it.
+      x-ohana-role: editor
+      parameters:
+        - name: today
+          in: query
+          description: "The client's day, for `next` (default the server's UTC day)."
+          schema: {type: string, format: date}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/ChoreInput"
+                - type: object
+                  properties:
+                    id: {type: string, pattern: "^[A-Za-z0-9-]{1,64}$"}
+      responses:
+        "201":
+          description: The chore.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [chore]
+                properties:
+                  chore: {$ref: "#/components/schemas/Chore"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /api/v1/families/{familyId}/chores/{choreId}:
+    parameters:
+      - $ref: "#/components/parameters/FamilyId"
+      - $ref: "#/components/parameters/ChoreId"
+    get:
+      tags: [Chores]
+      operationId: getChore
+      summary: One chore
+      x-ohana-role: viewer
+      parameters:
+        - name: today
+          in: query
+          description: "The client's day, for `next` (default the server's UTC day)."
+          schema: {type: string, format: date}
+      responses:
+        "200": {$ref: "#/components/responses/ChoreResult"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    patch:
+      tags: [Chores]
+      operationId: updateChore
+      summary: Change a chore
+      description: >-
+        Only the fields given change. A single chore that becomes repeating is no longer done.
+      x-ohana-role: editor
+      parameters:
+        - name: today
+          in: query
+          description: "The client's day, for `next` (default the server's UTC day)."
+          schema: {type: string, format: date}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ChorePatch"}
+      responses:
+        "200": {$ref: "#/components/responses/ChoreResult"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    delete:
+      tags: [Chores]
+      operationId: deleteChore
+      summary: Delete a chore
+      x-ohana-role: editor
+      responses:
+        "200": {$ref: "#/components/responses/DeletedString"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/families/{familyId}/chores/{choreId}/done:
+    parameters:
+      - $ref: "#/components/parameters/FamilyId"
+      - $ref: "#/components/parameters/ChoreId"
+    post:
+      tags: [Chores]
+      operationId: setChoreDone
+      summary: Mark a single chore done or open
+      description: >-
+        Editors may mark any chore, viewers only those assigned to them (else 403). A repeating
+        chore is never done (400): its occurrences are done in Reminders. Done again keeps
+        `doneAt`; `updatedAt` stays.
+      x-ohana-role: viewer
+      parameters:
+        - name: today
+          in: query
+          description: "The client's day, for `next` (default the server's UTC day)."
+          schema: {type: string, format: date}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [done]
+              properties:
+                done: {type: boolean}
+      responses:
+        "200": {$ref: "#/components/responses/ChoreResult"}
+        "400": {$ref: "#/components/responses/BadRequest"}
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
         "404": {$ref: "#/components/responses/NotFound"}
@@ -4328,6 +4491,11 @@ components:
       in: query
       description: What the user typed.
       schema: {type: string}
+    ChoreId:
+      name: choreId
+      in: path
+      required: true
+      schema: {type: string}
     ChatId:
       name: chatId
       in: path
@@ -4435,6 +4603,15 @@ components:
             required: [deleted]
             properties:
               deleted: {type: string, description: "The deleted thing's id."}
+    ChoreResult:
+      description: The chore.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [chore]
+            properties:
+              chore: {$ref: "#/components/schemas/Chore"}
     FinanceOverview:
       description: Settings, categories and accounts.
       content:
@@ -4603,7 +4780,7 @@ components:
           description: The enabled modules (`calendar` always).
           items:
             type: string
-            enum: [calendar, finance, meals, appointments, assistant]
+            enum: [calendar, finance, meals, appointments, chores, assistant]
         push:
           description: Push to the app through a relay; null when the server turned it off.
           oneOf:
@@ -4988,6 +5165,62 @@ components:
         overrides:
           type: array
           items: {$ref: "#/components/schemas/EventOverrideInput"}
+    ChorePerson:
+      type: object
+      description: Someone of the family (an account, or a member without one).
+      required: [id, name, account]
+      properties:
+        id: {type: string, description: "A user id, or a person's id (`account: false`)."}
+        name: {type: string}
+        account: {type: boolean}
+    Chore:
+      type: object
+      required: [id, title, note, assignee, day, time, rrule, done, doneAt, next, createdAt, updatedAt]
+      properties:
+        id: {type: string}
+        title: {type: string}
+        note: {type: string}
+        assignee:
+          oneOf:
+            - $ref: "#/components/schemas/ChorePerson"
+            - type: "null"
+        day: {type: string, format: date, description: "The due day, or a repeating chore's first occurrence."}
+        time: {type: [string, "null"], pattern: "^([01]\\d|2[0-3]):[0-5]\\d$", description: "HH:MM; null = all day."}
+        rrule: {$ref: "#/components/schemas/RRule"}
+        done: {type: boolean, description: "Single chores only; always false when repeating."}
+        doneAt: {type: [string, "null"], format: date-time}
+        next:
+          type: [string, "null"]
+          format: date
+          description: >-
+            Single: `day` while open (also when it is past: overdue), null when done. Repeating:
+            the first occurrence on or after `today`, null once the series ended.
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time, description: "Edits only; marking done doesn't change it."}
+    ChoreInput:
+      type: object
+      required: [title, day]
+      properties:
+        title: {type: string, minLength: 1, maxLength: 200, description: "Trimmed."}
+        note: {type: string, maxLength: 2000, default: ""}
+        assigneeId:
+          type: [string, "null"]
+          description: A user id of a member or the id of a person without an account of this family (else 400); null = nobody.
+        day: {type: string, format: date}
+        time: {type: [string, "null"], pattern: "^([01]\\d|2[0-3]):[0-5]\\d$"}
+        rrule:
+          $ref: "#/components/schemas/RRule"
+          description: As events' rrule; null or "" = once.
+    ChorePatch:
+      type: object
+      description: Any fields of `ChoreInput`; the others stay.
+      properties:
+        title: {type: string, minLength: 1, maxLength: 200}
+        note: {type: string, maxLength: 2000}
+        assigneeId: {type: [string, "null"]}
+        day: {type: string, format: date}
+        time: {type: [string, "null"], pattern: "^([01]\\d|2[0-3]):[0-5]\\d$"}
+        rrule: {$ref: "#/components/schemas/RRule"}
     ExportFile:
       type: object
       description: >-
@@ -5056,15 +5289,15 @@ components:
       type: object
       required: [kind, id, title, detail, day]
       properties:
-        kind: {type: string, enum: [recipe, event, note, transaction, search, person, chat]}
+        kind: {type: string, enum: [recipe, event, note, transaction, search, chore, person, chat], description: "Clients skip kinds they don't know (more may come)."}
         id:
           type: string
           description: >-
             The item's id (a member's user id for a person with an account); a note's is its day.
         title: {type: string}
         detail: {type: string, description: "More of the item, joined with \" · \" (may be empty)."}
-        day: {type: [string, "null"], format: date, description: "A note's or transaction's day; an event's next occurrence from today on (else its last; one hit per series); a chat's last change."}
-        time: {type: [string, "null"], description: "An event's start (HH:MM), null all day."}
+        day: {type: [string, "null"], format: date, description: "A note's or transaction's day; an event's next occurrence from today on (else its last; one hit per series); a chore's next due day (else its day); a chat's last change."}
+        time: {type: [string, "null"], description: "An event's start or a chore's time (HH:MM), null all day."}
         amountCents: {type: integer, description: "A transaction's amount; negative: money going out."}
         account: {type: boolean, description: "A person: a member with an account (else a person without one)."}
 
@@ -6294,7 +6527,7 @@ components:
         contextWindow: {type: integer, description: "0 (automatic) or 1000 to 10 000 000 tokens."}
     ChatPage:
       type: string
-      enum: [overview, calendar, finance, meals, appointments, settings]
+      enum: [overview, calendar, finance, meals, appointments, chores, settings]
       description: The page a chat belongs to (what the user most likely means).
     Chat:
       type: object

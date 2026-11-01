@@ -15,6 +15,7 @@ import { handleFinance } from "@/lib/finance/finance";
 import { handleEvents } from "@/lib/calendar/events";
 import { handleMeals } from "@/lib/meals/family-routes";
 import { handleAppointments } from "@/lib/appointments/family-routes";
+import { handleChores } from "@/lib/chores/routes";
 import { devSecret, SecretBox } from "@/lib/secrets";
 import { createTestDb } from "./db";
 import { NOW, makeFamily, makeUser } from "./factories";
@@ -128,7 +129,7 @@ export function assistantTest(
     heartbeatMs: 100,
     ...options.env,
   };
-  const handler = createFamilyApi([handleFamily, handleCalendar, handleEvents, handleFinance, handleMeals, handleAppointments, handleAi(env)], {
+  const handler = createFamilyApi([handleFamily, handleCalendar, handleEvents, handleFinance, handleMeals, handleAppointments, handleChores, handleAi(env)], {
     db,
     appUrl: "http://ohana.test",
   });

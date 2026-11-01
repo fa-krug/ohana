@@ -63,7 +63,7 @@ final class AssistantChatStore {
     /// Called after the assistant (or an undo) changed something, so the screens reload it.
     @ObservationIgnored var onChange: ([DataArea]) -> Void = { _ in }
     /// The page the user looks at (overview | calendar | finance | meals | appointments |
-    /// settings), sent along with every message (with this year).
+    /// chores | settings), sent along with every message (with this year).
     @ObservationIgnored var page = "overview"
 
     private func context() -> (page: String, year: Int) {

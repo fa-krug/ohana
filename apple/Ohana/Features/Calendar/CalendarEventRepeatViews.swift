@@ -2,9 +2,10 @@ import SwiftUI
 
 /// The event editor's Repeat and End Repeat, like Apple Calendar's: the presets, Custom… (its own
 /// page, `CalendarRepeatRuleEditor`), and when it stops. A rule the editor doesn't make (from
-/// Apple Calendar or the assistant) shows as its summary and stays as it is unless changed.
-struct CalendarEventRepeatSection: View {
-    @Binding var draft: CalendarEventDraft
+/// Apple Calendar or the assistant) shows as its summary and stays as it is unless changed. The
+/// chore editor has them too (any `RepeatEditing` draft).
+struct CalendarEventRepeatSection<Draft: RepeatEditing>: View {
+    @Binding var draft: Draft
     @Binding var custom: Bool
 
     private enum EndKind: Hashable { case never, date, count }
@@ -46,7 +47,7 @@ struct CalendarEventRepeatSection: View {
                     EmptyView()
                 case let .until(day):
                     DatePicker("Until", selection: Binding(get: { day.date }, set: { draft.setRepeatEnd(.until(Day($0))) }),
-                               in: draft.input.date.date..., displayedComponents: .date)
+                               in: draft.repeatStart.date..., displayedComponents: .date)
                 case let .count(n):
                     Stepper(value: Binding(get: { n }, set: { draft.setRepeatEnd(.count($0)) }), in: 1...999) {
                         Text("\(n) times")
@@ -76,7 +77,7 @@ struct CalendarEventRepeatSection: View {
     private func setEnd(_ kind: EndKind) {
         switch kind {
         case .never: draft.setRepeatEnd(.never)
-        case .date: draft.setRepeatEnd(.until(draft.input.date.adding(months: 3)))
+        case .date: draft.setRepeatEnd(.until(draft.repeatStart.adding(months: 3)))
         case .count: draft.setRepeatEnd(.count(10))
         }
     }
@@ -84,8 +85,8 @@ struct CalendarEventRepeatSection: View {
 
 /// Custom…: how often (daily, weekly, monthly, yearly, every n), on which weekdays, on which day
 /// of the month (the 15th, the last Friday).
-struct CalendarRepeatRuleEditor: View {
-    @Binding var draft: CalendarEventDraft
+struct CalendarRepeatRuleEditor<Draft: RepeatEditing>: View {
+    @Binding var draft: Draft
 
     private enum MonthlyMode: Hashable { case day, weekday }
 
@@ -96,7 +97,7 @@ struct CalendarRepeatRuleEditor: View {
         return rule.isEditable ? rule : RepeatRule(rule.frequency, interval: rule.interval, end: rule.end)
     }
 
-    private var start: Day { draft.input.date }
+    private var start: Day { draft.repeatStart }
 
     var body: some View {
         Form {

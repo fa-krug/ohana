@@ -91,7 +91,7 @@ private struct LeadingEdgeSwipe: UIGestureRecognizerRepresentable {
 
 /// The family page: the families to switch to with creating or joining one below them (in the
 /// demo: connecting a server), every page of the shell (the tab on screen highlighted; on iPhone
-/// the appointments and the settings aren't tabs, `Module.phonePages`), scanning a letter and
+/// the appointments, the chores and the settings aren't tabs, `Module.phonePages`), scanning a letter and
 /// the settings last. It also shows the invite links the app was opened with (`InviteInbox`).
 private struct FamilySidebar: View {
     let current: Module

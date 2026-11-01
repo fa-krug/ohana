@@ -2,5 +2,5 @@
   "name": "Ohana",
   "version": "demo",
   "apiVersion": 1,
-  "modules": ["calendar", "finance", "meals", "appointments", "assistant"]
+  "modules": ["calendar", "finance", "meals", "appointments", "chores", "assistant"]
 }

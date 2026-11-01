@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// A new event or one being edited: what the editor's fields hold.
-struct CalendarEventDraft: Equatable {
+/// A new event or one being edited: what the editor's fields hold. Its Repeat is
+/// `RepeatEditing`'s.
+struct CalendarEventDraft: Equatable, RepeatEditing {
     var eventID: String?
     var input: CalendarEventInput
     var isAppointment = false
@@ -28,12 +29,18 @@ struct CalendarEventDraft: Equatable {
         original = event
     }
 
+    var repeatRRule: String? {
+        get { input.rrule }
+        set { input.rrule = newValue }
+    }
+
+    var repeatStart: Day { input.date }
+
     var isAllDay: Bool { input.start == nil }
     /// The last day as the fields show it (it may be before the first while it's being changed).
     var endDay: Day { input.endDate ?? input.date }
     /// Editing one occurrence of an event that repeats: saving asks which ones it changes.
     var isOccurrence: Bool { eventID != nil && original?.occurrence != nil }
-    var rule: RepeatRule? { input.rrule.flatMap(RepeatRule.init) }
     /// How it repeats isn't what it was: only "this and the following events" can take that.
     var ruleChanged: Bool { RepeatRule.canonical(input.rrule) != RepeatRule.canonical(original?.rrule) }
 
@@ -60,32 +67,6 @@ struct CalendarEventDraft: Equatable {
         if !on || endDay < input.date { input.endDate = input.date }
     }
 
-    /// The Repeat menu: a preset keeps the end the rule had; Never stops it repeating. Custom is
-    /// the editor's own page (`setRule`).
-    var repeatChoice: CalendarRepeatChoice { CalendarRepeatChoice(rule) }
-
-    mutating func setRepeat(_ choice: CalendarRepeatChoice) {
-        switch choice {
-        case .never: input.rrule = nil
-        case .custom: if rule == nil { setRule(RepeatRule(.weekly)) }
-        default:
-            guard var next = choice.rule else { return }
-            next.end = rule?.end ?? .never
-            setRule(next)
-        }
-    }
-
-    mutating func setRule(_ rule: RepeatRule) {
-        input.rrule = rule.string
-    }
-
-    /// End Repeat: never, on a day, after a number of times.
-    mutating func setRepeatEnd(_ end: RepeatRule.End) {
-        guard var next = rule else { return }
-        next.end = end
-        setRule(next)
-    }
-
     /// What's wrong with it (the server's checks), nil when it can be saved.
     var problem: String? {
         if input.title.trimmingCharacters(in: .whitespaces).isEmpty { return String(localized: "Give it a title.") }
@@ -97,15 +78,6 @@ struct CalendarEventDraft: Equatable {
         if endDay < input.date { return String(localized: "The end must be after the start.") }
         if endDay == input.date, let start = input.start, let end = input.end, end < start {
             return String(localized: "The end must be after the start.")
-        }
-        return nil
-    }
-
-    var repeatProblem: String? {
-        guard let rrule = input.rrule else { return nil }
-        guard let rule = RepeatRule(rrule) else { return String(localized: "This repeat rule can’t be read.") }
-        if case let .until(day) = rule.end, day < input.date {
-            return String(localized: "The repeat must end after the event starts.")
         }
         return nil
     }

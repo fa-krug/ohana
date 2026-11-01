@@ -7,6 +7,7 @@ import { AuthError } from "@/lib/auth/errors";
 import type { ToolSpec } from "../provider";
 import { appleCalendarTools } from "./apple-calendar";
 import { calendarTools } from "./calendar";
+import { choreTools } from "./chores";
 import { NeedsConfirmation, type Tool, type ToolContext, type ToolResult } from "./common";
 import { financeTools } from "./finance";
 import { appointmentTools } from "./appointments";
@@ -36,6 +37,7 @@ export const TOOLS: Record<string, Tool> = {
   ...financeTools,
   ...mealTools,
   ...appointmentTools,
+  ...choreTools,
   ...generalTools,
   ...reminderTools,
   ...appleCalendarTools,
@@ -48,6 +50,7 @@ const TOOL_MODULE: Record<string, ModuleName> = Object.fromEntries([
   ...Object.keys(financeTools).map((n) => [n, "finance"]),
   ...Object.keys(mealTools).map((n) => [n, "meals"]),
   ...Object.keys(appointmentTools).map((n) => [n, "appointments"]),
+  ...Object.keys(choreTools).map((n) => [n, "chores"]),
 ]);
 
 /** Whether a tool's module is on (DISABLED_MODULES). */

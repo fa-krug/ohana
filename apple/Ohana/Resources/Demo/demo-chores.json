@@ -1,0 +1,110 @@
+{
+  "chores": [
+    {
+      "id": "chore-car-service",
+      "title": "Book the car service",
+      "note": "The garage on Torstraße, before the winter tyres go on.",
+      "assignee": { "id": "demo-anna", "name": "Anna Parker", "account": true },
+      "day": "{{day:-2}}",
+      "time": null,
+      "rrule": null,
+      "done": false,
+      "doneAt": null,
+      "next": "{{day:-2}}",
+      "createdAt": "{{time:-14400}}",
+      "updatedAt": "{{time:-14400}}"
+    },
+    {
+      "id": "chore-bins",
+      "title": "Take out the bins",
+      "note": "",
+      "assignee": { "id": "demo-user", "name": "Ben Parker", "account": true },
+      "day": "{{day:-14}}",
+      "time": "19:00",
+      "rrule": "FREQ=WEEKLY",
+      "done": false,
+      "doneAt": null,
+      "next": "{{day}}",
+      "createdAt": "{{time:-43200}}",
+      "updatedAt": "{{time:-43200}}"
+    },
+    {
+      "id": "chore-tidy",
+      "title": "Tidy the room",
+      "note": "Toys back in the boxes, clothes in the basket.",
+      "assignee": { "id": "person-mia", "name": "Mia", "account": false },
+      "day": "{{day:-30}}",
+      "time": "18:00",
+      "rrule": "FREQ=DAILY",
+      "done": false,
+      "doneAt": null,
+      "next": "{{day}}",
+      "createdAt": "{{time:-50000}}",
+      "updatedAt": "{{time:-50000}}"
+    },
+    {
+      "id": "chore-swim-bag",
+      "title": "Pack the swim bag",
+      "note": "",
+      "assignee": { "id": "person-leo", "name": "Leo", "account": false },
+      "day": "{{day:1}}",
+      "time": "07:30",
+      "rrule": null,
+      "done": false,
+      "doneAt": null,
+      "next": "{{day:1}}",
+      "createdAt": "{{time:-3000}}",
+      "updatedAt": "{{time:-3000}}"
+    },
+    {
+      "id": "chore-plants",
+      "title": "Water the plants",
+      "note": "The big ones on the balcony get a full can.",
+      "assignee": null,
+      "day": "{{day:-11}}",
+      "time": null,
+      "rrule": "FREQ=WEEKLY;INTERVAL=2",
+      "done": false,
+      "doneAt": null,
+      "next": "{{day:3}}",
+      "createdAt": "{{time:-40000}}",
+      "updatedAt": "{{time:-40000}}"
+    },
+    {
+      "id": "chore-present",
+      "title": "Buy a birthday present for Grandma Rose",
+      "note": "She’d like the new crossword book.",
+      "assignee": { "id": "demo-user", "name": "Ben Parker", "account": true },
+      "day": "{{day:5}}",
+      "time": null,
+      "rrule": null,
+      "done": false,
+      "doneAt": null,
+      "next": "{{day:5}}",
+      "createdAt": "{{time:-2000}}",
+      "updatedAt": "{{time:-2000}}"
+    },
+    {
+      "id": "chore-windows",
+      "title": "Clean the windows",
+      "note": "",
+      "assignee": { "id": "demo-anna", "name": "Anna Parker", "account": true },
+      "day": "{{day:-3}}",
+      "time": null,
+      "rrule": null,
+      "done": true,
+      "doneAt": "{{time:-2880}}",
+      "next": null,
+      "createdAt": "{{time:-20000}}",
+      "updatedAt": "{{time:-20000}}"
+    }
+  ],
+  "people": [
+    { "id": "demo-anna", "name": "Anna Parker", "account": true },
+    { "id": "demo-user", "name": "Ben Parker", "account": true },
+    { "id": "person-grandma-rose", "name": "Grandma Rose", "account": false },
+    { "id": "person-leo", "name": "Leo", "account": false },
+    { "id": "person-mia", "name": "Mia", "account": false }
+  ],
+  "canEdit": false
+}

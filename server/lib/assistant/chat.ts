@@ -84,7 +84,7 @@ export type Emit = (event: string, data: unknown) => void;
 const WAITS = new Set(["ask_user", "edit_reminders", "edit_apple_calendar", "suggest_items"]);
 
 /** The pages a chat can belong to: Ohana's modules, the family overview and the settings. */
-export const PAGES = ["overview", "calendar", "finance", "meals", "appointments", "settings"];
+export const PAGES = ["overview", "calendar", "finance", "meals", "appointments", "chores", "settings"];
 /** family-planner's names of pages (its chats may come with them). */
 const OLD_PAGES: Record<string, string> = { vacation: "calendar" };
 
@@ -140,6 +140,9 @@ requests as being about the meals, and keep suggestions, options and next steps 
 slots regularly, the slots they found, and booked appointments. Read requests as being about
 them, and keep suggestions, options and next steps about them (a new search, an earlier slot,
 booking).`,
+  chores: `the family's chores: who does what and when, once or repeating. Read requests as
+being about them, and keep suggestions, options and next steps about them (sharing the chores
+out, new ones, what is due or overdue).`,
   settings: `the settings: the family's name, members and sharing, the year's entry types,
 the finance categories and accounts, and the AI. Read requests as being about these settings,
 and keep suggestions, options and next steps about them.`,
@@ -278,6 +281,11 @@ before the last day of May (the next May from today). The family's home address:
     input.home ? `“${input.home}”` : "not set (searches then need a place)"
   }.
 
+## Chores
+The family's chores (get_chores): once (due on day) or repeating (rrule, as events have), each
+for one member or nobody. The app puts them into the users' Reminders, where a repeating
+chore's times are ticked off; only a single chore is done in Ohana (set_chore_done).
+
 ## Reminders
 ${
     input.reminders
@@ -318,8 +326,8 @@ mention the tasks in your answer.`
     }
 ` : ""}
 ## How to work
-- Use the tools to look things up; don't guess what's in the calendar, the finances, the meals
-  or the appointment searches.
+- Use the tools to look things up; don't guess what's in the calendar, the finances, the meals,
+  the appointment searches or the chores.
 - Don't add up or work out numbers yourself: analyze_transactions and analyze_calendar give
   totals, averages and counts per month, category, payee, type …; calculate does any other
   math (percentages, statistics, trends, loans and savings).

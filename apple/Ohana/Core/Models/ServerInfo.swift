@@ -23,11 +23,12 @@ struct ServerInfo: Codable, Equatable {
     static let requiredAPIVersion = 1
 
     /// The modules a server can turn off.
-    static let optionalModules: [Module] = [.finance, .meals, .appointments, .assistant]
+    static let optionalModules: [Module] = [.finance, .meals, .appointments, .chores, .assistant]
 
-    /// What a server without /api/v1/server is taken for.
+    /// What a server without /api/v1/server is taken for: everything it had then on (the
+    /// chores came later, so such a server has none).
     static let legacy = ServerInfo(name: "Ohana", version: "", apiVersion: 0,
-                                   modules: ([Module.calendar] + optionalModules).map(\.rawValue))
+                                   modules: ([Module.calendar] + optionalModules.filter { $0 != .chores }).map(\.rawValue))
 
     init(name: String, version: String, apiVersion: Int, modules: [String], push: Push? = nil) {
         self.name = name
@@ -60,7 +61,7 @@ struct ServerInfo: Codable, Equatable {
     func isEnabled(_ module: Module) -> Bool {
         switch module {
         case .overview, .calendar, .settings, .search: true
-        case .finance, .meals, .appointments, .assistant: modules.contains(module.rawValue)
+        case .finance, .meals, .appointments, .chores, .assistant: modules.contains(module.rawValue)
         }
     }
 

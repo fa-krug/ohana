@@ -19,7 +19,7 @@ struct FamilySearchResult: Decodable, Hashable {
 
 struct FamilySearchHit: Decodable, Hashable, Identifiable {
     enum Kind: String, CaseIterable {
-        case recipe, event, note, transaction, search, person, chat
+        case recipe, event, note, transaction, search, chore, person, chat
 
         var title: LocalizedStringKey {
             switch self {
@@ -28,6 +28,7 @@ struct FamilySearchHit: Decodable, Hashable, Identifiable {
             case .note: "Notes"
             case .transaction: "Transactions"
             case .search: "Appointment searches"
+            case .chore: "Chores"
             case .person: "People"
             case .chat: "Chats"
             }
@@ -40,6 +41,7 @@ struct FamilySearchHit: Decodable, Hashable, Identifiable {
             case .note: "note.text"
             case .transaction: "banknote"
             case .search: "stethoscope"
+            case .chore: "checklist.checked"
             case .person: "person"
             case .chat: "bubble.left.and.text.bubble.right"
             }
@@ -52,6 +54,7 @@ struct FamilySearchHit: Decodable, Hashable, Identifiable {
             case .event, .note: .calendar
             case .transaction: .finance
             case .search: .appointments
+            case .chore: .chores
             case .person: .settings
             case .chat: .assistant
             }
@@ -85,6 +88,7 @@ struct FamilySearchHit: Decodable, Hashable, Identifiable {
         case .event, .note: day.map { .calendarDay($0) }
         case .transaction: day.map { .financeTransaction(id: itemID, day: $0) }
         case .search: .appointmentSearch(id: itemID)
+        case .chore: .chore(id: itemID)
         case .person: .settings(.members)
         case .chat: .assistantChat(id: itemID)
         case nil: nil
