@@ -49,15 +49,10 @@ final class PushNotifications: NSObject {
 
     static func sameRelay(_ a: URL, _ b: URL) -> Bool {
         func normalized(_ u: URL) -> String {
-            var c = URLComponents(url: u, resolvingAgainstBaseURL: false)
-            c?.host = c?.host?.lowercased()
-            c?.scheme = c?.scheme?.lowercased()
-            var path = c?.path ?? ""
+            var path = u.path(percentEncoded: false)
             while path.hasSuffix("/") { path.removeLast() }
-            c?.path = path
-            c?.query = nil
-            c?.fragment = nil
-            return c?.string ?? u.absoluteString
+            let port = u.port.map { ":\($0)" } ?? ""
+            return "\(u.scheme?.lowercased() ?? "")://\(u.host()?.lowercased() ?? "")\(port)\(path)"
         }
         return normalized(a) == normalized(b)
     }
