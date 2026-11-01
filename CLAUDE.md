@@ -388,7 +388,13 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   note ops is kept on disk (`CalendarStore.queueFile`, shown on top of what's loaded)),
   `Shell/` (sidebar-adaptable `TabView`; on iPhone five tabs, overview, calendar, finance, meals and
   search: more would go under iOS's "More" with a second navigation bar, so appointments and settings
-  open as sheets from the family button there, `Module.phonePages`; family switcher (one system `Menu`, `FamilyMenu`, on every platform: no custom menus), assistant `.inspector` ⌘J (a `.sheet` on
+  open as sheets from the family sidebar there, `Module.phonePages`; family switcher: on iPad and Mac
+  a system `Menu` (`FamilyMenu`) at the top of the sidebar, where the tab view has no sidebar (iPhone,
+  a narrow iPad window) a family page behind the tabs as in Mail (`FamilySidebar.swift`:
+  `FamilySidebarHost` slides the tabs away, `AppModel.showsFamilySidebar`; the toolbar's family
+  button or a swipe from the leading edge, which a UIKit edge pan only takes while a module root is
+  on screen, `moduleRootsOnScreen`, so it stays "back" on pushed pages; families with new / join, every
+  page of the shell with the tab on screen highlighted, scanning a letter, the settings), assistant `.inspector` ⌘J (a `.sheet` on
   iPhone: an inspector there breaks the tabs' navigation bars), toggled by the ✨ button at the top
   right of every page: module roots get it from `shellToolbar()`, a page pushed onto a module's
   stack adds `.assistantButton()`; and its own

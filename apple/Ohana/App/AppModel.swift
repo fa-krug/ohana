@@ -56,6 +56,12 @@ final class AppModel {
     /// The sheet that connects a server (`ConnectServerView`), shown over the demo.
     var showsConnect = false
 
+    /// The family page behind the tabs on iPhone (`FamilySidebarHost`) is on screen.
+    var showsFamilySidebar = false
+    /// How many module roots are on screen (none while a page is pushed over one): the swipe
+    /// to the family page is on only then.
+    var moduleRootsOnScreen = 0
+
     /// No server connected: the screens show the demo's data.
     var isDemo: Bool { client?.isDemo ?? true }
 

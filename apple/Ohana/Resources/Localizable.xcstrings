@@ -1,7 +1,6 @@
 {
   "sourceLanguage": "en",
   "strings": {
-    "%@ %@": {},
     "%@ (%@) becomes the booking, the others its parts": {
       "localizations": {
         "de": {
@@ -13882,6 +13881,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Anmeldung & Sicherheit"
+          }
+        }
+      }
+    },
+    "Signed in as %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Angemeldet als %@"
           }
         }
       }

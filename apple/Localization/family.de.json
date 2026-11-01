@@ -194,5 +194,6 @@
   "not scheduled": "nicht geplant",
   "ntfy is push notifications you can host yourself, with an app for iPhone and iPad. The topic URL is the topic’s full address on ntfy.sh or your own ntfy server; the token is only needed for a protected topic.": "ntfy sind Push-Benachrichtigungen, die du selbst hosten kannst, mit einer App für iPhone und iPad. Die Topic-URL ist die vollständige Adresse des Topics auf ntfy.sh oder deinem eigenen ntfy-Server; das Token brauchst du nur für ein geschütztes Topic.",
   "paused": "pausiert",
-  "valid until %@": "gültig bis %@"
+  "valid until %@": "gültig bis %@",
+  "Signed in as %@": "Angemeldet als %@"
 }

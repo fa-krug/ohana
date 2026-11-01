@@ -39,22 +39,21 @@ struct FamilySwitcher: View {
     }
 }
 
-/// Opens the family menu (a system menu everywhere): the families to switch to, creating or
-/// joining one (in the demo: connecting a server), scanning a letter, and with `showsPages` the
-/// pages the sidebar would show where there is none (`Module.phonePages`). The visible one shows
-/// invite links the app was opened with (`InviteInbox`).
+/// Opens the family menu at the top of the sidebar (iPad, Mac; where there is no sidebar the
+/// shell has `FamilySidebarHost`): the families to switch to, creating or joining one (in the demo:
+/// connecting a server) and scanning a letter. It shows invite links the app was opened with
+/// (`InviteInbox`).
 struct FamilyPickerButton<ButtonLabel: View>: View {
     @Environment(AppModel.self) private var app
     /// The family on screen (scanning a letter goes to its shell).
     @Environment(FamilyContext.self) private var family: FamilyContext?
-    var showsPages = false
     @ViewBuilder let label: ButtonLabel
     @State private var creating = false
     @State private var joining: InviteRequest?
 
     var body: some View {
         Menu {
-            FamilyMenu(showsPages: showsPages, scans: family != nil, choose: run)
+            FamilyMenu(scans: family != nil, choose: run)
         } label: {
             label
         }
@@ -71,21 +70,19 @@ struct FamilyPickerButton<ButtonLabel: View>: View {
         case .create: creating = true
         case .join: joining = InviteRequest()
         case .connect: app.showsConnect = true
-        case let .page(page): page.open()
         case .scanLetter: family?.scanLetter()
         }
     }
 }
 
 private enum FamilyPickerAction {
-    case family(String), create, join, connect, page(Module), scanLetter
+    case family(String), create, join, connect, scanLetter
 }
 
 /// The family menu's items, a plain list: the families (the current one checked), creating or
-/// joining one, then scanning a letter and the pages, each with its icon.
+/// joining one, then scanning a letter.
 private struct FamilyMenu: View {
     @Environment(AppModel.self) private var app
-    let showsPages: Bool
     /// Offers scanning a letter (inside a family's shell).
     let scans: Bool
     let choose: (FamilyPickerAction) -> Void
@@ -104,22 +101,10 @@ private struct FamilyMenu: View {
             Button("New family", systemImage: "plus") { choose(.create) }
             Button("Join a family", systemImage: "person.badge.plus") { choose(.join) }
         }
-        if scans || showsPages {
-            Divider()
-        }
         if scans {
+            Divider()
             Button("Scan letter", systemImage: "doc.text.viewfinder") { choose(.scanLetter) }
         }
-        if showsPages {
-            ForEach(pages) { page in
-                Button(page.title, systemImage: page.systemImage) { choose(.page(page)) }
-            }
-        }
-    }
-
-    /// The pages the sidebar would show (a narrow iPad window has no sidebar either).
-    private var pages: [Module] {
-        Module.phonePages.isEmpty ? [.settings] : Module.phonePages.filter { app.isEnabled($0) }
     }
 }
 

@@ -12,7 +12,7 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
     var id: String { rawValue }
 
     /// The pages that aren't tabs on iPhone, whose tab bar holds five (the overview, three
-    /// modules and the search): sheets opened from the family button (`FamilyPicker`).
+    /// modules and the search): sheets opened from the family page (`FamilySidebarHost`).
     static var phonePages: [Module] {
         #if os(iOS)
         UIDevice.current.userInterfaceIdiom == .phone ? [.appointments, .settings] : []

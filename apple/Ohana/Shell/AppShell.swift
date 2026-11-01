@@ -6,7 +6,7 @@ import SwiftUI
 /// on the right (a sheet on iPhone), ⌘J. The iPhone's tab bar holds five tabs: with more, iOS
 /// puts the rest under "More", which pushes a tab's own navigation stack under a second bar. So
 /// there the appointments and the settings (`Module.phonePages`) open as sheets from the family
-/// button instead.
+/// page (`FamilySidebarHost`) instead.
 struct AppShell: View {
     @Environment(AppModel.self) private var app
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -72,6 +72,10 @@ struct AppShell: View {
             .tabBarMinimizeBehavior(.onScrollDown)
             #endif
             .modifier(AssistantPresentation(isPresented: $showAssistant, enabled: assistantOn))
+            #if os(iOS)
+            // Where the tab view has no sidebar: the family page behind the tabs.
+            .modifier(FamilySidebarHost(active: sizeClass == .compact, current: selection.wrappedValue))
+            #endif
             // The letter scanner over everything (the family menu, Spotlight / Siri / Shortcuts).
             .modifier(ShellLetterScan(context: context, assistantSheet: $showAssistant, phonePage: $phonePage))
             // The panel's settings and chats before it first opens, so it doesn't wait for them.
@@ -313,9 +317,10 @@ private struct AssistantPresentation: ViewModifier {
     }
 }
 
-/// The toolbar every module page gets from the shell: the family switcher (on iPhone, where there
-/// is no sidebar) and the assistant toggle.
+/// The toolbar every module page gets from the shell: the family sidebar's button (on iPhone,
+/// where the tab view has no sidebar) and the assistant toggle.
 struct ShellToolbar: ViewModifier {
+    @Environment(AppModel.self) private var app
     @Environment(\.horizontalSizeClass) private var sizeClass
 
     func body(content: Content) -> some View {
@@ -324,14 +329,19 @@ struct ShellToolbar: ViewModifier {
                 #if os(iOS)
                 if sizeClass == .compact {
                     ToolbarItem(placement: .topBarLeading) {
-                        FamilyPickerButton(showsPages: true) {
-                            Label("Family", systemImage: "person.2.circle")
+                        Button("Family", systemImage: "sidebar.leading") {
+                            withAnimation(.snappy(duration: 0.3)) { app.showsFamilySidebar = true }
                         }
                     }
                 }
                 #endif
             }
             .assistantButton()
+            #if os(iOS)
+            // The swipe to the family page waits while a page is pushed over a root.
+            .onAppear { app.moduleRootsOnScreen += 1 }
+            .onDisappear { app.moduleRootsOnScreen = max(0, app.moduleRootsOnScreen - 1) }
+            #endif
     }
 }
 
