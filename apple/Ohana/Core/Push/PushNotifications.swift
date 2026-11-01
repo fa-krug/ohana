@@ -248,7 +248,8 @@ final class PushNotifications: NSObject {
 }
 
 extension PushNotifications: nonisolated UNUserNotificationCenterDelegate {
-    /// In the foreground too: a banner, in the list, with its sound.
+    /// In the foreground too: a banner, in the list, with its sound (pushes and the cook timers'
+    /// local notifications alike).
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
                                             willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
         [.banner, .list, .sound]

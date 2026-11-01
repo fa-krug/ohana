@@ -10,7 +10,7 @@
 //   GET    /appointments/searches/{id}/runs                {runs: RunWithResults[]}
 //   POST   /appointments/searches/{id}/run                 "run now" → {queued: id} (the worker runs it)
 //   POST   /appointments/searches/{id}/enabled             {enabled} → {id, enabled}
-//   GET    /appointments/searches/{id}/slots/{resultId}    SlotDetailData + {booking, searchEnabled, people}
+//   GET    /appointments/searches/{id}/slots/{resultId}    SlotDetailData + {booking, searchEnabled, people, suggestedPerson}
 //   POST   /appointments/searches/{id}/slots/{resultId}/book   BookingInput → 201 {eventId, event}
 //   POST   /appointments/results/{resultId}/ignore         {searchId}
 //   DELETE /appointments/ignored/{entryId}                 {deleted}
@@ -26,7 +26,7 @@ import { families } from "@/lib/db/schema";
 import { findBooking, listBookedAppointments, publicEvent } from "@/lib/calendar/events";
 import { familyNames } from "@/lib/families/people";
 import { listChannelRows } from "@/lib/notifications/channels";
-import { type BookingInput, bookSlot, removeBooking } from "./booking";
+import { type BookingInput, bookSlot, removeBooking, suggestedPerson } from "./booking";
 import { searchInputSchema } from "./schema";
 import {
   assertSearch,
@@ -158,13 +158,16 @@ async function slot({ db, load }: Ctx, searchId: string, rawResultId: string): P
   const data = getSlotDetail(db, family.id, searchId, resultId);
   if (!data) throw new HttpError(404, "Slot not found");
   const booked = findBooking(db, family.id, searchId, resultId);
+  const search = assertSearch(db, family.id, searchId);
+  const people = peopleOf(db, family.id);
   return json({
     ...data,
     booking: booked
       ? { eventId: booked.id, date: booked.day, start: booked.start, end: booked.end, person: booked.person }
       : null,
-    searchEnabled: assertSearch(db, family.id, searchId).enabled,
-    people: peopleOf(db, family.id),
+    searchEnabled: search.enabled,
+    people,
+    suggestedPerson: suggestedPerson(db, family.id, search, people),
   });
 }
 

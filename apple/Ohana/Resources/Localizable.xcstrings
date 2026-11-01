@@ -93,6 +93,26 @@
         }
       }
     },
+    "%@ moved to %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ auf %@ verschoben"
+          }
+        }
+      }
+    },
+    "%@ planned for %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ am %@ eingeplant"
+          }
+        }
+      }
+    },
     "%@ selected (%@): %@": {
       "localizations": {
         "de": {
@@ -413,6 +433,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld Min."
+          }
+        }
+      }
+    },
+    "%lld more – add a word to narrow it down.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld weitere – ein weiteres Wort grenzt die Suche ein."
           }
         }
       }
@@ -1051,12 +1081,42 @@
         }
       }
     },
+    "Add ${eventTitle} on ${date}": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${eventTitle} am ${date} eintragen"
+          }
+        }
+      }
+    },
+    "Add ${quantity} ${unit} ${item} to the shopping list": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${quantity} ${unit} ${item} auf die Einkaufsliste setzen"
+          }
+        }
+      }
+    },
     "Add %@": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ hinzufügen"
+          }
+        }
+      }
+    },
+    "Add Event": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termin hinzufügen"
           }
         }
       }
@@ -1157,6 +1217,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Einen Termin mit Uhrzeit am ersten ausgewählten Tag hinzufügen"
+          }
+        }
+      }
+    },
+    "Add a transaction from a receipt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Buchung von einem Kassenbon hinzufügen"
           }
         }
       }
@@ -1341,6 +1411,16 @@
         }
       }
     },
+    "Add to Shopping List": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zur Einkaufsliste hinzufügen"
+          }
+        }
+      }
+    },
     "Add to calendar": {
       "localizations": {
         "de": {
@@ -1391,12 +1471,32 @@
         }
       }
     },
+    "Added %@ to the shopping list.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ steht jetzt auf der Einkaufsliste."
+          }
+        }
+      }
+    },
     "Added to the calendar.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "In den Kalender eingetragen."
+          }
+        }
+      }
+    },
+    "Added “%@” to the calendar on %@.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ steht jetzt im Kalender: %@."
           }
         }
       }
@@ -1447,6 +1547,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Adresse"
+          }
+        }
+      }
+    },
+    "Adds an event to the family calendar in Ohana.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trägt einen Termin in den Familienkalender in Ohana ein."
+          }
+        }
+      }
+    },
+    "Adds an item to the family’s shopping list in Ohana.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Setzt etwas auf die Einkaufsliste der Familie in Ohana."
           }
         }
       }
@@ -1717,6 +1837,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Beträge müssen Zahlen ab 0 sein, „von“ nicht über „bis“."
+          }
+        }
+      }
+    },
+    "An abbreviation like l, g or kg; without one, pieces.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Abkürzung wie l, g oder kg; ohne: Stück."
           }
         }
       }
@@ -2793,6 +2923,16 @@
         }
       }
     },
+    "Check the day and time the practice confirmed. Ohana then shows it in the calendar (and in the calendar feed, if you subscribed with booked appointments).": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prüfe Tag und Uhrzeit, die die Praxis bestätigt hat. Ohana zeigt ihn dann im Kalender (und im Kalender-Feed, wenn du ihn mit gebuchten Terminen abonniert hast)."
+          }
+        }
+      }
+    },
     "Child-friendly only": {
       "localizations": {
         "de": {
@@ -2899,6 +3039,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Filter zurücksetzen"
+          }
+        }
+      }
+    },
+    "Clear search": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche leeren"
           }
         }
       }
@@ -3243,6 +3393,16 @@
         }
       }
     },
+    "Connect your Ohana server in the app first.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbinde zuerst in der App deinen Ohana-Server."
+          }
+        }
+      }
+    },
     "Connect your Ohana server to see your own family.": {
       "localizations": {
         "de": {
@@ -3509,6 +3669,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Speichern fehlgeschlagen: %@"
+          }
+        }
+      }
+    },
+    "Couldn’t search": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche fehlgeschlagen"
           }
         }
       }
@@ -4333,6 +4503,16 @@
         }
       }
     },
+    "Did you book it?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hast du ihn gebucht?"
+          }
+        }
+      }
+    },
     "Dietary": {
       "localizations": {
         "de": {
@@ -4403,6 +4583,16 @@
         }
       }
     },
+    "Dismiss timer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timer ausblenden"
+          }
+        }
+      }
+    },
     "Distance from home": {
       "localizations": {
         "de": {
@@ -4439,6 +4629,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Doppelklick"
+          }
+        }
+      }
+    },
+    "Drag one onto a day": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zieh eins auf einen Tag"
           }
         }
       }
@@ -4509,6 +4709,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dauer (Sek.)"
+          }
+        }
+      }
+    },
+    "Durations start a timer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeitangaben starten einen Timer"
           }
         }
       }
@@ -4783,6 +4993,16 @@
         }
       }
     },
+    "End": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ende"
+          }
+        }
+      }
+    },
     "End time": {
       "localizations": {
         "de": {
@@ -4869,6 +5089,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aktionen des Termins"
+          }
+        }
+      }
+    },
+    "Events": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termine"
           }
         }
       }
@@ -5233,6 +5463,16 @@
         }
       }
     },
+    "Filled in from the receipt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vom Kassenbon ausgefüllt"
+          }
+        }
+      }
+    },
     "Filter": {
       "localizations": {
         "de": {
@@ -5293,6 +5533,16 @@
         }
       }
     },
+    "Find recipes, calendar events and notes, transactions, appointment searches, people and chats.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finde Rezepte, Termine und Notizen im Kalender, Buchungen, Terminsuchen, Personen und Chats."
+          }
+        }
+      }
+    },
     "Find transfers": {
       "localizations": {
         "de": {
@@ -5329,6 +5579,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fünf Felder: Minute, Stunde, Tag im Monat, Monat, Wochentag. „*/15 7-20 * * 1-5“ sucht werktags von 7:00 bis 20:59 alle 15 Minuten."
+          }
+        }
+      }
+    },
+    "For %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für %@"
           }
         }
       }
@@ -5689,6 +5949,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lebensmittel-Kategorie"
+          }
+        }
+      }
+    },
+    "Groceries of the shopping on %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lebensmittel vom Einkauf am %@"
           }
         }
       }
@@ -6073,6 +6343,16 @@
         }
       }
     },
+    "Import Recipe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rezept importieren"
+          }
+        }
+      }
+    },
     "Import a bank statement (⇧⌘I)": {
       "localizations": {
         "de": {
@@ -6099,6 +6379,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "Import fehlgeschlagen: %@"
+          }
+        }
+      }
+    },
+    "Import from Web": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus dem Web importieren"
+          }
+        }
+      }
+    },
+    "Import from the web": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus dem Web importieren"
+          }
+        }
+      }
+    },
+    "Import the recipe from ${url}": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rezept von ${url} importieren"
+          }
+        }
+      }
+    },
+    "Import undone": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import rückgängig gemacht"
           }
         }
       }
@@ -6151,6 +6471,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Importiert."
+          }
+        }
+      }
+    },
+    "Importing the recipe …": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rezept wird importiert …"
           }
         }
       }
@@ -6383,6 +6713,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Er meldet die Person überall ab und erlaubt ein neues Passwort, z. B. wenn sie es vergessen hat."
+          }
+        }
+      }
+    },
+    "Item": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Artikel"
           }
         }
       }
@@ -6637,6 +6977,16 @@
         }
       }
     },
+    "Left without one, it is sorted into a category when you save.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohne Kategorie wird sie beim Speichern einsortiert."
+          }
+        }
+      }
+    },
     "Leftover days": {
       "localizations": {
         "de": {
@@ -6733,6 +7083,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Link"
+          }
+        }
+      }
+    },
+    "Linked to the shopping of %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit dem Einkauf vom %@ verknüpft"
           }
         }
       }
@@ -7047,6 +7407,26 @@
         }
       }
     },
+    "Meals are turned off on your Ohana server.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Mahlzeiten sind auf deinem Ohana-Server ausgeschaltet."
+          }
+        }
+      }
+    },
+    "Meals swapped": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Essen getauscht"
+          }
+        }
+      }
+    },
     "Meat & Fish": {
       "localizations": {
         "de": {
@@ -7157,6 +7537,16 @@
         }
       }
     },
+    "Move Item": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Artikel verschieben"
+          }
+        }
+      }
+    },
     "Move down": {
       "localizations": {
         "de": {
@@ -7213,6 +7603,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nach oben"
+          }
+        }
+      }
+    },
+    "Moved to %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf %@ verschoben"
+          }
+        }
+      }
+    },
+    "Moved to another list": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf eine andere Liste verschoben"
+          }
+        }
+      }
+    },
+    "Moved “%@” to %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ auf %@ verschoben"
           }
         }
       }
@@ -8077,6 +8497,16 @@
         }
       }
     },
+    "No total found: type in the amount.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Summe gefunden: Gib den Betrag ein."
+          }
+        }
+      }
+    },
     "No transaction could be sorted": {
       "localizations": {
         "de": {
@@ -8227,6 +8657,16 @@
         }
       }
     },
+    "Not Yet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch nicht"
+          }
+        }
+      }
+    },
     "Not answered": {
       "localizations": {
         "de": {
@@ -8303,6 +8743,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Notiz"
+          }
+        }
+      }
+    },
+    "Notes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notizen"
+          }
+        }
+      }
+    },
+    "Nothing could be read from the receipt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vom Kassenbon ließ sich nichts lesen"
           }
         }
       }
@@ -8519,6 +8979,16 @@
         }
       }
     },
+    "Ohana can only save web pages.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohana kann nur Webseiten speichern."
+          }
+        }
+      }
+    },
     "Ohana checks on its own and tells you when an appointment frees up. Within (days): how far ahead an appointment may be.": {
       "localizations": {
         "de": {
@@ -8535,6 +9005,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ohana sucht nur, wenn du auf „Jetzt suchen“ tippst. Innerhalb von (Tagen): wie weit im Voraus ein Termin liegen darf."
+          }
+        }
+      }
+    },
+    "Ohana doesn’t know the unit “%@”.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohana kennt die Einheit „%@“ nicht."
+          }
+        }
+      }
+    },
+    "Ohana is reading the recipe. This can take a minute or two.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohana liest das Rezept. Das kann ein, zwei Minuten dauern."
           }
         }
       }
@@ -8725,6 +9215,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Verwaltung öffnen …"
+          }
+        }
+      }
+    },
+    "Open Ohana and connect your server first.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffne Ohana und verbinde zuerst deinen Server."
+          }
+        }
+      }
+    },
+    "Open Recipe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rezept öffnen"
           }
         }
       }
@@ -9251,6 +9761,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Empfänger"
+          }
+        }
+      }
+    },
+    "People": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Personen"
           }
         }
       }
@@ -9865,6 +10385,16 @@
         }
       }
     },
+    "Read on this device. Check the amount and the date before saving.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf diesem Gerät gelesen. Prüfe Betrag und Datum vor dem Speichern."
+          }
+        }
+      }
+    },
     "Read with the format saved for this bank.": {
       "localizations": {
         "de": {
@@ -9941,6 +10471,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Liest den Essensplan"
+          }
+        }
+      }
+    },
+    "Reading the receipt…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kassenbon wird gelesen …"
           }
         }
       }
@@ -10055,12 +10595,32 @@
         }
       }
     },
+    "Recipes to drag onto a day": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rezepte, die du auf einen Tag ziehen kannst"
+          }
+        }
+      }
+    },
     "Recipes with these tags aren’t planned.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Rezepte mit diesen Tags werden nicht eingeplant."
+          }
+        }
+      }
+    },
+    "Recipes, events, transactions, people…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rezepte, Termine, Buchungen, Personen …"
           }
         }
       }
@@ -10341,6 +10901,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Entfernt einen Termin"
+          }
+        }
+      }
+    },
+    "Removing “%@” …": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ wird entfernt …"
           }
         }
       }
@@ -10825,6 +11395,16 @@
         }
       }
     },
+    "Save to Ohana": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Ohana speichern"
+          }
+        }
+      }
+    },
     "Saved": {
       "localizations": {
         "de": {
@@ -10855,12 +11435,32 @@
         }
       }
     },
+    "Saved “%@” to “Want to try”.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ ist unter „Ausprobieren“ gespeichert."
+          }
+        }
+      }
+    },
     "Saved.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Gespeichert."
+          }
+        }
+      }
+    },
+    "Saves the recipe of a web page to “Want to try” in Ohana. The assistant reads the page, which can take a minute or two.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speichert das Rezept einer Webseite in Ohana unter „Ausprobieren“. Der Assistent liest dafür die Seite, das kann ein, zwei Minuten dauern."
           }
         }
       }
@@ -10901,6 +11501,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Speichert …"
+          }
+        }
+      }
+    },
+    "Scan Receipt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kassenbon scannen"
+          }
+        }
+      }
+    },
+    "Scan Receipt…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kassenbon scannen …"
           }
         }
       }
@@ -11051,6 +11671,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Suchen durchsuchen"
+          }
+        }
+      }
+    },
+    "Search the family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Familie durchsuchen"
           }
         }
       }
@@ -11795,6 +12425,16 @@
         }
       }
     },
+    "Shows the step": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeigt den Schritt"
+          }
+        }
+      }
+    },
     "Sign in": {
       "localizations": {
         "de": {
@@ -12103,6 +12743,26 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "Sorted into %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In %@ einsortiert"
+          }
+        }
+      }
+    },
+    "Sorted into %@, linked to the shopping of %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In %1$@ einsortiert, mit dem Einkauf vom %2$@ verknüpft"
           }
         }
       }
@@ -12425,6 +13085,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Das Ziehen des Anfassers abbrechen oder die Auswahl aufheben"
+          }
+        }
+      }
+    },
+    "Stop timer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timer stoppen"
           }
         }
       }
@@ -12769,6 +13439,26 @@
         }
       }
     },
+    "That isn’t the address of a web page.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das ist keine Adresse einer Webseite."
+          }
+        }
+      }
+    },
+    "That’s empty.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Da steht ja nichts."
+          }
+        }
+      }
+    },
     "The AI couldn’t sort: %@": {
       "localizations": {
         "de": {
@@ -13089,6 +13779,16 @@
         }
       }
     },
+    "The page is read on your server and its AI turns it into a recipe. This can take a minute or two.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Server liest die Seite, und seine KI macht daraus ein Rezept. Das kann ein, zwei Minuten dauern."
+          }
+        }
+      }
+    },
     "The passwords don’t match.": {
       "localizations": {
         "de": {
@@ -13115,6 +13815,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Die Menge muss eine Zahl über 0 sein."
+          }
+        }
+      }
+    },
+    "The receipt couldn’t be read.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Kassenbon konnte nicht gelesen werden."
           }
         }
       }
@@ -13179,6 +13889,16 @@
         }
       }
     },
+    "The server sent something unexpected.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Server hat etwas Unerwartetes geschickt."
+          }
+        }
+      }
+    },
     "The server sent something unexpected: %@": {
       "localizations": {
         "de": {
@@ -13235,6 +13955,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "In der Zwischenablage ist kein Bild."
+          }
+        }
+      }
+    },
+    "There’s no shopping list yet: it comes with the meal plan.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Es gibt noch keine Einkaufsliste: Sie kommt mit dem Essensplan."
           }
         }
       }
@@ -13369,6 +14099,16 @@
         }
       }
     },
+    "This needs the assistant, which is turned off on your Ohana server.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dafür braucht es den Assistenten, und der ist auf deinem Ohana-Server ausgeschaltet."
+          }
+        }
+      }
+    },
     "This plan has wrapped up!": {
       "localizations": {
         "de": {
@@ -13485,6 +14225,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Termine mit Uhrzeit, z. B. gebuchte Arzttermine; sie nennen Arzt und Praxis"
+          }
+        }
+      }
+    },
+    "Timer done: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timer fertig: %@"
           }
         }
       }
@@ -13739,6 +14489,16 @@
         }
       }
     },
+    "Turn a recipe page into a recipe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Rezeptseite als Rezept übernehmen"
+          }
+        }
+      }
+    },
     "Turn it on, then tap days to add or remove them; long-press + drag adds a range": {
       "localizations": {
         "de": {
@@ -13815,6 +14575,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Widerrufen / Wiederholen"
+          }
+        }
+      }
+    },
+    "Undo Import": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import rückgängig machen"
           }
         }
       }
@@ -14149,6 +14919,26 @@
         }
       }
     },
+    "Web Page": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Webseite"
+          }
+        }
+      }
+    },
+    "Web address": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Webadresse"
+          }
+        }
+      }
+    },
     "Web search": {
       "localizations": {
         "de": {
@@ -14279,6 +15069,16 @@
         }
       }
     },
+    "What should go on the shopping list?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was soll auf die Einkaufsliste?"
+          }
+        }
+      }
+    },
     "What to do in this step…": {
       "localizations": {
         "de": {
@@ -14349,12 +15149,42 @@
         }
       }
     },
+    "What’s the event?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was für ein Termin?"
+          }
+        }
+      }
+    },
     "When a search finds a new or earlier appointment. Each search chooses its channels.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Wenn eine Suche einen neuen oder früheren Termin findet. Jede Suche wählt ihre Kanäle selbst."
+          }
+        }
+      }
+    },
+    "When is it?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wann ist er?"
+          }
+        }
+      }
+    },
+    "When it ends, on the same day.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wann er endet, am selben Tag."
           }
         }
       }
@@ -14445,6 +15275,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Welche Suchen haben etwas gefunden, und was ist der früheste Termin?"
+          }
+        }
+      }
+    },
+    "Which web page has the recipe?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf welcher Webseite steht das Rezept?"
           }
         }
       }
@@ -14729,6 +15569,16 @@
         }
       }
     },
+    "Your account isn’t in a family yet. Open Ohana to create or join one.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Konto gehört noch zu keiner Familie. Öffne Ohana, um eine zu erstellen oder einer beizutreten."
+          }
+        }
+      }
+    },
     "Your bank accounts, cash or cards. A transaction can belong to one; the balance is the opening balance plus all its transactions.": {
       "localizations": {
         "de": {
@@ -14815,6 +15665,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Deine Sitzung ist abgelaufen, melde dich erneut an."
+          }
+        }
+      }
+    },
+    "Your session has ended. Open Ohana and sign in again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Sitzung ist abgelaufen. Öffne Ohana und melde dich wieder an."
           }
         }
       }
@@ -16005,6 +16865,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "„%@“ ist zu groß (max. %lld MB)."
+          }
+        }
+      }
+    },
+    "“%@” was removed again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ wurde wieder entfernt."
           }
         }
       }

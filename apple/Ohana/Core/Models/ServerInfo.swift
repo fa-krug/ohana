@@ -59,7 +59,7 @@ struct ServerInfo: Codable, Equatable {
     /// always there.
     func isEnabled(_ module: Module) -> Bool {
         switch module {
-        case .overview, .calendar, .settings: true
+        case .overview, .calendar, .settings, .search: true
         case .finance, .meals, .appointments, .assistant: modules.contains(module.rawValue)
         }
     }

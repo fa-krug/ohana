@@ -5,8 +5,8 @@ import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Db } from "@/lib/db";
 import {
-  calEntries, calEntryTypes, familyMembers, ingredients, mealPlanEntries, planIterations, recipeIngredients, recipes,
-  shoppingListItems, shoppingLists, units,
+  calEntries, calEntryTypes, familyMembers, ingredients, mealPlanEntries, mealPlans, planIterations, recipeIngredients,
+  recipes, shoppingListItems, shoppingLists, units,
 } from "@/lib/db/schema";
 import { createFamilyApi } from "@/lib/api/family-api";
 import { createToken } from "@/lib/auth/tokens";
@@ -236,6 +236,210 @@ describe("changing the plan", () => {
     const after = entriesOf(iterationId);
     expect(after.find((e) => e.id === leftover.id)).toEqual(expect.objectContaining({ recipeId: "r0", isLeftover: false, sourceEntryId: null }));
     expect(after.find((e) => e.id === cook.id)!.recipeId).toBe(cook.recipeId);
+  });
+});
+
+describe("drag and drop in the plan", () => {
+  const ingOf = (recipeId: string) => Number(recipeId.slice(1)) + 1;
+  const unusedRecipe = (iterationId: string) => {
+    const used = new Set(entriesOf(iterationId).map((e) => e.recipeId));
+    return [...Array(14).keys()].map((k) => `r${k}`).find((id) => !used.has(id))!;
+  };
+  const onDay = (iterationId: string, date: string) => entriesOf(iterationId).find((e) => e.date === date);
+  const clearDay = (iterationId: string, date: string) =>
+    db.delete(mealPlanEntries).where(and(eq(mealPlanEntries.iterationId, iterationId), eq(mealPlanEntries.date, date))).run();
+  const makeLeftover = (iterationId: string, cookDate: string, leftoverDate: string) => {
+    const cook = onDay(iterationId, cookDate)!;
+    const leftover = onDay(iterationId, leftoverDate)!;
+    db.update(mealPlanEntries).set({ recipeId: cook.recipeId, isLeftover: true, sourceEntryId: cook.id }).where(eq(mealPlanEntries.id, leftover.id)).run();
+    return { cook, leftover };
+  };
+
+  it("puts a recipe on a day without lunch; undo takes it away", async () => {
+    const iterationId = seedPlan();
+    clearDay(iterationId, "2026-11-06");
+    const recipeId = unusedRecipe(iterationId);
+    const path = `/meals/plan/iterations/${iterationId}/entries`;
+    expect((await viewer("POST", path, { date: "2026-11-06", recipeId })).status).toBe(403);
+    expect((await call("POST", path, { date: "2026-11-06", recipeId: "nope" })).status).toBe(404);
+    expect((await call("POST", "/meals/plan/iterations/nope/entries", { date: "2026-11-06", recipeId })).status).toBe(404);
+    expect((await call("POST", path, { date: "2026-11-08", recipeId })).status).toBe(422);
+    expect((await call("POST", path, { date: "2026-11-05", recipeId })).status).toBe(409);
+    expect((await call("POST", path, { date: "2026-11-6", recipeId })).status).toBe(400);
+
+    const res = await call("POST", path, { date: "2026-11-06", recipeId });
+    expect(res.status).toBe(200);
+    expect(res.data.iterationId).toBe(iterationId);
+    expect(res.data.undo).toEqual({ restore: [expect.objectContaining({ id: iterationId })], remove: [] });
+    expect(onDay(iterationId, "2026-11-06")).toEqual(
+      expect.objectContaining({ mealType: "LUNCH", recipeId, servings: 2, isLeftover: false, sourceEntryId: null, isLocked: false }),
+    );
+    expect(itemsOf(iterationId).find((i) => i.ingredientId === ingOf(recipeId))).toEqual(expect.objectContaining({ date: "2026-11-05", quantity: "100" }));
+
+    expect((await call("POST", "/meals/plan/restore", res.data.undo)).status).toBe(200);
+    expect(onDay(iterationId, "2026-11-06")).toBeUndefined();
+    expect(itemsOf(iterationId).some((i) => i.ingredientId === ingOf(recipeId))).toBe(false);
+  });
+
+  it("moves a meal to an empty day, its ingredients to that day's list", async () => {
+    const iterationId = seedPlan();
+    clearDay(iterationId, "2026-11-06");
+    const monday = onDay(iterationId, "2026-11-02")!;
+    const res = await call("POST", `/meals/plan/entries/${monday.id}/move`, { date: "2026-11-06" });
+    expect(res.status).toBe(200);
+    expect(res.data.iterationId).toBe(iterationId);
+    expect(onDay(iterationId, "2026-11-02")).toBeUndefined();
+    expect(onDay(iterationId, "2026-11-06")!.id).toBe(monday.id);
+    expect(itemsOf(iterationId).filter((i) => i.ingredientId === ingOf(monday.recipeId)).map((i) => i.date)).toEqual(["2026-11-05"]);
+
+    await call("POST", "/meals/plan/restore", res.data.undo);
+    expect(onDay(iterationId, "2026-11-02")!.id).toBe(monday.id);
+    expect(onDay(iterationId, "2026-11-06")).toBeUndefined();
+  });
+
+  it("swaps two days; checks the day, the meal and the role", async () => {
+    const iterationId = seedPlan();
+    const sunday = onDay(iterationId, "2026-11-01")!;
+    const tuesday = onDay(iterationId, "2026-11-03")!;
+    const path = `/meals/plan/entries/${sunday.id}/move`;
+    expect((await viewer("POST", path, { date: "2026-11-03" })).status).toBe(403);
+    expect((await stranger("POST", path, { date: "2026-11-03" })).status).toBe(404);
+    expect((await call("POST", "/meals/plan/entries/nope/move", { date: "2026-11-03" })).status).toBe(404);
+    expect((await call("POST", path, { date: "2026-10-31" })).status).toBe(422);
+    expect((await call("POST", path, { date: "2026-11-01" })).data).toEqual({ iterationId, undo: null });
+
+    const res = await call("POST", path, { date: "2026-11-03" });
+    expect(res.status).toBe(200);
+    expect(onDay(iterationId, "2026-11-03")!.id).toBe(sunday.id);
+    expect(onDay(iterationId, "2026-11-01")!.id).toBe(tuesday.id);
+    expect(entriesOf(iterationId)).toHaveLength(7);
+
+    await call("POST", "/meals/plan/restore", res.data.undo);
+    expect(onDay(iterationId, "2026-11-01")!.id).toBe(sunday.id);
+    expect(onDay(iterationId, "2026-11-03")!.id).toBe(tuesday.id);
+  });
+
+  it("makes a leftover a meal of its own once it lies on or before its meal's day", async () => {
+    const iterationId = seedPlan();
+    let { cook, leftover } = makeLeftover(iterationId, "2026-11-02", "2026-11-03");
+    // Earlier, but still before the leftover: it stays a leftover.
+    await call("POST", `/meals/plan/entries/${cook.id}/move`, { date: "2026-11-01" });
+    expect(entriesOf(iterationId).find((e) => e.id === leftover.id)).toEqual(expect.objectContaining({ isLeftover: true, sourceEntryId: cook.id }));
+    // After the leftover: it stands on its own.
+    await call("POST", `/meals/plan/entries/${cook.id}/move`, { date: "2026-11-04" });
+    expect(entriesOf(iterationId).find((e) => e.id === leftover.id)).toEqual(
+      expect.objectContaining({ date: "2026-11-03", recipeId: cook.recipeId, isLeftover: false, sourceEntryId: null }),
+    );
+
+    // Moving the leftover itself: after its meal it stays one, before it it stands alone.
+    ({ cook, leftover } = makeLeftover(iterationId, "2026-11-05", "2026-11-06"));
+    await call("POST", `/meals/plan/entries/${leftover.id}/move`, { date: "2026-11-07" });
+    expect(entriesOf(iterationId).find((e) => e.id === leftover.id)).toEqual(
+      expect.objectContaining({ date: "2026-11-07", isLeftover: true, sourceEntryId: cook.id }),
+    );
+    const res = await call("POST", `/meals/plan/entries/${leftover.id}/move`, { date: "2026-11-05" });
+    const after = entriesOf(iterationId);
+    expect(after.find((e) => e.id === leftover.id)).toEqual(expect.objectContaining({ date: "2026-11-05", isLeftover: false, sourceEntryId: null }));
+    expect(after.find((e) => e.id === cook.id)!.date).toBe("2026-11-07");
+
+    // Undo puts the leftover back.
+    await call("POST", "/meals/plan/restore", res.data.undo);
+    expect(entriesOf(iterationId).find((e) => e.id === leftover.id)).toEqual(
+      expect.objectContaining({ date: "2026-11-07", isLeftover: true, sourceEntryId: cook.id }),
+    );
+  });
+});
+
+describe("moving shopping items", () => {
+  type Item = typeof shoppingListItems.$inferSelect;
+  let a: string; // list of Monday 2026-11-02
+  let b: string; // list of Thursday 2026-11-05
+  const item = (id: string): Item | undefined => db.select().from(shoppingListItems).where(eq(shoppingListItems.id, id)).get();
+  const itemsOn = (listId: string) => db.select().from(shoppingListItems).where(eq(shoppingListItems.shoppingListId, listId)).all();
+  const move = (id: string, body: unknown) => call("POST", `/meals/shopping/items/${id}/move`, body);
+
+  beforeEach(() => {
+    const iterationId = seedPlan();
+    const lists = db.select().from(shoppingLists).where(eq(shoppingLists.iterationId, iterationId)).all();
+    a = lists.find((l) => l.shoppingDate === "2026-11-02")!.id;
+    b = lists.find((l) => l.shoppingDate === "2026-11-05")!.id;
+  });
+
+  it("moves a whole item, and back", async () => {
+    const x = itemsOn(a)[0];
+    expect((await viewer("POST", `/meals/shopping/items/${x.id}/move`, { listId: b })).status).toBe(403);
+    const res = await move(x.id, { listId: b });
+    expect(res.status).toBe(200);
+    expect(res.data).toEqual({ id: x.id, merged: false, previousQuantity: null, fromListId: a, quantity: "100" });
+    expect(item(x.id)!.shoppingListId).toBe(b);
+    const back = await move(x.id, { listId: a });
+    expect(back.data).toEqual({ id: x.id, merged: false, previousQuantity: null, fromListId: b, quantity: "100" });
+    expect(item(x.id)).toEqual(x);
+  });
+
+  it("merges into an open item of the same ingredient; undo moves the quantity back", async () => {
+    const y = itemsOn(a)[0];
+    const open = await call("POST", `/meals/shopping/lists/${b}/items`, { name: `Ing ${y.ingredientId - 1}`, quantity: "30", unitId: 1 });
+    expect(open.data.merged).toBe(false);
+    const res = await move(y.id, { listId: b });
+    expect(res.data).toEqual({ id: open.data.id, merged: true, previousQuantity: "30", fromListId: a, quantity: "100" });
+    expect(item(y.id)).toBeUndefined();
+    expect(item(open.data.id)!.quantity).toBe("130");
+
+    const undo = await move(res.data.id, { listId: res.data.fromListId, quantity: res.data.quantity });
+    expect(undo.status).toBe(200);
+    expect(undo.data).toEqual({ id: expect.any(String), merged: false, previousQuantity: null, fromListId: b, quantity: "100" });
+    expect(item(open.data.id)!.quantity).toBe("30");
+    expect(item(undo.data.id)).toEqual(expect.objectContaining({ shoppingListId: a, ingredientId: y.ingredientId, unitId: y.unitId, quantity: "100", isChecked: false }));
+  });
+
+  it("moves part of an item, leaving the rest; moving it back merges it again", async () => {
+    const y = itemsOn(a)[0];
+    expect((await move(y.id, { listId: b, quantity: "0" })).status).toBe(422);
+    expect((await move(y.id, { listId: b, quantity: "100.5" })).status).toBe(422);
+    expect((await move(y.id, { listId: b, quantity: "lots" })).status).toBe(422);
+    const res = await move(y.id, { listId: b, quantity: "40,5" });
+    expect(res.status).toBe(200);
+    expect(res.data).toEqual({ id: expect.any(String), merged: false, previousQuantity: null, fromListId: a, quantity: "40.5" });
+    expect(res.data.id).not.toBe(y.id);
+    expect(item(y.id)!.quantity).toBe("59.5");
+    expect(item(res.data.id)).toEqual(expect.objectContaining({ shoppingListId: b, ingredientId: y.ingredientId, quantity: "40.5", isChecked: false }));
+
+    const back = await move(res.data.id, { listId: a });
+    expect(back.data).toEqual({ id: y.id, merged: true, previousQuantity: "59.5", fromListId: b, quantity: "40.5" });
+    expect(item(y.id)!.quantity).toBe("100");
+    expect(item(res.data.id)).toBeUndefined();
+
+    // All of it is the whole item.
+    const all = await move(y.id, { listId: b, quantity: 100 });
+    expect(all.data).toEqual({ id: y.id, merged: false, previousQuantity: null, fromListId: a, quantity: "100" });
+  });
+
+  it("keeps a ticked item's tick and doesn't merge it", async () => {
+    const z = itemsOn(a)[0];
+    db.update(shoppingListItems).set({ isChecked: true }).where(eq(shoppingListItems.id, z.id)).run();
+    const open = await call("POST", `/meals/shopping/lists/${b}/items`, { name: `Ing ${z.ingredientId - 1}`, quantity: "30", unitId: 1 });
+    const res = await move(z.id, { listId: b });
+    expect(res.data).toEqual({ id: z.id, merged: false, previousQuantity: null, fromListId: a, quantity: "100" });
+    expect(item(z.id)).toEqual(expect.objectContaining({ shoppingListId: b, isChecked: true, quantity: "100" }));
+    expect(item(open.data.id)!.quantity).toBe("30");
+    await move(z.id, { listId: a });
+    expect(item(z.id)).toEqual(expect.objectContaining({ shoppingListId: a, isChecked: true, quantity: "100" }));
+  });
+
+  it("refuses the same list and what isn't the family's", async () => {
+    const x = itemsOn(a)[0];
+    expect((await move(x.id, { listId: a })).status).toBe(422);
+    expect((await move("nope", { listId: b })).status).toBe(404);
+    expect((await move(x.id, { listId: "nope" })).status).toBe(404);
+    expect((await stranger("POST", `/meals/shopping/items/${x.id}/move`, { listId: b })).status).toBe(404);
+    // Another family's list.
+    const other = makeFamily(db, makeUser(db).id).id;
+    db.insert(mealPlans).values({ id: "other-plan", familyId: other, createdAt: NOW }).run();
+    db.insert(planIterations).values({ id: "other-it", mealPlanId: "other-plan", startDate: "2026-11-01", endDate: "2026-11-07", createdAt: NOW }).run();
+    db.insert(shoppingLists).values({ id: "other-list", iterationId: "other-it", shoppingDate: "2026-11-02", createdAt: NOW }).run();
+    expect((await move(x.id, { listId: "other-list" })).status).toBe(404);
+    expect(item(x.id)).toEqual(x);
   });
 });
 

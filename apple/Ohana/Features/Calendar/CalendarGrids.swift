@@ -39,6 +39,8 @@ struct CalendarDayCell: View, Equatable {
         var selected = false
         /// The fill handle would fill it.
         var preview = false
+        /// An event dragged over the grid would land on it.
+        var dropTarget = false
         var focused = false
         var isToday = false
         var gap = false
@@ -114,6 +116,13 @@ struct CalendarDayCell: View, Equatable {
             }
         }
         .overlay {
+            if info.dropTarget {
+                // Like the fill handle's preview, a little stronger: it shows on selected days too.
+                shape.fill(Color.accentColor.opacity(0.15))
+                    .overlay(shape.strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 2, dash: [4, 2])))
+            }
+        }
+        .overlay {
             if focused {
                 // Thicker than the selection's border, with a white line inside it.
                 shape.strokeBorder(Color.accentColor, lineWidth: 3.5)
@@ -186,6 +195,9 @@ struct CalendarDayCell: View, Equatable {
                     Label(event.line, systemImage: event.isAppointment ? "stethoscope" : "clock")
                         .font(.caption2)
                         .lineLimit(1)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .modifier(CalendarEventDragSource(store: store, event: event, enabled: !info.readOnly,
+                                                          inGrid: true))
                 }
                 ForEach(birthdays, id: \.self) { b in
                     Text(CalendarText.birthday(b)).font(.caption2).lineLimit(1)

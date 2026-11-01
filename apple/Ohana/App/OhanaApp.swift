@@ -1,8 +1,11 @@
+import CoreSpotlight
 import SwiftUI
+import UserNotifications
 
 @main
 struct OhanaApp: App {
     @State private var app: AppModel
+    @Environment(\.scenePhase) private var scenePhase
     #if canImport(UIKit)
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     #else
@@ -12,7 +15,8 @@ struct OhanaApp: App {
     init() {
         let app = AppModel()
         _app = State(initialValue: app)
-        // Notification taps open their page.
+        // The notification center's delegate: every notification (a push, a cook timer's) shows
+        // while the app is open too, and a push's tap opens its page.
         PushNotifications.shared.start(app)
         #if os(macOS)
         // The assistant in the menu bar: a click away while the window is hidden or another app
@@ -34,11 +38,21 @@ struct OhanaApp: App {
                 .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
                     if let url = activity.webpageURL { app.open(url) }
                 }
+                // A recipe picked in Spotlight (`RecipeSpotlight`).
+                .onContinueUserActivity(CSSearchableItemActionType) { activity in
+                    guard let id = activity.userInfo?[CSSearchableItemActivityIdentifier] as? String else { return }
+                    Task { await app.openSpotlightItem(id) }
+                }
+                .modifier(RecipeSpotlightUpdates(app: app))
         }
         #if os(macOS)
         .defaultSize(width: 1280, height: 820)
         .windowToolbarStyle(.unified)
         #endif
         .commands { ShellCommands() }
+        // Cook timers that finished while the app was away leave the Live Activity.
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { CookTimers.shared.refresh() }
+        }
     }
 }

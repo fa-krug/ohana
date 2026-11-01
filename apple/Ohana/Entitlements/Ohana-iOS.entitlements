@@ -3,6 +3,9 @@
 <plist version="1.0">
 <dict>
 	<!-- Identical in Ohana-macOS.entitlements: shares the API token Keychain item. -->
+	<!-- A finished cook timer's notification comes through a Focus. -->
+	<key>com.apple.developer.usernotifications.time-sensitive</key>
+	<true/>
 	<key>keychain-access-groups</key>
 	<array>
 		<string>$(AppIdentifierPrefix)de.fa-krug.Ohana</string>

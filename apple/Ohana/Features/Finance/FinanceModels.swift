@@ -200,6 +200,13 @@ struct FinanceCategorizeResult: Codable {
     var remaining: Int
     var ai: Bool
     var inverse: [JSONValue]
+    /// Which category each sorted transaction got.
+    var assignments: [Assignment]?
+
+    struct Assignment: Codable {
+        var id: String
+        var categoryId: String
+    }
 }
 
 /// GET /ai/settings, the one field the finances need: whether the assistant is set up.
@@ -223,7 +230,14 @@ struct FinanceShoppingLinks: Codable, Hashable {
     /// The shopping list a transaction belongs to: one in a groceries category whose day is
     /// within ± 1 day of a shopping day (the nearest; on a tie the earlier list).
     func list(for date: String, categoryId: String?) -> Trip? {
-        guard let categoryId, categoryIds.contains(categoryId), let day = Day(date) else { return nil }
+        guard let categoryId, categoryIds.contains(categoryId) else { return nil }
+        return trip(near: date)
+    }
+
+    /// The shopping day within ± 1 day of the date, whatever the category (the nearest; on a
+    /// tie the earlier list).
+    func trip(near date: String) -> Trip? {
+        guard let day = Day(date) else { return nil }
         var best: Trip?
         var bestDistance = Int.max
         for trip in lists {

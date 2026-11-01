@@ -176,6 +176,12 @@ struct CalendarYearDays: View, Equatable {
             context.stroke(cache.border.offsetBy(dx: origin.x, dy: origin.y), with: .color(.accentColor),
                            style: StrokeStyle(lineWidth: 1.5, dash: [4, 2]))
         }
+        if info.dropTarget {
+            // An event dragged over the grid would land here (shows on selected days too).
+            context.fill(shape, with: .color(Color.accentColor.opacity(0.15)))
+            context.stroke(cache.border.offsetBy(dx: origin.x, dy: origin.y), with: .color(.accentColor),
+                           style: StrokeStyle(lineWidth: 2, dash: [4, 2]))
+        }
         if info.focused {
             context.stroke(cache.focus.offsetBy(dx: origin.x, dy: origin.y), with: .color(.accentColor), lineWidth: 3)
             context.stroke(cache.focusInner.offsetBy(dx: origin.x, dy: origin.y), with: .color(.white), lineWidth: 1)

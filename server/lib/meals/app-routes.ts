@@ -15,6 +15,8 @@
 //   GET    /meals/recipes                     ?list&q&sort&locale&tags&offset&limit → {items, totalCount}
 //   POST   /meals/recipes                     an UpsertRecipeInput → {id}
 //   POST   /meals/recipes/bulk                {recipes} (the generator's picks) → {createdIds}
+//   POST   /meals/recipes/import              {url, text?, title?, imageUrl?} → {id, title}: one recipe from a
+//                                              web page by the family's AI, saved TO_TRY (lib/meals/ai/import.ts)
 //   GET    /meals/recipes/{id}                {recipe, ingredients, units} (only those it uses)
 //   POST   /meals/recipes/{id}/move           → {listType} (KNOWN ⇄ TO_TRY)
 //   PUT    /meals/recipes/{id}/image          raw image/jpeg|png|webp bytes, or multipart "image" → {image}
@@ -30,6 +32,7 @@ import { AuthError } from "@/lib/auth/errors";
 import type { Db } from "@/lib/db";
 import { ingredients as ingredientsTable, recipes, units as unitsTable } from "@/lib/db/schema";
 import { generateImage } from "./ai/generate";
+import { importRecipe, importRecipeSchema } from "./ai/import";
 import { generateRecipeImage } from "./ai/recipes";
 import { mealsAi } from "./ai/status";
 import { ALLOWED_UPLOAD_TYPES, MAX_UPLOAD_BYTES } from "./images/config";
@@ -48,7 +51,7 @@ const createTagSchema = z.object({ category: z.string(), ...tagNames });
 const updateTagSchema = z.object(tagNames);
 
 export interface MealsAppOptions {
-  /** The AI the photo route uses (tests pass a fake one). */
+  /** The AI the photo and import routes use (tests pass a fake one). */
   aiEnv?: (db: Db) => AiEnv;
 }
 
@@ -119,6 +122,26 @@ export function createMealsApp(options: MealsAppOptions = {}) {
       return write(ctx, async (familyId) => {
         const input = bulkCreateSchema.parse(await readBody(ctx.req));
         return bulkCreateRecipes(ctx.db, familyId, input, ctx.now);
+      });
+    }
+    if (id === "import" && sub === undefined && m === "POST") {
+      return write(ctx, async (familyId) => {
+        if (!moduleEnabled("assistant")) throw new HttpError(404, "The assistant is turned off on this server");
+        const input = importRecipeSchema.parse(await readBody(ctx.req));
+        const env = aiEnv(ctx.db);
+        const model = await familyModel(env, familyId);
+        if (!model) throw new HttpError(400, "The AI isn't set up yet (Settings → AI)");
+        return importRecipe({
+          db: ctx.db,
+          familyId,
+          input,
+          language: ctx.requireUser().preferredLanguage === "de" ? "de" : "en",
+          provider: model.provider,
+          modelNet: env.modelNet,
+          net: env.net,
+          now: ctx.now,
+          signal: ctx.req.signal,
+        });
       });
     }
     if (sub === undefined) {

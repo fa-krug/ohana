@@ -271,5 +271,19 @@
   "Subcategory of %@": "Unterkategorie von %@",
   "The next import of this bank’s files asks again how their columns map.": "Beim nächsten Import der Dateien dieser Bank wird wieder nach der Zuordnung der Spalten gefragt.",
   "The overview stops comparing with it; its figures are gone.": "Die Übersicht vergleicht nicht mehr damit; die Werte sind dann gelöscht.",
-  "worse": "schlechter"
+  "worse": "schlechter",
+  "Scan Receipt": "Kassenbon scannen",
+  "Scan Receipt…": "Kassenbon scannen …",
+  "Add a transaction from a receipt": "Eine Buchung von einem Kassenbon hinzufügen",
+  "Reading the receipt…": "Kassenbon wird gelesen …",
+  "The receipt couldn’t be read.": "Der Kassenbon konnte nicht gelesen werden.",
+  "Nothing could be read from the receipt": "Vom Kassenbon ließ sich nichts lesen",
+  "Filled in from the receipt": "Vom Kassenbon ausgefüllt",
+  "No total found: type in the amount.": "Keine Summe gefunden: Gib den Betrag ein.",
+  "Read on this device. Check the amount and the date before saving.": "Auf diesem Gerät gelesen. Prüfe Betrag und Datum vor dem Speichern.",
+  "Left without one, it is sorted into a category when you save.": "Ohne Kategorie wird sie beim Speichern einsortiert.",
+  "Linked to the shopping of %@": "Mit dem Einkauf vom %@ verknüpft",
+  "Groceries of the shopping on %@": "Lebensmittel vom Einkauf am %@",
+  "Sorted into %@, linked to the shopping of %@": "In %1$@ einsortiert, mit dem Einkauf vom %2$@ verknüpft",
+  "Sorted into %@": "In %@ einsortiert"
 }

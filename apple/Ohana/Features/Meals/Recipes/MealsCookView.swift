@@ -7,7 +7,9 @@ import UIKit
 /// for a recipe with both, by hand or with the machine; then one step at a time in big type,
 /// swiping (or ← →) between them, with the step's ingredients scaled. Always presented over
 /// everything (`cookPresentation`), so it has its own Close. The screen stays awake on iPhone
-/// and iPad while it's shown; the step reached is remembered per device.
+/// and iPad while it's shown; the step reached is remembered per device. Durations in a step
+/// ("simmer for 20 minutes", `StepDurations`) start a timer (`CookTimers`: a bar here, a Live
+/// Activity, a notification when it's done).
 struct MealsCookView: View {
     let recipeID: String
     var servings: Int?
@@ -57,6 +59,8 @@ private struct RecipeCookSession: View {
     @State private var method: RecipeCookMethod?
     @State private var started = false
     @State private var stepIndex = 0
+    @State private var timerStarts = 0
+    private let timers = CookTimers.shared
     @FocusState private var pagerFocused: Bool
     @Environment(\.dismiss) private var dismiss
     @ScaledMetric(relativeTo: .largeTitle) private var photoSize: CGFloat = 180
@@ -189,6 +193,7 @@ private struct RecipeCookSession: View {
         VStack(spacing: 16) {
             progress
             pager
+            timersBar
             controls
         }
         .padding()
@@ -201,6 +206,7 @@ private struct RecipeCookSession: View {
         .onKeyPress(.leftArrow) { go(-1); return .handled }
         .onKeyPress(.rightArrow) { go(1); return .handled }
         .onAppear { pagerFocused = true }
+        .sensoryFeedback(.start, trigger: timerStarts)
     }
 
     private var progress: some View {
@@ -248,12 +254,12 @@ private struct RecipeCookSession: View {
         #if os(iOS)
         TabView(selection: $stepIndex) {
             ForEach(Array(steps.enumerated()), id: \.element.id) { index, step in
-                stepCard(step).tag(index).padding(.horizontal, 4)
+                stepCard(step, index: index).tag(index).padding(.horizontal, 4)
             }
         }
         .tabViewStyle(.page(indexDisplayMode: .never))
         #else
-        stepCard(steps[min(stepIndex, steps.count - 1)])
+        stepCard(steps[min(stepIndex, steps.count - 1)], index: min(stepIndex, steps.count - 1))
             .id(stepIndex)
             .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.98)), removal: .opacity))
             .gesture(DragGesture(minimumDistance: 30).onEnded { value in
@@ -264,7 +270,7 @@ private struct RecipeCookSession: View {
         #endif
     }
 
-    private func stepCard(_ step: RecipeStep) -> some View {
+    private func stepCard(_ step: RecipeStep, index: Int) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 if let program = RecipeProgram.title(of: step.programType) {
@@ -273,10 +279,20 @@ private struct RecipeCookSession: View {
                         .foregroundStyle(ModuleTint.meals)
                 }
                 if !step.instruction.isEmpty {
-                    Text(step.instruction)
+                    let durations = StepDurations.find(in: step.instruction)
+                    Text(StepDurations.linked(step.instruction, durations: durations))
                         .font(.system(.title, design: .rounded, weight: .medium))
                         .lineSpacing(6)
                         .fixedSize(horizontal: false, vertical: true)
+                        .tint(ModuleTint.meals)
+                        .environment(\.openURL, OpenURLAction { url in
+                            guard let found = StepDurations.index(of: url), durations.indices.contains(found) else {
+                                return .systemAction
+                            }
+                            startTimer(step, index: index, duration: found, seconds: durations[found].seconds)
+                            return .handled
+                        })
+                        .accessibilityHint(durations.isEmpty ? Text(verbatim: "") : Text("Durations start a timer"))
                 }
                 RecipeStepParams(step: step)
                     .font(.title3)
@@ -297,6 +313,83 @@ private struct RecipeCookSession: View {
         .scrollBounceBehavior(.basedOnSize)
         .contentCard(cornerRadius: 32, padding: 0, tint: ModuleTint.meals)
         .clipShape(.rect(cornerRadius: 32))
+    }
+
+    // MARK: Timers
+
+    private func startTimer(_ step: RecipeStep, index: Int, duration: Int, seconds: Int) {
+        withAnimation(.snappy) {
+            _ = timers.start(source:"\(recipe.detail.id)/\(step.id)/\(duration)", recipeID: recipe.detail.id,
+                             recipeTitle: recipe.detail.title, stepID: step.id,
+                             stepLabel: String(localized: "Step \(index + 1)"), instruction: step.instruction,
+                             seconds: seconds)
+        }
+        timerStarts += 1
+    }
+
+    /// The timers, soonest first: running ones count down, finished ones ring until dismissed.
+    /// Tapping one shows its step.
+    @ViewBuilder private var timersBar: some View {
+        let all = timers.sorted
+        if !all.isEmpty {
+            ScrollView(.horizontal) {
+                HStack(spacing: 8) {
+                    ForEach(all) { timerChip($0) }
+                }
+                .padding(.horizontal, 2)
+            }
+            .scrollIndicators(.hidden)
+            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+            .transition(.opacity.combined(with: .move(edge: .bottom)))
+        }
+    }
+
+    private func timerChip(_ timer: CookTimer) -> some View {
+        let done = timer.isDone(at: timers.now)
+        let title = timer.recipeID == recipe.detail.id ? timer.stepLabel : "\(timer.recipeTitle) · \(timer.stepLabel)"
+        return HStack(spacing: 10) {
+            Button {
+                show(timer)
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: done ? "bell.fill" : "timer")
+                        .foregroundStyle(ModuleTint.meals)
+                        .symbolEffect(.wiggle, options: .repeating, isActive: done)
+                    Text(verbatim: title)
+                        .lineLimit(1)
+                    if done {
+                        Text("Done")
+                    } else {
+                        Text(timerInterval: timer.startedAt...timer.endsAt, countsDown: true)
+                            .monospacedDigit()
+                            .fixedSize()
+                    }
+                }
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Shows the step")
+            Button {
+                withAnimation(.snappy) { timers.remove(timer.id) }
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(done ? Text("Dismiss timer") : Text("Stop timer"))
+        }
+        .font(.headline)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background {
+            Capsule()
+                .fill(Color.cardBackground)
+                .overlay { Capsule().fill(ModuleTint.meals.opacity(done ? 0.3 : 0.12)) }
+        }
+    }
+
+    private func show(_ timer: CookTimer) {
+        guard timer.recipeID == recipe.detail.id, let index = steps.firstIndex(where: { $0.id == timer.stepID }) else { return }
+        withAnimation(.snappy) { stepIndex = index }
     }
 
     private var controls: some View {
