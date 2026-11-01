@@ -86,6 +86,22 @@ final class FamilySettingsModel {
         }
     }
 
+    /// A change from a sheet: thrown errors stay in the sheet.
+    func update(_ family: FamilyContext, success: String, _ action: (FamilyAPI) async throws -> Void) async throws {
+        try await action(family.api)
+        await load(family.api)
+        family.didChange(.family)
+        ErrorBanner.shared.success(success)
+    }
+
+    /// A new invite link, for `personId`'s member without an account or anyone.
+    func createInvite(_ family: FamilyContext, role: FamilyRole, personId: String?) async throws -> URL? {
+        let invite: FamilyNewInvite = try await family.api.send(.post, "/household/invites",
+                                                                 body: FamilyInviteInput(role: role, personId: personId))
+        await load(family.api)
+        return URL(string: invite.url)
+    }
+
     /// Shows an event's new state right away (the switch shouldn't wait for the server).
     func replace(_ pref: FamilyEventPref) {
         guard var household = state.value, let i = household.events.firstIndex(where: { $0.id == pref.id }) else { return }

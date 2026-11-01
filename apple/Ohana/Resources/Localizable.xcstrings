@@ -6525,6 +6525,16 @@
         }
       }
     },
+    "Invite link": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einladungslink"
+          }
+        }
+      }
+    },
     "Invite link created": {
       "localizations": {
         "de": {
@@ -10715,6 +10725,16 @@
         }
       }
     },
+    "Remove from the family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus der Familie entfernen"
+          }
+        }
+      }
+    },
     "Remove home address": {
       "localizations": {
         "de": {
@@ -12031,16 +12051,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Passwort festlegen …"
-          }
-        }
-      }
-    },
-    "Set birthday": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Geburtstag eintragen"
           }
         }
       }
@@ -15375,6 +15385,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bei jeder Rolle: Die ganze Familie ist nicht zu Hause, der Essensplan lässt diese Tage aus."
+          }
+        }
+      }
+    },
+    "With the link, %@ signs in with a new account or their existing one and keeps their birthday. Valid for 7 days, once.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit dem Link meldet sich %@ mit einem neuen oder dem bestehenden Konto an und behält den Geburtstag. 7 Tage gültig, einmalig."
           }
         }
       }

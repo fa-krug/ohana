@@ -1,8 +1,9 @@
 import SwiftUI
 
 /// Settings → Members (the web's members and invites cards): accounts with their role and
-/// birthday, people without an account, and the open invite links. Editors change roles, add,
-/// edit and remove; everyone sets their own birthday.
+/// birthday, people without an account, and the open invite links. A member's row opens their
+/// page (`FamilyMemberPage`) where editors change roles, edit and remove, and everyone sets
+/// their own birthday; editors add people and create invite links here.
 struct FamilyMembersView: View {
     @Environment(FamilyContext.self) private var family
     @Environment(AppModel.self) private var app
@@ -24,12 +25,6 @@ struct FamilyMembersView: View {
         .navigationTitle("Members")
         .sheet(item: $sheet) { sheet in
             switch sheet {
-            case let .birthday(title, value, userId):
-                FamilyBirthdaySheet(title: title, birthday: value) { birthday in
-                    try await update(success: String(localized: "Birthday saved.")) { api in
-                        try await api.perform(.patch, "/household/members/\(userId)", body: FamilyBirthdayInput(birthday: birthday))
-                    }
-                }
             case .addPerson:
                 FamilyPersonSheet(person: nil) { input in
                     let added: FamilyAddedPerson = try await family.api.send(.post, "/household/people", body: input)
@@ -38,15 +33,9 @@ struct FamilyMembersView: View {
                         sharedLink = FamilySharedLink(url: url, name: added.person.name)
                     }
                 }
-            case let .editPerson(person):
-                FamilyPersonSheet(person: person) { input in
-                    try await update(success: String(localized: "Saved.")) { api in
-                        try await api.perform(.patch, "/household/people/\(person.id)", body: input)
-                    }
-                }
             case .addByEmail:
                 FamilyAddByEmailSheet { input in
-                    try await update(success: String(localized: "Added.")) { api in
+                    try await model.update(family, success: String(localized: "Added.")) { api in
                         try await api.perform(.post, "/household/members", body: input)
                     }
                     await app.refresh()
@@ -98,7 +87,7 @@ struct FamilyMembersView: View {
                     Menu {
                         ForEach([FamilyRole.editor, .viewer], id: \.self) { role in
                             Button {
-                                createInvite(role: role, personId: nil, name: nil)
+                                createInvite(role: role)
                             } label: {
                                 Text(role.title)
                             }
@@ -120,11 +109,24 @@ struct FamilyMembersView: View {
 
     // MARK: Rows
 
+    /// A member's row; opens their page when there's something to change (editors: anyone,
+    /// everyone: their own birthday).
+    @ViewBuilder
     private func memberRow(_ member: FamilyMember, household: FamilyHousehold) -> some View {
         let isSelf = member.userId == household.selfId
-        let canBirthday = household.canEdit || isSelf
-        let canManage = household.canEdit && !isSelf
-        return HStack(spacing: 12) {
+        if household.canEdit || isSelf {
+            NavigationLink {
+                FamilyMemberPage(model: model, subject: .member(member.userId)).assistantButton()
+            } label: {
+                memberLabel(member, isSelf: isSelf)
+            }
+        } else {
+            memberLabel(member, isSelf: isSelf)
+        }
+    }
+
+    private func memberLabel(_ member: FamilyMember, isSelf: Bool) -> some View {
+        HStack(spacing: 12) {
             FamilyAvatar(name: member.label, tint: .ohana)
             VStack(alignment: .leading, spacing: 2) {
                 Text(isSelf ? String(localized: "\(member.label) (you)") : member.label)
@@ -139,117 +141,35 @@ struct FamilyMembersView: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
             }
-            Spacer(minLength: 8)
-            if canBirthday {
-                Menu {
-                    memberActions(member, canManage: canManage)
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                        .rowHitTarget()
-                        .accessibilityLabel(Text("Actions for \(member.label)"))
-                }
-                .menuStyle(.button)
-                .buttonStyle(.borderless)
-                .fixedSize()
-            }
-        }
-        .contextMenu {
-            if canBirthday { memberActions(member, canManage: canManage) }
         }
     }
 
+    /// A member without an account; editors open their page.
     @ViewBuilder
-    private func memberActions(_ member: FamilyMember, canManage: Bool) -> some View {
-        Button {
-            sheet = .birthday(title: member.label, value: member.birthday, userId: member.userId)
-        } label: {
-            Label("Set birthday", systemImage: "birthday.cake")
-        }
-        if canManage {
-            Picker(selection: Binding(get: { member.role }, set: { setRole(member, $0) })) {
-                ForEach([FamilyRole.editor, .viewer], id: \.self) { role in
-                    Text(role.title).tag(role)
-                }
+    private func personRow(_ person: FamilyPerson, household: FamilyHousehold) -> some View {
+        if household.canEdit {
+            NavigationLink {
+                FamilyMemberPage(model: model, subject: .person(person.id)).assistantButton()
             } label: {
-                Label("Role", systemImage: "person.badge.key")
+                personLabel(person, household: household)
             }
-            Divider()
-            Button(role: .destructive) {
-                confirmation = FamilyConfirmation(
-                    title: String(localized: "Remove \(member.label) from the family?"),
-                    button: String(localized: "Remove")
-                ) { remove("/household/members/\(member.userId)", refreshApp: true) }
-            } label: {
-                Label("Remove", systemImage: "trash")
-            }
+        } else {
+            personLabel(person, household: household)
         }
     }
 
-    private func personRow(_ person: FamilyPerson, household: FamilyHousehold) -> some View {
-        let invite = household.invite(for: person)
-        return HStack(spacing: 12) {
+    private func personLabel(_ person: FamilyPerson, household: FamilyHousehold) -> some View {
+        HStack(spacing: 12) {
             FamilyAvatar(name: person.name, tint: .secondary)
             VStack(alignment: .leading, spacing: 2) {
                 Text(person.name).fontWeight(.medium).lineLimit(2)
-                let status = invite == nil ? String(localized: "No account") : String(localized: "Invite link open")
+                let status = household.invite(for: person) == nil
+                    ? String(localized: "No account") : String(localized: "Invite link open")
                 Text(([status] + [person.birthday.map { FamilyBirthdays.text($0) }].compactMap { $0 }).joined(separator: " · "))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
             }
-            Spacer(minLength: 8)
-            if let link = invite?.link {
-                ShareLink(item: link) {
-                    Image(systemName: "square.and.arrow.up")
-                        .rowHitTarget()
-                        .accessibilityLabel(Text("Share invite link"))
-                }
-                .buttonStyle(.borderless)
-            }
-            if household.canEdit {
-                Menu {
-                    personActions(person)
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                        .rowHitTarget()
-                        .accessibilityLabel(Text("Actions for \(person.name)"))
-                }
-                .menuStyle(.button)
-                .buttonStyle(.borderless)
-                .fixedSize()
-            }
-        }
-        .contextMenu {
-            if household.canEdit { personActions(person) }
-        }
-    }
-
-    @ViewBuilder
-    private func personActions(_ person: FamilyPerson) -> some View {
-        Button {
-            sheet = .editPerson(person)
-        } label: {
-            Label("Edit", systemImage: "pencil")
-        }
-        Menu {
-            ForEach([FamilyRole.editor, .viewer], id: \.self) { role in
-                Button {
-                    createInvite(role: role, personId: person.id, name: person.name)
-                } label: {
-                    Text(role.title)
-                }
-            }
-        } label: {
-            Label("Invite", systemImage: "link")
-        }
-        Divider()
-        Button(role: .destructive) {
-            confirmation = FamilyConfirmation(
-                title: String(localized: "Remove \(person.name) from the family?"),
-                button: String(localized: "Remove")
-            ) { remove("/household/people/\(person.id)", refreshApp: false) }
-        } label: {
-            Label("Remove", systemImage: "trash")
         }
     }
 
@@ -261,7 +181,7 @@ struct FamilyMembersView: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
                     .textSelection(.enabled)
-                Text(inviteDetails(invite, household: household))
+                Text(household.details(of: invite))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -282,8 +202,7 @@ struct FamilyMembersView: View {
                     button: String(localized: "Revoke"),
                     message: String(localized: "Whoever has it can’t join with it anymore.")
                 ) {
-                    remove("/household/invites/\(invite.id)", refreshApp: false,
-                           success: String(localized: "Invite link revoked."))
+                    revoke(invite)
                 }
             } label: {
                 Text("Revoke").rowHitTarget()
@@ -292,68 +211,43 @@ struct FamilyMembersView: View {
         }
     }
 
-    private func inviteDetails(_ invite: FamilyInvite, household: FamilyHousehold) -> String {
-        var parts: [String] = []
-        if let person = household.person(invite.personId) { parts.append(String(localized: "for \(person.name)")) }
-        parts.append(invite.role == .editor ? String(localized: "Editor") : String(localized: "Viewer"))
-        if let date = invite.expiryDate {
-            parts.append(String(localized: "valid until \(date.formatted(date: .abbreviated, time: .omitted))"))
-        }
-        return parts.joined(separator: " · ")
-    }
-
     // MARK: Changes
 
     private func reload() async { await model.load(family.api) }
 
-    /// A change from a sheet: thrown errors stay in the sheet.
-    private func update(success: String, _ action: (FamilyAPI) async throws -> Void) async throws {
-        try await action(family.api)
-        await reload()
-        family.didChange(.family)
-        ErrorBanner.shared.success(success)
-    }
-
-    private func setRole(_ member: FamilyMember, _ role: FamilyRole) {
-        guard role != member.role else { return }
+    private func revoke(_ invite: FamilyInvite) {
         let api = family.api
-        model.change(family, success: String(localized: "Role changed.")) {
-            try await api.perform(.patch, "/household/members/\(member.userId)", body: FamilyRoleInput(role: role))
+        model.change(family, success: String(localized: "Invite link revoked.")) {
+            try await api.perform(.delete, "/household/invites/\(invite.id)")
         }
     }
 
-    private func remove(_ path: String, refreshApp: Bool, success: String = String(localized: "Removed.")) {
-        let api = family.api
-        model.change(family, success: success) {
-            try await api.perform(.delete, path)
-            if refreshApp { await app.refresh() }
-        }
-    }
-
-    private func createInvite(role: FamilyRole, personId: String?, name: String?) {
-        let api = family.api
+    private func createInvite(role: FamilyRole) {
         perform {
-            let invite: FamilyNewInvite = try await api.send(.post, "/household/invites",
-                                                              body: FamilyInviteInput(role: role, personId: personId))
-            await reload()
-            if let url = URL(string: invite.url) { sharedLink = FamilySharedLink(url: url, name: name) }
+            if let url = try await model.createInvite(family, role: role, personId: nil) {
+                sharedLink = FamilySharedLink(url: url)
+            }
         }
     }
 }
 
 enum FamilyMembersSheet: Identifiable {
-    case birthday(title: String, value: Day?, userId: String)
     case addPerson
-    case editPerson(FamilyPerson)
     case addByEmail
 
-    var id: String {
-        switch self {
-        case let .birthday(_, _, userId): "birthday|\(userId)"
-        case .addPerson: "addPerson"
-        case let .editPerson(person): "person|\(person.id)"
-        case .addByEmail: "addByEmail"
+    var id: Self { self }
+}
+
+extension FamilyHousehold {
+    /// "for Hanna · Viewer · valid until 8 Nov 2026"
+    func details(of invite: FamilyInvite) -> String {
+        var parts: [String] = []
+        if let person = person(invite.personId) { parts.append(String(localized: "for \(person.name)")) }
+        parts.append(invite.role == .editor ? String(localized: "Editor") : String(localized: "Viewer"))
+        if let date = invite.expiryDate {
+            parts.append(String(localized: "valid until \(date.formatted(date: .abbreviated, time: .omitted))"))
         }
+        return parts.joined(separator: " · ")
     }
 }
 
