@@ -5953,66 +5953,6 @@
         }
       }
     },
-    "Good afternoon": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Guten Tag"
-          }
-        }
-      }
-    },
-    "Good afternoon, %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Guten Tag, %@"
-          }
-        }
-      }
-    },
-    "Good evening": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Guten Abend"
-          }
-        }
-      }
-    },
-    "Good evening, %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Guten Abend, %@"
-          }
-        }
-      }
-    },
-    "Good morning": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Guten Morgen"
-          }
-        }
-      }
-    },
-    "Good morning, %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Guten Morgen, %@"
-          }
-        }
-      }
-    },
     "Grandma": {
       "localizations": {
         "de": {
@@ -6199,16 +6139,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wie viel haben wir dieses Jahr pro Monat für Lebensmittel ausgegeben?"
-          }
-        }
-      }
-    },
-    "How much did we spend on groceries?": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wie viel haben wir für Lebensmittel ausgegeben?"
           }
         }
       }
@@ -9539,16 +9469,6 @@
         }
       }
     },
-    "Opens the assistant with this question, ready to send": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Öffnet den Assistenten mit dieser Frage, bereit zum Senden"
-          }
-        }
-      }
-    },
     "Opens the invite in the browser, where you create your account. Then come back and sign in.": {
       "localizations": {
         "de": {
@@ -10111,16 +10031,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Planung"
-          }
-        }
-      }
-    },
-    "Plan next week's meals": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Plane das Essen für nächste Woche"
           }
         }
       }
@@ -15299,16 +15209,6 @@
         }
       }
     },
-    "Welcome to %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Willkommen bei %@"
-          }
-        }
-      }
-    },
     "Welcome to %@.": {
       "localizations": {
         "de": {
@@ -15405,26 +15305,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Was es heute zu essen gibt, aus dem Essensplan."
-          }
-        }
-      }
-    },
-    "What's for dinner today?": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Was gibt es heute zu essen?"
-          }
-        }
-      }
-    },
-    "What's on this week?": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Was steht diese Woche an?"
           }
         }
       }

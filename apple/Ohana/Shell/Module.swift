@@ -11,6 +11,21 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
 
     var id: String { rawValue }
 
+    /// The pages that aren't tabs on iPhone, whose tab bar holds five (the overview, three
+    /// modules and the search): sheets opened from the family button (`FamilyPicker`).
+    static var phonePages: [Module] {
+        #if os(iOS)
+        UIDevice.current.userInterfaceIdiom == .phone ? [.appointments, .settings] : []
+        #else
+        []
+        #endif
+    }
+
+    /// What isn't a tab on iPhone: those pages, and the assistant (a sheet there).
+    static var notTabs: [Module] {
+        phonePages.isEmpty ? [] : phonePages + [.assistant]
+    }
+
     var title: LocalizedStringKey {
         switch self {
         case .overview: "Overview"

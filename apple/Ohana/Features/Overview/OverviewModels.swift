@@ -214,18 +214,6 @@ enum OverviewFormat {
         from == to ? from.formatted() : "\(from.formatted()) – \(to.formatted())"
     }
 
-    /// A greeting by the time of day.
-    static func greeting(hour: Int, name: String) -> String {
-        let trimmed = name.trimmingCharacters(in: .whitespaces)
-        switch hour {
-        case 5..<12:
-            return trimmed.isEmpty ? String(localized: "Good morning") : String(localized: "Good morning, \(trimmed)")
-        case 12..<18:
-            return trimmed.isEmpty ? String(localized: "Good afternoon") : String(localized: "Good afternoon, \(trimmed)")
-        default:
-            return trimmed.isEmpty ? String(localized: "Good evening") : String(localized: "Good evening, \(trimmed)")
-        }
-    }
 }
 
 extension Color {
@@ -297,16 +285,8 @@ extension OverviewFormat {
     }
 }
 
-/// The "Ask Ohana…" field's example questions.
+/// The "Ask Ohana…" field.
 enum OverviewAsk {
-    static func suggestions(canEdit: Bool) -> [String] {
-        [
-            String(localized: "What's on this week?"),
-            canEdit ? String(localized: "Plan next week's meals") : String(localized: "What's for dinner today?"),
-            String(localized: "How much did we spend on groceries?"),
-        ]
-    }
-
     /// The question to send, or nil for a blank field.
     static func question(_ text: String) -> String? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
