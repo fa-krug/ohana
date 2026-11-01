@@ -368,7 +368,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   The cook view (`MealsCookView`) turns durations in a step's
   text into timer links (`StepDurations`, English and German); `CookTimers` (app-wide, kept in
   `UserDefaults`) schedules a time-sensitive local notification per timer (shown in the
-  foreground too: `CookTimers.NotificationDelegate`) and keeps one Live Activity for all running
+  foreground too: the notification center's delegate is `PushNotifications`) and keeps one Live Activity for all running
   timers (iOS: `apple/Shared/CookTimerAttributes.swift`, drawn by the widget extension
   `apple/OhanaWidgets/`, the XcodeGen target `OhanaWidgets` embedded in `Ohana`). German strings: per-module
   `apple/Localization/*.de.json`, merged into `Resources/Localizable.xcstrings` by
