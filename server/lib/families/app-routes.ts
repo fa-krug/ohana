@@ -1,11 +1,13 @@
-// Routes of the family API for the native app (apple/): the overview (/overview) and the
-// household settings (/household/...: members, people without an account, invites, the home
-// address, notification channels and events), which the web pages do with server actions.
+// Routes of the family API for the native app (apple/): the overview (/overview), the search
+// across the modules (/search) and the household settings (/household/...: members, people
+// without an account, invites, the home address, notification channels and events), which the
+// web pages do with server actions.
 // They call the same lib functions as those actions (same checks: viewers read, editors
 // change, a family keeps an editor). Registered before the module's other routes; null for
 // paths that aren't its own ("", links, export and import are handleFamily's).
 //
 // GET    /overview?today=YYYY-MM-DD            the dashboard (familyDashboard)
+// GET    /search?q=&today=YYYY-MM-DD&limit=    one search across the modules (searchFamily)
 // GET    /household                            everything the settings page shows
 // DELETE /household                            deletes the family (editors; sole member)
 // POST   /household/members {email, role}      adds an account by its sign-in name
@@ -44,14 +46,18 @@ import { createFamily, deleteFamily, type FamilyDto } from "./manage";
 import { addMember, listMembers, removeMember, setMemberBirthday, setRole } from "./members";
 import { addPerson, listPeople, removePerson, updatePerson } from "./people";
 import type { Role } from "./roles";
+import { SEARCH_DEFAULT_LIMIT, SEARCH_MAX_LIMIT, searchFamily } from "./search";
 
 type Handler = (ctx: Ctx, args: string[]) => Promise<Response>;
 
-/** Routes /overview and /household/...; null for anything else. */
+/** Routes /overview, /search and /household/...; null for anything else. */
 export function handleFamilyApp(ctx: Ctx): Promise<Response> | null {
   const { rest, method } = ctx;
   if (rest[0] === "overview" && rest.length === 1) {
     return method === "GET" ? overview(ctx) : notAllowed();
+  }
+  if (rest[0] === "search" && rest.length === 1) {
+    return method === "GET" ? search(ctx) : notAllowed();
   }
   if (rest[0] !== "household") return null;
   const sub = rest.slice(1);
@@ -100,6 +106,17 @@ async function overview(ctx: Ctx): Promise<Response> {
   const asked = ctx.url.searchParams.get("today");
   const today = asked && isValidDate(asked) ? asked : ctx.now.toISOString().slice(0, 10);
   return json(await familyDashboard(ctx.db, familyId, today));
+}
+
+// ---- Search ----
+
+async function search(ctx: Ctx): Promise<Response> {
+  const { user, familyId } = await member(ctx);
+  const params = ctx.url.searchParams;
+  const asked = params.get("today");
+  const today = asked && isValidDate(asked) ? asked : ctx.now.toISOString().slice(0, 10);
+  const limit = Math.min(SEARCH_MAX_LIMIT, Math.max(1, Number(params.get("limit")) || SEARCH_DEFAULT_LIMIT));
+  return json(searchFamily(ctx.db, familyId, user.id, params.get("q") ?? "", { today, limit }));
 }
 
 // ---- Household ----

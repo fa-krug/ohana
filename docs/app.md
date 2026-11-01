@@ -31,6 +31,14 @@ For a server on your own network without HTTPS, use its address with `http://` (
 - **Viewers** see everything but can't change anything; the app hides the editing controls.
 - Modules the server turned off disappear from the app.
 
+## Search
+
+The search tab (🔍, at the end of the iPhone's tab bar and at the top of the sidebar; ⌘K on the
+Mac and iPad keyboards) looks through every module at once: recipes, calendar events and notes,
+transactions, appointment searches, the people of the family and your own assistant chats. Every
+word you type has to appear (upper case and accents don't matter, so `muller` finds *Müller*); a
+result opens where it lives, a transaction in its editor.
+
 ## The assistant
 
 The ✨ button at the top right of every page opens the assistant next to what you're looking at
