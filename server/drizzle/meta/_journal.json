@@ -85,6 +85,13 @@
       "when": 1793520953378,
       "tag": "0011_reminders_shopping",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1793535050366,
+      "tag": "0012_events_series",
+      "breakpoints": true
     }
   ]
 }

@@ -25,13 +25,13 @@ final class CalendarStore {
         var updating: Bool
     }
 
-    /// An undoable change: the days' values before and after, a deleted event or one moved to
-    /// another day.
+    /// An undoable change: the days' values before and after, events added, changed or deleted
+    /// (each series before and after), or one moved to other days.
     enum Step {
         case entries(before: CalendarEntries, after: CalendarEntries)
         case notes(before: [Day: CalendarNote?], after: [Day: CalendarNote?])
-        case deletedEvent(CalendarDeletedEvent)
-        case movedEvent(id: String, from: Day, to: Day)
+        case events([CalendarEventChange])
+        case movedEvent(CalendarEventMove)
     }
 
     private enum Batch: Codable {
@@ -109,7 +109,7 @@ final class CalendarStore {
     private(set) var fill: CalendarFill?
     /// The day under an event being dragged over a grid (iPad, Mac): where it would land.
     private(set) var dropTarget: Day?
-    /// Where the month in detail shows its events (by "id@day"), in the grid's coordinate space
+    /// Where the month in detail shows its events (by "uid@day"), in the grid's coordinate space
     /// (`CalendarMonthGrid.space`): a press there drags the event instead of selecting days.
     /// Only the grid's gestures read it, so it isn't observed.
     @ObservationIgnored var eventLabels: [String: (day: Day, frame: CGRect)] = [:]
@@ -186,7 +186,7 @@ final class CalendarStore {
 
     var isLoaded: Bool { phase == .loaded }
     var pending: Bool { !queue.isEmpty || flushing }
-    /// Types and feed links are changed on the server at once, not queued: not while the copy
+    /// Types are changed on the server at once, not queued: not while the copy
     /// on the device shows.
     var typesReadOnly: Bool { readOnly || savedCopy != nil }
     var canUndo: Bool { !readOnly && !undoStack.isEmpty }
@@ -525,12 +525,10 @@ final class CalendarStore {
         switch step {
         case let .entries(b, a): commit(before ? b : a, record: false)
         case let .notes(b, a): commitNotes(before ? b : a, record: false)
-        case let .deletedEvent(deleted):
-            perform { [self] in
-                if before { try await restoreEvent(deleted) } else { try await removeEvent(deleted.event) }
-            }
-        case let .movedEvent(id, from, to):
-            shiftEvent(id, from: before ? to : from, to: before ? from : to)
+        case let .events(changes):
+            perform { [self] in try await restoreEvents(changes, before: before) }
+        case let .movedEvent(move):
+            shiftEvent(move, back: before)
         }
     }
 
@@ -890,61 +888,128 @@ final class CalendarStore {
         notify?(.calendar)
     }
 
-    // MARK: Feed links
-
-    /// "feed": a new feed address (the old one stops working); "legacy": removes the old link.
-    func rotateLink(_ link: String) async throws {
-        let state: CalendarState = try await api.send(.post, "/links", query: yearQuery, body: CalendarLinkBody(link: link))
-        family = state.family
-    }
-
     // MARK: Events
 
-    func saveEvent(_ input: CalendarEventInput, id: String?) async throws {
-        if let id {
-            let _: CalendarEvent = try await api.send(.patch, "/events/\(id)", body: input)
-        } else {
-            let _: CalendarEvent = try await api.send(.post, "/events", body: input)
+    /// The event (or occurrence) with this `uid`, wherever it shows.
+    func event(_ uid: String) -> CalendarEvent? {
+        find(uid).flatMap { day in events[day]?.first { $0.uid == uid } }
+    }
+
+    /// The first day of a series (GET /events/{id}): on it "this and the ones after it" are all of them.
+    func seriesStart(_ id: String) async throws -> Day {
+        let series: CalendarEventSeries = try await api.get("/events/\(id)")
+        return series.date
+    }
+
+    /// Saves the editor's event: a new one, or a change to `editing` — the whole event, or for an
+    /// occurrence of a series the one alone or it and the ones after it (`span`). Undo (⌘Z) puts
+    /// back what was there before.
+    func saveEvent(_ input: CalendarEventInput, editing event: CalendarEvent? = nil, span: CalendarEventSpan? = nil) async throws {
+        guard let event else {
+            let created: CalendarEventSeries = try await send(.create(input))
+            recordStep(.events([CalendarEventChange(id: created.id, before: nil, after: created)]))
+            return await changedEvents()
         }
-        notify?(.events)
-        await load(quiet: true)
+        let before: CalendarEventSeries = try await api.get("/events/\(event.id)")
+        let scope = CalendarEventScope(event, span: span, seriesStart: before.date)
+        let (input, keepRule) = CalendarEventRequest.moved(input, from: event, scope: scope)
+        let saved: CalendarEventSeries = try await send(.save(input, id: event.id, scope: scope, keepRule: keepRule))
+        if saved.id == event.id {
+            recordStep(.events([CalendarEventChange(id: event.id, before: before, after: saved)]))
+        } else {
+            // Split: the series now ends before the occurrence, and a new one starts with it.
+            let rest: CalendarEventSeries? = try? await api.get("/events/\(event.id)")
+            recordStep(.events([CalendarEventChange(id: event.id, before: before, after: rest),
+                                CalendarEventChange(id: saved.id, before: nil, after: saved)]))
+        }
+        await changedEvents()
     }
 
-    /// Deletes an event; undo (⌘Z, the toast) adds it again.
-    func deleteEvent(_ event: CalendarEvent) async throws {
-        try await removeEvent(event)
-        guard event.date.year == year else { return }
-        recordStep(.deletedEvent(CalendarDeletedEvent(event)))
+    /// Deletes an event, or of a series one occurrence or it and the ones after it (`span`); undo
+    /// (⌘Z, the toast) puts it back.
+    func deleteEvent(_ event: CalendarEvent, span: CalendarEventSpan? = nil) async throws {
+        guard !readOnly else { return }
+        let before: CalendarEventSeries = try await api.get("/events/\(event.id)")
+        let scope = CalendarEventScope(event, span: span, seriesStart: before.date)
+        let answer: CalendarEventDeleteAnswer = try await send(.delete(id: event.id, scope: scope))
+        removeLocally(event.id, scope)
+        recordStep(.events([CalendarEventChange(id: answer.series == nil ? nil : event.id, before: before, after: answer.series)]))
         showToast(String(localized: "Deleted “\(event.title)”"), undo: true)
+        await changedEvents()
     }
 
-    private func removeEvent(_ event: CalendarEvent) async throws {
-        try await api.perform(.delete, "/events/\(event.id)")
-        events[event.date]?.removeAll { $0.id == event.id }
+    /// Takes deleted occurrences off the days at once (the reload brings the server's).
+    private func removeLocally(_ id: String, _ scope: CalendarEventScope) {
+        for (day, list) in events {
+            let rest = list.filter { event in
+                guard event.id == id else { return true }
+                switch scope {
+                case .all: return false
+                case let .this(occurrence): return event.occurrence != occurrence
+                case let .future(occurrence): return (event.occurrence ?? event.date) < occurrence
+                }
+            }
+            if rest.count != list.count { events[day] = rest.isEmpty ? nil : rest }
+        }
+        version += 1
+    }
+
+    private func changedEvents() async {
         notify?(.events)
         await load(quiet: true)
     }
 
-    /// Moves an event to another day of the year (dropped there): here at once, then saved;
-    /// undo (⌘Z, the toast) moves it back. A booked appointment stays one.
+    private func send<T: Decodable>(_ request: CalendarEventRequest) async throws -> T {
+        let client = api.client
+        let (data, _) = try await client.data(for: client.request(request.method, api.path(request.path),
+                                                                  query: request.query, body: request.body))
+        return try client.decode(T.self, from: data)
+    }
+
+    /// Puts the events of an undo step as they were (`before`) or as the change made them.
+    private func restoreEvents(_ changes: [CalendarEventChange], before: Bool) async throws {
+        for change in before ? changes.reversed() : changes {
+            let state = before ? change.before : change.after
+            switch (change.id, state) {
+            case (nil, nil):
+                break
+            case let (id?, nil):
+                try await api.perform(.delete, "/events/\(id)")
+                change.id = nil
+            case let (id, series?):
+                let restored: CalendarEventSeries = try await send(.restore(series, id: id))
+                change.id = restored.id
+            }
+        }
+        await changedEvents()
+    }
+
+    /// Moves an event to start on another day (dropped there), its length kept: here at once,
+    /// then saved; undo (⌘Z, the toast) moves it back. An occurrence of a series moves on its own;
+    /// a booked appointment stays one.
     func moveEvent(_ event: CalendarEvent, to day: Day) {
-        guard !readOnly, day != event.date, day.year == year, find(event.id, near: event.date) != nil else { return }
-        shiftEvent(event.id, from: event.date, to: day)
-        recordStep(.movedEvent(id: event.id, from: event.date, to: day))
+        let length = CalendarMath.ordinal(event.endDate) - CalendarMath.ordinal(event.date)
+        guard !readOnly, day != event.date, day.year <= year, CalendarMath.add(day, length).year >= year,
+              find(event.uid, near: event.date) != nil else { return }
+        let move = CalendarEventMove(id: event.id, occurrence: event.occurrence, from: event.date, to: day, length: length)
+        shiftEvent(move, back: false)
+        recordStep(.movedEvent(move))
         showToast(String(localized: "Moved “\(event.title)” to \(CalendarText.day(day))"), undo: true)
     }
 
-    /// An event dropped on `day`: moved there when it is one of this family's events.
+    /// An event dropped on `day`: moved by as many days as there are from the day it was dragged
+    /// from, when it is one of this family's events.
     func dropEvent(_ item: CalendarEventDragItem, on day: Day) {
-        guard item.familyID == api.familyID, let from = Day(item.date),
-              let found = find(item.eventID, near: from), let event = events[found]?.first(where: { $0.id == item.eventID })
-        else { return }
-        moveEvent(event, to: day)
+        guard item.familyID == api.familyID, let from = Day(item.date) else { return }
+        let uid = item.occurrence.map { "\(item.eventID)@\($0)" } ?? item.eventID
+        guard let found = find(uid, near: from), let event = events[found]?.first(where: { $0.uid == uid }) else { return }
+        moveEvent(event, to: CalendarMath.add(event.date, CalendarMath.ordinal(day) - CalendarMath.ordinal(from)))
     }
 
-    /// The payload of an event's drag.
-    func dragItem(_ event: CalendarEvent) -> CalendarEventDragItem {
-        CalendarEventDragItem(familyID: api.familyID, eventID: event.id, date: event.date.description)
+    /// The payload of an event's drag from `day` (one of its days; its first by default).
+    func dragItem(_ event: CalendarEvent, on day: Day? = nil) -> CalendarEventDragItem {
+        CalendarEventDragItem(familyID: api.familyID, eventID: event.id, date: (day ?? event.date).description,
+                              occurrence: event.occurrence?.description)
     }
 
     /// While an event is dragged over a grid: the day it would land on (nil: none).
@@ -959,66 +1024,84 @@ final class CalendarStore {
         return eventLabels.values.contains { $0.day == day && $0.frame.contains(point) }
     }
 
-    /// The day an event is on: `near` when it is there, else wherever it is.
-    private func find(_ id: String, near day: Day) -> Day? {
-        if events[day]?.contains(where: { $0.id == id }) == true { return day }
-        return events.first { $0.value.contains { $0.id == id } }?.key
+    /// A day the event (by `uid`) is on: `near` when it is there, else any.
+    private func find(_ uid: String, near day: Day? = nil) -> Day? {
+        if let day, events[day]?.contains(where: { $0.uid == uid }) == true { return day }
+        return events.first { $0.value.contains { $0.uid == uid } }?.key
     }
 
-    /// Puts an event on `to` here and saves its new date (PATCH {date}); a failure puts it
-    /// back and shows why.
-    private func shiftEvent(_ id: String, from: Day, to: Day) {
-        relocate(id, from: from, to: to)
+    /// Puts an event on its new days here and saves them (PATCH {date, endDate}, for an occurrence
+    /// with `span=this`); a failure puts it back and shows why.
+    private func shiftEvent(_ move: CalendarEventMove, back: Bool) {
+        let (from, to) = back ? (move.to, move.from) : (move.from, move.to)
+        relocate(move.uid, to: to)
         Task {
             do {
-                try await api.perform(.patch, "/events/\(id)", body: CalendarEventDateBody(date: to))
+                let _: CalendarEventSeries = try await send(.move(id: move.id, occurrence: move.occurrence, date: to,
+                                                                  endDate: CalendarMath.add(to, move.length)))
                 notify?(.events)
             } catch {
-                relocate(id, from: to, to: from)
+                relocate(move.uid, to: from)
                 if !(error is CancellationError) { ErrorBanner.shared.show(error) }
             }
             await load(quiet: true)
         }
     }
 
-    /// Moves an event between days of `events`, in the server's order (by start time).
-    private func relocate(_ id: String, from: Day, to: Day) {
-        guard let day = find(id, near: from), var list = events[day],
-              let index = list.firstIndex(where: { $0.id == id }) else { return }
-        let event = list.remove(at: index)
-        events[day] = list.isEmpty ? nil : list
-        if to.year == year {
-            var target = events[to] ?? []
-            let moved = event.on(to)
-            let at = target.firstIndex { ($0.start ?? "") > (moved.start ?? "") } ?? target.endIndex
-            target.insert(moved, at: at)
-            events[to] = target
+    /// Moves an event to start on `start` in `events`: off the days it was on, onto each day of
+    /// the year it is on now, in the server's order (all day first, then by start).
+    private func relocate(_ uid: String, to start: Day) {
+        guard let day = find(uid), let event = events[day]?.first(where: { $0.uid == uid }) else { return }
+        for (day, list) in events where list.contains(where: { $0.uid == uid }) {
+            let rest = list.filter { $0.uid != uid }
+            events[day] = rest.isEmpty ? nil : rest
         }
-        // A load that started before this would bring the old day back.
+        let moved = event.on(start)
+        for day in CalendarMath.range(moved.date, moved.endDate) where day.year == year {
+            var list = events[day] ?? []
+            let key = moved.sortKey(on: day)
+            let at = list.firstIndex { $0.sortKey(on: day) > key } ?? list.endIndex
+            list.insert(moved, at: at)
+            events[day] = list
+        }
+        // A load that started before this would bring the old days back.
         version += 1
-    }
-
-    /// Undoing a deletion: the event again with what it had (POST /events). It gets a new id,
-    /// which a redo deletes; an appointment's booking comes back as an event of its own.
-    private func restoreEvent(_ deleted: CalendarDeletedEvent) async throws {
-        let restored: CalendarEvent = try await api.send(.post, "/events", body: CalendarEventInput(deleted.event))
-        deleted.event = restored
-        notify?(.events)
-        await load(quiet: true)
     }
 }
 
-/// A deleted event in the undo history: the event as it was, then as undo made it again.
-final class CalendarDeletedEvent {
-    var event: CalendarEvent
-    init(_ event: CalendarEvent) { self.event = event }
+/// An event moved to other days (dragged), for undo: its first day before and after.
+struct CalendarEventMove: Equatable {
+    let id: String
+    let occurrence: Day?
+    let from: Day
+    let to: Day
+    /// Days after the first it goes on for.
+    let length: Int
+
+    var uid: String { occurrence.map { "\(id)@\($0)" } ?? id }
+}
+
+/// One event in the undo history: the series as it was before a change and as the change left it
+/// (nil: it didn't exist, or was deleted), and its id on the server now: a series put back after
+/// it was deleted gets a new one.
+final class CalendarEventChange {
+    var id: String?
+    let before: CalendarEventSeries?
+    let after: CalendarEventSeries?
+
+    init(id: String?, before: CalendarEventSeries?, after: CalendarEventSeries?) {
+        self.id = id
+        self.before = before
+        self.after = after
+    }
 }
 
 extension CalendarEventInput {
-    /// What the event has, to save it again.
+    /// What the event (an occurrence of a series: that one) has, to edit it.
     init(_ event: CalendarEvent) {
-        self.init(date: event.date, start: event.start, end: event.end, title: event.title,
-                  location: event.location, person: event.person, note: event.note, url: event.url)
+        self.init(date: event.date, endDate: event.endDate, start: event.start, end: event.end, title: event.title,
+                  location: event.location, person: event.person, note: event.note, url: event.url,
+                  rrule: RepeatRule.canonical(event.rrule) ?? event.rrule)
     }
 }
 

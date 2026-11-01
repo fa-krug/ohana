@@ -1,6 +1,7 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ %@": {},
     "%@ (%@) becomes the booking, the others its parts": {
       "localizations": {
         "de": {
@@ -221,6 +222,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld schon importiert – übersprungen"
+          }
+        }
+      }
+    },
+    "%lld events are missing in Apple Calendar at once. To be safe they weren’t deleted in Ohana.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Termine fehlen auf einmal in Apple Kalender. Sicherheitshalber wurden sie in Ohana nicht gelöscht."
           }
         }
       }
@@ -579,6 +590,46 @@
         }
       }
     },
+    "%lld times": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "einmal"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld-mal"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "once"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld times"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld updated": {
       "localizations": {
         "de": {
@@ -671,6 +722,16 @@
         }
       }
     },
+    "(positions %@)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(Positionen %@)"
+          }
+        }
+      }
+    },
     "+ %lld more": {
       "localizations": {
         "de": {
@@ -727,6 +788,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "?"
+          }
+        }
+      }
+    },
+    "A change to how it repeats applies to this event and the ones after it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Änderung der Wiederholung gilt für diesen Termin und die danach."
           }
         }
       }
@@ -821,16 +892,6 @@
         }
       }
     },
-    "A read-only calendar feed. Apple Calendar checks it for changes regularly. The only link that works without signing in: it opens the calendar feed, nothing else.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ein schreibgeschützter Kalender-Feed. Apple Kalender prüft ihn regelmäßig auf Änderungen. Der einzige Link, der ohne Anmeldung funktioniert: Er öffnet nur das Kalender-Abo, sonst nichts."
-          }
-        }
-      }
-    },
     "A search watches Doctolib and jameda for a speciality near a place and tells you when an appointment frees up.": {
       "localizations": {
         "de": {
@@ -847,16 +908,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Eine Unterkategorie hat die Art ihrer obersten Kategorie."
-          }
-        }
-      }
-    },
-    "A subscription stored in iCloud appears on all your Apple devices and on iCloud.com.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ein in iCloud gespeichertes Abo erscheint auf all deinen Apple-Geräten und auf iCloud.com."
           }
         }
       }
@@ -1611,6 +1662,16 @@
         }
       }
     },
+    "After": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nach"
+          }
+        }
+      }
+    },
     "All accounts": {
       "localizations": {
         "de": {
@@ -1907,6 +1968,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Darstellung"
+          }
+        }
+      }
+    },
+    "Apple Calendar": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Kalender"
           }
         }
       }
@@ -2313,6 +2384,16 @@
         }
       }
     },
+    "Best a calendar of its own: every event in it goes to Ohana.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Am besten ein eigener Kalender: Jeder Termin darin kommt zu Ohana."
+          }
+        }
+      }
+    },
     "Birthday": {
       "localizations": {
         "de": {
@@ -2373,12 +2454,12 @@
         }
       }
     },
-    "Book it on the practice’s page first. Ohana then shows it in the calendar (and in the calendar feed, if you subscribed with booked appointments).": {
+    "Book it on the practice’s page first. Ohana then shows it in the calendar.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Buche ihn zuerst auf der Seite der Praxis. Ohana zeigt ihn dann im Kalender (und im Kalender-Feed, wenn du ihn mit gebuchten Terminen abonniert hast)."
+            "value": "Buche ihn zuerst auf der Seite der Praxis. Ohana zeigt ihn dann im Kalender."
           }
         }
       }
@@ -2409,16 +2490,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Gebuchte Termine"
-          }
-        }
-      }
-    },
-    "Booked appointments (with time)": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gebuchte Termine (mit Uhrzeit)"
           }
         }
       }
@@ -2573,36 +2644,6 @@
         }
       }
     },
-    "Calendar subscription": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kalender-Abo"
-          }
-        }
-      }
-    },
-    "Calendar subscriptions made with the old link stop updating.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Damit angelegte Kalender-Abos werden nicht mehr aktualisiert."
-          }
-        }
-      }
-    },
-    "Calendar subscriptions with the current address stop updating and need to be added again.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kalender-Abos mit der bisherigen Adresse werden nicht mehr aktualisiert und müssen neu hinzugefügt werden."
-          }
-        }
-      }
-    },
     "Calendar view": {
       "localizations": {
         "de": {
@@ -2619,6 +2660,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kalender, Finanzen, Essen und Arzttermine für deine Familie."
+          }
+        }
+      }
+    },
+    "Calendars aren’t allowed on this device.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalender sind auf diesem Gerät nicht erlaubt."
           }
         }
       }
@@ -2719,6 +2770,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "E-Mail ändern …"
+          }
+        }
+      }
+    },
+    "Change how it repeats": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ändern, wie er sich wiederholt"
           }
         }
       }
@@ -2933,12 +2994,12 @@
         }
       }
     },
-    "Check the day and time the practice confirmed. Ohana then shows it in the calendar (and in the calendar feed, if you subscribed with booked appointments).": {
+    "Check the day and time the practice confirmed. Ohana then shows it in the calendar.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prüfe Tag und Uhrzeit, die die Praxis bestätigt hat. Ohana zeigt ihn dann im Kalender (und im Kalender-Feed, wenn du ihn mit gebuchten Terminen abonniert hast)."
+            "value": "Prüfe Tag und Uhrzeit, die die Praxis bestätigt hat. Ohana zeigt ihn dann im Kalender."
           }
         }
       }
@@ -3513,16 +3574,6 @@
         }
       }
     },
-    "Copied": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kopiert"
-          }
-        }
-      }
-    },
     "Copied %@": {
       "localizations": {
         "de": {
@@ -3973,12 +4024,32 @@
         }
       }
     },
+    "Custom…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eigene …"
+          }
+        }
+      }
+    },
     "Cut days": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Tage ausschneiden"
+          }
+        }
+      }
+    },
+    "Daily": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Täglich"
           }
         }
       }
@@ -4029,6 +4100,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Datumsformat"
+          }
+        }
+      }
+    },
+    "Day": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tag"
+          }
+        }
+      }
+    },
+    "Day entries as all-day events": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tageseinträge als ganztägige Termine"
+          }
+        }
+      }
+    },
+    "Day of the month": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tag des Monats"
           }
         }
       }
@@ -4113,6 +4214,26 @@
         }
       }
     },
+    "Delete All Events": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Termine löschen"
+          }
+        }
+      }
+    },
+    "Delete All Future Events": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle zukünftigen Termine löschen"
+          }
+        }
+      }
+    },
     "Delete Chat": {
       "localizations": {
         "de": {
@@ -4149,6 +4270,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Suche löschen …"
+          }
+        }
+      }
+    },
+    "Delete This Event Only": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur diesen Termin löschen"
           }
         }
       }
@@ -5043,6 +5174,16 @@
         }
       }
     },
+    "End Repeat": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wiederholung endet"
+          }
+        }
+      }
+    },
     "End time": {
       "localizations": {
         "de": {
@@ -5093,12 +5234,12 @@
         }
       }
     },
-    "Entry types and the calendar feed": {
+    "Entry types, view and Apple Calendar": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Eintragsarten und das Kalender-Abo"
+            "value": "Eintragsarten, Ansicht und Apple Kalender"
           }
         }
       }
@@ -5143,6 +5284,186 @@
         }
       }
     },
+    "Events go both ways between Ohana and the calendar you pick, repeating ones and edits and deletions too; when both changed, Ohana’s wins. Day entries go to Apple Calendar only, as all-day events. It syncs on this device while Ohana is open.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termine gehen in beide Richtungen zwischen Ohana und dem gewählten Kalender, wiederkehrende sowie Änderungen und Löschungen auch; wurde beides geändert, gilt Ohana. Tageseinträge gehen nur zu Apple Kalender, als ganztägige Termine. Abgeglichen wird auf diesem Gerät, während Ohana geöffnet ist."
+          }
+        }
+      }
+    },
+    "Events that came from Apple Calendar stay in both.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termine, die aus Apple Kalender kamen, bleiben in beiden."
+          }
+        }
+      }
+    },
+    "Every %lld days": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Jeden Tag"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Alle %lld Tage"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Every day"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Every %lld days"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Every %lld months": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Jeden Monat"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Alle %lld Monate"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Every month"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Every %lld months"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Every %lld weeks": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Jede Woche"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Alle %lld Wochen"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Every week"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Every %lld weeks"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Every %lld years": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Jedes Jahr"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Alle %lld Jahre"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Every year"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Every %lld years"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Every (minutes)": {
       "localizations": {
         "de": {
@@ -5163,6 +5484,16 @@
         }
       }
     },
+    "Every 2 Weeks": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle 2 Wochen"
+          }
+        }
+      }
+    },
     "Every 30 minutes": {
       "localizations": {
         "de": {
@@ -5179,6 +5510,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "Alle 5 Minuten"
+          }
+        }
+      }
+    },
+    "Every Day": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jeden Tag"
+          }
+        }
+      }
+    },
+    "Every Month": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jeden Monat"
+          }
+        }
+      }
+    },
+    "Every Week": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jede Woche"
+          }
+        }
+      }
+    },
+    "Every Year": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jedes Jahr"
           }
         }
       }
@@ -5703,6 +6074,16 @@
         }
       }
     },
+    "Frequency": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Häufigkeit"
+          }
+        }
+      }
+    },
     "From": {
       "localizations": {
         "de": {
@@ -6043,16 +6424,6 @@
         }
       }
     },
-    "How to add it to iCloud": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "So fügst du es zu iCloud hinzu"
-          }
-        }
-      }
-    },
     "How to use": {
       "localizations": {
         "de": {
@@ -6119,16 +6490,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Symbol (ein Emoji)"
-          }
-        }
-      }
-    },
-    "Icons & notes": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Symbole & Notizen"
           }
         }
       }
@@ -7117,16 +7478,6 @@
         }
       }
     },
-    "Mac: Calendar → File → New Calendar Subscription…, paste the URL, set Location to iCloud so it syncs to all your devices, and pick an auto-refresh interval.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mac: Kalender → Ablage → Neues Kalenderabonnement …, URL einfügen, Ort auf iCloud stellen, damit es auf alle Geräte synchronisiert wird, und ein Aktualisierungsintervall wählen."
-          }
-        }
-      }
-    },
     "Machine": {
       "localizations": {
         "de": {
@@ -7147,12 +7498,12 @@
         }
       }
     },
-    "Make a new feed address?": {
+    "Made elsewhere (Apple Calendar, the assistant): it stays as it is unless you change it.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Eine neue Abo-Adresse erstellen?"
+            "value": "Anderswo erstellt (Apple Kalender, Assistent): Sie bleibt, wie sie ist, solange du sie nicht änderst."
           }
         }
       }
@@ -7373,6 +7724,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Monat"
+          }
+        }
+      }
+    },
+    "Monthly": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monatlich"
+          }
+        }
+      }
+    },
+    "Months without that day are skipped.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monate ohne diesen Tag werden übersprungen."
           }
         }
       }
@@ -7607,6 +7978,16 @@
         }
       }
     },
+    "Never": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie"
+          }
+        }
+      }
+    },
     "New": {
       "localizations": {
         "de": {
@@ -7737,6 +8118,16 @@
         }
       }
     },
+    "New calendar “%@”": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neuer Kalender „%@“"
+          }
+        }
+      }
+    },
     "New category": {
       "localizations": {
         "de": {
@@ -7803,26 +8194,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Neue Familie …"
-          }
-        }
-      }
-    },
-    "New feed address": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Neue Abo-Adresse"
-          }
-        }
-      }
-    },
-    "New feed address made.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Neue Abo-Adresse erstellt."
           }
         }
       }
@@ -8547,6 +8918,16 @@
         }
       }
     },
+    "Not everything could be synced: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht alles konnte abgeglichen werden: %@"
+          }
+        }
+      }
+    },
     "Not run yet: results appear after the first run.": {
       "localizations": {
         "de": {
@@ -8623,6 +9004,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "In deinen Erinnerungen ändert sich nichts, bis du es anwendest."
+          }
+        }
+      }
+    },
+    "Nothing changes in your calendars until you apply it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In deinen Kalendern ändert sich nichts, bis du es anwendest."
           }
         }
       }
@@ -8889,6 +9280,26 @@
         }
       }
     },
+    "Ohana has no access to your calendars.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohana hat keinen Zugriff auf deine Kalender."
+          }
+        }
+      }
+    },
+    "Ohana has no access to your calendars. Allow it in the Settings app under Privacy & Security → Calendars.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohana hat keinen Zugriff auf deine Kalender. Erlaube ihn in den Einstellungen unter Datenschutz & Sicherheit → Kalender."
+          }
+        }
+      }
+    },
     "Ohana has no access to your reminders.": {
       "localizations": {
         "de": {
@@ -8959,32 +9370,22 @@
         }
       }
     },
-    "Old calendar link": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alter Kalender-Link"
-          }
-        }
-      }
-    },
-    "Old link removed.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alter Link entfernt."
-          }
-        }
-      }
-    },
     "On": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "An"
+            "value": "Am"
+          }
+        }
+      }
+    },
+    "On Date": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Am Datum"
           }
         }
       }
@@ -9825,6 +10226,16 @@
         }
       }
     },
+    "Pick another calendar": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anderen Kalender wählen"
+          }
+        }
+      }
+    },
     "Pick one or more, or write your own answer": {
       "localizations": {
         "de": {
@@ -10415,6 +10826,16 @@
         }
       }
     },
+    "Reading your Apple calendars": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liest deine Apple-Kalender"
+          }
+        }
+      }
+    },
     "Reading your reminders": {
       "localizations": {
         "de": {
@@ -10795,16 +11216,6 @@
         }
       }
     },
-    "Remove the old calendar link?": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Den alten Kalender-Link entfernen?"
-          }
-        }
-      }
-    },
     "Remove the statistic average?": {
       "localizations": {
         "de": {
@@ -10971,6 +11382,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Die ausgewählten Tage vorwärts oder rückwärts wiederholen (oder den ▪-Anfasser ziehen)"
+          }
+        }
+      }
+    },
+    "Repeats on": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wiederholt am"
           }
         }
       }
@@ -11361,6 +11782,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "1 Rezept speichern"
+          }
+        }
+      }
+    },
+    "Save for future events": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für zukünftige Termine sichern"
+          }
+        }
+      }
+    },
+    "Save for this event only": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur für diesen Termin sichern"
           }
         }
       }
@@ -13009,6 +13450,16 @@
         }
       }
     },
+    "Stop and remove Ohana’s events from it": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beenden und Ohanas Termine daraus entfernen"
+          }
+        }
+      }
+    },
     "Stop dictation": {
       "localizations": {
         "de": {
@@ -13029,6 +13480,26 @@
         }
       }
     },
+    "Stop syncing": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abgleich beenden"
+          }
+        }
+      }
+    },
+    "Stop syncing with Apple Calendar?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abgleich mit Apple Kalender beenden?"
+          }
+        }
+      }
+    },
     "Stop timer": {
       "localizations": {
         "de": {
@@ -13045,6 +13516,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Diese Suche beenden"
+          }
+        }
+      }
+    },
+    "Stop, keep the events": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beenden, Termine behalten"
           }
         }
       }
@@ -13079,32 +13560,22 @@
         }
       }
     },
-    "Subscribe on this device": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Auf diesem Gerät abonnieren"
-          }
-        }
-      }
-    },
-    "Subscription URL": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abo-Adresse"
-          }
-        }
-      }
-    },
     "Suggest categories for our finances and add them.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Schlag Kategorien für unsere Finanzen vor und leg sie an."
+          }
+        }
+      }
+    },
+    "Suggesting changes to your Apple calendars": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schlägt Änderungen an deinen Apple-Kalendern vor"
           }
         }
       }
@@ -13194,7 +13665,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Abgleich"
+            "value": "Abgleichen"
           }
         }
       }
@@ -13205,6 +13676,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Jetzt abgleichen"
+          }
+        }
+      }
+    },
+    "Sync now": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jetzt abgleichen"
+          }
+        }
+      }
+    },
+    "Sync with Apple Calendar…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit Apple Kalender abgleichen …"
           }
         }
       }
@@ -13224,7 +13715,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gleiche ab …"
+            "value": "Wird abgeglichen …"
           }
         }
       }
@@ -13459,6 +13950,16 @@
         }
       }
     },
+    "The Apple calendar “%@” is gone. Pick another one.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Apple-Kalender „%@“ ist nicht mehr da. Wähle einen anderen."
+          }
+        }
+      }
+    },
     "The Reminders list is gone.": {
       "localizations": {
         "de": {
@@ -13515,6 +14016,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Der Assistent funktioniert dann für die ganze Familie nicht mehr, bis ein neuer Schlüssel gespeichert ist."
+          }
+        }
+      }
+    },
+    "The calendar is gone.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Den Kalender gibt es nicht mehr."
           }
         }
       }
@@ -13589,22 +14100,22 @@
         }
       }
     },
+    "The event is gone.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Den Termin gibt es nicht mehr."
+          }
+        }
+      }
+    },
     "The family starts without members: add them afterwards.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Die Familie beginnt ohne Mitglieder: Füge sie danach hinzu."
-          }
-        }
-      }
-    },
-    "The feed address of this family in family-planner. Its event ids live on, so subscriptions moved over keep their events.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die Abo-Adresse dieser Familie im Familienplaner. Ihre Termin-IDs bleiben erhalten, damit umgezogene Abos ihre Termine behalten."
           }
         }
       }
@@ -13839,6 +14350,26 @@
         }
       }
     },
+    "The repeat must end after the event starts.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Wiederholung muss nach dem Beginn des Termins enden."
+          }
+        }
+      }
+    },
+    "The repeat rule isn’t valid.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Wiederholungsregel ist ungültig."
+          }
+        }
+      }
+    },
     "The requests go to %@.": {
       "localizations": {
         "de": {
@@ -13939,6 +14470,16 @@
         }
       }
     },
+    "The time isn’t valid.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Zeit ist ungültig."
+          }
+        }
+      }
+    },
     "The whole family as a JSON file: the calendar of all years (entry types, entries, notes) and the finances (accounts, categories, transactions, settings). Viewers can export too.": {
       "localizations": {
         "de": {
@@ -13965,6 +14506,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Design"
+          }
+        }
+      }
+    },
+    "There is no calendar account on this device to make the calendar in.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf diesem Gerät gibt es keinen Kalender-Account, in dem der Kalender angelegt werden kann."
           }
         }
       }
@@ -14039,6 +14590,16 @@
         }
       }
     },
+    "This calendar can’t be changed.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieser Kalender kann nicht geändert werden."
+          }
+        }
+      }
+    },
     "This calendar can’t be loaded: the family doesn’t exist (anymore), or you’re not a member of it.": {
       "localizations": {
         "de": {
@@ -14095,6 +14656,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nur auf diesem Gerät. Bei einer in iCloud geteilten Liste sehen alle die Artikel: Schalte es dann auf einem Gerät ein."
+          }
+        }
+      }
+    },
+    "This is a repeating event.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dies ist ein wiederkehrender Termin."
+          }
+        }
+      }
+    },
+    "This is a repeating event. You can undo this.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dies ist ein wiederkehrender Termin. Du kannst das rückgängig machen."
           }
         }
       }
@@ -14165,6 +14746,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dieses Rezept hat noch keine Schritte."
+          }
+        }
+      }
+    },
+    "This repeat rule can’t be read.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Wiederholungsregel lässt sich nicht lesen."
           }
         }
       }
@@ -14245,16 +14836,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zeit für die nächste Runde!"
-          }
-        }
-      }
-    },
-    "Timed events such as booked doctor’s appointments; they name the doctor and the practice": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Termine mit Uhrzeit, z. B. gebuchte Arzttermine; sie nennen Arzt und Praxis"
           }
         }
       }
@@ -15029,6 +15610,26 @@
         }
       }
     },
+    "Weekday": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wochentag"
+          }
+        }
+      }
+    },
+    "Weekday of the month": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wochentag des Monats"
+          }
+        }
+      }
+    },
     "Weekends are left out (Skip weekends).": {
       "localizations": {
         "de": {
@@ -15045,6 +15646,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wochenenden werden beim Füllen, Einfügen und Umschalten von Bereichen ausgelassen"
+          }
+        }
+      }
+    },
+    "Weekly": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wöchentlich"
           }
         }
       }
@@ -15239,12 +15850,12 @@
         }
       }
     },
-    "When it ends, on the same day.": {
+    "When it ends; on a later day for an event of several days.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wann er endet, am selben Tag."
+            "value": "Wann er endet; an einem späteren Tag für einen mehrtägigen Termin."
           }
         }
       }
@@ -15305,6 +15916,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wo dein Konto angemeldet ist. Melde ein Gerät ab, das du nicht mehr nutzt oder nicht kennst."
+          }
+        }
+      }
+    },
+    "Which": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Welcher"
           }
         }
       }
@@ -15449,6 +16070,16 @@
         }
       }
     },
+    "Yearly": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jährlich"
+          }
+        }
+      }
+    },
     "You": {
       "localizations": {
         "de": {
@@ -15515,6 +16146,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Das lässt sich rückgängig machen."
+          }
+        }
+      }
+    },
+    "You can view this family only: its events and day entries go to the calendar you pick, nothing comes back. It syncs on this device while Ohana is open.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du kannst diese Familie nur ansehen: Ihre Termine und Tageseinträge gehen in den gewählten Kalender, nichts kommt zurück. Abgeglichen wird auf diesem Gerät, während Ohana geöffnet ist."
           }
         }
       }
@@ -16299,6 +16940,16 @@
         }
       }
     },
+    "all day": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ganztägig"
+          }
+        }
+      }
+    },
     "all per month": {
       "localizations": {
         "de": {
@@ -16325,6 +16976,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "zum Ansehen: sieht alles, ändert nichts"
+          }
+        }
+      }
+    },
+    "at a set time": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "zu einer festen Zeit"
           }
         }
       }
@@ -16385,6 +17046,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "täglich"
+          }
+        }
+      }
+    },
+    "day": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tag"
           }
         }
       }
@@ -16509,6 +17180,26 @@
         }
       }
     },
+    "fifth": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "fünfter"
+          }
+        }
+      }
+    },
+    "first": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "erster"
+          }
+        }
+      }
+    },
     "for %@": {
       "localizations": {
         "de": {
@@ -16525,6 +17216,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "gefunden"
+          }
+        }
+      }
+    },
+    "fourth": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vierter"
           }
         }
       }
@@ -16589,12 +17290,12 @@
         }
       }
     },
-    "iPhone / iPad: tap “Subscribe on this device” (or Settings → Apps → Calendar → Calendar Accounts → Add Account → Other → Add Subscribed Calendar, and paste the URL).": {
+    "in %@": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "iPhone / iPad: auf „Auf diesem Gerät abonnieren“ tippen (oder Einstellungen → Apps → Kalender → Kalenderaccounts → Account hinzufügen → Andere → Kalenderabo hinzufügen und die URL einfügen)."
+            "value": "im %@"
           }
         }
       }
@@ -16619,12 +17320,32 @@
         }
       }
     },
+    "in week %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "in Kalenderwoche %@"
+          }
+        }
+      }
+    },
     "instructions for AI agents": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Anleitung für KI-Agenten"
+          }
+        }
+      }
+    },
+    "last": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "letzter"
           }
         }
       }
@@ -16645,6 +17366,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "zuletzt benutzt %@"
+          }
+        }
+      }
+    },
+    "location: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ort: %@"
           }
         }
       }
@@ -16769,12 +17500,152 @@
         }
       }
     },
+    "on %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "am %@"
+          }
+        }
+      }
+    },
+    "on %@ number %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "am %@ Nr. %lld"
+          }
+        }
+      }
+    },
     "on average": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "im Durchschnitt"
+          }
+        }
+      }
+    },
+    "on day %@ of the year": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "am %@ Tag des Jahres"
+          }
+        }
+      }
+    },
+    "on day %lld before the end": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "am %lld. Tag vor Monatsende"
+          }
+        }
+      }
+    },
+    "on the %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "am %@"
+          }
+        }
+      }
+    },
+    "on the fifth %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "am fünften %@"
+          }
+        }
+      }
+    },
+    "on the first %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "am ersten %@"
+          }
+        }
+      }
+    },
+    "on the fourth %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "am vierten %@"
+          }
+        }
+      }
+    },
+    "on the last %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "am letzten %@"
+          }
+        }
+      }
+    },
+    "on the last day": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "am letzten Tag"
+          }
+        }
+      }
+    },
+    "on the second %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "am zweiten %@"
+          }
+        }
+      }
+    },
+    "on the second to last %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "am vorletzten %@"
+          }
+        }
+      }
+    },
+    "on the third %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "am dritten %@"
+          }
+        }
+      }
+    },
+    "only this one": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "nur dieser"
           }
         }
       }
@@ -16819,6 +17690,16 @@
         }
       }
     },
+    "remove the location": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ort entfernen"
+          }
+        }
+      }
+    },
     "remove the notes": {
       "localizations": {
         "de": {
@@ -16859,6 +17740,16 @@
         }
       }
     },
+    "second": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "zweiter"
+          }
+        }
+      }
+    },
     "started by hand": {
       "localizations": {
         "de": {
@@ -16879,12 +17770,42 @@
         }
       }
     },
+    "third": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dritter"
+          }
+        }
+      }
+    },
+    "this and all following": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dieser und alle folgenden"
+          }
+        }
+      }
+    },
     "to": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "bis"
+          }
+        }
+      }
+    },
+    "to %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "auf %@"
           }
         }
       }
@@ -16909,6 +17830,26 @@
         }
       }
     },
+    "weekday": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wochentag"
+          }
+        }
+      }
+    },
+    "weekend day": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wochenendtag"
+          }
+        }
+      }
+    },
     "without %@": {
       "localizations": {
         "de": {
@@ -16925,6 +17866,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "schlechter"
+          }
+        }
+      }
+    },
+    "· Away": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· Unterwegs"
           }
         }
       }
@@ -16985,16 +17936,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "„%@“ wurde wieder entfernt."
-          }
-        }
-      }
-    },
-    "“⚠ Not covered” warnings": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "„⚠ Nicht abgedeckt“-Warnungen"
           }
         }
       }

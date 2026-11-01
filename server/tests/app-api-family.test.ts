@@ -53,7 +53,7 @@ describe("GET /overview", () => {
     expect(res.status).toBe(200);
     expect(res.data.today).toBe("2026-11-02");
     expect(Object.keys(res.data).sort()).toEqual(
-      ["awayToday", "birthdays", "calendar", "finance", "meals", "searches", "today", "todayEvents", "upcoming"].sort(),
+      ["awayToday", "birthdays", "calendar", "finance", "meals", "searches", "today", "todayEvents", "tomorrowEvents", "upcoming"].sort(),
     );
     expect(res.data.birthdays).toEqual([{ day: "2026-11-20", name: "Anna", age: 36 }]);
     expect(res.data.finance).toMatchObject({ month: "2026-11", incomeCents: 0, expenseCents: 0, count: 0, balanceCents: null });

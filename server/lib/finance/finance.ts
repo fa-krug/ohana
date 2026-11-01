@@ -10,7 +10,7 @@
 import type { Ctx } from "@/lib/api/family-api";
 import { cleanName, HttpError, json, objectOf, readBody, slug } from "@/lib/api/http";
 import { addDays, diffDays, isValidDate } from "@/lib/calendar/dates";
-import type { Lang } from "@/lib/calendar/ics";
+import type { Lang } from "@/lib/i18n/config";
 import { categoryTree, PATH_SEPARATOR } from "./category-tree";
 import {
   type AccountRow,

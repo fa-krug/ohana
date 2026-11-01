@@ -1,7 +1,7 @@
 // HTTP helpers and input checks shared by the family API modules (ported from family-planner's
 // _shared/http.ts).
 
-import type { Lang } from "@/lib/calendar/ics";
+import type { Lang } from "@/lib/i18n/config";
 
 export const CORS = {
   "access-control-allow-origin": "*",

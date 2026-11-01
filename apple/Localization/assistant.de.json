@@ -220,5 +220,21 @@
   "no due date": "kein Fälligkeitsdatum",
   "notes: %@": "Notizen: %@",
   "remove the notes": "Notizen entfernen",
-  "rename to “%@”": "umbenennen in „%@“"
+  "rename to “%@”": "umbenennen in „%@“",
+  "Reading your Apple calendars": "Liest deine Apple-Kalender",
+  "Suggesting changes to your Apple calendars": "Schlägt Änderungen an deinen Apple-Kalendern vor",
+  "Nothing changes in your calendars until you apply it.": "In deinen Kalendern ändert sich nichts, bis du es anwendest.",
+  "Calendars aren’t allowed on this device.": "Kalender sind auf diesem Gerät nicht erlaubt.",
+  "The calendar is gone.": "Den Kalender gibt es nicht mehr.",
+  "The event is gone.": "Den Termin gibt es nicht mehr.",
+  "The repeat rule isn’t valid.": "Die Wiederholungsregel ist ungültig.",
+  "The time isn’t valid.": "Die Zeit ist ungültig.",
+  "This calendar can’t be changed.": "Dieser Kalender kann nicht geändert werden.",
+  "all day": "ganztägig",
+  "at a set time": "zu einer festen Zeit",
+  "location: %@": "Ort: %@",
+  "remove the location": "Ort entfernen",
+  "only this one": "nur dieser",
+  "this and all following": "dieser und alle folgenden",
+  "to %@": "auf %@"
 }

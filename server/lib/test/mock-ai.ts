@@ -31,6 +31,10 @@
 //   "remind me to <x> [in <list>]"        -> edit_reminders: add <x> (default list "shopping")
 //   "complete <id>"                       -> edit_reminders: complete the reminder <id>
 //   "ask and remind me to <x>"            -> edit_reminders and ask_user in one step (one waits)
+//   "my calendars"                        -> get_apple_calendar
+//   "schedule <title> at <start> [in <calendar>]" -> edit_apple_calendar: add it (start
+//                                            "YYYY-MM-DD[THH:MM]", default calendar "Family")
+//   "cancel event <id>"                   -> edit_apple_calendar: delete it (span "future")
 //   "find a <speciality> before <day>"    -> create_appointment_search
 //   "appointment searches"                -> list_appointment_searches
 //   "book <resultId> of <search>"         -> book_appointment_slot
@@ -52,7 +56,12 @@
 // (stream_options), like Mistral.
 
 type Part = { type: string; text?: string };
-type Msg = { role: string; content: string | null | Part[]; tool_calls?: unknown[] };
+type Msg = {
+  role: string;
+  content: string | null | Part[];
+  tool_calls?: { id: string; function: { name: string } }[];
+  tool_call_id?: string;
+};
 
 /** A message's text: the string, or its text parts joined. */
 function textOf(content: Msg["content"]) {
@@ -328,14 +337,20 @@ async function respond(req: Request, body: any): Promise<Response> {
   if (last.role === "tool") {
     const result = JSON.parse(textOf(last.content) || "{}");
     if (result.error) return reply(stream, `That didn't work: ${result.error}`);
+    const called = messages.flatMap((m) => m.tool_calls ?? []).find((c) => c.id === last.tool_call_id);
+    const device = called?.function.name === "edit_apple_calendar"
+      ? { changes: "calendar", left: "calendars" }
+      : { changes: "reminder", left: "Reminders" };
     const text = result.skipped
       ? "You skipped my question."
       : result.applied === true
       ? `Done: ${result.results?.filter((r: { ok?: boolean }) => r.ok).length ?? 0} of ${
         result.results?.length ?? 0
-      } reminder changes applied.`
+      } ${device.changes} changes applied.`
       : result.applied === false
-      ? "OK, I left your Reminders as they were."
+      ? `OK, I left your ${device.left} as they were.`
+      : Array.isArray(result.calendars) && Array.isArray(result.events)
+      ? `You have ${result.events.length} events in ${result.calendars.length} calendars.`
       : Array.isArray(result.days) && result.days.every((d: { items?: unknown }) => Array.isArray(d.items))
       ? `${result.days.reduce((n: number, d: { items: unknown[] }) => n + d.items.length, 0)} items to buy on ${result.days.length} shopping days.`
       : Array.isArray(result.lists) && Array.isArray(result.items)
@@ -435,6 +450,20 @@ async function respond(req: Request, body: any): Promise<Response> {
   const complete = /^complete (\S+)$/i.exec(text);
   if (complete && tools.has("edit_reminders")) {
     return reply(stream, "", { name: "edit_reminders", args: { ops: [{ op: "complete", id: complete[1] }] } });
+  }
+  const schedule = /^schedule (.+?) at (\S+)(?: in (.+))?$/i.exec(text);
+  if (schedule && tools.has("edit_apple_calendar")) {
+    return reply(stream, "", {
+      name: "edit_apple_calendar",
+      args: { ops: [{ op: "add", calendar: schedule[3] ?? "Family", title: schedule[1], start: schedule[2] }] },
+    });
+  }
+  const cancel = /^cancel event (\S+)$/i.exec(text);
+  if (cancel && tools.has("edit_apple_calendar")) {
+    return reply(stream, "", { name: "edit_apple_calendar", args: { ops: [{ op: "delete", id: cancel[1], span: "future" }] } });
+  }
+  if (/my calendars/.test(lower) && tools.has("get_apple_calendar")) {
+    return reply(stream, "", { name: "get_apple_calendar", args: {} });
   }
   if (/shopping list|einkaufsliste/.test(lower) && tools.has("get_shopping_items")) {
     return reply(stream, "", { name: "get_shopping_items", args: {} });

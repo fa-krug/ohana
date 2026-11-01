@@ -24,7 +24,7 @@ afterEach(() => {
 
 function seed() {
   const db = createTestDb();
-  db.insert(families).values({ id: "h1", feedId: "feedh1", name: "Home", createdAt: now, updatedAt: now }).run();
+  db.insert(families).values({ id: "h1", name: "Home", createdAt: now, updatedAt: now }).run();
   db.insert(units).values({ id: 1, nameEn: "gram", nameDe: "Gramm", abbreviation: "g" }).run();
   db.insert(ingredients).values({ id: 1, nameEn: "Tomato", nameDe: "Tomate", category: "PRODUCE" }).run();
   db.insert(mealTags).values({ id: "t1", familyId: "h1", category: "DIETARY", nameEn: "Vegan", nameDe: "Vegan", isDefault: true }).run();

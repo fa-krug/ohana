@@ -17,9 +17,13 @@ struct WidgetSnapshot: Codable, Hashable, Sendable {
         var day: Day
         /// The type's name, "Title · Person" of an event, the name of whose birthday it is.
         var title: String
-        /// "HH:MM"; nil for all day (always for runs and birthdays).
+        /// "HH:MM"; nil for all day (always for runs and birthdays), and on the later days of an
+        /// event that spans days.
         var start: String? = nil
+        /// "HH:MM" on this day; for an event that spans days only on its last.
         var end: String? = nil
+        /// The event goes on after this day (it spans days): it isn't over today.
+        var continues: Bool? = nil
         /// A calendar type's "#rrggbb".
         var color: String? = nil
         /// An event booked from an appointment search.
@@ -95,9 +99,11 @@ struct WidgetSnapshot: Codable, Hashable, Sendable {
         return Array(Set(ends + slots + [midnight])).sorted()
     }
 
-    /// The end of a timed event: its `end`, else an hour after its start (like the calendar feed).
+    /// The end of a timed event on its day: its `end`, else an hour after its start; nil while it
+    /// goes on to another day. The last day of one that spans days ends at its `end`.
     static func endDate(of item: Item) -> Date? {
-        guard let start = item.start, let begin = date(item.day, start) else { return nil }
+        guard item.continues != true else { return nil }
+        guard let start = item.start, let begin = date(item.day, start) else { return item.end.flatMap { date(item.day, $0) } }
         if let end = item.end, let date = date(item.day, end), date > begin { return date }
         return begin.addingTimeInterval(3600)
     }
@@ -138,13 +144,19 @@ extension WidgetSnapshot {
                 allDay.append(Item(kind: .birthday, id: "birthday|\(birthday.name)|\(day)", day: day,
                                    title: birthday.name, age: birthday.age))
             }
-            let events = day == today
-                ? wire.todayEvents
-                : wire.upcoming.compactMap { if case let .event(event) = $0, event.date == day { event } else { nil } }
+            // An event that spans days shows on each of them: its start on the first, its end on the last.
+            // Tomorrow's come from `tomorrowEvents` (an older server: the ones of today and coming up).
+            var seen = Set<String>()
+            let candidates = day == today ? wire.todayEvents
+                : wire.tomorrowEvents ?? (wire.todayEvents + wire.upcoming.compactMap { if case let .event(event) = $0 { event } else { nil } })
+            let events = candidates.filter { $0.date <= day && day <= $0.lastDay && seen.insert($0.uid).inserted }
             let eventItems = events.map { event in
-                Item(kind: .event, id: "event|\(event.id)", day: day,
+                Item(kind: .event, id: "event|\(event.uid)", day: day,
                      title: event.person.isEmpty ? event.title : "\(event.title) · \(event.person)",
-                     start: event.start, end: event.end, isAppointment: event.searchId != nil)
+                     start: day == event.date ? event.start : nil,
+                     end: day == event.lastDay ? event.end : nil,
+                     continues: day < event.lastDay ? true : nil,
+                     isAppointment: event.searchId != nil)
             }
             // All-day events with the runs; timed ones by their start.
             items += allDay + eventItems.filter { !$0.isTimed }
@@ -175,12 +187,19 @@ extension WidgetSnapshot {
 private struct OverviewWire: Decodable {
     struct Event: Decodable {
         let id: String
+        /// The original day of an occurrence of a repeating event.
+        let occurrence: Day?
         let date: Day
+        /// The last day of one that spans days.
+        let endDate: Day?
         let start: String?
         let end: String?
         let title: String
         let person: String
         let searchId: String?
+
+        var lastDay: Day { max(endDate ?? date, date) }
+        var uid: String { occurrence.map { "\(id)@\($0)" } ?? id }
     }
 
     enum Upcoming: Decodable {
@@ -238,6 +257,8 @@ private struct OverviewWire: Decodable {
     let today: Day
     let awayToday: [String]
     let todayEvents: [Event]
+    /// The occurrences on tomorrow, ones that started before it too.
+    let tomorrowEvents: [Event]?
     let upcoming: [Upcoming]
     let meals: Meals?
     let searches: [Search]?

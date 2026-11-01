@@ -84,6 +84,9 @@ targets:
         # The shopping list in Reminders (Core/Reminders), and the assistant's Reminders tools.
         NSRemindersFullAccessUsageDescription: "Ohana writes what the meal plan needs into the Reminders list you choose, and the assistant reads and changes your reminders when you ask it to."
         NSRemindersUsageDescription: "Ohana writes what the meal plan needs into the Reminders list you choose, and the assistant reads and changes your reminders when you ask it to."
+        # The sync with an Apple Calendar calendar (Features/Calendar/AppleCalendarSync.swift), and
+        # the assistant's Calendar tools.
+        NSCalendarsFullAccessUsageDescription: "Ohana syncs your family’s calendar with the Apple Calendar calendar you pick, and the assistant reads and changes your calendars when you ask it to."
         # The cook view's timers on the Lock Screen and in the Dynamic Island.
         NSSupportsLiveActivities: true
         CFBundleURLTypes:
@@ -219,6 +222,7 @@ targets:
         NSRemindersUsageDescription: "Ohana writes what the meal plan needs into the Reminders list you choose, and the assistant reads and changes your reminders when you ask it to."
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
+        NSCalendarsFullAccessUsageDescription: "Ohana syncs your family’s calendar with the Apple Calendar calendar you pick, and the assistant reads and changes your calendars when you ask it to."
         CFBundleURLTypes:
           - CFBundleURLName: de.fa-krug.Ohana.pairing
             CFBundleURLSchemes: [ohana]

@@ -38,6 +38,8 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Ohana syncs your family’s calendar with the Apple Calendar calendar you pick, and the assistant reads and changes your calendars when you ask it to.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Ohana uses the camera for recipe pictures and to scan receipts.</string>
 	<key>NSMicrophoneUsageDescription</key>

@@ -44,6 +44,8 @@ enum AssistantToolLabels {
         case "get_shopping_items": return String(localized: "Reading what the meal plan needs")
         case "get_reminders": return String(localized: "Reading your reminders")
         case "edit_reminders": return String(localized: "Suggesting changes to your reminders")
+        case "get_apple_calendar": return String(localized: "Reading your Apple calendars")
+        case "edit_apple_calendar": return String(localized: "Suggesting changes to your Apple calendars")
         case "list_appointment_searches": return String(localized: "Reading the appointment searches")
         case "find_doctor_specialities": return String(localized: "Looking up specialities")
         case "create_appointment_search": return String(localized: "Creating an appointment search")
@@ -71,6 +73,7 @@ enum AssistantToolLabels {
         case "list_recipes", "get_recipe", "save_recipe", "get_meal_plan", "plan_meals": "fork.knife"
         case "get_shopping_items": "cart"
         case "get_reminders", "edit_reminders": "checklist"
+        case "get_apple_calendar", "edit_apple_calendar": "calendar.badge.checkmark"
         case "list_appointment_searches", "find_doctor_specialities", "create_appointment_search",
              "change_appointment_search", "run_appointment_search", "get_appointment_slot",
              "book_appointment_slot":
@@ -256,6 +259,16 @@ enum AssistantToolLabels {
         case "get_reminders":
             if !named(a["list"]).isEmpty { parts.append(quoted(named(a["list"]))) }
         case "edit_reminders":
+            let titles = ops.map { str($0["title"]) }.filter { !$0.isEmpty }
+            if !ops.isEmpty {
+                let n = ops.count
+                parts.append(String(AttributedString(localized: "^[\(n) change](inflect: true)").characters))
+            }
+            parts.append(list(titles, max: 3))
+        case "get_apple_calendar":
+            parts.append(span(date(a["from"]), date(a["to"])))
+            if !named(a["calendar"]).isEmpty { parts.append(quoted(named(a["calendar"]))) }
+        case "edit_apple_calendar":
             let titles = ops.map { str($0["title"]) }.filter { !$0.isEmpty }
             if !ops.isEmpty {
                 let n = ops.count

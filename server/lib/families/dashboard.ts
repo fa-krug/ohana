@@ -1,11 +1,12 @@
-// The family overview (phase 7): one dashboard over all modules. Today (meal or "away", the
-// day's appointments), what comes up (calendar runs and booked appointments together), this
+// The family overview (phase 7): one dashboard over all modules. Today and tomorrow (meal or
+// "away", the days' events: every occurrence covering the day, also of events that started
+// earlier or repeat), what comes up (calendar runs and booked appointments together), this
 // month's finances, the next birthdays and the latest finds of the appointment searches.
 
 import type { Db } from "@/lib/db";
 import { addDays } from "@/lib/calendar/dates";
 import { type CalendarSummary, calendarSummary } from "@/lib/calendar/summary";
-import { listEvents, type PublicEvent, publicEvent } from "@/lib/calendar/events";
+import { listOccurrences, type PublicEvent } from "@/lib/calendar/events";
 import { type MonthSummary, monthSummary } from "@/lib/finance/summary";
 import { getMealsSummary, type MealsSummary } from "@/lib/meals/queries/meal-plan";
 import { awayDays } from "@/lib/meals/meal-plan/away";
@@ -14,7 +15,8 @@ import { type BirthdayDay, birthdaysIn } from "./birthdays";
 import { familyNames } from "./people";
 import { moduleEnabled } from "@/lib/server-info";
 
-/** One line of "coming up": a run of a calendar type, or a timed event. */
+/** One line of "coming up": a run of a calendar type, or an event's occurrence starting after
+ *  today. */
 export type UpcomingItem =
   | { kind: "entry"; date: string; to: string; name: string; color: string }
   | { kind: "event"; date: string; event: PublicEvent };
@@ -35,7 +37,10 @@ export interface Dashboard {
   calendar: CalendarSummary;
   /** Names of today's "away" types (no meal is planned then). */
   awayToday: string[];
+  /** The occurrences covering today (also those that started earlier). */
   todayEvents: PublicEvent[];
+  /** The occurrences covering tomorrow. */
+  tomorrowEvents: PublicEvent[];
   upcoming: UpcomingItem[];
   meals: MealsSummary;
   finance: MonthSummary;
@@ -57,7 +62,9 @@ export async function familyDashboard(
     calendarSummary(db, familyId, today, { days: UPCOMING_DAYS, limit }),
     monthSummary(db, familyId, today),
   ]);
-  const events = listEvents(db, familyId, { from: today, to: until }).map(publicEvent);
+  const events = listOccurrences(db, familyId, { from: today, to: until });
+  const tomorrow = addDays(today, 1);
+  const covering = (day: string) => events.filter((e) => e.date <= day && e.endDate >= day);
   const upcoming: UpcomingItem[] = [
     ...calendar.upcoming.map((u) => ({ kind: "entry" as const, date: u.from, to: u.to, name: u.name, color: u.color })),
     ...events.filter((e) => e.date > today).map((event) => ({ kind: "event" as const, date: event.date, event })),
@@ -82,7 +89,8 @@ export async function familyDashboard(
     today,
     calendar,
     awayToday: awayDays(db, familyId, today, today).get(today) ?? [],
-    todayEvents: events.filter((e) => e.date === today),
+    todayEvents: covering(today),
+    tomorrowEvents: covering(tomorrow),
     upcoming: upcoming.slice(0, limit),
     meals: getMealsSummary(db, familyId, today),
     finance,

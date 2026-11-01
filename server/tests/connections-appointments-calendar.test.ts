@@ -1,5 +1,5 @@
 // Phase 7, Appointments → Calendar: booked slots become timed calendar events, which the REST
-// API (/events), GET /families/{id} and the calendar feed (events=1) serve.
+// API (/events) and GET /families/{id} serve.
 
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -10,8 +10,7 @@ import { createToken } from "@/lib/auth/tokens";
 import { AuthError } from "@/lib/auth/errors";
 import { handleFamily } from "@/lib/calendar/family-routes";
 import { handleCalendar } from "@/lib/calendar/vacation";
-import { createEvent, findBooking, handleEvents, listBookedAppointments, listEvents } from "@/lib/calendar/events";
-import { buildIcs } from "@/lib/calendar/ics";
+import { createEvent, findBooking, handleEvents, listBookedAppointments, loadSeries } from "@/lib/calendar/events";
 import { bookSlot, removeBooking } from "@/lib/appointments/booking";
 import { familyDashboard } from "@/lib/families/dashboard";
 import { createTestDb } from "@/lib/test/db";
@@ -49,7 +48,6 @@ let db: Db;
 let editorId: string;
 let viewerId: string;
 let familyId: string;
-let feedId: string;
 
 beforeEach(() => {
   db = createTestDb();
@@ -57,7 +55,6 @@ beforeEach(() => {
   viewerId = makeUser(db).id;
   const f = makeFamily(db, editorId, [{ userId: viewerId, role: "viewer" }]);
   familyId = f.id;
-  feedId = f.feedId;
 });
 
 const tokenOf = (userId: string) => createToken(db, { userId, kind: "api" }, NOW).token;
@@ -111,39 +108,7 @@ describe("events API", () => {
     createEvent(db, other.id, { date: "2026-11-03", title: "secret" }, {}, NOW);
     const call = api(db)(tokenOf(editorId));
     expect((await call("GET", `/families/${other.id}/events`)).status).toBe(404);
-    expect(listEvents(db, familyId)).toEqual([]);
-  });
-});
-
-describe("calendar feed", () => {
-  it("has timed events only with events=1", async () => {
-    createEvent(db, familyId, { date: "2026-11-03", start: "10:30", title: "Dr. Berg", person: "Mia", location: "Praxis, Ort" }, {}, NOW);
-    createEvent(db, familyId, { date: "2026-11-05", title: "Impfung" }, {}, NOW);
-    const anon = api(db)(null);
-    const plain = await anon("GET", `/families/${feedId}/calendar.ics`);
-    expect(plain.data).not.toContain("Dr. Berg");
-    const ics = (await anon("GET", `/families/${feedId}/calendar.ics?events=1`)).data as string;
-    expect(ics).toContain("DTSTART:20261103T103000\r\n");
-    expect(ics).toContain("DURATION:PT1H");
-    expect(ics).toContain("SUMMARY:Dr. Berg (Mia)");
-    expect(ics).toContain("LOCATION:Praxis\\, Ort");
-    expect(ics).toContain("DTSTART;VALUE=DATE:20261105");
-    expect(ics).toContain("DTEND;VALUE=DATE:20261106");
-  });
-
-  it("uses the end time when there is one", () => {
-    const ics = buildIcs({
-      calendarName: "x",
-      uidPrefix: "p",
-      types: [],
-      entries: new Map(),
-      events: [{ id: "e1", day: "2026-11-03", start: "08:15", end: "09:00", title: "T", location: "", person: "", note: "n", url: "https://a.test/" }],
-      now: NOW,
-    });
-    expect(ics).toContain("UID:p-event-e1@ohana");
-    expect(ics).toContain("DTEND:20261103T090000");
-    expect(ics).toContain("URL:https://a.test/");
-    expect(ics).toContain("DESCRIPTION:n\\nhttps://a.test/");
+    expect(loadSeries(db, familyId)).toEqual([]);
   });
 });
 
@@ -222,9 +187,9 @@ describe("booking a slot", () => {
     expect(() => removeBooking(db, { id: viewerId }, familyId, event.id)).toThrow(expect.objectContaining({ status: 403 }));
     // Deleting the search (and its results) leaves the appointment in the calendar.
     db.delete(apptSearches).where(eq(apptSearches.id, search.id)).run();
-    expect(listEvents(db, familyId)).toHaveLength(1);
+    expect(loadSeries(db, familyId)).toHaveLength(1);
     removeBooking(db, { id: editorId }, familyId, event.id);
-    expect(listEvents(db, familyId)).toEqual([]);
+    expect(loadSeries(db, familyId)).toEqual([]);
     expect(() => removeBooking(db, { id: editorId }, familyId, event.id)).toThrow(expect.objectContaining({ status: 404 }));
   });
 

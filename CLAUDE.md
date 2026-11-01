@@ -101,7 +101,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   → 28 Feb in other years). `familyNames` (accounts + people, with ids and birthdays) are the
   "who is it for" chips when booking an appointment, the members the assistant's system
   prompt names with their ages, and the birthdays of the calendar (GET `/families/{id}`
-  `birthdays` by day via `dayExtras`, shown by the app's calendar; the feed with `birthdays=1`: one yearly `RRULE` event each)
+  `birthdays` by day via `dayExtras`, shown by the app's calendar)
   and of the overview (next 30 days, `familyDashboard`).
 - **Family REST API** (`lib/api/family-api.ts`, family-planner's `handler.ts`): `http/api.ts`
   runs `createFamilyApi([...routes])` for `/api/v1/families/{id}[/…]`; the first route is
@@ -109,7 +109,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   Each module adds a route function `(ctx: Ctx) => Promise<Response> | null` (null: not my
   path) to that list. `Ctx` has `db`, `store` (calendar part of family-planner's `Store`),
   `finance` (its finance part), `rest` (path after the id), `principal`,
-  `requireUser()`, `load(need)` / `loadWith(need, query)` with `need` = `edit` | `view` | `feed`
+  `requireUser()`, `load(need)` / `loadWith(need, query)` with `need` = `edit` | `view`
   (404 for non-members — admins too —, 403 "You can only view this family" for viewers).
   Signed in by an API token (Bearer; the session cookie is still accepted, writes with it need
   a same-origin request). The separate routes (`/recipes`, `/geocode`, the
@@ -119,14 +119,12 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   family-planner's, so its scripts keep working.
 - **Calendar (`lib/calendar/`):** family-planner's vacation module.
   `store.ts` is the calendar part of its `Store` interface over Drizzle (`DrizzleCalendarStore`,
-  snake_case rows, promise API); `vacation.ts` (types per year, entries, notes, the ICS feed
-  route `GET /api/v1/families/{feedId|legacyId}/calendar.ics`, public, never by family id),
-  `family-routes.ts` (GET/PATCH family, `links`, `export`/`import`), `ics.ts`, `dates.ts` and
-  `core.ts` (pure client logic) are ported with few changes. Tables `cal_entry_types` (PK
+  snake_case rows, promise API); `vacation.ts` (types per year, entries, notes),
+  `family-routes.ts` (GET/PATCH family, `export`/`import`), `gaps.ts` (`gapDays`), `dates.ts` and
+  `core.ts` (pure client logic) are ported with few changes; there is no calendar feed (the app
+  syncs with Apple Calendar instead). Tables `cal_entry_types` (PK
   family+year+id), `cal_entries` (with the day's `year`, composite FK to its type: deleting a
-  type cascades to its days; never `INSERT OR REPLACE` a type), `cal_notes`; `families.feed_id`
-  (random, unique) and `legacy_id` (family-planner's old view id, for the import; also the
-  feed's UID prefix). `createFamily` adds the preset types (`presets.ts`) in the creator's
+  type cascades to its days; never `INSERT OR REPLACE` a type), `cal_notes`. `createFamily` adds the preset types (`presets.ts`) in the creator's
   language. Export / import of the family file: `GET /export`, `POST /import` (checks in
   `lib/calendar/export-file.ts`; family-planner's Clone isn't ported); the overview shows
   `lib/calendar/summary.ts`.
@@ -183,7 +181,13 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   question, ends the step with a `kind: "reminders"` item the app shows as a confirmation card;
   the app applies the ops through EventKit and answers `POST /ai/chats/{id}/reminders`
   (`{id, applied, results, reminders}`), which becomes the tool's result (a new message instead
-  marks it `skipped`). `notify.ts` is the "assistant turn finished" notification (`RunnerEnv.turnEnded`
+  marks it `skipped`). **Apple Calendar** (`tools/apple-calendar.ts`) works the same way: the
+  `appleCalendar` context (the device's calendars and their events from a week back to 90 days
+  ahead, `cleanAppleCalendar`; `ohana: true` marks the calendar the family syncs with),
+  `get_apple_calendar`, `edit_apple_calendar` (add / update / delete, `span` this | future on an
+  occurrence "id@day", `rrule` via `lib/calendar/rrule.ts`) → `kind: "calendar"` card →
+  `POST /ai/chats/{id}/calendar`; the waiting-item code (`openEdit`, `waitingFor`) is shared by
+  both. `notify.ts` is the "assistant turn finished" notification (`RunnerEnv.turnEnded`
   from the `ChatRunner`; `chats.seen_at`, set every 15 s by a follower, says someone looks).
   `net.ts` refuses private addresses (`AiEnv.modelNet` may allow them for the endpoint with
   `AI_ALLOW_PRIVATE_ENDPOINT`). `toolsFor` leaves out the tools of turned-off modules
@@ -245,16 +249,25 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `meals.ts`, `connections.ts`,
   `assistant.ts`).
 - **Connections between modules (phase 7):**
-  - *Appointments → Calendar:* `cal_events` (`lib/db/schema/connections.ts`): timed events
-    (`day`, wall-clock `start`/`end` "HH:MM" or null = all day, title, location, person,
-    note, url, `source` manual | appointment with `source_id` = search, `source_item` =
-    result; the slot's data is copied, results are pruned). `lib/calendar/events.ts` (CRUD,
-    zod `eventInputSchema`, REST `handleEvents`: GET/POST `/events`, DELETE `/events/{id}`),
-    `lib/appointments/booking.ts` (`bookSlot` once per slot, optional stop = search disabled;
-    `removeBooking`; app routes in `lib/appointments/app-routes.ts`). GET `/families/{id}` adds
-    `events` by day (`familyState`'s 4th argument). The feed adds them with `events=1`
-    (`buildIcs` `events`: floating local times, `DURATION:PT1H` without an end). The
-    assistant's tools reach every module (meals, appointments, events; see Assistant).
+  - *Appointments → Calendar:* `cal_events` (`lib/db/schema/connections.ts`): events from
+    `day` to `end_day` (wall-clock `start` on the first / `end` on the last "HH:MM", or null =
+    all day), title, location, person, note, url, `source` manual | appointment with
+    `source_id` = search, `source_item` = result (the slot's data is copied, results are
+    pruned) | apple: imported by the app's Apple Calendar sync, `source_item` = the Apple
+    event's key, `externalId` in the API, POST /events with an `externalId` the family has
+    answers that event with 200. Repeating: `rrule` (an RFC 5545 RRULE value, `rrule.ts`: own
+    parser / bounded expander over plain days, DTSTART always included), `exdates` (JSON), and
+    override rows (`series_id` + `occurrence`, the original day) for occurrences changed on
+    their own. `lib/calendar/events.ts`: occurrences (`PublicEvent`: `id` is always the
+    series', `occurrence` its original day; `GET /events?from=&to=` (a range is required, max 3
+    years), lists by day put a multi-day occurrence under each day), the stored form
+    (`EventSeries`: `GET /events?raw=1`, `GET /events/{id}`), writes `POST`, `PATCH` /
+    `DELETE /events/{id}[?occurrence=&span=this|future]` (none: the whole series; a date shift
+    moves exdates and overrides along; `future` splits off a new series). `lib/appointments/booking.ts`
+    (`bookSlot` once per slot, optional stop = search disabled; `removeBooking`; app routes in
+    `lib/appointments/app-routes.ts`). GET `/families/{id}` adds `events` by day
+    (`familyState`). The assistant's tools reach every module (meals, appointments, events
+    with `endDate`, `rrule`, `occurrence` / `span`; see Assistant).
   - *Calendar → Meals:* `cal_entry_types.away` (optional `away` in the type API, export and
     import; `TypeRow.away?`). `lib/meals/meal-plan/away.ts` `awayDays`; `populateIteration`
     passes them as `assignSchedule({ skipDates })` and counts cooking sessions from the days
@@ -382,7 +395,10 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   deleted ones don't come back); `ShoppingRemindersUpdates` in `AppShell` syncs on becoming
   active, a family switch and meals changes; set up in `Features/Meals/Reminders/` (Settings →
   Shopping List, the meal plan's toolbar). Off in the demo. The assistant's Reminders card
-  (`edit_reminders`) applies its ops through `RemindersStore` too.
+  (`edit_reminders`) applies its ops through `RemindersStore` too. Its Calendar card
+  (`edit_apple_calendar`, `Features/Assistant/AssistantAppleCalendar.swift`) applies through
+  `Core/Calendar/DeviceCalendarStore.swift` (EventKit behind a protocol; read-only access check,
+  the assistant never asks for it); every chat request carries `appleCalendar` next to `reminders`.
   The assistant: `family.ask(prompt, send:, newChat:)` opens it ready to type from anywhere (⇧⌘J, the overview's field, the Mac's menu bar item (`MenuBarItem`, an AppKit status item: SwiftUI's `MenuBarExtra` re-sets its icon on every window redraw and crashed the app), the
   `AskOhanaIntent` App Shortcut). Recipes are in Spotlight (`RecipeSpotlight.swift`: every family's,
   after loading the account and after recipe changes; emptied in the demo / with Meals off; a result
@@ -395,6 +411,22 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   page's text via `Preprocess.js`). Code both use is in `apple/Shared/` (`Keychain`,
   `SharedConnection`): no App Group — the app mirrors the server URL and selected family into the
   shared Keychain access group next to the token, and removes them on sign out.
+  Calendar events in the app: `CalendarEvent` is an occurrence (list identity `uid` = "id@occurrence"),
+  `CalendarEventSeries` the stored form; `RepeatRule` (+`Text`: summaries, the editor's presets)
+  parses / writes RRULEs; `CalendarEventEditor` / `CalendarEventRepeatViews` (Apple-like Repeat and End
+  Repeat, "this event only / future events"), `CalendarEventRequests` (pure request builders; moving a
+  whole series shifts its BYDAY), `CalendarEventText` (how a multi-day event reads on each day);
+  `CalendarStore` snapshots the series (`GET /events/{id}`) before a change for undo.
+  Apple Calendar sync (`Features/Calendar/AppleCalendarSync*.swift`, Settings → Calendar), per device
+  and family through EventKit: `AppleSyncPlanner` (pure, tested) plans, `AppleCalendarSync` runs it
+  (at launch, foreground, every 15 min, `EKEventStoreChanged`, `FamilyContext.didChange(.events/
+  .calendar)`) and keeps the links in Application Support `Ohana/CalendarSync/`. Events both ways
+  (Ohana wins a conflict; viewers one way), a repeating event as one series (`RepeatRule` ↔
+  `EKRecurrenceRule`, master by `calendarItemIdentifier`) whose occurrences changed or deleted on
+  their own sync day by day within the window (`AppleSyncException` per original day; one pass more
+  after a series changed as a whole), day entries as all-day runs to Apple only; Ohana's copies
+  carry `ohana://f/{id}/calendar/{day}?event=|entry=` as their URL and imports keep their
+  `externalId`, so devices sharing an iCloud calendar link instead of copying twice.
   The cook view (`MealsCookView`) turns durations in a step's
   text into timer links (`StepDurations`, English and German); `CookTimers` (app-wide, kept in
   `UserDefaults`) schedules a time-sensitive local notification per timer (shown in the

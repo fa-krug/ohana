@@ -40,6 +40,8 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Ohana syncs your family’s calendar with the Apple Calendar calendar you pick, and the assistant reads and changes your calendars when you ask it to.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2026 Sascha Krug. All rights reserved.</string>
 	<key>NSRemindersFullAccessUsageDescription</key>

@@ -3,7 +3,7 @@
 
 import type { Db } from "@/lib/db";
 import { addDays, consecutiveRuns } from "./dates";
-import { gapDays } from "./ics";
+import { gapDays } from "./gaps";
 import { DrizzleCalendarStore } from "./store";
 
 export interface CalendarSummary {

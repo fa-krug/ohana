@@ -228,8 +228,7 @@ struct CalendarAccessibilityTests {
 /// cell redraws when its own day changes, not on every change anywhere in the year.
 struct CalendarCellTests {
     private func state() -> CalendarState {
-        let family = CalendarFamilyInfo(id: "f1", feedId: "feed", legacyId: nil, name: "Family", access: "editor",
-                                        readOnly: false, updatedAt: nil)
+        let family = CalendarFamilyInfo(id: "f1", name: "Family", access: "editor", readOnly: false, updatedAt: nil)
         return CalendarState(
             family: family,
             types: [CalendarEntryType(id: "kita", year: 2026, name: "Kita", color: "#f59e0b", role: .needsCover),
@@ -282,8 +281,9 @@ struct CalendarCellTests {
     }
 }
 
-/// Answers the calendar's requests like the server would (a deleted event, one made again)
-/// and records them; nothing leaves the test.
+/// Answers the calendar's requests like the server would (an event's series, a deleted event or
+/// occurrence, one made again) and records them with their query; nothing leaves the test. Ids
+/// starting with "s" are weekly series that start on 10 March 2026.
 nonisolated final class CalendarStubProtocol: URLProtocol {
     private static let lock = NSLock()
     nonisolated(unsafe) private static var log: [String] = []
@@ -296,11 +296,19 @@ nonisolated final class CalendarStubProtocol: URLProtocol {
     override func startLoading() {
         let method = request.httpMethod ?? "GET"
         let path = request.url?.path ?? ""
-        Self.lock.withLock { Self.log.append("\(method) \(path)") }
+        let query = request.url?.query.map { "?\($0)" } ?? ""
+        Self.lock.withLock { Self.log.append("\(method) \(path)\(query)") }
         var status = 200
         var body = Data("{}".utf8)
+        let id = String(path.split(separator: "/").last ?? "")
+        let occurrence = request.url?.query?.contains("occurrence=") == true
         if method == "POST" && path.hasSuffix("/events") {
-            body = Data(#"{"id":"e2","date":"2026-03-10","start":"09:30","end":null,"title":"Dentist"}"#.utf8)
+            body = Self.series("e2")
+        } else if path.contains("/events/") && (method == "GET" || method == "PATCH") {
+            body = Self.series(id)
+        } else if path.contains("/events/") && method == "DELETE" {
+            // An occurrence (or the ones from it on) taken out leaves the series; else it is gone.
+            body = occurrence ? Self.series(id) : Data(#"{"deleted":"\#(id)"}"#.utf8)
         } else if method == "GET" {
             status = 503
         }
@@ -311,6 +319,11 @@ nonisolated final class CalendarStubProtocol: URLProtocol {
         client?.urlProtocolDidFinishLoading(self)
     }
     override func stopLoading() {}
+
+    static func series(_ id: String) -> Data {
+        let rule = id.hasPrefix("s") ? #""FREQ=WEEKLY""# : "null"
+        return Data(#"{"id":"\#(id)","date":"2026-03-10","endDate":"2026-03-10","start":"09:30","end":null,"title":"Dentist","rrule":\#(rule),"exdates":[],"overrides":[]}"#.utf8)
+    }
 }
 
 @Suite(.serialized)
@@ -335,7 +348,9 @@ struct CalendarEventUndoTests {
         let store = store()
         let event = CalendarEvent(id: "e1", date: d("2026-03-10"), start: "09:30", end: nil, title: "Dentist")
         try await store.deleteEvent(event)
-        #expect(CalendarStubProtocol.requests.contains("DELETE /api/v1/families/f1/events/e1"))
+        // The series as it was is kept first, for undo.
+        #expect(CalendarStubProtocol.requests.prefix(2) == ["GET /api/v1/families/f1/events/e1",
+                                                           "DELETE /api/v1/families/f1/events/e1"])
         #expect(store.canUndo)
         #expect(store.toast == "Deleted “Dentist”")
         #expect(store.toastOffersUndo)
@@ -344,9 +359,58 @@ struct CalendarEventUndoTests {
         #expect(await waitFor("POST /api/v1/families/f1/events"))
         #expect(store.canRedo)
         // Made again with a new id (then reloaded), which redo deletes.
-        #expect(await waitFor("GET /api/v1/families/f1", times: 2))
+        #expect(await waitFor("GET /api/v1/families/f1?year=2026", times: 2))
         store.redo()
         #expect(await waitFor("DELETE /api/v1/families/f1/events/e2"))
+    }
+
+    @Test func undoPutsADeletedOccurrenceBack() async throws {
+        CalendarStubProtocol.reset()
+        let store = store()
+        let event = CalendarEvent(id: "s1", occurrence: d("2026-03-17"), date: d("2026-03-17"), start: "09:30", end: nil,
+                                  title: "Dentist", rrule: "FREQ=WEEKLY")
+        try await store.deleteEvent(event, span: .this)
+        #expect(CalendarStubProtocol.requests.contains("DELETE /api/v1/families/f1/events/s1?occurrence=2026-03-17&span=this"))
+        // Undo patches the series back as it was (its exdates with it); redo takes the day out again.
+        store.undo()
+        #expect(await waitFor("PATCH /api/v1/families/f1/events/s1"))
+        store.redo()
+        #expect(await waitFor("PATCH /api/v1/families/f1/events/s1", times: 2))
+        #expect(!CalendarStubProtocol.requests.contains { $0.hasPrefix("POST") })
+    }
+
+    @Test func deletingFromTheFirstOccurrenceOnDeletesTheSeries() async throws {
+        CalendarStubProtocol.reset()
+        let store = store()
+        // The stub's series starts on 10 March: "this and the following" from there are all of them.
+        let first = CalendarEvent(id: "s1", occurrence: d("2026-03-10"), date: d("2026-03-10"), start: "09:30", end: nil,
+                                  title: "Dentist", rrule: "FREQ=WEEKLY")
+        try await store.deleteEvent(first, span: .future)
+        #expect(CalendarStubProtocol.requests.contains("DELETE /api/v1/families/f1/events/s1"))
+        let later = CalendarEvent(id: "s2", occurrence: d("2026-03-24"), date: d("2026-03-24"), start: "09:30", end: nil,
+                                  title: "Dentist", rrule: "FREQ=WEEKLY")
+        try await store.deleteEvent(later, span: .future)
+        #expect(CalendarStubProtocol.requests.contains("DELETE /api/v1/families/f1/events/s2?occurrence=2026-03-24&span=future"))
+        // Undo of the whole series posts it back with its rule (a new id).
+        store.undo()
+        #expect(await waitFor("PATCH /api/v1/families/f1/events/s2"))
+        store.undo()
+        #expect(await waitFor("POST /api/v1/families/f1/events"))
+    }
+
+    @Test func savesAnOccurrenceOnItsOwnAndUndoPutsTheSeriesBack() async throws {
+        CalendarStubProtocol.reset()
+        let store = store()
+        let event = CalendarEvent(id: "s1", occurrence: d("2026-03-17"), date: d("2026-03-17"), start: "09:30", end: nil,
+                                  title: "Dentist", rrule: "FREQ=WEEKLY")
+        var input = CalendarEventInput(event)
+        input.start = "10:00"
+        try await store.saveEvent(input, editing: event, span: .this)
+        #expect(CalendarStubProtocol.requests.prefix(2) == ["GET /api/v1/families/f1/events/s1",
+                                                           "PATCH /api/v1/families/f1/events/s1?occurrence=2026-03-17&span=this"])
+        #expect(store.canUndo)
+        store.undo()
+        #expect(await waitFor("PATCH /api/v1/families/f1/events/s1"))
     }
 
     @Test func movesAnEventAndUndoMovesItBack() async throws {
@@ -380,8 +444,7 @@ struct CalendarEventUndoTests {
 /// A calendar with a booked appointment on 10 March 2026.
 private func calendarWithEvent(readOnly: Bool = false) -> CalendarState {
     CalendarState(
-        family: CalendarFamilyInfo(id: "f1", feedId: "feed", legacyId: nil, name: "Family", access: "editor",
-                                   readOnly: readOnly, updatedAt: nil),
+        family: CalendarFamilyInfo(id: "f1", name: "Family", access: "editor", readOnly: readOnly, updatedAt: nil),
         types: [], typeYears: [2026], entries: [:], notes: nil,
         events: ["2026-03-10": [CalendarEvent(id: "e1", date: d("2026-03-10"), start: "09:30", end: nil, title: "Dentist",
                                               source: "appointment", searchId: "s1")],
@@ -443,9 +506,47 @@ struct CalendarEventDragTests {
         #expect(!s.isOnEvent(CGPoint(x: 20, y: 45), day: nil))
     }
 
-    @Test func sendsOnlyTheNewDate() throws {
-        let body = try JSONEncoder().encode(CalendarEventDateBody(date: d("2026-03-12")))
-        #expect(String(decoding: body, as: UTF8.self) == #"{"date":"2026-03-12"}"#)
+    @Test func sendsOnlyTheNewDays() throws {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        let body = try encoder.encode(CalendarEventDateBody(date: d("2026-03-12"), endDate: d("2026-03-14")))
+        #expect(String(decoding: body, as: UTF8.self) == #"{"date":"2026-03-12","endDate":"2026-03-14"}"#)
+    }
+
+    @Test func movesAnEventOfSeveralDaysWhole() {
+        let s = editableStore()
+        var state = calendarWithEvent()
+        let trip = CalendarEvent(id: "t1", date: d("2026-03-20"), endDate: d("2026-03-22"), start: nil, end: nil, title: "Trip")
+        state = CalendarState(family: state.family, types: [], typeYears: [2026], entries: [:], notes: nil,
+                              events: ["2026-03-20": [trip], "2026-03-21": [trip], "2026-03-22": [trip]], birthdays: nil)
+        s.apply(state)
+        // Dragged by its middle day onto the 25th: it moves by four days, keeping its three.
+        s.dropEvent(s.dragItem(trip, on: d("2026-03-21")), on: d("2026-03-25"))
+        #expect(s.events[d("2026-03-20")] == nil && s.events[d("2026-03-23")] == nil)
+        #expect([d("2026-03-24"), d("2026-03-25"), d("2026-03-26")].allSatisfy { s.events[$0]?.first?.date == d("2026-03-24") })
+        #expect(s.events[d("2026-03-26")]?.first?.endDate == d("2026-03-26"))
+        s.undo()
+        #expect(s.events[d("2026-03-21")]?.first?.date == d("2026-03-20") && s.events[d("2026-03-24")] == nil)
+    }
+
+    @Test func movesOneOccurrenceOfASeries() {
+        let s = editableStore()
+        let week1 = CalendarEvent(id: "s1", occurrence: d("2026-03-10"), date: d("2026-03-10"), start: "16:00", end: nil,
+                                  title: "Swimming", rrule: "FREQ=WEEKLY")
+        let week2 = CalendarEvent(id: "s1", occurrence: d("2026-03-17"), date: d("2026-03-17"), start: "16:00", end: nil,
+                                  title: "Swimming", rrule: "FREQ=WEEKLY")
+        let base = calendarWithEvent()
+        s.apply(CalendarState(family: base.family, types: [], typeYears: [2026], entries: [:], notes: nil,
+                              events: ["2026-03-10": [week1], "2026-03-17": [week2]], birthdays: nil))
+        let item = s.dragItem(week2)
+        #expect(item == CalendarEventDragItem(familyID: "f1", eventID: "s1", date: "2026-03-17", occurrence: "2026-03-17"))
+        s.dropEvent(item, on: d("2026-03-18"))
+        // Only that week's: the other stays, both keep their uid.
+        #expect(s.events[d("2026-03-10")]?.map(\.uid) == ["s1@2026-03-10"])
+        #expect(s.events[d("2026-03-18")]?.map(\.uid) == ["s1@2026-03-17"])
+        #expect(s.events[d("2026-03-17")] == nil)
+        #expect(CalendarEventRequest.move(id: "s1", occurrence: d("2026-03-17"), date: d("2026-03-18"), endDate: d("2026-03-18")).query
+                == ["occurrence": "2026-03-17", "span": "this"])
     }
 }
 
@@ -496,7 +597,7 @@ nonisolated final class CalendarQueueStubProtocol: URLProtocol {
 @Suite(.serialized)
 struct CalendarSavedCopyTests {
     private static let json = #"""
-    {"family":{"id":"f1","feedId":"Abc123Def456","name":"Krug","access":"edit","readOnly":false},
+    {"family":{"id":"f1","name":"Krug","access":"edit","readOnly":false},
      "types":[{"id":"sick","year":2026,"name":"Sick","color":"#ef4444","role":"none","position":0}],
      "entries":{"2026-03-02":["sick"]}}
     """#

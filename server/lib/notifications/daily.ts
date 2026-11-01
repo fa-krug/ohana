@@ -11,7 +11,7 @@ import type { Db } from "@/lib/db";
 import { families } from "@/lib/db/schema";
 import { getAppUrl } from "@/lib/auth/config";
 import { addDays, consecutiveRuns } from "@/lib/calendar/dates";
-import { gapDays } from "@/lib/calendar/ics";
+import { gapDays } from "@/lib/calendar/gaps";
 import { DrizzleCalendarStore } from "@/lib/calendar/store";
 import type { Sender } from "./index";
 import { familyLocale, translator } from "./locale";

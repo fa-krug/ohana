@@ -104,11 +104,6 @@ export const rateLimits = sqliteTable(
 export const families = sqliteTable("families", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
-  /** The calendar feed's secret id: opens calendar.ics and nothing else, without signing in. */
-  feedId: text("feed_id").notNull().unique(),
-  /** The view id of a family-planner planner from before families (filled by the import):
-   *  its feed keeps working under this id, and the feed's event UIDs keep it as prefix. */
-  legacyId: text("legacy_id").unique(),
   /** Home address (geocoded with Photon): the origin for distances, e.g. to a practice. */
   homeAddress: text("home_address"),
   homeLat: real("home_lat"),

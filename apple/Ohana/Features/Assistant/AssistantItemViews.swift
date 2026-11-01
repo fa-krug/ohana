@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// One item of the chat: a message, a tool call, a change with undo, a question, a Reminders
-/// edit to apply, a note.
+/// One item of the chat: a message, a tool call, a change with undo, a question, a Reminders or
+/// calendar edit to apply, a note.
 /// Equal for the same item (`.equatable()`): the closure would otherwise draw every item again
 /// whenever the chat does (a keystroke, another module beside the panel).
 struct AssistantItemView: View, Equatable {
@@ -34,6 +34,8 @@ struct AssistantItemView: View, Equatable {
             AssistantQuestionCard(question: question, store: store)
         case let .reminders(edit):
             AssistantRemindersCard(edit: edit, store: store)
+        case let .calendar(edit):
+            AssistantCalendarCard(edit: edit, store: store)
         case .compacted:
             HStack(spacing: 8) {
                 VStack { Divider() }
@@ -408,30 +410,162 @@ struct AssistantRemindersCard: View {
                 .disabled(!active)
             }
             if let outcome = edit.outcome {
-                outcomeLabel(outcome)
+                AssistantEditOutcome(text: outcome, answer: edit.answer)
             }
         }
         .contentCard(cornerRadius: 18, padding: 12)
         .task(id: reminders.revision) { reminders.refreshAccess() }
     }
 
-    private func row(_ op: AssistantReminderOp, index: Int, open: Bool) -> some View {
+    private func row(_ op: AssistantReminderOp, index: Int, open: Bool) -> AssistantEditOpRow {
         // While it waits, an update to another list reads as a move (the reminder's list now).
         let currentList = open && op.op == "update" && reminders.access.isGranted
             ? op.id.flatMap { reminders.reminder($0)?.listID } : nil
         let line = AssistantReminderOpLine.make(op, currentListID: currentList)
-        let result = edit.answer?.results.flatMap { index < $0.count ? $0[index] : nil }
-        let declined = edit.answer?.applied == false || edit.skipped
-        return HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Image(systemName: line.icon)
-                .foregroundStyle(line.destructive ? Color.red : .secondary)
+        return AssistantEditOpRow(icon: line.icon, text: line.text, detail: line.detail, destructive: line.destructive,
+                                  result: edit.answer?.results.flatMap { index < $0.count ? $0[index] : nil },
+                                  declined: edit.answer?.applied == false || edit.skipped)
+    }
+
+    private var noAccess: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label(reminders.access == .restricted
+                  ? "Reminders aren’t allowed on this device."
+                  : "Ohana has no access to your reminders.",
+                  systemImage: "exclamationmark.triangle")
+                .foregroundStyle(.orange)
+            if reminders.access != .restricted, let url = RemindersStore.settingsURL {
+                Link(destination: url) {
+                    Label("Open Settings", systemImage: "gear")
+                }
+            }
+        }
+        .font(.caption)
+    }
+
+    private func apply() {
+        posting = true
+        Task {
+            defer { posting = false }
+            refused = await store.applyReminders(edit.id) == .noAccess
+        }
+    }
+}
+
+/// A change of the device's calendars the assistant suggests, like the Reminders card: what it
+/// does, op by op (the event, when it is, the calendar; deletes in red), and **Apply** /
+/// **Don't apply** while it waits. Without access to the calendars (taken away since the message)
+/// it points to the Settings. Once answered, each op shows how it went and the card how it ended.
+struct AssistantCalendarCard: View {
+    let edit: AssistantCalendarEdit
+    let store: AssistantChatStore
+    @State private var calendars = DeviceCalendarStore.shared
+    /// Apply found no access.
+    @State private var refused = false
+
+    private var isOpen: Bool { store.openCalendarEdit()?.edit.id == edit.id }
+
+    var body: some View {
+        let open = isOpen
+        let active = open && !store.busy
+        VStack(alignment: .leading, spacing: 8) {
+            Label {
+                Text(verbatim: edit.summary).font(.callout.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
+            } icon: {
+                Image(systemName: "calendar").foregroundStyle(ModuleTint.assistant)
+            }
+            if open {
+                Text("Nothing changes in your calendars until you apply it.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(Array(edit.ops.enumerated()), id: \.offset) { index, op in
+                    row(op, index: index, open: open)
+                }
+            }
+            .padding(.vertical, 2)
+            if open {
+                if refused || !calendars.hasAccess {
+                    noAccess
+                }
+                HStack(spacing: 8) {
+                    Spacer(minLength: 0)
+                    Button("Don’t Apply") {
+                        store.declineCalendar(edit.id)
+                    }
+                    .buttonStyle(.bordered)
+                    Button("Apply") {
+                        apply()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(ModuleTint.assistant)
+                    .accessibilityLabel(Text("Apply: \(edit.summary)"))
+                }
+                .disabled(!active)
+            }
+            if let outcome = edit.outcome {
+                AssistantEditOutcome(text: outcome, answer: edit.answer)
+            }
+        }
+        .contentCard(cornerRadius: 18, padding: 12)
+        .task(id: calendars.revision) { calendars.refreshAccess() }
+    }
+
+    private func row(_ op: AssistantCalendarOp, index: Int, open: Bool) -> AssistantEditOpRow {
+        // While it waits, an update to another calendar reads as a move (the event's calendar now).
+        let currentCalendar = open && op.op == "update" && calendars.hasAccess
+            ? op.id.flatMap { calendars.calendarID(of: DeviceEventRef($0)) } : nil
+        let line = AssistantCalendarOpLine.make(op, currentCalendarID: currentCalendar)
+        return AssistantEditOpRow(icon: line.icon, text: line.text, detail: line.detail, destructive: line.destructive,
+                                  result: edit.answer?.results.flatMap { index < $0.count ? $0[index] : nil },
+                                  declined: edit.answer?.applied == false || edit.skipped)
+    }
+
+    private var noAccess: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label(calendars.access == .restricted
+                  ? "Calendars aren’t allowed on this device."
+                  : "Ohana has no access to your calendars.",
+                  systemImage: "exclamationmark.triangle")
+                .foregroundStyle(.orange)
+            if calendars.access != .restricted, let url = DeviceCalendarStore.settingsURL {
+                Link(destination: url) {
+                    Label("Open Settings", systemImage: "gear")
+                }
+            }
+        }
+        .font(.caption)
+    }
+
+    private func apply() {
+        // Applied right away (the answer then goes out like a message).
+        refused = store.applyCalendar(edit.id) == .noAccess
+    }
+}
+
+/// One op of a Reminders or calendar edit: its icon, what it does and a fainter detail, and once
+/// answered how it went (the error below it when it failed); faded when the edit wasn't applied.
+struct AssistantEditOpRow: View {
+    let icon: String
+    let text: String
+    let detail: String?
+    let destructive: Bool
+    let result: AssistantReminderResult?
+    let declined: Bool
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: icon)
+                .foregroundStyle(destructive ? Color.red : .secondary)
                 .frame(width: 18)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
-                Text(verbatim: line.text)
-                    .foregroundStyle(line.destructive ? Color.red : .primary)
+                Text(verbatim: text)
+                    .foregroundStyle(destructive ? Color.red : .primary)
                     .fixedSize(horizontal: false, vertical: true)
-                if let detail = line.detail, !detail.isEmpty {
+                if let detail, !detail.isEmpty {
                     Text(verbatim: detail)
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -456,46 +590,29 @@ struct AssistantRemindersCard: View {
         .opacity(declined ? 0.6 : 1)
         .accessibilityElement(children: .combine)
     }
+}
 
-    private var noAccess: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Label(reminders.access == .restricted
-                  ? "Reminders aren’t allowed on this device."
-                  : "Ohana has no access to your reminders.",
-                  systemImage: "exclamationmark.triangle")
-                .foregroundStyle(.orange)
-            if reminders.access != .restricted, let url = RemindersStore.settingsURL {
-                Link(destination: url) {
-                    Label("Open Settings", systemImage: "gear")
-                }
-            }
-        }
-        .font(.caption)
-    }
+/// How a Reminders or calendar edit ended: applied (some ops failed: in orange), not applied, not
+/// answered.
+struct AssistantEditOutcome: View {
+    let text: String
+    let answer: AssistantRemindersEdit.Answer?
 
-    private func outcomeLabel(_ text: String) -> some View {
-        let applied = edit.answer?.applied == true
-        let failed = (edit.answer?.failures ?? 0) > 0
-        return Label {
+    var body: some View {
+        let applied = answer?.applied == true
+        let failed = (answer?.failures ?? 0) > 0
+        Label {
             Text(verbatim: text)
         } icon: {
             if applied {
                 Image(systemName: failed ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
                     .foregroundStyle(failed ? Color.orange : .green)
-            } else if edit.answer != nil {
+            } else if answer != nil {
                 Image(systemName: "xmark.circle")
             }
         }
         .font(.caption)
         .foregroundStyle(.secondary)
-    }
-
-    private func apply() {
-        posting = true
-        Task {
-            defer { posting = false }
-            refused = await store.applyReminders(edit.id) == .noAccess
-        }
     }
 }
 

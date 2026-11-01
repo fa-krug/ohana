@@ -4,7 +4,7 @@
 // web pages do with server actions.
 // They call the same lib functions as those actions (same checks: viewers read, editors
 // change, a family keeps an editor). Registered before the module's other routes; null for
-// paths that aren't its own ("", links, export and import are handleFamily's).
+// paths that aren't its own ("", export and import are handleFamily's).
 //
 // GET    /overview?today=YYYY-MM-DD            the dashboard (familyDashboard)
 // GET    /search?q=&today=YYYY-MM-DD&limit=    one search across the modules (searchFamily)

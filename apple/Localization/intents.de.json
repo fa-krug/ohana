@@ -13,7 +13,7 @@
   "When is it?": "Wann ist er?",
   "All day": "Ganztägig",
   "End": "Ende",
-  "When it ends, on the same day.": "Wann er endet, am selben Tag.",
+  "When it ends; on a later day for an event of several days.": "Wann er endet; an einem späteren Tag für einen mehrtägigen Termin.",
   "Location": "Ort",
   "Added “%@” to the calendar on %@.": "„%@“ steht jetzt im Kalender: %@.",
   "Import Recipe": "Rezept importieren",

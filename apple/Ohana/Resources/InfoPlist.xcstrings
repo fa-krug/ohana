@@ -1,6 +1,16 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "NSCalendarsFullAccessUsageDescription": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohana gleicht den Kalender deiner Familie mit dem Apple-Kalender ab, den du auswählst, und der Assistent liest und ändert deine Kalender, wenn du ihn darum bittest."
+          }
+        }
+      }
+    },
     "NSCameraUsageDescription": {
       "localizations": {
         "de": {

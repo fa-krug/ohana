@@ -108,7 +108,7 @@ struct OverviewTests {
         #expect(OverviewLinks.meal(empty.meals) == .mealPlan)
         #expect(OverviewLinks.topExpense(empty.finance) == .financeTransactions(categoryID: nil))
         #expect(empty.birthdays.map(OverviewLinks.route(for:)).first == .calendarDay(Day("2026-11-15")!))
-        #expect(OverviewLinks.route(for: empty.todayEvents[0]) == .calendarDay(Day("2026-11-01")!))
+        #expect(OverviewLinks.route(for: empty.todayEvents[0], today: empty.today) == .calendarDay(Day("2026-11-01")!))
         // Every route lands in the module it belongs to.
         #expect(OverviewLinks.route(for: d.searches[0]).module == .appointments)
         #expect(OverviewLinks.topExpense(d.finance).module == .finance)

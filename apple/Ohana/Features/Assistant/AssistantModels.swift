@@ -244,7 +244,8 @@ struct AssistantReminderOp: Decodable, Equatable {
     var subject: String { (op == "add" ? title : itemTitle) ?? "" }
 }
 
-/// How one op went on the device: `{ok: true, id?}` or `{ok: false, error}`.
+/// How one op went on the device: `{ok: true, id?}` or `{ok: false, error}` (a calendar edit's
+/// too).
 struct AssistantReminderResult: Codable, Equatable {
     var ok: Bool
     /// The reminder (the new one for add).
@@ -255,8 +256,107 @@ struct AssistantReminderResult: Codable, Equatable {
     static func failed(_ error: String) -> Self { .init(ok: false, id: nil, error: error) }
 }
 
+/// A change of the device's calendars the assistant suggests (`kind: "calendar"`, server
+/// lib/assistant/tools/apple-calendar.ts): like a Reminders edit, nothing changes until the user
+/// applies it on their device, which answers with one result per op.
+struct AssistantCalendarEdit: Equatable {
+    var id: String
+    /// What it does, e.g. "Add “Dentist” to Family".
+    var summary: String
+    var ops: [AssistantCalendarOp]
+    /// Applied (with each op's result) or declined.
+    var answer: Answer?
+    /// The user wrote a new message instead.
+    var skipped: Bool
+
+    typealias Answer = AssistantRemindersEdit.Answer
+}
+
+/// One change of a calendar edit, as the server resolved it: `calendar` is always a calendar's
+/// id (with its title); ops on an existing event name it (`id`, `eventTitle`) and say when it is
+/// now (`eventStart`, `eventEnd`, `eventAllDay`). Times are "YYYY-MM-DDTHH:MM", or "YYYY-MM-DD"
+/// all day (`end` then the last day).
+/// add: `calendar`, `title`, `start`, `end`?, `allDay`?, `location`?, `notes`?, `rrule`?; update:
+/// `id`, `span`? (this | future, for an occurrence), `calendar` (the event's, or the one it moves
+/// to), `title`?, `start`?, `end`?, `allDay`?, `location`?, `notes`? ("" clears them); delete:
+/// `id`, `span`?. Decoded leniently: an op this app doesn't know keeps its `op` (and fails when
+/// applied).
+struct AssistantCalendarOp: Decodable, Equatable {
+    /// add | update | delete
+    var op: String
+    var id: String?
+    var span: String?
+    var eventTitle: String?
+    var eventStart: String?
+    var eventEnd: String?
+    var eventAllDay: Bool?
+    var calendar: String
+    var calendarTitle: String
+    var title: String?
+    var start: String?
+    var end: String?
+    var allDay: Bool?
+    var location: String?
+    var notes: String?
+    var rrule: String?
+
+    init(op: String, id: String? = nil, span: String? = nil, eventTitle: String? = nil, eventStart: String? = nil,
+         eventEnd: String? = nil, eventAllDay: Bool? = nil, calendar: String, calendarTitle: String,
+         title: String? = nil, start: String? = nil, end: String? = nil, allDay: Bool? = nil, location: String? = nil,
+         notes: String? = nil, rrule: String? = nil) {
+        self.op = op
+        self.id = id
+        self.span = span
+        self.eventTitle = eventTitle
+        self.eventStart = eventStart
+        self.eventEnd = eventEnd
+        self.eventAllDay = eventAllDay
+        self.calendar = calendar
+        self.calendarTitle = calendarTitle
+        self.title = title
+        self.start = start
+        self.end = end
+        self.allDay = allDay
+        self.location = location
+        self.notes = notes
+        self.rrule = rrule
+    }
+
+    private enum Keys: String, CodingKey {
+        case op, id, span, eventTitle, eventStart, eventEnd, eventAllDay, calendar, calendarTitle, title, start, end
+        case allDay, location, notes, rrule
+    }
+
+    init(from decoder: any Decoder) throws {
+        guard let c = try? decoder.container(keyedBy: Keys.self) else {
+            self.init(op: "", calendar: "", calendarTitle: "")
+            return
+        }
+        func opt(_ key: Keys) -> String? { try? c.decodeIfPresent(String.self, forKey: key) }
+        func flag(_ key: Keys) -> Bool? { try? c.decodeIfPresent(Bool.self, forKey: key) }
+        let op = opt(.op) ?? ""
+        // A delete has nothing to change: its times, if any, are the event's.
+        let deletes = op == "delete"
+        self.init(
+            op: op, id: opt(.id), span: opt(.span), eventTitle: opt(.eventTitle),
+            eventStart: opt(.eventStart) ?? (deletes ? opt(.start) : nil),
+            eventEnd: opt(.eventEnd) ?? (deletes ? opt(.end) : nil),
+            eventAllDay: flag(.eventAllDay) ?? (deletes ? flag(.allDay) : nil),
+            calendar: opt(.calendar) ?? "", calendarTitle: opt(.calendarTitle) ?? "", title: opt(.title),
+            start: deletes ? nil : opt(.start), end: deletes ? nil : opt(.end), allDay: deletes ? nil : flag(.allDay),
+            location: opt(.location), notes: opt(.notes), rrule: opt(.rrule)
+        )
+    }
+
+    /// The event it is about: the new one's title for add, else the event's.
+    var subject: String { (op == "add" ? title : eventTitle) ?? "" }
+
+    /// The day the event shows on now (where an occurrence moved away from its own day is found).
+    var near: Day? { eventStart.flatMap { Day($0) } }
+}
+
 /// What the chat shows: messages, tool activity, changes (with undo), questions, changes of the
-/// user's Reminders to apply. Decoded by `kind`; a kind this app doesn't know yet becomes
+/// user's Reminders and calendars to apply. Decoded by `kind`; a kind this app doesn't know yet becomes
 /// `.unknown` (and isn't shown).
 enum AssistantItem: Decodable, Equatable {
     case user(text: String, attachments: [AssistantAttachmentRef])
@@ -266,6 +366,8 @@ enum AssistantItem: Decodable, Equatable {
     case question(AssistantQuestion)
     /// A change of the user's Reminders (edit_reminders) that waits for them to apply it here.
     case reminders(AssistantRemindersEdit)
+    /// A change of the device's calendars (edit_apple_calendar) that waits for them to apply it here.
+    case calendar(AssistantCalendarEdit)
     /// From here on, the model gets the earlier part of the chat as a summary.
     case compacted
     case error(text: String)
@@ -317,6 +419,12 @@ enum AssistantItem: Decodable, Equatable {
             let ops = try? c.decodeIfPresent([AssistantReminderOp].self, forKey: .ops)
             let answer = try? c.decodeIfPresent(AssistantRemindersEdit.Answer.self, forKey: .answer)
             self = .reminders(AssistantRemindersEdit(
+                id: str(.id), summary: str(.summary), ops: ops ?? [], answer: answer, skipped: flag(.skipped)
+            ))
+        case "calendar":
+            let ops = try? c.decodeIfPresent([AssistantCalendarOp].self, forKey: .ops)
+            let answer = try? c.decodeIfPresent(AssistantCalendarEdit.Answer.self, forKey: .answer)
+            self = .calendar(AssistantCalendarEdit(
                 id: str(.id), summary: str(.summary), ops: ops ?? [], answer: answer, skipped: flag(.skipped)
             ))
         case "compacted":
@@ -421,7 +529,8 @@ struct AssistantSSEParser {
 // MARK: Requests
 
 /// A message for the assistant: the text, files as text, images as data URLs; and where the
-/// user is (the page, the year, their language and day) and, with access, their Reminders.
+/// user is (the page, the year, their language and day) and, with access, their Reminders and
+/// the device's calendars.
 struct AssistantChatInput: Encodable {
     var text: String?
     var attachments: [AssistantOutgoingAttachment]?
@@ -431,6 +540,8 @@ struct AssistantChatInput: Encodable {
     var today: String
     /// Without it, the Reminders tools are off for the turn.
     var reminders: AssistantRemindersContext?
+    /// Without it, the Apple Calendar tools are off for the turn.
+    var appleCalendar: AssistantCalendarContext?
 }
 
 /// POST /ai/chats/{id}/answer
@@ -443,6 +554,7 @@ struct AssistantAnswerInput: Encodable {
     var lang: String
     var today: String
     var reminders: AssistantRemindersContext?
+    var appleCalendar: AssistantCalendarContext?
 }
 
 /// POST /ai/chats/{id}/reminders: the waiting Reminders edit `id` applied (with one result per
@@ -456,6 +568,21 @@ struct AssistantRemindersAnswerInput: Encodable {
     var lang: String
     var today: String
     var reminders: AssistantRemindersContext?
+    var appleCalendar: AssistantCalendarContext?
+}
+
+/// POST /ai/chats/{id}/calendar: the waiting calendar edit `id` applied (with one result per op,
+/// in order) or declined; `appleCalendar` is the snapshot after applying.
+struct AssistantCalendarAnswerInput: Encodable {
+    var id: String
+    var applied: Bool
+    var results: [AssistantReminderResult]?
+    var page: String
+    var year: Int
+    var lang: String
+    var today: String
+    var reminders: AssistantRemindersContext?
+    var appleCalendar: AssistantCalendarContext?
 }
 
 nonisolated struct AssistantOutgoingAttachment: Encodable, Equatable {

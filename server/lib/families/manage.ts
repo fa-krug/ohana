@@ -3,7 +3,6 @@ import { asc, eq, sql } from "drizzle-orm";
 import type { Db } from "@/lib/db";
 import { families, familyMembers, users } from "@/lib/db/schema";
 import { AuthError } from "@/lib/auth/errors";
-import { randomToken } from "@/lib/api/http";
 import { insertPresetTypes } from "@/lib/calendar/presets";
 import { seedDefaultTags } from "@/lib/meals/recipes/tags";
 import { insertDefaultCategories } from "@/lib/finance/presets";
@@ -36,7 +35,7 @@ export function createFamily(
   return db.transaction((tx) => {
     const family = tx
       .insert(families)
-      .values({ id: randomUUID(), name, feedId: randomToken(20), createdAt: now, updatedAt: now })
+      .values({ id: randomUUID(), name, createdAt: now, updatedAt: now })
       .returning()
       .get();
     const lang = args.lang === "de" ? "de" : "en";

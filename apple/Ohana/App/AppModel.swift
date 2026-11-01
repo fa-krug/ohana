@@ -258,6 +258,7 @@ final class AppModel {
             let info = serverInfo
             Task { await PushNotifications.shared.renew(client: client, info: info) }
             prefetch()
+            AppleCalendarSync.shared.syncAllSoon()
         } catch is CancellationError {
         } catch APIError.unauthorized {
             await useDemo(signingOut: false)
@@ -300,6 +301,7 @@ final class AppModel {
             client.cache?.clear()
             ShoppingReminders.forget(server: client.baseURL)
             CalendarStore.removeQueues(server: client.baseURL)
+            AppleCalendarSync.shared.removeAll(server: client.baseURL)
             SharedConnection.forget()
             if syncsWidgets { WidgetSync.reload() }
             // The server drops the device's push with its token.
@@ -419,6 +421,7 @@ final class FamilyContext {
     func didChange(_ areas: [DataArea]) {
         for area in areas { revisions[area, default: 0] += 1 }
         if !api.client.isDemo { WidgetSync.reloadSoon() }
+        if areas.contains(.events) || areas.contains(.calendar) { AppleCalendarSync.shared.ohanaChanged(self) }
     }
 
     fileprivate func adoptRevisions(from other: FamilyContext) {

@@ -11,51 +11,11 @@ enum CalendarSheet: Identifiable {
     var id: String {
         switch self {
         case let .note(days): "note-" + days.map(\.description).joined(separator: ",")
-        case let .event(draft): "event-" + (draft.eventID ?? "new")
+        case let .event(draft): "event-" + (draft.original?.uid ?? draft.eventID ?? "new")
         case .details: "details"
         case .repeatDays: "repeat"
         case .help: "help"
         }
-    }
-}
-
-/// A new event or one being edited.
-struct CalendarEventDraft: Equatable {
-    var eventID: String?
-    var input: CalendarEventInput
-    var isAppointment = false
-    /// The appointment search it was booked from.
-    var searchID: String?
-    /// The event being edited, as it is saved.
-    var original: CalendarEvent?
-
-    static func new(on day: Day) -> CalendarEventDraft {
-        CalendarEventDraft(input: CalendarEventInput(date: day, start: nil, end: nil, title: ""))
-    }
-
-    init(eventID: String? = nil, input: CalendarEventInput, isAppointment: Bool = false) {
-        self.eventID = eventID
-        self.input = input
-        self.isAppointment = isAppointment
-    }
-
-    init(_ event: CalendarEvent) {
-        eventID = event.id
-        input = CalendarEventInput(event)
-        isAppointment = event.isAppointment
-        searchID = event.searchId
-        original = event
-    }
-
-    /// What's wrong with it (the server's checks), nil when it can be saved.
-    var problem: String? {
-        if input.title.trimmingCharacters(in: .whitespaces).isEmpty { return String(localized: "Give it a title.") }
-        if let start = input.start, let end = input.end, end < start { return String(localized: "The end must be after the start.") }
-        let url = input.url.trimmingCharacters(in: .whitespaces).lowercased()
-        if !url.isEmpty && !(url.hasPrefix("http://") || url.hasPrefix("https://")) {
-            return String(localized: "The link must start with http:// or https://.")
-        }
-        return nil
     }
 }
 
@@ -226,190 +186,6 @@ extension View {
     }
 }
 
-// MARK: Event
-
-/// Adds or edits a timed event (POST /events, PATCH /events/{id}).
-struct CalendarEventSheet: View {
-    @Environment(FamilyContext.self) private var family
-    let store: CalendarStore
-    @State var draft: CalendarEventDraft
-    @Environment(\.dismiss) private var dismiss
-    @State private var saving = false
-    @State private var deleting: CalendarEvent?
-    /// The draft as it opened, for Cancel.
-    private let initial: CalendarEventDraft
-
-    init(store: CalendarStore, draft: CalendarEventDraft) {
-        self.store = store
-        _draft = State(initialValue: draft)
-        initial = draft
-    }
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    TextField("Title", text: $draft.input.title)
-                        .accessibilityHint(Text("Required"))
-                    DatePicker("Date", selection: dateBinding, displayedComponents: .date)
-                    Toggle("All day", isOn: allDayBinding)
-                    if draft.input.start != nil {
-                        DatePicker("Starts", selection: timeBinding(\.start, fallback: "09:00"), displayedComponents: .hourAndMinute)
-                        Toggle("End time", isOn: hasEndBinding)
-                        if draft.input.end != nil {
-                            DatePicker("Ends", selection: timeBinding(\.end, fallback: "10:00"), displayedComponents: .hourAndMinute)
-                        }
-                    }
-                } footer: {
-                    if let problem = timeProblem {
-                        Text(problem).foregroundStyle(.red)
-                    }
-                }
-                Section {
-                    TextField("Who it is for", text: $draft.input.person)
-                    TextField("Location", text: $draft.input.location)
-                    TextField("Link", text: $draft.input.url)
-                        #if os(iOS)
-                        .keyboardType(.URL)
-                        .textInputAutocapitalization(.never)
-                        #endif
-                        .autocorrectionDisabled()
-                    TextField("Note", text: $draft.input.note, axis: .vertical)
-                        .lineLimit(2...5)
-                } footer: {
-                    VStack(alignment: .leading, spacing: 6) {
-                        if let problem = linkProblem {
-                            Text(problem).foregroundStyle(.red)
-                        }
-                        if draft.isAppointment {
-                            Text("Booked from an appointment search.")
-                            if let searchID = draft.searchID {
-                                Button("Open the appointment search") {
-                                    dismiss()
-                                    family.open(.appointmentSearch(id: searchID))
-                                }
-                                .buttonStyle(.borderless)
-                            }
-                        }
-                    }
-                }
-                if let original = draft.original {
-                    Section {
-                        Button("Delete event", role: .destructive) { deleting = original }
-                    }
-                }
-            }
-            .formStyle(.grouped)
-            .navigationTitle(draft.eventID == nil ? LocalizedStringKey("New event") : LocalizedStringKey("Edit event"))
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    CancelButton(hasChanges: draft != initial)
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { save() }
-                        .disabled(draft.problem != nil || saving)
-                        .keyboardShortcut(.defaultAction)
-                }
-            }
-            .calendarDeleteEventDialog($deleting, store: store) { dismiss() }
-        }
-        .discardGuard(hasChanges: draft != initial)
-        .errorBanner()
-        .presentationDetents([.large])
-        #if os(macOS)
-        .frame(minWidth: 440, minHeight: 520)
-        #endif
-    }
-
-    /// The checks shown at their fields (a missing title only disables Save).
-    private var timeProblem: String? {
-        if let start = draft.input.start, let end = draft.input.end, end < start {
-            return String(localized: "The end must be after the start.")
-        }
-        return nil
-    }
-
-    private var linkProblem: String? {
-        let url = draft.input.url.trimmingCharacters(in: .whitespaces).lowercased()
-        return !url.isEmpty && !(url.hasPrefix("http://") || url.hasPrefix("https://"))
-            ? String(localized: "The link must start with http:// or https://.") : nil
-    }
-
-    private var dateBinding: Binding<Date> {
-        Binding(get: { draft.input.date.date }, set: { draft.input.date = Day($0) })
-    }
-
-    private var allDayBinding: Binding<Bool> {
-        Binding(get: { draft.input.start == nil }, set: { allDay in
-            draft.input.start = allDay ? nil : "09:00"
-            draft.input.end = nil
-        })
-    }
-
-    private var hasEndBinding: Binding<Bool> {
-        Binding(get: { draft.input.end != nil }, set: { on in
-            draft.input.end = on ? Self.later(draft.input.start ?? "09:00") : nil
-        })
-    }
-
-    private func timeBinding(_ key: WritableKeyPath<CalendarEventInput, String?>, fallback: String) -> Binding<Date> {
-        Binding(get: {
-            Self.date(of: draft.input[keyPath: key] ?? fallback, on: draft.input.date)
-        }, set: { date in
-            let c = Calendar.current.dateComponents([.hour, .minute], from: date)
-            draft.input[keyPath: key] = String(format: "%02d:%02d", c.hour ?? 0, c.minute ?? 0)
-        })
-    }
-
-    static func date(of time: String, on day: Day) -> Date {
-        let parts = time.split(separator: ":").compactMap { Int($0) }
-        let c = DateComponents(year: day.year, month: day.month, day: day.day,
-                               hour: parts.first ?? 9, minute: parts.count > 1 ? parts[1] : 0)
-        return Calendar.current.date(from: c) ?? day.date
-    }
-
-    /// An hour after "HH:MM" (at most 23:59).
-    static func later(_ time: String) -> String {
-        let parts = time.split(separator: ":").compactMap { Int($0) }
-        let minutes = min((parts.first ?? 9) * 60 + (parts.count > 1 ? parts[1] : 0) + 60, 23 * 60 + 59)
-        return String(format: "%02d:%02d", minutes / 60, minutes % 60)
-    }
-
-    private func save() {
-        saving = true
-        var input = draft.input
-        input.title = input.title.trimmingCharacters(in: .whitespaces)
-        input.url = input.url.trimmingCharacters(in: .whitespaces)
-        let id = draft.eventID
-        perform {
-            defer { saving = false }
-            try await store.saveEvent(input, id: id)
-            dismiss()
-        }
-    }
-
-}
-
-extension View {
-    /// "Delete “Title”?" before an event is deleted, the same from every place that deletes one
-    /// (the editor, a row's menu, its context menu); `onDeleted` runs after it is gone.
-    func calendarDeleteEventDialog(_ event: Binding<CalendarEvent?>, store: CalendarStore,
-                                   onDeleted: @escaping () -> Void = {}) -> some View {
-        confirmationDialog(String(localized: "Delete “\(event.wrappedValue?.title ?? "")”?"),
-                           isPresented: Binding(get: { event.wrappedValue != nil }, set: { if !$0 { event.wrappedValue = nil } }),
-                           titleVisibility: .visible, presenting: event.wrappedValue) { e in
-            Button("Delete", role: .destructive) {
-                perform {
-                    try await store.deleteEvent(e)
-                    onDeleted()
-                }
-            }
-        } message: { _ in
-            Text("You can undo this.")
-        }
-    }
-}
-
 // MARK: Details
 
 /// The selected days with their entries, notes, events and birthdays, and their actions.
@@ -503,8 +279,8 @@ struct CalendarSelectionDetails: View {
                 .buttonStyle(.plain)
                 .disabled(store.readOnly)
             }
-            ForEach(events) { event in
-                eventRow(event)
+            ForEach(events, id: \.uid) { event in
+                eventRow(event, on: day)
             }
             ForEach(birthdays, id: \.self) { b in
                 Text(CalendarText.birthday(b))
@@ -519,7 +295,7 @@ struct CalendarSelectionDetails: View {
         family.open(.appointmentSearch(id: id))
     }
 
-    private func eventRow(_ event: CalendarEvent) -> some View {
+    private func eventRow(_ event: CalendarEvent, on day: Day) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: event.isAppointment ? "stethoscope" : "clock")
                 .foregroundStyle(Color.accentColor)
@@ -527,9 +303,14 @@ struct CalendarSelectionDetails: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(event.person.isEmpty ? event.title : "\(event.title) (\(event.person))")
                     .font(.subheadline.weight(.semibold))
-                Text(event.timeText ?? String(localized: "All day"))
+                Text(event.whenText)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                if let repeatText = event.repeatText {
+                    Label(repeatText, systemImage: "repeat")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 if !event.location.isEmpty {
                     Text(event.location).font(.caption).foregroundStyle(.secondary)
                 }
@@ -568,7 +349,8 @@ struct CalendarSelectionDetails: View {
         }
         .contentShape(.rect)
         // Onto another day of the grid (iPad, Mac: phones have no grid next to the details).
-        .modifier(CalendarEventDragSource(store: store, event: event, enabled: !store.readOnly && sizeClass != .compact))
+        .modifier(CalendarEventDragSource(store: store, event: event, day: day,
+                                          enabled: !store.readOnly && sizeClass != .compact))
         .contextMenu {
             if event.isAppointment, let searchID = event.searchId {
                 Button("Open the appointment search", systemImage: "stethoscope") { openSearch(searchID) }

@@ -1,12 +1,10 @@
-// The calendar: entry types per year, day entries, day notes and the iCalendar feed (ported
-// from family-planner's _shared/vacation.ts; the routes keep its paths and JSON shapes).
+// The calendar: entry types per year, day entries and day notes (ported from family-planner's
+// _shared/vacation.ts; the routes keep its paths and JSON shapes).
 
 import type { Ctx } from "@/lib/api/family-api";
-import { cleanName, cleanYear, CORS, currentYear, HttpError, json, objectOf, readBody, slug } from "@/lib/api/http";
+import { cleanName, cleanYear, currentYear, HttpError, json, objectOf, readBody, slug } from "@/lib/api/http";
 import { dateRange, isValidDate, isWeekend } from "./dates";
-import { buildIcs, type Lang } from "./ics";
-import { familyNames } from "@/lib/families/people";
-import { listEvents } from "./events";
+import type { Lang } from "@/lib/i18n/config";
 import { type CalendarStore as Store, type EntryRow, type NoteRow, type Role, ROLES, type TypeRow } from "./store";
 
 export const PRESET_TYPES: { id: string; name: string; color: string; role: Role }[] = [
@@ -324,11 +322,9 @@ function parseOps<T extends { days: string[] }>(
   return { ops, total };
 }
 
-/** Routes /families/{id}/(calendar.ics|types|entries|notes); null for anything else. */
+/** Routes /families/{id}/(types|entries|notes); null for anything else. */
 export function handleCalendar(ctx: Ctx): Promise<Response> | null {
   switch (ctx.rest[0]) {
-    case "calendar.ics":
-      return ctx.rest.length === 1 && ctx.method === "GET" ? calendarFeed(ctx) : null;
     case "types":
       return types(ctx);
     case "entries":
@@ -337,56 +333,6 @@ export function handleCalendar(ctx: Ctx): Promise<Response> | null {
       return ctx.rest.length === 1 ? notes(ctx) : null;
   }
   return null;
-}
-
-async function calendarFeed({ db, store, url, load }: Ctx): Promise<Response> {
-  const { family } = await load("feed");
-  const withNotes = url.searchParams.get("notes") === "1";
-  const [types, rows, notes] = await Promise.all([
-    store.listTypes(family.id),
-    store.listEntries(family.id),
-    withNotes ? store.listNotes(family.id) : undefined,
-  ]);
-  const entries = new Map<string, string[]>();
-  for (const r of rows) {
-    const list = entries.get(r.day) ?? [];
-    list.push(r.type_id);
-    entries.set(r.day, list);
-  }
-  // A filter matches types by id or name in every year.
-  const typesParam = url.searchParams.get("types");
-  const include = typesParam ? new Set<TypeRow>() : undefined;
-  for (const ref of typesParam?.split(",").filter(Boolean) ?? []) {
-    const matches = types.filter((t) => t.id === ref || t.name.toLowerCase() === ref.trim().toLowerCase());
-    if (!matches.length) throw new HttpError(404, `Unknown entry type "${ref}"`);
-    for (const t of matches) include!.add(t);
-  }
-  const ics = buildIcs({
-    calendarName: url.searchParams.get("name") || family.name,
-    // Planners from before families keep their event ids (they were made from the old view id).
-    uidPrefix: family.legacy_id ?? family.feed_id,
-    types,
-    entries,
-    include,
-    gaps: url.searchParams.get("gaps") === "1",
-    notes: notes && new Map(notes.map((n) => [n.day, n])),
-    lang: url.searchParams.get("lang") === "de" ? "de" : "en",
-    // Booked appointments and other timed events (phase 7), only when asked for.
-    events: url.searchParams.get("events") === "1" ? listEvents(db, family.id) : undefined,
-    // The members' birthdays, only when asked for.
-    birthdays:
-      url.searchParams.get("birthdays") === "1"
-        ? familyNames(db, family.id).flatMap((p) => (p.birthday ? [{ id: p.id, name: p.name, birthday: p.birthday }] : []))
-        : undefined,
-  });
-  return new Response(ics, {
-    headers: {
-      ...CORS,
-      "content-type": "text/calendar; charset=utf-8",
-      "content-disposition": 'inline; filename="calendar.ics"',
-      "cache-control": "max-age=300",
-    },
-  });
 }
 
 async function types({ store, req, url, method, rest, loadWith, now }: Ctx): Promise<Response> {

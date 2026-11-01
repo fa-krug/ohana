@@ -345,9 +345,9 @@ struct AppointmentBookSheet: View {
                         Label("The end is before the start.", systemImage: "exclamationmark.circle.fill")
                             .foregroundStyle(.red)
                     } else if afterVisit {
-                        Text("Check the day and time the practice confirmed. Ohana then shows it in the calendar (and in the calendar feed, if you subscribed with booked appointments).")
+                        Text("Check the day and time the practice confirmed. Ohana then shows it in the calendar.")
                     } else {
-                        Text("Book it on the practice’s page first. Ohana then shows it in the calendar (and in the calendar feed, if you subscribed with booked appointments).")
+                        Text("Book it on the practice’s page first. Ohana then shows it in the calendar.")
                     }
                 }
                 Section("For whom") {

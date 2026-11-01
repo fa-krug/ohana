@@ -16,8 +16,8 @@ const now = new Date("2026-06-27T12:00:00Z");
 function seededPlan() {
   const db = createTestDb();
   db.insert(families).values([
-    { id: "h1", feedId: "feedh1", name: "Home", createdAt: now, updatedAt: now },
-    { id: "h2", feedId: "feedh2", name: "Other", createdAt: now, updatedAt: now },
+    { id: "h1", name: "Home", createdAt: now, updatedAt: now },
+    { id: "h2", name: "Other", createdAt: now, updatedAt: now },
   ]).run();
   db.insert(units).values({ id: 1, nameEn: "gram", nameDe: "Gramm", abbreviation: "g", conversionFactor: "1" }).run();
   db.insert(ingredients).values({ id: 1, nameEn: "Tomato", nameDe: "Tomate", category: "PRODUCE" }).run();
@@ -46,7 +46,7 @@ describe("renewIteration", () => {
 
 function seededTwoIterations() {
   const db = createTestDb();
-  db.insert(families).values({ id: "h1", feedId: "feedh1", name: "Home", createdAt: now, updatedAt: now }).run();
+  db.insert(families).values({ id: "h1", name: "Home", createdAt: now, updatedAt: now }).run();
   db.insert(units).values({ id: 1, nameEn: "gram", nameDe: "Gramm", abbreviation: "g", conversionFactor: "1" }).run();
   db.insert(ingredients).values({ id: 1, nameEn: "Tomato", nameDe: "Tomate", category: "PRODUCE" }).run();
   // 14 KNOWN recipes, leftoverDays:0 -> 7 cook days fully tile a 1-week iteration, no gap-fill.

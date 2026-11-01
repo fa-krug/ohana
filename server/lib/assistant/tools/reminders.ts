@@ -9,7 +9,7 @@
 
 import { HttpError } from "@/lib/api/http";
 import { isValidDate } from "@/lib/calendar/dates";
-import { fitting, type Tool, type ToolContext } from "./common";
+import { fitting, opsSummary, type Tool, type ToolContext } from "./common";
 
 /** What the app tells about the user's Reminders (checked and capped by cleanReminders). */
 export interface RemindersSnapshot {
@@ -211,47 +211,20 @@ export function resolveOps(r: RemindersSnapshot, raw: unknown): ReminderOp[] {
   });
 }
 
-const n = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
-
 /** What the card says the edit does, e.g. "Add 3 reminders to Groceries". */
 export function editSummary(ops: ReminderOp[], lang: "en" | "de"): string {
-  const de = lang === "de";
-  const count = (kind: ReminderOp["op"]) => ops.filter((o) => o.op === kind).length;
-  const only = ops.every((o) => o.op === ops[0].op) ? ops[0] : null;
-  const sameList = ops.every((o) => o.list === ops[0].list);
-  if (only && ops.length === 1) {
-    const what = `„${only.op === "add" ? only.title : only.itemTitle}“`;
-    const en = `“${only.op === "add" ? only.title : only.itemTitle}”`;
-    switch (only.op) {
-      case "add":
-        return de ? `${what} zu ${only.listTitle} hinzufügen` : `Add ${en} to ${only.listTitle}`;
-      case "update":
-        return de ? `${what} ändern` : `Change ${en}`;
-      case "complete":
-        return de ? `${what} abhaken` : `Complete ${en}`;
-      case "uncomplete":
-        return de ? `${what} wieder öffnen` : `Reopen ${en}`;
-      case "delete":
-        return de ? `${what} löschen` : `Delete ${en}`;
-    }
-  }
-  const parts: string[] = [];
-  const things = (k: number) => (de ? n(k, "Erinnerung", "Erinnerungen") : n(k, "reminder", "reminders"));
-  const verbs: [ReminderOp["op"], string, string][] = [
-    ["add", "add", "hinzufügen"],
-    ["update", "change", "ändern"],
-    ["complete", "complete", "abhaken"],
-    ["uncomplete", "reopen", "wieder öffnen"],
-    ["delete", "delete", "löschen"],
-  ];
-  for (const [kind, en, deVerb] of verbs) {
-    const k = count(kind);
-    if (!k) continue;
-    const to = kind === "add" && only && sameList ? (de ? ` zu ${ops[0].listTitle}` : ` to ${ops[0].listTitle}`) : "";
-    parts.push(de ? `${things(k)}${to} ${deVerb}` : `${en} ${things(k)}${to}`);
-  }
-  const out = parts.join(", ");
-  return out.charAt(0).toUpperCase() + out.slice(1);
+  return opsSummary(ops, lang, {
+    noun: { en: ["reminder", "reminders"], de: ["Erinnerung", "Erinnerungen"] },
+    verbs: [
+      ["add", "add", "hinzufügen"],
+      ["update", "change", "ändern"],
+      ["complete", "complete", "abhaken"],
+      ["uncomplete", "reopen", "wieder öffnen"],
+      ["delete", "delete", "löschen"],
+    ],
+    name: (o) => (o.op === "add" ? o.title : o.itemTitle),
+    target: (o) => ({ id: o.list, title: o.listTitle }),
+  });
 }
 
 export const reminderTools: Record<string, Tool> = {

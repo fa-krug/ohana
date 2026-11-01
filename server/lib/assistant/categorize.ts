@@ -5,7 +5,7 @@
 // number -> category id. Only categories that fit (income / expense) count.
 
 import { HttpError } from "@/lib/api/http";
-import type { Lang } from "@/lib/calendar/ics";
+import type { Lang } from "@/lib/i18n/config";
 import { categoryTree } from "@/lib/finance/category-tree";
 import { similarKey } from "@/lib/finance/finance";
 import type { CategoryRow, TransactionRow } from "@/lib/finance/store";

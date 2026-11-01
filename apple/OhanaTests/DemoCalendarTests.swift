@@ -21,7 +21,7 @@ struct DemoCalendarTests {
     @Test func theYearHasTypesEntriesNotesEventsAndBirthdays() throws {
         let state = try state(year: 2026)
         #expect(state.family.id == "demo" && state.family.name == "Parker family")
-        #expect(state.family.readOnly && state.family.access == "view" && state.family.legacyId == nil)
+        #expect(state.family.readOnly && state.family.access == "view")
         #expect(state.types.map(\.name) == ["Vacation", "School holidays", "Grandma visits", "Anna off work"])
         #expect(state.types.allSatisfy { $0.year == 2026 })
         #expect(state.types.first { $0.id == "vacation" }?.isAway == true)
@@ -36,8 +36,18 @@ struct DemoCalendarTests {
         #expect(state.notes?[today.adding(days: 12).description]?.comment.contains("Lisbon") == true)
 
         let events = try #require(state.events)
-        #expect(events.values.flatMap { $0 }.map(\.id).sorted()
-            == ["event-dentist", "event-parents-evening", "event-pediatrician", "event-swim"])
+        #expect(Set(events.values.flatMap { $0 }.map(\.id))
+            == ["event-dentist", "event-parents-evening", "event-pediatrician", "event-swim", "event-class-trip"])
+        // Swimming every week from tomorrow, twelve times: nine of them in 2026.
+        let swims = events.values.flatMap { $0 }.filter { $0.id == "event-swim" }
+        #expect(swims.count == 9 && swims.allSatisfy { $0.repeats && $0.occurrence == $0.date })
+        #expect(events[today.adding(days: 8).description]?.first?.uid == "event-swim@\(today.adding(days: 8))")
+        #expect(events[today.adding(days: 2).description] == nil)
+        // The class trip over three days, on each of them.
+        for offset in 9...11 {
+            let trip = try #require(events[today.adding(days: offset).description]?.first { $0.id == "event-class-trip" })
+            #expect(trip.date == today.adding(days: 9) && trip.endDate == today.adding(days: 11) && !trip.repeats)
+        }
         let pediatrician = try #require(events[today.adding(days: 3).description]?.first)
         #expect(pediatrician.id == "event-pediatrician" && pediatrician.isAppointment)
         #expect(pediatrician.searchId == "search-pediatrician" && pediatrician.person == "Mia")
@@ -63,7 +73,8 @@ struct DemoCalendarTests {
         let next = try state(year: 2027)
         #expect(next.types.count == 4 && next.types.allSatisfy { $0.year == 2027 })
         #expect(next.entries.keys.allSatisfy { $0.hasPrefix("2027-") })
-        #expect(next.events?.isEmpty == true)
+        // Only the last three swimming lessons are in 2027.
+        #expect(next.events?.values.flatMap { $0 }.map(\.id) == ["event-swim", "event-swim", "event-swim"])
         #expect(next.birthdays?["2027-03-14"] == [CalendarBirthday(name: "Mia", age: 9)])
 
         let far = try state(year: 2030)
@@ -81,6 +92,27 @@ struct DemoCalendarTests {
         #expect(this.entries.keys.allSatisfy { $0.hasPrefix("2026-") })
         #expect(this.events?[today.description]?.first?.id == "event-dentist")
         #expect(next.events?["2026-12-27"] == nil && this.events?["2026-12-27"]?.first?.id == "event-pediatrician")
+    }
+
+    @Test func answersTheEventsRoutes() throws {
+        var server = DemoServer()
+        server.today = { today }
+        server.now = { today.date }
+        func get<T: Decodable>(_ path: String, _ query: [String: String] = [:], as: T.Type) throws -> T {
+            var url = DemoServer.baseURL.appending(path: "/api/v1/families/demo" + path)
+            url.append(queryItems: query.map { URLQueryItem(name: $0.key, value: $0.value) })
+            let (data, response) = server.respond(to: URLRequest(url: url))
+            #expect(response.statusCode == 200)
+            return try APIClient.decoder.decode(T.self, from: data)
+        }
+        let swim = try get("/events/event-swim", as: CalendarEventSeries.self)
+        #expect(swim.rrule == "FREQ=WEEKLY;COUNT=12" && swim.date == today.adding(days: 1) && swim.exdates.isEmpty)
+        let raw = try get("/events", ["raw": "1"], as: CalendarEventSeriesResponse.self)
+        #expect(raw.events.count == 5)
+        let week = try get("/events", ["from": today.description, "to": today.adding(days: 9).description],
+                           as: CalendarEventsResponse.self)
+        #expect(week.events.map(\.id) == ["event-dentist", "event-swim", "event-pediatrician", "event-parents-evening",
+                                         "event-swim", "event-class-trip"])
     }
 
     @Test func withoutAYearItIsThisYear() throws {

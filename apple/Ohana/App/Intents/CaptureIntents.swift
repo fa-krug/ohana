@@ -95,7 +95,7 @@ struct AddEventIntent: AppIntent {
     @Parameter(title: "All day", default: false)
     var allDay: Bool
 
-    @Parameter(title: "End", description: "When it ends, on the same day.")
+    @Parameter(title: "End", description: "When it ends; on a later day for an event of several days.")
     var end: Date?
 
     @Parameter(title: "Location")
@@ -121,11 +121,13 @@ struct AddEventIntent: AppIntent {
     }
 }
 
-/// The body of POST /events (server/lib/calendar/events.ts `eventInputSchema`): the day and the
-/// wall-clock times in the device's calendar and time zone; no times for an all-day event, no end
-/// that isn't later the same day.
+/// The body of POST /events (server/lib/calendar/events.ts `eventInputSchema`): the first and
+/// last day and the wall-clock times in the device's calendar and time zone; no times for an
+/// all-day event. An end on a later day makes an event of several days; one that isn't after the
+/// start is left out.
 nonisolated struct EventIntentBody: Encodable, Equatable {
     var date: String
+    var endDate: String?
     var start: String?
     var end: String?
     var title: String
@@ -135,13 +137,17 @@ nonisolated struct EventIntentBody: Encodable, Equatable {
         self.title = title
         let location = location?.trimmingCharacters(in: .whitespacesAndNewlines)
         self.location = location?.isEmpty == false ? location : nil
-        let day = calendar.dateComponents([.year, .month, .day], from: start)
-        date = String(format: "%04d-%02d-%02d", day.year ?? 0, day.month ?? 0, day.day ?? 0)
+        date = Self.day(start, calendar)
+        let end = end.flatMap { $0 > start ? $0 : nil }
+        if let end, !calendar.isDate(end, inSameDayAs: start) { endDate = Self.day(end, calendar) }
         guard !allDay else { return }
         self.start = Self.time(start, calendar)
-        if let end, end > start, calendar.isDate(end, inSameDayAs: start) {
-            self.end = Self.time(end, calendar)
-        }
+        if let end { self.end = Self.time(end, calendar) }
+    }
+
+    private static func day(_ date: Date, _ calendar: Calendar) -> String {
+        let day = calendar.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", day.year ?? 0, day.month ?? 0, day.day ?? 0)
     }
 
     private static func time(_ date: Date, _ calendar: Calendar) -> String {

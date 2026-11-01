@@ -41,6 +41,19 @@ meanwhile), the server wins: the change is dropped, a message says so, and the s
 shows the server's state. Other changes need the server. Signing out removes the copy and the
 changes not sent yet.
 
+## Apple Calendar
+
+Settings → Calendar → *Sync with Apple Calendar* links the family's calendar with a calendar of
+Apple Calendar on this device: an iCloud, Google or Exchange one, or a new one named after the
+family. Events go both ways, edits and deletions too (when both sides changed an event, Ohana's
+wins): events over several days keep their days, a repeating event stays one repeating event
+with its rule, and an occurrence changed or deleted on its own on one side is changed or deleted
+on the other. The day entries (vacation, holidays, …) go to Apple Calendar only, as all-day
+events over each run of days, and changes made to them there are put back. It covers a month
+back and a year ahead, and runs while the app is open: at launch, when it comes to the front,
+every 15 minutes, and when either side changes. Viewers only get the family's events, nothing
+goes back. Several devices can sync into the same iCloud calendar without copying events twice.
+
 ## Families, roles and modules
 
 - If you're in several families, switch between them at the top of the sidebar.
