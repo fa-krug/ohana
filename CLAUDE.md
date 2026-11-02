@@ -196,7 +196,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `POST /ai/chats/{id}/suggestions`; an unticked one is `{ok: false, declined: true}`. The
   letter scan's sheet gets the same items without a chat: `letter.ts`, `POST /ai/letter {text,
   today?, lang?}` (editors; one completion with the family's model, items checked one by one with
-  `resolveSuggestion`, wrong ones dropped, tasks' `list` null) → `{ai, source?, items}`. `notify.ts` is the "assistant turn finished" notification (`RunnerEnv.turnEnded`
+  `resolveSuggestion`, wrong ones dropped, tasks' `list` null; body `tags`: the user's existing
+  tags) → `{ai, source?, items, filing}` (`filing`: title, date, whose it is, tags only of `tags`). `notify.ts` is the "assistant turn finished" notification (`RunnerEnv.turnEnded`
   from the `ChatRunner`; `chats.seen_at`, set every 15 s by a follower, says someone looks).
   `net.ts` refuses private addresses (`AiEnv.modelNet` may allow them for the endpoint with
   `AI_ALLOW_PRIVATE_ENDPOINT`). `toolsFor` leaves out the tools of turned-off modules
@@ -476,8 +477,12 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `_kMDItemUserTags` xattr). Letters (`Features/Letters/`): *Scan letter* in the family menu, the
   `ScanLetterIntent` App Shortcut (Spotlight, `LetterScanInbox`) and the assistant's paperclip,
   all through `FamilyContext.scanLetter()` / `ShellLetterScan` → `LetterReviewSheet` (name, date
-  and tags suggested by `LetterSuggestions`: Apple's on-device model, else rules; never over the
-  user's edits). From the shell (assistant on, editor, not the demo) the sheet also sends only the
+  and tags suggested by `LetterSuggestions`: Apple's on-device model, else rules; tags only existing ones:
+  saved with a scan on this device, or on the files in the folder, `FolderTags`, as neither Finder nor
+  Files has an API for its tag list; a family member named in the letter brings the tag of their name or its
+  short form, `NameMatch`: "Michi" for Michael; whose letter it is (`person`, not necessarily who scans it) names the file
+  "date_Person_Title" with that person's tag; the server's `filing` (from `POST …/ai/letter`, sent the
+  existing tags) beats Apple's model, which beats the rules, field by field (`LetterReview.merged`); never over the user's edits). From the shell (assistant on, editor, not the demo) the sheet also sends only the
   text to `POST …/ai/letter` (`LetterFind.swift`) and lists the events, tasks and deadlines found at
   its bottom, ticked, each editable (`LetterItemEditor`); Done saves the PDF, then adds the ticked
   ones with `AssistantSuggestionsApply` (failed ones stay, Done retries them). The paperclip

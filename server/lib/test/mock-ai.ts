@@ -52,7 +52,9 @@
 // block: source "Elternbrief" (the letter's first line), an event in 7 days 15:00–17:00 in the
 // schoolyard for the family's first member, a task due in 5 days and a deadline in 3 days at
 // 12:00 (German titles when asked to answer in German). A letter saying "nothing" gets no items;
-// one saying "sloppy" gets wrong items too (no date, end without start, unknown kind …).
+// one saying "sloppy" gets wrong items too (no date, end without start, unknown kind …). Its
+// filing: the source as title, today as date, the first member as person, the first two of the
+// existing tags and a made-up one.
 // Asked to sort transactions into categories (the categorize prompt), it picks the category
 // whose id or name occurs in a row's payee or description, searching the web once for a payee
 // it can't place.
@@ -233,7 +235,15 @@ function letter(stream: boolean, system: string, text: string) {
     return d.toISOString().slice(0, 10);
   };
   const source = text.trim().split("\n")[0].slice(0, 80) || "Elternbrief";
-  if (/\bnothing\b/i.test(text)) return reply(stream, JSON.stringify({ source, items: [] }));
+  const given = /^- "tags": up to \d+ of the existing tags .*\(JSON\): (\[.*?\])\. A tag/m.exec(system)?.[1];
+  const tags: string[] = given ? JSON.parse(given) : [];
+  const filing = {
+    title: source,
+    date: today,
+    ...(first ? { person: first } : {}),
+    tags: [...tags.slice(0, 2), "Made up"],
+  };
+  if (/\bnothing\b/i.test(text)) return reply(stream, JSON.stringify({ source, items: [], filing }));
   const items: unknown[] = [
     {
       kind: "event",
@@ -263,7 +273,7 @@ function letter(stream: boolean, system: string, text: string) {
       "not an item",
     );
   }
-  return reply(stream, "Here is what I found:\n```json\n" + JSON.stringify({ source, items }, null, 1) + "\n```");
+  return reply(stream, "Here is what I found:\n```json\n" + JSON.stringify({ source, items, filing }, null, 1) + "\n```");
 }
 
 /** How often the conversation looked at the calendar: in the summary, and after it. */

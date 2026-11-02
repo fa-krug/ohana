@@ -27,7 +27,7 @@ struct ScannedReceipt {
         self.filing = filing
     }
 
-    /// The PDF's name: "YYYY-MM-DD Shop 12,34 EUR" from what the transaction says.
+    /// The PDF's name: "YYYY-MM-DD_Shop_12,34_EUR" from what the transaction says.
     static func fileName(day: Day, payee: String, amountCents: Int?, currency: String,
                          locale: Locale = .autoupdatingCurrent) -> String {
         var parts = [day.description]
@@ -36,7 +36,7 @@ struct ScannedReceipt {
         if let amountCents, amountCents != 0 {
             parts.append("\(FinanceMoney.input(amountCents, locale: locale)) \(currency)")
         }
-        return parts.joined(separator: " ")
+        return ScanFileName.joined(parts.joined(separator: " "))
     }
 
     /// The PDF's tags: "Receipt" and the category, if one is chosen.

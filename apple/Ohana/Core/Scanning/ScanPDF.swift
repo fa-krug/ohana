@@ -23,7 +23,10 @@ nonisolated struct ScanFilingSettings: @unchecked Sendable {
 
     static let recentTagsKey = "scanRecentTags"
     static let folderKey = "scanFolderBookmark"
+    /// The recent tags the form offers.
     static let maxRecentTags = 12
+    /// The tags kept: the only ones a scan is suggested (`knownTags`).
+    static let maxKnownTags = 300
 
     static func savesPDFKey(_ kind: ScanKind) -> String { "scanSavesPDF.\(kind.rawValue)" }
 
@@ -36,14 +39,17 @@ nonisolated struct ScanFilingSettings: @unchecked Sendable {
         defaults.set(on, forKey: Self.savesPDFKey(kind))
     }
 
-    /// The tags used last, the latest first.
-    var recentTags: [String] { defaults.stringArray(forKey: Self.recentTagsKey) ?? [] }
+    /// Every tag saved with a scan on this device, the latest first.
+    var knownTags: [String] { defaults.stringArray(forKey: Self.recentTagsKey) ?? [] }
 
-    /// Puts `tags` in front of the recent ones (no duplicates, case ignored), keeping `maxRecentTags`.
+    /// The tags used last, the latest first.
+    var recentTags: [String] { Array(knownTags.prefix(Self.maxRecentTags)) }
+
+    /// Puts `tags` in front of the known ones (no duplicates, case ignored), keeping `maxKnownTags`.
     func remember(tags: [String]) {
         var seen = Set<String>()
-        let unique = (tags + recentTags).filter { seen.insert($0.lowercased()).inserted }
-        defaults.set(Array(unique.prefix(Self.maxRecentTags)), forKey: Self.recentTagsKey)
+        let unique = (tags + knownTags).filter { seen.insert($0.lowercased()).inserted }
+        defaults.set(Array(unique.prefix(Self.maxKnownTags)), forKey: Self.recentTagsKey)
     }
 
     // MARK: The folder
@@ -108,27 +114,36 @@ nonisolated enum ScanFileName {
     static let maxLength = 120
     static let fallback = "Scan"
 
+    /// The words of `text` joined by "_" (file names have no spaces), a lone dash between them
+    /// ("Brief – Schule") left out.
+    static func joined(_ text: String) -> String {
+        text.split(whereSeparator: \.isWhitespace)
+            .filter { !$0.allSatisfy { "-–—".contains($0) } }
+            .joined(separator: "_")
+    }
+
     /// A name that works as a file name everywhere: no "/", ":", "\" and the other characters
-    /// Windows and the Files app refuse, no control characters, spaces tidied, no dot in front,
-    /// without a ".pdf" the user typed, at most `maxLength` characters; "Scan" when nothing is left.
+    /// Windows and the Files app refuse, no control characters, words joined by "_" (`joined`), no
+    /// dot in front, without a ".pdf" the user typed, at most `maxLength` characters; "Scan" when
+    /// nothing is left.
     static func sanitized(_ name: String) -> String {
         let forbidden = CharacterSet(charactersIn: "/\\:*?\"<>|").union(.controlCharacters).union(.newlines)
         var clean = String(String.UnicodeScalarView(name.unicodeScalars.map { forbidden.contains($0) ? "-" : $0 }))
-        clean = clean.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        clean = joined(clean)
         if clean.lowercased().hasSuffix(".pdf") { clean = String(clean.dropLast(4)) }
-        let edges = CharacterSet(charactersIn: " .-")
+        let edges = CharacterSet(charactersIn: " .-_")
         clean = clean.trimmingCharacters(in: edges)
         if clean.count > maxLength { clean = String(clean.prefix(maxLength)).trimmingCharacters(in: edges) }
         return clean.isEmpty ? fallback : clean
     }
 
-    /// "Name.pdf" in `folder`, or "Name 2.pdf", "Name 3.pdf", … when that is taken.
+    /// "Name.pdf" in `folder`, or "Name_2.pdf", "Name_3.pdf", … when that is taken.
     static func unique(_ name: String, in folder: URL,
                        exists: (URL) -> Bool = { FileManager.default.fileExists(atPath: $0.path) }) -> URL {
         let base = sanitized(name)
         var number = 1
         while true {
-            let file = folder.appendingPathComponent(number == 1 ? "\(base).pdf" : "\(base) \(number).pdf",
+            let file = folder.appendingPathComponent(number == 1 ? "\(base).pdf" : "\(base)_\(number).pdf",
                                                      isDirectory: false)
             if !exists(file) { return file }
             number += 1
@@ -174,6 +189,37 @@ nonisolated enum FinderTags {
             let read = data.withUnsafeMutableBytes { getxattr(path, attribute, $0.baseAddress, size, 0, 0) }
             return read == size ? decode(data) : []
         }
+    }
+}
+
+/// The Finder / Files tags in use in a folder: neither has an API for its list of tags, so they
+/// are read off the files (and folders) in it and its subfolders.
+nonisolated enum FolderTags {
+    static let maxItems = 3000
+    static let maxDepth = 4
+
+    /// The tags of the items in `folder` (at most `maxItems`, `maxDepth` folders down), the most
+    /// used first, each once (case ignored, the most used spelling).
+    static func read(_ folder: URL, maxItems: Int = maxItems, maxDepth: Int = maxDepth) -> [String] {
+        let access = folder.startAccessingSecurityScopedResource()
+        defer { if access { folder.stopAccessingSecurityScopedResource() } }
+        guard let items = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: nil,
+                                                         options: [.skipsHiddenFiles, .skipsPackageDescendants])
+        else { return [] }
+        var counts: [String: Int] = [:]
+        var seen = 0
+        while seen < maxItems, let item = items.nextObject() as? URL {
+            seen += 1
+            if items.level >= maxDepth { items.skipDescendants() }
+            for tag in FinderTags.read(item) { counts[tag, default: 0] += 1 }
+        }
+        var total: [String: Int] = [:]
+        for (tag, count) in counts { total[tag.lowercased(), default: 0] += count }
+        let ordered = counts.sorted {
+            let a = total[$0.key.lowercased()]!, b = total[$1.key.lowercased()]!
+            return a != b ? a > b : $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key
+        }
+        return ScanTags.cleaned(ordered.map(\.key), limit: .max)
     }
 }
 

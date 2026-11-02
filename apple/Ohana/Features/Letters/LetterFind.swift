@@ -3,7 +3,8 @@ import Foundation
 // What a scanned letter asks of the family: once its text is read, the review sheet sends only
 // the text to the server (`POST /ai/letter`, the family's assistant model), which answers with
 // the events, tasks and deadlines it found, in the shape of the assistant's suggestions
-// (`AssistantSuggestionOp`). The review lists them, ticked; each can be edited
+// (`AssistantSuggestionOp`), and how to file it (`LetterFiling`: title, date, whose it is, tags
+// from the existing ones it was sent). The review lists them, ticked; each can be edited
 // (`LetterItemEditor`, over a `LetterItemDraft`), and Done adds the ticked ones like the
 // assistant's suggestions card does (`AssistantSuggestionsApply`: events through the family API,
 // tasks and deadlines into the user's Reminders).
@@ -14,26 +15,66 @@ struct LetterFindings: Decodable, Equatable {
     /// Who the letter is from, when the model said.
     var source: String?
     var items: [AssistantSuggestionOp]
+    /// How to file it (an older server sends none).
+    var filing: LetterFiling?
 
-    init(ai: Bool, source: String? = nil, items: [AssistantSuggestionOp] = []) {
+    init(ai: Bool, source: String? = nil, items: [AssistantSuggestionOp] = [], filing: LetterFiling? = nil) {
         self.ai = ai
         self.source = source
         self.items = items
+        self.filing = filing
     }
 
-    private enum Keys: String, CodingKey { case ai, source, items }
+    private enum Keys: String, CodingKey { case ai, source, items, filing }
 
     init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: Keys.self)
         ai = try c.decodeIfPresent(Bool.self, forKey: .ai) ?? true
         source = (try? c.decodeIfPresent(String.self, forKey: .source))?.flatMap { $0.isEmpty ? nil : $0 }
         items = (try? c.decodeIfPresent([AssistantSuggestionOp].self, forKey: .items)) ?? []
+        filing = (try? c.decodeIfPresent(LetterFiling.self, forKey: .filing)) ?? nil
     }
 }
 
-/// Looks for what to add in a letter's text (tests fake it).
+/// The server's name for the PDF: a title (without the date and the person), the letter's date,
+/// the family member it's about (as the family lists them) and tags from the ones sent. Each
+/// piece is optional; one that doesn't decode is left out.
+struct LetterFiling: Decodable, Equatable {
+    var title: String?
+    var date: Day?
+    var person: String?
+    var tags: [String] = []
+
+    init(title: String? = nil, date: Day? = nil, person: String? = nil, tags: [String] = []) {
+        self.title = title
+        self.date = date
+        self.person = person
+        self.tags = tags
+    }
+
+    private enum Keys: String, CodingKey { case title, date, person, tags }
+
+    init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: Keys.self)
+        func text(_ key: Keys) -> String? {
+            let value = (try? c.decodeIfPresent(String.self, forKey: key))??.trimmingCharacters(in: .whitespacesAndNewlines)
+            return value?.isEmpty == false ? value : nil
+        }
+        title = text(.title)
+        date = text(.date).flatMap(Day.init)
+        person = text(.person)
+        tags = (try? c.decodeIfPresent([String].self, forKey: .tags)) ?? []
+    }
+
+    var suggestion: LetterSuggestion {
+        LetterSuggestion(title: title, date: date, tags: tags, person: person).cleaned()
+    }
+}
+
+/// Looks for what to add in a letter's text and how to file it (`tags`: the existing ones it may
+/// pick from; tests fake it).
 protocol LetterItemFinding {
-    func find(_ text: String, today: Day) async throws -> LetterFindings
+    func find(_ text: String, today: Day, tags: [String]) async throws -> LetterFindings
 }
 
 /// POST /ai/letter on the family API (editors; the assistant's model).
@@ -44,18 +85,22 @@ struct FamilyLetterFinder: LetterItemFinding {
         let text: String
         let today: String
         let lang: String
+        let tags: [String]
     }
 
     /// The most text the server takes (`MAX_LETTER_TEXT`).
     static let maxText = LetterScan.maxText
+    /// The existing tags sent (the latest and most used first).
+    static let maxTags = 200
 
-    static func body(_ text: String, today: Day, lang: String = MealPlanLanguage.current) -> Body {
+    static func body(_ text: String, today: Day, tags: [String] = [],
+                     lang: String = MealPlanLanguage.current) -> Body {
         Body(text: String(text.trimmingCharacters(in: .whitespacesAndNewlines).prefix(maxText)),
-             today: today.description, lang: lang)
+             today: today.description, lang: lang, tags: Array(tags.prefix(maxTags)))
     }
 
-    func find(_ text: String, today: Day) async throws -> LetterFindings {
-        try await api.send(.post, "/ai/letter", body: Self.body(text, today: today))
+    func find(_ text: String, today: Day, tags: [String]) async throws -> LetterFindings {
+        try await api.send(.post, "/ai/letter", body: Self.body(text, today: today, tags: tags))
     }
 }
 

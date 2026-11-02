@@ -2,9 +2,10 @@ import CoreGraphics
 import SwiftUI
 
 /// A scanned letter on its way: cropped (picked pages), its text read on the device, the
-/// suggested file name and tags (the heuristic first, then Apple's on-device model; a field the
-/// user edited stays theirs), what the server found in it to add (with a `finder`: the shell's
-/// flow) and what the user chooses in `LetterReviewSheet`.
+/// suggested file name and tags (whose letter it is among them; the server's answer over Apple's
+/// on-device model over the heuristic, whichever comes first; a field the user edited stays
+/// theirs), what the server found in it to add (with a `finder`: the shell's flow) and what the
+/// user chooses in `LetterReviewSheet`.
 @Observable
 final class LetterReview: Identifiable {
     let id = UUID()
@@ -37,10 +38,18 @@ final class LetterReview: Identifiable {
     private(set) var pages: [ScanPage]
     private(set) var text = ""
     /// Apple's model is working on a better name and tags.
-    private(set) var suggesting = false
-    private var heuristic = LetterSuggestion()
-    /// The family's names (the editor's "Who it is for"), once loaded.
-    private(set) var people: [String] = []
+    private var modelSuggesting = false
+    /// Apple's model or the server is working on a better name and tags.
+    var suggesting: Bool { modelSuggesting || finding == .looking }
+    /// Where a suggestion comes from: a better one's fields win over a worse one's.
+    enum SuggestionSource: CaseIterable {
+        case server, model, heuristic
+    }
+    private var suggestions: [SuggestionSource: LetterSuggestion] = [:]
+    /// The tags the suggestions are limited to (`ScanFiling.existingTags`).
+    private var known: [String]
+    /// The family's names (the editor's "Who it is for"; whose letter it is), once loaded by `run`.
+    var people: [String] = []
 
     private(set) var finding = Finding.off
     /// What was found, in the server's order (each ticked, the ones this app can't add left out).
@@ -58,6 +67,7 @@ final class LetterReview: Identifiable {
         self.needsCrop = needsCrop
         self.finder = finder
         filing = ScanFiling(kind: .letter, settings: settings)
+        known = settings.knownTags
         self.today = today
         pages = images.map { ScanPage(image: $0, lines: []) }
     }
@@ -72,39 +82,47 @@ final class LetterReview: Identifiable {
     }
 
     func run(names: @MainActor () async -> [String]) async {
+        // The folder's tags are read while the pages are: the server is asked with them.
+        let existing = Task { await filing.existingTags() }
         if needsCrop {
             images = await ScanCrop.cropped(images)
             pages = images.map { ScanPage(image: $0, lines: []) }
         }
+        let read: Result<[ScanPage], any Error>
         do {
-            took(try await ScanReader.read(images, maxPages: LetterScan.maxPages, languageCorrection: true))
+            read = .success(try await ScanReader.read(images, maxPages: LetterScan.maxPages, languageCorrection: true))
         } catch {
-            reading = .failed(error.localizedDescription)
+            read = .failure(error)
+        }
+        known = await existing.value
+        switch read {
+        case let .success(pages): took(pages)
+        case let .failure(error): reading = .failed(error.localizedDescription)
         }
         let names = await names()
         people = names
-        heuristic = LetterHeuristic.suggest(text, names: names)
-        apply(heuristic)
+        apply(LetterHeuristic.suggest(text, names: names, known: known), from: .heuristic)
         if !text.isEmpty, LetterModel.isAvailable {
-            suggesting = true
-            if let suggestion = await LetterModel.suggest(text, names: names) { apply(suggestion) }
-            suggesting = false
+            modelSuggesting = true
+            if let suggestion = await LetterModel.suggest(text, names: names, known: known) { apply(suggestion) }
+            modelSuggesting = false
         }
         await findTask?.value
     }
 
-    /// The pages as read: their text, then (with a finder) the server looks for what's in it.
+    /// The pages as read: their text, then (with a finder) the server looks for what's in it and
+    /// how to file it (with the `known` tags).
     func took(_ read: [ScanPage]) {
         pages = read
         text = AssistantLetter.text(read)
         reading = text.isEmpty ? .failed(LetterScanError.noText.localizedDescription) : .read
         guard let finder, !text.isEmpty else { return }
         finding = .looking
-        let text = text, today = today
+        let text = text, today = today, tags = known
         findTask = Task { [weak self] in
             let result: Result<LetterFindings, any Error>
             do {
-                result = .success(try await finder.find(text, today: today))
+                result = .success(try await finder.find(text, today: today, tags: tags))
             } catch {
                 result = .failure(error)
             }
@@ -124,6 +142,7 @@ final class LetterReview: Identifiable {
             foundSource = findings.source
             found = findings.items.filter { $0.kind != .unknown }.map { LetterFoundItem(op: $0) }
             finding = .found
+            if let filing = findings.filing { apply(filing.suggestion, from: .server) }
         case let .failure(error) where error is CancellationError:
             finding = .off
         case let .failure(error):
@@ -137,13 +156,33 @@ final class LetterReview: Identifiable {
         if finding == .looking { finding = .off }
     }
 
-    /// Fills what the user hasn't edited (what the model left out is the heuristic's).
-    func apply(_ suggestion: LetterSuggestion) {
-        var suggestion = suggestion
-        if suggestion.date == nil { suggestion.date = heuristic.date }
-        if suggestion.title == nil { suggestion.title = heuristic.title }
-        if suggestion.tags.isEmpty { suggestion.tags = heuristic.tags }
-        filing.suggest(name: suggestion.fileName(today: today), tags: suggestion.tags)
+    /// Takes `suggestion` from `source` and fills what the user hasn't edited with the best of
+    /// all so far (`merged`).
+    func apply(_ suggestion: LetterSuggestion, from source: SuggestionSource = .model) {
+        suggestions[source] = suggestion
+        let merged = merged
+        let label = merged.person.map { person in
+            NameMatch.tag(for: person, known: known, family: people) ?? NameMatch.firstNames([person]).first ?? person
+        }
+        filing.suggest(name: merged.fileName(today: today, label: label), tags: merged.tags)
+    }
+
+    /// Each field from the best source that has it (the server's, Apple's model's, the
+    /// heuristic's); the person only one of the family (`people`), the tags only existing ones
+    /// (`known`), the person's own tag first.
+    var merged: LetterSuggestion {
+        let ranked = SuggestionSource.allCases.compactMap { suggestions[$0] }
+        var merged = LetterSuggestion()
+        merged.title = ranked.lazy.compactMap(\.title).first
+        merged.date = ranked.lazy.compactMap(\.date).first
+        merged.person = ranked.lazy.compactMap { $0.person.flatMap { NameMatch.member($0, in: self.people) } }.first
+        var tags = ranked.lazy.map { ScanTags.existing($0.tags, known: self.known, names: self.people) }
+            .first { !$0.isEmpty } ?? []
+        if let person = merged.person, let tag = NameMatch.tag(for: person, known: known, family: people) {
+            tags = ScanTags.cleaned([tag] + tags)
+        }
+        merged.tags = tags
+        return merged
     }
 
     var isBusy: Bool { reading == .reading || filing.saving || adding }

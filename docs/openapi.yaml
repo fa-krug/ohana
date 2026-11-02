@@ -4005,8 +4005,12 @@ paths:
         shape of the assistant's `suggest_items` ops; tasks and deadlines are for the device's
         default Reminders list (`list` and `listTitle` null). Items the model gets wrong are left
         out one by one; at most 30. Without AI settings `ai` is false and `items` empty (no
-        error). Relative dates are resolved against the letter's own date, else `today`. Under
-        `/ai`, so it answers 404 when the server turned the `assistant` module off.
+        error). Relative dates are resolved against the letter's own date, else `today`. With AI
+        settings the answer also has `filing`, how the app files the scan as a PDF: a title
+        (without date and person), the letter's date, whose document it is (one of the family's
+        people, as listed) and tags chosen only from the `tags` sent (the user's existing Finder /
+        Files tags). Under `/ai`, so it answers 404 when the server turned the `assistant` module
+        off.
       x-ohana-role: editor
       parameters:
         - $ref: "#/components/parameters/FamilyId"
@@ -4021,6 +4025,14 @@ paths:
                 text: {type: string, minLength: 1, maxLength: 100000, description: "The letter's text (not blank)."}
                 today: {type: string, format: date, description: "The app's day; default the server's (UTC)."}
                 lang: {type: string, enum: [en, de], default: en, description: "The language of titles and notes."}
+                tags:
+                  type: array
+                  maxItems: 300
+                  description: >-
+                    The user's existing tags, the only ones `filing.tags` may hold. Strings are
+                    trimmed, cut to 30 characters and kept once (case ignored); anything else is
+                    ignored.
+                  items: {type: string, maxLength: 30}
       responses:
         "200":
           description: What the letter asks for.
@@ -4036,6 +4048,19 @@ paths:
                     type: array
                     maxItems: 30
                     items: {$ref: "#/components/schemas/SuggestionOp"}
+                  filing:
+                    type: object
+                    description: How to file the scan (with `ai` true).
+                    required: [tags]
+                    properties:
+                      title: {type: string, maxLength: 60, description: "What the document is, in the letter's language, without the date and the person.", example: Information Psychotherapie}
+                      date: {type: string, format: date, description: "The day the letter was written."}
+                      person: {type: string, description: "The family member the document is for or about, as the family lists them."}
+                      tags:
+                        type: array
+                        maxItems: 5
+                        description: Of the `tags` sent, spelled as sent.
+                        items: {type: string}
         "400": {$ref: "#/components/responses/BadRequest"}
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}

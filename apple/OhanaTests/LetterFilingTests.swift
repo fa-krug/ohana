@@ -58,7 +58,7 @@ struct LetterFilingTests {
         #expect(suggestion.date == Day(year: 2026, month: 10, day: 28))
         #expect(suggestion.tags == ["Elternbrief", "Schule", "Einladung", "Mia"])
         #expect(suggestion.fileName(today: Day(year: 2026, month: 11, day: 1))
-            == "2026-10-28 Elternbrief Klasse 3b – Laternenfest")
+            == "2026-10-28_Elternbrief_Klasse_3b_Laternenfest")
     }
 
     @Test func takesTheSubjectLine() {
@@ -109,9 +109,93 @@ struct LetterFilingTests {
         #expect(LetterHeuristic.tags("Leonie paid the syntax fee", names: ["Leo"]).isEmpty)
     }
 
+    @Test func namesTheFileAfterItsPerson() {
+        let date = Day(year: 2026, month: 7, day: 16)
+        let letter = LetterSuggestion(title: "Information Psychotherapie", date: date, person: "Michael Krug")
+        #expect(letter.fileName(today: date, label: "Michi") == "2026-07-16_Michi_Information_Psychotherapie")
+        #expect(letter.fileName(today: date) == "2026-07-16_Information_Psychotherapie")
+        // Not twice: the title names them already (by the label or the first name).
+        var named = letter
+        named.title = "Michi – Termin"
+        #expect(named.fileName(today: date, label: "Michi") == "2026-07-16_Michi_Termin")
+        named.title = "Termin für Michael"
+        #expect(named.fileName(today: date, label: "Michi") == "2026-07-16_Termin_für_Michael")
+        #expect(LetterSuggestion(person: "Mia Krug").fileName(today: date, label: "Mia") == "2026-07-16_Mia")
+
+        // In the review: the person's tag, else their first name.
+        let settings = Self.settings()
+        settings.remember(tags: ["Michi", "Arzt"])
+        let review = LetterReview(images: [Self.image()], settings: settings, today: date)
+        review.people = ["Michael Krug", "Mia Krug"]
+        review.apply(LetterSuggestion(title: "Termin", tags: ["Arzt"], person: "Michael Krug"))
+        #expect(review.filing.name == "2026-07-16_Michi_Termin")
+        #expect(review.filing.tags == ["Michi", "Arzt"])
+        review.apply(LetterSuggestion(title: "Elternbrief", person: "mia"))
+        #expect(review.filing.name == "2026-07-16_Mia_Elternbrief")
+        #expect(review.filing.tags == [])
+    }
+
+    @Test func findsWhoseLetterItIs() {
+        #expect(LetterHeuristic.suggest(Self.schoolLetter, names: ["Mia Krug", "Leo", "Sascha"]).person == "Mia Krug")
+        let both = Self.schoolLetter + "\nLeo kommt auch."
+        #expect(LetterHeuristic.suggest(both, names: ["Mia Krug", "Leo"]).person == nil)
+        #expect(LetterHeuristic.suggest("Termin für Michael", names: ["Michi"]).person == "Michi")
+        #expect(LetterHeuristic.suggest("Liebe Familie", names: ["Mia Krug"]).person == nil)
+
+        #expect(NameMatch.member("mia krug", in: ["Mia Krug", "Leo"]) == "Mia Krug")
+        #expect(NameMatch.member("Mia", in: ["Mia Krug", "Leo"]) == "Mia Krug")
+        #expect(NameMatch.member("Mia", in: ["Mia Krug", "Mia Müller"]) == nil)
+        #expect(NameMatch.member("Oma", in: ["Mia Krug"]) == nil)
+        #expect(NameMatch.member(" ", in: ["Mia Krug"]) == nil)
+        #expect(NameMatch.tag(for: "Michael Krug", known: ["Arzt", "Michi"], family: ["Michael Krug", "Mia"]) == "Michi")
+        #expect(NameMatch.tag(for: "Mia", known: ["Arzt", "Michi"], family: ["Michael Krug", "Mia"]) == nil)
+
+        let prompt = LetterModel.prompt("Text", names: ["Mia Krug", "Sascha"], known: [])
+        #expect(prompt.contains("Mia Krug, Sascha"))
+        #expect(prompt.contains("isn't necessarily who it's for"))
+    }
+
+    @Test func matchesShortFormsOfNames() {
+        for (short, long) in [("Michi", "Michael"), ("Alex", "Alexander"), ("Basti", "Sebastian"),
+                              ("Hannes", "Johannes"), ("Lena", "Magdalena"), ("Steffi", "Stefanie"),
+                              ("Kathi", "Katharina"), ("Franzi", "Franziska"), ("Michael", "michael"),
+                              ("René", "Rene")] {
+            #expect(NameMatch.similar(short, long), "\(short) – \(long)")
+            #expect(NameMatch.similar(long, short), "\(long) – \(short)")
+        }
+        for (a, b) in [("Leo", "Leonie"), ("Michael", "Michaela"), ("Hanna", "Hannover"), ("Paul", "Pause"),
+                       ("Christian", "Christkind"), ("Mia", "Miriam"), ("Michi", "Max")] {
+            #expect(!NameMatch.similar(a, b), "\(a) – \(b)")
+        }
+    }
+
+    @Test func suggestsANameTagForAVariantOfTheName() {
+        let letter = "Sehr geehrte Familie Krug,\nder Termin für Michael ist am Montag."
+        let known = ["Michi", "Arzt", "Leonie"]
+        #expect(LetterHeuristic.suggest(letter, names: ["Michael Krug"], known: known).tags == ["Michi"])
+        // The family calls him Michi, the letter Michael.
+        #expect(LetterHeuristic.suggest(letter, names: ["Michi"], known: known).tags == ["Michi"])
+        // Not a name of the family: no tag.
+        #expect(LetterHeuristic.suggest(letter, names: ["Leonie"], known: known).tags.isEmpty)
+        // Another member's own name isn't a variant of someone else's.
+        #expect(LetterHeuristic.suggest("Michaela kommt mit.", names: ["Michi", "Michaela"], known: known).tags.isEmpty)
+        // The model's "Michael" becomes the known "Michi".
+        #expect(ScanTags.existing(["Michael", "Erfunden"], known: known, names: ["Michael Krug"]) == ["Michi"])
+    }
+
+    @Test func suggestsOnlyKnownTags() {
+        let known = ["Psychotherapie", "elternbrief", "Mia", "Arzt"]
+        let suggestion = LetterHeuristic.suggest(Self.schoolLetter, names: ["Mia Krug", "Leo"], known: known)
+        #expect(suggestion.tags == ["elternbrief", "Mia"])
+        let tags = LetterHeuristic.suggest("Ihre Psychotherapie beginnt am Montag.", known: known).tags
+        #expect(tags == ["Psychotherapie"])
+        #expect(LetterHeuristic.suggest(Self.schoolLetter, names: ["Mia Krug"], known: []).tags.isEmpty)
+        #expect(ScanTags.existing(["SCHULE", "Neu", " arzt "], known: ["Schule", "Arzt"]) == ["Schule", "Arzt"])
+    }
+
     @Test func noDateNamesTheFileByToday() {
         let today = Day(year: 2026, month: 11, day: 1)
-        #expect(LetterSuggestion(title: "Brief").fileName(today: today) == "2026-11-01 Brief")
+        #expect(LetterSuggestion(title: "Brief").fileName(today: today) == "2026-11-01_Brief")
         #expect(LetterSuggestion().fileName(today: today) == "2026-11-01")
     }
 
@@ -124,14 +208,18 @@ struct LetterFilingTests {
         #expect(!cleaned.title!.hasSuffix(" "))
         #expect(cleaned.tags == ["Schule", "Kita", "A", "B", "C"])
         #expect(LetterSuggestion(title: "  ").cleaned().title == nil)
-        #expect(LetterModel.prompt("Text", names: ["Mia Krug"]).contains("Mia"))
+        #expect(LetterModel.prompt("Text", names: ["Mia Krug"], known: []).contains("Mia"))
+        #expect(LetterModel.prompt("Text", names: [], known: ["Arzt", "Kita"]).contains("Arzt, Kita"))
     }
 
     @Test func aModelSuggestionKeepsWhatTheUserEdited() {
-        let review = LetterReview(images: [Self.image()], settings: Self.settings(),
+        let settings = Self.settings()
+        settings.remember(tags: ["Kita", "Schule"])
+        let review = LetterReview(images: [Self.image()], settings: settings,
                                   today: Day(year: 2026, month: 11, day: 1))
-        review.apply(LetterSuggestion(title: "Brief", date: Day(year: 2026, month: 10, day: 2), tags: ["Kita"]))
-        #expect(review.filing.name == "2026-10-02 Brief")
+        review.apply(LetterSuggestion(title: "Brief", date: Day(year: 2026, month: 10, day: 2),
+                                      tags: ["Kita", "Erfunden"]))
+        #expect(review.filing.name == "2026-10-02_Brief")
         #expect(review.filing.tags == ["Kita"])
         review.filing.editName("Mein Name")
         review.filing.addTag("Wichtig")
@@ -144,9 +232,10 @@ struct LetterFilingTests {
     // MARK: File names and tags
 
     @Test func sanitizesFileNames() {
-        #expect(ScanFileName.sanitized("Betr.: Rechnung 12/2026") == "Betr.- Rechnung 12-2026")
+        #expect(ScanFileName.sanitized("Betr.: Rechnung 12/2026") == "Betr.-_Rechnung_12-2026")
         #expect(ScanFileName.sanitized("  .versteckt  ") == "versteckt")
-        #expect(ScanFileName.sanitized("Zeile\neins  zwei") == "Zeile-eins zwei")
+        #expect(ScanFileName.sanitized("Zeile\neins  zwei") == "Zeile-eins_zwei")
+        #expect(ScanFileName.sanitized("Brief – Schule ") == "Brief_Schule")
         #expect(ScanFileName.sanitized("Brief.PDF") == "Brief")
         #expect(ScanFileName.sanitized("a*b?c\"d<e>f|g\\h") == "a-b-c-d-e-f-g-h")
         #expect(ScanFileName.sanitized("   ") == "Scan")
@@ -156,9 +245,9 @@ struct LetterFilingTests {
 
     @Test func numbersFileNamesThatAreTaken() {
         let folder = URL(fileURLWithPath: "/tmp/letters", isDirectory: true)
-        let taken: Set<String> = ["Brief.pdf", "Brief 2.pdf"]
+        let taken: Set<String> = ["Brief.pdf", "Brief_2.pdf"]
         #expect(ScanFileName.unique("Brief", in: folder) { taken.contains($0.lastPathComponent) }.lastPathComponent
-            == "Brief 3.pdf")
+            == "Brief_3.pdf")
         #expect(ScanFileName.unique("Neu", in: folder) { taken.contains($0.lastPathComponent) }.lastPathComponent
             == "Neu.pdf")
     }
@@ -222,10 +311,10 @@ struct LetterFilingTests {
         defer { try? FileManager.default.removeItem(at: folder) }
         let data = ScanPDF.make(pages: [ScanPage(image: Self.image(), lines: [])], title: "T", tags: [])
         let first = try ScanFiler.save(data, name: "2026-10-28 Brief: Kita", tags: ["Kita"], in: folder)
-        #expect(first.lastPathComponent == "2026-10-28 Brief- Kita.pdf")
+        #expect(first.lastPathComponent == "2026-10-28_Brief-_Kita.pdf")
         #expect(FinderTags.read(first) == ["Kita"])
         let second = try ScanFiler.save(data, name: "2026-10-28 Brief: Kita", tags: [], in: folder)
-        #expect(second.lastPathComponent == "2026-10-28 Brief- Kita 2.pdf")
+        #expect(second.lastPathComponent == "2026-10-28_Brief-_Kita_2.pdf")
         #expect(PDFDocument(url: second)?.pageCount == 1)
         #expect(throws: ScanFilingError.self) {
             try ScanFiler.save(data, name: "x", tags: [], in: folder.appendingPathComponent("gone"))
@@ -252,6 +341,24 @@ struct LetterFilingTests {
         settings.remember(tags: (1...20).map { "T\($0)" })
         #expect(settings.recentTags.count == ScanFilingSettings.maxRecentTags)
         #expect(settings.recentTags.first == "T1")
+        #expect(settings.knownTags.count == 23)
+    }
+
+    @Test func readsTheTagsInUseInTheFolder() throws {
+        let folder = try Self.temporaryFolder()
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let sub = folder.appendingPathComponent("Arzt", isDirectory: true)
+        try FileManager.default.createDirectory(at: sub, withIntermediateDirectories: true)
+        for (name, tags) in [("a.pdf", ["Schule", "Mia"]), ("b.pdf", ["schule"]), ("c.pdf", [])] {
+            let file = folder.appendingPathComponent(name)
+            try Data().write(to: file)
+            try FinderTags.write(tags, to: file)
+        }
+        let deep = sub.appendingPathComponent("d.pdf")
+        try Data().write(to: deep)
+        try FinderTags.write(["Psychotherapie", "Rot\n6"], to: deep)
+        #expect(FolderTags.read(folder) == ["Schule", "Mia", "Psychotherapie", "Rot"])
+        #expect(FolderTags.read(folder, maxDepth: 1) == ["Schule", "Mia"])
     }
 
     @Test func remembersTheFolder() throws {
@@ -350,7 +457,7 @@ struct LetterFilingTests {
     @Test func namesAReceiptsPDF() {
         let german = Locale(identifier: "de_DE")
         #expect(ScannedReceipt.fileName(day: Day(year: 2026, month: 10, day: 12), payee: " REWE ", amountCents: -2347,
-                                        currency: "EUR", locale: german) == "2026-10-12 REWE 23,47 EUR")
+                                        currency: "EUR", locale: german) == "2026-10-12_REWE_23,47_EUR")
         #expect(ScannedReceipt.fileName(day: Day(year: 2026, month: 10, day: 12), payee: "", amountCents: nil,
                                         currency: "EUR") == "2026-10-12")
         #expect(ScannedReceipt.tags(category: "Groceries") == ["Receipt", "Groceries"])

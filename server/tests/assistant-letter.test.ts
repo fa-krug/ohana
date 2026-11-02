@@ -5,7 +5,15 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { handleDisabledModules } from "@/lib/api/disabled-modules";
 import { createFamilyApi } from "@/lib/api/family-api";
-import { letterInput, letterPrompt, MAX_LETTER_TEXT, parseLetterAnswer } from "@/lib/assistant/letter";
+import {
+  letterInput,
+  letterPrompt,
+  MAX_FILING_TAGS,
+  MAX_FILING_TITLE,
+  MAX_LETTER_TEXT,
+  MAX_TAGS,
+  parseLetterAnswer,
+} from "@/lib/assistant/letter";
 import { handleAi } from "@/lib/assistant/routes";
 import { MAX_SUGGESTIONS, NO_REMINDERS, resolveSuggestion } from "@/lib/assistant/tools/suggestions";
 import { addPerson } from "@/lib/families/people";
@@ -63,6 +71,7 @@ describe("POST /ai/letter", () => {
           listTitle: null,
         },
       ],
+      filing: { title: "Elternbrief Klasse 3b", date: "2026-11-02", person: expect.any(String), tags: [] },
     });
     // One completion: the instructions, then the letter as the user's message.
     const [system, user] = net.aiBody.messages;
@@ -89,6 +98,29 @@ describe("POST /ai/letter", () => {
     expect(res.data.items[0].person).toBe("Aaron");
   });
 
+  it("files the letter: whose it is and only the existing tags", async () => {
+    const t = setup();
+    await configure(t);
+    addPerson(t.db, { id: t.editor.id }, t.familyId, { name: "Aaron", birthday: "2018-03-01" }, NOW);
+    const tags = [" Michi ", "Schule", "schule", 7, "", "Arzt"];
+    const res = await t.call("POST", `${t.ai}/letter`, { text: LETTER, today: "2026-11-02", tags });
+    expect(res.status).toBe(200);
+    const system: string = net.aiBody.messages[0].content;
+    expect(system).toContain('(JSON): ["Michi","Schule","Arzt"]');
+    expect(system).toMatch(/NOT necessarily who it is for/);
+    expect(system).toMatch(/"Michi" for Michael/);
+    // The mock picks the first two and makes one up: that one is dropped.
+    expect(res.data.filing).toEqual({
+      title: "Elternbrief Klasse 3b",
+      date: "2026-11-02",
+      person: expect.any(String),
+      tags: ["Michi", "Schule"],
+    });
+    const none = await t.call("POST", `${t.ai}/letter`, { text: "A letter about nothing", tags: "Michi" });
+    expect(none.data.filing.tags).toEqual([]);
+    expect(net.aiBody.messages[0].content).toMatch(/there are no existing tags/);
+  });
+
   it("drops the items the model got wrong", async () => {
     const t = setup();
     await configure(t);
@@ -96,7 +128,12 @@ describe("POST /ai/letter", () => {
     expect(res.status).toBe(200);
     expect(res.data.items.map((i: { op: string }) => i.op)).toEqual(["event", "task", "deadline"]);
     const none = await t.call("POST", `${t.ai}/letter`, { text: "A letter about nothing" });
-    expect(none.data).toEqual({ ai: true, source: "A letter about nothing", items: [] });
+    expect(none.data).toEqual({
+      ai: true,
+      source: "A letter about nothing",
+      items: [],
+      filing: { title: "A letter about nothing", date: expect.any(String), person: expect.any(String), tags: [] },
+    });
   });
 
   it("is for editors, with a text", async () => {
@@ -141,13 +178,38 @@ describe("the letter's answer", () => {
     expect(parseLetterAnswer(JSON.stringify({ source: " Note ", items: [event] }))).toEqual({
       source: "Note",
       items: [{ op: "event", title: "Party", date: "2026-11-09" }],
+      filing: { tags: [] },
     });
     expect(parseLetterAnswer(`Sure: [${JSON.stringify(event)}]`).items).toHaveLength(1);
-    expect(parseLetterAnswer(JSON.stringify({ items: "none" }))).toEqual({ items: [] });
+    expect(parseLetterAnswer(JSON.stringify({ items: "none" }))).toEqual({ items: [], filing: { tags: [] } });
     expect(parseLetterAnswer(JSON.stringify({ source: "x".repeat(300), items: [] })).source).toHaveLength(200);
     const many = Array.from({ length: 40 }, () => event);
     expect(parseLetterAnswer(JSON.stringify({ items: many })).items).toHaveLength(MAX_SUGGESTIONS);
     expect(() => parseLetterAnswer("I couldn't read it.")).toThrow(/not valid JSON/);
+  });
+
+  it("checks the filing against the family and the given tags", () => {
+    const people = ["Michael Krug", "Mia Krug", "Mia Schulz", "Aaron"];
+    const tags = ["Michi", "Arzt", "Schule", "Kita", "Rechnung", "Steuer", "Psychotherapie"];
+    const parse = (filing: unknown) => parseLetterAnswer(JSON.stringify({ items: [], filing }), { people, tags }).filing;
+    expect(parse({ title: "  Information   Psychotherapie ", date: "2026-07-16", person: "michael krug", tags: ["michi", "ARZT", "Erfunden", "Arzt", 3] })).toEqual({
+      title: "Information Psychotherapie",
+      date: "2026-07-16",
+      person: "Michael Krug",
+      tags: ["Michi", "Arzt"],
+    });
+    // A first name only one has; one two share, or nobody of the family: left out.
+    expect(parse({ person: "Michael" }).person).toBe("Michael Krug");
+    expect(parse({ person: "Mia" }).person).toBeUndefined();
+    expect(parse({ person: "Oma" }).person).toBeUndefined();
+    expect(parse({ person: "aaron" }).person).toBe("Aaron");
+    // A wrong date and an empty title are left out; a long title is cut at a word.
+    expect(parse({ title: " ", date: "2026-02-30" })).toEqual({ tags: [] });
+    const long = parse({ title: "Elternbrief der Grundschule Nord Klasse 3b zum Laternenfest am Freitag dem dreizehnten" }).title!;
+    expect(long.length).toBeLessThanOrEqual(MAX_FILING_TITLE);
+    expect(long).toBe("Elternbrief der Grundschule Nord Klasse 3b zum Laternenfest");
+    expect(parse({ tags })?.tags).toHaveLength(MAX_FILING_TAGS);
+    expect(parse("filing")).toEqual({ tags: [] });
   });
 
   it("puts tasks on the default list, ignoring a list the model names", () => {
@@ -163,12 +225,15 @@ describe("the letter's answer", () => {
 
   it("checks the body", () => {
     const now = new Date("2026-11-02T22:30:00Z");
-    expect(letterInput({ text: " Hi " }, now)).toEqual({ text: "Hi", today: "2026-11-02", lang: "en" });
-    expect(letterInput({ text: "Hi", today: "2027-01-05", lang: "de" }, now)).toEqual({
+    expect(letterInput({ text: " Hi " }, now)).toEqual({ text: "Hi", today: "2026-11-02", lang: "en", tags: [] });
+    expect(letterInput({ text: "Hi", today: "2027-01-05", lang: "de", tags: ["A", " a", null, "x".repeat(40)] }, now)).toEqual({
       text: "Hi",
       today: "2027-01-05",
       lang: "de",
+      tags: ["A", "x".repeat(30)],
     });
+    expect(letterInput({ text: "Hi", tags: Array.from({ length: 400 }, (_, i) => `T${i}`) }, now).tags).toHaveLength(MAX_TAGS);
+    expect(letterInput({ text: "Hi", tags: { a: 1 } }, now).tags).toEqual([]);
     expect(() => letterInput({ text: "Hi", today: "tomorrow" }, now)).toThrow(/today/);
     expect(letterPrompt({ today: "2026-11-02", lang: "en", people: [] })).toMatch(/aren't known/);
   });

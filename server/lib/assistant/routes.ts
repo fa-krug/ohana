@@ -424,9 +424,10 @@ async function categorize({ req, load, finance }: Ctx, env: AiEnv) {
   return json({ changed: ops.length, matched: similar.size, considered: candidates.length, remaining, ai, inverse, assignments });
 }
 
-/** POST /ai/letter {text, today?, lang?}: the events, tasks and deadlines in a letter's text
- *  (the app's letter scan), for the app to list, edit and add: `{ai, source?, items}` with
- *  suggest_items' ops (tasks and deadlines to the default Reminders list). Without AI settings
+/** POST /ai/letter {text, today?, lang?, tags?}: the events, tasks and deadlines in a letter's
+ *  text (the app's letter scan), for the app to list, edit and add, and how to file it:
+ *  `{ai, source?, items, filing}` with suggest_items' ops (tasks and deadlines to the default
+ *  Reminders list) and `filing` {title?, date?, person?, tags} (tags only of `tags`). Without AI settings
  *  `ai` is false and there are no items. One completion in the request (letter.ts). */
 async function letter({ req, load, db, now }: Ctx, env: AiEnv) {
   const { family } = await load("edit");

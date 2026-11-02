@@ -3,23 +3,36 @@ import Foundation
 import FoundationModels
 #endif
 
-/// What a scanned letter is about, for its file name and tags: worked out on the device only,
-/// first by `LetterHeuristic`, then (where Apple Intelligence is on) by Apple's on-device model
-/// (`LetterModel`).
+/// What a scanned letter is about and whose it is, for its file name and tags: by
+/// `LetterHeuristic`, Apple's on-device model (`LetterModel`, where Apple Intelligence is on) and
+/// the server's assistant model (`LetterFindings.filing`, from the shell).
 struct LetterSuggestion: Equatable {
     /// A short title in the letter's language, e.g. "Elternbrief Klasse 3b – Laternenfest".
     var title: String?
     /// The day the letter was written.
     var date: Day?
     var tags: [String] = []
+    /// The family member the letter is about, as the family lists them (not necessarily who
+    /// scans it).
+    var person: String?
 
     static let maxTitle = 60
 
-    /// The file name without ".pdf": "YYYY-MM-DD Title", with the letter's date, else `today`.
-    func fileName(today: Day) -> String {
-        let day = (date ?? today).description
-        guard let title, !title.isEmpty else { return day }
-        return "\(day) \(title)"
+    /// The file name without ".pdf": "YYYY-MM-DD_Label_Title_Words", with the letter's date, else
+    /// `today`; `label` (the person's tag or first name) unless the title already names them.
+    func fileName(today: Day, label: String? = nil) -> String {
+        var parts = [(date ?? today).description]
+        if let label, !label.isEmpty, !titleNames(label) { parts.append(label) }
+        if let title, !title.isEmpty { parts.append(title) }
+        return ScanFileName.joined(parts.joined(separator: " "))
+    }
+
+    /// The title has `label` or the person's first name as a word.
+    private func titleNames(_ label: String) -> Bool {
+        guard let title else { return false }
+        let words = Set(title.split { !$0.isLetter }.map { NameMatch.folded(String($0)) })
+        let names = [label] + NameMatch.firstNames([person ?? ""])
+        return names.contains { words.contains(NameMatch.folded($0)) }
     }
 
     /// Tidied: the title trimmed and at most `maxTitle` characters (cut at a word), the tags
@@ -31,7 +44,9 @@ struct LetterSuggestion: Equatable {
             title = cut.range(of: " ", options: .backwards).map { String(cut[..<$0.lowerBound]) } ?? cut
             title = title.trimmingCharacters(in: CharacterSet(charactersIn: " ,;:–-"))
         }
-        return LetterSuggestion(title: title.isEmpty ? nil : title, date: date, tags: ScanTags.cleaned(tags))
+        let person = person?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return LetterSuggestion(title: title.isEmpty ? nil : title, date: date, tags: ScanTags.cleaned(tags),
+                                person: person?.isEmpty == false ? person : nil)
     }
 
     private static func oneLine(_ text: String) -> String {
@@ -43,17 +58,22 @@ struct LetterSuggestion: Equatable {
 // MARK: - The heuristic
 
 /// The suggestion without a model: the title from a subject line or a heading near the top, the
-/// letter's date from the first date near the top, tags from keywords and the family's first
-/// names found in the text.
+/// letter's date from the first date near the top, tags from the known ones, keywords and the
+/// family's first names found in the text, the person the one family member it mentions.
 enum LetterHeuristic {
     /// How far down the letter's date and heading are looked for.
     static let topLines = 25
 
-    static func suggest(_ text: String, names: [String] = []) -> LetterSuggestion {
+    /// `known`: the existing tags; given, only those are suggested.
+    static func suggest(_ text: String, names: [String] = [], known: [String]? = nil) -> LetterSuggestion {
         let lines = text.split(whereSeparator: \.isNewline)
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
-        return LetterSuggestion(title: title(lines), date: date(lines), tags: tags(text, names: names)).cleaned()
+        var tags = tags(text, names: names, known: known ?? [])
+        if let known { tags = ScanTags.existing(tags, known: known, names: names) }
+        let people = people(text, names: names)
+        return LetterSuggestion(title: title(lines), date: date(lines), tags: tags,
+                                person: people.count == 1 ? people[0] : nil).cleaned()
     }
 
     // MARK: Title
@@ -192,25 +212,47 @@ enum LetterHeuristic {
         ("Tax", [" tax ", " tax return", " irs ", " hmrc "]),
     ]
 
-    /// Up to three keyword tags, then the family's first names found in the text.
-    static func tags(_ text: String, names: [String]) -> [String] {
-        let normalized = " " + text.lowercased()
-            .map { $0.isLetter || $0.isNumber ? String($0) : " " }
-            .joined()
-            .split(separator: " ")
-            .joined(separator: " ") + " "
-        // The keyword lists hold some punctuation for readability; compare like the text.
-        func normal(_ keyword: String) -> String {
-            keyword.map { $0.isLetter || $0.isNumber ? String($0) : " " }.joined()
-        }
+    /// The `known` tags found in the text, the known tags that are a variant of a family member's
+    /// name the letter mentions ("Michi" when it says "Michael"), up to three keyword tags, then
+    /// the family's first names found in the text.
+    static func tags(_ text: String, names: [String], known: [String] = []) -> [String] {
+        let normalized = normalized(text)
         let keywordTags = Self.keywordTags
             .filter { $0.keywords.contains { normalized.contains(normal($0)) } }
             .map(\.tag)
             .prefix(3)
-        let firstNames = names.compactMap { $0.split(separator: " ").first.map(String.init) }
-            .filter { $0.count >= 2 }
-            .filter { normalized.contains(" \(normal($0.lowercased())) ") }
-        return ScanTags.cleaned(Array(keywordTags) + firstNames)
+        let family = NameMatch.firstNames(names)
+        let mentioned = NameMatch.firstNames(people(text, names: names))
+        let knownFound = known.filter { $0.count >= 2 && normalized.contains(" \(normal($0.lowercased())) ") }
+        let nameTags = known.filter { tag in mentioned.contains { NameMatch.isVariant(tag, of: $0, family: family) } }
+        return ScanTags.cleaned(knownFound + nameTags + Array(keywordTags) + mentioned, limit: .max)
+    }
+
+    /// The family's members (`names`, as listed) the text mentions: by their first name, or a
+    /// variant of it written with a capital (`NameMatch`).
+    static func people(_ text: String, names: [String]) -> [String] {
+        let normalized = normalized(text)
+        let family = NameMatch.firstNames(names)
+        let words = NameMatch.capitalizedWords(text)
+        return names.filter { full in
+            guard let name = NameMatch.firstNames([full]).first else { return false }
+            return name.count >= 2 && normalized.contains(" \(normal(name.lowercased())) ")
+                || words.contains { NameMatch.isVariant($0, of: name, family: family) }
+        }
+    }
+
+    /// The text lowercased, words split by single spaces, padded with a space at both ends.
+    private static func normalized(_ text: String) -> String {
+        " " + text.lowercased()
+            .map { $0.isLetter || $0.isNumber ? String($0) : " " }
+            .joined()
+            .split(separator: " ")
+            .joined(separator: " ") + " "
+    }
+
+    /// The keyword lists hold some punctuation for readability; compared like the text.
+    private static func normal(_ keyword: String) -> String {
+        keyword.map { $0.isLetter || $0.isNumber ? String($0) : " " }.joined()
     }
 
     // MARK: Matching
@@ -234,6 +276,89 @@ enum LetterHeuristic {
     }
 }
 
+// MARK: - Names
+
+/// Whether two first names are the same person's: the same, or one a short form of the other
+/// ("Michi" – Michael, "Alex" – Alexander, "Basti" – Sebastian, "Hannes" – Johannes), case and
+/// accents ignored. A short form has at most six letters: the long name's first four or more,
+/// perhaps a doubled letter and a pet ending ("Steffi" – Stefanie), or its middle or end without
+/// the ending. Not one: a name of three letters ("Leo" – Leonie), another name that only adds an
+/// ending (Michael – Michaela), a word that goes on differently ("Hanna" – Hannover).
+nonisolated enum NameMatch {
+    static func firstNames(_ names: [String]) -> [String] {
+        names.compactMap { $0.split(separator: " ").first.map(String.init) }
+    }
+
+    /// The words of `text` that start with a capital letter (names among them), each once.
+    static func capitalizedWords(_ text: String) -> [String] {
+        var seen = Set<String>()
+        return text.split { !$0.isLetter }
+            .filter { $0.count >= 3 && $0.first!.isUppercase }
+            .map(String.init)
+            .filter { seen.insert($0).inserted }
+    }
+
+    static func similar(_ a: String, _ b: String) -> Bool {
+        let a = folded(a), b = folded(b)
+        guard a.count >= 3, b.count >= 3 else { return false }
+        if a == b { return true }
+        let (short, long) = a.count <= b.count ? (a, b) : (b, a)
+        guard short.count <= 6 else { return false }
+        // Another name with an ending: Michael – Michaela.
+        if long.hasPrefix(short), long.count - short.count <= 2 { return false }
+        let stem = nicknameStem(short)
+        let prefix = zip(stem, long).prefix { $0 == $1 }.count
+        if prefix >= 4 {
+            // What's left of the short form: nothing, or a doubled letter (Steff-i – Stefanie).
+            let rest = stem.dropFirst(prefix)
+            if rest.isEmpty || rest.count == 1 && rest.first == stem[stem.index(stem.startIndex, offsetBy: prefix - 1)] {
+                return true
+            }
+        }
+        // A short form from the middle or the end: Basti – Sebastian, Lena – Magdalena.
+        return stem.count >= 4 && long.count - stem.count <= 6 && long.contains(stem)
+    }
+
+    /// `word` (in a letter, or a tag) names `name` of the `family`: a variant of it, and not
+    /// another member's own name.
+    static func isVariant(_ word: String, of name: String, family: [String]) -> Bool {
+        let folded = folded(word)
+        if family.contains(where: { Self.folded($0) == folded }) { return Self.folded(name) == folded }
+        return similar(word, name)
+    }
+
+    /// The member of the family (`names`, as listed) an answer names: the name itself (case
+    /// ignored), else the one member with its first name; nil for anyone else.
+    static func member(_ answer: String, in names: [String]) -> String? {
+        let answer = answer.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !answer.isEmpty else { return nil }
+        if let exact = names.first(where: { $0.caseInsensitiveCompare(answer) == .orderedSame }) { return exact }
+        guard let first = firstNames([answer]).first.map(folded) else { return nil }
+        let matches = names.filter { firstNames([$0]).first.map(folded) == first }
+        return matches.count == 1 ? matches[0] : nil
+    }
+
+    /// The `known` tag that is `person`'s name or a short form of it, among the `family`'s names.
+    static func tag(for person: String, known: [String], family: [String]) -> String? {
+        guard let first = firstNames([person]).first else { return nil }
+        let firsts = firstNames(family)
+        return known.first { isVariant($0, of: first, family: firsts) }
+    }
+
+    /// Lowercased, without accents, letters only.
+    static func folded(_ text: String) -> String {
+        String(text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil).filter(\.isLetter))
+    }
+
+    /// A short form without its pet ending: "basti" → "bast", "hansi" → "hans", "lenchen" → "len".
+    private static func nicknameStem(_ name: String) -> String {
+        for ending in ["chen", "ie", "i", "y"] where name.hasSuffix(ending) && name.count - ending.count >= 3 {
+            return String(name.dropLast(ending.count))
+        }
+        return name
+    }
+}
+
 // MARK: - Apple's on-device model
 
 /// The suggestion of Apple's on-device model (FoundationModels), where Apple Intelligence is on;
@@ -251,12 +376,13 @@ enum LetterModel {
         #endif
     }
 
-    static func suggest(_ text: String, names: [String]) async -> LetterSuggestion? {
+    /// `known`: the existing tags, the only ones it may suggest.
+    static func suggest(_ text: String, names: [String], known: [String]) async -> LetterSuggestion? {
         #if canImport(FoundationModels)
         guard isAvailable else { return nil }
-        let prompt = Self.prompt(text, names: names)
+        let prompt = Self.prompt(text, names: names, known: known)
         return await withTaskGroup(of: LetterSuggestion?.self) { group in
-            group.addTask { await ask(prompt) }
+            group.addTask { await ask(prompt, names: names) }
             group.addTask {
                 try? await Task.sleep(for: timeout)
                 return nil
@@ -270,25 +396,39 @@ enum LetterModel {
         #endif
     }
 
-    static func prompt(_ text: String, names: [String]) -> String {
+    /// The model's context is small: the latest of the known tags.
+    static let maxKnown = 100
+
+    static func prompt(_ text: String, names: [String], known: [String]) -> String {
         var prompt = "The scanned letter:\n\n\(text.prefix(maxText))"
-        let firstNames = names.compactMap { $0.split(separator: " ").first.map(String.init) }
-        if !firstNames.isEmpty {
-            prompt += "\n\nThe family's first names: \(firstNames.joined(separator: ", ")). "
-                + "When the letter is about one of them, use that name as a tag."
+        if !names.isEmpty {
+            prompt += "\n\nThe family's members: \(names.joined(separator: ", ")). Whoever scans the letter (often "
+                + "a parent) isn't necessarily who it's for: decide whom it is about (the child it's about, the "
+                + "patient, the addressee) and give that member as the person, written exactly as listed; an "
+                + "empty person when it's for the whole family or unclear."
+        }
+        if known.isEmpty {
+            prompt += "\n\nThere are no tags yet: answer with no tags."
+        } else {
+            prompt += "\n\nThe existing tags: \(known.prefix(maxKnown).joined(separator: ", ")). "
+                + "Choose the tags only from these, those that fit the letter (a name when it's about that "
+                + "person; a tag may be a short form of a name, e.g. \"Michi\" for Michael); none when none "
+                + "fits. Never make up a tag."
         }
         return prompt
     }
 
     #if canImport(FoundationModels)
-    private static func ask(_ prompt: String) async -> LetterSuggestion? {
+    private static func ask(_ prompt: String, names: [String]) async -> LetterSuggestion? {
         let session = LanguageModelSession(instructions: """
             You name scanned letters (from a school, a daycare, a club, a doctor, an office) so a \
-            family can file them as PDFs. Write the title and the tags in the letter's language.
+            family can file them as PDFs, and say which family member each is about. Write the title \
+            and the tags in the letter's language.
             """)
         guard let answer = try? await session.respond(to: prompt, generating: LetterModelAnswer.self).content
         else { return nil }
-        return LetterSuggestion(title: answer.title, date: Day(answer.date), tags: answer.tags).cleaned()
+        return LetterSuggestion(title: answer.title, date: Day(answer.date), tags: answer.tags,
+                                person: NameMatch.member(answer.person, in: names)).cleaned()
     }
     #endif
 }
@@ -296,11 +436,13 @@ enum LetterModel {
 #if canImport(FoundationModels)
 @Generable
 nonisolated struct LetterModelAnswer {
-    @Guide(description: "A short title for the letter, at most 60 characters, in the letter's language, naming the sender or kind and the topic, e.g. \"Elternbrief Klasse 3b – Laternenfest\" or \"Invitation – Mia's birthday party\"")
+    @Guide(description: "The family member the letter is about, exactly as listed; an empty string when it's for the whole family or unclear")
+    var person: String
+    @Guide(description: "A short title for the letter, at most 60 characters, in the letter's language, naming the sender or kind and the topic, without the date and the person's name, e.g. \"Elternbrief Klasse 3b – Laternenfest\" or \"Invitation – birthday party\"")
     var title: String
     @Guide(description: "The date the letter was written, as YYYY-MM-DD; an empty string when it shows none")
     var date: String
-    @Guide(description: "1 to 5 short tags in the letter's language for filing it, e.g. \"Schule\", \"Kita\", \"Einladung\", \"Rechnung\" or a child's first name", .count(1...5))
+    @Guide(description: "0 to 5 tags for filing it, each one of the existing tags given", .count(0...5))
     var tags: [String]
 }
 #endif

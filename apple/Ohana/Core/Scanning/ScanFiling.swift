@@ -57,6 +57,15 @@ final class ScanFiling {
         tagsEdited = true
     }
 
+    /// The tags a scan may be suggested: those saved with a scan on this device, then those on the
+    /// files in the folder (Finder / Files tags).
+    func existingTags() async -> [String] {
+        let saved = settings.knownTags
+        guard let folder = folder.url else { return saved }
+        let inFolder = await Task.detached(priority: .userInitiated) { FolderTags.read(folder) }.value
+        return ScanTags.cleaned(saved + inFolder, limit: .max)
+    }
+
     /// The tags used before that this scan hasn't got.
     var recentTags: [String] {
         let current = Set(tags.map { $0.lowercased() })
@@ -140,7 +149,7 @@ final class ScanFiling {
 }
 
 /// Tags as the user keeps them.
-enum ScanTags {
+nonisolated enum ScanTags {
     static let maxSuggested = 5
     static let maxLength = 30
 
@@ -157,6 +166,24 @@ enum ScanTags {
             if result.count == limit { break }
         }
         return result
+    }
+
+    /// Those of `tags` that are among `known` (case ignored), spelled as there. A tag that names
+    /// someone of the family (`names`, `NameMatch`) and isn't known becomes the known variant of
+    /// that name ("Michael" → "Michi").
+    static func existing(_ tags: [String], known: [String], names: [String] = []) -> [String] {
+        var spelling: [String: String] = [:]
+        for tag in known where spelling[tag.lowercased()] == nil { spelling[tag.lowercased()] = tag }
+        let family = NameMatch.firstNames(names)
+        return cleaned(tags.compactMap { tag in
+            let tag = tag.trimmingCharacters(in: .whitespaces)
+            if let known = spelling[tag.lowercased()] { return known }
+            let people = family.filter { NameMatch.isVariant(tag, of: $0, family: family) }
+            guard !people.isEmpty else { return nil }
+            return known.first { candidate in
+                people.contains { NameMatch.isVariant(candidate, of: $0, family: family) }
+            }
+        })
     }
 }
 
@@ -251,10 +278,15 @@ struct ScanFilingSection: View {
                             Button {
                                 filing.addTag(tag)
                             } label: {
-                                Label(tag, systemImage: "plus")
-                                    .lineLimit(1)
-                                    .font(.callout)
-                                    .chip()
+                                // Not a `Label`: in a form row it showed only the icon.
+                                HStack(spacing: 4) {
+                                    Image(systemName: "plus")
+                                        .font(.caption2.weight(.bold))
+                                        .foregroundStyle(.secondary)
+                                    Text(tag).lineLimit(1)
+                                }
+                                .font(.callout)
+                                .chip()
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel(Text("Add \(tag)"))
