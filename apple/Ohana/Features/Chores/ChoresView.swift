@@ -4,7 +4,7 @@ import SwiftUI
 /// evening, on today the overdue ones above. A chore (a repeating one's occurrence) is ticked off
 /// here by editors and by the member it's for; anyone turns its notification on or off for
 /// themselves (the bell). Editors add (File ▸ New Chore, ⌘N), edit and delete; every chore is on
-/// the All Chores page (`ChoresAllView`, the More menu). Everything shows and changes at once from
+/// the All Chores page (`ChoresAllView`, its toolbar button). Everything shows and changes at once from
 /// the family's `ChoresStore`, which syncs with the server in the background. Inside the shell's
 /// navigation stack.
 struct ChoresView: View {
@@ -146,11 +146,7 @@ struct ChoresView: View {
             }
         }
         ToolbarItem {
-            Menu {
-                Button("All Chores", systemImage: "list.bullet") { showAll = true }
-            } label: {
-                Label("More", systemImage: "ellipsis")
-            }
+            Button("All Chores", systemImage: "list.bullet") { showAll = true }
         }
     }
 
