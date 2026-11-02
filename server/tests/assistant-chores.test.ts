@@ -1,13 +1,13 @@
 // The assistant's chore tools (lib/assistant/tools/chores.ts) against the in-memory database:
-// listing, adding by a member's name, changing, removing and marking done, and the undo steps
-// replayed through the family API.
+// listing, adding by a member's name, changing, removing and marking done (a repeating chore per
+// day), and the undo steps replayed through the family API.
 
 import { afterEach, describe, expect, it } from "vitest";
 import type { NetOptions } from "@/lib/assistant/net";
 import { runTool, type ToolContext, TOOLS, toolsFor } from "@/lib/assistant/tools";
 import { DrizzleCalendarStore } from "@/lib/calendar/store";
 import { DrizzleFinanceStore } from "@/lib/finance/store";
-import { getChoreRow, listChores } from "@/lib/chores/chores";
+import { choreSubscriberIds, getChoreRow, listChores, occurrenceDone } from "@/lib/chores/chores";
 import { addPerson } from "@/lib/families/people";
 import { type AssistantTest, assistantTest } from "@/lib/test/assistant";
 import { NOW } from "@/lib/test/factories";
@@ -60,6 +60,9 @@ describe("chore tools", () => {
       assignee: { id: f.mia.id, name: "Mia", account: false },
       rrule: "FREQ=DAILY",
       next: "2026-11-03",
+      part: "day",
+      // The user who asked gets its notification.
+      subscriberIds: [f.t.editor.id],
     });
     expect(res.change).toEqual({
       kind: "chores",
@@ -77,12 +80,19 @@ describe("chore tools", () => {
     expect(res.result.error).toMatch(/isn't a member of the family/);
   });
 
-  it("list the chores and the people", async () => {
+  it("list the chores (compact) and the people", async () => {
     const f = family();
-    await f.tool("add_chore", { title: "Bins", day: "2026-11-05" });
+    const { result: bins } = await f.tool("add_chore", { title: "Bins", day: "2026-11-05", time: "19:00", assignee: "Mia" });
+    const { result: cat } = await f.tool("add_chore", { title: "Cat", day: "2026-10-30", rrule: "FREQ=DAILY", part: "morning" });
+    await f.tool("set_chore_done", { id: cat.id, done: true, day: "2026-11-01" });
+    await f.tool("set_chore_done", { id: cat.id, done: true, day: "2026-10-01" }); // not an occurrence
     const res = await f.tool("get_chores", {});
     expect(res.ok).toBe(true);
-    expect(res.result.chores.map((c: { title: string }) => c.title)).toEqual(["Bins"]);
+    const name = res.result.people.find((p: { id: string }) => p.id === f.t.editor.id).name;
+    expect(res.result.chores).toEqual([
+      { id: cat.id, title: "Cat", assignee: null, day: "2026-10-30", time: null, part: "morning", rrule: "FREQ=DAILY", next: TODAY, doneOn: ["2026-11-01"], notified: [name] },
+      { id: bins.id, title: "Bins", assignee: "Mia", day: "2026-11-05", time: "19:00", part: "evening", rrule: null, next: "2026-11-05", done: false, notified: [name] },
+    ]);
     expect(res.result.people.map((p: { name: string }) => p.name)).toContain("Mia");
   });
 
@@ -97,7 +107,7 @@ describe("chore tools", () => {
       {
         method: "PATCH",
         path: `/chores/${chore.id}`,
-        body: { title: "Water plants", note: "Balcony", assigneeId: f.mia.id, day: "2026-10-30", time: null, rrule: null },
+        body: { title: "Water plants", note: "Balcony", assigneeId: f.mia.id, day: "2026-10-30", time: null, part: "day", rrule: null },
       },
       { method: "POST", path: `/chores/${chore.id}/done`, body: { done: true } },
     ]);
@@ -110,18 +120,21 @@ describe("chore tools", () => {
     });
   });
 
-  it("remove a chore, and undo brings it back with its id", async () => {
+  it("remove a chore, and undo brings it back with its id and subscribers", async () => {
     const f = family();
     const { result: chore } = await f.tool("add_chore", { title: "Laundry", day: "2026-11-01", time: "18:00" });
     await f.tool("set_chore_done", { id: chore.id, done: true });
+    const viewer = f.t.viewer.id;
+    expect((await f.t.view("POST", f.t.f + `/chores/${chore.id}/subscribe`, { subscribed: true })).status).toBe(200);
     const res = await f.tool("remove_chore", { id: chore.id });
     expect(res.ok).toBe(true);
     expect(res.change.summary).toBe("Removed the chore “Laundry”");
     expect(getChoreRow(f.t.db, f.t.familyId, chore.id)).toBeNull();
     await f.undo(res.change);
     expect(listChores(f.t.db, f.t.familyId, TODAY)).toEqual([
-      expect.objectContaining({ id: chore.id, title: "Laundry", time: "18:00", done: true }),
+      expect.objectContaining({ id: chore.id, title: "Laundry", time: "18:00", part: "evening", done: true }),
     ]);
+    expect(choreSubscriberIds(f.t.db, chore.id).sort()).toEqual([f.t.editor.id, viewer].sort());
     expect((await f.tool("remove_chore", { id: "nope" })).result.error).toMatch(/No chore/);
   });
 
@@ -134,8 +147,30 @@ describe("chore tools", () => {
     await f.undo(res.change);
     expect(getChoreRow(f.t.db, f.t.familyId, chore.id)?.doneAt).toBeNull();
 
+  });
+
+  it("tick off a repeating chore's day, and undo opens it again", async () => {
+    const f = family();
     const { result: weekly } = await f.tool("add_chore", { title: "Vacuum", day: "2026-11-02", rrule: "FREQ=WEEKLY" });
+    // A day is needed, and it must be an occurrence.
     expect((await f.tool("set_chore_done", { id: weekly.id, done: true })).ok).toBe(false);
+    expect((await f.tool("set_chore_done", { id: weekly.id, done: true, day: "2026-11-03" })).ok).toBe(false);
+    const res = await f.tool("set_chore_done", { id: weekly.id, done: true, day: "2026-11-09" });
+    expect(res.ok, JSON.stringify(res.result)).toBe(true);
+    expect(res.change).toEqual({
+      kind: "chores",
+      summary: "Marked “Vacuum, 2026-11-09” as done",
+      undo: [{ method: "POST", path: `/chores/${weekly.id}/done`, body: { done: false, day: "2026-11-09" } }],
+    });
+    expect(occurrenceDone(f.t.db, weekly.id, "2026-11-09")).toBe(true);
+    await f.undo(res.change);
+    expect(occurrenceDone(f.t.db, weekly.id, "2026-11-09")).toBe(false);
+    // Opening a done day is undone by ticking it off again.
+    await f.tool("set_chore_done", { id: weekly.id, done: true, day: "2026-11-02" });
+    const open = await f.tool("set_chore_done", { id: weekly.id, done: false, day: "2026-11-02" });
+    expect(open.change.undo).toEqual([{ method: "POST", path: `/chores/${weekly.id}/done`, body: { done: true, day: "2026-11-02" } }]);
+    await f.undo(open.change);
+    expect(occurrenceDone(f.t.db, weekly.id, "2026-11-02")).toBe(true);
   });
 
   it("are read-only without writes and gone with the module off", () => {

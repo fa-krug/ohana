@@ -122,7 +122,10 @@ tags:
   - name: Chores
     description: >-
       The family's chores, once or repeating, each assigned to one person of the family or to
-      nobody (module `chores`); the app writes them into a Reminders list.
+      nobody, at a time or in a part of the day (module `chores`). A single chore is ticked off as
+      a whole, a repeating one per occurrence. Accounts subscribe to a chore to get a push
+      notification on their devices when it is due (its time, else 07:00 morning, 12:00 day,
+      18:00 evening, server time; at most 3 hours late).
   - name: Assistant
     description: The AI assistant's chats and agent instructions (module `assistant`).
   - name: AI settings
@@ -1982,8 +1985,8 @@ paths:
       operationId: createChore
       summary: Add a chore
       description: >-
-        With `id` the chore is put back with that id (how the assistant's undo restores a removed
-        chore); 409 if a chore has it.
+        Without `subscriberIds` the caller is subscribed. With `id` the chore is put back with that
+        id (how the assistant's undo restores a removed chore); 409 if a chore has it.
       x-ohana-role: editor
       parameters:
         - name: today
@@ -2015,6 +2018,58 @@ paths:
         "403": {$ref: "#/components/responses/Forbidden"}
         "404": {$ref: "#/components/responses/NotFound"}
         "409": {$ref: "#/components/responses/Conflict"}
+  /api/v1/families/{familyId}/chores/agenda:
+    parameters:
+      - $ref: "#/components/parameters/FamilyId"
+    get:
+      tags: [Chores]
+      operationId: choreAgenda
+      summary: The chores day by day, and the overdue ones
+      description: >-
+        Every day from `from` to `to` (at most 62 days), each with its chores: a single chore on
+        its day, a repeating one on each occurrence (done per occurrence). Items by part of the
+        day (morning, day, evening), then time (none first), then title. `overdue`: the open
+        single chores whose day is before `today`, oldest first.
+      x-ohana-role: viewer
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema: {type: string, format: date}
+        - name: to
+          in: query
+          required: true
+          description: Not before `from`.
+          schema: {type: string, format: date}
+        - name: today
+          in: query
+          description: "The client's day, for `overdue` (default the server's UTC day)."
+          schema: {type: string, format: date}
+      responses:
+        "200":
+          description: The agenda.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [days, overdue]
+                properties:
+                  days:
+                    type: array
+                    items:
+                      type: object
+                      required: [date, items]
+                      properties:
+                        date: {type: string, format: date}
+                        items:
+                          type: array
+                          items: {$ref: "#/components/schemas/ChoreItem"}
+                  overdue:
+                    type: array
+                    items: {$ref: "#/components/schemas/ChoreItem"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
   /api/v1/families/{familyId}/chores/{choreId}:
     parameters:
       - $ref: "#/components/parameters/FamilyId"
@@ -2039,7 +2094,8 @@ paths:
       operationId: updateChore
       summary: Change a chore
       description: >-
-        Only the fields given change. A single chore that becomes repeating is no longer done.
+        Only the fields given change (`subscriberIds` too: omitted, they stay). A single chore that
+        becomes repeating is no longer done. A new day, time, part or rule may notify again.
       x-ohana-role: editor
       parameters:
         - name: today
@@ -2074,11 +2130,12 @@ paths:
     post:
       tags: [Chores]
       operationId: setChoreDone
-      summary: Mark a single chore done or open
+      summary: Tick a chore off, or one occurrence of a repeating one
       description: >-
-        Editors may mark any chore, viewers only those assigned to them (else 403). A repeating
-        chore is never done (400): its occurrences are done in Reminders. Done again keeps
-        `doneAt`; `updatedAt` stays.
+        Editors may mark any chore, viewers only those assigned to them (else 403). A single
+        chore is done as a whole (`day` is ignored); done again keeps `doneAt` and `doneBy`. A
+        repeating chore needs `day`, one of its occurrences (else 400), and records or removes
+        that occurrence's completion (see the agenda). `updatedAt` stays.
       x-ohana-role: viewer
       parameters:
         - name: today
@@ -2094,11 +2151,41 @@ paths:
               required: [done]
               properties:
                 done: {type: boolean}
+                day: {type: string, format: date, description: "A repeating chore's occurrence (required for one)."}
       responses:
         "200": {$ref: "#/components/responses/ChoreResult"}
         "400": {$ref: "#/components/responses/BadRequest"}
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/families/{familyId}/chores/{choreId}/subscribe:
+    parameters:
+      - $ref: "#/components/parameters/FamilyId"
+      - $ref: "#/components/parameters/ChoreId"
+    post:
+      tags: [Chores]
+      operationId: subscribeChore
+      summary: Get a notification when the chore is due, or not
+      description: Any member, viewers too, for themselves.
+      x-ohana-role: viewer
+      parameters:
+        - name: today
+          in: query
+          description: "The client's day, for `next` (default the server's UTC day)."
+          schema: {type: string, format: date}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subscribed]
+              properties:
+                subscribed: {type: boolean}
+      responses:
+        "200": {$ref: "#/components/responses/ChoreResult"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
         "404": {$ref: "#/components/responses/NotFound"}
 
   # ------------------------------------------------------------------ finance
@@ -5175,7 +5262,7 @@ components:
         account: {type: boolean}
     Chore:
       type: object
-      required: [id, title, note, assignee, day, time, rrule, done, doneAt, next, occurrences, createdAt, updatedAt]
+      required: [id, title, note, assignee, day, time, part, rrule, done, doneAt, doneBy, next, subscriberIds, subscribed, createdAt, updatedAt]
       properties:
         id: {type: string}
         title: {type: string}
@@ -5186,22 +5273,26 @@ components:
             - type: "null"
         day: {type: string, format: date, description: "The due day, or a repeating chore's first occurrence."}
         time: {type: [string, "null"], pattern: "^([01]\\d|2[0-3]):[0-5]\\d$", description: "HH:MM; null = all day."}
+        part: {$ref: "#/components/schemas/ChorePart"}
         rrule: {$ref: "#/components/schemas/RRule"}
         done: {type: boolean, description: "Single chores only; always false when repeating."}
-        doneAt: {type: [string, "null"], format: date-time}
+        doneAt: {type: [string, "null"], format: date-time, description: "Single chores only."}
+        doneBy:
+          description: Who ticked a single chore off (while they are in the family); null when repeating.
+          oneOf:
+            - $ref: "#/components/schemas/ChorePerson"
+            - type: "null"
         next:
           type: [string, "null"]
           format: date
           description: >-
             Single: `day` while open (also when it is past: overdue), null when done. Repeating:
             the first occurrence on or after `today`, null once the series ended.
-        occurrences:
+        subscriberIds:
           type: array
-          items: {type: string, format: date}
-          description: >-
-            Repeating: the last occurrence before `today`, the one on `today` and the first after
-            it (those there are), ascending; the app writes each into Reminders 3 hours before it
-            is due. Single: empty.
+          items: {type: string}
+          description: The accounts that get a notification when it is due, by name.
+        subscribed: {type: boolean, description: "Whether the caller is among them."}
         createdAt: {type: string, format: date-time}
         updatedAt: {type: string, format: date-time, description: "Edits only; marking done doesn't change it."}
     ChoreInput:
@@ -5215,9 +5306,18 @@ components:
           description: A user id of a member or the id of a person without an account of this family (else 400); null = nobody.
         day: {type: string, format: date}
         time: {type: [string, "null"], pattern: "^([01]\\d|2[0-3]):[0-5]\\d$"}
+        part:
+          $ref: "#/components/schemas/ChorePart"
+          description: Ignored when there is a time (that decides it); default `day` (PATCH, the stored one).
         rrule:
           $ref: "#/components/schemas/RRule"
           description: As events' rrule; null or "" = once.
+        subscriberIds:
+          type: array
+          items: {type: string}
+          description: >-
+            Accounts of the family (else 400) that get a notification when it is due. POST without
+            it: the caller.
     ChorePatch:
       type: object
       description: Any fields of `ChoreInput`; the others stay.
@@ -5227,7 +5327,40 @@ components:
         assigneeId: {type: [string, "null"]}
         day: {type: string, format: date}
         time: {type: [string, "null"], pattern: "^([01]\\d|2[0-3]):[0-5]\\d$"}
+        part: {$ref: "#/components/schemas/ChorePart"}
         rrule: {$ref: "#/components/schemas/RRule"}
+        subscriberIds:
+          type: array
+          items: {type: string}
+          description: Replaces the subscribers; omitted, they stay.
+    ChorePart:
+      type: string
+      enum: [morning, day, evening]
+      description: >-
+        The part of the day. With a time: before 12:00 morning, before 17:00 day, else evening.
+    ChoreItem:
+      type: object
+      description: One chore on one day (the agenda).
+      required: [choreId, day, title, note, assignee, part, time, repeating, done, doneAt, doneBy, subscribed]
+      properties:
+        choreId: {type: string}
+        day: {type: string, format: date, description: "The occurrence (a single chore: its day)."}
+        title: {type: string}
+        note: {type: string}
+        assignee:
+          oneOf:
+            - $ref: "#/components/schemas/ChorePerson"
+            - type: "null"
+        part: {$ref: "#/components/schemas/ChorePart"}
+        time: {type: [string, "null"], pattern: "^([01]\\d|2[0-3]):[0-5]\\d$"}
+        repeating: {type: boolean}
+        done: {type: boolean, description: "This occurrence (a single chore: the chore) is done."}
+        doneAt: {type: [string, "null"], format: date-time}
+        doneBy:
+          oneOf:
+            - $ref: "#/components/schemas/ChorePerson"
+            - type: "null"
+        subscribed: {type: boolean, description: "Whether the caller gets its notification."}
     ExportFile:
       type: object
       description: >-

@@ -1,70 +1,156 @@
 import SwiftUI
 
-/// Chores: the family's chores, once or repeating, for someone or for nobody in particular, in
-/// sections (overdue, today, upcoming, repeating, done lately) and filtered by person. A single
-/// chore is ticked off here (by editors, and by its own person); repeating ones are ticked off in
-/// Reminders. Editors add (File ▸ New Chore, ⌘N), edit and delete. The chores go into a Reminders
-/// list of the user's choice (`ChoreRemindersView`, the More menu). Inside the shell's
-/// navigation stack.
+/// What the chores page shows: the chores (for the people, whether the account edits, the
+/// editor) and the agenda around the day on screen.
+struct ChoresScreen: Equatable {
+    var page: ChoresPage
+    var agenda: ChoreAgenda
+}
+
+/// Chores: a day at a time (today first, stepped back and forth), its chores by morning, day and
+/// evening, on today the overdue ones above. A chore (a repeating one's occurrence) is ticked off
+/// here by editors and by the member it's for; anyone turns its notification on or off for
+/// themselves (the bell). Editors add (File ▸ New Chore, ⌘N), edit and delete; every chore is on
+/// the All Chores page (`ChoresAllView`, the More menu). Inside the shell's navigation stack.
 struct ChoresView: View {
     @Environment(FamilyContext.self) private var family
     @Environment(AppModel.self) private var app
-    @State private var state: LoadState<ChoresPage> = .idle
+    @State private var state: LoadState<ChoresScreen> = .idle
+    /// The day on screen.
+    @State private var shown = Day.today
     @State private var filter: ChoreFilter = .everyone
     @State private var editing: ChoreEditorTarget?
-    @State private var deleting: Chore?
-    @State private var showReminders = false
+    @State private var deleting: ChoreItem?
+    @State private var showAll = false
+    @State private var pickingDay = false
+    /// The agenda of another range is being asked for.
+    @State private var loading = false
     /// A chore a route asked for, opened once the list is there.
     @State private var pendingChoreID: String?
-    /// Chores being ticked off (or opened again) right now.
-    @State private var ticking: Set<String> = []
+    /// A chore a notification led to, marked on its day for a moment.
+    @State private var highlighted: String?
+    /// Items (and chores) being changed right now.
+    @State private var busy: Set<String> = []
 
     private var today: Day { Day.today }
 
     /// Changes to what's shown wait while it's the copy on the device.
-    private var canEdit: Bool { (state.value?.canEdit ?? family.canEdit) && !state.isSaved }
+    private var canEdit: Bool { (state.value?.page.canEdit ?? family.canEdit) && !state.isSaved }
 
     var body: some View {
-        LoadStateView(state: state, retry: load) { page in
-            content(page)
+        LoadStateView(state: state, retry: load) { screen in
+            content(screen)
         }
         .ohanaBackground(ModuleTint.chores)
         .navigationTitle("Chores")
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
+        .safeAreaBar(edge: .top) {
+            if state.value != nil { dayBar.padding(.horizontal).padding(.vertical, 8) }
+        }
         .toolbar { toolbar }
         .focusedSceneValue(\.newItem, canEdit ? NewItemAction(title: "New Chore") { editing = .new } : nil)
         .focusedSceneValue(\.moduleMenu, ModuleMenu(title: "Chores") { moduleMenu })
-        .task(id: family.revision(.chores)) { await load() }
+        .task(id: LoadKey(revision: family.revision(.chores), from: ChoreAgenda.window(around: shown, today: today).from)) {
+            await load()
+        }
         .onChange(of: family.pendingRoute, initial: true) {
             guard let route = family.takeRoute(for: .chores) else { return }
             switch route {
             case .newChore: if canEdit { editing = .new }
-            case let .chore(id): pendingChoreID = id
+            case let .chore(id, day?):
+                // A notification's: the chore on its day.
+                shown = day
+                highlighted = id
+            case let .chore(id, nil): pendingChoreID = id
             default: break
             }
             openPending()
         }
         .onChange(of: state.value) { openPending() }
-        .sheet(item: $editing) { target in
-            editor(target)
+        .navigationDestination(isPresented: $showAll) {
+            ChoresAllView(filter: $filter).assistantButton()
         }
-        .sheet(isPresented: $showReminders) { ChoreRemindersSheet() }
+        .sheet(item: $editing) { target in
+            ChoreEditorHost(target: target, page: state.value?.page, canEdit: canEdit, filter: filter, day: shown)
+        }
         .confirmationDialog(
             Text("Delete “\(deleting?.title ?? "")”?"), isPresented: .init(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
             titleVisibility: .visible, presenting: deleting
-        ) { chore in
+        ) { item in
             Button("Delete", role: .destructive) {
-                perform { try await ChoreActions.delete(family, chore.id) }
+                perform { try await ChoreActions.delete(family, item.choreId) }
             }
         }
     }
 
+    private struct LoadKey: Equatable {
+        let revision: Int
+        let from: Day
+    }
+
     private func load() async {
-        await LoadState.run($state, Self.request(family.api))
+        let pageGet = Self.request(family.api), agendaGet = Self.agendaRequest(family.api, around: shown)
+        loading = true
+        defer { loading = false }
+        await LoadState.run($state, saved: {
+            guard let page = pageGet.saved(), let agenda = agendaGet.saved() else { return nil }
+            return Saved(value: ChoresScreen(page: page.value, agenda: agenda.value), date: min(page.date, agenda.date))
+        }) {
+            let page = try await pageGet.fetch()
+            return ChoresScreen(page: page, agenda: try await agendaGet.fetch())
+        }
     }
 
     /// The chores' GET (the prefetch asks the same); its copy is kept whatever the day.
     static func request(_ api: FamilyAPI) -> CachedGet<ChoresPage> {
         api.cached("/chores", query: ["today": Day.today.description], key: "/chores")
+    }
+
+    /// The agenda of the two weeks around `day` (`ChoreAgenda.window`); those around today are
+    /// kept whatever the day, so the page opens offline.
+    static func agendaRequest(_ api: FamilyAPI, around day: Day, today: Day = .today) -> CachedGet<ChoreAgenda> {
+        let window = ChoreAgenda.window(around: day, today: today)
+        let query: [String: String?] = ["from": window.from.description, "to": window.to.description,
+                                        "today": today.description]
+        let current = window == ChoreAgenda.window(around: today, today: today)
+        return api.cached("/chores/agenda", query: query, key: current ? "/chores/agenda" : nil)
+    }
+
+    // MARK: Day
+
+    private var dayBar: some View {
+        HStack(spacing: 8) {
+            Button { shown = shown.adding(days: -1) } label: {
+                Label("Previous Day", systemImage: "chevron.left").labelStyle(.iconOnly)
+            }
+            .buttonBorderShape(.circle)
+            Button { pickingDay = true } label: {
+                Text(ChoreText.dayName(shown, today: today))
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint(Text("Picks a day"))
+            .popover(isPresented: $pickingDay) {
+                DatePicker("Day", selection: Binding(get: { shown.date }, set: { shown = Day($0); pickingDay = false }),
+                           displayedComponents: .date)
+                    .datePickerStyle(.graphical)
+                    .labelsHidden()
+                    .padding()
+                    .frame(minWidth: 300)
+                    .presentationCompactAdaptation(.popover)
+            }
+            if shown != today {
+                Button("Today") { shown = today }
+            }
+            Button { shown = shown.adding(days: 1) } label: {
+                Label("Next Day", systemImage: "chevron.right").labelStyle(.iconOnly)
+            }
+            .buttonBorderShape(.circle)
+        }
+        .buttonStyle(.glass)
     }
 
     // MARK: Toolbar and menus
@@ -79,7 +165,7 @@ struct ChoresView: View {
         }
         ToolbarItem {
             Menu {
-                Picker("Whose chores", selection: $filter) { filterChoices }
+                Picker("Whose chores", selection: $filter) { ChoreFilterChoices(people: state.value?.page.people ?? []) }
                     .pickerStyle(.inline)
             } label: {
                 Label("Filter", systemImage: filter == .everyone
@@ -88,52 +174,29 @@ struct ChoresView: View {
         }
         ToolbarItem {
             Menu {
-                moreMenu
+                Section {
+                    Button("All Chores", systemImage: "list.bullet") { showAll = true }
+                }
+                Section {
+                    Button("Reload", systemImage: "arrow.clockwise") { Task { await load() } }
+                }
             } label: {
                 Label("More", systemImage: "ellipsis")
             }
         }
     }
 
-    @ViewBuilder
-    private var filterChoices: some View {
-        let people = state.value?.people ?? []
-        Text("Everyone").tag(ChoreFilter.everyone)
-        if let me = app.me?.id, people.contains(where: { $0.id == me }) {
-            Text("Only mine").tag(ChoreFilter.person(me))
-        }
-        ForEach(people.filter { $0.id != app.me?.id }) { person in
-            Text(verbatim: person.name).tag(ChoreFilter.person(person.id))
-        }
-        Text("Nobody in particular").tag(ChoreFilter.nobody)
-    }
-
-    @ViewBuilder
-    private var moreMenu: some View {
-        if !family.api.client.isDemo {
-            Section {
-                Button("Chores in Reminders", systemImage: "checklist") { showReminders = true }
-                if ChoreReminders.shared.settings(for: family.api).listID != nil {
-                    Button("Sync with Reminders", systemImage: "arrow.triangle.2.circlepath") {
-                        Task { await ChoreReminders.shared.sync(family, reason: .manual) }
-                    }
-                }
-            }
-        }
-        Section {
-            Button("Reload", systemImage: "arrow.clockwise") { Task { await load() } }
-        }
-    }
-
     /// The Chores menu (Mac menu bar, the iPad's ⌘-hold list).
     @ViewBuilder
     private var moduleMenu: some View {
-        Picker("Whose Chores", selection: $filter) { filterChoices }
+        Picker("Whose Chores", selection: $filter) { ChoreFilterChoices(people: state.value?.page.people ?? []) }
             .pickerStyle(.inline)
         Divider()
-        if !family.api.client.isDemo {
-            Button("Chores in Reminders…") { showReminders = true }
-        }
+        Button("Previous Day") { shown = shown.adding(days: -1) }
+        Button("Next Day") { shown = shown.adding(days: 1) }
+        Button("Today") { shown = today }
+        Divider()
+        Button("All Chores") { showAll = true }
         Button("Reload") { Task { await load() } }
             .keyboardShortcut("r", modifiers: .command)
     }
@@ -141,29 +204,56 @@ struct ChoresView: View {
     // MARK: Content
 
     @ViewBuilder
-    private func content(_ page: ChoresPage) -> some View {
-        let sections = ChoreSections.make(page.chores, today: today, filter: filter)
-        if page.chores.isEmpty {
-            emptyState
-        } else if sections.isEmpty {
+    private func content(_ screen: ChoresScreen) -> some View {
+        let overdue = shown == today ? screen.agenda.overdue.filter { filter.matches($0.assignee) } : []
+        if screen.page.chores.isEmpty {
             ContentUnavailableView {
-                Label("No chores here", systemImage: Module.chores.systemImage)
-            } description: {
-                Text("Nobody’s chores match the filter.")
+                Label("No chores yet", systemImage: Module.chores.systemImage)
             } actions: {
-                Button("Show Everyone’s") { filter = .everyone }
-                    .buttonStyle(.glass)
+                if canEdit {
+                    Button("New Chore", systemImage: "plus") { editing = .new }
+                        .buttonStyle(.glassProminent)
+                }
             }
+        } else if let items = screen.agenda.items(on: shown) {
+            let parts = ChoreParts.items(items, filter: filter)
+            if parts.isEmpty && overdue.isEmpty {
+                ContentUnavailableView {
+                    Label("Nothing to do", systemImage: "checkmark.circle")
+                } actions: {
+                    if filter != .everyone {
+                        Button("Show Everyone’s") { filter = .everyone }
+                            .buttonStyle(.glass)
+                    }
+                }
+            } else {
+                list(parts: parts, overdue: overdue)
+            }
+        } else if loading {
+            ProgressView().controlSize(.large).frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
+            ContentUnavailableView {
+                Label("Couldn’t load", systemImage: "exclamationmark.triangle")
+            } actions: {
+                Button("Try again") { Task { await load() } }
+                    .buttonStyle(.glassProminent)
+            }
+        }
+    }
+
+    private func list(parts: [(part: ChorePart, items: [ChoreItem])], overdue: [ChoreItem]) -> some View {
+        ScrollViewReader { proxy in
             List {
-                ForEach(ChoreSections.Kind.allCases, id: \.self) { kind in
-                    let chores = sections.chores(kind)
-                    if !chores.isEmpty {
-                        Section {
-                            ForEach(chores) { row($0) }
-                        } header: {
-                            Text(Self.title(kind))
-                        }
+                if !overdue.isEmpty {
+                    Section("Overdue") {
+                        ForEach(overdue) { row($0, overdue: true) }
+                    }
+                }
+                ForEach(parts, id: \.part) { part in
+                    Section {
+                        ForEach(part.items) { row($0, overdue: false) }
+                    } header: {
+                        Label(part.part.title, systemImage: part.part.systemImage)
                     }
                 }
             }
@@ -173,58 +263,52 @@ struct ChoresView: View {
             .listStyle(.inset)
             #endif
             .refreshable { await load() }
-        }
-    }
-
-    private var emptyState: some View {
-        ContentUnavailableView {
-            Label("No chores yet", systemImage: Module.chores.systemImage)
-        } description: {
-            Text("Chores are the family’s jobs: once or repeating, for someone or for whoever gets to it. They can go into Reminders on each device.")
-        } actions: {
-            if canEdit {
-                Button("New Chore", systemImage: "plus") { editing = .new }
-                    .buttonStyle(.glassProminent)
+            .task(id: highlighted) {
+                guard let id = highlighted else { return }
+                if let item = (overdue + parts.flatMap(\.items)).first(where: { $0.choreId == id }) {
+                    withAnimation { proxy.scrollTo(item.id, anchor: .center) }
+                }
+                try? await Task.sleep(for: .seconds(3))
+                withAnimation { highlighted = nil }
             }
         }
     }
 
-    static func title(_ kind: ChoreSections.Kind) -> LocalizedStringKey {
-        switch kind {
-        case .overdue: "Overdue"
-        case .today: "Today"
-        case .upcoming: "Upcoming"
-        case .repeating: "Repeating"
-        case .done: "Done"
-        }
-    }
-
-    private func row(_ chore: Chore) -> some View {
-        ChoreRow(chore: chore, today: today, canTick: canTick(chore), ticking: ticking.contains(chore.id),
-                 tick: { tick(chore) }, open: { open(chore) })
+    private func row(_ item: ChoreItem, overdue: Bool) -> some View {
+        ChoreItemRow(item: item, today: today, overdue: overdue, canTick: canTick(item),
+                     canSubscribe: !state.isSaved, busy: busy.contains(item.id) || busy.contains(item.choreId),
+                     tick: { tick(item) }, subscribe: { subscribe(item.choreId, !item.subscribed) },
+                     open: { open(item.choreId) })
+            .id(item.id)
+            .listRowBackground(highlighted == item.choreId ? ModuleTint.chores.opacity(0.15) : nil)
             .contextMenu {
-                if canTick(chore) {
-                    Button(chore.done ? "Not Done" : "Done", systemImage: chore.done ? "circle" : "checkmark.circle") {
-                        tick(chore)
+                if canTick(item) {
+                    Button(item.done ? "Not Done" : "Done", systemImage: item.done ? "circle" : "checkmark.circle") {
+                        tick(item)
                     }
                 }
-                Button(canEdit ? "Edit" : "Show", systemImage: canEdit ? "pencil" : "info.circle") { open(chore) }
+                if !state.isSaved {
+                    Button(item.subscribed ? "Don’t Notify Me" : "Notify Me", systemImage: item.subscribed ? "bell.slash" : "bell") {
+                        subscribe(item.choreId, !item.subscribed)
+                    }
+                }
+                Button(canEdit ? "Edit" : "Show", systemImage: canEdit ? "pencil" : "info.circle") { open(item.choreId) }
                 if canEdit {
                     Divider()
-                    Button("Delete", systemImage: "trash", role: .destructive) { deleting = chore }
+                    Button("Delete", systemImage: "trash", role: .destructive) { deleting = item }
                 }
             }
             .swipeActions(edge: .trailing) {
                 if canEdit {
-                    Button("Delete", systemImage: "trash", role: .destructive) { deleting = chore }
-                    Button("Edit", systemImage: "pencil") { open(chore) }
+                    Button("Delete", systemImage: "trash", role: .destructive) { deleting = item }
+                    Button("Edit", systemImage: "pencil") { open(item.choreId) }
                         .tint(ModuleTint.chores)
                 }
             }
             .swipeActions(edge: .leading) {
-                if canTick(chore) {
-                    Button(chore.done ? "Not Done" : "Done", systemImage: chore.done ? "arrow.uturn.backward" : "checkmark") {
-                        tick(chore)
+                if canTick(item) {
+                    Button(item.done ? "Not Done" : "Done", systemImage: item.done ? "arrow.uturn.backward" : "checkmark") {
+                        tick(item)
                     }
                     .tint(.green)
                 }
@@ -233,35 +317,55 @@ struct ChoresView: View {
 
     // MARK: Actions
 
-    /// A single chore can be ticked off by editors, and by the member it's for.
-    private func canTick(_ chore: Chore) -> Bool {
-        guard !chore.isRepeating, !state.isSaved else { return false }
-        if state.value?.canEdit ?? family.canEdit { return true }
-        guard let me = app.me?.id, let assignee = chore.assignee else { return false }
+    /// Editors tick off any chore, the member it's for theirs.
+    private func canTick(_ item: ChoreItem) -> Bool {
+        guard !state.isSaved else { return false }
+        if state.value?.page.canEdit ?? family.canEdit { return true }
+        guard let me = app.me?.id, let assignee = item.assignee else { return false }
         return assignee.id == me
     }
 
-    private func tick(_ chore: Chore) {
-        guard !ticking.contains(chore.id) else { return }
-        ticking.insert(chore.id)
+    private func tick(_ item: ChoreItem) {
+        guard !busy.contains(item.id) else { return }
+        busy.insert(item.id)
+        let body = ChoreDoneBody(toggling: item)
         perform {
-            defer { ticking.remove(chore.id) }
-            let changed = try await ChoreActions.setDone(family, chore.id, !chore.done)
+            defer { busy.remove(item.id) }
+            let chore = try await ChoreActions.setDone(family, item.choreId, body)
             // At once, before the reload the change starts.
-            if case var .loaded(page) = state, let index = page.chores.firstIndex(where: { $0.id == changed.id }) {
-                page.chores[index] = changed
-                state = .loaded(page)
+            change(chore) { agenda in
+                agenda.update(choreID: item.choreId, day: item.day) { $0.done = body.done }
+                if body.done { agenda.overdue.removeAll { $0.id == item.id } }
             }
         }
     }
 
-    private func open(_ chore: Chore) {
-        editing = .chore(chore)
+    private func subscribe(_ id: String, _ on: Bool) {
+        guard !busy.contains(id) else { return }
+        busy.insert(id)
+        perform {
+            defer { busy.remove(id) }
+            let chore = try await ChoreActions.subscribe(family, id, on)
+            change(chore) { $0.update(choreID: id) { $0.subscribed = chore.subscribed } }
+        }
+    }
+
+    /// What's on screen with `chore` as the server answered it.
+    private func change(_ chore: Chore, agenda: (inout ChoreAgenda) -> Void) {
+        guard case var .loaded(screen) = state else { return }
+        if let index = screen.page.chores.firstIndex(where: { $0.id == chore.id }) { screen.page.chores[index] = chore }
+        agenda(&screen.agenda)
+        state = .loaded(screen)
+    }
+
+    private func open(_ id: String) {
+        pendingChoreID = id
+        openPending()
     }
 
     /// Opens the chore a route asked for: from the list, else asked of the server.
     private func openPending() {
-        guard let id = pendingChoreID, let page = state.value else { return }
+        guard let id = pendingChoreID, let page = state.value?.page else { return }
         pendingChoreID = nil
         if let chore = page.chores.first(where: { $0.id == id }) {
             editing = .chore(chore)
@@ -272,88 +376,105 @@ struct ChoresView: View {
             editing = .chore(response.chore)
         }
     }
+}
 
-    @ViewBuilder
-    private func editor(_ target: ChoreEditorTarget) -> some View {
-        let people = state.value?.people ?? []
-        switch target {
-        case .new:
-            // A filter on someone: the new chore is theirs.
-            let assignee: String? = if case let .person(id) = filter { id } else { nil }
-            ChoreEditor(chore: nil, people: people, draft: .new(on: today, for: assignee))
-        case let .chore(chore):
-            ChoreEditor(chore: chore, people: people, readOnly: !canEdit, draft: ChoreDraft(input: ChoreInput(chore)))
+/// Whose chores a list shows: everyone, mine, each person, nobody in particular.
+struct ChoreFilterChoices: View {
+    @Environment(AppModel.self) private var app
+    let people: [ChorePerson]
+
+    var body: some View {
+        Text("Everyone").tag(ChoreFilter.everyone)
+        if let me = app.me?.id, people.contains(where: { $0.id == me }) {
+            Text("Only mine").tag(ChoreFilter.person(me))
         }
+        ForEach(people.filter { $0.id != app.me?.id }) { person in
+            Text(verbatim: person.name).tag(ChoreFilter.person(person.id))
+        }
+        Text("Nobody in particular").tag(ChoreFilter.nobody)
     }
 }
 
-/// One chore: the tick (a single chore) or the repeat sign, its title, when it's due and whom
-/// it's for, its note.
-struct ChoreRow: View {
-    let chore: Chore
+/// One chore on the day: the tick, its title, the time, the repeat sign and whom it's for (an
+/// overdue one its day), and the bell of its notification.
+struct ChoreItemRow: View {
+    let item: ChoreItem
     let today: Day
+    let overdue: Bool
     let canTick: Bool
-    let ticking: Bool
+    let canSubscribe: Bool
+    let busy: Bool
     let tick: () -> Void
+    let subscribe: () -> Void
     let open: () -> Void
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            leading
+        HStack(alignment: .center, spacing: 12) {
+            tickButton
             Button(action: open) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(chore.title)
-                        .strikethrough(chore.done)
-                        .foregroundStyle(chore.done ? .secondary : .primary)
+                    Text(item.title)
+                        .strikethrough(item.done)
+                        .foregroundStyle(item.done ? .secondary : .primary)
                         .lineLimit(2)
-                    HStack(spacing: 6) {
-                        Text(ChoreText.schedule(chore, today: today))
-                            .foregroundStyle(chore.isOverdue(today: today) ? .red : .secondary)
-                        if let assignee = chore.assignee {
-                            Text(verbatim: "·").foregroundStyle(.tertiary)
-                            Label(assignee.name, systemImage: "person.fill")
-                                .labelStyle(.titleAndIcon)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .font(.caption)
-                    .lineLimit(2)
-                    if !chore.note.isEmpty {
-                        Text(chore.note)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
+                    details
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(.rect)
             }
             .buttonStyle(.plain)
             .accessibilityHint(Text("Opens the chore"))
+            Button(action: subscribe) {
+                Image(systemName: item.subscribed ? "bell.fill" : "bell")
+                    .foregroundStyle(item.subscribed ? ModuleTint.chores : .secondary)
+                    .rowHitTarget()
+            }
+            .buttonStyle(.borderless)
+            .disabled(!canSubscribe || busy)
+            .accessibilityLabel(item.subscribed ? Text("Notifies you") : Text("Doesn’t notify you"))
+            .help(item.subscribed ? Text("Notifies you") : Text("Doesn’t notify you"))
         }
     }
 
-    @ViewBuilder private var leading: some View {
-        if chore.isRepeating {
-            Image(systemName: "repeat")
-                .font(.body.weight(.semibold))
-                .foregroundStyle(ModuleTint.chores)
-                .frame(width: 26)
-                .accessibilityLabel(Text("Repeating"))
-        } else if ticking {
+    @ViewBuilder private var details: some View {
+        let hasDetails = overdue || item.time != nil || item.repeating || item.assignee != nil
+        if hasDetails {
+            HStack(spacing: 6) {
+                if overdue {
+                    Text(ChoreText.dayName(item.day, today: today)).foregroundStyle(.red)
+                }
+                if let time = item.time {
+                    Text(verbatim: time)
+                }
+                if item.repeating {
+                    Image(systemName: "repeat").accessibilityLabel(Text("Repeating"))
+                }
+                if let assignee = item.assignee {
+                    Label(assignee.name, systemImage: "person.fill")
+                        .labelStyle(.titleAndIcon)
+                }
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+        }
+    }
+
+    @ViewBuilder private var tickButton: some View {
+        if busy {
             ProgressView().controlSize(.small).frame(width: 26)
         } else {
             Button(action: tick) {
-                Image(systemName: chore.done ? "checkmark.circle.fill" : "circle")
+                Image(systemName: item.done ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
-                    .foregroundStyle(chore.done ? ModuleTint.chores : .secondary)
+                    .foregroundStyle(item.done ? ModuleTint.chores : .secondary)
                     .frame(width: 26)
                     .rowHitTarget()
             }
             .buttonStyle(.borderless)
             .disabled(!canTick)
-            .accessibilityLabel(chore.done ? Text("Done") : Text("Not done"))
-            .accessibilityHint(Text(chore.done ? "Opens it again" : "Ticks it off"))
+            .accessibilityLabel(item.done ? Text("Done") : Text("Not done"))
+            .accessibilityHint(Text(item.done ? "Opens it again" : "Ticks it off"))
         }
     }
 }

@@ -306,7 +306,6 @@ final class AppModel {
             Keychain.delete(Keys.token)
             client.cache?.clear()
             ShoppingReminders.forget(server: client.baseURL)
-            ChoreReminders.forget(server: client.baseURL)
             CalendarStore.removeQueues(server: client.baseURL)
             AppleCalendarSync.shared.removeAll(server: client.baseURL)
             SharedConnection.forget()
@@ -365,8 +364,9 @@ final class AppModel {
             InviteInbox.shared.receive(code)
             return true
         }
-        let tab = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "tab" }?.value
-        guard let (familyID, route) = AppRoute.parse(webPath: path, tab: tab),
+        let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        let tab = items.first { $0.name == "tab" }?.value, day = items.first { $0.name == "day" }?.value
+        guard let (familyID, route) = AppRoute.parse(webPath: path, tab: tab, day: day),
               let family = families.first(where: { $0.id == familyID }) else { return false }
         selectedFamilyID = family.id
         context(for: family)?.open(route)

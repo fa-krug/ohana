@@ -5,8 +5,9 @@ import SwiftUI
 struct ChoreDraft: Equatable, RepeatEditing {
     var input: ChoreInput
 
-    static func new(on day: Day, for assigneeID: String? = nil) -> ChoreDraft {
-        ChoreDraft(input: ChoreInput(title: "", assigneeId: assigneeID, day: day))
+    /// A new chore: the signed-in account (`me`) is notified, nobody else.
+    static func new(on day: Day, for assigneeID: String? = nil, me: String? = nil) -> ChoreDraft {
+        ChoreDraft(input: ChoreInput(title: "", assigneeId: assigneeID, day: day, subscriberIds: me.map { [$0] } ?? []))
     }
 
     var repeatRRule: String? {
@@ -26,9 +27,30 @@ struct ChoreDraft: Equatable, RepeatEditing {
         return repeatProblem
     }
 
-    /// At a time, or any time of the day.
+    /// At a time (first the part's usual one), or any time of its part of the day.
     mutating func setTimed(_ timed: Bool) {
-        input.time = timed ? "09:00" : nil
+        setTime(timed ? Self.usualTime(input.effectivePart) : nil)
+    }
+
+    /// The time; the part follows it, and stays when the time goes.
+    mutating func setTime(_ time: String?) {
+        input.time = time
+        if let part = time.flatMap(ChorePart.of) { input.part = part }
+    }
+
+    /// When a part's chore without a time is due (the server's, for its notification).
+    static func usualTime(_ part: ChorePart) -> String {
+        switch part {
+        case .morning: "07:00"
+        case .day: "12:00"
+        case .evening: "18:00"
+        }
+    }
+
+    /// The notification for `id` on or off.
+    mutating func setNotified(_ id: String, _ on: Bool) {
+        input.subscriberIds.removeAll { $0 == id }
+        if on { input.subscriberIds.append(id) }
     }
 
     /// What's sent: the title and note trimmed.
@@ -53,10 +75,35 @@ enum ChoreEditorTarget: Identifiable, Hashable {
     }
 }
 
-/// Adds or edits a chore (POST /chores, PATCH /chores/{id}): a title, whom it's for, its day
-/// (and time), how it repeats like an event in the calendar, a note. Viewers see it read-only.
+/// The editor the chores pages open: a new chore (for the filter's person, on `day`) or one
+/// (read-only without editing).
+struct ChoreEditorHost: View {
+    @Environment(AppModel.self) private var app
+    let target: ChoreEditorTarget
+    let page: ChoresPage?
+    let canEdit: Bool
+    let filter: ChoreFilter
+    let day: Day
+
+    var body: some View {
+        let people = page?.people ?? []
+        switch target {
+        case .new:
+            // A filter on someone: the new chore is theirs.
+            let assignee: String? = if case let .person(id) = filter { id } else { nil }
+            ChoreEditor(chore: nil, people: people, draft: .new(on: day, for: assignee, me: app.me?.id))
+        case let .chore(chore):
+            ChoreEditor(chore: chore, people: people, readOnly: !canEdit, draft: ChoreDraft(input: ChoreInput(chore)))
+        }
+    }
+}
+
+/// Adds or edits a chore (POST /chores, PATCH /chores/{id}): a title, whom it's for, its day,
+/// part of the day (or time), how it repeats like an event in the calendar, a note, who's
+/// notified. Viewers see it read-only, but turn their own notification on or off.
 struct ChoreEditor: View {
     @Environment(FamilyContext.self) private var family
+    @Environment(AppModel.self) private var app
     @Environment(\.dismiss) private var dismiss
     /// The chore being edited; nil: a new one.
     let chore: Chore?
@@ -67,6 +114,9 @@ struct ChoreEditor: View {
     @State private var saving = false
     @State private var customRepeat = false
     @State private var confirmDelete = false
+    /// Read-only: the account's own notification (POST /chores/{id}/subscribe at once).
+    @State private var subscribed: Bool
+    @State private var subscribing = false
     /// The draft as it opened, for Cancel.
     private let initial: ChoreDraft
 
@@ -75,8 +125,12 @@ struct ChoreEditor: View {
         self.people = people
         self.readOnly = readOnly
         _draft = State(initialValue: draft)
+        _subscribed = State(initialValue: chore?.subscribed ?? false)
         initial = draft
     }
+
+    /// Who can be notified: the members with an account.
+    private var accounts: [ChorePerson] { people.filter(\.account) }
 
     /// Whom it can be for: the family's people, and the one it's for even when they left.
     private var choices: [ChorePerson] {
@@ -92,39 +146,45 @@ struct ChoreEditor: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    TextField("Title", text: $draft.input.title)
-                        .accessibilityHint(Text("Required"))
-                    Picker("Assigned to", selection: $draft.input.assigneeId) {
-                        Text("Nobody").tag(String?.none)
-                        ForEach(choices) { person in
-                            Text(verbatim: person.name).tag(Optional(person.id))
+                Group {
+                    Section {
+                        TextField("Title", text: $draft.input.title)
+                            .accessibilityHint(Text("Required"))
+                        Picker("Assigned to", selection: $draft.input.assigneeId) {
+                            Text("Nobody").tag(String?.none)
+                            ForEach(choices) { person in
+                                Text(verbatim: person.name).tag(Optional(person.id))
+                            }
                         }
                     }
-                }
-                Section {
-                    DatePicker(draft.rule == nil ? "Due" : "Starts",
-                               selection: Binding(get: { draft.input.day.date }, set: { draft.input.day = Day($0) }),
-                               displayedComponents: .date)
-                    Toggle("At a time", isOn: Binding(get: { draft.input.time != nil }, set: { draft.setTimed($0) }))
-                    if let time = draft.input.time {
-                        DatePicker("Time", selection: Binding(get: { CalendarEventSheet.date(of: time, on: draft.input.day) }, set: {
-                            let c = Calendar.current.dateComponents([.hour, .minute], from: $0)
-                            draft.input.time = String(format: "%02d:%02d", c.hour ?? 0, c.minute ?? 0)
-                        }), displayedComponents: .hourAndMinute)
+                    Section {
+                        DatePicker(draft.rule == nil ? "Due" : "Starts",
+                                   selection: Binding(get: { draft.input.day.date }, set: { draft.input.day = Day($0) }),
+                                   displayedComponents: .date)
+                        // With a time the time decides.
+                        Picker("Part of Day", selection: Binding(get: { draft.input.effectivePart }, set: { draft.input.part = $0 })) {
+                            ForEach(ChorePart.allCases, id: \.self) { part in
+                                Text(part.title).tag(part)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .disabled(draft.input.time != nil)
+                        Toggle("At a time", isOn: Binding(get: { draft.input.time != nil }, set: { draft.setTimed($0) }))
+                        if let time = draft.input.time {
+                            DatePicker("Time", selection: Binding(get: { CalendarEventSheet.date(of: time, on: draft.input.day) }, set: {
+                                let c = Calendar.current.dateComponents([.hour, .minute], from: $0)
+                                draft.setTime(String(format: "%02d:%02d", c.hour ?? 0, c.minute ?? 0))
+                            }), displayedComponents: .hourAndMinute)
+                        }
+                    }
+                    CalendarEventRepeatSection(draft: $draft, custom: $customRepeat)
+                    Section {
+                        TextField("Note", text: $draft.input.note, axis: .vertical)
+                            .lineLimit(2...6)
                     }
                 }
-                CalendarEventRepeatSection(draft: $draft, custom: $customRepeat)
-                Section {
-                    TextField("Note", text: $draft.input.note, axis: .vertical)
-                        .lineLimit(2...6)
-                } footer: {
-                    if let chore, chore.done, let date = chore.doneDate {
-                        Text("Done \(date.formatted(date: .abbreviated, time: .shortened)).")
-                    } else if draft.rule != nil {
-                        Text("In Reminders, a repeating chore gets a new reminder each time, three hours before it’s due.")
-                    }
-                }
+                .disabled(readOnly)
+                notifySection
                 if let chore, !readOnly {
                     Section {
                         Button("Delete Chore", role: .destructive) { confirmDelete = true }
@@ -136,7 +196,6 @@ struct ChoreEditor: View {
                 }
             }
             .formStyle(.grouped)
-            .disabled(readOnly)
             .navigationTitle(title)
             .navigationDestination(isPresented: $customRepeat) {
                 CalendarRepeatRuleEditor(draft: $draft)
@@ -164,6 +223,52 @@ struct ChoreEditor: View {
         #if os(macOS)
         .frame(minWidth: 440, minHeight: 520)
         #endif
+    }
+
+    /// Editors pick who's notified (saved with the chore); a viewer turns their own on or off.
+    @ViewBuilder private var notifySection: some View {
+        if readOnly {
+            if let chore {
+                Section("Notify") {
+                    Toggle("Notify me", isOn: Binding(get: { subscribed }, set: { subscribe(chore, $0) }))
+                        .disabled(subscribing || app.isDemo)
+                }
+            }
+        } else if !accounts.isEmpty {
+            Section("Notify") {
+                ForEach(accounts) { person in
+                    let on = draft.input.subscriberIds.contains(person.id)
+                    Button { draft.setNotified(person.id, !on) } label: {
+                        HStack {
+                            Text(verbatim: person.name).foregroundStyle(.primary)
+                            Spacer()
+                            if on {
+                                Image(systemName: "checkmark")
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(ModuleTint.chores)
+                            }
+                        }
+                        .contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(on ? .isSelected : [])
+                }
+            }
+        }
+    }
+
+    private func subscribe(_ chore: Chore, _ on: Bool) {
+        subscribing = true
+        subscribed = on
+        perform {
+            defer { subscribing = false }
+            do {
+                subscribed = try await ChoreActions.subscribe(family, chore.id, on).subscribed
+            } catch {
+                subscribed = !on
+                throw error
+            }
+        }
     }
 
     /// Unchanged: nothing to send.
@@ -208,11 +313,19 @@ enum ChoreActions {
         ErrorBanner.shared.success(String(localized: "Chore deleted."))
     }
 
-    /// Ticks a single chore off, or opens it again.
+    /// Ticks a chore off, or opens it again (a repeating one's occurrence `body.day`).
     @discardableResult
-    static func setDone(_ family: FamilyContext, _ id: String, _ done: Bool) async throws -> Chore {
-        let response: ChoreResponse = try await family.api.send(.post, "/chores/\(id)/done", query: today,
-                                                                body: ["done": done])
+    static func setDone(_ family: FamilyContext, _ id: String, _ body: ChoreDoneBody) async throws -> Chore {
+        let response: ChoreResponse = try await family.api.send(.post, "/chores/\(id)/done", query: today, body: body)
+        family.didChange(.chores)
+        return response.chore
+    }
+
+    /// The signed-in account notified when it's due, or not.
+    @discardableResult
+    static func subscribe(_ family: FamilyContext, _ id: String, _ on: Bool) async throws -> Chore {
+        let response: ChoreResponse = try await family.api.send(.post, "/chores/\(id)/subscribe", query: today,
+                                                                body: ChoreSubscribeBody(subscribed: on))
         family.didChange(.chores)
         return response.chore
     }

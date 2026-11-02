@@ -7,13 +7,16 @@
       "assignee": { "id": "demo-anna", "name": "Anna Parker", "account": true },
       "day": "{{day:-2}}",
       "time": null,
+      "part": "day",
       "rrule": null,
       "done": false,
       "doneAt": null,
+      "doneBy": null,
       "next": "{{day:-2}}",
+      "subscriberIds": [],
+      "subscribed": false,
       "createdAt": "{{time:-14400}}",
-      "updatedAt": "{{time:-14400}}",
-      "occurrences": []
+      "updatedAt": "{{time:-14400}}"
     },
     {
       "id": "chore-bins",
@@ -22,13 +25,16 @@
       "assignee": { "id": "demo-user", "name": "Ben Parker", "account": true },
       "day": "{{day:-14}}",
       "time": "19:00",
+      "part": "evening",
       "rrule": "FREQ=WEEKLY",
       "done": false,
       "doneAt": null,
+      "doneBy": null,
       "next": "{{day}}",
+      "subscriberIds": ["demo-user"],
+      "subscribed": true,
       "createdAt": "{{time:-43200}}",
-      "updatedAt": "{{time:-43200}}",
-      "occurrences": ["{{day:-7}}", "{{day}}", "{{day:7}}"]
+      "updatedAt": "{{time:-43200}}"
     },
     {
       "id": "chore-tidy",
@@ -37,13 +43,34 @@
       "assignee": { "id": "person-mia", "name": "Mia", "account": false },
       "day": "{{day:-30}}",
       "time": "18:00",
+      "part": "evening",
       "rrule": "FREQ=DAILY",
       "done": false,
       "doneAt": null,
+      "doneBy": null,
       "next": "{{day}}",
+      "subscriberIds": ["demo-anna"],
+      "subscribed": false,
       "createdAt": "{{time:-50000}}",
-      "updatedAt": "{{time:-50000}}",
-      "occurrences": ["{{day:-1}}", "{{day}}", "{{day:1}}"]
+      "updatedAt": "{{time:-50000}}"
+    },
+    {
+      "id": "chore-dishwasher",
+      "title": "Empty the dishwasher",
+      "note": "",
+      "assignee": { "id": "person-leo", "name": "Leo", "account": false },
+      "day": "{{day:-20}}",
+      "time": null,
+      "part": "morning",
+      "rrule": "FREQ=DAILY",
+      "done": false,
+      "doneAt": null,
+      "doneBy": null,
+      "next": "{{day}}",
+      "subscriberIds": [],
+      "subscribed": false,
+      "createdAt": "{{time:-45000}}",
+      "updatedAt": "{{time:-45000}}"
     },
     {
       "id": "chore-swim-bag",
@@ -52,13 +79,16 @@
       "assignee": { "id": "person-leo", "name": "Leo", "account": false },
       "day": "{{day:1}}",
       "time": "07:30",
+      "part": "morning",
       "rrule": null,
       "done": false,
       "doneAt": null,
+      "doneBy": null,
       "next": "{{day:1}}",
+      "subscriberIds": ["demo-user", "demo-anna"],
+      "subscribed": true,
       "createdAt": "{{time:-3000}}",
-      "updatedAt": "{{time:-3000}}",
-      "occurrences": []
+      "updatedAt": "{{time:-3000}}"
     },
     {
       "id": "chore-plants",
@@ -67,13 +97,16 @@
       "assignee": null,
       "day": "{{day:-11}}",
       "time": null,
+      "part": "morning",
       "rrule": "FREQ=WEEKLY;INTERVAL=2",
       "done": false,
       "doneAt": null,
+      "doneBy": null,
       "next": "{{day:3}}",
+      "subscriberIds": [],
+      "subscribed": false,
       "createdAt": "{{time:-40000}}",
-      "updatedAt": "{{time:-40000}}",
-      "occurrences": ["{{day:-11}}", "{{day:3}}"]
+      "updatedAt": "{{time:-40000}}"
     },
     {
       "id": "chore-present",
@@ -82,13 +115,16 @@
       "assignee": { "id": "demo-user", "name": "Ben Parker", "account": true },
       "day": "{{day:5}}",
       "time": null,
+      "part": "day",
       "rrule": null,
       "done": false,
       "doneAt": null,
+      "doneBy": null,
       "next": "{{day:5}}",
+      "subscriberIds": ["demo-user"],
+      "subscribed": true,
       "createdAt": "{{time:-2000}}",
-      "updatedAt": "{{time:-2000}}",
-      "occurrences": []
+      "updatedAt": "{{time:-2000}}"
     },
     {
       "id": "chore-windows",
@@ -97,13 +133,16 @@
       "assignee": { "id": "demo-anna", "name": "Anna Parker", "account": true },
       "day": "{{day:-3}}",
       "time": null,
+      "part": "day",
       "rrule": null,
       "done": true,
       "doneAt": "{{time:-2880}}",
+      "doneBy": { "id": "demo-anna", "name": "Anna Parker", "account": true },
       "next": null,
+      "subscriberIds": [],
+      "subscribed": false,
       "createdAt": "{{time:-20000}}",
-      "updatedAt": "{{time:-20000}}",
-      "occurrences": []
+      "updatedAt": "{{time:-20000}}"
     }
   ],
   "people": [

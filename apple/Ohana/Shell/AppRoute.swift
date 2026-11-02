@@ -29,8 +29,9 @@ enum AppRoute: Hashable {
     case appointmentSlot(searchID: String, resultID: String)
     case newAppointmentSearch
     // Chores
-    /// One chore (its editor; read-only for viewers), over the list.
-    case chore(id: String)
+    /// One chore (its editor; read-only for viewers), over the chores of `day` (its occurrence, a
+    /// notification's `?day=`; nil: today).
+    case chore(id: String, day: Day? = nil)
     case newChore
     // Assistant
     /// The assistant's page, optionally on one chat.
@@ -63,7 +64,7 @@ enum AppRoute: Hashable {
 
 /// The pages of the family's settings a route can open.
 enum SettingsPage: String, Hashable, CaseIterable {
-    case members, home, notifications, calendar, finance, shopping, chores, assistant, data
+    case members, home, notifications, calendar, finance, shopping, assistant, data
 
     /// The module whose settings the page holds; nil for the family's own pages.
     var module: Module? {
@@ -71,7 +72,6 @@ enum SettingsPage: String, Hashable, CaseIterable {
         case .calendar: .calendar
         case .finance: .finance
         case .shopping: .meals
-        case .chores: .chores
         case .assistant: .assistant
         case .members, .home, .notifications, .data: nil
         }
@@ -81,14 +81,15 @@ enum SettingsPage: String, Hashable, CaseIterable {
 extension AppRoute {
     /// The route of a web app path inside a family: `/f/{familyId}/meals/recipes/{id}` → `.recipe`.
     /// Returns the family's id too. Nil for paths outside a family.
-    /// `tab`: the settings page's `?tab=` (the web's settings tabs).
-    static func parse(webPath path: String, tab: String? = nil) -> (familyID: String, route: AppRoute)? {
+    /// `tab`: the settings page's `?tab=` (the web's settings tabs); `day`: the `?day=` of a
+    /// chore's link (its notification's).
+    static func parse(webPath path: String, tab: String? = nil, day: String? = nil) -> (familyID: String, route: AppRoute)? {
         let parts = path.split(separator: "/").map(String.init)
         guard parts.count >= 2, parts[0] == "f" else { return nil }
         let familyID = parts[1]
         let rest = Array(parts.dropFirst(2))
         if rest.first == "settings", let page = settingsPage(tab: tab) { return (familyID, .settings(page)) }
-        return (familyID, route(rest))
+        return (familyID, route(rest, day: day.flatMap(Day.init)))
     }
 
     /// The web's settings tabs (components/families/settings-tabs.tsx) as the app's pages.
@@ -103,7 +104,7 @@ extension AppRoute {
         }
     }
 
-    private static func route(_ rest: [String]) -> AppRoute {
+    private static func route(_ rest: [String], day: Day?) -> AppRoute {
         guard let first = rest.first else { return .module(.overview) }
         let at = { (i: Int) in rest.count > i ? rest[i] : nil }
         switch first {
@@ -130,9 +131,9 @@ extension AppRoute {
             if at(2) == "slots", let result = at(3) { return .appointmentSlot(searchID: search, resultID: result) }
             return .appointmentSearch(id: search)
         case "chores":
-            // `/chores/{id}`: a chore (the links of the reminders the chores sync writes).
+            // `/chores/{id}?day=`: a chore on a day (its notification's link).
             guard let chore = at(1) else { return .module(.chores) }
-            return chore == "new" ? .newChore : .chore(id: chore)
+            return chore == "new" ? .newChore : .chore(id: chore, day: day)
         case "assistant":
             return .assistantChat(id: nil)
         case "settings":

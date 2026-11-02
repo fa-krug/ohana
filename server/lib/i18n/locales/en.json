@@ -126,6 +126,11 @@
       "title": "The assistant has answered",
       "untitled": "Your chat"
     },
+    "chores": {
+      "dueAt": "Due at {{time}}",
+      "dueNow": "Due now",
+      "for": "for {{name}}"
+    },
     "coverage": {
       "new": "new",
       "title_one": "{{count}} day without cover in the next two weeks",

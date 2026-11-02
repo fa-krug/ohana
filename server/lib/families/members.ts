@@ -1,6 +1,6 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import type { Db } from "@/lib/db";
-import { chores, familyMembers, users } from "@/lib/db/schema";
+import { choreSubscribers, chores, familyMembers, users } from "@/lib/db/schema";
 import { AuthError } from "@/lib/auth/errors";
 import { assertBirthday } from "./people";
 import { type Actor, type Role, isRole, requireRole } from "./roles";
@@ -104,8 +104,8 @@ export function setRole(db: Db, actor: Actor, familyId: string, userId: string, 
     .run();
 }
 
-/** Removes a member (their chores in the family become nobody's); everyone may remove
- *  themselves (leave), editors anyone. */
+/** Removes a member (their chores in the family become nobody's, their subscriptions to its
+ *  chores end); everyone may remove themselves (leave), editors anyone. */
 export function removeMember(db: Db, actor: Actor, familyId: string, userId: string): void {
   requireRole(db, actor, familyId, userId === actor.id ? "viewer" : "editor");
   const rows = memberRows(db, familyId);
@@ -124,5 +124,13 @@ export function removeMember(db: Db, actor: Actor, familyId: string, userId: str
   db.update(chores)
     .set({ assigneeUserId: null })
     .where(and(eq(chores.familyId, familyId), eq(chores.assigneeUserId, userId)))
+    .run();
+  db.delete(choreSubscribers)
+    .where(
+      and(
+        eq(choreSubscribers.userId, userId),
+        inArray(choreSubscribers.choreId, db.select({ id: chores.id }).from(chores).where(eq(chores.familyId, familyId))),
+      ),
+    )
     .run();
 }

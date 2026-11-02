@@ -259,16 +259,24 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `assistant.ts`).
 - **Chores (`lib/chores/`):** table `chores` (`lib/db/schema/chores.ts`): title, note, assigned to
   one account (`assignee_user_id`) or person (`assignee_person_id`) of the family or nobody, `day`
-  (the due day / a series' first), `time` ("HH:MM" or null), `rrule` (null = once; events'
-  `lib/calendar/rrule.ts`), `done_at` (single chores only). `chores.ts` (CRUD, `nextDue`: a single
-  chore's `day` while open, a repeating one's first occurrence from `today`; `occurrences`: a
-  repeating one's last before `today`, today's and the first after), `routes.ts`
-  `handleChores` (`GET/POST /chores?today=`, `GET/PATCH/DELETE /chores/{id}`, `POST
-  /chores/{id}/done {done}`; members read, editors change, viewers may tick off their own; POST
-  takes an optional `id` so the assistant's undo brings a chore back under its id). Accepting a
-  person's invite moves their chores to the account; removing a member unassigns theirs. Assistant
-  tools `tools/chores.ts` (`get_chores`, `add_chore`, `update_chore`, `remove_chore`,
-  `set_chore_done`); search kind `chore`. The app writes them into Reminders (see Native app).
+  (the due day / a series' first), `time` ("HH:MM" or null), `part` (morning | day | evening; a
+  time decides it: <12 morning, <17 day), `rrule` (null = once; events' `lib/calendar/rrule.ts`),
+  `done_at` / `done_by_id` (single chores); `chore_completions` (a repeating chore's ticked
+  occurrences), `chore_subscribers` (who gets its notification), `chore_notified` (occurrences
+  notified). `chores.ts` (CRUD, `nextDue`, `choreAgenda`), `routes.ts` `handleChores` (`GET/POST
+  /chores?today=`, `GET /chores/agenda?from=&to=&today=` (by day, items by part then time, plus
+  the open single chores before today as `overdue`; ≤ 62 days), `GET/PATCH/DELETE /chores/{id}`,
+  `POST /chores/{id}/done {done, day}` (day: the occurrence of a repeating one), `POST
+  /chores/{id}/subscribe {subscribed}`; members read and subscribe themselves, editors change
+  (`subscriberIds`, default the creator), viewers may tick off their own; POST takes an optional
+  `id` so the assistant's undo brings a chore back under its id). `notify.ts`
+  `choreNotifications` (worker, every tick): an occurrence due (its time, else 07:00 / 12:00 /
+  18:00 by part, server-local) within the last 3 h, not done, not notified → push to its
+  subscribers' app devices only (`notifyFamily` with `channelIds: []`), path
+  `/f/{id}/chores/{choreId}?day=`. Accepting a person's invite moves their chores to the account;
+  removing a member unassigns theirs and drops their subscriptions. Assistant tools
+  `tools/chores.ts` (`get_chores`, `add_chore`, `update_chore`, `remove_chore`, `set_chore_done`);
+  search kind `chore`.
 - **Connections between modules (phase 7):**
   - *Appointments → Calendar:* `cal_events` (`lib/db/schema/connections.ts`): events from
     `day` to `end_day` (wall-clock `start` on the first / `end` on the last "HH:MM", or null =
@@ -427,19 +435,15 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   meal plan (`MealPlanDrop`; the plan's recipe column, `MealPlanRecipeColumn.swift`), a calendar
   event onto another day (`CalendarEventDrag.swift`, `CalendarStore.moveEvent`; the grids' selection
   gestures step aside on an event label).
-  Chores (`Features/Chores/`: `ChoresView` by Overdue / Today / Upcoming / Repeating / Done,
-  `ChoreEditor` with the calendar's repeat controls (`RepeatEditing`), `ChoreRemindersView`) go into a
-  Reminders list chosen per device and family (`Core/Reminders/ChoreReminders.swift`, `UserDefaults`:
-  list, whose chores (everyone's or one person's), links chore (or occurrence) → reminder).
-  `ChoreReminderPlan` (pure, tested): a single chore is one reminder due on its day; a repeating
-  one gets a plain reminder per occurrence (no recurrence rule), written once it's due within 3 h
-  (all day: from 21:00 the evening before; the latest of the server's `occurrences` that has
-  appeared; none from before the chore was made or of a series that ended before today), missed
-  ones are left; url `ohana://f/{id}/chores/{choreId}?v=<fingerprint>[&o=<day>]`
-  (an open reminder with another `v` is written again); a single chore's done goes both ways
-  (`POST …/done`), a deleted reminder stays deleted until the chore changes, only reminders this
-  device linked are ever removed. Syncs on becoming active, a family switch, chore changes,
-  Reminders changes and, while the app runs, when the next occurrence's reminder is due to appear.
+  Chores (`Features/Chores/`): `ChoresView` shows one day (a day bar under the navigation bar:
+  back / forward, date picker, Today) in Morning / Day / Evening sections, Overdue on top on today,
+  from `GET /chores` + `GET /chores/agenda` (two-week windows, `ChoreAgenda.window`); rows tick an
+  occurrence off (`POST …/done`, `day` for repeating ones) and toggle the caller's notification
+  bell (`…/subscribe`); `ChoresAllView` lists every chore by part; `ChoreEditor` (part of day, or a
+  time that decides it, repeat via `RepeatEditing`, Notify: the family's accounts, the signed-in
+  user ticked on a new chore; viewers get only "Notify me"). Kept lean: no explanatory footers.
+  A chore notification's `/f/{id}/chores/{choreId}?day=` opens that day and highlights it
+  (`AppRoute.chore(id:day:)`).
   The shopping list is a Reminders list (`Core/Reminders/`: `RemindersStore` wraps one
   `EKEventStore`; `ShoppingReminders` per server + family on this device, in `UserDefaults`: the
   chosen list and the keys already written). `sync` writes `GET /meals/shopping?from=today` one-way

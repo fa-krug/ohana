@@ -2,7 +2,7 @@ import EventKit
 import Foundation
 
 // A `RepeatRule` as EventKit's and back: Apple Calendar's events (`AppleCalendarSync`,
-// `DeviceCalendarStore`) and the chores' reminders (`RemindersStore`) repeat by these.
+// `DeviceCalendarStore`) repeat by these.
 
 extension RepeatRule {
     /// EventKit's rule for it (EventKit has no week start of its own to set).

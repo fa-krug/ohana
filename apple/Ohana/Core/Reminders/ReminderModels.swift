@@ -2,8 +2,8 @@ import Foundation
 
 // The user's Reminders as plain values (no EventKit types), so the logic over them is pure and
 // testable: what `RemindersStore` reads (`ReminderList`, `ReminderSnapshot`) and what it writes
-// (`ReminderDraft`, `ReminderChange`). The shopping list's and the chores' syncs
-// (`ShoppingReminderPlan`, `ChoreReminderPlan`) and the assistant's Reminders tools work on these.
+// (`ReminderDraft`, `ReminderChange`). The shopping list's sync (`ShoppingReminderPlan`) and the
+// assistant's Reminders tools work on these.
 
 /// Whether the app may use the user's Reminders (EventKit's authorization, for reminders).
 enum RemindersAccess: Equatable {

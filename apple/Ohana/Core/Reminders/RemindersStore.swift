@@ -14,8 +14,8 @@ import AppKit
 /// (`ReminderModels.swift`). Views reload on `revision`, which grows whenever the reminders
 /// database changes (here, in the Reminders app, through iCloud).
 ///
-/// Used by the shopping list's and the chores' syncs (`ShoppingReminders`, `ChoreReminders`), the
-/// Siri action that adds to the shopping list and the assistant's Reminders tools.
+/// Used by the shopping list's sync (`ShoppingReminders`), the Siri action that adds to it and
+/// the assistant's Reminders tools.
 @Observable
 final class RemindersStore {
     static let shared = RemindersStore()

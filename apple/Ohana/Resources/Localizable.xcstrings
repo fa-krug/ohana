@@ -920,16 +920,6 @@
         }
       }
     },
-    "%lld ticked off or reopened": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld abgehakt oder wieder geöffnet"
-          }
-        }
-      }
-    },
     "%lld times": {
       "localizations": {
         "de": {
@@ -2138,6 +2128,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nach"
+          }
+        }
+      }
+    },
+    "All Chores": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Aufgaben"
           }
         }
       }
@@ -3664,46 +3664,6 @@
         }
       }
     },
-    "Chores are the family’s jobs: once or repeating, for someone or for whoever gets to it. They can go into Reminders on each device.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aufgaben sind die Arbeiten der Familie: einmalig oder wiederkehrend, für jemanden oder für den, der dazu kommt. Auf jedem Gerät können sie in Erinnerungen landen."
-          }
-        }
-      }
-    },
-    "Chores in Reminders": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aufgaben in Erinnerungen"
-          }
-        }
-      }
-    },
-    "Chores in Reminders…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aufgaben in Erinnerungen …"
-          }
-        }
-      }
-    },
-    "Chores of": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aufgaben von"
-          }
-        }
-      }
-    },
     "Clear": {
       "localizations": {
         "de": {
@@ -4120,16 +4080,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Verbinde zuerst in der App deinen Ohana-Server."
-          }
-        }
-      }
-    },
-    "Connect your Ohana server to put the chores into Reminders.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verbinde deinen Ohana-Server, um die Aufgaben in Erinnerungen zu übernehmen."
           }
         }
       }
@@ -5434,22 +5384,22 @@
         }
       }
     },
+    "Doesn’t notify you": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benachrichtigt dich nicht"
+          }
+        }
+      }
+    },
     "Done": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Fertig"
-          }
-        }
-      }
-    },
-    "Done %@.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Erledigt %@."
           }
         }
       }
@@ -5480,6 +5430,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nicht anwenden"
+          }
+        }
+      }
+    },
+    "Don’t Notify Me": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht benachrichtigen"
           }
         }
       }
@@ -5690,16 +5650,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Jeder Betrag ist eine Spanne pro Monat in %@, von den unteren bis zu den oberen Haushalten; nur ein Wert ist ein einzelner Durchschnitt. Was ihr nicht wisst, bleibt leer."
-          }
-        }
-      }
-    },
-    "Each reminder says whom the chore is for.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jede Erinnerung nennt, für wen die Aufgabe ist."
           }
         }
       }
@@ -6010,6 +5960,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Esc / ⇧⌘A"
+          }
+        }
+      }
+    },
+    "Evening": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abends"
           }
         }
       }
@@ -7606,16 +7566,6 @@
         }
       }
     },
-    "In Reminders, a repeating chore gets a new reminder each time, three hours before it’s due.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In Erinnerungen bekommt eine wiederkehrende Aufgabe jedes Mal eine neue Erinnerung, drei Stunden bevor sie fällig ist."
-          }
-        }
-      }
-    },
     "In Reminders: %@": {
       "localizations": {
         "de": {
@@ -7854,16 +7804,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sie gleicht sich von selbst ab, wenn du Ohana öffnest und wenn sich der Essensplan ändert. Hake beim Einkaufen in der Erinnerungen-App ab."
-          }
-        }
-      }
-    },
-    "It syncs by itself when you open Ohana, when the chores change and when you tick one off in Reminders; while Ohana is open, also when a repeating chore is due again. A reminder you delete stays deleted until its chore changes (a repeating chore’s until its next time).": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Der Abgleich läuft von selbst, wenn du Ohana öffnest, wenn sich die Aufgaben ändern und wenn du eine in Erinnerungen abhakst; solange Ohana geöffnet ist, auch wenn eine wiederkehrende Aufgabe wieder dran ist. Eine gelöschte Erinnerung bleibt gelöscht, bis sich ihre Aufgabe ändert (die einer wiederkehrenden Aufgabe bis zum nächsten Mal)."
           }
         }
       }
@@ -8688,6 +8628,16 @@
         }
       }
     },
+    "Morning": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Morgens"
+          }
+        }
+      }
+    },
     "Most went to %@": {
       "localizations": {
         "de": {
@@ -9238,6 +9188,16 @@
         }
       }
     },
+    "Next Day": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nächster Tag"
+          }
+        }
+      }
+    },
     "Next Gap": {
       "localizations": {
         "de": {
@@ -9434,16 +9394,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noch keine Chats"
-          }
-        }
-      }
-    },
-    "No chores here": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Keine Aufgaben"
           }
         }
       }
@@ -9868,16 +9818,6 @@
         }
       }
     },
-    "Nobody’s chores match the filter.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Keine Aufgaben passen zum Filter."
-          }
-        }
-      }
-    },
     "None": {
       "localizations": {
         "de": {
@@ -10200,6 +10140,16 @@
         }
       }
     },
+    "Nothing to do": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nichts zu tun"
+          }
+        }
+      }
+    },
     "Nothing to redo": {
       "localizations": {
         "de": {
@@ -10246,6 +10196,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "Benachrichtigungen auf diesem Gerät"
+          }
+        }
+      }
+    },
+    "Notifies you": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benachrichtigt dich"
+          }
+        }
+      }
+    },
+    "Notify": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benachrichtigen"
+          }
+        }
+      }
+    },
+    "Notify Me": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benachrichtige mich"
+          }
+        }
+      }
+    },
+    "Notify me": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benachrichtige mich"
           }
         }
       }
@@ -10430,16 +10420,6 @@
         }
       }
     },
-    "Ohana needs access to your reminders to write the chores into the list you choose, to keep them up to date and to see which you ticked off. Nothing else of your reminders goes to the server.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ohana braucht Zugriff auf deine Erinnerungen, um die Aufgaben in die gewählte Liste zu schreiben, sie aktuell zu halten und zu sehen, welche du abgehakt hast. Sonst geht nichts von deinen Erinnerungen an den Server."
-          }
-        }
-      }
-    },
     "Ohana needs access to your reminders to write the shopping list into the list you choose and to keep it up to date. Nothing of your reminders goes to the server.": {
       "localizations": {
         "de": {
@@ -10456,16 +10436,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ohana auf %@ wird sofort abgemeldet. Es lässt sich wieder verbinden."
-          }
-        }
-      }
-    },
-    "Ohana puts the family’s chores into a list in Reminders, each due on its day. A repeating chore gets a new reminder each time, three hours before it’s due. Tick a one-off chore off in Reminders and it’s done in Ohana too.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ohana überträgt die Aufgaben der Familie in eine Liste in Erinnerungen, jede fällig an ihrem Tag. Eine wiederkehrende Aufgabe bekommt jedes Mal eine neue Erinnerung, drei Stunden bevor sie fällig ist. Hakst du eine einmalige Aufgabe in Erinnerungen ab, ist sie auch in Ohana erledigt."
           }
         }
       }
@@ -10646,16 +10616,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nur die ersten %lld Tage werden angezeigt."
-          }
-        }
-      }
-    },
-    "Only their chores; those of the others don’t go to the list.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nur ihre Aufgaben; die der anderen kommen nicht in die Liste."
           }
         }
       }
@@ -11116,6 +11076,16 @@
         }
       }
     },
+    "Part of Day": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tageszeit"
+          }
+        }
+      }
+    },
     "Part of a split booking": {
       "localizations": {
         "de": {
@@ -11486,6 +11456,16 @@
         }
       }
     },
+    "Picks a day": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wählt einen Tag"
+          }
+        }
+      }
+    },
     "Pinch": {
       "localizations": {
         "de": {
@@ -11672,6 +11652,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vorheriges / nächstes Jahr"
+          }
+        }
+      }
+    },
+    "Previous Day": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorheriger Tag"
           }
         }
       }
@@ -14466,16 +14456,6 @@
         }
       }
     },
-    "Someone no longer in the family": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jemand, der nicht mehr zur Familie gehört"
-          }
-        }
-      }
-    },
     "Someone with an Ohana account: the email they sign in with.": {
       "localizations": {
         "de": {
@@ -15156,16 +15136,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mit Apple Kalender abgleichen …"
-          }
-        }
-      }
-    },
-    "Sync with Reminders": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mit Erinnerungen abgleichen"
           }
         }
       }
@@ -16190,16 +16160,6 @@
         }
       }
     },
-    "This device only. With a list shared in iCloud, everyone sees the chores: then turn it on on one device.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nur auf diesem Gerät. Mit einer in iCloud geteilten Liste sehen alle die Aufgaben: Schalte es dann nur auf einem Gerät ein."
-          }
-        }
-      }
-    },
     "This device only. With a list shared in iCloud, everyone sees the items: then turn it on on one device.": {
       "localizations": {
         "de": {
@@ -16976,16 +16936,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bis du deinen Server verbindest, zeigt Ohana eine Demo-Familie. Sie lässt sich nicht ändern."
-          }
-        }
-      }
-    },
-    "Upcoming": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Demnächst"
           }
         }
       }
@@ -18810,6 +18760,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "darf nur ansehen"
+          }
+        }
+      }
+    },
+    "chores.part.day": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tagsüber"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Day"
           }
         }
       }

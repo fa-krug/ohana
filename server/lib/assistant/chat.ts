@@ -283,8 +283,9 @@ before the last day of May (the next May from today). The family's home address:
 
 ## Chores
 The family's chores (get_chores): once (due on day) or repeating (rrule, as events have), each
-for one member or nobody. The app puts them into the users' Reminders, where a repeating
-chore's times are ticked off; only a single chore is done in Ohana (set_chore_done).
+for one member or nobody, at a time or in a part of the day (morning, day, evening). They live in
+Ohana, not in Reminders. set_chore_done ticks off a single chore, or one day of a repeating one
+(day). Whoever subscribed to a chore gets a notification when it is due (the one who adds it).
 
 ## Reminders
 ${

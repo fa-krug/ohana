@@ -1,7 +1,7 @@
 // The worker process: everything that runs in the background, apart from the HTTP server,
 // so that a slow job never blocks a request. Same image as the server, started with
 // `docker-entrypoint.sh worker`. Today: cleanup, the nightly backup and the appointment
-// searches (every APPT_TICK_SECONDS), the daily notifications (coverage), the week ahead
+// searches (every APPT_TICK_SECONDS), the daily notifications (coverage), chores that are due, the week ahead
 // (geocoding event locations daily, the weekly digest) and the assistant's chat turns (looked for every ASSISTANT_TICK_MS, a cheap indexed query).
 import { setTimeout as sleep } from "node:timers/promises";
 import { db, sqlite } from "../lib/db/client";
@@ -13,6 +13,7 @@ import { defaultAiEnv } from "../lib/assistant/routes";
 import { migrationsApplied } from "../lib/maintenance/migrations";
 import { dailyNotifications } from "../lib/notifications/daily";
 import { weeklyDigests } from "../lib/digest/digest";
+import { choreNotifications } from "../lib/chores/notify";
 import { enabledModules, moduleEnabled } from "../lib/server-info";
 
 const TICK_MS = Number(process.env.WORKER_TICK_SECONDS ?? 60) * 1000;
@@ -53,6 +54,8 @@ async function tick(now: Date): Promise<void> {
   }
   // Uncovered days in the next two weeks (phase 7).
   await dailyNotifications(db, now);
+  // Chores that are due now, to their subscribers' devices (off with the module).
+  if (moduleEnabled("chores")) await choreNotifications(db, now);
   // The week ahead (phase 11): places geocoded daily, the digest on DIGEST_WEEKDAY from DIGEST_HOUR.
   await weeklyDigests(db, now);
 }

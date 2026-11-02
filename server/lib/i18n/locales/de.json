@@ -126,6 +126,11 @@
       "title": "Der Assistent hat geantwortet",
       "untitled": "Dein Chat"
     },
+    "chores": {
+      "dueAt": "Fällig um {{time}}",
+      "dueNow": "Jetzt fällig",
+      "for": "für {{name}}"
+    },
     "coverage": {
       "new": "neu",
       "title_one": "{{count}} Tag ohne Betreuung in den nächsten zwei Wochen",

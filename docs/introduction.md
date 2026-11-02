@@ -57,10 +57,11 @@ Ready to try it? Go to the [quick start](/quickstart).
 
 - **Chores** for anyone in the family, with or without an account: once, due on a day (and a
   time, if you like), or **repeating** (daily, weekly, every second Saturday, …).
-- They go into a **Reminders list** you pick on each device (shared over iCloud if you like):
-  everyone's chores, only yours or one person's. Each time a repeating chore comes round, its
-  reminder shows up 3 hours before it's due.
-- Tick a one-off chore off in Reminders or in the app; the other side follows.
+- Each chore belongs to a part of the day: **morning, day or evening** (from its time, if it has
+  one). The app shows them that way, day by day, with what's overdue.
+- Tick a chore off in the app; a repeating chore each time it comes round.
+- **Notifications on your devices** when a chore is due, for the chores you choose: the ones you
+  add are ticked for you, and anyone in the family with an account can tick the others.
 
 ## Appointments
 
@@ -86,6 +87,7 @@ Ready to try it? Go to the [quick start](/quickstart).
 
 Pushover, Pushbullet, Telegram, email (SMTP) or **ntfy** (self-hostable push), set per family:
 new appointments, days without cover, a finished assistant answer.
+Chores that are due go to the app only, to whoever ticked them.
 
 ## Languages
 
