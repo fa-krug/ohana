@@ -98,7 +98,8 @@ OhanaTests/       Swift Testing unit tests
   finds it) opens the app with the letter scanner (`ScanLetterIntent` → `FamilyContext.scanLetter()`,
   hosted by the shell like the family menu's *Scan letter*).
 - **Scanning paper** (`Core/Scanning/`, `Features/Letters/`): letters (the family menu, *Scan Letter*,
-  the assistant's attach menu) and receipts (Finance) come from the document camera, or a picked
+  the assistant's attach menu; a photo or PDF shared to Ohana, or opened with it on the Mac, goes
+  straight to the letter's review: `LetterScanInbox`) and receipts (Finance) come from the document camera, or a picked
   photo / PDF that Vision crops to the paper (`ScanCrop`). Their text is read on the device; the
   review can save the pages as a searchable PDF (invisible text layer, Finder / Files tags, name
   and tags suggested on the device, Apple's on-device model where available) into a folder the

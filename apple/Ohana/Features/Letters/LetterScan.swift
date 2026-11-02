@@ -9,7 +9,8 @@ import SwiftUI
 // the text goes to the server), to edit and tick; Done adds the ticked ones. From the family
 // menu, Spotlight / Siri / Shortcuts (`ScanLetterIntent`; both `FamilyContext.scanLetter()`,
 // hosted by the shell: `ShellLetterScan`) and the assistant composer's attach menu (which attaches
-// the text to the chat instead).
+// the text to the chat instead). Photos and PDFs shared to Ohana (the share sheet, Open With on the
+// Mac: `LetterScanInbox`) skip the scanner and go to the shell's review as picked pages.
 
 enum LetterScanError: LocalizedError {
     case noText
@@ -41,11 +42,12 @@ extension View {
     }
 
     /// The whole flow for a letter: the scanner when `isPresented` turns on, then the review sheet
-    /// (saving the PDF, and with `findsItems` what the server finds in the letter to add). `onDone`
-    /// gets the letter once the sheet has gone (the PDF saved and the ticked items added by then).
-    func letterScanFlow(isPresented: Binding<Bool>, findsItems: Bool,
-                        onDone: @escaping (LetterScanOutcome) -> Void = { _ in }) -> some View {
-        modifier(LetterScanFlow(isPresented: isPresented, findsItems: findsItems, onDone: onDone))
+    /// (saving the PDF, and with `findsItems` what the server finds in the letter to add). A
+    /// `shared` letter goes to the review without the scanner (it's cleared). `onDone` gets the
+    /// letter once the sheet has gone (the PDF saved and the ticked items added by then).
+    func letterScanFlow(isPresented: Binding<Bool>, shared: Binding<SharedLetter?> = .constant(nil),
+                        findsItems: Bool, onDone: @escaping (LetterScanOutcome) -> Void = { _ in }) -> some View {
+        modifier(LetterScanFlow(isPresented: isPresented, shared: shared, findsItems: findsItems, onDone: onDone))
     }
 }
 
@@ -107,6 +109,7 @@ private struct PaperScanner: ViewModifier {
 
 private struct LetterScanFlow: ViewModifier {
     @Binding var isPresented: Bool
+    @Binding var shared: SharedLetter?
     let findsItems: Bool
     let onDone: (LetterScanOutcome) -> Void
     @Environment(FamilyContext.self) private var family
@@ -117,14 +120,17 @@ private struct LetterScanFlow: ViewModifier {
     func body(content: Content) -> some View {
         content
             .paperScanner(isPresented: $isPresented, maxPages: LetterScan.maxPages) { images, needsCrop in
-                let review = LetterReview(images: images, needsCrop: needsCrop,
-                                          finder: findsItems ? FamilyLetterFinder(api: family.api) : nil)
-                review.start(names: LetterReview.familyNames(family.api))
                 Task {
                     // After the camera or the file picker has gone: one presentation at a time.
                     try? await Task.sleep(for: .milliseconds(350))
-                    self.review = review
+                    show(images, needsCrop: needsCrop)
                 }
+            }
+            .onChange(of: shared?.id, initial: true) {
+                guard let letter = shared else { return }
+                shared = nil
+                // Shared files are pages as picked: cropped to the paper first.
+                show(letter.images, needsCrop: true)
             }
             .sheet(item: $review, onDismiss: {
                 guard let outcome = finished else { return }
@@ -136,6 +142,13 @@ private struct LetterScanFlow: ViewModifier {
                     .errorBanner()
             }
     }
+
+    private func show(_ images: [CGImage], needsCrop: Bool) {
+        let review = LetterReview(images: images, needsCrop: needsCrop,
+                                  finder: findsItems ? FamilyLetterFinder(api: family.api) : nil)
+        review.start(names: LetterReview.familyNames(family.api))
+        self.review = review
+    }
 }
 
 /// The shell's letter scan (`FamilyContext.scanLetter()`, the family menu, "Scan Letter" from
@@ -146,6 +159,7 @@ struct ShellLetterScan: ViewModifier {
     @Binding var assistantSheet: Bool
     @Binding var phonePage: Module?
     @State private var scanning = false
+    @State private var shared: SharedLetter?
 
     /// The server can look for what to add: the assistant on, an editor, a server (not the demo).
     private var findsItems: Bool {
@@ -154,19 +168,10 @@ struct ShellLetterScan: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .letterScanFlow(isPresented: $scanning, findsItems: findsItems)
+            .letterScanFlow(isPresented: $scanning, shared: $shared, findsItems: findsItems)
             .onChange(of: context.letterScanRequest) {
                 guard context.takeLetterScanRequest() else { return }
-                var covered = phonePage != nil
-                #if os(iOS)
-                covered = covered || assistantSheet && UIDevice.current.userInterfaceIdiom == .phone
-                #endif
-                if covered {
-                    phonePage = nil
-                    #if os(iOS)
-                    if UIDevice.current.userInterfaceIdiom == .phone { assistantSheet = false }
-                    #endif
-                }
+                let covered = uncover()
                 Task {
                     try? await Task.sleep(for: .milliseconds(covered ? 500 : 150))
                     scanning = true
@@ -176,5 +181,31 @@ struct ShellLetterScan: ViewModifier {
                 // "Scan Letter" from Spotlight, Siri or Shortcuts.
                 if LetterScanInbox.shared.take() { context.scanLetter() }
             }
+            .onChange(of: LetterScanInbox.shared.letter?.id, initial: true) {
+                // Photos and PDFs shared to Ohana: straight to the review, once all of them are read.
+                guard LetterScanInbox.shared.letter != nil else { return }
+                let covered = uncover()
+                Task {
+                    try? await Task.sleep(for: .milliseconds(covered ? 500 : 150))
+                    await LetterScanInbox.shared.settled()
+                    if let letter = LetterScanInbox.shared.takeLetter() { shared = letter }
+                }
+            }
+    }
+
+    /// Closes what would cover the scanner on iPhone (a page's sheet, the assistant's); whether
+    /// anything did.
+    private func uncover() -> Bool {
+        var covered = phonePage != nil
+        #if os(iOS)
+        covered = covered || assistantSheet && UIDevice.current.userInterfaceIdiom == .phone
+        #endif
+        if covered {
+            phonePage = nil
+            #if os(iOS)
+            if UIDevice.current.userInterfaceIdiom == .phone { assistantSheet = false }
+            #endif
+        }
+        return covered
     }
 }

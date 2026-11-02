@@ -476,7 +476,10 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `files.bookmarks.app-scope`), with an editable name and tags (Finder / Files tags, the
   `_kMDItemUserTags` xattr). Letters (`Features/Letters/`): *Scan letter* in the family menu, the
   `ScanLetterIntent` App Shortcut (Spotlight, `LetterScanInbox`) and the assistant's paperclip,
-  all through `FamilyContext.scanLetter()` / `ShellLetterScan` → `LetterReviewSheet` (name, date
+  all through `FamilyContext.scanLetter()` / `ShellLetterScan` → `LetterReviewSheet`; photos and PDFs
+  shared to Ohana or opened with it (`CFBundleDocumentTypes`, rank Alternate; `AppModel.open` with a
+  file URL → `LetterScanInbox.receive`, files arriving together make one letter, iOS's copy deleted
+  once read) skip the scanner and reach the same review as picked pages (`letterScanFlow(shared:)`) (name, date
   and tags suggested by `LetterSuggestions`: Apple's on-device model, else rules; tags only existing ones:
   saved with a scan on this device, or on the files in the folder, `FolderTags`, as neither Finder nor
   Files has an API for its tag list; a family member named in the letter brings the tag of their name or its

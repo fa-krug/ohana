@@ -359,9 +359,15 @@ final class AppModel {
     /// family when it is one of the account's. An invite (`ohana://invite/{code}`, the server's
     /// `/invite/{code}`) waits in `InviteInbox` for the family picker or the no-family screen to
     /// show it. Signed out, a server's link (an invite, any page) leads to signing in there
-    /// (`openSignedOut`). False for links it can't open.
+    /// (`openSignedOut`). A photo or PDF shared to Ohana goes to the letter review
+    /// (`LetterScanInbox`), in the demo too. False for links it can't open.
     @discardableResult
     func open(_ url: URL) -> Bool {
+        if url.isFileURL {
+            guard LetterScanInbox.accepts(url) else { return false }
+            LetterScanInbox.shared.receive(url)
+            return true
+        }
         if isDemo { return openSignedOut(url) }
         var path = url.path(percentEncoded: false)
         if url.scheme == DevicePairing.callbackScheme {
