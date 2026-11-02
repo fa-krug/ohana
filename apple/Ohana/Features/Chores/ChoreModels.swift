@@ -61,12 +61,12 @@ struct Chore: Codable, Hashable, Identifiable {
     /// The RRULE value; nil: once.
     let rrule: String?
     /// Done (a chore that's once; a repeating one's occurrences are ticked off in the agenda).
-    let done: Bool
-    let doneAt: String?
+    var done: Bool
+    var doneAt: String?
     var doneBy: ChorePerson?
     /// When it's due next: an open single chore's day (also when past: overdue), nil when it's
     /// done; a repeating one's first occurrence from today on, nil once the series ended.
-    let next: Day?
+    var next: Day?
     /// The accounts notified when it's due.
     var subscriberIds: [String] = []
     /// The signed-in account is among them.
@@ -205,11 +205,11 @@ struct ChoreAgenda: Codable, Equatable {
         apply(&overdue)
     }
 
-    /// The days the agenda loads around `day`: blocks of two weeks from three days before today,
-    /// so stepping through a block asks nothing new.
+    /// The days the agenda loads around `day`: blocks of 62 days (the most the server answers)
+    /// from 30 days before today, so stepping through a block asks nothing new.
     static func window(around day: Day, today: Day) -> (from: Day, to: Day) {
-        let length = 14
-        let start = today.adding(days: -3)
+        let length = 62
+        let start = today.adding(days: -30)
         let offset = CalendarMath.ordinal(day) - CalendarMath.ordinal(start)
         let block = offset >= 0 ? offset / length : -((-offset + length - 1) / length)
         let from = start.adding(days: block * length)
@@ -232,8 +232,11 @@ struct ChoreResponse: Codable {
 }
 
 /// What POST /chores takes (and PATCH /chores/{id}, which gets it whole). `assigneeId`, `time`
-/// and `rrule` are sent as null when empty, so an edit clears them.
-struct ChoreInput: Encodable, Equatable {
+/// and `rrule` are sent as null when empty, so an edit clears them. A new chore carries the id the
+/// app made for it (`id`), so sending it again can't add it twice.
+struct ChoreInput: Codable, Equatable {
+    /// A new chore's id (POST only).
+    var id: String?
     var title: String
     var note: String = ""
     /// A member's account id or a person's id; nil: nobody.
@@ -246,8 +249,9 @@ struct ChoreInput: Encodable, Equatable {
     /// The accounts notified when it's due.
     var subscriberIds: [String] = []
 
-    init(title: String, note: String = "", assigneeId: String? = nil, day: Day, time: String? = nil,
+    init(id: String? = nil, title: String, note: String = "", assigneeId: String? = nil, day: Day, time: String? = nil,
          part: ChorePart = .day, rrule: String? = nil, subscriberIds: [String] = []) {
+        self.id = id
         self.title = title
         self.note = note
         self.assigneeId = assigneeId
@@ -267,11 +271,23 @@ struct ChoreInput: Encodable, Equatable {
     var effectivePart: ChorePart { time.flatMap(ChorePart.of) ?? part }
 
     private enum CodingKeys: String, CodingKey {
-        case title, note, assigneeId, day, time, part, rrule, subscriberIds
+        case id, title, note, assigneeId, day, time, part, rrule, subscriberIds
+    }
+
+    init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(id: try c.decodeIfPresent(String.self, forKey: .id), title: try c.decode(String.self, forKey: .title),
+                  note: try c.decodeIfPresent(String.self, forKey: .note) ?? "",
+                  assigneeId: try c.decodeIfPresent(String.self, forKey: .assigneeId),
+                  day: try c.decode(Day.self, forKey: .day), time: try c.decodeIfPresent(String.self, forKey: .time),
+                  part: try c.decodeIfPresent(ChorePart.self, forKey: .part) ?? .day,
+                  rrule: try c.decodeIfPresent(String.self, forKey: .rrule),
+                  subscriberIds: try c.decodeIfPresent([String].self, forKey: .subscriberIds) ?? [])
     }
 
     func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encodeIfPresent(id, forKey: .id)
         try c.encode(title, forKey: .title)
         try c.encode(note, forKey: .note)
         try c.encode(assigneeId, forKey: .assigneeId)
@@ -284,11 +300,16 @@ struct ChoreInput: Encodable, Equatable {
 }
 
 /// POST /chores/{id}/done: a single chore, or a repeating one's occurrence `day`.
-struct ChoreDoneBody: Encodable, Equatable {
+struct ChoreDoneBody: Codable, Equatable {
     var done: Bool
     var day: Day?
 
     private enum CodingKeys: String, CodingKey { case done, day }
+
+    init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(done: try c.decode(Bool.self, forKey: .done), day: try c.decodeIfPresent(Day.self, forKey: .day))
+    }
 
     func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
@@ -308,7 +329,7 @@ struct ChoreDoneBody: Encodable, Equatable {
 }
 
 /// POST /chores/{id}/subscribe: the signed-in account notified or not.
-struct ChoreSubscribeBody: Encodable, Equatable {
+struct ChoreSubscribeBody: Codable, Equatable {
     var subscribed: Bool
 }
 

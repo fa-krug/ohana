@@ -437,9 +437,19 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   gestures step aside on an event label).
   Chores (`Features/Chores/`): `ChoresView` shows one day (a day bar under the navigation bar:
   back / forward, date picker, Today) in Morning / Day / Evening sections, Overdue on top on today,
-  from `GET /chores` + `GET /chores/agenda` (two-week windows, `ChoreAgenda.window`); rows tick an
-  occurrence off (`POST …/done`, `day` for repeating ones) and toggle the caller's notification
-  bell (`…/subscribe`); `ChoresAllView` lists every chore by part; `ChoreEditor` (part of day, or a
+  from `GET /chores` + `GET /chores/agenda` (62-day windows from today − 30, `ChoreAgenda.window`);
+  rows tick an occurrence off (`POST …/done`, `day` for repeating ones) and toggle the caller's
+  notification bell (`…/subscribe`). Local-first, without sync indicators: `ChoresStore` (one per
+  family, `FamilyContext.chores`, shared by the pages and the editor) shows the `ResponseCache`
+  copies at once and refreshes silently (appear, active, reconnect, `didChange(.chores)`); changes
+  (`ChoreChange`: create with a client-made `id` (a 409 counts as done), update, delete, done,
+  subscribe) apply at once (`ChoresSnapshot.apply`; a changed chore's days via
+  `RepeatRule.occurrences`, `RepeatRule+Occurrences.swift`, the server's expander ported; days
+  outside the loaded windows are worked out from the chores) and wait in a queue in Application
+  Support `Ohana/Chores/` (`queueFile`, removed on sign out / pairing) sent in order (after each
+  change, at launch / active via `AppModel.sendQueuedChanges`, reconnect); a 4xx drops the change
+  and reloads, a network failure retries with backoff. `ChoresAllView` lists every chore by part;
+  `ChoreEditor` (saves and closes at once; part of day, or a
   time that decides it, repeat via `RepeatEditing`, Notify: the family's accounts, the signed-in
   user ticked on a new chore; viewers get only "Notify me"). Kept lean: no explanatory footers.
   A chore notification's `/f/{id}/chores/{choreId}?day=` opens that day and highlights it

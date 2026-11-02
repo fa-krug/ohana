@@ -26,8 +26,7 @@ extension DemoServer {
             guard let day = chore["day"]?.stringValue.flatMap(Day.init) else { continue }
             let repeating = chore["rrule"]?.stringValue != nil
             let days: [Day] = if repeating {
-                occurrences(of: .object(["date": .string(day.description), "rrule": chore["rrule"] ?? .null]), from: from, to: to)
-                    .compactMap { $0["date"]?.stringValue.flatMap(Day.init) }
+                chore["rrule"]?.stringValue.flatMap(RepeatRule.init)?.occurrences(start: day, from: from, to: to) ?? []
             } else {
                 from <= day && day <= to ? [day] : []
             }

@@ -79,14 +79,14 @@ enum ChoreEditorTarget: Identifiable, Hashable {
 /// (read-only without editing).
 struct ChoreEditorHost: View {
     @Environment(AppModel.self) private var app
+    @Environment(FamilyContext.self) private var family
     let target: ChoreEditorTarget
-    let page: ChoresPage?
-    let canEdit: Bool
     let filter: ChoreFilter
     let day: Day
 
     var body: some View {
-        let people = page?.people ?? []
+        let people = family.chores.page?.people ?? []
+        let canEdit = family.chores.canEdit
         switch target {
         case .new:
             // A filter on someone: the new chore is theirs.
@@ -98,9 +98,10 @@ struct ChoreEditorHost: View {
     }
 }
 
-/// Adds or edits a chore (POST /chores, PATCH /chores/{id}): a title, whom it's for, its day,
-/// part of the day (or time), how it repeats like an event in the calendar, a note, who's
-/// notified. Viewers see it read-only, but turn their own notification on or off.
+/// Adds or edits a chore (through the `ChoresStore`: saved on the device at once, sent when the
+/// server can be reached): a title, whom it's for, its day, part of the day (or time), how it
+/// repeats like an event in the calendar, a note, who's notified. Viewers see it read-only, but
+/// turn their own notification on or off.
 struct ChoreEditor: View {
     @Environment(FamilyContext.self) private var family
     @Environment(AppModel.self) private var app
@@ -111,12 +112,10 @@ struct ChoreEditor: View {
     /// Shown, not edited (viewers).
     let readOnly: Bool
     @State private var draft: ChoreDraft
-    @State private var saving = false
     @State private var customRepeat = false
     @State private var confirmDelete = false
-    /// Read-only: the account's own notification (POST /chores/{id}/subscribe at once).
+    /// Read-only: the account's own notification (changed at once).
     @State private var subscribed: Bool
-    @State private var subscribing = false
     /// The draft as it opened, for Cancel.
     private let initial: ChoreDraft
 
@@ -211,7 +210,7 @@ struct ChoreEditor: View {
                     }
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Save") { save() }
-                            .disabled(draft.problem != nil || saving)
+                            .disabled(draft.problem != nil)
                             .keyboardShortcut(.defaultAction)
                     }
                 }
@@ -231,7 +230,7 @@ struct ChoreEditor: View {
             if let chore {
                 Section("Notify") {
                     Toggle("Notify me", isOn: Binding(get: { subscribed }, set: { subscribe(chore, $0) }))
-                        .disabled(subscribing || app.isDemo)
+                        .disabled(app.isDemo)
                 }
             }
         } else if !accounts.isEmpty {
@@ -258,75 +257,18 @@ struct ChoreEditor: View {
     }
 
     private func subscribe(_ chore: Chore, _ on: Bool) {
-        subscribing = true
         subscribed = on
-        perform {
-            defer { subscribing = false }
-            do {
-                subscribed = try await ChoreActions.subscribe(family, chore.id, on).subscribed
-            } catch {
-                subscribed = !on
-                throw error
-            }
-        }
+        family.chores.subscribe(chore.id, on)
     }
 
     /// Unchanged: nothing to send.
     private func save() {
-        if chore != nil && draft == initial { return dismiss() }
-        saving = true
-        let input = draft.cleaned
-        perform {
-            defer { saving = false }
-            try await ChoreActions.save(family, input, editing: chore?.id)
-            dismiss()
-        }
+        if chore == nil || draft != initial { family.chores.save(draft.cleaned, editing: chore?.id) }
+        dismiss()
     }
 
     private func delete(_ chore: Chore) {
-        perform {
-            try await ChoreActions.delete(family, chore.id)
-            dismiss()
-        }
-    }
-}
-
-/// The module's changes, shared by its screens; each tells the others what changed.
-enum ChoreActions {
-    static var today: [String: String?] { ["today": Day.today.description] }
-
-    /// Adds a chore (`id` nil) or changes one.
-    @discardableResult
-    static func save(_ family: FamilyContext, _ input: ChoreInput, editing id: String?) async throws -> Chore {
-        let response: ChoreResponse = if let id {
-            try await family.api.send(.patch, "/chores/\(id)", query: today, body: input)
-        } else {
-            try await family.api.send(.post, "/chores", query: today, body: input)
-        }
-        family.didChange(.chores)
-        return response.chore
-    }
-
-    static func delete(_ family: FamilyContext, _ id: String) async throws {
-        try await family.api.perform(.delete, "/chores/\(id)")
-        family.didChange(.chores)
-        ErrorBanner.shared.success(String(localized: "Chore deleted."))
-    }
-
-    /// Ticks a chore off, or opens it again (a repeating one's occurrence `body.day`).
-    @discardableResult
-    static func setDone(_ family: FamilyContext, _ id: String, _ body: ChoreDoneBody) async throws -> Chore {
-        let response: ChoreResponse = try await family.api.send(.post, "/chores/\(id)/done", query: today, body: body)
-        family.didChange(.chores)
-        return response.chore
-    }
-
-    /// The signed-in account notified when it's due, or not.
-    @discardableResult
-    static func subscribe(_ family: FamilyContext, _ id: String, _ on: Bool) async throws -> Chore {
-        let response: ChoreResponse = try await family.api.send(.post, "/chores/\(id)/subscribe", query: today,
-                                                                body: ChoreSubscribeBody(subscribed: on))
-        family.didChange(.chores)
-        return response.chore
+        family.chores.delete(chore.id)
+        dismiss()
     }
 }

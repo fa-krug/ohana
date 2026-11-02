@@ -189,18 +189,17 @@ struct ChoreModelTests {
         #expect(AppRoute.chore(id: "c1").requiredModule == .chores)
     }
 
-    @Test func theAgendaLoadsTwoWeeksAtATime() {
+    @Test func theAgendaLoadsAboutTwoMonthsAtATime() {
         let today = Day("2026-11-02")!
         let current = ChoreAgenda.window(around: today, today: today)
-        #expect(current.from == Day("2026-10-30") && current.to == Day("2026-11-12"))
-        // Every day of a window has it.
-        for offset in -3...10 {
+        #expect(current.from == Day("2026-10-03") && current.to == Day("2026-12-03"))
+        // Every day of a window has it; the server answers at most 62 days.
+        #expect(CalendarMath.range(current.from, current.to).count == 62)
+        for offset in -30...31 {
             #expect(ChoreAgenda.window(around: today.adding(days: offset), today: today) == current, "\(offset)")
         }
-        #expect(ChoreAgenda.window(around: Day("2026-11-13")!, today: today) == (Day("2026-11-13")!, Day("2026-11-26")!))
-        #expect(ChoreAgenda.window(around: Day("2026-10-29")!, today: today) == (Day("2026-10-16")!, Day("2026-10-29")!))
-        #expect(ChoreAgenda.window(around: Day("2026-10-16")!, today: today).from == Day("2026-10-16"))
-        #expect(ChoreAgenda.window(around: Day("2026-10-15")!, today: today).from == Day("2026-10-02"))
+        #expect(ChoreAgenda.window(around: Day("2026-12-04")!, today: today) == (Day("2026-12-04")!, Day("2027-02-03")!))
+        #expect(ChoreAgenda.window(around: Day("2026-10-02")!, today: today) == (Day("2026-08-02")!, Day("2026-10-02")!))
     }
 
     @Test func theDraftRepeatsLikeAnEvent() {
@@ -289,8 +288,8 @@ struct DemoChoresTests {
         #expect(agenda.days.filter { $0.items.contains { $0.choreId == "chore-swim-bag" } }.map(\.date) == [today.adding(days: 1)])
         #expect(agenda.items(on: today.adding(days: -3))?.contains { $0.choreId == "chore-windows" && $0.done } == true)
         // What the app asks.
-        let request = ChoresView.agendaRequest(FamilyAPI(client: APIClient(demo: server), familyID: DemoServer.familyID), around: today, today: today)
-        #expect(request.query["from"] == "2026-10-27" && request.query["to"] == "2026-11-09")
+        let request = ChoresStore.agendaRequest(FamilyAPI(client: APIClient(demo: server), familyID: DemoServer.familyID), around: today, today: today)
+        #expect(request.query["from"] == "2026-09-30" && request.query["to"] == "2026-11-30")
     }
 
     @Test func answersOneChore() throws {

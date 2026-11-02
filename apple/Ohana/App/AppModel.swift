@@ -169,6 +169,7 @@ final class AppModel {
             Keychain.save(token, for: Keys.token)
             // It may be another account: nothing of the last one shows.
             ResponseCache(server: server).clear()
+            ChoresStore.removeQueues(server: server)
             connect(server: server, token: token)
             SharedConnection.remember(server: server, familyID: selectedFamilyID)
             await refresh()
@@ -289,7 +290,15 @@ final class AppModel {
     /// Only once the server answered: the account's copy alone may be outdated.
     private func prefetch() {
         guard answered, phase == .ready, let family = selectedFamily, let context = context(for: family) else { return }
+        sendQueuedChanges()
         prefetcher.start(context)
+    }
+
+    /// Sends the selected family's changes left waiting (at launch, when the app is active again,
+    /// a family switch, the connection back).
+    func sendQueuedChanges() {
+        guard !isDemo, let family = selectedFamily, let context = context(for: family) else { return }
+        context.sendQueuedChanges(me: me?.id)
     }
 
     /// Signs the device out: the server forgets its token, the app forgets the server and shows
@@ -307,6 +316,7 @@ final class AppModel {
             client.cache?.clear()
             ShoppingReminders.forget(server: client.baseURL)
             CalendarStore.removeQueues(server: client.baseURL)
+            ChoresStore.removeQueues(server: client.baseURL)
             AppleCalendarSync.shared.removeAll(server: client.baseURL)
             SharedConnection.forget()
             if syncsWidgets { WidgetSync.reload() }
@@ -433,6 +443,33 @@ final class FamilyContext {
 
     fileprivate func adoptRevisions(from other: FamilyContext) {
         revisions = other.revisions
+        if let store = other.choresStore { adopt(store) }
+    }
+
+    // MARK: Chores
+
+    @ObservationIgnored private var choresStore: ChoresStore?
+
+    /// The family's chores, kept on the device; made when first needed, kept while the family's
+    /// context is (a newer context of the family takes it over).
+    var chores: ChoresStore {
+        if let choresStore { return choresStore }
+        let store = ChoresStore(api: api, canEdit: canEdit, queueFile: ChoresStore.queueFile(for: api))
+        adopt(store)
+        return store
+    }
+
+    private func adopt(_ store: ChoresStore) {
+        store.familyCanEdit = canEdit
+        store.notify = { [weak self] in self?.didChange($0) }
+        choresStore = store
+    }
+
+    /// Sends the chores' changes left waiting (from before the app quit, or offline).
+    func sendQueuedChanges(me: String?) {
+        guard isEnabled(.chores), choresStore != nil || ChoresStore.hasQueue(for: api) else { return }
+        if chores.me == nil { chores.me = me }
+        chores.retryNow()
     }
 
     // MARK: Routes

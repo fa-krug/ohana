@@ -111,8 +111,7 @@ extension DemoServer {
     }
 
     /// The occurrences of an event of the file that overlap `from`…`to` (events.ts `PublicEvent`):
-    /// the event itself when it doesn't repeat, else one per day its rule gives. The demo's rules
-    /// only use FREQ, INTERVAL, COUNT and UNTIL.
+    /// the event itself when it doesn't repeat, else one per day its rule gives.
     static func occurrences(of event: JSONValue, from: Day, to: Day) -> [JSONValue] {
         guard var object = event.objectValue, let date = object["date"]?.stringValue.flatMap(Day.init) else { return [] }
         let end = object["endDate"]?.stringValue.flatMap(Day.init) ?? date
@@ -123,28 +122,12 @@ extension DemoServer {
             object["rrule"] = .null
             return date <= to && end >= from ? [.object(object)] : []
         }
-        var out: [JSONValue] = []
-        var n = 0
-        while true {
-            let day: Day
-            switch rule.frequency {
-            case .daily: day = CalendarMath.add(date, n * rule.interval)
-            case .weekly: day = CalendarMath.add(date, n * rule.interval * 7)
-            case .monthly: day = date.adding(months: n * rule.interval)
-            case .yearly: day = date.adding(months: n * rule.interval * 12)
-            }
-            if day > to { break }
-            if case let .count(count) = rule.end, n >= count { break }
-            if case let .until(last) = rule.end, day > last { break }
-            n += 1
-            let last = CalendarMath.add(day, length)
-            guard last >= from else { continue }
+        return rule.occurrences(start: date, from: CalendarMath.add(from, -length), to: to).map { day in
             var occurrence = object
             occurrence["occurrence"] = .string(day.description)
             occurrence["date"] = .string(day.description)
-            occurrence["endDate"] = .string(last.description)
-            out.append(.object(occurrence))
+            occurrence["endDate"] = .string(CalendarMath.add(day, length).description)
+            return .object(occurrence)
         }
-        return out
     }
 }
