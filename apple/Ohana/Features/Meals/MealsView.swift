@@ -38,10 +38,11 @@ struct MealsRecipeRef: Hashable, Identifiable {
     var id: Self { self }
 }
 
-/// What Meals does with an `AppRoute` of its module: the part to show, a screen to open, the new
-/// recipe editor to open.
+/// What Meals does with an `AppRoute` of its module: the part to show, the recipe list to show, a
+/// screen to open, the new recipe editor to open.
 struct MealsRouting: Equatable {
     var segment: MealsSegment?
+    var recipeList: RecipeListType?
     var destination: MealsDestination?
     var createsRecipe = false
 
@@ -53,6 +54,9 @@ struct MealsRouting: Equatable {
         case let .recipe(id):
             segment = .recipes
             destination = .recipe(id: id)
+        case let .recipeList(list):
+            segment = .recipes
+            recipeList = list
         case let .cook(recipeID):
             destination = .cook(recipeID: recipeID)
         case .newRecipe:
@@ -77,6 +81,8 @@ struct MealsView: View {
     @Environment(FamilyContext.self) private var family
     @Environment(\.horizontalSizeClass) private var sizeClass
     @AppStorage("meals.segment") private var segment: MealsSegment = .recipes
+    /// The recipe list's Favourites / Want to try (`RecipeListView` keeps it under the same key).
+    @AppStorage(RecipeListModel.listKey) private var recipeList = RecipeListModel.defaultList
     @State private var shownRecipe: MealsRecipeRef?
     @State private var cooking: MealsRecipeRef?
     @State private var creatingRecipe = false
@@ -138,6 +144,7 @@ struct MealsView: View {
         .onChange(of: family.pendingRoute, initial: true) {
             guard let route = family.takeRoute(for: .meals), let routing = MealsRouting(route) else { return }
             if let target = routing.segment { segment = target }
+            if let list = routing.recipeList { recipeList = list }
             if routing.createsRecipe { creatingRecipe = true }
             switch routing.destination {
             case let .recipe(id, servings)?: shownRecipe = MealsRecipeRef(recipeID: id, servings: servings)

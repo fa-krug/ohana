@@ -2895,6 +2895,13 @@ paths:
         Recipe image or `og:image`; a photo that can't be loaded is left out. Waits for the model
         (up to two minutes). 400 when the AI isn't set up or the address is invalid or private,
         404 when the `assistant` or `meals` module is off.
+
+
+        With `background: true` (the share extension) the request only checks the same things and
+        queues the import: 202 with the `RecipeImport`, which the worker then runs (up to four
+        minutes). Once the recipe is saved the import is gone from `GET …/meals/recipes/imports`
+        and the starter's app devices get a push (to the recipe); a failed one stays there with
+        its `error` (and a push) until it is retried or deleted (failed ones go after a week).
       x-ohana-role: editor
       parameters:
         - $ref: "#/components/parameters/FamilyId"
@@ -2912,6 +2919,7 @@ paths:
                   description: The page's readable text (or HTML, JSON-LD included) as the browser had it; cut after 100,000 characters. Without it (or under 100 characters) the server fetches the page.
                 title: {type: [string, "null"], description: "The page's title as the browser had it."}
                 imageUrl: {type: [string, "null"], format: uri, description: "The recipe's photo (http or https); anything else is ignored."}
+                background: {type: boolean, default: false, description: "Queue it for the worker and answer 202 at once."}
       responses:
         "200":
           description: The saved recipe.
@@ -2923,6 +2931,15 @@ paths:
                 properties:
                   id: {type: string}
                   title: {type: string}
+        "202":
+          description: "Queued (`background: true`)."
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [import]
+                properties:
+                  import: {$ref: "#/components/schemas/RecipeImport"}
         "400": {$ref: "#/components/responses/BadRequest"}
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
@@ -2933,6 +2950,122 @@ paths:
             application/json:
               schema: {$ref: "#/components/schemas/Error"}
         "502": {$ref: "#/components/responses/BadGateway"}
+  /api/v1/families/{familyId}/meals/recipes/import/preview:
+    post:
+      tags: [Meals]
+      operationId: previewRecipeImport
+      summary: Read a page for the import, without the AI
+      description: >-
+        Reads the page as the import does (`text` when it is enough, else fetched by the server)
+        and says whether it holds schema.org Recipe data. `title` is the Recipe's name, else the
+        browser's `title`, else the page's (empty when there is none); `imageUrl` the browser's,
+        else the page's photo. 400 for an invalid or private address, 404 when the `assistant`
+        or `meals` module is off, 502 when the page can't be loaded.
+      x-ohana-role: editor
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url]
+              properties:
+                url: {type: string, format: uri}
+                text: {type: [string, "null"]}
+                title: {type: [string, "null"]}
+                imageUrl: {type: [string, "null"], format: uri}
+      responses:
+        "200":
+          description: What the page holds.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [recipe, title, imageUrl]
+                properties:
+                  recipe: {type: boolean, description: The page has schema.org Recipe data.}
+                  title: {type: string}
+                  imageUrl: {type: [string, "null"]}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "502": {$ref: "#/components/responses/BadGateway"}
+  /api/v1/families/{familyId}/meals/recipes/imports:
+    get:
+      tags: [Meals]
+      operationId: listRecipeImports
+      summary: The background imports
+      description: >-
+        The family's imports queued with `background: true` that are waiting, running or failed,
+        newest first (a finished one is gone: its recipe is saved). Empty when the `assistant`
+        module is off.
+      x-ohana-role: viewer
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+      responses:
+        "200":
+          description: The imports.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [imports]
+                properties:
+                  imports:
+                    type: array
+                    items: {$ref: "#/components/schemas/RecipeImport"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/families/{familyId}/meals/recipes/imports/{importId}:
+    delete:
+      tags: [Meals]
+      operationId: deleteRecipeImport
+      summary: Delete a background import
+      description: In any state; a running one's result is discarded.
+      x-ohana-role: editor
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+        - {name: importId, in: path, required: true, schema: {type: string}}
+      responses:
+        "200":
+          description: Deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [deleted]
+                properties:
+                  deleted: {type: boolean, const: true}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/families/{familyId}/meals/recipes/imports/{importId}/retry:
+    post:
+      tags: [Meals]
+      operationId: retryRecipeImport
+      summary: Queue a failed import again
+      description: Only a `failed` import (409 otherwise); it waits for the worker again.
+      x-ohana-role: editor
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+        - {name: importId, in: path, required: true, schema: {type: string}}
+      responses:
+        "200":
+          description: The import, waiting.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [import]
+                properties:
+                  import: {$ref: "#/components/schemas/RecipeImport"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
   /api/v1/families/{familyId}/meals/recipes/{recipeId}:
     parameters:
       - $ref: "#/components/parameters/FamilyId"
@@ -6261,6 +6394,18 @@ components:
           type: array
           items: {type: string}
         imageBase64: {type: [string, "null"], maxLength: 4000000, description: "The photo (e.g. from the generator's `image` event)."}
+    RecipeImport:
+      type: object
+      description: A recipe import queued for the worker (`POST …/meals/recipes/import` with `background`).
+      required: [id, url, title, imageUrl, status, error, createdAt]
+      properties:
+        id: {type: string}
+        url: {type: string, format: uri}
+        title: {type: string, description: "The browser's or, once read, the page's title; may be empty."}
+        imageUrl: {type: [string, "null"]}
+        status: {type: string, enum: [waiting, running, failed]}
+        error: {type: [string, "null"], description: Why it failed.}
+        createdAt: {type: string, format: date-time}
     GeneratedRecipe:
       type: object
       description: A recipe as the generator streams it (snake_case; map it to `BulkRecipe` to save it).

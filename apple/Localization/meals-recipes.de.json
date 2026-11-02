@@ -247,5 +247,17 @@
   "—": "—",
   "Undo Import": "Import rückgängig machen",
   "Open Recipe": "Rezept öffnen",
-  "Import undone": "Import rückgängig gemacht"
+  "Import undone": "Import rückgängig gemacht",
+  "Importing %lld recipes into “Want to try”": {
+    "en": {
+      "one": "Importing %lld recipe into “Want to try”",
+      "other": "Importing %lld recipes into “Want to try”"
+    },
+    "de": {
+      "one": "%lld Rezept wird unter „Ausprobieren“ importiert",
+      "other": "%lld Rezepte werden unter „Ausprobieren“ importiert"
+    }
+  },
+  "Reading the recipe…": "Rezept wird gelesen…",
+  "Ohana couldn’t read a recipe from this page.": "Ohana konnte aus dieser Seite kein Rezept lesen."
 }

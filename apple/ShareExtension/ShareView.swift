@@ -2,103 +2,134 @@ import Foundation
 import Observation
 import SwiftUI
 
-/// Saving a shared page as a recipe: reads what the share sheet handed over, asks the server for
-/// the family (the one the app shows) and has the server import the page (its assistant reads it,
-/// which can take a minute or two).
+/// Saving a shared page as a recipe: reads what the share sheet handed over, finds the family (the
+/// one the app shows) and whether the page is a recipe, asks, then hands the page to the server,
+/// which imports it in the background (the app shows it as a placeholder meanwhile).
 @Observable
 final class ShareModel {
+    /// What the page turned out to be.
+    enum Recognition: Equatable {
+        /// The page's schema.org Recipe: its name and photo, when it has them.
+        case recipe(name: String?, imageUrl: String?)
+        case notRecipe
+        /// The page couldn't be looked at.
+        case unknown
+    }
+
     enum State: Equatable {
-        case working
-        case saved(title: String)
-        /// Taking the import back (the recipe is deleted).
-        case undoing(title: String)
-        case undone(title: String)
+        case checking
+        case asking(Recognition)
+        case sending
+        /// Handed over; `title` when an older server already saved the recipe.
+        case sent(title: String?)
         case failed(String)
     }
 
-    private(set) var state: State = .working
+    private(set) var state: State = .checking
     private(set) var pageTitle: String?
     private(set) var pageHost: String?
     private(set) var familyName: String?
-    /// The saved recipe and its family, for Undo.
-    private var saved: (connection: SharedConnection, familyID: String, id: String)?
+    private var page = SharedPage()
+    private var target: (connection: SharedConnection, familyID: String)?
+    /// The photo the preview found (macOS, other apps: Safari's script didn't run).
+    private var previewImage: String?
     private var task: Task<Void, Never>?
 
     /// Called with true when the user is done, false when they cancel.
     var finish: (Bool) -> Void = { _ in }
-
-    var isFinished: Bool {
-        switch state {
-        case .working, .undoing: false
-        case .saved, .undone, .failed: true
-        }
-    }
-
-    var isFailed: Bool {
-        if case .failed = state { true } else { false }
-    }
+    private var finished = false
 
     func start(_ items: [NSExtensionItem]) {
         guard task == nil else { return }
-        task = Task { await save(items) }
+        task = Task { await check(items) }
     }
 
-    private func save(_ items: [NSExtensionItem]) async {
+    private func check(_ items: [NSExtensionItem]) async {
         guard let connection = SharedConnection.load() else {
             state = .failed(SharedError.notConnected.localizedDescription)
             return
         }
-        let page = await SharedPage.read(items)
+        page = await SharedPage.read(items)
         pageTitle = page.title
         pageHost = page.url?.host()
         guard let url = page.url else {
-            state = .failed(String(localized: "Ohana can only save web pages."))
+            state = .failed(page.preprocessed
+                ? String(localized: "Safari couldn’t hand over this page. Reload it and share it again.")
+                : String(localized: "Ohana can only save web pages."))
             return
         }
         do {
             let family = try await connection.family()
             familyName = family.name
-            let request = RecipeImportRequest(url: url, text: page.text, title: page.title, imageUrl: page.imageUrl)
-            let recipe = try await connection.importRecipe(familyID: family.id, request)
-            saved = (connection, family.id, recipe.id)
-            state = .saved(title: recipe.title)
+            target = (connection, family.id)
+            async let status = connection.mealsStatus(familyID: family.id)
+            async let recognition = recognize(url, connection: connection, familyID: family.id)
+            guard try await status.generate else {
+                state = .failed(String(localized: "Ohana’s assistant isn’t set up yet. Set it up in Ohana’s settings first."))
+                return
+            }
+            state = .asking(await recognition)
         } catch is CancellationError {
         } catch {
             state = .failed(error.localizedDescription)
         }
     }
 
-    /// Deletes the recipe just saved.
-    func undo() {
-        guard case let .saved(title) = state, let saved else { return }
-        undoError = nil
-        state = .undoing(title: title)
+    /// Safari's script read the page: decided here. Otherwise the server looks (a failing or slow
+    /// look leaves it unknown).
+    private func recognize(_ url: URL, connection: SharedConnection, familyID: String) async -> Recognition {
+        if let recipe = page.recipe {
+            return recipe ? .recipe(name: page.recipeName, imageUrl: page.recipeImage ?? page.imageUrl) : .notRecipe
+        }
+        guard let preview = try? await connection.previewRecipe(familyID: familyID,
+                                                                RecipePreviewRequest(url: url, title: page.title)) else {
+            return .unknown
+        }
+        previewImage = preview.imageUrl
+        let title = preview.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if pageTitle == nil, !title.isEmpty { pageTitle = title }
+        return preview.recipe ? .recipe(name: title.isEmpty ? nil : title, imageUrl: preview.imageUrl) : .notRecipe
+    }
+
+    /// Hands the page to the server, which imports it in the background; closes shortly after.
+    func save() {
+        guard case let .asking(recognition) = state, let target, let url = page.url else { return }
+        var name: String?
+        var image: String?
+        if case let .recipe(recipeName, recipeImage) = recognition { (name, image) = (recipeName, recipeImage) }
+        let request = RecipeImportRequest(url: url, text: page.text, title: name ?? pageTitle,
+                                          imageUrl: image ?? page.imageUrl ?? previewImage, background: true)
+        state = .sending
         task = Task {
             do {
-                try await saved.connection.deleteRecipe(familyID: saved.familyID, id: saved.id)
-                self.saved = nil
-                state = .undone(title: title)
+                switch try await target.connection.startImport(familyID: target.familyID, request) {
+                case .queued: state = .sent(title: nil)
+                case let .imported(recipe): state = .sent(title: recipe.title)
+                }
+                try await Task.sleep(for: .seconds(1.2))
+                done()
             } catch is CancellationError {
             } catch {
-                // Still saved: back to it, with Undo to try again.
-                state = .saved(title: title)
-                undoError = error.localizedDescription
+                state = .failed(error.localizedDescription)
             }
         }
     }
 
-    /// Why Undo didn't work (shown under the saved recipe).
-    private(set) var undoError: String?
-
     func cancel() {
         task?.cancel()
-        finish(false)
+        close(false)
     }
 
-    func done() { finish(true) }
+    func done() { close(true) }
+
+    private func close(_ done: Bool) {
+        guard !finished else { return }
+        finished = true
+        finish(done)
+    }
 }
 
-/// The extension's sheet: the page, the family, and how the saving goes.
+/// The extension's sheet: the page, the family, the question, and how the handing over goes.
 struct ShareView: View {
     let model: ShareModel
 
@@ -107,20 +138,29 @@ struct ShareView: View {
         NavigationStack {
             content
                 .padding()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .navigationTitle("Save to Ohana")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    if model.isFinished {
-                        ToolbarItem(placement: .confirmationAction) { finishButton }
-                        if case .saved = model.state {
-                            ToolbarItem(placement: .cancellationAction) { undoButton }
-                        }
-                    } else if case .undoing = model.state {
-                        ToolbarItem(placement: .confirmationAction) { ProgressView() }
-                    } else {
+                    switch model.state {
+                    case .checking, .asking, .sending:
                         ToolbarItem(placement: .cancellationAction) {
                             Button("Cancel", role: .cancel) { model.cancel() }
+                        }
+                        ToolbarItem(placement: .confirmationAction) {
+                            if case let .asking(recognition) = model.state {
+                                saveButton(recognition)
+                            } else {
+                                ProgressView()
+                            }
+                        }
+                    case .sent:
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done", role: .confirm) { model.done() }
+                        }
+                    case .failed:
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Close") { model.cancel() }
                         }
                     }
                 }
@@ -131,15 +171,18 @@ struct ShareView: View {
                 .font(.headline)
             content
             HStack {
-                if case .saved = model.state { undoButton }
                 Spacer()
-                if model.isFinished {
-                    finishButton
-                } else if case .undoing = model.state {
-                    ProgressView().controlSize(.small)
-                } else {
+                switch model.state {
+                case .checking, .asking, .sending:
                     Button("Cancel", role: .cancel) { model.cancel() }
                         .keyboardShortcut(.cancelAction)
+                    if case let .asking(recognition) = model.state { saveButton(recognition) }
+                case .sent:
+                    Button("Done") { model.done() }
+                        .keyboardShortcut(.defaultAction)
+                case .failed:
+                    Button("Close") { model.cancel() }
+                        .keyboardShortcut(.defaultAction)
                 }
             }
         }
@@ -149,26 +192,42 @@ struct ShareView: View {
         #endif
     }
 
-    private var undoButton: some View {
-        Button("Undo", role: .destructive) { model.undo() }
-    }
-
-    @ViewBuilder
-    private var finishButton: some View {
-        if !model.isFailed {
-            Button("Done") { model.done() }
-                .keyboardShortcut(.defaultAction)
-        } else {
-            Button("Close") { model.cancel() }
-                .keyboardShortcut(.defaultAction)
-        }
+    private func saveButton(_ recognition: ShareModel.Recognition) -> some View {
+        Button(recognition == .notRecipe ? LocalizedStringKey("Try Anyway") : "Save", role: .confirm) { model.save() }
+            .keyboardShortcut(.defaultAction)
     }
 
     private var content: some View {
         VStack(alignment: .leading, spacing: 14) {
-            if model.pageTitle != nil || model.pageHost != nil {
+            if case let .asking(recognition) = model.state {
+                question(recognition)
+            } else {
+                pageLabel(name: nil, image: nil)
+                family
+                status
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// The page (or its recipe): name, host, photo.
+    @ViewBuilder
+    private func pageLabel(name: String?, image: String?) -> some View {
+        let title = name ?? model.pageTitle
+        if title != nil || model.pageHost != nil {
+            HStack(spacing: 12) {
+                if let url = image.flatMap(URL.init(string:)) {
+                    AsyncImage(url: url) { photo in
+                        photo.resizable().scaledToFill()
+                    } placeholder: {
+                        Color.secondary.opacity(0.15)
+                    }
+                    .frame(width: 56, height: 56)
+                    .clipShape(.rect(cornerRadius: 10))
+                    .accessibilityHidden(true)
+                }
                 VStack(alignment: .leading, spacing: 2) {
-                    if let title = model.pageTitle {
+                    if let title {
                         Text(verbatim: title)
                             .font(.body.weight(.semibold))
                             .lineLimit(2)
@@ -180,59 +239,66 @@ struct ShareView: View {
                     }
                 }
             }
-            if let family = model.familyName {
-                Label {
-                    Text("For \(family)")
-                } icon: {
-                    Image(systemName: "person.2")
-                }
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            }
-            status
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private var family: some View {
+        if let family = model.familyName {
+            Label {
+                Text("For \(family)")
+            } icon: {
+                Image(systemName: "person.2")
+            }
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private func question(_ recognition: ShareModel.Recognition) -> some View {
+        switch recognition {
+        case let .recipe(name, image):
+            Label("Recipe recognized", systemImage: "fork.knife")
+                .font(.headline)
+            pageLabel(name: name, image: image)
+            family
+            Text("Save it to Ohana?")
+        case .notRecipe:
+            Label("No recipe recognized", systemImage: "questionmark.circle")
+                .font(.headline)
+            pageLabel(name: nil, image: nil)
+            family
+            Text("Ohana’s AI can still try to read a recipe from this page.")
+                .fixedSize(horizontal: false, vertical: true)
+        case .unknown:
+            Text("Save this page as a recipe?")
+                .font(.headline)
+            pageLabel(name: nil, image: nil)
+            family
+        }
     }
 
     @ViewBuilder
     private var status: some View {
         switch model.state {
-        case .working:
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                ProgressView()
-                    .controlSize(.small)
-                Text("Ohana is reading the recipe. This can take a minute or two.")
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        case let .saved(title):
+        case .checking:
+            progress("Looking for a recipe…")
+        case .sending:
+            progress("Sending to Ohana…")
+        case let .sent(title):
             Label {
-                Text("Saved “\(title)” to “Want to try”.")
-                    .fixedSize(horizontal: false, vertical: true)
+                Group {
+                    if let title {
+                        Text("Saved “\(title)” to “Want to try”.")
+                    } else {
+                        Text("Ohana is adding the recipe in the background.")
+                    }
+                }
+                .fixedSize(horizontal: false, vertical: true)
             } icon: {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(.green)
-            }
-            if let error = model.undoError {
-                Text(verbatim: error)
-                    .font(.subheadline)
-                    .foregroundStyle(.orange)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        case let .undoing(title):
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                ProgressView()
-                    .controlSize(.small)
-                Text("Removing “\(title)” …")
-                    .foregroundStyle(.secondary)
-            }
-        case let .undone(title):
-            Label {
-                Text("“\(title)” was removed again.")
-                    .fixedSize(horizontal: false, vertical: true)
-            } icon: {
-                Image(systemName: "arrow.uturn.backward.circle.fill")
-                    .foregroundStyle(.secondary)
             }
         case let .failed(message):
             Label {
@@ -242,6 +308,17 @@ struct ShareView: View {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundStyle(.orange)
             }
+        case .asking:
+            EmptyView()
+        }
+    }
+
+    private func progress(_ text: LocalizedStringKey) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            ProgressView()
+                .controlSize(.small)
+            Text(text)
+                .foregroundStyle(.secondary)
         }
     }
 }

@@ -16,7 +16,14 @@
 //   POST   /meals/recipes                     an UpsertRecipeInput → {id}
 //   POST   /meals/recipes/bulk                {recipes} (the generator's picks) → {createdIds}
 //   POST   /meals/recipes/import              {url, text?, title?, imageUrl?} → {id, title}: one recipe from a
-//                                              web page by the family's AI, saved TO_TRY (lib/meals/ai/import.ts)
+//                                              web page by the family's AI, saved TO_TRY (lib/meals/ai/import.ts);
+//                                              with `background: true` → 202 {import}: the worker imports it
+//                                              (lib/meals/ai/import-queue.ts)
+//   POST   /meals/recipes/import/preview      {url, text?, title?, imageUrl?} → {recipe, title, imageUrl}: the
+//                                              page read without the AI (has it Recipe data?)
+//   GET    /meals/recipes/imports             {imports}: the background imports waiting, running or failed
+//   DELETE /meals/recipes/imports/{id}        → {deleted: true} (a running one's result is discarded)
+//   POST   /meals/recipes/imports/{id}/retry  → {import}: a failed one waits again
 //   GET    /meals/recipes/{id}                {recipe, ingredients, units} (only those it uses)
 //   POST   /meals/recipes/{id}/move           → {listType} (KNOWN ⇄ TO_TRY)
 //   PUT    /meals/recipes/{id}/image          raw image/jpeg|png|webp bytes, or multipart "image" → {image}
@@ -32,7 +39,8 @@ import { AuthError } from "@/lib/auth/errors";
 import type { Db } from "@/lib/db";
 import { ingredients as ingredientsTable, recipes, units as unitsTable } from "@/lib/db/schema";
 import { generateImage } from "./ai/generate";
-import { importRecipe, importRecipeSchema } from "./ai/import";
+import { importRecipe, importRecipeSchema, previewImport } from "./ai/import";
+import { deleteImport, enqueueImport, listImports, retryImport } from "./ai/import-queue";
 import { generateRecipeImage } from "./ai/recipes";
 import { mealsAi } from "./ai/status";
 import { ALLOWED_UPLOAD_TYPES, MAX_UPLOAD_BYTES } from "./images/config";
@@ -45,6 +53,8 @@ import { createTag, deleteTag, resetTags, updateTag } from "./recipes/tags";
 import { upsertRecipe } from "./recipes/upsert";
 import { bulkCreateSchema } from "./schemas/generate";
 import { moduleEnabled } from "@/lib/server-info";
+
+const ASSISTANT_OFF = "The assistant is turned off on this server";
 
 const tagNames = { nameEn: z.string().trim().max(80), nameDe: z.string().trim().max(80) };
 const createTagSchema = z.object({ category: z.string(), ...tagNames });
@@ -125,24 +135,55 @@ export function createMealsApp(options: MealsAppOptions = {}) {
       });
     }
     if (id === "import" && sub === undefined && m === "POST") {
-      return write(ctx, async (familyId) => {
-        if (!moduleEnabled("assistant")) throw new HttpError(404, "The assistant is turned off on this server");
-        const input = importRecipeSchema.parse(await readBody(ctx.req));
+      return (async () => {
+        const { family } = await ctx.load("edit");
+        const familyId = family.id;
+        if (!moduleEnabled("assistant")) throw new HttpError(404, ASSISTANT_OFF);
+        const body = await readBody(ctx.req);
+        const input = importRecipeSchema.parse(body);
         const env = aiEnv(ctx.db);
         const model = await familyModel(env, familyId);
         if (!model) throw new HttpError(400, "The AI isn't set up yet (Settings → AI)");
-        return importRecipe({
+        const user = ctx.requireUser();
+        const language = user.preferredLanguage === "de" ? "de" : "en";
+        if (body.background === true) {
+          // The share extension: the worker imports it (lib/meals/ai/import-queue.ts).
+          return json({ import: enqueueImport(ctx.db, familyId, user.id, input, language, ctx.now) }, 202);
+        }
+        return json(await importRecipe({
           db: ctx.db,
           familyId,
           input,
-          language: ctx.requireUser().preferredLanguage === "de" ? "de" : "en",
+          language,
           provider: model.provider,
           modelNet: env.modelNet,
           net: env.net,
           now: ctx.now,
           signal: ctx.req.signal,
-        });
+        }));
+      })();
+    }
+    if (id === "import" && sub === "preview" && action === undefined && m === "POST") {
+      return write(ctx, async () => {
+        if (!moduleEnabled("assistant")) throw new HttpError(404, ASSISTANT_OFF);
+        const input = importRecipeSchema.parse(await readBody(ctx.req));
+        return previewImport(input, aiEnv(ctx.db).net, ctx.req.signal);
       });
+    }
+    if (id === "imports") {
+      if (sub === undefined && m === "GET") {
+        return read(ctx, (familyId) => ({ imports: moduleEnabled("assistant") ? listImports(ctx.db, familyId) : [] }));
+      }
+      if (sub !== undefined && action === undefined && m === "DELETE") {
+        return write(ctx, async (familyId) => {
+          deleteImport(ctx.db, familyId, sub);
+          return { deleted: true };
+        });
+      }
+      if (sub !== undefined && action === "retry" && m === "POST") {
+        return write(ctx, async (familyId) => ({ import: retryImport(ctx.db, familyId, sub, ctx.now) }));
+      }
+      return null;
     }
     if (sub === undefined) {
       // PATCH / DELETE /meals/recipes/{id} are family-routes.ts's.
@@ -173,7 +214,7 @@ export function createMealsApp(options: MealsAppOptions = {}) {
       }
       if (action === "generate" && m === "POST") {
         return write(ctx, async (familyId) => {
-          if (!moduleEnabled("assistant")) throw new HttpError(404, "The assistant is turned off on this server");
+          if (!moduleEnabled("assistant")) throw new HttpError(404, ASSISTANT_OFF);
           const env = aiEnv(ctx.db);
           const model = await familyModel(env, familyId);
           if (!model?.imageModel) throw new HttpError(400, "No image model is set (Settings → AI)");

@@ -2,29 +2,47 @@ import Foundation
 import UniformTypeIdentifiers
 
 /// What the share sheet hands the extension: the page's address, and on iOS what
-/// `Preprocess.js` read in Safari (title, text, og:image). Other apps share just a URL.
+/// `Preprocess.js` read in Safari (title, text, og:image, the recipe of its JSON-LD). Other apps
+/// share just a URL.
 nonisolated struct SharedPage: Equatable, Sendable {
     var url: URL?
     var title: String?
     var text: String?
     var imageUrl: String?
+    /// Whether the page's JSON-LD describes a schema.org Recipe; nil when the page wasn't read
+    /// (no usable preprocessing result: the server is asked instead).
+    var recipe: Bool?
+    var recipeName: String?
+    var recipeImage: String?
+    /// Safari handed over a preprocessing result at all, even one without a page (its crashed
+    /// or blank tab's placeholder).
+    var preprocessed = false
 
     /// The key Safari puts the preprocessing script's result under.
     static let resultsKey = "NSExtensionJavaScriptPreprocessingResultsKey"
 
-    /// The script's result (`{url, title, text, imageUrl}`).
+    /// The script's result (`{url, title, text, imageUrl, recipe, recipeName, recipeImage}`).
     init(preprocessingResults results: [String: Any]) {
         url = (results["url"] as? String).flatMap(Self.webURL)
         title = Self.nonEmpty(results["title"] as? String)
         text = Self.nonEmpty(results["text"] as? String)
         imageUrl = Self.nonEmpty(results["imageUrl"] as? String)
+        recipe = results["recipe"] as? Bool
+        recipeName = Self.nonEmpty(results["recipeName"] as? String)
+        recipeImage = Self.nonEmpty(results["recipeImage"] as? String)
+        preprocessed = true
     }
 
-    init(url: URL? = nil, title: String? = nil, text: String? = nil, imageUrl: String? = nil) {
+    init(url: URL? = nil, title: String? = nil, text: String? = nil, imageUrl: String? = nil,
+         recipe: Bool? = nil, recipeName: String? = nil, recipeImage: String? = nil, preprocessed: Bool = false) {
         self.url = url
         self.title = title
         self.text = text
         self.imageUrl = imageUrl
+        self.recipe = recipe
+        self.recipeName = recipeName
+        self.recipeImage = recipeImage
+        self.preprocessed = preprocessed
     }
 
     /// Only http(s) pages can be imported.
@@ -39,31 +57,44 @@ nonisolated struct SharedPage: Equatable, Sendable {
         return text
     }
 
-    /// Reads the shared items: Safari's preprocessing result first, else a URL attachment; the
-    /// item's text (Safari on the Mac puts the page title there) as the title.
+    /// Reads every shared item: Safari's preprocessing result, a URL attachment (or a text that is
+    /// one), and the item's text (Safari on the Mac puts the page title there), then `combine`s
+    /// them.
     static func read(_ items: [NSExtensionItem]) async -> SharedPage {
-        var page = SharedPage()
+        var result: SharedPage?
+        var attachmentURL: URL?
+        var itemTitle: String?
         for item in items {
-            if page.title == nil {
-                page.title = nonEmpty(item.attributedContentText?.string) ?? nonEmpty(item.attributedTitle?.string)
+            if itemTitle == nil {
+                itemTitle = nonEmpty(item.attributedContentText?.string) ?? nonEmpty(item.attributedTitle?.string)
             }
             for provider in item.attachments ?? [] {
-                if provider.hasItemConformingToTypeIdentifier(UTType.propertyList.identifier),
-                   let found = await load(provider, type: UTType.propertyList.identifier) {
-                    return found.merging(page)
+                if result == nil, provider.hasItemConformingToTypeIdentifier(UTType.propertyList.identifier),
+                   let found = await load(provider, type: UTType.propertyList.identifier), found.preprocessed {
+                    result = found
                 }
-                if page.url == nil, provider.hasItemConformingToTypeIdentifier(UTType.url.identifier) {
-                    page.url = await load(provider, type: UTType.url.identifier)?.url
+                for type in [UTType.url, UTType.plainText] where attachmentURL == nil {
+                    if provider.hasItemConformingToTypeIdentifier(type.identifier),
+                       let found = await load(provider, type: type.identifier), !found.preprocessed {
+                        attachmentURL = found.url
+                    }
                 }
             }
         }
-        return page
+        return combine(result: result, attachmentURL: attachmentURL, itemTitle: itemTitle)
     }
 
-    /// This page, with what it lacks taken from `other`.
-    func merging(_ other: SharedPage) -> SharedPage {
-        SharedPage(url: url ?? other.url, title: title ?? other.title, text: text ?? other.text,
-                   imageUrl: imageUrl ?? other.imageUrl)
+    /// The shared page from what the items held. A preprocessing result is only the page when it
+    /// has its own http(s) address; one without is Safari's placeholder for a crashed or blank
+    /// tab, so its title, text and recipe are dropped (as is the item's title when it is the
+    /// placeholder's) and the URL attachment is the page.
+    static func combine(result: SharedPage?, attachmentURL: URL?, itemTitle: String?) -> SharedPage {
+        if var result, result.url != nil {
+            result.title = result.title ?? itemTitle
+            return result
+        }
+        let title = itemTitle == result?.title ? nil : itemTitle
+        return SharedPage(url: attachmentURL, title: title, preprocessed: result != nil)
     }
 
     private static func load(_ provider: NSItemProvider, type: String) async -> SharedPage? {

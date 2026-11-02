@@ -2,10 +2,13 @@ import SwiftUI
 
 /// The family's recipes (web: meals/recipes): Favourites or Want to try, search, tag filter and
 /// sort, a page of 20 at a time as an adaptive grid of cards. File ▸ New Recipe (⌘N) adds one.
+/// Pages shared to Ohana show as placeholders on top of "Want to try" while the server imports
+/// them (`RecipeImports`).
 struct RecipeListView: View {
     @Environment(FamilyContext.self) private var family
     @Environment(\.undoManager) private var undoManager
     @Environment(\.mealsOnScreen) private var onScreen
+    @Environment(\.scenePhase) private var scenePhase
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var sizeClass
     #endif
@@ -15,6 +18,7 @@ struct RecipeListView: View {
     @State private var query = ""
     @State private var tagFilter: Set<String> = []
     @State private var model = RecipeListModel()
+    @State private var imports = RecipeImports()
     @State private var tags: [RecipeTag] = []
     @State private var ai = MealsAIStatus.none
     @State private var showFilter = false
@@ -29,10 +33,18 @@ struct RecipeListView: View {
         .init(list: list, query: query.trimmingCharacters(in: .whitespaces), sort: sort, tags: tagFilter)
     }
 
+    /// The imports show on "Want to try" without a search or filter.
+    private var importCards: [RecipeImportJob] {
+        list == .toTry && key.query.isEmpty && tagFilter.isEmpty ? imports.items : []
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 controls
+                if list == .known, imports.pendingCount > 0 {
+                    RecipeImportsBanner(count: imports.pendingCount) { list = .toTry }
+                }
                 content
             }
             .padding(.horizontal)
@@ -53,6 +65,12 @@ struct RecipeListView: View {
                 if Task.isCancelled { return }
             }
             await model.reload(family.api, key)
+        }
+        .task(id: RecipeImports.Load(familyID: family.api.familyID, revision: family.revision(.recipes),
+                                     active: onScreen && scenePhase == .active, restarts: imports.restarts)) {
+            // Only while the list is on screen and the app active; it starts over on coming back.
+            guard onScreen, scenePhase == .active else { return }
+            await imports.poll(family)
         }
         .task(id: family.revision(.recipes)) {
             tags = (try? await RecipeTagsView.request(family.api).fetchOrSaved().tags) ?? tags
@@ -132,7 +150,7 @@ struct RecipeListView: View {
             .padding(.top, 40)
         } else if model.loadedQuery == nil {
             ProgressView().controlSize(.large).frame(maxWidth: .infinity).padding(.top, 80)
-        } else if visible.isEmpty {
+        } else if visible.isEmpty && importCards.isEmpty {
             if !key.query.isEmpty {
                 ContentUnavailableView.search(text: key.query).padding(.top, 40)
             } else if !tagFilter.isEmpty {
@@ -166,6 +184,11 @@ struct RecipeListView: View {
             // Cards grow with the text size, up to one column on a phone.
             let width = min(cardWidth, 320)
             LazyVGrid(columns: [GridItem(.adaptive(minimum: width, maximum: width * 1.7), spacing: 16)], spacing: 16) {
+                ForEach(importCards) { job in
+                    RecipeImportCard(job: job, canEdit: family.canEdit,
+                                     retry: { Task { await imports.retry(job, family) } },
+                                     remove: { Task { await imports.remove(job, family) } })
+                }
                 ForEach(visible) { recipe in
                     NavigationLink {
                         MealsRecipeDetailView(recipeID: recipe.id).assistantButton()
@@ -183,10 +206,12 @@ struct RecipeListView: View {
                 ProgressView().frame(maxWidth: .infinity).padding()
                     .onAppear { Task { await model.loadMore(family.api) } }
             }
-            Text("\(model.totalCount) recipes")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity)
+            if !visible.isEmpty {
+                Text("\(model.totalCount) recipes")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+            }
         }
     }
 

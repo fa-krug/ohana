@@ -8,7 +8,7 @@ import {
   uniqueIndex,
   type AnySQLiteColumn,
 } from "drizzle-orm/sqlite-core";
-import { families } from "../schema";
+import { families, users } from "../schema";
 
 export const ingredients = sqliteTable("ingredients", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -212,4 +212,37 @@ export const mealPlanExcludedTags = sqliteTable(
       .references(() => mealTags.id, { onDelete: "cascade" }),
   },
   (t) => ({ uniqExcluded: uniqueIndex("meal_plan_excluded_tags_plan_tag_idx").on(t.mealPlanId, t.tagId) }),
+);
+
+/** A recipe import waiting for the worker (lib/meals/ai/import-queue.ts): the share extension
+ *  hands a page over and closes. `status` waiting | running | failed; the row is deleted once
+ *  the recipe is saved. `input` is the import's body as JSON (the page's text included), so a
+ *  retry runs it again; `run_token` / `locked_until` are the running worker's lease. */
+export const recipeImports = sqliteTable(
+  "recipe_imports",
+  {
+    id: text("id").primaryKey(),
+    familyId: text("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    /** Who started it (told when it is done); null once the account is gone. */
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+    url: text("url").notNull(),
+    title: text("title").notNull().default(""),
+    imageUrl: text("image_url"),
+    input: text("input").notNull(),
+    /** The starter's language: the recipe's and the notification's. */
+    language: text("language").notNull().default("en"),
+    status: text("status").notNull().default("waiting"),
+    error: text("error"),
+    attempts: integer("attempts").notNull().default(0),
+    runToken: text("run_token"),
+    lockedUntil: integer("locked_until", { mode: "timestamp" }),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+  },
+  (t) => ({
+    recipeImportsStatusIdx: index("recipe_imports_status_idx").on(t.status, t.lockedUntil),
+    recipeImportsFamilyIdx: index("recipe_imports_family_idx").on(t.familyId),
+  }),
 );

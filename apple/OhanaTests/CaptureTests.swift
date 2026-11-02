@@ -127,10 +127,71 @@ struct CaptureTests {
         #expect(page.title == "Pasta")
         #expect(page.text?.hasPrefix("{") == true)
         #expect(page.imageUrl == nil)
+        #expect(page.preprocessed)
+        #expect(page.recipe == nil) // the script didn't say: unknown
         #expect(SharedPage(preprocessingResults: ["url": "file:///etc/passwd"]).url == nil)
-        let merged = SharedPage(url: URL(string: "https://a.example")).merging(SharedPage(title: "From the item"))
-        #expect(merged.title == "From the item")
-        #expect(merged.url?.host() == "a.example")
+    }
+
+    @Test func readsTheRecipeThePageScriptFound() {
+        let page = SharedPage(preprocessingResults: [
+            "url": "https://example.com/pasta", "title": "Pasta | Example", "recipe": true,
+            "recipeName": " Pasta al limone ", "recipeImage": "https://example.com/p.jpg",
+        ])
+        #expect(page.recipe == true)
+        #expect(page.recipeName == "Pasta al limone")
+        #expect(page.recipeImage == "https://example.com/p.jpg")
+        // Through Safari the booleans arrive as NSNumber.
+        let bridged = SharedPage(preprocessingResults: ["url": "https://example.com", "recipe": NSNumber(value: false),
+                                                         "recipeName": ""])
+        #expect(bridged.recipe == false)
+        #expect(bridged.recipeName == nil)
+    }
+
+    @Test func combinesTheSharedItems() {
+        let link = URL(string: "https://example.com/pasta")!
+        // A good result is the page; the item's text only fills a missing title.
+        let result = SharedPage(preprocessingResults: ["url": "https://example.com/pasta", "text": "Body", "recipe": true])
+        let page = SharedPage.combine(result: result, attachmentURL: URL(string: "https://other.example"), itemTitle: "Item")
+        #expect(page.url == link && page.title == "Item" && page.text == "Body" && page.recipe == true)
+
+        // Safari's crashed tab: a result without an address. The URL attachment is the page, and
+        // nothing of the placeholder (nor the item's copy of its title) is kept.
+        let crashed = SharedPage(preprocessingResults: ["url": "", "title": "Webseite abgestürzt", "text": "Neu laden",
+                                                        "recipe": false])
+        let recovered = SharedPage.combine(result: crashed, attachmentURL: link, itemTitle: "Webseite abgestürzt")
+        #expect(recovered == SharedPage(url: link, preprocessed: true))
+        #expect(recovered.text == nil && recovered.recipe == nil)
+        #expect(SharedPage.combine(result: crashed, attachmentURL: link, itemTitle: "Pasta").title == "Pasta")
+
+        // No address anywhere: Safari handed over a page it couldn't read, or another app shared
+        // something that isn't one.
+        #expect(SharedPage.combine(result: crashed, attachmentURL: nil, itemTitle: nil).preprocessed)
+        let plain = SharedPage.combine(result: nil, attachmentURL: link, itemTitle: "Shared")
+        #expect(plain == SharedPage(url: link, title: "Shared"))
+        #expect(!SharedPage.combine(result: nil, attachmentURL: nil, itemTitle: nil).preprocessed)
+    }
+
+    @Test func backgroundImportBodyAndAnswers() throws {
+        let url = URL(string: "https://example.com/pasta")!
+        #expect(try Self.json(RecipeImportRequest(url: url))["background"] == nil)
+        #expect(try Self.json(RecipeImportRequest(url: url, background: true))["background"] as? Bool == true)
+        #expect(RecipeImportRequest.previewPath(familyID: "f1") == "/api/v1/families/f1/meals/recipes/import/preview")
+        let preview = try Self.json(RecipePreviewRequest(url: url, title: "  "))
+        #expect(preview["url"] as? String == "https://example.com/pasta" && preview["title"] == nil)
+
+        let queued = try JSONDecoder().decode(RecipeImportStarted.self, from: Data("""
+        {"import":{"id":"i1","url":"https://example.com/pasta","title":"","imageUrl":null,"status":"waiting",        "error":null,"createdAt":"2026-11-02T10:00:00.000Z"}}
+        """.utf8))
+        guard case let .queued(job) = queued else { Issue.record("not queued"); return }
+        #expect(job.id == "i1" && job.title.isEmpty && job.imageUrl == nil && !job.isFailed)
+        // An older server ignores `background` and answers with the saved recipe.
+        let old = try JSONDecoder().decode(RecipeImportStarted.self, from: Data(#"{"id":"r1","title":"Pasta"}"#.utf8))
+        #expect(old == .imported(ImportedRecipe(id: "r1", title: "Pasta")))
+        #expect(throws: (any Error).self) { try JSONDecoder().decode(RecipeImportStarted.self, from: Data("{}".utf8)) }
+
+        let preview2 = try JSONDecoder().decode(RecipePreview.self, from: Data(#"{"recipe":true,"title":"Pasta","imageUrl":null}"#.utf8))
+        #expect(preview2 == RecipePreview(recipe: true, title: "Pasta", imageUrl: nil))
+        #expect(try JSONDecoder().decode(MealsAIAvailability.self, from: Data(#"{"generate":false,"photos":false,"recipeCount":2}"#.utf8)).generate == false)
     }
 
     @Test func sharedConnectionBuildsRequests() throws {

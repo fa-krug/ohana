@@ -108,62 +108,138 @@ nonisolated struct SharedConnection: Sendable {
         families.first { $0.id == selected } ?? families.first
     }
 
-    /// Reading a page takes the server's AI up to about two minutes.
+    /// Reading a page takes the server's AI up to about two minutes (the app's import sheet and
+    /// the Shortcuts action wait for it).
     static let importTimeout: TimeInterval = 180
 
-    /// POST /api/v1/families/{id}/meals/recipes/import: the server reads the page (or the text
-    /// sent along) and saves the recipe to "Want to try".
-    func importRecipe(familyID: String, _ input: RecipeImportRequest, session: URLSession = .shared) async throws -> ImportedRecipe {
-        let body = try JSONEncoder().encode(input)
-        let req = request("POST", RecipeImportRequest.path(familyID: familyID), body: body, timeout: Self.importTimeout)
-        let data = try await data(for: req, session: session)
+    /// Looking at a page (the preview) fetches it on the server: up to about 20 seconds.
+    static let previewTimeout: TimeInterval = 25
+
+    /// GET /api/v1/families/{id}/meals/status: whether the family's AI can read recipes.
+    func mealsStatus(familyID: String, session: URLSession = .shared) async throws -> MealsAIAvailability {
+        try decode(await data(for: request("GET", "/api/v1/families/\(familyID)/meals/status"), session: session))
+    }
+
+    /// POST …/meals/recipes/import/preview: whether the page is a recipe (its schema.org JSON-LD,
+    /// read by the server without the AI), its title and photo.
+    func previewRecipe(familyID: String, _ input: RecipePreviewRequest, session: URLSession = .shared) async throws -> RecipePreview {
+        let req = request("POST", RecipeImportRequest.previewPath(familyID: familyID),
+                          body: try JSONEncoder().encode(input), timeout: Self.previewTimeout)
+        return try decode(await data(for: req, session: session))
+    }
+
+    /// POST …/meals/recipes/import with `background`: the server queues the import and answers at
+    /// once (its worker reads the page; the recipe lands in "Want to try"). An older server
+    /// imports it before answering.
+    func startImport(familyID: String, _ input: RecipeImportRequest, session: URLSession = .shared) async throws -> RecipeImportStarted {
+        let req = request("POST", RecipeImportRequest.path(familyID: familyID), body: try JSONEncoder().encode(input))
+        return try decode(await data(for: req, session: session))
+    }
+
+    private func decode<T: Decodable>(_ data: Data) throws -> T {
         do {
-            return try JSONDecoder().decode(ImportedRecipe.self, from: data)
+            return try JSONDecoder().decode(T.self, from: data)
         } catch {
             throw SharedError.transport(String(localized: "The server sent something unexpected."))
         }
-    }
-
-    /// DELETE /api/v1/families/{id}/meals/recipes/{id}: takes an import back.
-    func deleteRecipe(familyID: String, id: String, session: URLSession = .shared) async throws {
-        _ = try await data(for: request("DELETE", RecipeImportRequest.recipePath(familyID: familyID, id: id)), session: session)
     }
 }
 
 /// The body of POST …/meals/recipes/import: the page's address, and what the share sheet read of
 /// it (its text: JSON-LD and the visible text; its title; its og:image). Without `text` the server
-/// fetches the page itself.
+/// fetches the page itself. `background`: queue it and answer at once (`RecipeImportStarted`).
 nonisolated struct RecipeImportRequest: Codable, Equatable, Sendable {
     var url: String
     var text: String?
     var title: String?
     var imageUrl: String?
+    var background: Bool?
 
     /// The most text sent along (the page script caps it too).
     static let maxText = 100_000
 
-    init(url: URL, text: String? = nil, title: String? = nil, imageUrl: String? = nil) {
+    init(url: URL, text: String? = nil, title: String? = nil, imageUrl: String? = nil, background: Bool? = nil) {
         self.url = url.absoluteString
         self.text = Self.clean(text).map { String($0.prefix(Self.maxText)) }
         self.title = Self.clean(title)
         self.imageUrl = Self.clean(imageUrl).flatMap { URL(string: $0)?.scheme?.hasPrefix("http") == true ? $0 : nil }
+        self.background = background
     }
 
     static func path(familyID: String) -> String { "/api/v1/families/\(familyID)/meals/recipes/import" }
 
-    /// The imported recipe, for taking the import back (DELETE).
-    static func recipePath(familyID: String, id: String) -> String { "/api/v1/families/\(familyID)/meals/recipes/\(id)" }
+    static func previewPath(familyID: String) -> String { path(familyID: familyID) + "/preview" }
 
-    private static func clean(_ text: String?) -> String? {
+    fileprivate static func clean(_ text: String?) -> String? {
         guard let text = text?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else { return nil }
         return text
     }
 }
 
-/// The answer of the import: the saved recipe.
+/// The body of POST …/meals/recipes/import/preview: the page's address (and title, shown back
+/// when the server can't read one).
+nonisolated struct RecipePreviewRequest: Encodable, Equatable, Sendable {
+    var url: String
+    var title: String?
+
+    init(url: URL, title: String? = nil) {
+        self.url = url.absoluteString
+        self.title = RecipeImportRequest.clean(title)
+    }
+}
+
+/// The preview's answer: whether the page holds a schema.org Recipe, its title and photo.
+nonisolated struct RecipePreview: Decodable, Equatable, Sendable {
+    let recipe: Bool
+    let title: String
+    let imageUrl: String?
+}
+
+/// The answer of a synchronous import (an older server, the app's import sheet): the saved recipe.
 nonisolated struct ImportedRecipe: Codable, Equatable, Sendable {
     let id: String
     let title: String
+}
+
+/// An import the server's worker is doing or failed at (GET …/meals/recipes/imports). A
+/// successful one is gone from the list: its recipe is in "Want to try".
+nonisolated struct RecipeImportJob: Codable, Equatable, Identifiable, Sendable {
+    let id: String
+    let url: String
+    /// The page's title as sent; may be empty.
+    let title: String
+    let imageUrl: String?
+    /// "waiting", "running" or "failed".
+    let status: String
+    let error: String?
+    /// ISO 8601.
+    let createdAt: String
+
+    var isFailed: Bool { status == "failed" }
+}
+
+/// What POST …/meals/recipes/import answered: the queued import (202 `{import}`), or from an
+/// older server that ignores `background`, the recipe it already saved (200 `{id, title}`).
+nonisolated enum RecipeImportStarted: Decodable, Equatable, Sendable {
+    case queued(RecipeImportJob)
+    case imported(ImportedRecipe)
+
+    private enum CodingKeys: String, CodingKey { case `import` }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        if let job = try container.decodeIfPresent(RecipeImportJob.self, forKey: .import) {
+            self = .queued(job)
+        } else {
+            self = .imported(try ImportedRecipe(from: decoder))
+        }
+    }
+}
+
+/// GET …/meals/status as far as the extension needs it: false when the family's AI isn't set up
+/// or the assistant is off.
+nonisolated struct MealsAIAvailability: Decodable, Equatable, Sendable {
+    let generate: Bool
 }
 
 /// The server's error text: `{ "error": "…" }` from the family API, `{ "message": "…" }` from the

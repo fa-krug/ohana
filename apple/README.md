@@ -79,8 +79,8 @@ Shared/           Compiled into the apps and their extensions: Keychain, SharedC
                   request), SharedPage (what the share sheet hands over), CookTimerAttributes
                   (the cook timers' Live Activity, iOS)
 ShareExtension/   "Save to Ohana" in the share sheet (targets OhanaShare for iOS and
-                  OhanaShare-macOS, embedded in the apps): the server imports a web page's recipe;
-                  Preprocess.js reads the page in Safari on iOS
+                  OhanaShare-macOS, embedded in the apps): a web page's recipe, imported by the
+                  server in the background; Preprocess.js reads the page in Safari on iOS
 OhanaWidgets/     Widget extension (OhanaWidgets for iOS, OhanaWidgets-macOS, embedded in the
                   apps): the Home Screen / Lock Screen / desktop widgets, and on iOS the cook
                   timers' Live Activity
@@ -109,9 +109,14 @@ OhanaTests/       Swift Testing unit tests
   ticked ones (events to the family's calendar, the rest to Reminders). Only the text ever goes to
   the server.
 - **Share extension** (`ShareExtension/`): sharing a web page (Safari, or any app sharing a URL) to
-  Ohana has the server read its recipe and save it to "Want to try"; *Undo* deletes it again, and
-  cancelling while it works saves nothing (the server notices the request go away). The app's
-  *Import from Web* sheet works the same. There is no App Group: the
+  Ohana first tells whether it is a recipe (its schema.org JSON-LD: read by `Preprocess.js` in
+  Safari on iOS, else by the server's `POST …/meals/recipes/import/preview`) and asks; *Save* hands
+  the page to the server (`background: true`), whose worker imports it into "Want to try" and
+  notifies the device, and the extension closes. Until then the recipe list shows the import as a
+  placeholder on "Want to try" (`Features/Meals/Recipes/RecipeImports.swift`, polling
+  `GET …/meals/recipes/imports`; a failed one offers Try again / Remove). A preprocessing result
+  without an address (Safari's crashed or blank tab) is ignored in favour of the shared URL. The
+  app's *Import from Web* sheet still imports while it waits. There is no App Group: the
   extension reads the token, the server's address and the selected family from the Keychain,
   where the app keeps them (`SharedConnection`; same access group in all entitlements). The app
   writes them at launch, after pairing and when the family changes, and removes them when it

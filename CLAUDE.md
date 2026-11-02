@@ -50,8 +50,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   migrations, then loops every `APPT_TICK_SECONDS` (15): the appointment `SearchRunner`, and
   every `WORKER_TICK_SECONDS` (60) `lib/maintenance/cleanup.ts`, the nightly
   `lib/maintenance/backup.ts` and `lib/notifications/daily.ts`; the loop itself ticks every
-  `ASSISTANT_TICK_MS` (1000) for the assistant's `ChatRunner`; turned-off modules' runners
-  don't run). `docker-entrypoint.sh setup-link <email>` prints a setup link. Long-running jobs
+  `ASSISTANT_TICK_MS` (1000) for the assistant's `ChatRunner` and the meals' `ImportRunner`;
+  turned-off modules' runners don't run). `docker-entrypoint.sh setup-link <email>` prints a setup link. Long-running jobs
   (appointment searches, assistant turns, notifications) belong in the worker, never in a
   request.
 - **HTTP (`http/`):** `app.ts` `createApp({ db })` (tests: `app.request(…)`, see
@@ -354,7 +354,13 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   web page, `POST …/meals/recipes/import`: the browser's text or the page fetched with `net`
   (never private), JSON-LD / og:image read before `htmlToText`, `buildImportPrompt`, saved
   TO_TRY with "Source: <url>" in the description, the photo best effort; nothing is saved once the
-  request's signal aborted, i.e. the client went away), `stream.ts` (the NDJSON stream
+  request's signal aborted, i.e. the client went away; with `background: true`, the share
+  extension's, it answers 202 at once: `import-queue.ts` saves a `recipe_imports` row (input
+  JSON, the starter's language, lease), the worker's `ImportRunner` runs `importRecipe` (claim by
+  CAS + run token, at most `IMPORT_MAX_CONCURRENT`, a lost lease runs once more, then failed),
+  deletes the row when done and pushes to the starter's devices; failed ones stay for
+  `GET /meals/recipes/imports`, `…/imports/{id}/retry`, DELETE, cleanup after 7 days;
+  `POST …/import/preview` reads the page without the AI: Recipe JSON-LD or not), `stream.ts` (the NDJSON stream
   of `POST /api/v1/families/{id}/recipes/generate`, inline in the server process: one
   user-started call with timeouts, cancelled with the request), `status.ts` (`mealsAi`: show
   the buttons; off with the assistant). Saving: `recipes/bulk-create.ts`; photo: the meals
@@ -497,7 +503,13 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   after loading the account and after recipe changes; emptied in the demo / with Meals off; a result
   opens `ohana://f/{id}/meals/recipes/{id}`). The recipe list's *Import from Web* sheet
   (`RecipeImportView`, editors, with the meals AI) posts a URL to `…/meals/recipes/import`, then
-  offers to open the recipe or undo (DELETE it); so does the share extension. From outside the app: Siri / Shortcuts actions without opening it
+  offers to open the recipe or undo (DELETE it). The share extension instead first says whether the
+  page is a recipe (`Preprocess.js` finds schema.org Recipe JSON-LD in Safari on iOS, else
+  `…/import/preview`), asks, then hands the page off (`background: true`, 202) and closes; the
+  worker imports it, and the recipe list shows the waiting / failed ones as placeholder cards on
+  "Want to try" (`RecipeImports.swift`, polling `GET …/meals/recipes/imports`; a banner on
+  Favourites). `SharedPage.combine`: a Safari result without its own URL (a crashed tab) doesn't
+  count, the shared URL does. From outside the app: Siri / Shortcuts actions without opening it
   (`App/Intents/CaptureIntents.swift`: add to the shopping list (a reminder in the family's Reminders list), add an event, import a recipe;
   `IntentConnection`) and the *Save to Ohana* Safari share extension (`apple/ShareExtension/`,
   targets `OhanaShare` / `OhanaShare-macOS`, bundle id `de.fa-krug.Ohana.Share`; iOS sends the

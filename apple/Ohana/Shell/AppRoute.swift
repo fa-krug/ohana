@@ -20,6 +20,9 @@ enum AppRoute: Hashable {
     case financeTransaction(id: String, day: Day)
     // Meals
     case recipe(id: String)
+    /// The recipes on one list (`/f/{id}/meals/recipes`, a failed import's notification: "Want
+    /// to try", where the import waits).
+    case recipeList(RecipeListType)
     case cook(recipeID: String)
     case newRecipe
     case mealPlan
@@ -46,7 +49,7 @@ enum AppRoute: Hashable {
         case .weekAhead: .overview
         case .calendarDay: .calendar
         case .financeTransactions, .financeTransaction: .finance
-        case .recipe, .cook, .newRecipe, .mealPlan, .mealTags: .meals
+        case .recipe, .recipeList, .cook, .newRecipe, .mealPlan, .mealTags: .meals
         case .appointmentSearch, .appointmentSlot, .newAppointmentSearch: .appointments
         case .chore, .newChore: .chores
         case .assistantChat: .assistant
@@ -117,7 +120,7 @@ extension AppRoute {
             switch at(1) {
             case "recipes":
                 if let id = at(2), id != "new", id != "generate" { return .recipe(id: id) }
-                return at(2) == "new" ? .newRecipe : .module(.meals)
+                return at(2) == "new" ? .newRecipe : .recipeList(.toTry)
             case "cook": return at(2).map { .cook(recipeID: $0) } ?? .module(.meals)
             // The shopping list lives in Reminders now: old links (and the reminders' own) open
             // the plan it comes from.

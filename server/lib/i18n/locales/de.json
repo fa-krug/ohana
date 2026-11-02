@@ -170,6 +170,10 @@
         "title": "Ohana-Testnachricht"
       }
     },
+    "recipeImport": {
+      "failed": "Rezept konnte nicht importiert werden",
+      "saved": "In „Ausprobieren“ gespeichert"
+    },
     "test": {
       "body": "Der Kanal „{{channel}}“ funktioniert.",
       "title": "Ohana-Testnachricht"

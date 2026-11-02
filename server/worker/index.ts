@@ -2,13 +2,16 @@
 // so that a slow job never blocks a request. Same image as the server, started with
 // `docker-entrypoint.sh worker`. Today: cleanup, the nightly backup and the appointment
 // searches (every APPT_TICK_SECONDS), the daily notifications (coverage), chores that are due, the week ahead
-// (geocoding event locations daily, the weekly digest) and the assistant's chat turns (looked for every ASSISTANT_TICK_MS, a cheap indexed query).
+// (geocoding event locations daily, the weekly digest), the assistant's chat turns and the
+// recipe imports the share extension handed over (both looked for every ASSISTANT_TICK_MS, a
+// cheap indexed query).
 import { setTimeout as sleep } from "node:timers/promises";
 import { db, sqlite } from "../lib/db/client";
 import { backupDatabase, hasBackupFor } from "../lib/maintenance/backup";
 import { cleanup } from "../lib/maintenance/cleanup";
 import { SearchRunner } from "../lib/appointments/runner";
 import { ChatRunner } from "../lib/assistant/runner";
+import { ImportRunner } from "../lib/meals/ai/import-queue";
 import { defaultAiEnv } from "../lib/assistant/routes";
 import { migrationsApplied } from "../lib/maintenance/migrations";
 import { dailyNotifications } from "../lib/notifications/daily";
@@ -45,7 +48,7 @@ async function waitForMigrations(): Promise<void> {
 
 async function tick(now: Date): Promise<void> {
   const removed = cleanup(db, now);
-  if (removed.tokens + removed.invites + removed.rateLimits + removed.dismissals > 0) {
+  if (removed.tokens + removed.invites + removed.rateLimits + removed.dismissals + removed.imports > 0) {
     console.log("[worker] cleanup", removed);
   }
   if (BACKUP_KEEP > 0 && now.getHours() >= BACKUP_HOUR && !hasBackupFor(BACKUP_DIR, now)) {
@@ -72,11 +75,15 @@ async function main(): Promise<void> {
   if (runSearches) searches.start(new Date());
   // Assistant turns: claimed through the database, run without awaiting.
   const chats = new ChatRunner(defaultAiEnv(db));
+  // Recipe imports in the background (meals + assistant), started like the turns.
+  const runImports = moduleEnabled("meals") && moduleEnabled("assistant");
+  const imports = new ImportRunner(db);
   let lastTick = 0;
   let lastSearches = 0;
   while (!stopping) {
     const now = new Date();
     if (runChats) chats.tick(now);
+    if (runImports) imports.tick(now);
     if (runSearches && now.getTime() - lastSearches >= APPT_TICK_MS) {
       lastSearches = now.getTime();
       searches.tick(now);
@@ -91,7 +98,7 @@ async function main(): Promise<void> {
     }
     await sleep(ASSISTANT_TICK_MS, undefined, { signal: wake.signal }).catch(() => undefined);
   }
-  await Promise.all([searches.stop(5000), chats.stop(5000)]);
+  await Promise.all([searches.stop(5000), chats.stop(5000), imports.stop(5000)]);
   sqlite.close();
 }
 

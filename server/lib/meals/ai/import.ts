@@ -3,7 +3,8 @@
 // the browser had, else the page fetched here — goes to the model with the import prompt
 // (prompt.ts buildImportPrompt), its answer is checked like the generator's (verify.ts) and
 // saved like the generator's picks (bulkCreateRecipes, list TO_TRY), with the page's address at
-// the end of the description and the page's photo when it has one.
+// the end of the description and the page's photo when it has one. The share extension's
+// imports run in the worker (import-queue.ts); previewImport reads a page without the AI.
 //
 // Pages and photos are fetched with the net that never reaches private addresses (also not
 // with AI_ALLOW_PRIVATE_ENDPOINT, which is only for the model), with timeouts and size limits.
@@ -64,6 +65,8 @@ export interface PageContent {
   structuredData: string;
   /** The recipe's photo: JSON-LD's image, else og:image / twitter:image (absolute). */
   imageUrl: string | null;
+  /** The JSON-LD Recipe's name, when it has one (the preview's title). */
+  recipeName?: string;
 }
 
 // ---- reading HTML (pure) ----
@@ -157,15 +160,17 @@ export function extractPage(html: string, pageUrl: string): PageContent {
   const meta = metaOf(html);
   const { title, text } = htmlToText(html);
   const firstName = recipes.map((r) => r.name).find((n) => typeof n === "string" && n.trim());
+  const recipeName = firstName ? decodeEntities(String(firstName)).trim().slice(0, 300) : "";
   const imageUrl =
     absolute(imageOf(recipes[0]?.image), pageUrl) ??
     absolute(meta.get("og:image") ?? meta.get("og:image:url") ?? meta.get("og:image:secure_url"), pageUrl) ??
     absolute(meta.get("twitter:image") ?? meta.get("twitter:image:src"), pageUrl);
   return {
-    title: (meta.get("og:title") || (firstName ? decodeEntities(String(firstName)).trim() : "") || title).slice(0, 300),
+    title: (meta.get("og:title") || recipeName || title).slice(0, 300),
     text: text.slice(0, MAX_IMPORT_TEXT),
     structuredData: recipes.map((r) => JSON.stringify(withoutNoise(r))).join("\n").slice(0, MAX_STRUCTURED),
     imageUrl,
+    ...(recipeName ? { recipeName } : {}),
   };
 }
 
@@ -264,15 +269,37 @@ export async function downloadImage(url: string, net: NetOptions, signal?: Abort
 /** The page as the model gets it: the browser's text (or HTML) when it is enough, else the
  *  page fetched here. A title the browser sent wins. */
 export async function pageOf(input: ImportRecipeInput, net: NetOptions, signal?: AbortSignal): Promise<PageContent> {
-  let page: PageContent;
+  const page = await readPage(input, net, signal);
+  return { ...page, title: input.title || page.title };
+}
+
+/** The page as it is: the browser's text (or HTML) when it is enough, else fetched here. */
+async function readPage(input: ImportRecipeInput, net: NetOptions, signal?: AbortSignal): Promise<PageContent> {
   if (input.text.trim().length >= MIN_TEXT) {
-    page = looksLikeHtml(input.text)
+    return looksLikeHtml(input.text)
       ? extractPage(input.text, input.url)
       : { title: "", text: input.text, structuredData: "", imageUrl: null };
-  } else {
-    page = await fetchPage(input.url, net, signal);
   }
-  return { ...page, title: input.title || page.title };
+  return fetchPage(input.url, net, signal);
+}
+
+export interface ImportPreview {
+  /** Whether the page holds schema.org Recipe data (a good sign the import will find one). */
+  recipe: boolean;
+  title: string;
+  imageUrl: string | null;
+}
+
+/** What the share sheet shows before handing a page over (POST …/meals/recipes/import/preview):
+ *  no AI, only the page read like the import reads it. The title: the Recipe's name, else the
+ *  browser's title, else the page's. */
+export async function previewImport(input: ImportRecipeInput, net: NetOptions, signal?: AbortSignal): Promise<ImportPreview> {
+  const page = await readPage(input, net, signal);
+  return {
+    recipe: page.structuredData !== "",
+    title: page.recipeName || input.title || page.title || "",
+    imageUrl: input.imageUrl ?? page.imageUrl,
+  };
 }
 
 function quantityOf(q: number | string | undefined): string {
@@ -336,12 +363,15 @@ export interface ImportOptions {
   net: NetOptions;
   now: Date;
   signal?: AbortSignal;
+  /** Called once the page is read (the background import shows its title meanwhile). */
+  onPage?: (page: PageContent) => void;
 }
 
 /** Imports the page's recipe and saves it (TO_TRY). 422 when the page holds none. */
 export async function importRecipe(o: ImportOptions): Promise<{ id: string; title: string }> {
   const { db, familyId, input } = o;
   const page = await pageOf(input, o.net, o.signal);
+  o.onPage?.(page);
   // The photo loads while the model reads.
   const imageUrl = input.imageUrl ?? page.imageUrl;
   const photo = imageUrl ? downloadImage(imageUrl, o.net, o.signal) : Promise.resolve(null);

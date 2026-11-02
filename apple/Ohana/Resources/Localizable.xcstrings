@@ -7526,6 +7526,46 @@
         }
       }
     },
+    "Importing %lld recipes into “Want to try”": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Rezept wird unter „Ausprobieren“ importiert"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Rezepte werden unter „Ausprobieren“ importiert"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Importing %lld recipe into “Want to try”"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Importing %lld recipes into “Want to try”"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Importing the recipe …": {
       "localizations": {
         "de": {
@@ -8254,6 +8294,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Such die Feiertage des nächsten Jahres heraus und trag sie in den Kalender ein."
+          }
+        }
+      }
+    },
+    "Looking for a recipe…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rezept wird gesucht…"
           }
         }
       }
@@ -9588,6 +9638,16 @@
         }
       }
     },
+    "No recipe recognized": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Rezept erkannt"
+          }
+        }
+      }
+    },
     "No recipes came up. Try other settings.": {
       "localizations": {
         "de": {
@@ -10350,6 +10410,16 @@
         }
       }
     },
+    "Ohana couldn’t read a recipe from this page.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohana konnte aus dieser Seite kein Rezept lesen."
+          }
+        }
+      }
+    },
     "Ohana has no access to your calendars.": {
       "localizations": {
         "de": {
@@ -10390,12 +10460,12 @@
         }
       }
     },
-    "Ohana is reading the recipe. This can take a minute or two.": {
+    "Ohana is adding the recipe in the background.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ohana liest das Rezept. Das kann ein, zwei Minuten dauern."
+            "value": "Ohana fügt das Rezept im Hintergrund hinzu."
           }
         }
       }
@@ -10436,6 +10506,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ohana schreibt, was der Essensplan braucht, in eine Liste in Erinnerungen, jeden Artikel fällig an seinem Einkaufstag. Hake ab, ändere oder ergänze in Erinnerungen: Was du geändert hast, lässt Ohana in Ruhe."
+          }
+        }
+      }
+    },
+    "Ohana’s AI can still try to read a recipe from this page.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohanas KI kann trotzdem versuchen, ein Rezept aus dieser Seite zu lesen."
+          }
+        }
+      }
+    },
+    "Ohana’s assistant isn’t set up yet. Set it up in Ohana’s settings first.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohanas Assistent ist noch nicht eingerichtet. Richte ihn zuerst in Ohanas Einstellungen ein."
           }
         }
       }
@@ -12016,6 +12106,16 @@
         }
       }
     },
+    "Reading the recipe…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rezept wird gelesen…"
+          }
+        }
+      }
+    },
     "Reading transactions": {
       "localizations": {
         "de": {
@@ -12142,6 +12242,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rezeptfotos"
+          }
+        }
+      }
+    },
+    "Recipe recognized": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rezept erkannt"
           }
         }
       }
@@ -12502,16 +12612,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Entfernt einen Termin"
-          }
-        }
-      }
-    },
-    "Removing “%@” …": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "„%@“ wird entfernt …"
           }
         }
       }
@@ -12976,6 +13076,16 @@
         }
       }
     },
+    "Safari couldn’t hand over this page. Reload it and share it again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safari konnte die Seite nicht übergeben. Lade sie neu und teile sie noch einmal."
+          }
+        }
+      }
+    },
     "Save": {
       "localizations": {
         "de": {
@@ -13062,6 +13172,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nur für diesen Termin sichern"
+          }
+        }
+      }
+    },
+    "Save it to Ohana?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Ohana speichern?"
+          }
+        }
+      }
+    },
+    "Save this page as a recipe?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Seite als Rezept speichern?"
           }
         }
       }
@@ -13742,6 +13872,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Senden fehlgeschlagen: %@"
+          }
+        }
+      }
+    },
+    "Sending to Ohana…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird an Ohana gesendet…"
           }
         }
       }
@@ -16676,6 +16816,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Versucht es erneut"
+          }
+        }
+      }
+    },
+    "Try Anyway": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trotzdem versuchen"
           }
         }
       }
@@ -19696,16 +19846,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "„%@“ ist zu groß (max. %lld MB)."
-          }
-        }
-      }
-    },
-    "“%@” was removed again.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "„%@“ wurde wieder entfernt."
           }
         }
       }
