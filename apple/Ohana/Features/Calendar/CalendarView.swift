@@ -423,7 +423,9 @@ struct CalendarPlannerView: View {
                 .disabled(store.selection.isEmpty)
             Button("Paste", systemImage: "doc.on.clipboard") { store.paste(text: CalendarPasteboard.string) }
                 .disabled(store.selection.isEmpty)
-            Toggle("Skip weekends", isOn: $store.skipWeekends)
+            Toggle(isOn: $store.skipWeekends) {
+                Label("Skip weekends", systemImage: "calendar.day.timeline.leading")
+            }
         }
         if !monthList && mode == .year {
             Divider()
