@@ -1,6 +1,7 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ %@": {},
     "%@ (%@) becomes the booking, the others its parts": {
       "localizations": {
         "de": {
