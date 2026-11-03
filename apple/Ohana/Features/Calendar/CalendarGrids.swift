@@ -224,9 +224,9 @@ struct CalendarDayCell: View, Equatable {
         }
     }
 
-    /// The web's month view: the day number top left, the note's icon in the middle, the marks
-    /// in the corners. At accessibility sizes the icon goes under the number and the cake is
-    /// left out (the day's label still has it), so the number never gets clipped.
+    /// The web's month view: the day number top left, the note's icon at the trailing edge, the
+    /// marks in the corners. The icon stays clear of the number. At accessibility sizes the icon goes under the
+    /// number and the cake is left out (the day's label still has it), so the number never gets clipped.
     private func monthContent(note: CalendarNote?, events: [CalendarEvent], birthdays: [CalendarBirthday],
                               weekend: Bool, ink: Color, filled: Bool) -> some View {
         let large = typeSize.isAccessibilitySize
@@ -236,16 +236,11 @@ struct CalendarDayCell: View, Equatable {
             .lineLimit(1)
             .minimumScaleFactor(0.6)
         let icon = note.flatMap { CalendarSymbol.drawable($0.icon) }
-        // The theme color; on a type's color the cell's ink, which reads on it.
-        let iconStyle = filled ? ink : Color.accentColor
         return ZStack(alignment: .topLeading) {
             if large {
-                VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 2) {
                     number
-                    if let icon {
-                        Image(systemName: icon).font(.title3).foregroundStyle(iconStyle)
-                            .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-                    }
+                    if let icon { noteIcon(icon, ink: ink, filled: filled) }
                 }
                 .padding(.top, 4)
                 .padding(.horizontal, 6)
@@ -254,17 +249,26 @@ struct CalendarDayCell: View, Equatable {
                     .padding(.top, 5)
                     .padding(.leading, 7)
                 if let icon {
-                    Image(systemName: icon)
-                        .font(.title3)
-                        .foregroundStyle(iconStyle)
-                        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .offset(y: 4)
+                    noteIcon(icon, ink: ink, filled: filled)
+                        .padding(.trailing, 6)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                        .offset(y: 3)
                 }
             }
             marks(note: note, events: events, birthdays: large ? [] : birthdays, dot: 8, cake: .caption,
                   inset: 6, ink: ink, filled: filled)
         }
+    }
+
+    /// The month view's note icon: the theme color, on a type's color the cell's ink with a soft
+    /// shadow, so it stands out from the stripes.
+    private func noteIcon(_ icon: String, ink: Color, filled: Bool) -> some View {
+        Image(systemName: icon)
+            .font(.system(size: 17, weight: .semibold))
+            .foregroundStyle(filled ? ink : Color.accentColor)
+            .shadow(color: filled ? (ink == .white ? Color.black : Color.white).opacity(0.6) : .clear, radius: 1.5)
+            .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+            .accessibilityHidden(true)
     }
 
     /// The marks in the corners, where the web has them: a comment (a triangle top right), events

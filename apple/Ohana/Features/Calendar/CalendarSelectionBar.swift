@@ -179,15 +179,10 @@ struct CalendarSelectionBar: View {
                 Button {
                     actions.showDetails()
                 } label: {
-                    // The chevron at the trailing edge, however long the title is.
-                    HStack(spacing: 4) {
-                        selection(days)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        Image(systemName: "chevron.right")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.tertiary)
-                    }
-                    .contentShape(.rect)
+                    // The chevron right behind the date; the whole width stays the button.
+                    selection(days, chevron: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(.rect)
                 }
                 .buttonStyle(.plain)
                 .accessibilityHint(Text("Show the selected days’ details"))
@@ -205,11 +200,17 @@ struct CalendarSelectionBar: View {
     }
 
     /// The day (or first and last), and under it the count or, one day, what is on it.
-    private func selection(_ days: [Day]) -> some View {
+    private func selection(_ days: [Day], chevron: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 1) {
-            Text(CalendarText.selectionTitle(days))
-                .font(.subheadline.weight(.semibold))
-                .lineLimit(1)
+            HStack(spacing: 5) {
+                Text(CalendarText.selectionTitle(days))
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+                if chevron {
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.bold))
+                }
+            }
             if let line = days.count == 1 ? dayLine(days[0]) : Text(CalendarText.selectionCount(days)) {
                 line.font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }

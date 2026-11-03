@@ -80,13 +80,6 @@ struct CalendarNoteSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    CalendarSymbolGrid(symbols: CalendarSymbol.noteIcons,
-                                       selection: Binding(get: { icon }, set: { icon = $0; iconPicked = true }),
-                                       allowsNone: true, suggested: suggested)
-                } header: {
-                    Text("Icon")
-                }
                 Section("Comment") {
                     TextField("e.g. Christmas", text: $comment, axis: .vertical)
                         .lineLimit(3...6)
@@ -97,6 +90,13 @@ struct CalendarNoteSheet: View {
                             }
                         }
                         .focused($commentFocused)
+                }
+                Section {
+                    CalendarSymbolGrid(symbols: CalendarSymbol.noteIcons,
+                                       selection: Binding(get: { icon }, set: { icon = $0; iconPicked = true }),
+                                       allowsNone: true, suggested: suggested)
+                } header: {
+                    Text("Icon")
                 }
                 if !same {
                     Section {
