@@ -105,33 +105,43 @@ struct CalendarTypeBadge: View {
     let color: String
     let icon: String
     let member: CalendarMember?
+    /// Whether it gives its label as help (off where the view around it has a longer one).
+    var help = true
     @ScaledMetric private var size: CGFloat
     private let baseSize: CGFloat
 
-    init(name: String, color: String, icon: String, member: CalendarMember?, size: CGFloat = 18) {
+    init(name: String, color: String, icon: String, member: CalendarMember?, size: CGFloat = 18, help: Bool = true) {
         self.name = name
         self.color = color
         self.icon = icon
         self.member = member
+        self.help = help
         baseSize = size
         // As `FamilyAvatar`, so both circles match.
         _size = ScaledMetric(wrappedValue: size, relativeTo: .caption)
     }
 
-    init(type: CalendarEntryType, member: CalendarMember?, size: CGFloat = 18) {
-        self.init(name: type.name, color: type.color, icon: type.icon, member: member, size: size)
+    init(type: CalendarEntryType, member: CalendarMember?, size: CGFloat = 18, help: Bool = true) {
+        self.init(name: type.name, color: type.color, icon: type.icon, member: member, size: size, help: help)
     }
 
     var label: String { member.map { "\(name) (\($0.name))" } ?? name }
 
     var body: some View {
+        if help {
+            icons.help(label)
+        } else {
+            icons
+        }
+    }
+
+    private var icons: some View {
         HStack(spacing: max(2, size * 0.12)) {
             if let member {
                 FamilyAvatar(name: member.name, tint: MemberColor.color(member.color), size: baseSize)
             }
             CalendarTypeIcon(color: color, icon: icon, size: size)
         }
-        .help(label)
         .accessibilityElement()
         .accessibilityLabel(Text(label))
     }

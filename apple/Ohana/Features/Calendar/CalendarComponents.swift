@@ -170,7 +170,7 @@ struct CalendarStripes: View {
     }
 }
 
-/// The year's types as toggle chips with their workday counts, in one row that scrolls (in the
+/// The year's types as toggle chips (their badges), in one row that scrolls (in the
 /// selection bar), and the way to edit them; on the selection they add or remove the type. A
 /// year without types offers to copy them from another year.
 struct CalendarTypeChips: View {
@@ -210,27 +210,21 @@ struct CalendarTypeChips: View {
         }
     }
 
-    /// A chip like the web's: the type's color around it and tinted while every selected day has it.
+    /// A chip of the type's badge: the type's color around it and tinted while every selected day has it.
     private func chip(_ type: CalendarEntryType, index: Int, stats: CalendarTypeStats) -> some View {
         let active = store.selectionHas(type.id)
         let color = Color(calendarHex: type.color)
         return Button {
             store.toggleOnSelection(type.id)
         } label: {
-            HStack(spacing: 6) {
-                CalendarTypeBadge(type: type, member: store.member(of: type), size: 18)
-                Text(type.name).lineLimit(1)
-                Text("\(stats.workdays)d")
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
-            }
-            .font(.subheadline.weight(active ? .semibold : .regular))
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .frame(minHeight: 36)
-            .background(active ? color.opacity(0.28) : Color.primary.opacity(0.06), in: .capsule)
-            .overlay(Capsule().strokeBorder(active ? color : Color.primary.opacity(0.12), lineWidth: active ? 1.5 : 1))
-            .contentShape(.capsule)
+            // Icons only: the name and the counts are in the help and the accessibility label.
+            CalendarTypeBadge(type: type, member: store.member(of: type), size: 24, help: false)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 7)
+                .frame(minHeight: 36)
+                .background(active ? color.opacity(0.28) : Color.primary.opacity(0.06), in: .capsule)
+                .overlay(Capsule().strokeBorder(active ? color : Color.primary.opacity(0.12), lineWidth: active ? 1.5 : 1))
+                .contentShape(.capsule)
         }
         .buttonStyle(.plain)
         .disabled(store.readOnly)
