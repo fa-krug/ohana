@@ -64,6 +64,8 @@ final class CalendarStore {
     private(set) var notes: CalendarNotes = [:]
     private(set) var events: [Day: [CalendarEvent]] = [:]
     private(set) var birthdays: [Day: [CalendarBirthday]] = [:]
+    /// The family's members, whom the types belong to (the same in every year).
+    private(set) var members: [CalendarMember] = []
     /// Nothing can be changed: a viewer. On the copy on the device changes are queued like any
     /// other and sent once the server can be reached.
     private(set) var readOnly: Bool
@@ -194,6 +196,14 @@ final class CalendarStore {
 
     func type(_ id: String) -> CalendarEntryType? { types.first { $0.id == id } }
 
+    func member(_ id: String?) -> CalendarMember? {
+        guard let id else { return nil }
+        return members.first { $0.id == id }
+    }
+
+    /// Whom a type belongs to; nil: nobody (or a member who's gone).
+    func member(of type: CalendarEntryType) -> CalendarMember? { member(type.memberId) }
+
     /// A day's entry types, in the order of the types.
     func types(on day: Day) -> [CalendarEntryType] {
         let ids = entries[day] ?? []
@@ -274,6 +284,7 @@ final class CalendarStore {
         update(\.notes, notes)
         update(\.events, Self.byDay(state.events ?? [:]))
         update(\.birthdays, Self.byDay(state.birthdays ?? [:]))
+        if let members = state.members { update(\.members, members) }
         update(\.phase, .loaded)
     }
 
@@ -811,10 +822,8 @@ final class CalendarStore {
 
     @discardableResult
     func addType(name: String? = nil) async throws -> CalendarEntryType {
-        let patch = CalendarTypePatch(
-            name: name ?? String(localized: "New type \(types.count + 1)"),
-            color: CalendarMath.nextColor(types), role: CalendarRole.none
-        )
+        // No member: the server gives it to the caller.
+        let patch = CalendarTypePatch(name: name ?? String(localized: "New type \(types.count + 1)"), role: CalendarRole.none)
         let created: CalendarEntryType = try await api.send(.post, "/types", query: yearQuery, body: patch)
         types.append(created)
         addTypeYear(year)
@@ -826,14 +835,26 @@ final class CalendarStore {
     func updateType(_ id: String, _ patch: CalendarTypePatch) async throws {
         if let i = types.firstIndex(where: { $0.id == id }) {
             if let name = patch.name { types[i].name = name }
-            if let color = patch.color { types[i].color = color }
-            if let role = patch.role { types[i].role = role }
+            if let memberId = patch.memberId { types[i].memberId = memberId }
+            if let role = patch.role {
+                // A type showing its role's default takes the new role's (the server's answer says).
+                if patch.icon == nil && types[i].icon == types[i].role.defaultIcon { types[i].icon = role.defaultIcon }
+                types[i].role = role
+            }
+            if let icon = patch.icon { types[i].icon = icon ?? types[i].role.defaultIcon }
             if let away = patch.away { types[i].away = away }
             if let position = patch.position { types[i].position = position }
         }
         version += 1
         do {
-            let _: CalendarEntryType = try await api.send(.patch, "/types/\(id)", query: yearQuery, body: patch)
+            let updated: CalendarEntryType = try await api.send(.patch, "/types/\(id)", query: yearQuery, body: patch)
+            if patch.memberId != nil || patch.position != nil {
+                // The other types' shades may have changed with it.
+                await load(quiet: true)
+            } else if let i = types.firstIndex(where: { $0.id == id }) {
+                types[i].color = updated.color
+                types[i].icon = updated.icon
+            }
             notify?(.calendar)
         } catch {
             await load(quiet: true)
@@ -857,6 +878,8 @@ final class CalendarStore {
                 let _: CalendarEntryType = try await api.send(.patch, "/types/\(id)", query: yearQuery,
                                                                 body: CalendarTypePatch(position: position))
             }
+            // The order decides the shades of a member's types.
+            await load(quiet: true)
             notify?(.calendar)
         } catch {
             await load(quiet: true)
@@ -874,6 +897,8 @@ final class CalendarStore {
         if types.isEmpty { typeYears = typeYears?.filter { $0 != year } }
         clearUndo()
         version += 1
+        // The member's other types may move up a shade.
+        await load(quiet: true)
         notify?(.calendar)
     }
 

@@ -5,15 +5,18 @@ import type { Ctx } from "@/lib/api/family-api";
 import { cleanName, cleanYear, currentYear, HttpError, json, objectOf, readBody, slug } from "@/lib/api/http";
 import { dateRange, isValidDate, isWeekend } from "./dates";
 import type { Lang } from "@/lib/i18n/config";
-import { type CalendarStore as Store, type EntryRow, type NoteRow, type Role, ROLES, type TypeRow } from "./store";
+import { familyNames } from "@/lib/families/people";
+import type { Db } from "@/lib/db";
+import { cleanSymbol, cleanTypeIcon, isSymbolName, typeIcon } from "./icons";
+import { type CalendarStore as Store, type EntryRow, type NoteRow, type Role, ROLES, type TypeInput, type TypeRow } from "./store";
 
-export const PRESET_TYPES: { id: string; name: string; color: string; role: Role }[] = [
-  { id: "holiday", name: "Holiday", color: "#f59e0b", role: "day_off" },
-  { id: "vacation", name: "Vacation", color: "#22c55e", role: "covers" },
-  { id: "sick", name: "Sick", color: "#ef4444", role: "none" },
+export const PRESET_TYPES: { id: string; name: string; role: Role; icon: string | null }[] = [
+  { id: "holiday", name: "Holiday", role: "day_off", icon: null },
+  { id: "vacation", name: "Vacation", role: "covers", icon: "beach.umbrella" },
+  { id: "sick", name: "Sick", role: "none", icon: "cross.case" },
 ];
 
-/** Localized preset names by type id; ids, colors and roles stay the same. */
+/** Localized preset names by type id; ids, roles and icons stay the same. */
 const PRESET_NAMES: Record<Lang, Record<string, string>> = {
   en: Object.fromEntries(PRESET_TYPES.map((t) => [t.id, t.name])),
   de: { holiday: "Feiertag", vacation: "Urlaub", sick: "Krank" },
@@ -22,19 +25,24 @@ const PRESET_NAMES: Record<Lang, Record<string, string>> = {
 export const MAX_TYPES = 50; // per year
 const MAX_DAYS_PER_REQUEST = 4000;
 const MAX_RANGE_DAYS = 3 * 366;
-const MAX_ICON = 16; // UTF-16 code units: enough for flags and ZWJ emoji
 const MAX_COMMENT = 500;
 const MAX_IMPORT_YEARS = 50;
 const MAX_IMPORT_DAYS = 20000; // days with entries, and days with notes
-const COLOR_RE = /^#[0-9a-fA-F]{6}$/;
 // Type ids come from slug() and uniqueId(); imports must look the same.
 const TYPE_ID_RE = /^[a-z0-9][a-z0-9-]{0,47}$/;
 
-export function cleanColor(v: unknown): string {
-  if (typeof v !== "string" || !COLOR_RE.test(v)) {
-    throw new HttpError(400, "color must look like #22c55e");
+/** The ids of the family's accounts and people: who a type can belong to. */
+export function memberIdsOf(db: Db, familyId: string): Set<string> {
+  return new Set(familyNames(db, familyId).map((m) => m.id));
+}
+
+/** A type's `memberId`: an account's or a person's id of the family, or null (nobody). */
+export function cleanMemberId(v: unknown, memberIds: Set<string>): string | null {
+  if (v === null) return null;
+  if (typeof v !== "string" || !memberIds.has(v)) {
+    throw new HttpError(400, "memberId must be a member of the family");
   }
-  return v.toLowerCase();
+  return v;
 }
 
 export function cleanRole(v: unknown): Role {
@@ -66,7 +74,7 @@ export function newFamilyTypes(raw: unknown, lang: Lang) {
     const name = cleanName(t?.name);
     const id = uniqueId(slug(name), taken);
     taken.add(id);
-    return { id, name, color: cleanColor(t.color), role: cleanRole(t.role), away: cleanAway(t.away) };
+    return { id, name, role: cleanRole(t.role), icon: cleanTypeIcon(t.icon), away: cleanAway(t.away) };
   });
 }
 
@@ -104,8 +112,25 @@ export function publicType(t: TypeRow) {
     id: t.id,
     year: t.year,
     name: t.name,
+    memberId: t.member_id,
     color: t.color,
     role: t.role,
+    /** The icon to draw: the type's own, else its role's. */
+    icon: typeIcon(t),
+    position: t.position,
+    away: t.away ?? false,
+  };
+}
+
+/** A type in the export file: whose it is by name (the file never holds ids), no color. */
+export function exportType(t: TypeRow, names: Map<string, string>) {
+  return {
+    id: t.id,
+    year: t.year,
+    name: t.name,
+    member: (t.member_id && names.get(t.member_id)) ?? null,
+    role: t.role,
+    icon: t.icon,
     position: t.position,
     away: t.away ?? false,
   };
@@ -164,10 +189,14 @@ function dayMap(v: unknown, field: string): [string, unknown][] {
   return list;
 }
 
-/** Validates the calendar part of an export file (types, entries, notes) for importing. */
+/** A type of an import file: `member` is the name of whose it is (resolved by the caller). */
+export type ImportType = Omit<TypeInput, "family_id" | "member_id"> & { member: string | null };
+
+/** Validates the calendar part of an export file (types, entries, notes) for importing. A
+ *  type's `color` (older files) is ignored. */
 export function parseVacationImport(body: Record<string, unknown>) {
   if (!Array.isArray(body.types)) throw new HttpError(400, "types must be an array");
-  const types: Omit<TypeRow, "family_id">[] = [];
+  const types: ImportType[] = [];
   const keys = new Set<string>();
   const perYear = new Map<number, number>();
   for (const [i, raw] of body.types.entries()) {
@@ -186,8 +215,9 @@ export function parseVacationImport(body: Record<string, unknown>) {
       year,
       id: t.id,
       name: cleanName(t.name),
-      color: cleanColor(t.color),
+      member: typeof t.member === "string" && t.member.trim() ? t.member.trim() : null,
       role: cleanRole(t.role),
+      icon: cleanTypeIcon(t.icon),
       position: Number.isInteger(t.position) ? (t.position as number) : i,
       away: cleanAway(t.away),
     });
@@ -208,8 +238,13 @@ export function parseVacationImport(body: Record<string, unknown>) {
   const notes: NoteRow[] = [];
   for (const [day, raw] of dayMap(body.notes, "notes")) {
     const n = objectOf(raw, `The note of ${day}`);
-    const icon = cleanNoteText(n.icon, "icon", MAX_ICON);
-    const comment = cleanNoteText(n.comment, "comment", MAX_COMMENT);
+    // An older file's icon that isn't an SF Symbol name (an emoji) goes to the comment's front.
+    let icon = cleanNoteText(n.icon, "icon", Infinity);
+    let comment = cleanNoteText(n.comment, "comment", MAX_COMMENT);
+    if (icon && !isSymbolName(icon)) {
+      comment = clip(`${icon} ${comment}`.trim(), MAX_COMMENT);
+      icon = "";
+    }
     if (icon || comment) notes.push({ day, icon, comment });
   }
   return { types, entries, notes };
@@ -284,6 +319,19 @@ function parseOp(raw: unknown, types: TypeRow[]): Op {
 
 type NoteOp = { icon: string; comment: string; days: string[] };
 
+/** At most `max` UTF-16 code units of `s`, never half a surrogate pair. */
+function clip(s: string, max: number): string {
+  if (s.length <= max) return s;
+  const cut = s.slice(0, max);
+  return /[\uD800-\uDBFF]$/.test(cut) ? cut.slice(0, -1) : cut;
+}
+
+/** A note's icon: "" (none) or an SF Symbol name. */
+function cleanNoteIcon(v: unknown): string {
+  const s = typeof v === "string" ? v.trim() : v;
+  return s === undefined || s === "" ? "" : cleanSymbol(s);
+}
+
 function cleanNoteText(v: unknown, field: string, max: number): string {
   if (v === undefined) return "";
   if (typeof v !== "string") throw new HttpError(400, `${field} must be a string`);
@@ -304,7 +352,7 @@ function parseNoteOp(raw: unknown): NoteOp {
     throw new HttpError(400, '"set" needs "icon" or "comment"');
   }
   return {
-    icon: cleanNoteText(o.icon, "icon", MAX_ICON),
+    icon: cleanNoteIcon(o.icon),
     comment: cleanNoteText(o.comment, "comment", MAX_COMMENT),
     days: parseDays(o),
   };
@@ -335,10 +383,13 @@ export function handleCalendar(ctx: Ctx): Promise<Response> | null {
   return null;
 }
 
-async function types({ store, req, url, method, rest, loadWith, now }: Ctx): Promise<Response> {
+async function types({ db, store, req, url, method, rest, loadWith, now, requireUser }: Ctx): Promise<Response> {
   const write = !(rest.length === 1 && method === "GET");
   const [{ family }, all] = await loadWith(write ? "edit" : "view", (id) => store.listTypes(id));
   const body = write ? await readBody(req) : {};
+  // After a write: the types as listed again (their colors follow positions and members).
+  const relisted = async (year: number) => (await store.listTypes(family.id)).filter((t) => t.year === year);
+  const typeIn = async (year: number, id: string) => (await relisted(year)).find((t) => t.id === id)!;
 
   if (rest.length === 2 && rest[1] === "copy" && method === "POST") {
     // Copies a year's types into another year; types the target already has are kept.
@@ -354,7 +405,7 @@ async function types({ store, req, url, method, rest, loadWith, now }: Ctx): Pro
       .slice(0, Math.max(0, MAX_TYPES - target.length))
       .map((t) => ({ ...t, year: to, position: position++ }));
     await store.upsertTypes(copies);
-    return json([...target, ...copies].map(publicType));
+    return json((await relisted(to)).map(publicType));
   }
 
   const year = typesYear(url, body, now);
@@ -364,18 +415,23 @@ async function types({ store, req, url, method, rest, loadWith, now }: Ctx): Pro
   if (rest.length === 1 && method === "POST") {
     if (types.length >= MAX_TYPES) throw new HttpError(400, "Too many entry types");
     const name = cleanName(body.name);
-    const type: TypeRow = {
+    const memberIds = memberIdsOf(db, family.id);
+    // No memberId: the caller's own type; null: nobody's. A color is the member's, not given.
+    const self = requireUser().id;
+    const type: TypeInput = {
       family_id: family.id,
       year,
       id: uniqueId(slug(name), new Set(types.map((t) => t.id))),
       name,
-      color: cleanColor(body.color),
+      member_id: body.memberId === undefined ? (memberIds.has(self) ? self : null) : cleanMemberId(body.memberId, memberIds),
       role: cleanRole(body.role),
+      // None (or null): the role's icon, which follows the role when it changes.
+      icon: cleanTypeIcon(body.icon),
       position: types.reduce((m, t) => Math.max(m, t.position + 1), 0),
       away: cleanAway(body.away),
     };
     await store.upsertTypes([type]);
-    return json(publicType(type), 201);
+    return json(publicType(await typeIn(year, type.id)), 201);
   }
 
   if (rest.length === 2) {
@@ -383,8 +439,9 @@ async function types({ store, req, url, method, rest, loadWith, now }: Ctx): Pro
     if (method === "PATCH") {
       const next = { ...type };
       if (body.name !== undefined) next.name = cleanName(body.name);
-      if (body.color !== undefined) next.color = cleanColor(body.color);
+      if (body.memberId !== undefined) next.member_id = cleanMemberId(body.memberId, memberIdsOf(db, family.id));
       if (body.role !== undefined) next.role = cleanRole(body.role);
+      if (body.icon !== undefined) next.icon = cleanTypeIcon(body.icon);
       if (body.away !== undefined) next.away = cleanAway(body.away);
       if (body.position !== undefined) {
         if (!Number.isInteger(body.position)) {
@@ -393,7 +450,7 @@ async function types({ store, req, url, method, rest, loadWith, now }: Ctx): Pro
         next.position = body.position as number;
       }
       await store.upsertTypes([next]);
-      return json(publicType(next));
+      return json(publicType(await typeIn(year, next.id)));
     }
     if (method === "DELETE") {
       await store.deleteType(family.id, year, type.id);

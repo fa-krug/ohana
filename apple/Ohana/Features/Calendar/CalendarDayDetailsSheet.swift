@@ -85,7 +85,7 @@ struct CalendarDetailsSheet: View {
                         .foregroundStyle(.red)
                 }
                 if !types.isEmpty {
-                    CalendarDayTypes(types: types)
+                    CalendarDayTypes(types: types, store: store)
                 }
             }
         }
@@ -94,13 +94,14 @@ struct CalendarDetailsSheet: View {
                 if !store.readOnly { editing = .note(day) }
             } label: {
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
-                    Text(note.icon.isEmpty ? "📝" : note.icon)
-                    Text(note.comment.isEmpty ? String(localized: "Icon") : note.comment)
+                    CalendarNoteSymbol(icon: note.icon.isEmpty ? "note.text" : note.icon)
+                    Text(note.comment.isEmpty ? CalendarSymbol.title(note.icon) : note.comment)
                         .foregroundStyle(.primary)
                         .multilineTextAlignment(.leading)
                 }
             }
             .disabled(store.readOnly)
+            .accessibilityLabel(Text(note.text))
             .swipeActions(edge: .trailing) {
                 if !store.readOnly {
                     Button("Delete", systemImage: "trash", role: .destructive) { store.setNote(nil, on: [day]) }
@@ -156,18 +157,21 @@ struct CalendarEventRef: Hashable {
     var day: Day
 }
 
-/// A day's entry types as tinted capsules.
+/// A day's entry types as tinted capsules, each with its double icon (`CalendarTypeBadge`).
 struct CalendarDayTypes: View {
     let types: [CalendarEntryType]
+    let store: CalendarStore
 
     var body: some View {
         HStack(spacing: 6) {
             ForEach(types) { type in
                 HStack(spacing: 4) {
-                    CalendarSwatch(type: type, size: 10)
-                    Text(type.name).font(.subheadline).lineLimit(1)
+                    CalendarTypeBadge(type: type, member: store.member(of: type), size: 16)
+                    // The badge reads the name (with the member's).
+                    Text(type.name).font(.subheadline).lineLimit(1).accessibilityHidden(true)
                 }
-                .padding(.horizontal, 8)
+                .padding(.leading, 3)
+                .padding(.trailing, 8)
                 .padding(.vertical, 3)
                 .background(Color(calendarHex: type.color).opacity(0.18), in: .capsule)
             }

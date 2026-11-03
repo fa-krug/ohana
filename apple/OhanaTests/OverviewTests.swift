@@ -13,7 +13,7 @@ struct OverviewTests {
     static let fullSample = """
     {"today":"2026-11-02","calendar":{"nextGap":"2026-11-04","upcoming":[{"name":"Vacation","color":"#22c55e","from":"2026-10-30","to":"2026-11-03"}]},
      "awayToday":["Vacation"],"todayEvents":[],
-     "upcoming":[{"kind":"entry","date":"2026-10-30","to":"2026-11-03","name":"Vacation","color":"#22c55e"},
+     "upcoming":[{"kind":"entry","date":"2026-10-30","to":"2026-11-03","name":"Vacation","color":"#22c55e","icon":"airplane","member":{"id":"p1","name":"Mia","color":"green"}},
                  {"kind":"event","date":"2026-11-03","event":{"id":"e1","date":"2026-11-03","start":"08:15","end":"09:00","title":"Pediatrician","location":"Praxis","person":"Mia","note":"","url":"https://x.example","source":"appointment","searchId":"s1"}}],
      "meals":{"today":{"recipeId":"r1","recipeTitle":"Lasagne","isLeftover":true}},
      "finance":{"currency":"EUR","month":"2026-11","incomeCents":250000,"expenseCents":12345,"count":7,"topExpense":{"categoryId":"c1","name":"Groceries","icon":"🛒","color":"#f97316","expenseCents":9000},"balanceCents":-500},
@@ -46,13 +46,15 @@ struct OverviewTests {
         #expect(d.calendar.nextGap == Day("2026-11-04"))
         #expect(d.calendar.upcoming.first?.from == Day("2026-10-30"))
         #expect(d.awayToday == ["Vacation"])
-        guard case let .entry(_, to, name, color) = d.upcoming.first else {
+        guard case let .entry(_, to, name, color, icon, member) = d.upcoming.first else {
             Issue.record("expected an entry")
             return
         }
         #expect(to == Day("2026-11-03"))
         #expect(name == "Vacation")
         #expect(color == "#22c55e")
+        #expect(icon == "airplane")
+        #expect(member == CalendarMember(id: "p1", name: "Mia", color: "green"))
         #expect(d.upcoming[1].id == "event|e1")
         #expect(d.meals.today?.isLeftover == true)
         #expect(d.finance.netCents == 250000 - 12345)

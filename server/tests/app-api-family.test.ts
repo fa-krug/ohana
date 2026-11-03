@@ -107,6 +107,52 @@ describe("GET /household", () => {
 });
 
 describe("members", () => {
+  it("get distinct colors and change them: their own, editors anyone's", async () => {
+    const s = setup();
+    const members = (await s.asViewer("GET", `${s.f}/household`)).data.members;
+    expect(members.map((m: any) => [m.email, m.color])).toEqual([
+      ["anna@test", "blue"],
+      ["ben@test", "orange"],
+    ]);
+    const carl = makeUser(s.db, { email: "carl@test" });
+    expect((await s.asEditor("POST", `${s.f}/household/members`, { email: "carl@test", role: "viewer" })).data.color).toBe("green");
+
+    const own = await s.asViewer("PATCH", `${s.f}/household/members/${s.viewer.id}`, { color: "purple" });
+    expect(own.status).toBe(200);
+    expect(own.data.color).toBe("purple");
+    expect((await s.asViewer("PATCH", `${s.f}/household/members/${s.editor.id}`, { color: "red" })).status).toBe(403);
+    // Two members may share a color.
+    const other = await s.asEditor("PATCH", `${s.f}/household/members/${carl.id}`, { color: "blue" });
+    expect(other.data.color).toBe("blue");
+    expect((await s.asEditor("PATCH", `${s.f}/household/members/${carl.id}`, { color: "magenta" })).status).toBe(400);
+    expect((await s.asEditor("PATCH", `${s.f}/household/members/${carl.id}`, { color: "#0090ff" })).status).toBe(400);
+  });
+
+  it("are in GET /families/{id} with their colors, and their types' colors follow theirs", async () => {
+    const s = setup();
+    await s.asEditor("POST", `${s.f}/household/people`, { name: "Mia" });
+    const state = (await s.asViewer("GET", s.f)).data;
+    expect(state.members.map((m: any) => [m.name, m.account, m.color])).toEqual([
+      ["Anna", true, "blue"],
+      ["Ben", true, "orange"],
+      ["Mia", false, "green"],
+    ]);
+    const vacation = () => state.types.find((t: any) => t.id === "vacation");
+    expect(vacation()).toMatchObject({ memberId: s.editor.id, color: "#4db1ff" }); // blue's 2nd shade
+    await s.asEditor("PATCH", `${s.f}/household/members/${s.editor.id}`, { color: "red" });
+    const after = (await s.asViewer("GET", s.f)).data;
+    expect(after.types.map((t: any) => t.color)).toEqual(["#e5484d", "#ef8b8e", "#ce1d23"]);
+  });
+
+  it("leave their types to nobody when removed", async () => {
+    const s = setup();
+    await s.asEditor("PATCH", `${s.f}/types/sick?year=2026`, { memberId: s.viewer.id });
+    expect((await s.asEditor("DELETE", `${s.f}/household/members/${s.viewer.id}`)).status).toBe(200);
+    const sick = (await s.asEditor("GET", s.f)).data.types.find((t: any) => t.id === "sick");
+    expect(sick).toMatchObject({ memberId: null, color: "#8e8e93" });
+    expect(s.db.select().from(calEntryTypes).where(eq(calEntryTypes.id, "sick")).get()!.memberUserId).toBeNull();
+  });
+
   it("adds an account by email and changes roles, keeping an editor", async () => {
     const s = setup();
     const carl = makeUser(s.db, { email: "carl@test" });
@@ -157,9 +203,17 @@ describe("people and invites", () => {
     expect((await s.asEditor("POST", `${s.f}/household/people`, { name: "mia" })).status).toBe(409);
 
     const edited = await s.asEditor("PATCH", `${s.f}/household/people/${id}`, { name: "Mia K.", birthday: "" });
-    expect(edited.data).toEqual({ id, name: "Mia K.", birthday: null });
+    // Anna has blue, Ben orange: Mia gets green, and keeps it while no color is sent.
+    expect(edited.data).toEqual({ id, name: "Mia K.", birthday: null, color: "green" });
     const household = (await s.asEditor("GET", `${s.f}/household`)).data;
-    expect(household.people).toEqual([{ id, name: "Mia K.", birthday: null }]);
+    expect(household.people).toEqual([{ id, name: "Mia K.", birthday: null, color: "green" }]);
+    const recolored = await s.asEditor("PATCH", `${s.f}/household/people/${id}`, { name: "Mia K.", birthday: null, color: "pink" });
+    expect(recolored.data.color).toBe("pink");
+    expect((await s.asEditor("PATCH", `${s.f}/household/people/${id}`, { name: "Mia K.", color: "mauve" })).status).toBe(400);
+    const chosen = await s.asEditor("POST", `${s.f}/household/people`, { name: "Leo", color: "blue" });
+    expect(chosen.data.person.color).toBe("blue");
+    expect((await s.asEditor("POST", `${s.f}/household/people`, { name: "Max", color: "#ff0000" })).status).toBe(400);
+    expect((await s.asEditor("DELETE", `${s.f}/household/people/${chosen.data.person.id}`)).status).toBe(200);
     expect(household.invites[0].personId).toBe(id);
 
     expect((await s.asEditor("DELETE", `${s.f}/household/people/${id}`)).status).toBe(200);

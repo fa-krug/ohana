@@ -39,6 +39,12 @@ struct DemoOverviewTests {
         #expect(events[2].end == nil)
         #expect(d.upcoming.map(\.date) == d.upcoming.map(\.date).sorted())
         #expect(d.calendar.upcoming.first?.name == "Vacation")
+        if case let .entry(_, _, _, _, icon, member)? = d.upcoming.first(where: { if case .entry = $0 { true } else { false } }) {
+            #expect(member?.name == "Ben Parker")
+            #expect(icon == "beach.umbrella")
+        } else {
+            Issue.record("expected an entry")
+        }
         #expect(d.calendar.upcoming.first?.from == Self.today.adding(days: 12))
         #expect(d.awayToday.isEmpty)
 
@@ -104,6 +110,7 @@ struct DemoOverviewTests {
         #expect(h.people.map(\.name) == ["Grandma Rose", "Leo", "Mia"])
         #expect(h.people[0].birthday == Day(year: 1952, month: 11, day: 9))
         #expect(h.people[2].birthday == Day("2018-03-14"))
+        #expect(h.members.map(\.color) == ["blue", "orange"] && h.people.allSatisfy { MemberColor(key: $0.color) != nil })
         #expect(h.invites.isEmpty)
         #expect(h.home.address == "Lindenstraße 12, 10115 Berlin")
         #expect(h.home.hasLocation)

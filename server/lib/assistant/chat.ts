@@ -186,7 +186,7 @@ export function systemPrompt(input: {
   /** The family's home address, if set (appointment searches look around it). */
   home?: string | null;
   /** The family's members by name; `account: false` for those who don't sign in (children …). */
-  people?: { name: string; account: boolean; birthday: string | null }[];
+  people?: { id?: string; name: string; account: boolean; birthday: string | null }[];
   /** Why the assistant can only read: the settings, or the user is a viewer of the family. */
   readOnly?: "settings" | "viewer";
   search: boolean;
@@ -202,7 +202,10 @@ export function systemPrompt(input: {
   });
   const types = input.types.filter((t) => t.year === year);
   const typeList = types.length
-    ? types.map((t) => `- ${t.id}: “${t.name}” (${ROLE_TEXT[t.role]})`).join("\n")
+    ? types.map((t) => {
+      const member = input.people?.find((p) => p.id && p.id === t.member_id)?.name;
+      return `- ${t.id}: “${t.name}” (${ROLE_TEXT[t.role]}${member ? `, ${member}'s` : ""})`;
+    }).join("\n")
     : "- (none yet)";
   const tree = categoryTree(input.categories);
   const cats = input.categories.length
@@ -231,9 +234,10 @@ message for this page unless it clearly continues the earlier topic.
 
 ## Vacation calendar
 A year calendar where each day can hold several entries of entry types; every year has its own
-types. Roles drive the coverage check: a weekday with a "needs cover" entry (e.g. day care
+types, each belonging to a family member (whose color it takes) or nobody. Roles drive the coverage check: a weekday with a "needs cover" entry (e.g. day care
 closed) is a gap unless it also has a "covers" (e.g. a parent's vacation) or "day off" entry
-(e.g. a public holiday). Days can also have one note (emoji icon and/or comment).
+(e.g. a public holiday). Days can also have one note (an SF Symbol icon
+such as "gift" and/or a comment).
 Entry types in ${year}:
 ${typeList}
 

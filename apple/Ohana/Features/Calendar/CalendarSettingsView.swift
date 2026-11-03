@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Settings → Calendar (the web's calendar tab): the entry types of a year (name, color, role,
+/// Settings → Calendar (the web's calendar tab): the entry types of a year (name, member, role,
 /// away, order; add, delete, copy from another year), the view settings of this device and this
 /// device's sync with Apple Calendar.
 struct CalendarSettingsView: View {
@@ -198,9 +198,10 @@ private struct CalendarSettingsContent: View {
 
     private func typeLabel(_ type: CalendarEntryType, stats: CalendarTypeStats) -> some View {
         HStack(spacing: 12) {
-            CalendarSwatch(type: type, size: 22)
+            CalendarTypeBadge(type: type, member: store.member(of: type), size: 22)
             VStack(alignment: .leading, spacing: 2) {
-                Text(type.name).foregroundStyle(.primary)
+                // The badge reads the name (with the member's).
+                Text(type.name).foregroundStyle(.primary).accessibilityHidden(true)
                 Text(type.isAway ? "\(type.role.title) · \(String(localized: "Away"))" : type.role.title)
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -257,18 +258,21 @@ private struct CalendarSettingsContent: View {
 
 }
 
-/// Edits one type: name, color, role, away; deletes it. A page pushed from the list of types,
-/// with Cancel and Done instead of the back button.
+/// Edits one type: name, member (whose color it takes), role, icon, away; deletes it. A page pushed
+/// from the list of types, with Cancel and Done instead of the back button.
 struct CalendarTypeEditor: View {
     let store: CalendarStore
     let type: CalendarEntryType
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
-    @State private var color = ""
+    @State private var memberId: String?
     @State private var role = CalendarRole.none
+    /// The icon picked on this page; until one is, the type keeps its own (or its role's default,
+    /// following the role chosen here).
+    @State private var pickedIcon: String?
     @State private var away = false
     @State private var confirmDelete = false
-    /// The fields hold the type's values (only once: the color picker's sheet would reset them).
+    /// The fields hold the type's values (only once: coming back to the page would reset them).
     @State private var loaded = false
 
     var body: some View {
@@ -283,33 +287,18 @@ struct CalendarTypeEditor: View {
                 }
             }
             Section {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) {
-                    ForEach(CalendarMath.palette, id: \.self) { hex in
-                        Button {
-                            color = hex
-                        } label: {
-                            Circle()
-                                .fill(Color(calendarHex: hex))
-                                .frame(width: 32, height: 32)
-                                .overlay {
-                                    if color.lowercased() == hex {
-                                        Image(systemName: "checkmark").font(.caption.bold()).foregroundStyle(.white)
-                                    }
-                                }
-                                .frame(maxWidth: .infinity, minHeight: 44)
-                                .contentShape(.rect)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(hex)
-                    }
+                memberRow(nil)
+                ForEach(store.members) { memberRow($0) }
+                LabeledContent("Color") {
+                    RoundedRectangle(cornerRadius: 5)
+                        .fill(previewColor)
+                        .frame(width: 22, height: 22)
+                        .accessibilityHidden(true)
                 }
-                .padding(.vertical, 4)
-                ColorPicker("Other color", selection: Binding(
-                    get: { Color(calendarHex: color) },
-                    set: { color = $0.calendarHex() }
-                ), supportsOpacity: false)
             } header: {
-                Text("Color")
+                Text("Member")
+            } footer: {
+                Text("The type takes the member’s color: their first type of the year has it, further ones a shade of it.")
             }
             Section {
                 Picker("Role", selection: $role) {
@@ -318,6 +307,15 @@ struct CalendarTypeEditor: View {
                 Toggle("Away", isOn: $away)
             } footer: {
                 Text(role.help + "\n" + String(localized: "Away: the whole family is away from home on these days, the meal plan plans no meals for them."))
+            }
+            Section {
+                LabeledContent("Preview") {
+                    CalendarTypeBadge(name: name, color: previewHex, icon: icon, member: store.member(memberId), size: 28)
+                }
+                CalendarSymbolGrid(symbols: CalendarSymbol.typeIcons,
+                                   selection: Binding(get: { icon }, set: { pickedIcon = $0 }))
+            } header: {
+                Text("Icon")
             }
             Section {
                 Button("Delete type", role: .destructive) { confirmDelete = true }
@@ -355,26 +353,72 @@ struct CalendarTypeEditor: View {
             guard !loaded else { return }
             loaded = true
             name = type.name
-            color = type.color
+            memberId = type.memberId
             role = type.role
             away = type.isAway
         }
     }
 
+    /// A member to pick (nil: nobody), with a check on the chosen one.
+    private func memberRow(_ member: CalendarMember?) -> some View {
+        Button {
+            memberId = member?.id
+        } label: {
+            HStack(spacing: 12) {
+                if let member {
+                    FamilyAvatar(name: member.name, tint: MemberColor.color(member.color), size: 28)
+                    Text(member.name).foregroundStyle(.primary)
+                } else {
+                    Image(systemName: "person.slash")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 28, height: 28)
+                        .background(Color.gray.opacity(0.18), in: .circle)
+                    Text("Nobody").foregroundStyle(.primary)
+                }
+                Spacer(minLength: 8)
+                if memberId == member?.id {
+                    Image(systemName: "checkmark").fontWeight(.semibold).foregroundStyle(Color.accentColor)
+                }
+            }
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(memberId == member?.id ? .isSelected : [])
+    }
+
+    /// The type's color as it stands; for another member theirs, until the server works out the
+    /// shade.
+    private var previewColor: Color { Color(calendarHex: previewHex) }
+
+    private var previewHex: String {
+        if memberId == type.memberId { return type.color }
+        return MemberColor(key: store.member(memberId)?.color)?.hex ?? "#8b8d98"
+    }
+
+    /// The icon the type would have without one picked here: its own, or the chosen role's
+    /// default while it shows its role's.
+    private var keptIcon: String {
+        type.icon == type.role.defaultIcon ? role.defaultIcon : type.icon
+    }
+
+    private var icon: String { pickedIcon ?? keptIcon }
+
     private var hasChanges: Bool {
-        loaded && (name.trimmingCharacters(in: .whitespaces) != type.name || color.lowercased() != type.color.lowercased()
-            || role != type.role || away != type.isAway)
+        loaded && (name.trimmingCharacters(in: .whitespaces) != type.name || memberId != type.memberId
+            || role != type.role || icon != keptIcon || away != type.isAway)
     }
 
     private func save() {
         var patch = CalendarTypePatch()
         let trimmed = name.trimmingCharacters(in: .whitespaces)
         if trimmed != type.name { patch.name = trimmed }
-        if color.lowercased() != type.color.lowercased() { patch.color = color.lowercased() }
+        if memberId != type.memberId { patch.memberId = .some(memberId) }
         if role != type.role { patch.role = role }
+        if let pickedIcon, pickedIcon != keptIcon { patch.icon = .some(pickedIcon) }
         if away != type.isAway { patch.away = away }
         dismiss()
-        guard patch.name != nil || patch.color != nil || patch.role != nil || patch.away != nil else { return }
+        guard !patch.isEmpty else { return }
         perform { try await store.updateType(type.id, patch) }
     }
 }

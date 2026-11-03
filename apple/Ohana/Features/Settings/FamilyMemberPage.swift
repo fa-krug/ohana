@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// One member's page, opened from their row in Settings → Members: an account's birthday and
-/// role, or a member without an account's name, birthday and invite link; editors remove them
-/// here. It shows what `model` holds, so it follows the reloads, and closes once they're gone.
+/// One member's page, opened from their row in Settings → Members: an account's color, birthday
+/// and role, or a member without an account's name, color, birthday and invite link; editors
+/// remove them here. It shows what `model` holds, so it follows the reloads, and closes once they're gone.
 struct FamilyMemberPage: View {
     enum Subject: Hashable {
         case member(String)
@@ -84,6 +84,12 @@ struct FamilyMemberPage: View {
             LabeledContent("Email", value: member.email)
         }
 
+        // Everyone their own, editors anyone's.
+        colorSection(member.color, id: member.userId, household: household,
+                     canChange: !model.state.isSaved && (household.canEdit || member.userId == household.selfId)) { color in
+            FamilyColorChange(path: "/household/members/\(member.userId)", body: FamilyColorInput(color: color))
+        }
+
         Section {
             Button {
                 sheet = .birthday(member)
@@ -127,6 +133,11 @@ struct FamilyMemberPage: View {
                 birthdayRow(person.birthday)
             }
             .tint(.primary)
+        }
+
+        colorSection(person.color, id: person.id, household: household, canChange: model.canEdit) { color in
+            FamilyColorChange(path: "/household/people/\(person.id)",
+                              body: FamilyPersonInput(name: person.name, birthday: person.birthday, color: color))
         }
 
         Section {
@@ -187,6 +198,26 @@ struct FamilyMemberPage: View {
         }
     }
 
+    /// The member's color: their calendar types' colors come from it, so the calendar reloads.
+    private func colorSection(_ color: String?, id: String, household: FamilyHousehold, canChange: Bool,
+                              change: @escaping (String) -> FamilyColorChange) -> some View {
+        Section {
+            FamilyColorChoice(selection: color, used: household.colorsUsed(besides: id)) { picked in
+                guard picked.rawValue != color else { return }
+                let family = family, request = change(picked.rawValue)
+                model.change(family) {
+                    try await family.api.perform(.patch, request.path, body: request.body)
+                    family.didChange(.calendar)
+                }
+            }
+            .disabled(!canChange)
+        } header: {
+            Text("Color")
+        } footer: {
+            Text("The member’s calendar entry types take this color. A dot marks colors others have already.")
+        }
+    }
+
     private func birthdayRow(_ birthday: Day?) -> some View {
         LabeledContent("Birthday") {
             if let birthday {
@@ -221,6 +252,60 @@ struct FamilyMemberPage: View {
                 sharedLink = FamilySharedLink(url: url, name: person.name)
             }
         }
+    }
+}
+
+/// A color change's request: an account's or a person's PATCH.
+struct FamilyColorChange {
+    let path: String
+    let body: any Encodable
+}
+
+/// The palette as swatches: a check on the current color, a dot under the ones other members have
+/// already (they can still be picked).
+struct FamilyColorChoice: View {
+    let selection: String?
+    /// Whose colors they are, by key.
+    let used: [String: [String]]
+    let choose: (MemberColor) -> Void
+
+    var body: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) {
+            ForEach(MemberColor.allCases) { color in
+                swatch(color)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func swatch(_ color: MemberColor) -> some View {
+        let selected = selection == color.rawValue
+        let owners = used[color.rawValue] ?? []
+        return Button {
+            choose(color)
+        } label: {
+            VStack(spacing: 4) {
+                Circle()
+                    .fill(color.color.gradient)
+                    .frame(width: 32, height: 32)
+                    .overlay {
+                        if selected {
+                            Image(systemName: "checkmark").font(.caption.bold()).foregroundStyle(.white)
+                        }
+                    }
+                Circle()
+                    .fill(.secondary)
+                    .frame(width: 4, height: 4)
+                    .opacity(owners.isEmpty ? 0 : 1)
+            }
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .help(owners.isEmpty ? color.name : "\(color.name) · \(owners.formatted(.list(type: .and)))")
+        .accessibilityLabel(color.name)
+        .accessibilityValue(owners.isEmpty ? "" : String(localized: "Used by \(owners.formatted(.list(type: .and)))"))
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 

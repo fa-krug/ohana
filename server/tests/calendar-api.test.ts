@@ -12,6 +12,7 @@ import { handleCalendar } from "@/lib/calendar/vacation";
 import { DrizzleCalendarStore } from "@/lib/calendar/store";
 import { calendarSummary } from "@/lib/calendar/summary";
 import { createFamily, deleteFamily } from "@/lib/families/manage";
+import { memberColorHex, typeShade } from "@/lib/families/colors";
 import { createTestDb } from "@/lib/test/db";
 import { NOW, makeFamily, makeUser } from "@/lib/test/factories";
 
@@ -72,10 +73,10 @@ describe("new families", () => {
       .where(eq(calEntryTypes.familyId, f.id))
       .orderBy(calEntryTypes.position)
       .all();
-    expect(types.map((t) => [t.year, t.id, t.name, t.role, t.position])).toEqual([
-      [2026, "holiday", "Holiday", "day_off", 0],
-      [2026, "vacation", "Vacation", "covers", 1],
-      [2026, "sick", "Sick", "none", 2],
+    expect(types.map((t) => [t.year, t.id, t.name, t.role, t.position, t.icon])).toEqual([
+      [2026, "holiday", "Holiday", "day_off", 0, null],
+      [2026, "vacation", "Vacation", "covers", 1, "beach.umbrella"],
+      [2026, "sick", "Sick", "none", 2, "cross.case"],
     ]);
   });
 
@@ -93,14 +94,15 @@ describe("new families", () => {
       ["vacation", "Urlaub"],
       ["sick", "Krank"],
     ]);
-    expect(types.map((t) => t.color)).toEqual(["#f59e0b", "#22c55e", "#ef4444"]);
+    // Without an editor, nobody's.
+    expect(types.map((t) => t.memberUserId)).toEqual([null, null, null]);
   });
 
   it("deleting a family deletes its calendar", async () => {
     const s = setup();
     const f = newFamily(s);
     await s.call("POST", `/families/${f.id}/entries`, { type: "vacation", date: "2026-08-03" });
-    await s.call("POST", `/families/${f.id}/notes`, { icon: "🎄", date: "2026-12-25" });
+    await s.call("POST", `/families/${f.id}/notes`, { icon: "tree", date: "2026-12-25" });
     deleteFamily(s.db, { id: s.owner.id, admin: true }, f.id);
     for (const table of [calEntryTypes, calEntries, calNotes]) {
       expect(s.db.select().from(table).where(eq(table.familyId, f.id)).all()).toEqual([]);
@@ -169,7 +171,7 @@ describe("calendar API", () => {
       ["PATCH", "/types/vacation?year=2026", { name: "X" }],
       ["DELETE", "/types/vacation?year=2026"],
       ["POST", "/types/copy", { from: 2026, to: 2027 }],
-      ["POST", "/notes", { icon: "🎄", date: "2026-12-25" }],
+      ["POST", "/notes", { icon: "tree", date: "2026-12-25" }],
       ["POST", "/import", { format: "family-planner", version: 2, types: [] }],
     ];
     for (const [method, path, body] of writes) {
@@ -204,7 +206,10 @@ describe("calendar API", () => {
     expect((await post({ type: "nope", dates: ["2026-02-03"] })).status).toBe(404);
     expect((await post({ action: "add", dates: ["2026-02-03"] })).status).toBe(400);
     expect((await s.call("GET", "/families/doesnotexist123")).status).toBe(404);
-    expect((await s.call("POST", `/families/${f.id}/types`, { name: "X", color: "red" })).status).toBe(400);
+    const foreign = await s.call("POST", `/families/${f.id}/types`, { name: "X", memberId: makeUser(s.db).id });
+    expect(foreign.status).toBe(400);
+    expect(foreign.data.error).toBe("memberId must be a member of the family");
+    expect((await s.call("PATCH", `/families/${f.id}/types/sick`, { memberId: 7 })).status).toBe(400);
     const bad = await s.handler(
       new Request(`${BASE}/families/${f.id}/entries`, {
         method: "POST",
@@ -225,15 +230,22 @@ describe("calendar API", () => {
       role: "needs_cover",
     });
     expect(created.status).toBe(201);
+    // The caller's type (a color in the body is ignored): their 4th, the 4th shade of blue.
     expect(created.data).toEqual({
       id: "day-care-closed",
       year: 2026,
       name: "Day care closed",
-      color: "#8b5cf6",
+      memberId: s.owner.id,
+      color: typeShade(memberColorHex("blue"), 3),
       role: "needs_cover",
+      icon: "exclamationmark.triangle",
       position: 3,
       away: false,
     });
+    const nobody = await s.call("POST", `/families/${f.id}/types?year=2026`, { name: "School trip", memberId: null });
+    expect(nobody.data).toMatchObject({ memberId: null, color: "#8e8e93" });
+    const moved = await s.call("PATCH", `/families/${f.id}/types/school-trip?year=2026`, { memberId: s.owner.id });
+    expect(moved.data).toMatchObject({ memberId: s.owner.id, color: typeShade(memberColorHex("blue"), 4) });
 
     const renamed = await s.call("PATCH", `/families/${f.id}/types/vacation?year=2026`, { name: "Vacation Dad" });
     expect(renamed.data.name).toBe("Vacation Dad");
@@ -244,8 +256,61 @@ describe("calendar API", () => {
     const deleted = await s.call("DELETE", `/families/${f.id}/types/vacation?year=2026`);
     expect(deleted.data).toEqual({ deleted: "vacation", year: 2026 });
     const state = (await s.call("GET", `/families/${f.id}`)).data;
-    expect(state.types.map((t: any) => t.id)).toEqual(["holiday", "sick", "day-care-closed"]);
+    expect(state.types.map((t: any) => t.id)).toEqual(["holiday", "sick", "day-care-closed", "school-trip"]);
+    // The colors follow: the owner's types are now four, shaded by position.
+    expect(state.types.map((t: any) => t.color)).toEqual([0, 1, 2, 3].map((i) => typeShade(memberColorHex("blue"), i)));
     expect(state.entries).toEqual({});
+  });
+
+  it("gives entry types an icon: their own or their role's", async () => {
+    const s = setup();
+    const f = newFamily(s);
+    const types = `/families/${f.id}/types`;
+    // The presets: Holiday the role's, Vacation and Sick their own.
+    const listed = (await s.call("GET", `${types}?year=2026`)).data;
+    expect(listed.map((t: any) => [t.id, t.icon])).toEqual([
+      ["holiday", "sun.max"],
+      ["vacation", "beach.umbrella"],
+      ["sick", "cross.case"],
+    ]);
+
+    // Without one (or null), the role's, which follows the role.
+    const roles = { none: "tag", needs_cover: "exclamationmark.triangle", covers: "checkmark.shield", day_off: "sun.max" };
+    for (const [role, icon] of Object.entries(roles)) {
+      const res = await s.call("POST", `${types}?year=2027`, { name: `T ${role}`, role, icon: role === "none" ? null : undefined });
+      expect([res.status, res.data.icon]).toEqual([201, icon]);
+    }
+    const plain = await s.call("PATCH", `${types}/t-none?year=2027`, { role: "covers" });
+    expect(plain.data.icon).toBe("checkmark.shield");
+
+    // Its own: kept through other changes, null resets it to the role's.
+    const own = await s.call("POST", `${types}?year=2026`, { name: "Trip", icon: "airplane" });
+    expect([own.status, own.data.icon]).toEqual([201, "airplane"]);
+    expect((await s.call("PATCH", `${types}/trip?year=2026`, { name: "Trips", role: "covers" })).data.icon).toBe("airplane");
+    expect((await s.call("PATCH", `${types}/trip?year=2026`, { icon: "car.fill" })).data.icon).toBe("car.fill");
+    const reset = await s.call("PATCH", `${types}/trip?year=2026`, { icon: null });
+    expect(reset.data.icon).toBe("checkmark.shield");
+    const row = s.db.select().from(calEntryTypes).where(eq(calEntryTypes.id, "trip")).get()!;
+    expect(row.icon).toBeNull();
+
+    // Only SF Symbol names; nothing is written otherwise.
+    for (const icon of ["🏖", "Airplane", "car fill", "car..fill", ".car", "car.", "", 7, "a".repeat(65)]) {
+      const added = await s.call("POST", `${types}?year=2026`, { name: "Bad", icon });
+      expect([added.status, added.data.error]).toEqual([400, "icon must be an SF Symbol name"]);
+      const changed = await s.call("PATCH", `${types}/sick?year=2026`, { icon });
+      expect([changed.status, changed.data.error]).toEqual([400, "icon must be an SF Symbol name"]);
+    }
+    expect((await s.call("POST", `${types}?year=2026`, { name: "Long", icon: "a".repeat(64) })).status).toBe(201);
+    expect((await s.call("GET", `${types}?year=2026`)).data.find((t: any) => t.id === "sick").icon).toBe("cross.case");
+
+    // Copying a year keeps the icons, own and role's.
+    s.db.delete(calEntryTypes).where(eq(calEntryTypes.year, 2027)).run();
+    const copied = await s.call("POST", `${types}/copy`, { from: 2026, to: 2027 });
+    expect(copied.data.map((t: any) => [t.id, t.icon])).toEqual(
+      (await s.call("GET", `${types}?year=2026`)).data.map((t: any) => [t.id, t.icon]),
+    );
+    const copiedRows = s.db.select().from(calEntryTypes).where(eq(calEntryTypes.year, 2027)).all();
+    expect(Object.fromEntries(copiedRows.map((t) => [t.id, t.icon]))).toMatchObject({ holiday: null, trip: null, sick: "cross.case" });
   });
 
   it("renames a family", async () => {
@@ -266,19 +331,19 @@ describe("calendar API", () => {
     const f = newFamily(s);
     const post = (body: unknown) => s.call("POST", `/families/${f.id}/notes`, body);
 
-    let res = await post({ icon: " 🎄 ", comment: " Christmas ", from: "2026-12-24", to: "2026-12-26" });
+    let res = await post({ icon: " tree ", comment: " Christmas ", from: "2026-12-24", to: "2026-12-26" });
     expect(res.status).toBe(200);
     expect(res.data).toEqual({ ok: true, ops: 1, days: 3 });
     expect((await s.call("GET", `/families/${f.id}/notes?year=2026`)).data).toEqual({
-      "2026-12-24": { icon: "🎄", comment: "Christmas" },
-      "2026-12-25": { icon: "🎄", comment: "Christmas" },
-      "2026-12-26": { icon: "🎄", comment: "Christmas" },
+      "2026-12-24": { icon: "tree", comment: "Christmas" },
+      "2026-12-25": { icon: "tree", comment: "Christmas" },
+      "2026-12-26": { icon: "tree", comment: "Christmas" },
     });
 
     res = await post({
       ops: [
         // "set" replaces the whole note: no comment given means "".
-        { action: "set", icon: "🎁", dates: ["2026-12-24"] },
+        { action: "set", icon: "gift", dates: ["2026-12-24"] },
         { action: "clear", date: "2026-12-26" },
         // Both empty after trimming behaves like "clear".
         { icon: " ", comment: "", date: "2026-12-25" },
@@ -287,7 +352,7 @@ describe("calendar API", () => {
     });
     expect(res.data).toEqual({ ok: true, ops: 4, days: 7 });
     const notes = (await s.call("GET", `/families/${f.id}/notes?from=2026-12-01&to=2026-12-31`)).data;
-    expect(notes).toEqual({ "2026-12-24": { icon: "🎁", comment: "" } });
+    expect(notes).toEqual({ "2026-12-24": { icon: "gift", comment: "" } });
     expect(Object.keys((await s.call("GET", `/families/${f.id}/notes?year=2026`)).data).length).toBe(5);
     expect((await s.call("GET", `/families/${f.id}/notes?year=2025`)).data).toEqual({});
   });
@@ -296,7 +361,7 @@ describe("calendar API", () => {
     const s = setup();
     const f = newFamily(s);
     const res = await s.call("POST", `/families/${f.id}/notes`, {
-      icon: "🏖",
+      icon: "beach.umbrella",
       from: "2026-08-03",
       to: "2026-08-16",
       skipWeekends: true,
@@ -312,15 +377,15 @@ describe("calendar API", () => {
     const f = newFamily(s);
     await s.call("POST", `/families/${f.id}/notes`, {
       ops: [
-        { icon: "🎄", comment: "Christmas", date: "2026-12-25" },
-        { icon: "🎆", date: "2025-12-31" },
+        { icon: "tree", comment: "Christmas", date: "2026-12-25" },
+        { icon: "sparkles", date: "2025-12-31" },
       ],
     });
     const state = (await s.call("GET", `/families/${f.id}?year=2026`)).data;
-    expect(state.notes).toEqual({ "2026-12-25": { icon: "🎄", comment: "Christmas" } });
+    expect(state.notes).toEqual({ "2026-12-25": { icon: "tree", comment: "Christmas" } });
     // Viewers read notes too.
     const view = (await f.view("GET", `/families/${f.id}?from=2025-12-01&to=2025-12-31`)).data;
-    expect(view.notes).toEqual({ "2025-12-31": { icon: "🎆", comment: "" } });
+    expect(view.notes).toEqual({ "2025-12-31": { icon: "sparkles", comment: "" } });
     expect(Object.keys((await f.view("GET", `/families/${f.id}/notes`)).data)).toEqual(["2025-12-31", "2026-12-25"]);
   });
 
@@ -347,20 +412,23 @@ describe("calendar API", () => {
     const f = newFamily(s);
     const post = (body: unknown) => s.call("POST", `/families/${f.id}/notes`, body);
     const cases: [unknown, string][] = [
-      [{ action: "add", icon: "🎄", date: "2026-12-25" }, "action must be set or clear"],
+      [{ action: "add", icon: "tree", date: "2026-12-25" }, "action must be set or clear"],
       [{ date: "2026-12-25" }, '"set" needs "icon" or "comment"'],
-      [{ icon: 1, date: "2026-12-25" }, "icon must be a string"],
+      [{ icon: 1, date: "2026-12-25" }, "icon must be an SF Symbol name"],
       [{ comment: null, date: "2026-12-25" }, "comment must be a string"],
-      [{ icon: "🎄".repeat(9), date: "2026-12-25" }, "icon is too long (max. 16)"],
+      // Icons are SF Symbol names: no emoji, capitals, spaces or stray dots, at most 64.
+      ...["🎄", "Star", "sun max", "sun..max", ".sun", "sun.", "a".repeat(65)].map(
+        (icon): [unknown, string] => [{ icon, date: "2026-12-25" }, "icon must be an SF Symbol name"],
+      ),
       [{ comment: "x".repeat(501), date: "2026-12-25" }, "comment is too long (max. 500)"],
-      [{ icon: "🎄", dates: ["2026-02-30"] }, 'Invalid date "2026-02-30" (use YYYY-MM-DD)'],
-      [{ icon: "🎄", dates: "2026-12-25" }, "dates must be an array"],
-      [{ icon: "🎄", from: "2026-12-25", to: "nope" }, "from/to must be YYYY-MM-DD"],
-      [{ icon: "🎄" }, 'Op needs "dates" or "from"/"to"'],
+      [{ icon: "tree", dates: ["2026-02-30"] }, 'Invalid date "2026-02-30" (use YYYY-MM-DD)'],
+      [{ icon: "tree", dates: "2026-12-25" }, "dates must be an array"],
+      [{ icon: "tree", from: "2026-12-25", to: "nope" }, "from/to must be YYYY-MM-DD"],
+      [{ icon: "tree" }, 'Op needs "dates" or "from"/"to"'],
       [{ ops: [1] }, "Each op must be an object"],
-      [{ icon: "🎄", from: "2020-01-01", to: "2026-12-31" }, "Range is too long"],
+      [{ icon: "tree", from: "2020-01-01", to: "2026-12-31" }, "Range is too long"],
       [
-        { ops: [1, 2, 3, 4].map((y) => ({ icon: "🎄", from: `202${y}-01-01`, to: `202${y + 2}-12-31` })) },
+        { ops: [1, 2, 3, 4].map((y) => ({ icon: "tree", from: `202${y}-01-01`, to: `202${y + 2}-12-31` })) },
         "Too many days in one request",
       ],
     ];
@@ -368,8 +436,8 @@ describe("calendar API", () => {
       const res = await post(body);
       expect([res.status, res.data.error]).toEqual([400, error]);
     }
-    // Limits are inclusive; a flag (2 code points, 4 UTF-16 units) fits easily.
-    const ok = await post({ icon: "🇩🇪", comment: "x".repeat(500), date: "2026-10-03" });
+    // Limits are inclusive.
+    const ok = await post({ icon: "a".repeat(64), comment: "x".repeat(500), date: "2026-10-03" });
     expect(ok.status).toBe(200);
     // Nothing was written by the failed requests.
     expect(Object.keys((await s.call("GET", `/families/${f.id}/notes`)).data)).toEqual(["2026-10-03"]);
@@ -466,14 +534,14 @@ describe("calendar API", () => {
     const s = setup();
     const f = newFamily(s);
     await s.call("POST", `/families/${f.id}/types/copy`, { from: 2026, to: 2027 });
-    await s.call("PATCH", `/families/${f.id}/types/sick?year=2027`, { name: "Ill", position: 7 });
+    await s.call("PATCH", `/families/${f.id}/types/sick?year=2027`, { name: "Ill", position: 7, icon: "thermometer" });
     await s.call("POST", `/families/${f.id}/entries`, {
       ops: [
         { types: ["vacation", "sick"], dates: ["2026-08-03"] },
         { type: "holiday", dates: ["2027-01-01"] },
       ],
     });
-    await s.call("POST", `/families/${f.id}/notes`, { icon: "🎄", comment: "Xmas", date: "2026-12-25" });
+    await s.call("POST", `/families/${f.id}/notes`, { icon: "tree", comment: "Xmas", date: "2026-12-25" });
 
     // Viewers may export; the file never contains the family's ids.
     const res = await f.view("GET", `/families/${f.id}/export`);
@@ -482,8 +550,11 @@ describe("calendar API", () => {
     const file = res.data;
     expect([file.format, file.version, file.name]).toEqual(["family-planner", 2, "Krug"]);
     expect(file.types.length).toBe(6);
+    // Types carry their stored icon: their own, or null for the role's.
+    const iconOf = (year: number, id: string) => file.types.find((t: any) => t.year === year && t.id === id).icon;
+    expect([iconOf(2026, "holiday"), iconOf(2026, "vacation"), iconOf(2027, "sick")]).toEqual([null, "beach.umbrella", "thermometer"]);
     expect(file.entries).toEqual({ "2026-08-03": ["sick", "vacation"], "2027-01-01": ["holiday"] });
-    expect(file.notes).toEqual({ "2026-12-25": { icon: "🎄", comment: "Xmas" } });
+    expect(file.notes).toEqual({ "2026-12-25": { icon: "tree", comment: "Xmas" } });
     const text = JSON.stringify(file);
     expect(text.includes(f.id)).toBe(false);
 
@@ -492,7 +563,7 @@ describe("calendar API", () => {
     s.db.update(families).set({ name: "Other" }).where(eq(families.id, target.id)).run();
     await s.call("POST", `/families/${target.id}/types?year=2028`, { name: "Gone", color: "#000000" });
     await s.call("POST", `/families/${target.id}/entries`, { type: "gone", date: "2028-03-01" });
-    await s.call("POST", `/families/${target.id}/notes`, { icon: "👻", date: "2028-03-02" });
+    await s.call("POST", `/families/${target.id}/notes`, { icon: "moon", date: "2028-03-02" });
     const imported = await s.call("POST", `/families/${target.id}/import?year=2027`, file);
     expect(imported.status).toBe(200);
     expect(imported.data.family.id).toBe(target.id);
@@ -524,15 +595,15 @@ describe("calendar API", () => {
     expect(await status({ ...file, types: {} })).toBe(400);
     expect(await status({ ...file, types: [type, type] })).toBe(400);
     expect(await status({ ...file, types: [{ ...type, id: "../x" }] })).toBe(400);
-    expect(await status({ ...file, types: [{ ...type, color: "red" }] })).toBe(400);
     expect(await status({ ...file, types: [{ ...type, role: "boss" }] })).toBe(400);
     expect(await status({ ...file, types: [{ ...type, year: 26 }] })).toBe(400);
+    expect(await status({ ...file, types: [{ ...type, icon: "🏖" }] })).toBe(400);
     // Entries can only use the types of their own year.
     expect(await status({ ...file, entries: { "2027-08-03": ["vacation"] } })).toBe(400);
     expect(await status({ ...file, entries: { "2026-02-30": ["vacation"] } })).toBe(400);
     expect(await status({ ...file, entries: { "2026-08-03": "vacation" } })).toBe(400);
     expect(await status({ ...file, entries: { "2026-08-03": [1] } })).toBe(400);
-    expect(await status({ ...file, notes: { "2026-12-25": "🎄" } })).toBe(400);
+    expect(await status({ ...file, notes: { "2026-12-25": "tree" } })).toBe(400);
     expect(await status({ ...file, notes: { "2026-12-25": { comment: "x".repeat(501) } } })).toBe(400);
 
     // A rejected file changes nothing.
@@ -543,11 +614,25 @@ describe("calendar API", () => {
     const res = await s.call("POST", `${path}?year=2026`, {
       ...file,
       entries: { "2026-08-03": ["vacation"] },
-      notes: { "2026-12-24": { icon: "", comment: " " }, "2026-12-25": { icon: "🎄" } },
+      notes: {
+        "2026-12-24": { icon: "", comment: " " },
+        "2026-12-25": { icon: "gift" },
+        // An older file's emoji icon goes to the front of the comment.
+        "2026-12-26": { icon: "🎄", comment: "Boxing Day" },
+        "2026-12-27": { icon: "🎄" },
+        "2026-12-28": { icon: "🎄", comment: "x".repeat(500) },
+      },
     });
     expect(res.status).toBe(200);
     expect(res.data.entries).toEqual({ "2026-08-03": ["vacation"] });
-    expect(res.data.notes).toEqual({ "2026-12-25": { icon: "🎄", comment: "" } });
+    // A type without an icon (an older file) gets its role's.
+    expect(res.data.types.map((t: any) => t.icon)).toEqual(["checkmark.shield"]);
+    expect(res.data.notes).toEqual({
+      "2026-12-25": { icon: "gift", comment: "" },
+      "2026-12-26": { icon: "", comment: "🎄 Boxing Day" },
+      "2026-12-27": { icon: "", comment: "🎄" },
+      "2026-12-28": { icon: "", comment: `🎄 ${"x".repeat(497)}` },
+    });
   });
 
   it("a failed replace leaves the calendar as it was", async () => {
@@ -672,6 +757,8 @@ describe("calendar summary", () => {
       ["Kita zu", "2026-11-02", "2026-11-06"],
       ["Holiday", "2026-12-25", "2026-12-25"],
     ]);
+    expect(summary.upcoming[0].member).toEqual({ id: s.owner.id, name: s.owner.name.trim() || "owner", color: "blue" });
+    expect(summary.upcoming[0].color).toBe(typeShade(memberColorHex("blue"), 1));
     expect((await calendarSummary(s.db, f.id, "2026-11-07")).nextGap).toBeNull();
   });
 });

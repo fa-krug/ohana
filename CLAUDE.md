@@ -102,7 +102,12 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   "who is it for" chips when booking an appointment, the members the assistant's system
   prompt names with their ages, and the birthdays of the calendar (GET `/families/{id}`
   `birthdays` by day via `dayExtras`, shown by the app's calendar)
-  and of the overview (next 30 days, `familyDashboard`).
+  and of the overview (next 30 days, `familyDashboard`). **Colors:** every account and person
+  has one of a fixed palette (`colors.ts`, browser-safe: `MEMBER_COLORS` keys → hex,
+  `pickMemberColor`: the first unused, else the least used; `member-colors.ts`
+  `nextMemberColor`), `family_members.color` / `family_people.color`; new members get a free
+  one, accepting a person's invite keeps theirs; members change their own, editors anyone's
+  (`PATCH /household/members/{id}` / `people/{id}` `color`; duplicates allowed).
 - **Family REST API** (`lib/api/family-api.ts`, family-planner's `handler.ts`): `http/api.ts`
   runs `createFamilyApi([...routes])` for `/api/v1/families/{id}[/…]`; the first route is
   `handleDisabledModules` (`lib/api/disabled-modules.ts`).
@@ -124,7 +129,16 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `core.ts` (pure client logic) are ported with few changes; there is no calendar feed (the app
   syncs with Apple Calendar instead). Tables `cal_entry_types` (PK
   family+year+id), `cal_entries` (with the day's `year`, composite FK to its type: deleting a
-  type cascades to its days; never `INSERT OR REPLACE` a type), `cal_notes`. `createFamily` adds the preset types (`presets.ts`) in the creator's
+  type cascades to its days; never `INSERT OR REPLACE` a type), `cal_notes`. A type belongs to
+  a member (`member_user_id` / `member_person_id`, API `memberId`; POST without one: the
+  caller; removing the member clears it) and has no color of its own: `listTypes` derives
+  `color` from the member's (`typeShade`: their first type of the year by position the color
+  itself, each further one another shade; nobody's: gray); GET `/families/{id}` lists
+  `members` with their colors. Export files name a type's member (matched by name on import).
+  Icons are SF Symbol names the app draws (`icons.ts`): a type's `icon` (null: its role's,
+  `ROLE_ICONS`; the API always answers one) and a note's `icon` ("" or a symbol; an import's
+  emoji moves into the comment).
+  `createFamily` adds the preset types (`presets.ts`, the creator's) in the creator's
   language. Export / import of the family file: `GET /export`, `POST /import` (checks in
   `lib/calendar/export-file.ts`; family-planner's Clone isn't ported); the overview shows
   `lib/calendar/summary.ts`.
@@ -516,6 +530,16 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   page's text via `Preprocess.js`). Code both use is in `apple/Shared/` (`Keychain`,
   `SharedConnection`): no App Group — the app mirrors the server URL and selected family into the
   shared Keychain access group next to the token, and removes them on sign out.
+  Member colors: `DesignSystem/MemberColor.swift` (the server's palette by key, `FamilyAvatar`,
+  `MemberIcon`: the small tinted avatar); a member's name as text only where there is room (the
+  type editor's member picker, Apple Calendar runs titled "Type (Member)"), elsewhere (type
+  chips, settings rows, the overview) the icon only; grid cells are the plain color. The color is
+  chosen on `FamilyMemberPage`; a type's member in `CalendarTypeEditor` (changing it or the order
+  reloads the types: their shades shift). A type shows as `CalendarTypeBadge`
+  (`Features/Calendar/CalendarSymbols.swift`): the member's initials, then its SF Symbol on its
+  color (`CalendarRole.defaultIcon` until one is picked in the editor's `CalendarSymbolGrid`); a
+  note's icon is an SF Symbol too (`CalendarSymbol.noteIcons`), tinted in the theme color (on a
+  type-filled cell the cell's ink).
   Calendar events in the app: `CalendarEvent` is an occurrence (list identity `uid` = "id@occurrence"),
   `CalendarEventSeries` the stored form; `RepeatRule` (+`Text`: summaries, the editor's presets)
   parses / writes RRULEs; `CalendarEventEditor` / `CalendarEventRepeatViews` (Apple-like Repeat and End

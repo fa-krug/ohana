@@ -14,11 +14,11 @@ import { familyNames } from "@/lib/families/people";
 import { eventRange, eventsByDay, listOccurrences, type PublicEvent } from "./events";
 import { EXPORT_FORMAT, EXPORT_VERSION, isExportFormat } from "./export-file";
 import {
+  exportType,
   groupEntries,
   listVacation,
   notesMap,
   parseVacationImport,
-  publicType,
   type Range,
   rangeFromQuery,
   type VacationData,
@@ -36,29 +36,37 @@ export function publicFamily({ family, access }: Loaded) {
   };
 }
 
-/** What the calendar shows next to the entries: events and the members' birthdays. */
+/** The family's accounts and people as the calendar shows them (familyNames' order). */
+export type FamilyMemberColor = { id: string; name: string; account: boolean; color: string };
+
+/** What the calendar shows next to the entries: events, the members' birthdays and the
+ *  members with their colors. */
 export interface DayExtras {
   /** The days the events were listed for. */
   range: { from: string; to: string };
   /** The occurrences overlapping `range`. */
   events: PublicEvent[];
   birthdays: BirthdayDay[];
+  members: FamilyMemberColor[];
 }
 
 /** The range's events (a missing end: the year of the other one, else the current year; at
  *  most 3 years), and its birthdays when the range has both ends. */
 export function dayExtras(db: Db, familyId: string, range: Range, now?: Date): DayExtras {
   const events = eventRange(range, now);
+  const names = familyNames(db, familyId);
   return {
     range: events,
     events: listOccurrences(db, familyId, events),
-    birthdays: range.from && range.to ? birthdaysIn(familyNames(db, familyId), range.from, range.to) : [],
+    birthdays: range.from && range.to ? birthdaysIn(names, range.from, range.to) : [],
+    members: names.map(({ id, name, account, color }) => ({ id, name, account, color })),
   };
 }
 
 /** GET /families/{id}: the family and its calendar in the range, with the events (`events`:
- *  day -> the occurrences covering it) and the members' birthdays (`birthdays`: day ->
- *  [{name, age}]) of the range by day when given. */
+ *  day -> the occurrences covering it), the members' birthdays (`birthdays`: day ->
+ *  [{name, age}]) of the range by day and the members with their colors (`members`) when
+ *  given. */
 export function familyState(loaded: Loaded, range: Range, data: VacationData, extras?: DayExtras) {
   const family = publicFamily(loaded);
   // "session" is the name from before families, kept for scripts that read it.
@@ -66,7 +74,9 @@ export function familyState(loaded: Loaded, range: Range, data: VacationData, ex
     family,
     session: family,
     ...vacationState(range, data),
-    ...(extras ? { events: eventsByDay(extras.events, extras.range), birthdays: birthdaysByDay(extras.birthdays) } : {}),
+    ...(extras
+      ? { events: eventsByDay(extras.events, extras.range), birthdays: birthdaysByDay(extras.birthdays), members: extras.members }
+      : {}),
   };
 }
 
@@ -76,20 +86,21 @@ function birthdaysByDay(rows: BirthdayDay[]): Record<string, { name: string; age
   return out;
 }
 
-/** The whole family as a file: all years, types, entries and notes, and the finances, but
- *  never its ids. */
+/** The whole family as a file: all years, types (whose they are by name), entries and notes,
+ *  and the finances, but never its ids. `names`: member id -> name. */
 export function exportData(
   family: FamilyRow,
   [types, rows, notes]: VacationData,
   finance: Awaited<ReturnType<typeof exportFinance>>,
   now: Date,
+  names: Map<string, string> = new Map(),
 ) {
   return {
     format: EXPORT_FORMAT,
     version: EXPORT_VERSION,
     exportedAt: now.toISOString(),
     name: family.name,
-    types: types.map(publicType),
+    types: types.map((t) => exportType(t, names)),
     entries: groupEntries(rows),
     notes: notesMap(notes),
     finance,
@@ -147,22 +158,29 @@ async function rename({ db, store, req, url, loadWith, now, requireUser }: Ctx):
 }
 
 /** Viewers may export too: they can read all of that anyway. */
-async function exportFamily({ store, finance, loadWith, now }: Ctx): Promise<Response> {
+async function exportFamily({ db, store, finance, loadWith, now }: Ctx): Promise<Response> {
   const [{ family }, data] = await loadWith("view", (id) => listVacation(store, id, {}));
-  return json(exportData(family, data, await exportFinance(finance, family.id), now), 200, {
+  const names = new Map(familyNames(db, family.id).map((m) => [m.id, m.name]));
+  return json(exportData(family, data, await exportFinance(finance, family.id), now, names), 200, {
     ...NO_STORE,
     "content-disposition": `attachment; filename="${slug(family.name)}.json"`,
   });
 }
 
 /** Replaces all years, types, entries and notes, and the finances if the file has them, with
- *  those of an export file; the name stays. Answers like GET /families/{id} (with ?year= etc.). */
+ *  those of an export file; the name stays. A type's `member` is found by name among the
+ *  family's members (else nobody's). Answers like GET /families/{id} (with ?year= etc.). */
 async function importFamily({ db, store, req, url, load, now }: Ctx): Promise<Response> {
   const range = rangeFromQuery(url);
   const loaded = await load("edit");
   const { family } = loaded;
   const data = parseImport(await readBody(req), family.id);
-  const types = data.types.map((t) => ({ ...t, family_id: family.id }));
+  const byName = new Map(familyNames(db, family.id).map((m) => [m.name.trim().toLowerCase(), m.id]));
+  const types = data.types.map(({ member, ...t }) => ({
+    ...t,
+    family_id: family.id,
+    member_id: (member && byName.get(member.toLowerCase())) ?? null,
+  }));
   await store.replaceContents(family.id, types, data.entries, data.notes, data.finance);
   const updated = (await store.getFamily(family.id))!;
   return json(

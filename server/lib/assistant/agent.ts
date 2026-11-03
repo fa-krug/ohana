@@ -3,6 +3,7 @@
 // with ready-to-use URLs.
 
 import type { FamilyRow, TypeRow } from "@/lib/calendar/store";
+import { typeIcon } from "@/lib/calendar/icons";
 
 export interface AgentDocInput {
   /** Public API base, e.g. https://ohana.example/api/v1 */
@@ -12,6 +13,8 @@ export interface AgentDocInput {
   family: FamilyRow;
   /** Types of all years. */
   types: TypeRow[];
+  /** The family's accounts and people (whose a type is). */
+  members?: { id: string; name: string }[];
   /** Today as YYYY-MM-DD. */
   today: string;
   /** Seconds after which an open app shows changes. */
@@ -25,17 +28,23 @@ const ROLE_HELP: Record<string, string> = {
   none: "normal",
 };
 
-function typesTable(types: TypeRow[]): string {
+function typesTable(types: TypeRow[], members: { id: string; name: string }[]): string {
   if (!types.length) return "_No types in this year yet._";
+  const whose = (t: TypeRow) => members.find((m) => m.id === t.member_id)?.name ?? "–";
   return [
-    "| id | name | role | color |",
-    "| --- | --- | --- | --- |",
-    ...types.map((t) => `| \`${t.id}\` | ${t.name} | ${t.role} | ${t.color} |`),
+    "| id | name | role | member | color | icon |",
+    "| --- | --- | --- | --- | --- | --- |",
+    ...types.map((t) => `| \`${t.id}\` | ${t.name} | ${t.role} | ${whose(t)} | ${t.color} | ${typeIcon(t)} |`),
   ].join("\n");
 }
 
+function membersTable(members: { id: string; name: string }[]): string {
+  if (!members.length) return "";
+  return ["", "Members (a type's `memberId`):", "", "| id | name |", "| --- | --- |", ...members.map((m) => `| \`${m.id}\` | ${m.name} |`)].join("\n");
+}
+
 export function buildAgentDoc(input: AgentDocInput): string {
-  const { base, readOnly, family, types, today, refreshSeconds } = input;
+  const { base, readOnly, family, types, today, refreshSeconds, members = [] } = input;
   const years = [...new Set(types.map((t) => t.year))].sort((a, b) => a - b);
   // Examples use the current year, or the latest year with types if it has none.
   const thisYear = Number(today.slice(0, 4));
@@ -46,8 +55,8 @@ export function buildAgentDoc(input: AgentDocInput): string {
   const json = (v: unknown) => "`" + JSON.stringify(v) + "`";
 
   const typeSections = years.length
-    ? years.map((y) => `### ${y}\n\n${typesTable(types.filter((t) => t.year === y))}`)
-      .join("\n\n")
+    ? years.map((y) => `### ${y}\n\n${typesTable(types.filter((t) => t.year === y), members)}`)
+      .join("\n\n") + membersTable(members)
     : "_This calendar has no entry types yet._";
 
   const read = `## Reading
@@ -58,7 +67,7 @@ one in the app under *Account* → *API tokens*). All responses are JSON. Dates 
 
 - Everything for a year (types, entries, notes): ${s}?year=${year}
 - Entries only: ${s}/entries?year=${year} → \`{"${year}-08-03": ["${example.id}"], ...}\`
-- Notes only: ${s}/notes?year=${year} → \`{"${year}-12-25": {"icon": "🎄", "comment": "Christmas"}, ...}\`
+- Notes only: ${s}/notes?year=${year} → \`{"${year}-12-25": {"icon": "gift", "comment": "Christmas"}, ...}\`
 - Types of a year: ${s}/types?year=${year}
 - \`?from=YYYY-MM-DD&to=YYYY-MM-DD\` works instead of \`?year=\`.`;
 
@@ -86,7 +95,7 @@ ${financeDoc(s, year, false)}`;
     to: `${year}-08-14`,
     skipWeekends: true,
   };
-  const noteOp = { action: "set", date: `${year}-12-25`, icon: "🎄", comment: "Christmas" };
+  const noteOp = { action: "set", date: `${year}-12-25`, icon: "gift", comment: "Christmas" };
 
   return `# Ohana “${family.name}” – instructions for AI agents
 
@@ -132,16 +141,18 @@ drops Saturdays and Sundays. Up to 4000 days per request.
 
 ### Notes: \`POST ${s}/notes\`
 
-${json(noteOp)} – \`set\` replaces a day's note (icon max. 16 characters, comment max. 500),
+${json(noteOp)} – \`set\` replaces a day's note (icon: an SF Symbol name such as \`gift\`,
+\`birthday.cake\` or \`star\`, or \`""\`; anything else is a 400; comment max. 500),
 \`{"action": "clear", "dates": [...]}\` removes it. Days and \`{"ops": [...]}\` work as for entries.
 
 ### Types (add \`?year=YYYY\`, default: the current year)
 
 - Add: \`POST ${s}/types?year=${year}\` ${
-    json({ name: "Day care closed", color: "#8b5cf6", role: "needs_cover" })
-  }
-- Change: \`PATCH ${s}/types/{type}?year=${year}\` with any of \`name\`, \`color\` (#rrggbb),
-  \`role\`, \`position\`
+    json({ name: "Day care closed", memberId: null, role: "needs_cover" })
+  } (\`memberId\`: whose it is, a member's id or null; left out: yours. Its color is the member's.
+  \`icon\`: an SF Symbol name, e.g. \`airplane\`; null or left out: the role's)
+- Change: \`PATCH ${s}/types/{type}?year=${year}\` with any of \`name\`, \`memberId\`,
+  \`role\`, \`icon\` (null: back to the role's), \`position\`
 - Delete (also deletes its entries in that year): \`DELETE ${s}/types/{type}?year=${year}\`
 - Copy a year's types into another year: \`POST ${s}/types/copy\` ${
     json({ from: year, to: year + 1 })
@@ -166,13 +177,15 @@ function concepts(): string {
   return `## How the calendar works
 
 - A year calendar. Each day can hold **several entries**, each of an **entry type** (name,
-  color, role). Every year has its own set of types.
+  role, icon, and the family member it belongs to, whose color it takes). Every year has its own
+  set of types.
 - Roles drive the **coverage check**: a weekday with a *${ROLE_HELP.needs_cover}* entry
   (e.g. “Day care closed”) is a gap unless it also has a *${ROLE_HELP.covers}* entry
   (e.g. “Vacation Dad”) or a *${ROLE_HELP.day_off}* entry (e.g. “Holiday”). Role
-  *${ROLE_HELP.none}* is just a color. Role ids: \`needs_cover\`, \`covers\`, \`day_off\`,
+  *${ROLE_HELP.none}* just marks the day. Role ids: \`needs_cover\`, \`covers\`, \`day_off\`,
   \`none\`. Day-off entries don't count as used vacation days.
-- A day can also have one **note**: an icon (emoji) and/or a comment, e.g. 🎄 Christmas.
+- A day can also have one **note**: an icon (an SF Symbol name, e.g. \`gift\`) and/or a
+  comment, e.g. \`gift\` Christmas.
   Notes are independent of entries.`;
 }
 

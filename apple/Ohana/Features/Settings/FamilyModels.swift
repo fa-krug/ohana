@@ -28,6 +28,19 @@ struct FamilyHousehold: Codable, Hashable {
         guard let id else { return nil }
         return people.first { $0.id == id }
     }
+
+    /// The colors the other members and people have (by key), with whose they are: shown on the
+    /// color choice of `id`'s page.
+    func colorsUsed(besides id: String) -> [String: [String]] {
+        var used: [String: [String]] = [:]
+        for member in members where member.userId != id {
+            if let color = member.color { used[color, default: []].append(member.label) }
+        }
+        for person in people where person.id != id {
+            if let color = person.color { used[color, default: []].append(person.name) }
+        }
+        return used
+    }
 }
 
 /// server/lib/families/members.ts `MemberDto`.
@@ -38,6 +51,8 @@ struct FamilyMember: Codable, Hashable, Identifiable {
     let role: FamilyRole
     let birthday: Day?
     let joinedAt: String
+    /// Their `MemberColor` key; nil from an older server.
+    var color: String?
 
     var id: String { userId }
     var label: String { name.isEmpty ? email : name }
@@ -48,6 +63,8 @@ struct FamilyPerson: Codable, Hashable, Identifiable {
     let id: String
     let name: String
     let birthday: Day?
+    /// Their `MemberColor` key; nil from an older server.
+    var color: String?
 }
 
 struct FamilyInvite: Codable, Hashable, Identifiable {
@@ -312,16 +329,22 @@ struct FamilyPersonInput: Encodable {
     let name: String
     let birthday: Day?
     var invite: FamilyRole?
+    /// A `MemberColor` key; left out: the server keeps theirs (or picks one for a new person).
+    var color: String?
 
     func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(name, forKey: .name)
         try c.encode(birthday, forKey: .birthday)
         try c.encode(invite, forKey: .invite)
+        try c.encodeIfPresent(color, forKey: .color)
     }
 
-    private enum CodingKeys: String, CodingKey { case name, birthday, invite }
+    private enum CodingKeys: String, CodingKey { case name, birthday, invite, color }
 }
+
+/// PATCH /household/members/{userId}: an account's color (their own, or anyone's as an editor).
+struct FamilyColorInput: Codable { let color: String }
 
 struct FamilyHomeInput: Encodable {
     let address: String

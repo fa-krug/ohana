@@ -234,7 +234,7 @@ describe("meal plan tools", () => {
   it("leave away days out and show them", async () => {
     const f = family();
     await withRecipes(f);
-    f.t.db.insert(calEntryTypes).values({ familyId: f.t.familyId, year: 2026, id: "trip", name: "Trip", color: "#000000", role: "none", position: 9, away: true }).run();
+    f.t.db.insert(calEntryTypes).values({ familyId: f.t.familyId, year: 2026, id: "trip", name: "Trip", role: "none", position: 9, away: true }).run();
     f.t.db.insert(calEntries).values({ familyId: f.t.familyId, year: 2026, day: "2026-11-04", typeId: "trip" }).run();
     const setup = await f.tool("plan_meals", { action: "setup", shoppingDays: ["Saturday"] });
     expect(setup.result.meals.map((m: { date: string }) => m.date)).not.toContain("2026-11-04");

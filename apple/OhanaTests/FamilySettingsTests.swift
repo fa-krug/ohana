@@ -5,7 +5,7 @@ import Testing
 struct FamilySettingsTests {
     /// GET /household as the server answered it (web tests' family).
     static let household = """
-    {"name":"Krug","role":"editor","selfId":"u1","members":[{"userId":"u1","email":"anna@test","name":"Anna","role":"editor","birthday":"1990-11-20","joinedAt":"2026-11-01T12:00:00.000Z"},{"userId":"u2","email":"ben@test","name":"","role":"viewer","birthday":null,"joinedAt":"2026-11-01T12:00:00.000Z"}],"people":[{"id":"p1","name":"Mia","birthday":"2018-11-15"}],"invites":[{"id":"i1","url":"http://ohana.test/invite/JoB_YiEHiYZCAkViLmlhsA","role":"viewer","personId":"p1","expiresAt":"2026-11-08T12:00:00.000Z"}],"home":{"address":"Hauptstr. 1, Berlin","lat":52.5,"lng":13.4},"channels":[{"id":"c1","name":"Phone","provider":"PUSHBULLET","target":"","enabled":true,"hasToken":true,"smtpHost":"","smtpPort":465,"smtpUsername":"","smtpFrom":""}],"events":[{"event":"appointment_found","enabled":true,"channelIds":null,"hasChannels":false},{"event":"coverage_gap","enabled":true,"channelIds":null,"hasChannels":true},{"event":"assistant_turn_finished","enabled":false,"channelIds":null,"hasChannels":true}]}
+    {"name":"Krug","role":"editor","selfId":"u1","members":[{"userId":"u1","email":"anna@test","name":"Anna","role":"editor","birthday":"1990-11-20","joinedAt":"2026-11-01T12:00:00.000Z","color":"blue"},{"userId":"u2","email":"ben@test","name":"","role":"viewer","birthday":null,"joinedAt":"2026-11-01T12:00:00.000Z","color":"green"}],"people":[{"id":"p1","name":"Mia","birthday":"2018-11-15","color":"green"}],"invites":[{"id":"i1","url":"http://ohana.test/invite/JoB_YiEHiYZCAkViLmlhsA","role":"viewer","personId":"p1","expiresAt":"2026-11-08T12:00:00.000Z"}],"home":{"address":"Hauptstr. 1, Berlin","lat":52.5,"lng":13.4},"channels":[{"id":"c1","name":"Phone","provider":"PUSHBULLET","target":"","enabled":true,"hasToken":true,"smtpHost":"","smtpPort":465,"smtpUsername":"","smtpFrom":""}],"events":[{"event":"appointment_found","enabled":true,"channelIds":null,"hasChannels":false},{"event":"coverage_gap","enabled":true,"channelIds":null,"hasChannels":true},{"event":"assistant_turn_finished","enabled":false,"channelIds":null,"hasChannels":true}]}
     """
 
     @Test func decodesTheHousehold() throws {
@@ -14,6 +14,10 @@ struct FamilySettingsTests {
         #expect(h.members.map(\.label) == ["Anna", "ben@test"])
         #expect(h.members[0].birthday == Day("1990-11-20"))
         #expect(h.members[1].birthday == nil)
+        #expect(h.members.map(\.color) == ["blue", "green"] && h.people[0].color == "green")
+        // Anna's page marks the colors the others have, with whose they are.
+        #expect(h.colorsUsed(besides: "u1") == ["green": ["ben@test", "Mia"]])
+        #expect(h.colorsUsed(besides: "p1") == ["blue": ["Anna"], "green": ["ben@test"]])
         #expect(h.invite(for: h.people[0])?.id == "i1")
         #expect(h.person(h.invites[0].personId)?.name == "Mia")
         #expect(h.invites[0].link?.host() == "ohana.test")
@@ -54,6 +58,10 @@ struct FamilySettingsTests {
         #expect(try json(FamilyBirthdayInput(birthday: Day("2001-02-03")))["birthday"] as? String == "2001-02-03")
         let person = try json(FamilyPersonInput(name: "Mia", birthday: nil, invite: .viewer))
         #expect(person["invite"] as? String == "viewer" && person["birthday"] is NSNull)
+        // The color only when it changes: left out, the server keeps it.
+        #expect(person["color"] == nil)
+        #expect(try json(FamilyPersonInput(name: "Mia", birthday: nil, color: "teal"))["color"] as? String == "teal")
+        #expect(try json(FamilyColorInput(color: "pink")) as? [String: String] == ["color": "pink"])
         let home = try json(FamilyHomeInput(address: "", lat: nil, lng: nil))
         #expect(home["lat"] is NSNull && home["address"] as? String == "")
         let pref = FamilyEventPref(event: "coverage_gap", enabled: true, channelIds: nil, hasChannels: true)

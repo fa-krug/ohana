@@ -4,11 +4,13 @@
 
 import { cleanName, HttpError, slug } from "@/lib/api/http";
 import { dateRange, diffDays, isWeekend } from "@/lib/calendar/dates";
-import type { CalendarStore as Store, TypeRow } from "@/lib/calendar/store";
+import type { CalendarStore as Store, TypeInput, TypeRow } from "@/lib/calendar/store";
+import type { Db } from "@/lib/db";
+import { familyNames } from "@/lib/families/people";
+import { cleanTypeIcon } from "@/lib/calendar/icons";
 import {
   applyEntryOps,
   applyNoteOps,
-  cleanColor,
   cleanRole,
   MAX_TYPES,
   parseEntryOps,
@@ -56,6 +58,23 @@ async function entriesOn(store: Store, familyId: string, days: string[]) {
   return map;
 }
 
+/** The family's accounts and people (who a type can belong to). */
+const membersOf = (db: Db, familyId: string) => familyNames(db, familyId).map(({ id, name }) => ({ id, name }));
+
+/** A type as the model sees it: with whose it is by name. */
+function typeOut(t: TypeRow, members: { id: string; name: string }[]) {
+  return { ...publicType(t), member: members.find((m) => m.id === t.member_id)?.name ?? null };
+}
+
+/** Whose a type is: a member's name (case-insensitive) or id; null or "" for nobody. */
+function resolveMember(ref: unknown, members: { id: string; name: string }[]): string | null {
+  if (ref === null || ref === "") return null;
+  if (typeof ref !== "string") throw new HttpError(400, "member must be a name");
+  const key = ref.trim().toLowerCase();
+  const m = members.find((m) => m.id === ref) ?? members.find((m) => m.name.trim().toLowerCase() === key);
+  if (!m) throw new HttpError(400, `"${ref}" is not a member of the family (${members.map((m) => m.name).join(", ")})`);
+  return m.id;
+}
 
 const daysProps = {
   dates: { type: "array", items: { type: "string" }, description: "Days as YYYY-MM-DD." },
@@ -80,7 +99,7 @@ export const calendarTools: Record<string, Tool> = {
         required: ["from", "to"],
       },
     },
-    async run(args, { calendar: store, familyId }) {
+    async run(args, { calendar: store, db, familyId }) {
       const { from, to } = range(args);
       if (dateRange(from, to).length > MAX_RANGE_DAYS) {
         throw new HttpError(400, "Read at most about a year at a time");
@@ -95,7 +114,7 @@ export const calendarTools: Record<string, Tool> = {
       for (const r of rows) entries.set(r.day, [...(entries.get(r.day) ?? []), r.type_id]);
       return {
         result: {
-          types: inRange.map(publicType),
+          types: inRange.map((t) => typeOut(t, membersOf(db, familyId))),
           entries: Object.fromEntries(entries),
           notes: Object.fromEntries(
             notes.map((n) => [n.day, { icon: n.icon, comment: n.comment }]),
@@ -226,12 +245,12 @@ export const calendarTools: Record<string, Tool> = {
     spec: {
       name: "set_notes",
       description:
-        'Sets or clears day notes (one per day: an emoji icon and/or a comment, e.g. 🎄 "Christmas"). Each op: {"action": "set" | "clear", "icon", "comment", and the days}.',
+        'Sets or clears day notes (one per day: an icon and/or a comment). icon: an SF Symbol name like "gift", "birthday.cake", "star" (else an error; no emoji). Each op: {"action": "set" | "clear", "icon", "comment", and the days}.',
       parameters: opsSchema({
         type: "object",
         properties: {
           action: { type: "string", enum: ["set", "clear"] },
-          icon: { type: "string", description: "One emoji" },
+          icon: { type: "string", description: 'SF Symbol name; "" none' },
           comment: { type: "string", description: "Up to 500 characters" },
           ...daysProps,
         },
@@ -271,7 +290,7 @@ export const calendarTools: Record<string, Tool> = {
     spec: {
       name: "manage_entry_types",
       description:
-        'Adds, changes, deletes or copies entry types. Every year has its own types. "add": name, color (#rrggbb), role. "update": type (id or name) and any of name, color, role. "delete": type (also deletes its entries in that year; needs confirmed). "copy_year": from and to (years).',
+        'Adds, changes, deletes or copies entry types. Every year has its own types. Each type belongs to a family member (or nobody: member null) and takes its color from theirs; icon: an SF Symbol name (null: its role default). "add": name, role, member (name; default: the user), icon. "update": type (id or name) and any of name, role, member, icon. "delete": type (also deletes its entries in that year; needs confirmed). "copy_year": from and to (years).',
       parameters: {
         type: "object",
         properties: {
@@ -279,8 +298,9 @@ export const calendarTools: Record<string, Tool> = {
           year: { type: "integer" },
           type: { type: "string" },
           name: { type: "string" },
-          color: { type: "string" },
+          member: { type: ["string", "null"], description: "A family member's name; null: nobody's" },
           role: { type: "string", enum: ["none", "needs_cover", "covers", "day_off"] },
+          icon: { type: ["string", "null"] },
           from: { type: "integer" },
           to: { type: "integer" },
           confirmed: { type: "boolean" },
@@ -288,8 +308,11 @@ export const calendarTools: Record<string, Tool> = {
         required: ["action"],
       },
     },
-    async run(args, { calendar: store, familyId, lang }) {
+    async run(args, { calendar: store, db, familyId, lang, userId }) {
       const all = await store.listTypes(familyId);
+      const members = membersOf(db, familyId);
+      const typeIn = async (year: number, id: string) =>
+        (await store.listTypes(familyId)).find((t) => t.year === year && t.id === id)!;
       const year = Number(args.year ?? new Date().getUTCFullYear());
       if (!Number.isInteger(year) || year < 1900 || year > 2200) {
         throw new HttpError(400, "Invalid year");
@@ -300,18 +323,20 @@ export const calendarTools: Record<string, Tool> = {
         case "add": {
           if (types.length >= MAX_TYPES) throw new HttpError(400, "Too many entry types");
           const name = cleanName(args.name);
-          const type: TypeRow = {
+          const self = members.some((m) => m.id === userId) ? userId! : null;
+          const type: TypeInput = {
             family_id: familyId,
             year,
             id: uniqueId(slug(name), new Set(types.map((t) => t.id))),
             name,
-            color: cleanColor(args.color ?? "#64748b"),
+            member_id: args.member === undefined ? self : resolveMember(args.member, members),
             role: cleanRole(args.role),
+            icon: cleanTypeIcon(args.icon),
             position: types.reduce((m, t) => Math.max(m, t.position + 1), 0),
           };
           await store.upsertTypes([type]);
           return {
-            result: publicType(type),
+            result: typeOut(await typeIn(year, type.id), members),
             summary: `Added “${name}” (${year})`,
             change: {
               kind: "types",
@@ -324,11 +349,12 @@ export const calendarTools: Record<string, Tool> = {
           const type = resolveType(all, args.type, year);
           const next = { ...type };
           if (args.name !== undefined) next.name = cleanName(args.name);
-          if (args.color !== undefined) next.color = cleanColor(args.color);
+          if (args.member !== undefined) next.member_id = resolveMember(args.member, members);
           if (args.role !== undefined) next.role = cleanRole(args.role);
+          if (args.icon !== undefined) next.icon = cleanTypeIcon(args.icon);
           await store.upsertTypes([next]);
           return {
-            result: publicType(next),
+            result: typeOut(await typeIn(year, next.id), members),
             summary: `Changed “${next.name}” (${year})`,
             change: {
               kind: "types",
@@ -336,7 +362,7 @@ export const calendarTools: Record<string, Tool> = {
               undo: [{
                 method: "PATCH",
                 path: path(type.id),
-                body: { name: type.name, color: type.color, role: type.role },
+                body: { name: type.name, memberId: type.member_id, role: type.role, icon: type.icon },
               }],
             },
           };
@@ -365,7 +391,7 @@ export const calendarTools: Record<string, Tool> = {
             .map((t) => ({ ...t, year: to, position: position++ }));
           await store.upsertTypes(copies);
           return {
-            result: [...target, ...copies].map(publicType),
+            result: (await store.listTypes(familyId)).filter((t) => t.year === to).map((t) => typeOut(t, members)),
             summary: `Copied ${copies.length} types to ${to}`,
             change: copies.length
               ? {

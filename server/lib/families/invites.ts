@@ -1,8 +1,9 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { and, eq, gt, isNull, lt } from "drizzle-orm";
 import type { Db } from "@/lib/db";
-import { chores, families, familyMembers, familyPeople, invites, users } from "@/lib/db/schema";
+import { calEntryTypes, chores, families, familyMembers, familyPeople, invites, users } from "@/lib/db/schema";
 import { AuthError } from "@/lib/auth/errors";
+import { nextMemberColor } from "./member-colors";
 import { type Actor, type Role, getRole, isRole, requireRole } from "./roles";
 
 export type Invite = typeof invites.$inferSelect;
@@ -87,8 +88,9 @@ function personOf(db: Db, inv: Invite) {
 }
 
 /** Makes `userId` a member with the invite's role and uses the invite up; an invite for a
- *  member without an account replaces that person (the membership takes their birthday and
- *  chores, an account without a name their name).
+ *  member without an account replaces that person (the membership takes their birthday, color,
+ *  chores and entry types, an account without a name their name); otherwise the account gets a
+ *  color nobody in the family has yet.
  *  Runs inside the caller's transaction when it registers a new account. */
 export function acceptInvite(db: Db, userId: string, code: string, now: Date): { familyId: string } {
   const inv = validateInvite(db, code, now);
@@ -102,6 +104,7 @@ export function acceptInvite(db: Db, userId: string, code: string, now: Date): {
       userId,
       role: isRole(inv.role) ? inv.role : "viewer",
       birthday: person?.birthday ?? null,
+      color: person?.color ?? nextMemberColor(db, inv.familyId),
       joinedAt: now,
     })
     .run();
@@ -112,6 +115,10 @@ export function acceptInvite(db: Db, userId: string, code: string, now: Date): {
     db.update(chores)
       .set({ assigneeUserId: userId, assigneePersonId: null })
       .where(and(eq(chores.familyId, inv.familyId), eq(chores.assigneePersonId, person.id)))
+      .run();
+    db.update(calEntryTypes)
+      .set({ memberUserId: userId, memberPersonId: null })
+      .where(and(eq(calEntryTypes.familyId, inv.familyId), eq(calEntryTypes.memberPersonId, person.id)))
       .run();
     db.delete(familyPeople).where(eq(familyPeople.id, person.id)).run();
   }

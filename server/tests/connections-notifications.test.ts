@@ -77,7 +77,7 @@ describe("coverage alert", () => {
   // NOW's year (2026) has the preset types; add one that needs cover.
   function closure(days: string[]) {
     db.insert(schema.calEntryTypes)
-      .values({ familyId, year: 2026, id: "kita", name: "Kita closed", color: "#ff0000", role: "needs_cover", position: 5 })
+      .values({ familyId, year: 2026, id: "kita", name: "Kita closed", role: "needs_cover", position: 5 })
       .onConflictDoNothing()
       .run();
     for (const day of days) db.insert(schema.calEntries).values({ familyId, day, year: 2026, typeId: "kita" }).onConflictDoNothing().run();

@@ -127,7 +127,7 @@ struct FamilyMembersView: View {
 
     private func memberLabel(_ member: FamilyMember, isSelf: Bool) -> some View {
         HStack(spacing: 12) {
-            FamilyAvatar(name: member.label, tint: .ohana)
+            FamilyAvatar(name: member.label, tint: MemberColor.color(member.color))
             VStack(alignment: .leading, spacing: 2) {
                 Text(isSelf ? String(localized: "\(member.label) (you)") : member.label)
                     .fontWeight(.medium)
@@ -160,7 +160,7 @@ struct FamilyMembersView: View {
 
     private func personLabel(_ person: FamilyPerson, household: FamilyHousehold) -> some View {
         HStack(spacing: 12) {
-            FamilyAvatar(name: person.name, tint: .secondary)
+            FamilyAvatar(name: person.name, tint: MemberColor.color(person.color))
             VStack(alignment: .leading, spacing: 2) {
                 Text(person.name).fontWeight(.medium).lineLimit(2)
                 let status = household.invite(for: person) == nil
@@ -257,27 +257,6 @@ struct FamilySharedLink: Identifiable {
     /// Whom it is for (a member without an account).
     var name: String?
     var id: String { url.absoluteString }
-}
-
-/// The initials of a name in a round badge; grows with Dynamic Type.
-struct FamilyAvatar: View {
-    let name: String
-    var tint: Color = .ohana
-    @ScaledMetric(relativeTo: .caption) private var size: CGFloat = 32
-
-    private var initials: String {
-        let parts = name.split(whereSeparator: { $0 == " " || $0 == "@" || $0 == "." }).prefix(2)
-        return parts.compactMap { $0.first.map(String.init) }.joined().uppercased()
-    }
-
-    var body: some View {
-        Text(initials.isEmpty ? "?" : initials)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(.white)
-            .frame(width: size, height: size)
-            .background(tint.gradient, in: .circle)
-            .accessibilityHidden(true)
-    }
 }
 
 /// A destructive action waiting for its confirmation.

@@ -120,6 +120,13 @@
       "when": 1793648839054,
       "tag": "0016_recipe_imports",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1793685282839,
+      "tag": "0017_member_colors",
+      "breakpoints": true
     }
   ]
 }

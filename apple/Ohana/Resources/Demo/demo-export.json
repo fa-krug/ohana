@@ -8,8 +8,9 @@
       "id": "vacation",
       "year": {{year:0}},
       "name": "Vacation",
-      "color": "#22c55e",
+      "member": "Ben Parker",
       "role": "covers",
+      "icon": "beach.umbrella",
       "position": 0,
       "away": true
     },
@@ -17,8 +18,9 @@
       "id": "school",
       "year": {{year:0}},
       "name": "School holidays",
-      "color": "#3b82f6",
+      "member": "Mia",
       "role": "day_off",
+      "icon": "backpack",
       "position": 1,
       "away": false
     },
@@ -26,8 +28,9 @@
       "id": "grandma",
       "year": {{year:0}},
       "name": "Grandma visits",
-      "color": "#f97316",
+      "member": "Grandma Rose",
       "role": "covers",
+      "icon": "figure.and.child.holdinghands",
       "position": 2,
       "away": false
     }
@@ -69,11 +72,11 @@
   },
   "notes": {
     "{{day:12}}": {
-      "icon": "✈️",
+      "icon": "airplane",
       "comment": "Flight to Lisbon 07:10"
     },
     "{{day:24}}": {
-      "icon": "🚆",
+      "icon": "tram",
       "comment": "Pick Grandma up at Hauptbahnhof"
     }
   },

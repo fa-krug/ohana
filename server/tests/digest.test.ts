@@ -75,7 +75,7 @@ function setHome(lat = 52.52, lng = 13.405) {
 
 function away(days: string[]) {
   db.insert(schema.calEntryTypes)
-    .values({ familyId, year: 2026, id: "trip", name: "Trip", color: "#00f", role: "none", position: 9, away: true })
+    .values({ familyId, year: 2026, id: "trip", name: "Trip", role: "none", position: 9, away: true })
     .onConflictDoNothing()
     .run();
   for (const day of days) db.insert(schema.calEntries).values({ familyId, day, year: 2026, typeId: "trip" }).run();

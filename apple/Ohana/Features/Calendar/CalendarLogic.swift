@@ -355,24 +355,11 @@ enum CalendarMath {
 
     // MARK: Colors
 
-    static let palette = ["#3b82f6", "#ec4899", "#8b5cf6", "#14b8a6", "#f97316",
-                          "#84cc16", "#06b6d4", "#a855f7", "#eab308", "#64748b"]
-
-    static func nextColor(_ types: [CalendarEntryType]) -> String {
-        let used = Set(types.map { $0.color.lowercased() })
-        return palette.first { !used.contains($0) } ?? palette[types.count % palette.count]
-    }
-
     /// "#rrggbb" → its components 0…1, nil for anything else.
     static func rgb(_ hex: String) -> (r: Double, g: Double, b: Double)? {
         let s = hex.hasPrefix("#") ? hex.dropFirst() : Substring(hex)
         guard s.count == 6, let n = Int(s, radix: 16) else { return nil }
         return (Double((n >> 16) & 255) / 255, Double((n >> 8) & 255) / 255, Double(n & 255) / 255)
-    }
-
-    static func hex(r: Double, g: Double, b: Double) -> String {
-        func c(_ v: Double) -> Int { Int((min(max(v, 0), 1) * 255).rounded()) }
-        return String(format: "#%02x%02x%02x", c(r), c(g), c(b))
     }
 
     /// Whether dark text reads better than white on the color (core.ts `contrastText`).

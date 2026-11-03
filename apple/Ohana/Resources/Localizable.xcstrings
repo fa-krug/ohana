@@ -2101,6 +2101,16 @@
         }
       }
     },
+    "Adult and child": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erwachsener mit Kind"
+          }
+        }
+      }
+    },
     "Advanced": {
       "localizations": {
         "de": {
@@ -2117,6 +2127,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nach"
+          }
+        }
+      }
+    },
+    "Airplane": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flugzeug"
           }
         }
       }
@@ -2863,6 +2883,16 @@
         }
       }
     },
+    "Backpack": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rucksack"
+          }
+        }
+      }
+    },
     "Backwards": {
       "localizations": {
         "de": {
@@ -2893,12 +2923,52 @@
         }
       }
     },
+    "Bandage": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pflaster"
+          }
+        }
+      }
+    },
+    "Beach umbrella": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonnenschirm"
+          }
+        }
+      }
+    },
+    "Bed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bett"
+          }
+        }
+      }
+    },
     "Being an administrator doesn’t open a family: add yourself as a member for that.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Als Administrator siehst du keine Familie von selbst: Füge dich dafür als Mitglied hinzu."
+          }
+        }
+      }
+    },
+    "Bell": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glocke"
           }
         }
       }
@@ -2933,6 +3003,16 @@
         }
       }
     },
+    "Birthday cake": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geburtstagstorte"
+          }
+        }
+      }
+    },
     "Birthday saved.": {
       "localizations": {
         "de": {
@@ -2959,6 +3039,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mixen"
+          }
+        }
+      }
+    },
+    "Blue": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blau"
           }
         }
       }
@@ -3043,6 +3133,16 @@
         }
       }
     },
+    "Books": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bücher"
+          }
+        }
+      }
+    },
     "Bot token": {
       "localizations": {
         "de": {
@@ -3059,6 +3159,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Beides"
+          }
+        }
+      }
+    },
+    "Briefcase": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktentasche"
+          }
+        }
+      }
+    },
+    "Brown": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Braun"
           }
         }
       }
@@ -3193,6 +3313,16 @@
         }
       }
     },
+    "Camera": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamera"
+          }
+        }
+      }
+    },
     "Can't reach the server right now.": {
       "localizations": {
         "de": {
@@ -3229,6 +3359,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dein Server ist nicht erreichbar"
+          }
+        }
+      }
+    },
+    "Car": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto"
           }
         }
       }
@@ -6673,6 +6813,16 @@
         }
       }
     },
+    "First aid kit": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erste-Hilfe-Koffer"
+          }
+        }
+      }
+    },
     "First row holds the column names": {
       "localizations": {
         "de": {
@@ -6703,12 +6853,32 @@
         }
       }
     },
+    "Flag": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fahne"
+          }
+        }
+      }
+    },
     "Folder": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Ordner"
+          }
+        }
+      }
+    },
+    "Football": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fußball"
           }
         }
       }
@@ -6953,6 +7123,16 @@
         }
       }
     },
+    "Gift": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geschenk"
+          }
+        }
+      }
+    },
     "Give it a name.": {
       "localizations": {
         "de": {
@@ -7003,6 +7183,16 @@
         }
       }
     },
+    "Graduation cap": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Doktorhut"
+          }
+        }
+      }
+    },
     "Grandma": {
       "localizations": {
         "de": {
@@ -7013,12 +7203,32 @@
         }
       }
     },
+    "Green": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grün"
+          }
+        }
+      }
+    },
     "Has an Ohana account already? Add them with the email of their account.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Schon ein Ohana-Konto? Füge die Person mit der E-Mail ihres Kontos hinzu."
+          }
+        }
+      }
+    },
+    "Heart": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Herz"
           }
         }
       }
@@ -7119,6 +7329,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Heimatadresse gespeichert."
+          }
+        }
+      }
+    },
+    "House": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haus"
           }
         }
       }
@@ -7463,6 +7683,16 @@
         }
       }
     },
+    "Important": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wichtig"
+          }
+        }
+      }
+    },
     "Imported ^[%lld transaction](inflect: true)": {
       "localizations": {
         "de": {
@@ -7641,6 +7871,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Einnahmen nach Kategorie"
+          }
+        }
+      }
+    },
+    "Indigo": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indigo"
+          }
+        }
+      }
+    },
+    "Info": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Info"
           }
         }
       }
@@ -8023,6 +8273,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Letztes Jahr"
+          }
+        }
+      }
+    },
+    "Leaf": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blatt"
           }
         }
       }
@@ -8487,6 +8747,16 @@
         }
       }
     },
+    "Meal": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Essen"
+          }
+        }
+      }
+    },
     "Meal Type": {
       "localizations": {
         "de": {
@@ -8563,6 +8833,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Essen getauscht"
+          }
+        }
+      }
+    },
+    "Member": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mitglied"
           }
         }
       }
@@ -8783,6 +9063,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mehrfachauswahl"
+          }
+        }
+      }
+    },
+    "Music": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musik"
           }
         }
       }
@@ -9523,6 +9813,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noch keine Heimatadresse."
+          }
+        }
+      }
+    },
+    "No icon": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Symbol"
           }
         }
       }
@@ -10329,6 +10629,16 @@
         }
       }
     },
+    "Office": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Büro"
+          }
+        }
+      }
+    },
     "Offline · as of %@": {
       "localizations": {
         "de": {
@@ -10979,12 +11289,12 @@
         }
       }
     },
-    "Or any other emoji": {
+    "Orange": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Oder ein beliebiges anderes Emoji"
+            "value": "Orange"
           }
         }
       }
@@ -11005,16 +11315,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Anderer (OpenAI-kompatibel)"
-          }
-        }
-      }
-    },
-    "Other color": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Andere Farbe"
           }
         }
       }
@@ -11185,6 +11485,16 @@
         }
       }
     },
+    "Party": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Party"
+          }
+        }
+      }
+    },
     "Passkey": {
       "localizations": {
         "de": {
@@ -11321,6 +11631,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Suche pausieren"
+          }
+        }
+      }
+    },
+    "Paw print": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pfotenabdruck"
           }
         }
       }
@@ -11535,12 +11855,42 @@
         }
       }
     },
+    "Pills": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tabletten"
+          }
+        }
+      }
+    },
+    "Pin": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pin"
+          }
+        }
+      }
+    },
     "Pinch": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Zwei Finger zusammenziehen"
+          }
+        }
+      }
+    },
+    "Pink": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pink"
           }
         }
       }
@@ -11885,6 +12235,16 @@
         }
       }
     },
+    "Purple": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lila"
+          }
+        }
+      }
+    },
     "Pushbullet, Pushover, Telegram or email over SMTP.": {
       "localizations": {
         "de": {
@@ -12001,6 +12361,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mit dem für diese Bank gespeicherten Format gelesen."
+          }
+        }
+      }
+    },
+    "Reading": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lesen"
           }
         }
       }
@@ -12301,6 +12671,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Empfänger-E-Mail"
+          }
+        }
+      }
+    },
+    "Red": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rot"
           }
         }
       }
@@ -12981,6 +13361,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zeilen vor der Tabelle"
+          }
+        }
+      }
+    },
+    "Run": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Laufen"
           }
         }
       }
@@ -14125,6 +14515,16 @@
         }
       }
     },
+    "Shield": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schild"
+          }
+        }
+      }
+    },
     "Shift + click": {
       "localizations": {
         "de": {
@@ -14575,6 +14975,16 @@
         }
       }
     },
+    "Snowflake": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schneeflocke"
+          }
+        }
+      }
+    },
     "Someone with an Ohana account: the email they sign in with.": {
       "localizations": {
         "de": {
@@ -14829,6 +15239,26 @@
         }
       }
     },
+    "Sports": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sport"
+          }
+        }
+      }
+    },
+    "Star": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stern"
+          }
+        }
+      }
+    },
     "Start %@ with the types of %@; you can change them afterwards": {
       "localizations": {
         "de": {
@@ -14965,6 +15395,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Schritte für eine Küchenmaschine, mit ihren Programmen und Einstellungen."
+          }
+        }
+      }
+    },
+    "Stethoscope": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stethoskop"
           }
         }
       }
@@ -15139,12 +15579,32 @@
         }
       }
     },
+    "Suitcase": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Koffer"
+          }
+        }
+      }
+    },
     "Summing up the finances": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Rechnet die Finanzen zusammen"
+          }
+        }
+      }
+    },
+    "Sun": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonne"
           }
         }
       }
@@ -15289,6 +15749,16 @@
         }
       }
     },
+    "Tag": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etikett"
+          }
+        }
+      }
+    },
     "Tags": {
       "localizations": {
         "de": {
@@ -15385,6 +15855,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aufgabe"
+          }
+        }
+      }
+    },
+    "Teal": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Türkis"
           }
         }
       }
@@ -15819,6 +16299,16 @@
         }
       }
     },
+    "The member’s calendar entry types take this color. A dot marks colors others have already.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Eintragsarten des Mitglieds im Kalender bekommen diese Farbe. Ein Punkt markiert Farben, die andere schon haben."
+          }
+        }
+      }
+    },
     "The model didn’t answer – trying again (%lld/%lld)…": {
       "localizations": {
         "de": {
@@ -16099,6 +16589,16 @@
         }
       }
     },
+    "The type takes the member’s color: their first type of the year has it, further ones a shade of it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Art bekommt die Farbe des Mitglieds: seine erste Art im Jahr genau diese, weitere eine Abstufung davon."
+          }
+        }
+      }
+    },
     "The whole family as a JSON file: the calendar of all years (entry types, entries, notes) and the finances (accounts, categories, transactions, settings). Viewers can export too.": {
       "localizations": {
         "de": {
@@ -16165,6 +16665,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Auf diesem Gerät gibt es keine Standardliste für Erinnerungen."
+          }
+        }
+      }
+    },
+    "Thermometer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thermometer"
           }
         }
       }
@@ -16709,6 +17219,16 @@
         }
       }
     },
+    "Train": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zug"
+          }
+        }
+      }
+    },
     "Transaction": {
       "localizations": {
         "de": {
@@ -17119,6 +17639,16 @@
         }
       }
     },
+    "Used by %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hat schon: %@"
+          }
+        }
+      }
+    },
     "User created": {
       "localizations": {
         "de": {
@@ -17245,6 +17775,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ansehen"
+          }
+        }
+      }
+    },
+    "Walk": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spaziergang"
           }
         }
       }
@@ -17865,6 +18405,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Jährlich"
+          }
+        }
+      }
+    },
+    "Yellow": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gelb"
           }
         }
       }

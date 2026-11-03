@@ -440,13 +440,14 @@ async function letter({ req, load, db, now }: Ctx, env: AiEnv) {
 
 /** GET /families/{id}/agent: instructions for AI agents that use the API with the user's
  *  token (Markdown), with the family's entry types and ready-to-use URLs. */
-async function agent({ store, publicBase, loadWith }: Ctx): Promise<Response> {
+async function agent({ db, store, publicBase, loadWith }: Ctx): Promise<Response> {
   const [{ family, access }, types] = await loadWith("view", (id) => store.listTypes(id));
   const doc = buildAgentDoc({
     base: publicBase,
     readOnly: access !== "edit",
     family,
     types,
+    members: familyNames(db, family.id).map(({ id, name }) => ({ id, name })),
     today: new Date().toISOString().slice(0, 10),
     refreshSeconds: 15,
   });

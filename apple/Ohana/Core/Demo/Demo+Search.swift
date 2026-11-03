@@ -45,7 +45,9 @@ extension DemoServer {
         let notes = (calendar?["notes"]?.objectValue ?? [:]).compactMap { day, note -> DemoSearchItem? in
             let comment = s(note, "comment")
             guard !comment.isEmpty else { return nil }
-            return DemoSearchItem(id: day, title: joined(s(note, "icon"), firstLine(comment)), detail: "", text: [comment], day: day)
+            let icon = s(note, "icon")
+            return DemoSearchItem(id: day, title: firstLine(comment), detail: "", text: [comment], day: day,
+                                  extra: icon.isEmpty ? [:] : ["icon": .string(icon)])
         }
         let categories = Dictionary((request.json("finance")?["categories"]?.arrayValue ?? []).map { (s($0, "id"), s($0, "name")) },
                                     uniquingKeysWith: { a, _ in a })

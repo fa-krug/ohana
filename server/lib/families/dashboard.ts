@@ -6,7 +6,7 @@
 
 import type { Db } from "@/lib/db";
 import { addDays } from "@/lib/calendar/dates";
-import { type CalendarSummary, calendarSummary } from "@/lib/calendar/summary";
+import { type CalendarSummary, calendarSummary, type RunMember } from "@/lib/calendar/summary";
 import { listOccurrences, type PublicEvent } from "@/lib/calendar/events";
 import { type MonthSummary, monthSummary } from "@/lib/finance/summary";
 import { getMealsSummary, type MealsSummary } from "@/lib/meals/queries/meal-plan";
@@ -21,7 +21,7 @@ import { weekAhead } from "@/lib/digest/digest";
 /** One line of "coming up": a run of a calendar type, or an event's occurrence starting after
  *  today. */
 export type UpcomingItem =
-  | { kind: "entry"; date: string; to: string; name: string; color: string }
+  | { kind: "entry"; date: string; to: string; name: string; color: string; icon: string; member: RunMember }
   | { kind: "event"; date: string; event: PublicEvent };
 
 export interface SearchFind {
@@ -71,7 +71,15 @@ export async function familyDashboard(
   const tomorrow = addDays(today, 1);
   const covering = (day: string) => events.filter((e) => e.date <= day && e.endDate >= day);
   const upcoming: UpcomingItem[] = [
-    ...calendar.upcoming.map((u) => ({ kind: "entry" as const, date: u.from, to: u.to, name: u.name, color: u.color })),
+    ...calendar.upcoming.map((u) => ({
+      kind: "entry" as const,
+      date: u.from,
+      to: u.to,
+      name: u.name,
+      color: u.color,
+      icon: u.icon,
+      member: u.member,
+    })),
     ...events.filter((e) => e.date > today).map((event) => ({ kind: "event" as const, date: event.date, event })),
   ];
   // Runs that started earlier (still going) sort as today.

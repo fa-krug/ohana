@@ -9,7 +9,8 @@
       "name": "Anna Parker",
       "role": "editor",
       "birthday": "1989-05-20",
-      "joinedAt": "2024-02-11T18:20:00.000Z"
+      "joinedAt": "2024-02-11T18:20:00.000Z",
+      "color": "blue"
     },
     {
       "userId": "demo-user",
@@ -17,13 +18,14 @@
       "name": "Ben Parker",
       "role": "viewer",
       "birthday": "1987-09-03",
-      "joinedAt": "2024-02-12T07:45:00.000Z"
+      "joinedAt": "2024-02-12T07:45:00.000Z",
+      "color": "orange"
     }
   ],
   "people": [
-    { "id": "person-grandma-rose", "name": "Grandma Rose", "birthday": "{{anniversary:10:1952}}" },
-    { "id": "person-leo", "name": "Leo", "birthday": "2021-07-02" },
-    { "id": "person-mia", "name": "Mia", "birthday": "2018-03-14" }
+    { "id": "person-grandma-rose", "name": "Grandma Rose", "birthday": "{{anniversary:10:1952}}", "color": "purple" },
+    { "id": "person-leo", "name": "Leo", "birthday": "2021-07-02", "color": "red" },
+    { "id": "person-mia", "name": "Mia", "birthday": "2018-03-14", "color": "green" }
   ],
   "invites": [],
   "home": { "address": "Lindenstraße 12, 10115 Berlin", "lat": 52.5306, "lng": 13.3846 },

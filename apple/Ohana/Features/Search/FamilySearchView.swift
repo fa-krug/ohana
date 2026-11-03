@@ -121,12 +121,20 @@ private struct SearchHitRow: View {
             if let route = hit.route { family.open(route) }
         } label: {
             HStack(spacing: 12) {
-                Image(systemName: kind.systemImage)
-                    .foregroundStyle(kind.module.tint)
-                    .frame(width: 24)
-                    .accessibilityHidden(true)
+                // A note's own symbol, in the theme color as on the calendar.
+                if kind == .note, let icon = hit.icon.flatMap({ CalendarSymbol.drawable($0) }) {
+                    Image(systemName: icon)
+                        .foregroundStyle(Color.accentColor)
+                        .frame(width: 24)
+                        .accessibilityHidden(true)
+                } else {
+                    Image(systemName: kind.systemImage)
+                        .foregroundStyle(kind.module.tint)
+                        .frame(width: 24)
+                        .accessibilityHidden(true)
+                }
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(hit.title)
+                    Text(title)
                         .lineLimit(1)
                     if !hit.detail.isEmpty {
                         Text(hit.detail)
@@ -142,6 +150,12 @@ private struct SearchHitRow: View {
         }
         .buttonStyle(.plain)
         .disabled(hit.route == nil)
+    }
+
+    /// A note with only an icon is called by it.
+    private var title: String {
+        if hit.title.isEmpty, kind == .note, let icon = hit.icon, !icon.isEmpty { return CalendarSymbol.title(icon) }
+        return hit.title
     }
 
     @ViewBuilder private var trailing: some View {

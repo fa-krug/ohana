@@ -146,6 +146,18 @@ struct AppleSyncMappingTests {
         ])
     }
 
+    @Test func namesTheMemberOfARunsType() {
+        let types: [Int: [CalendarEntryType]] = [2026: [
+            CalendarEntryType(id: "vac", year: 2026, name: "Vacation", memberId: "p1", color: "#30a46c", role: .covers),
+            CalendarEntryType(id: "kita", year: 2026, name: "Kita closed", color: "#8b8d98", role: .needsCover),
+            CalendarEntryType(id: "off", year: 2026, name: "Off", memberId: "gone", color: "#0090ff", role: .covers),
+        ]]
+        let entries: [Day: [String]] = [d("2026-11-02"): ["vac", "kita", "off"]]
+        let spans = AppleSyncMapping.spans(entries: entries, types: types, members: ["p1": "Mia"], window: window)
+        // "Type (Member)" like an event's person; nobody's type (or a member who's gone) by its name.
+        #expect(spans.map(\.title) == ["Kita closed", "Off", "Vacation (Mia)"])
+    }
+
     @Test func turnsOhanasSeriesIntoAppleEventsAndBack() {
         let events = [
             CalendarEventSeries(id: "s1", date: d("2026-11-05"), start: "09:00", end: "10:00", title: "Swimming",
@@ -384,5 +396,19 @@ struct AppleSyncPlannerTests {
         var unmarked = current
         unmarked.url = nil
         #expect(plan(apple: [unmarked], spans: [span], entryIDs: ["m1"]).steps.isEmpty)
+    }
+
+    @Test func remakesARunWhenItsTypeChangesMember() {
+        let mia = AppleSyncSpan(typeID: "vac", title: "Vacation (Mia)", first: d("2026-11-02"), last: d("2026-11-06"))
+        let current = apple("m1", AppleSyncMapping.apple(mia),
+                            url: AppleSyncMark.url(family: family, day: d("2026-11-02"), .entry("vac")))
+        #expect(plan(apple: [current], spans: [mia]).keepEntries == ["m1"])
+        // Without its link (known by its id) it's still matched by its day and title.
+        var unmarked = current
+        unmarked.url = nil
+        #expect(plan(apple: [unmarked], spans: [mia], entryIDs: ["m1"]).keepEntries == ["m1"])
+        // Given to Leo: the title says so.
+        let leo = AppleSyncSpan(typeID: "vac", title: "Vacation (Leo)", first: d("2026-11-02"), last: d("2026-11-06"))
+        #expect(plan(apple: [current], spans: [leo]).steps == [.deleteEntry(appleID: "m1"), .createEntry(leo)])
     }
 }

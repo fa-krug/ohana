@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Db } from "@/lib/db";
 import { familyMembers, users } from "@/lib/db/schema";
 import { createFamily } from "@/lib/families/manage";
+import { nextMemberColor } from "@/lib/families/member-colors";
 import type { Role } from "@/lib/families/roles";
 
 export const NOW = new Date("2026-11-01T12:00:00Z");
@@ -29,7 +30,9 @@ export function makeUser(
 export function makeFamily(db: Db, editorId: string, others: { userId: string; role: Role }[] = []) {
   const family = createFamily(db, { name: "Krug", editorId }, NOW);
   for (const m of others) {
-    db.insert(familyMembers).values({ familyId: family.id, userId: m.userId, role: m.role, joinedAt: NOW }).run();
+    db.insert(familyMembers)
+      .values({ familyId: family.id, userId: m.userId, role: m.role, color: nextMemberColor(db, family.id), joinedAt: NOW })
+      .run();
   }
   return family;
 }

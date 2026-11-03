@@ -3,7 +3,8 @@
 
 import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
 import type { Db } from "@/lib/db";
-import { calEntries, calEntryTypes, calNotes, families } from "@/lib/db/schema";
+import { calEntries, calEntryTypes, calNotes, families, familyMembers, familyPeople } from "@/lib/db/schema";
+import { memberColorHex, NEUTRAL_COLOR, typeShade } from "@/lib/families/colors";
 import { type FinanceContents, replaceFinance } from "@/lib/finance/store";
 
 export type Role = "none" | "needs_cover" | "covers" | "day_off";
@@ -28,13 +29,22 @@ export interface TypeRow {
   year: number;
   id: string; // unique within the family's year
   name: string;
+  /** Whose type it is: an account's or a person's id in the family, or null (nobody). */
+  member_id: string | null;
+  /** Derived, never stored: the member's color, a shade of it from their second type of the
+   *  year on (by position), a gray for nobody's. */
   color: string;
   role: Role;
+  /** The stored icon (an SF Symbol name), or null: the role's (`icons.ts` `typeIcon`). */
+  icon: string | null;
   position: number;
   /** The whole family is away from home on its days (the meal plan skips them).
    *  Optional: family-planner's rows and files have none (false). */
   away?: boolean;
 }
+
+/** A type to write: its color comes from the member, so a given one is ignored. */
+export type TypeInput = Omit<TypeRow, "color"> & { color?: string };
 
 export interface EntryRow {
   day: string;
@@ -54,7 +64,7 @@ export interface CalendarStore {
 
   /** Types of all years, ordered by year and position. */
   listTypes(familyId: string): Promise<TypeRow[]>;
-  upsertTypes(types: TypeRow[]): Promise<void>;
+  upsertTypes(types: TypeInput[]): Promise<void>;
   /** Deletes the type and all of its day entries (which are all in its year). */
   deleteType(familyId: string, year: number, typeId: string): Promise<void>;
   listEntries(familyId: string, from?: string, to?: string): Promise<EntryRow[]>;
@@ -69,7 +79,7 @@ export interface CalendarStore {
    *  given: all or nothing. */
   replaceContents(
     familyId: string,
-    types: TypeRow[],
+    types: TypeInput[],
     entries: EntryRow[],
     notes: NoteRow[],
     finance?: FinanceContents,
@@ -97,16 +107,63 @@ export function familyRow(f: FamilyRecord): FamilyRow {
   };
 }
 
-function typeRow(t: typeof calEntryTypes.$inferSelect): TypeRow {
+/** The types with their colors: each member's (and nobody's) types of a year shaded in order
+ *  of position, then id (the order of `rows`). */
+function withColors(
+  rows: (typeof calEntryTypes.$inferSelect)[],
+  colors: Map<string, string>,
+): TypeRow[] {
+  const seen = new Map<string, number>();
+  return rows.map((t) => {
+    // Someone no longer in the family (left without the cleanup) counts as nobody.
+    const id = t.memberUserId ?? t.memberPersonId;
+    const member_id = id && colors.has(id) ? id : null;
+    const key = `${t.year}|${member_id ?? ""}`;
+    const index = seen.get(key) ?? 0;
+    seen.set(key, index + 1);
+    const base = member_id ? memberColorHex(colors.get(member_id)) : NEUTRAL_COLOR;
+    return {
+      family_id: t.familyId,
+      year: t.year,
+      id: t.id,
+      name: t.name,
+      member_id,
+      color: typeShade(base, index),
+      role: isRole(t.role) ? t.role : "none",
+      icon: t.icon ?? null,
+      position: t.position,
+      away: t.away,
+    };
+  });
+}
+
+/** The family's accounts and people by id, with their color keys. */
+function memberColors(db: Pick<Db, "select">, familyId: string): Map<string, { color: string; account: boolean }> {
+  const out = new Map<string, { color: string; account: boolean }>();
+  for (const m of db
+    .select({ id: familyMembers.userId, color: familyMembers.color })
+    .from(familyMembers)
+    .where(eq(familyMembers.familyId, familyId))
+    .all()) {
+    out.set(m.id, { color: m.color, account: true });
+  }
+  for (const p of db
+    .select({ id: familyPeople.id, color: familyPeople.color })
+    .from(familyPeople)
+    .where(eq(familyPeople.familyId, familyId))
+    .all()) {
+    out.set(p.id, { color: p.color, account: false });
+  }
+  return out;
+}
+
+/** The member columns of a type: an account's or a person's id of the family; anything else
+ *  is nobody (the routes refuse it before). */
+function memberColumns(members: Map<string, { account: boolean }>, memberId: string | null) {
+  const m = memberId ? members.get(memberId) : undefined;
   return {
-    family_id: t.familyId,
-    year: t.year,
-    id: t.id,
-    name: t.name,
-    color: t.color,
-    role: isRole(t.role) ? t.role : "none",
-    position: t.position,
-    away: t.away,
+    memberUserId: m?.account ? memberId : null,
+    memberPersonId: m && !m.account ? memberId : null,
   };
 }
 
@@ -135,35 +192,33 @@ export class DrizzleCalendarStore implements CalendarStore {
   }
 
   async listTypes(familyId: string) {
-    return this.db
+    const rows = this.db
       .select()
       .from(calEntryTypes)
       .where(eq(calEntryTypes.familyId, familyId))
       .orderBy(asc(calEntryTypes.year), asc(calEntryTypes.position), asc(calEntryTypes.id))
-      .all()
-      .map(typeRow);
+      .all();
+    const colors = new Map([...memberColors(this.db, familyId)].map(([id, m]) => [id, m.color]));
+    return withColors(rows, colors);
   }
 
-  async upsertTypes(types: TypeRow[]) {
+  async upsertTypes(types: TypeInput[]) {
     // An upsert, never INSERT OR REPLACE: replacing would delete the type's entries (cascade).
     this.db.transaction((tx) => {
+      const members = new Map<string, ReturnType<typeof memberColors>>();
       for (const t of types) {
-        const values = {
-          familyId: t.family_id,
-          year: t.year,
-          id: t.id,
+        if (!members.has(t.family_id)) members.set(t.family_id, memberColors(tx, t.family_id));
+        const set = {
           name: t.name,
-          color: t.color,
+          ...memberColumns(members.get(t.family_id)!, t.member_id),
           role: t.role,
+          icon: t.icon ?? null,
           position: t.position,
           away: t.away ?? false,
         };
         tx.insert(calEntryTypes)
-          .values(values)
-          .onConflictDoUpdate({
-            target: [calEntryTypes.familyId, calEntryTypes.year, calEntryTypes.id],
-            set: { name: t.name, color: t.color, role: t.role, position: t.position, away: values.away },
-          })
+          .values({ familyId: t.family_id, year: t.year, id: t.id, ...set })
+          .onConflictDoUpdate({ target: [calEntryTypes.familyId, calEntryTypes.year, calEntryTypes.id], set })
           .run();
       }
     });
@@ -261,7 +316,7 @@ export class DrizzleCalendarStore implements CalendarStore {
 
   async replaceContents(
     familyId: string,
-    types: TypeRow[],
+    types: TypeInput[],
     entries: EntryRow[],
     notes: NoteRow[],
     finance?: FinanceContents,
@@ -271,6 +326,7 @@ export class DrizzleCalendarStore implements CalendarStore {
       tx.delete(calEntries).where(eq(calEntries.familyId, familyId)).run();
       tx.delete(calEntryTypes).where(eq(calEntryTypes.familyId, familyId)).run();
       tx.delete(calNotes).where(eq(calNotes.familyId, familyId)).run();
+      const members = memberColors(tx, familyId);
       for (const part of chunks(types)) {
         tx.insert(calEntryTypes)
           .values(
@@ -279,8 +335,9 @@ export class DrizzleCalendarStore implements CalendarStore {
               year: t.year,
               id: t.id,
               name: t.name,
-              color: t.color,
+              ...memberColumns(members, t.member_id),
               role: t.role,
+              icon: t.icon ?? null,
               position: t.position,
               away: t.away ?? false,
             })),

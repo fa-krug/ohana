@@ -11,10 +11,10 @@
 // GET    /household                            everything the settings page shows
 // DELETE /household                            deletes the family (editors; sole member)
 // POST   /household/members {email, role}      adds an account by its sign-in name
-// PATCH  /household/members/{userId} {role?, birthday?}
+// PATCH  /household/members/{userId} {role?, birthday?, color?}
 // DELETE /household/members/{userId}           removes a member (oneself: leave)
-// POST   /household/people {name, birthday?, invite?: role | null}
-// PATCH  /household/people/{id} {name, birthday}
+// POST   /household/people {name, birthday?, color?, invite?: role | null}
+// PATCH  /household/people/{id} {name, birthday, color?}  (no color: kept)
 // DELETE /household/people/{id}
 // POST   /household/invites {role, personId?}
 // DELETE /household/invites/{id}
@@ -34,7 +34,15 @@ import { families } from "@/lib/db/schema";
 import type { User } from "@/lib/auth/tokens";
 import { pickLocale } from "@/lib/i18n/locale";
 import { isValidDate } from "@/lib/calendar/dates";
-import { addMemberSchema, addPersonSchema, birthdaySchema, familyNameSchema, personSchema, role as roleSchema } from "@/lib/schemas/auth";
+import {
+  addMemberSchema,
+  addPersonSchema,
+  birthdaySchema,
+  familyNameSchema,
+  memberColorSchema,
+  personSchema,
+  role as roleSchema,
+} from "@/lib/schemas/auth";
 import { createChannel, deleteChannel, listChannels, updateChannel } from "@/lib/notifications/channels";
 import { channelInputSchema } from "@/lib/notifications/schema";
 import { sendTestNotification } from "@/lib/notifications";
@@ -43,7 +51,7 @@ import { familyDashboard } from "./dashboard";
 import { homeAddressSchema, setHomeAddress } from "./home";
 import { createInvite, listInvites, revokeInvite } from "./invites";
 import { createFamily, deleteFamily, type FamilyDto } from "./manage";
-import { addMember, listMembers, removeMember, setMemberBirthday, setRole } from "./members";
+import { addMember, listMembers, removeMember, setMemberBirthday, setMemberColor, setRole } from "./members";
 import { addPerson, listPeople, removePerson, updatePerson } from "./people";
 import type { Role } from "./roles";
 import { SEARCH_DEFAULT_LIMIT, SEARCH_MAX_LIMIT, searchFamily } from "./search";
@@ -126,7 +134,7 @@ export interface HouseholdDto {
   role: Role;
   selfId: string;
   members: ReturnType<typeof listMembers>;
-  people: { id: string; name: string; birthday: string | null }[];
+  people: { id: string; name: string; birthday: string | null; color: string }[];
   /** Open invites (editors only; [] for viewers). */
   invites: { id: string; url: string; role: string; personId: string | null; expiresAt: Date }[];
   home: { address: string | null; lat: number | null; lng: number | null };
@@ -144,7 +152,7 @@ function householdOf(ctx: Ctx, user: User, familyId: string, role: Role): Househ
     role,
     selfId: user.id,
     members: listMembers(db, actor, familyId),
-    people: listPeople(db, actor, familyId).map((p) => ({ id: p.id, name: p.name, birthday: p.birthday })),
+    people: listPeople(db, actor, familyId).map(personOut),
     invites:
       role === "editor"
         ? listInvites(db, actor, familyId, now).map((i) => ({
@@ -180,9 +188,14 @@ const addMemberRoute: Handler = async (ctx) => {
   return json(addMember(ctx.db, { id: user.id }, familyId, input, ctx.now), 201);
 };
 
-const memberPatchSchema = z.object({ role: roleSchema.optional(), birthday: birthdaySchema.optional() });
+const memberPatchSchema = z.object({
+  role: roleSchema.optional(),
+  birthday: birthdaySchema.optional(),
+  color: memberColorSchema.optional(),
+});
 
-/** A role and / or a birthday (members set their own birthday, editors anyone's). */
+/** A role, a birthday and / or a color (members set their own birthday and color, editors
+ *  anyone's). */
 const updateMember: Handler = async (ctx, [userId]) => {
   const { user, familyId } = await member(ctx);
   const raw = await readBody(ctx.req);
@@ -190,6 +203,7 @@ const updateMember: Handler = async (ctx, [userId]) => {
   const actor = { id: user.id };
   if (input.role !== undefined) setRole(ctx.db, actor, familyId, userId, input.role);
   if ("birthday" in raw) setMemberBirthday(ctx.db, actor, familyId, userId, input.birthday ?? null, ctx.now);
+  if (input.color !== undefined) setMemberColor(ctx.db, actor, familyId, userId, input.color);
   const updated = listMembers(ctx.db, actor, familyId).find((m) => m.userId === userId);
   if (!updated) throw new HttpError(404, "Member not found.");
   return json(updated);
@@ -204,13 +218,20 @@ const removeMemberRoute: Handler = async (ctx, [userId]) => {
 
 // ---- People without an account ----
 
+const personOut = (p: { id: string; name: string; birthday: string | null; color: string }) => ({
+  id: p.id,
+  name: p.name,
+  birthday: p.birthday,
+  color: p.color,
+});
+
 const addPersonRoute: Handler = async (ctx) => {
   const { user, familyId } = await member(ctx, "edit");
   const input = addPersonSchema.parse(await readBody(ctx.req));
   const res = addPerson(ctx.db, { id: user.id }, familyId, input, ctx.now);
   return json(
     {
-      person: { id: res.person.id, name: res.person.name, birthday: res.person.birthday },
+      person: personOut(res.person),
       invite: res.invite ? { ...res.invite, url: inviteUrl(ctx, res.invite.code) } : null,
     },
     201,
@@ -220,8 +241,7 @@ const addPersonRoute: Handler = async (ctx) => {
 const updatePersonRoute: Handler = async (ctx, [personId]) => {
   const { user, familyId } = await member(ctx, "edit");
   const input = personSchema.parse(await readBody(ctx.req));
-  updatePerson(ctx.db, { id: user.id }, familyId, personId, input, ctx.now);
-  return json({ id: personId, name: input.name, birthday: input.birthday });
+  return json(personOut(updatePerson(ctx.db, { id: user.id }, familyId, personId, input, ctx.now)));
 };
 
 const removePersonRoute: Handler = async (ctx, [personId]) => {

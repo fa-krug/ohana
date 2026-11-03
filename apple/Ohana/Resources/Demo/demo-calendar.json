@@ -7,10 +7,10 @@
     "updatedAt": "{{time:-185}}"
   },
   "types": [
-    { "id": "vacation", "name": "Vacation", "color": "#22c55e", "role": "covers", "position": 0, "away": true },
-    { "id": "school-holidays", "name": "School holidays", "color": "#3b82f6", "role": "needs_cover", "position": 1, "away": false },
-    { "id": "grandma", "name": "Grandma visits", "color": "#f97316", "role": "covers", "position": 2, "away": false },
-    { "id": "anna-off", "name": "Anna off work", "color": "#a855f7", "role": "covers", "position": 3, "away": false }
+    { "id": "vacation", "name": "Vacation", "memberId": "demo-user", "color": "#f76b15", "role": "covers", "icon": "beach.umbrella", "position": 0, "away": true },
+    { "id": "school-holidays", "name": "School holidays", "memberId": "person-mia", "color": "#30a46c", "role": "needs_cover", "icon": "backpack", "position": 1, "away": false },
+    { "id": "grandma", "name": "Grandma visits", "memberId": "person-grandma-rose", "color": "#8e4ec6", "role": "covers", "icon": "figure.and.child.holdinghands", "position": 2, "away": false },
+    { "id": "anna-off", "name": "Anna off work", "memberId": "demo-anna", "color": "#0090ff", "role": "covers", "icon": "briefcase", "position": 3, "away": false }
   ],
   "spans": [
     { "type": "vacation", "from": "{{day:-78}}", "to": "{{day:-65}}" },
@@ -30,17 +30,17 @@
     { "type": "grandma", "from": "{{day:61}}", "to": "{{day:67}}" }
   ],
   "notes": {
-    "{{day:-78}}": { "icon": "🏖️", "comment": "Summer trip to the Baltic Sea" },
-    "{{day:-84}}": { "icon": "🚆", "comment": "Grandma arrives 11:40, Hauptbahnhof" },
-    "{{day:-42}}": { "icon": "🎒", "comment": "First day of school" },
-    "{{day:-2}}": { "icon": "🎃", "comment": "Pumpkin carving with the neighbours" },
-    "{{day:2}}": { "icon": "📚", "comment": "Library books due" },
-    "{{day:9}}": { "icon": "🎈", "comment": "Mia at Emma's birthday party, 15:00" },
-    "{{day:12}}": { "icon": "✈️", "comment": "Flight to Lisbon 07:15 BER" },
-    "{{day:19}}": { "icon": "🏠", "comment": "Back home in the evening" },
-    "{{day:24}}": { "icon": "🚆", "comment": "Grandma Rose arrives 14:30" },
-    "{{day:33}}": { "icon": "🚗", "comment": "Car inspection" },
-    "{{day:47}}": { "icon": "🎄", "comment": "School concert" }
+    "{{day:-78}}": { "icon": "sun.max", "comment": "Summer trip to the Baltic Sea" },
+    "{{day:-84}}": { "icon": "tram", "comment": "Grandma arrives 11:40, Hauptbahnhof" },
+    "{{day:-42}}": { "icon": "graduationcap", "comment": "First day of school" },
+    "{{day:-2}}": { "icon": "leaf", "comment": "Pumpkin carving with the neighbours" },
+    "{{day:2}}": { "icon": "book", "comment": "Library books due" },
+    "{{day:9}}": { "icon": "party.popper", "comment": "Mia at Emma's birthday party, 15:00" },
+    "{{day:12}}": { "icon": "airplane", "comment": "Flight to Lisbon 07:15 BER" },
+    "{{day:19}}": { "icon": "house", "comment": "Back home in the evening" },
+    "{{day:24}}": { "icon": "tram", "comment": "Grandma Rose arrives 14:30" },
+    "{{day:33}}": { "icon": "car", "comment": "Car inspection" },
+    "{{day:47}}": { "icon": "music.note", "comment": "School concert" }
   },
   "events": [
     {

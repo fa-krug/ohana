@@ -427,13 +427,11 @@ private struct OverviewUpcomingCard: View {
     @ViewBuilder
     private func row(_ item: OverviewUpcomingItem) -> some View {
         switch item {
-        case let .entry(date, to, name, color):
+        case let .entry(date, to, name, color, icon, member):
             OverviewLine {
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(Color(overviewHex: color))
-                    .frame(width: 12, height: 12)
-                    .accessibilityHidden(true)
-                Text(name).lineLimit(2)
+                CalendarTypeBadge(name: name, color: color, icon: icon, member: member, size: 18)
+                // The badge reads the name (with the member's).
+                Text(name).lineLimit(2).accessibilityHidden(true)
             } trailing: {
                 Text(OverviewFormat.range(date, to))
                     .monospacedDigit()

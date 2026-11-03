@@ -66,7 +66,7 @@ function seedRecipes() {
 }
 
 function addType(id: string, away: boolean, role = "none") {
-  db.insert(calEntryTypes).values({ familyId, year: 2026, id, name: id === "trip" ? "Trip" : id, color: "#123456", role, position: 9, away }).run();
+  db.insert(calEntryTypes).values({ familyId, year: 2026, id, name: id === "trip" ? "Trip" : id, role, position: 9, away }).run();
 }
 function mark(typeId: string, days: string[]) {
   for (const day of days) db.insert(calEntries).values({ familyId, day, year: 2026, typeId }).run();
@@ -120,7 +120,7 @@ describe("meal plan and away days", () => {
 
   it("ignores the away flag of other families and of other years' types", () => {
     const other = makeFamily(db, makeUser(db).id);
-    db.insert(calEntryTypes).values({ familyId: other.id, year: 2026, id: "trip", name: "Trip", color: "#123456", away: true }).run();
+    db.insert(calEntryTypes).values({ familyId: other.id, year: 2026, id: "trip", name: "Trip", away: true }).run();
     db.insert(calEntries).values({ familyId: other.id, day: "2026-06-03", year: 2026, typeId: "trip" }).run();
     const { iterationId } = setupMealPlan(db, familyId, input, now, mulberry32(1));
     expect(db.select().from(mealPlanEntries).where(eq(mealPlanEntries.iterationId, iterationId)).all()).toHaveLength(7);
@@ -152,9 +152,9 @@ describe("the away flag in the calendar API", () => {
 
   it("creates, patches, copies, exports and imports it", async () => {
     const api = call();
-    const created = await api("POST", `/families/${familyId}/types?year=2026`, { name: "Away", color: "#112233", away: true });
+    const created = await api("POST", `/families/${familyId}/types?year=2026`, { name: "Away", away: true });
     expect(created.data.away).toBe(true);
-    expect((await api("POST", `/families/${familyId}/types?year=2026`, { name: "Bad", color: "#112233", away: "yes" })).status).toBe(400);
+    expect((await api("POST", `/families/${familyId}/types?year=2026`, { name: "Bad", away: "yes" })).status).toBe(400);
     const patched = await api("PATCH", `/families/${familyId}/types/vacation?year=2026`, { away: true });
     expect(patched.data).toMatchObject({ id: "vacation", away: true, role: "covers" });
     const listed = await api("GET", `/families/${familyId}/types?year=2026`);

@@ -6,6 +6,7 @@ import { AuthError } from "@/lib/auth/errors";
 import { insertPresetTypes } from "@/lib/calendar/presets";
 import { seedDefaultTags } from "@/lib/meals/recipes/tags";
 import { insertDefaultCategories } from "@/lib/finance/presets";
+import { pickMemberColor } from "./colors";
 import { type Actor, type Role, isRole, requireRole } from "./roles";
 
 export type Family = typeof families.$inferSelect;
@@ -25,7 +26,8 @@ function cleanName(name: string): string {
 }
 
 /** Creates a family with the calendar's preset types for this year and the default finance
- *  categories (both named in `lang`); `editorId` (if given) becomes its first editor. */
+ *  categories (both named in `lang`); `editorId` (if given) becomes its first editor, with the
+ *  palette's first color and the preset types. */
 export function createFamily(
   db: Db,
   args: { name: string; editorId?: string; lang?: string },
@@ -39,18 +41,18 @@ export function createFamily(
       .returning()
       .get();
     const lang = args.lang === "de" ? "de" : "en";
-    insertPresetTypes(tx, family.id, lang, now.getUTCFullYear());
-    insertDefaultCategories(tx, family.id, lang);
-    seedDefaultTags(tx as unknown as Db, family.id); // the meal tags every family starts with
     if (args.editorId) {
       tx.insert(familyMembers)
-        .values({ familyId: family.id, userId: args.editorId, role: "editor", joinedAt: now })
+        .values({ familyId: family.id, userId: args.editorId, role: "editor", color: pickMemberColor([]), joinedAt: now })
         .run();
       tx.update(users)
         .set({ lastFamilyId: family.id })
         .where(eq(users.id, args.editorId))
         .run();
     }
+    insertPresetTypes(tx, family.id, lang, now.getUTCFullYear(), args.editorId ?? null);
+    insertDefaultCategories(tx, family.id, lang);
+    seedDefaultTags(tx as unknown as Db, family.id); // the meal tags every family starts with
     return family;
   });
 }

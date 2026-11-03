@@ -208,19 +208,26 @@ struct CalendarSelectionBar: View {
             Text(CalendarText.selectionTitle(days))
                 .font(.subheadline.weight(.semibold))
                 .lineLimit(1)
-            if let line = days.count == 1 ? dayLine(days[0]) : CalendarText.selectionCount(days) {
-                Text(line).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            if let line = days.count == 1 ? dayLine(days[0]) : Text(CalendarText.selectionCount(days)) {
+                line.font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
         }
     }
 
-    /// One day: its note, events and birthdays in a line (touch screens have no tooltips).
-    private func dayLine(_ day: Day) -> String? {
+    /// One day: its note (the icon in the theme color), events and birthdays in a line (touch
+    /// screens have no tooltips).
+    private func dayLine(_ day: Day) -> Text? {
         var parts: [String] = []
-        if let note = store.notes[day], !note.text.isEmpty { parts.append(note.text) }
+        let note = store.notes[day]
+        if let note, !note.comment.isEmpty { parts.append(note.comment) }
         parts += (store.events[day] ?? []).map { "🕑 " + $0.line(on: day) }
         parts += (store.birthdays[day] ?? []).map(CalendarText.birthday)
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+        let text = parts.joined(separator: " · ")
+        guard let icon = note.flatMap({ CalendarSymbol.drawable($0.icon) }) else {
+            return parts.isEmpty ? nil : Text(text)
+        }
+        let symbol = Text(Image(systemName: icon)).foregroundStyle(Color.accentColor)
+        return parts.isEmpty ? Text("\(symbol) \(CalendarSymbol.title(icon))") : Text("\(symbol) \(text)")
     }
 }
 

@@ -74,11 +74,13 @@ struct FamilySearchHit: Decodable, Hashable, Identifiable {
     let amountCents: Int?
     /// A person: a member with an account.
     let account: Bool?
+    /// A note's icon (an SF Symbol's name), when it has one.
+    let icon: String?
 
     var id: String { "\(kindName)/\(itemID)" }
 
     enum CodingKeys: String, CodingKey {
-        case kindName = "kind", itemID = "id", title, detail, day, time, amountCents, account
+        case kindName = "kind", itemID = "id", title, detail, day, time, amountCents, account, icon
     }
 
     /// Where the hit opens (`FamilyContext.open`).

@@ -5,6 +5,7 @@ import { familyMembers, familyPeople, users } from "@/lib/db/schema";
 import { AuthError } from "@/lib/auth/errors";
 import { addDays, formatDate, isValidDate } from "@/lib/calendar/dates";
 import { createInvite } from "./invites";
+import { assertMemberColor, nextMemberColor } from "./member-colors";
 import { type Actor, type Role, requireRole } from "./roles";
 
 /** A family member without an account (a child, a grandparent). */
@@ -12,6 +13,8 @@ export interface PersonDto {
   id: string;
   name: string;
   birthday: string | null;
+  /** A key of MEMBER_COLORS. */
+  color: string;
   createdAt: Date;
 }
 
@@ -29,9 +32,17 @@ export function listPeople(db: Db, actor: Actor, familyId: string): PersonDto[] 
   return peopleOf(db, familyId);
 }
 
+const personColumns = {
+  id: familyPeople.id,
+  name: familyPeople.name,
+  birthday: familyPeople.birthday,
+  color: familyPeople.color,
+  createdAt: familyPeople.createdAt,
+};
+
 function peopleOf(db: Db, familyId: string): PersonDto[] {
   return db
-    .select({ id: familyPeople.id, name: familyPeople.name, birthday: familyPeople.birthday, createdAt: familyPeople.createdAt })
+    .select(personColumns)
     .from(familyPeople)
     .where(eq(familyPeople.familyId, familyId))
     .orderBy(asc(familyPeople.name))
@@ -55,13 +66,14 @@ function assertPerson(db: Db, familyId: string, personId: string) {
   return row;
 }
 
-/** Adds someone without an account; with `invite`, also an invite link for them that makes
- *  them a member with this role (and replaces them) once accepted. */
+/** Adds someone without an account (in `color`, else one nobody has yet); with `invite`, also
+ *  an invite link for them that makes them a member with this role (and replaces them) once
+ *  accepted. */
 export function addPerson(
   db: Db,
   actor: Actor,
   familyId: string,
-  args: { name: string; birthday?: string | null; invite?: Role | null },
+  args: { name: string; birthday?: string | null; color?: string | null; invite?: Role | null },
   now: Date,
 ): { person: PersonDto; invite: { code: string; expiresAt: Date } | null } {
   requireRole(db, actor, familyId, "editor");
@@ -69,35 +81,45 @@ export function addPerson(
   const birthday = args.birthday ?? null;
   assertFreeName(db, familyId, name);
   assertBirthday(birthday, now);
+  const color = args.color ?? nextMemberColor(db, familyId);
+  assertMemberColor(color);
   return db.transaction((tx) => {
     const person = tx
       .insert(familyPeople)
-      .values({ id: randomUUID(), familyId, name, birthday, createdAt: now })
-      .returning({ id: familyPeople.id, name: familyPeople.name, birthday: familyPeople.birthday, createdAt: familyPeople.createdAt })
+      .values({ id: randomUUID(), familyId, name, birthday, color, createdAt: now })
+      .returning(personColumns)
       .get();
     const invite = args.invite ? createInvite(tx, actor, familyId, args.invite, now, person.id) : null;
     return { person, invite };
   });
 }
 
-/** Changes the name and the birthday of someone without an account. */
+/** Changes the name, the birthday and (if given) the color of someone without an account;
+ *  answers them as they are now. */
 export function updatePerson(
   db: Db,
   actor: Actor,
   familyId: string,
   personId: string,
-  args: { name: string; birthday: string | null },
+  args: { name: string; birthday: string | null; color?: string },
   now: Date,
-): void {
+): PersonDto {
   requireRole(db, actor, familyId, "editor");
   assertPerson(db, familyId, personId);
   const name = args.name.trim();
   assertFreeName(db, familyId, name, personId);
   assertBirthday(args.birthday, now);
-  db.update(familyPeople).set({ name, birthday: args.birthday }).where(eq(familyPeople.id, personId)).run();
+  if (args.color !== undefined) assertMemberColor(args.color);
+  return db
+    .update(familyPeople)
+    .set({ name, birthday: args.birthday, ...(args.color !== undefined ? { color: args.color } : {}) })
+    .where(eq(familyPeople.id, personId))
+    .returning(personColumns)
+    .get()!;
 }
 
-/** Removes someone without an account (and their open invite). */
+/** Removes someone without an account (and their open invite; their entry types become
+ *  nobody's through the foreign key). */
 export function removePerson(db: Db, actor: Actor, familyId: string, personId: string): void {
   requireRole(db, actor, familyId, "editor");
   assertPerson(db, familyId, personId);
@@ -109,14 +131,14 @@ export function removePerson(db: Db, actor: Actor, familyId: string, personId: s
 export function familyNames(
   db: Db,
   familyId: string,
-): { id: string; name: string; account: boolean; birthday: string | null }[] {
+): { id: string; name: string; account: boolean; birthday: string | null; color: string }[] {
   const accounts = db
-    .select({ id: users.id, name: users.name, email: users.email, birthday: familyMembers.birthday })
+    .select({ id: users.id, name: users.name, email: users.email, birthday: familyMembers.birthday, color: familyMembers.color })
     .from(familyMembers)
     .innerJoin(users, eq(users.id, familyMembers.userId))
     .where(eq(familyMembers.familyId, familyId))
     .all()
-    .map((u) => ({ id: u.id, name: u.name.trim() || u.email.split("@")[0], account: true, birthday: u.birthday }));
-  const people = peopleOf(db, familyId).map((p) => ({ id: p.id, name: p.name, account: false, birthday: p.birthday }));
+    .map((u) => ({ id: u.id, name: u.name.trim() || u.email.split("@")[0], account: true, birthday: u.birthday, color: u.color }));
+  const people = peopleOf(db, familyId).map((p) => ({ id: p.id, name: p.name, account: false, birthday: p.birthday, color: p.color }));
   return [...accounts, ...people].sort((a, b) => a.name.localeCompare(b.name));
 }

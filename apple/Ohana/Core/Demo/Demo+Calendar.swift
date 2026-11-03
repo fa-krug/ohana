@@ -6,7 +6,8 @@ extension DemoServer {
     /// GET /families/demo?year= (family-routes.ts `familyState`) from `demo-calendar.json`: the
     /// same types in every year, the entries of its spans (`{type, from, to}`), notes and events
     /// that fall in the year (each occurrence of a repeating one under every day it covers), and
-    /// the birthdays of its `people` in it. GET /events (`from`/`to`, `year` or `raw=1`) and
+    /// the birthdays of its `people` in it, the members (with their colors) from `demo-household.json`.
+    /// GET /events (`from`/`to`, `year` or `raw=1`) and
     /// /events/{id} answer from the same events.
     static func calendar(_ request: Request) -> JSONValue? {
         if let events = self.events(request) { return events }
@@ -65,6 +66,16 @@ extension DemoServer {
                 .object(["name": .string(name), "age": .number(Double(year - born.year))]))
         }
 
+        let household = request.json("household")
+        let accounts: [JSONValue] = (household?["members"]?.arrayValue ?? []).map { member in
+            .object(["id": member["userId"] ?? .null, "name": member["name"] ?? .null, "account": .bool(true),
+                     "color": member["color"] ?? .null])
+        }
+        let people: [JSONValue] = (household?["people"]?.arrayValue ?? []).map { person in
+            .object(["id": person["id"] ?? .null, "name": person["name"] ?? .null, "account": .bool(false),
+                     "color": person["color"] ?? .null])
+        }
+
         let family = file["family"] ?? .null
         let typeYears = Set([request.today.year - 1, request.today.year, request.today.year + 1, year]).sorted()
         return .object([
@@ -76,6 +87,7 @@ extension DemoServer {
             "notes": .object(notes),
             "events": .object(events.mapValues { .array($0) }),
             "birthdays": .object(birthdays.mapValues { .array($0) }),
+            "members": .array(accounts + people),
         ])
     }
 

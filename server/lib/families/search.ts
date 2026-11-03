@@ -45,6 +45,8 @@ export interface SearchHit {
   amountCents?: number;
   /** A person's: whether they have an account (a member) or not. */
   account?: boolean;
+  /** A note's icon (an SF Symbol name), when it has one. */
+  icon?: string;
 }
 
 export interface SearchResult {
@@ -187,7 +189,7 @@ function noteHits(db: Db, familyId: string) {
     .all()
     .filter((n) => n.comment.trim())
     .map((n) => ({
-      hit: { kind: "note" as const, id: n.day, title: joined(n.icon, line(n.comment)), detail: "", day: n.day },
+      hit: { kind: "note" as const, id: n.day, title: line(n.comment), detail: "", day: n.day, ...(n.icon ? { icon: n.icon } : {}) },
       text: [n.comment],
     }));
 }

@@ -236,7 +236,10 @@ enum AppleSyncMapping {
     }
 
     /// The runs of days with the same type, in `window` (types are per year: a run ends with it).
-    static func spans(entries: [Day: [String]], types: [Int: [CalendarEntryType]], window: ClosedRange<Day>) -> [AppleSyncSpan] {
+    /// A run is titled "Type (Member)" for a type that belongs to someone (`members`: names by id),
+    /// like an event's person in brackets; a new member makes it a new run.
+    static func spans(entries: [Day: [String]], types: [Int: [CalendarEntryType]], members: [String: String] = [:],
+                      window: ClosedRange<Day>) -> [AppleSyncSpan] {
         var days: [String: [Day]] = [:]
         for (day, ids) in entries where window.contains(day) {
             for id in ids { days["\(day.year)/\(id)", default: []].append(day) }
@@ -247,10 +250,16 @@ enum AppleSyncMapping {
             guard let year = Int(parts[0]), let type = types[year]?.first(where: { $0.id == String(parts[1]) }) else { continue }
             for run in CalendarMath.runs(list.sorted()) {
                 guard let first = run.first, let last = run.last else { continue }
-                out.append(AppleSyncSpan(typeID: type.id, title: type.name, first: first, last: last))
+                out.append(AppleSyncSpan(typeID: type.id, title: title(type, members: members), first: first, last: last))
             }
         }
         return out.sorted { ($0.first, $0.typeID) < ($1.first, $1.typeID) }
+    }
+
+    /// A type's run's title: "Vacation (Mia)", or "Vacation" for nobody's.
+    static func title(_ type: CalendarEntryType, members: [String: String]) -> String {
+        guard let name = type.memberId.flatMap({ members[$0] }), !name.isEmpty else { return type.name }
+        return "\(type.name) (\(name))"
     }
 
     /// An entry run as its Apple event.

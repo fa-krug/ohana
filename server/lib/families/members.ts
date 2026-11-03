@@ -1,7 +1,8 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import type { Db } from "@/lib/db";
-import { choreSubscribers, chores, familyMembers, users } from "@/lib/db/schema";
+import { calEntryTypes, choreSubscribers, chores, familyMembers, users } from "@/lib/db/schema";
 import { AuthError } from "@/lib/auth/errors";
+import { assertMemberColor, nextMemberColor } from "./member-colors";
 import { assertBirthday } from "./people";
 import { type Actor, type Role, isRole, requireRole } from "./roles";
 
@@ -11,6 +12,8 @@ export interface MemberDto {
   name: string;
   role: Role;
   birthday: string | null;
+  /** A key of MEMBER_COLORS. */
+  color: string;
   joinedAt: Date;
 }
 
@@ -23,6 +26,7 @@ export function listMembers(db: Db, actor: Actor, familyId: string): MemberDto[]
       name: users.name,
       role: familyMembers.role,
       birthday: familyMembers.birthday,
+      color: familyMembers.color,
       joinedAt: familyMembers.joinedAt,
     })
     .from(familyMembers)
@@ -65,11 +69,12 @@ export function addMember(
   if (!user) throw new AuthError(404, "There is no account with this email.");
   const existing = memberRows(db, familyId).find((m) => m.userId === user.id);
   if (existing) throw new AuthError(409, "This person is already a member.");
-  db.insert(familyMembers).values({ familyId, userId: user.id, role: args.role, joinedAt: now }).run();
+  const color = nextMemberColor(db, familyId);
+  db.insert(familyMembers).values({ familyId, userId: user.id, role: args.role, color, joinedAt: now }).run();
   if (!user.lastFamilyId) {
     db.update(users).set({ lastFamilyId: familyId }).where(eq(users.id, user.id)).run();
   }
-  return { userId: user.id, email: user.email, name: user.name, role: args.role, birthday: null, joinedAt: now };
+  return { userId: user.id, email: user.email, name: user.name, role: args.role, birthday: null, color, joinedAt: now };
 }
 
 /** A member's birthday in this family; members set their own, editors anyone's. */
@@ -92,6 +97,20 @@ export function setMemberBirthday(
     .run();
 }
 
+/** A member's color in this family (a palette key; others may have it too); members set their
+ *  own, editors anyone's. */
+export function setMemberColor(db: Db, actor: Actor, familyId: string, userId: string, color: string): void {
+  requireRole(db, actor, familyId, userId === actor.id ? "viewer" : "editor");
+  if (!memberRows(db, familyId).some((m) => m.userId === userId)) {
+    throw new AuthError(404, "Member not found.");
+  }
+  assertMemberColor(color);
+  db.update(familyMembers)
+    .set({ color })
+    .where(and(eq(familyMembers.familyId, familyId), eq(familyMembers.userId, userId)))
+    .run();
+}
+
 export function setRole(db: Db, actor: Actor, familyId: string, userId: string, role: Role): void {
   requireRole(db, actor, familyId, "editor");
   if (!memberRows(db, familyId).some((m) => m.userId === userId)) {
@@ -104,8 +123,8 @@ export function setRole(db: Db, actor: Actor, familyId: string, userId: string, 
     .run();
 }
 
-/** Removes a member (their chores in the family become nobody's, their subscriptions to its
- *  chores end); everyone may remove themselves (leave), editors anyone. */
+/** Removes a member (their chores and entry types in the family become nobody's, their
+ *  subscriptions to its chores end); everyone may remove themselves (leave), editors anyone. */
 export function removeMember(db: Db, actor: Actor, familyId: string, userId: string): void {
   requireRole(db, actor, familyId, userId === actor.id ? "viewer" : "editor");
   const rows = memberRows(db, familyId);
@@ -124,6 +143,10 @@ export function removeMember(db: Db, actor: Actor, familyId: string, userId: str
   db.update(chores)
     .set({ assigneeUserId: null })
     .where(and(eq(chores.familyId, familyId), eq(chores.assigneeUserId, userId)))
+    .run();
+  db.update(calEntryTypes)
+    .set({ memberUserId: null })
+    .where(and(eq(calEntryTypes.familyId, familyId), eq(calEntryTypes.memberUserId, userId)))
     .run();
   db.delete(choreSubscribers)
     .where(

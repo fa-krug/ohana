@@ -88,12 +88,13 @@ struct OverviewEvent: Codable, Hashable {
     }
 }
 
-/// One line of "coming up": a run of a calendar type, or a timed event.
+/// One line of "coming up": a run of a calendar type (its icon, and with whom the type belongs
+/// to, if anyone), or a timed event.
 enum OverviewUpcomingItem: Codable, Hashable, Identifiable {
-    case entry(date: Day, to: Day, name: String, color: String)
+    case entry(date: Day, to: Day, name: String, color: String, icon: String, member: CalendarMember?)
     case event(date: Day, event: OverviewEvent)
 
-    private enum Keys: String, CodingKey { case kind, date, to, name, color, event }
+    private enum Keys: String, CodingKey { case kind, date, to, name, color, icon, member, event }
 
     init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: Keys.self)
@@ -104,19 +105,25 @@ enum OverviewUpcomingItem: Codable, Hashable, Identifiable {
         default:
             self = .entry(date: date, to: try c.decode(Day.self, forKey: .to),
                           name: try c.decode(String.self, forKey: .name),
-                          color: try c.decode(String.self, forKey: .color))
+                          color: try c.decode(String.self, forKey: .color),
+                          // Older servers don't send it: the default role's.
+                          icon: try c.decodeIfPresent(String.self, forKey: .icon).flatMap { $0.isEmpty ? nil : $0 }
+                              ?? CalendarRole.none.defaultIcon,
+                          member: try c.decodeIfPresent(CalendarMember.self, forKey: .member))
         }
     }
 
     func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: Keys.self)
         switch self {
-        case let .entry(date, to, name, color):
+        case let .entry(date, to, name, color, icon, member):
             try c.encode("entry", forKey: .kind)
             try c.encode(date, forKey: .date)
             try c.encode(to, forKey: .to)
             try c.encode(name, forKey: .name)
             try c.encode(color, forKey: .color)
+            try c.encode(icon, forKey: .icon)
+            try c.encode(member, forKey: .member)
         case let .event(date, event):
             try c.encode("event", forKey: .kind)
             try c.encode(date, forKey: .date)
@@ -126,14 +133,14 @@ enum OverviewUpcomingItem: Codable, Hashable, Identifiable {
 
     var id: String {
         switch self {
-        case let .entry(date, _, name, _): "entry|\(name)|\(date)"
+        case let .entry(date, _, name, _, _, member): "entry|\(name)|\(member?.id ?? "")|\(date)"
         case let .event(_, event): "event|\(event.uid)"
         }
     }
 
     var date: Day {
         switch self {
-        case let .entry(date, _, _, _), let .event(date, _): date
+        case let .entry(date, _, _, _, _, _), let .event(date, _): date
         }
     }
 }

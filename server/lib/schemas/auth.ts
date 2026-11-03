@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ROLES } from "@/lib/families/roles";
+import { MEMBER_COLORS } from "@/lib/families/colors";
 
 const email = z.string().trim().toLowerCase().email();
 // Sign-in name: an email or a plain name (accounts imported from the old apps may use one).
@@ -51,8 +52,15 @@ export const birthdaySchema = z
   .or(z.literal("").transform(() => null))
   .nullable()
   .default(null);
-export const addPersonSchema = z.object({ name: personName, birthday: birthdaySchema, invite: role.nullable().default(null) });
-export const personSchema = z.object({ name: personName, birthday: birthdaySchema });
+/** A key of MEMBER_COLORS. */
+export const memberColorSchema = z.enum(MEMBER_COLORS.map((c) => c.key) as [string, ...string[]]);
+export const addPersonSchema = z.object({
+  name: personName,
+  birthday: birthdaySchema,
+  color: memberColorSchema.optional(),
+  invite: role.nullable().default(null),
+});
+export const personSchema = z.object({ name: personName, birthday: birthdaySchema, color: memberColorSchema.optional() });
 export const profileSchema = z.object({
   name: z.string().trim().max(100).optional(),
   preferredLanguage: z.enum(["en", "de"]).optional(),

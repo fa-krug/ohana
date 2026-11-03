@@ -4,13 +4,19 @@
 import type { Db } from "@/lib/db";
 import { addDays, consecutiveRuns } from "./dates";
 import { gapDays } from "./gaps";
+import { typeIcon } from "./icons";
 import { DrizzleCalendarStore } from "./store";
+import { familyNames } from "@/lib/families/people";
+
+/** Whose a run is: the type's member with their color key. */
+export type RunMember = { id: string; name: string; color: string } | null;
 
 export interface CalendarSummary {
   /** The first uncovered weekday from today on (within `days`), or null. */
   nextGap: string | null;
-  /** Runs of an entry type that end today or later, by start, at most `limit`. */
-  upcoming: { name: string; color: string; from: string; to: string }[];
+  /** Runs of an entry type that end today or later, by start, at most `limit`; `color` is
+   *  the type's (derived) hex, `icon` its SF Symbol (its own, else its role's). */
+  upcoming: { name: string; color: string; icon: string; member: RunMember; from: string; to: string }[];
 }
 
 export async function calendarSummary(
@@ -30,6 +36,7 @@ export async function calendarSummary(
   for (const r of rows) entries.set(r.day, [...(entries.get(r.day) ?? []), r.type_id]);
 
   const nextGap = gapDays(types, entries).find((d) => d >= today) ?? null;
+  const members = new Map(familyNames(db, familyId).map((m) => [m.id, { id: m.id, name: m.name, color: m.color }]));
 
   const upcoming: CalendarSummary["upcoming"] = [];
   for (const type of types) {
@@ -37,7 +44,8 @@ export async function calendarSummary(
     for (const run of consecutiveRuns(days)) {
       const to = run[run.length - 1];
       if (to < today || run[0] > until) continue;
-      upcoming.push({ name: type.name, color: type.color, from: run[0], to });
+      const member = (type.member_id && members.get(type.member_id)) || null;
+      upcoming.push({ name: type.name, color: type.color, icon: typeIcon(type), member, from: run[0], to });
     }
   }
   upcoming.sort((a, b) => a.from.localeCompare(b.from) || a.name.localeCompare(b.name));

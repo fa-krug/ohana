@@ -1138,10 +1138,11 @@ paths:
     patch:
       tags: [Household]
       operationId: updateMember
-      summary: Change a member's role and/or birthday
+      summary: Change a member's role, birthday and/or color
       description: >-
-        `role` needs an editor (a family keeps an editor). Members set their own `birthday`,
-        editors anyone's; `null` or `""` clears it. A field that is left out stays.
+        `role` needs an editor (a family keeps an editor). Members set their own `birthday`
+        and `color`, editors anyone's; `null` or `""` clears the birthday. A field that is left
+        out stays. Several members may have the same color.
       x-ohana-role: viewer
       requestBody:
         required: true
@@ -1152,6 +1153,7 @@ paths:
               properties:
                 role: {$ref: "#/components/schemas/Role"}
                 birthday: {$ref: "#/components/schemas/BirthdayInput"}
+                color: {$ref: "#/components/schemas/MemberColor"}
       responses:
         "200":
           description: The member.
@@ -1180,8 +1182,10 @@ paths:
       operationId: addPerson
       summary: Add a member without an account (optionally with an invite)
       description: >-
-        Names are unique per family. With `invite` (a role), an invite for that person is
-        created: whoever accepts it becomes the member in their place.
+        Names are unique per family. Without `color` the person gets one nobody in the family
+        has yet (else the least used). With `invite` (a role), an invite for that person is
+        created: whoever accepts it becomes the member in their place (with their color and
+        entry types).
       x-ohana-role: editor
       parameters:
         - $ref: "#/components/parameters/FamilyId"
@@ -1195,6 +1199,7 @@ paths:
               properties:
                 name: {type: string, minLength: 1, maxLength: 80}
                 birthday: {$ref: "#/components/schemas/BirthdayInput"}
+                color: {$ref: "#/components/schemas/MemberColor"}
                 invite:
                   oneOf:
                     - $ref: "#/components/schemas/Role"
@@ -1226,7 +1231,8 @@ paths:
     patch:
       tags: [Household]
       operationId: updatePerson
-      summary: Rename a person or set their birthday
+      summary: Rename a person or set their birthday or color
+      description: A left-out `color` stays; a left-out `birthday` is cleared.
       x-ohana-role: editor
       requestBody:
         required: true
@@ -1238,6 +1244,7 @@ paths:
               properties:
                 name: {type: string, minLength: 1, maxLength: 80}
                 birthday: {$ref: "#/components/schemas/BirthdayInput"}
+                color: {$ref: "#/components/schemas/MemberColor"}
       responses:
         "200":
           description: The person.
@@ -1476,7 +1483,10 @@ paths:
       tags: [Calendar]
       operationId: createEntryType
       summary: Add an entry type to a year (max. 50 per year)
-      description: The id is made from the name. The year is `?year=`, else the body's `year`, else the current year.
+      description: >-
+        The id is made from the name. The year is `?year=`, else the body's `year`, else the
+        current year. The type's color comes from its member (a `color` in the body is
+        ignored).
       x-ohana-role: editor
       parameters:
         - $ref: "#/components/parameters/TypeYear"
@@ -1486,12 +1496,19 @@ paths:
           application/json:
             schema:
               type: object
-              required: [name, color]
+              required: [name]
               properties:
                 year: {type: [integer, string], description: "YYYY"}
                 name: {type: string, minLength: 1, maxLength: 80}
-                color: {$ref: "#/components/schemas/Color"}
+                memberId:
+                  type: [string, "null"]
+                  description: >-
+                    Whose type it is: a member's user id or a person's id of this family (else
+                    400); `null`: nobody's; left out: the caller's.
                 role: {$ref: "#/components/schemas/EntryTypeRole"}
+                icon:
+                  oneOf: [{$ref: "#/components/schemas/SymbolName"}, {type: "null"}]
+                  description: "The type's own icon; `null` or left out: its role's (`EntryType.icon`)."
                 away: {type: boolean, default: false}
       responses:
         "201":
@@ -1508,7 +1525,7 @@ paths:
       tags: [Calendar]
       operationId: copyEntryTypes
       summary: Copy a year's types into another year
-      description: Types the target year has already (by id) are kept; answers the target year's types.
+      description: Types the target year has already (by id) are kept; copies keep their member and icon. Answers the target year's types.
       x-ohana-role: editor
       parameters:
         - $ref: "#/components/parameters/FamilyId"
@@ -1557,8 +1574,13 @@ paths:
               properties:
                 year: {type: [integer, string], description: "YYYY (when not in the query)"}
                 name: {type: string, minLength: 1, maxLength: 80}
-                color: {$ref: "#/components/schemas/Color"}
+                memberId:
+                  type: [string, "null"]
+                  description: A member's user id or a person's id of this family, or `null` (nobody's).
                 role: {$ref: "#/components/schemas/EntryTypeRole"}
+                icon:
+                  oneOf: [{$ref: "#/components/schemas/SymbolName"}, {type: "null"}]
+                  description: "The type's own icon; `null`: back to its role's; left out: kept."
                 away: {type: boolean}
                 position: {type: integer}
       responses:
@@ -5001,6 +5023,28 @@ components:
       type: string
       pattern: "^#[0-9a-fA-F]{6}$"
       description: A hex color like `#22c55e` (stored lowercase).
+    SymbolName:
+      type: string
+      maxLength: 64
+      pattern: "^[a-z0-9]+(\\.[a-z0-9]+)*$"
+      description: >-
+        An Apple SF Symbol name the app draws, e.g. `sun.max` or `birthday.cake` (else 400 "icon
+        must be an SF Symbol name").
+    MemberColor:
+      type: string
+      enum: [blue, orange, green, red, purple, yellow, teal, pink, indigo, brown]
+      description: >-
+        A family member's color, a key of the palette (blue #0090ff, orange #f76b15, green
+        #30a46c, red #e5484d, purple #8e4ec6, yellow #f2b705, teal #12a594, pink #d6409f, indigo
+        #3e63dd, brown #8a5a3c); new members get them in this order. Their entry types take it.
+    TypeMember:
+      type: [object, "null"]
+      description: Whose the type is, with their color key; null for nobody's.
+      required: [id, name, color]
+      properties:
+        id: {type: string}
+        name: {type: string}
+        color: {$ref: "#/components/schemas/MemberColor"}
     Role:
       type: string
       enum: [editor, viewer]
@@ -5185,6 +5229,17 @@ components:
           additionalProperties:
             type: array
             items: {$ref: "#/components/schemas/Event"}
+        members:
+          type: array
+          description: The family's accounts and people by name, with their colors.
+          items:
+            type: object
+            required: [id, name, account, color]
+            properties:
+              id: {type: string, description: "The user id, or the person's id."}
+              name: {type: string}
+              account: {type: boolean, description: "false: a member without an account."}
+              color: {$ref: "#/components/schemas/MemberColor"}
         birthdays:
           type: object
           description: Day → birthdays that day (only when the range has both ends).
@@ -5205,13 +5260,25 @@ components:
         `covers` (covers a day), `day_off` (no cover needed, e.g. a holiday), `none`.
     EntryType:
       type: object
-      required: [id, year, name, color, role, position, away]
+      required: [id, year, name, memberId, color, role, icon, position, away]
       properties:
         id: {type: string, pattern: "^[a-z0-9][a-z0-9-]{0,47}$", description: "Unique within the year (made from the name)."}
         year: {type: integer}
         name: {type: string, maxLength: 80}
-        color: {$ref: "#/components/schemas/Color"}
+        memberId: {type: [string, "null"], description: "Whose type it is: a user id or a person's id; null: nobody's."}
+        color:
+          allOf: [{$ref: "#/components/schemas/Color"}]
+          readOnly: true
+          description: >-
+            Derived: the member's color for their first type of the year (by position), a shade
+            of it for each further one; shades of gray (`#8e8e93`) for nobody's types.
         role: {$ref: "#/components/schemas/EntryTypeRole"}
+        icon:
+          allOf: [{$ref: "#/components/schemas/SymbolName"}]
+          description: >-
+            The icon the app draws: the type's own, else its role's (`none` → `tag`,
+            `needs_cover` → `exclamationmark.triangle`, `covers` → `checkmark.shield`, `day_off`
+            → `sun.max`). Never null.
         position: {type: integer}
         away: {type: boolean, description: "The whole family is away on its days (the meal plan skips them)."}
     EntriesByDay:
@@ -5224,7 +5291,11 @@ components:
       type: object
       required: [icon, comment]
       properties:
-        icon: {type: string, maxLength: 16, description: "An emoji."}
+        icon:
+          type: string
+          maxLength: 64
+          pattern: "^$|^[a-z0-9]+(\\.[a-z0-9]+)*$"
+          description: An SF Symbol name (see `SymbolName`), or "" for none.
         comment: {type: string, maxLength: 500}
     NotesByDay:
       type: object
@@ -5265,7 +5336,11 @@ components:
         - type: object
           properties:
             action: {type: string, enum: [set, clear], default: set}
-            icon: {type: string, maxLength: 16}
+            icon:
+              type: string
+              maxLength: 64
+              pattern: "^$|^[a-z0-9]+(\\.[a-z0-9]+)*$"
+              description: An SF Symbol name (trimmed), or "" for none; anything else is a 400 "icon must be an SF Symbol name".
             comment: {type: string, maxLength: 500}
           description: "`set` needs `icon` or `comment`; a set with both empty clears the note."
     Event:
@@ -5532,9 +5607,31 @@ components:
         name: {type: string}
         types:
           type: array
-          items: {$ref: "#/components/schemas/EntryType"}
+          description: >-
+            The types, whose they are by name (an import finds the member by name,
+            case-insensitive, else the type is nobody's; a `color` is ignored), with their
+            stored icon (`null`: the role's; missing in older files: `null`; an invalid one is
+            a 400).
+          items:
+            type: object
+            required: [id, year, name]
+            properties:
+              id: {type: string, pattern: "^[a-z0-9][a-z0-9-]{0,47}$"}
+              year: {type: integer}
+              name: {type: string, maxLength: 80}
+              member: {type: [string, "null"], description: "The member's name."}
+              role: {$ref: "#/components/schemas/EntryTypeRole"}
+              icon:
+                oneOf: [{$ref: "#/components/schemas/SymbolName"}, {type: "null"}]
+              position: {type: integer}
+              away: {type: boolean}
         entries: {$ref: "#/components/schemas/EntriesByDay"}
-        notes: {$ref: "#/components/schemas/NotesByDay"}
+        notes:
+          allOf: [{$ref: "#/components/schemas/NotesByDay"}]
+          description: >-
+            The notes. On import, a note icon that isn't an SF Symbol name (an older file's
+            emoji) moves to the front of the comment ("🎄 Christmas", max. 500 kept) instead of
+            failing the import.
         finance:
           type: object
           properties:
@@ -5598,6 +5695,7 @@ components:
         time: {type: [string, "null"], description: "An event's start or a chore's time (HH:MM), null all day."}
         amountCents: {type: integer, description: "A transaction's amount; negative: money going out."}
         account: {type: boolean, description: "A person: a member with an account (else a person without one)."}
+        icon: {$ref: "#/components/schemas/SymbolName", description: "A note's icon, when it has one (the title is its comment)."}
 
     # ---------------------------------------------------------------- overview
     Dashboard:
@@ -5614,10 +5712,12 @@ components:
               type: array
               items:
                 type: object
-                required: [name, color, from, to]
+                required: [name, color, icon, member, from, to]
                 properties:
                   name: {type: string}
                   color: {$ref: "#/components/schemas/Color"}
+                  icon: {$ref: "#/components/schemas/SymbolName", description: "The type's icon (its own, else its role's)."}
+                  member: {$ref: "#/components/schemas/TypeMember"}
                   from: {type: string, format: date}
                   to: {type: string, format: date}
         awayToday:
@@ -5638,13 +5738,15 @@ components:
           items:
             oneOf:
               - type: object
-                required: [kind, date, to, name, color]
+                required: [kind, date, to, name, color, icon, member]
                 properties:
                   kind: {type: string, const: entry}
                   date: {type: string, format: date}
                   to: {type: string, format: date}
                   name: {type: string}
-                  color: {$ref: "#/components/schemas/Color"}
+                  color: {$ref: "#/components/schemas/Color", description: "The type's (derived) color."}
+                  icon: {$ref: "#/components/schemas/SymbolName", description: "The type's icon (its own, else its role's)."}
+                  member: {$ref: "#/components/schemas/TypeMember"}
               - type: object
                 required: [kind, date, event]
                 properties:
@@ -5824,23 +5926,24 @@ components:
     # ---------------------------------------------------------------- household
     Member:
       type: object
-      required: [userId, email, name, role, birthday, joinedAt]
+      required: [userId, email, name, role, birthday, color, joinedAt]
       properties:
         userId: {type: string}
         email: {type: string}
         name: {type: string}
         role: {$ref: "#/components/schemas/Role"}
         birthday: {type: [string, "null"], format: date}
+        color: {$ref: "#/components/schemas/MemberColor"}
         joinedAt: {type: string, format: date-time}
     Person:
       type: object
       description: A member without an account (a child, a grandparent).
-      required: [id, name, birthday]
+      required: [id, name, birthday, color]
       properties:
         id: {type: string}
         name: {type: string}
         birthday: {type: [string, "null"], format: date}
-        createdAt: {type: string, format: date-time, description: "Only in the answer of `POST …/people`."}
+        color: {$ref: "#/components/schemas/MemberColor"}
     CreatedInvite:
       type: object
       required: [code, expiresAt, url]

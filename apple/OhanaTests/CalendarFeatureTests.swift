@@ -210,9 +210,9 @@ struct CalendarAccessibilityTests {
         let type = CalendarEntryType(id: "t1", year: 2026, name: "Vacation", color: "#3b82f6", role: .covers)
         let event = CalendarEvent(id: "e1", date: d("2026-03-10"), start: "09:30", end: nil, title: "Dentist")
         let text = CalendarDayCell.accessibilityText(day: d("2026-03-10"), types: [type],
-                                                     note: CalendarNote(icon: "🎈", comment: "Party"), events: [event],
+                                                     note: CalendarNote(icon: "gift", comment: "Party"), events: [event],
                                                      birthdays: [CalendarBirthday(name: "Mia", age: 7)], gap: true)
-        #expect(text == CalendarText.longDay(d("2026-03-10")) + ", Vacation, 🎈 Party, 09:30 Dentist, 🎂 Mia turns 7, Not covered")
+        #expect(text == CalendarText.longDay(d("2026-03-10")) + ", Vacation, Gift: Party, 09:30 Dentist, 🎂 Mia turns 7, Not covered")
         #expect(CalendarDayCell.accessibilityText(day: d("2026-03-10"), types: [], note: nil, events: [], birthdays: [],
                                                   gap: false) == CalendarText.longDay(d("2026-03-10")))
     }
@@ -235,7 +235,7 @@ struct CalendarCellTests {
                     CalendarEntryType(id: "vac", year: 2026, name: "Vacation", color: "#3b82f6", role: .covers)],
             typeYears: [2026],
             entries: ["2026-03-02": ["kita"], "2026-03-03": ["kita", "vac"]],
-            notes: ["2026-03-02": CalendarNote(icon: "🎈", comment: "")],
+            notes: ["2026-03-02": CalendarNote(icon: "gift", comment: "")],
             events: nil, birthdays: nil
         )
     }
@@ -249,7 +249,7 @@ struct CalendarCellTests {
         #expect(context.selectionTypes == ["kita"])
         let monday = s.cell(d("2026-03-02"), context)
         #expect(monday.types.map(\.id) == ["kita"])
-        #expect(monday.note?.icon == "🎈")
+        #expect(monday.note?.icon == "gift")
         #expect(monday.selected && monday.gap && !monday.focused)
         #expect(monday.onTypes == ["kita"])
         let tuesday = s.cell(d("2026-03-03"), context)
@@ -673,7 +673,7 @@ struct CalendarSavedCopyTests {
         first.apply(state)
         first.select(d("2026-03-02"))
         first.toggleOnSelection("sick")
-        first.setNote(CalendarNote(icon: "🎈", comment: "Party"), on: [d("2026-03-04")])
+        first.setNote(CalendarNote(icon: "gift", comment: "Party"), on: [d("2026-03-04")])
         #expect(first.entries[d("2026-03-02")] == nil)
         #expect(FileManager.default.fileExists(atPath: queueFile.path()))
 
@@ -681,7 +681,7 @@ struct CalendarSavedCopyTests {
         let second = CalendarStore(api: api, year: 2026, readOnly: false, queueFile: queueFile)
         second.apply(state)
         #expect(second.entries[d("2026-03-02")] == nil)
-        #expect(second.notes[d("2026-03-04")] == CalendarNote(icon: "🎈", comment: "Party"))
+        #expect(second.notes[d("2026-03-04")] == CalendarNote(icon: "gift", comment: "Party"))
         #expect(second.pending)
 
         // The server answers again: what was queued is sent and the file removed; the server's
@@ -744,7 +744,7 @@ struct CalendarSavedCopyTests {
         #expect(entries == [d("2026-03-02"): ["a", "b"], d("2026-03-03"): ["b"]])
         CalendarMath.apply([CalendarEntryOp(action: .remove, type: "b", dates: [d("2026-03-03")])], to: &entries, year: 2026)
         #expect(entries[d("2026-03-03")] == nil)
-        var notes: CalendarNotes = [d("2026-03-02"): CalendarNote(icon: "🎈", comment: "")]
+        var notes: CalendarNotes = [d("2026-03-02"): CalendarNote(icon: "gift", comment: "")]
         CalendarMath.apply([CalendarNoteOp(action: .clear, dates: [d("2026-03-02")]),
                             CalendarNoteOp(action: .set, dates: [d("2026-03-04")], icon: "", comment: "Trip")],
                            to: &notes, year: 2026)

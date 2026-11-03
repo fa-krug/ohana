@@ -14,17 +14,6 @@ extension Color {
             self = .gray
         }
     }
-
-    /// The color as "#rrggbb" (sRGB), for the server.
-    func calendarHex(in environment: EnvironmentValues = EnvironmentValues()) -> String {
-        let cg = resolve(in: environment).cgColor
-        if let srgb = CGColorSpace(name: CGColorSpace.sRGB),
-           let converted = cg.converted(to: srgb, intent: .defaultIntent, options: nil),
-           let c = converted.components, c.count >= 3 {
-            return CalendarMath.hex(r: Double(c[0]), g: Double(c[1]), b: Double(c[2]))
-        }
-        return "#64748b"
-    }
 }
 
 /// The system pasteboard as plain text.
@@ -181,23 +170,6 @@ struct CalendarStripes: View {
     }
 }
 
-/// A type's swatch.
-struct CalendarSwatch: View {
-    let type: CalendarEntryType
-    var size: CGFloat = 12
-
-    var body: some View {
-        RoundedRectangle(cornerRadius: size / 4)
-            .fill(Color(calendarHex: type.color))
-            .overlay {
-                if type.role == .needsCover {
-                    CalendarStripes().opacity(0.4).clipShape(.rect(cornerRadius: size / 4))
-                }
-            }
-            .frame(width: size, height: size)
-    }
-}
-
 /// The year's types as toggle chips with their workday counts, in one row that scrolls (in the
 /// selection bar), and the way to edit them; on the selection they add or remove the type. A
 /// year without types offers to copy them from another year.
@@ -246,7 +218,7 @@ struct CalendarTypeChips: View {
             store.toggleOnSelection(type.id)
         } label: {
             HStack(spacing: 6) {
-                CalendarSwatch(type: type, size: 12)
+                CalendarTypeBadge(type: type, member: store.member(of: type), size: 18)
                 Text(type.name).lineLimit(1)
                 Text("\(stats.workdays)d")
                     .font(.caption.monospacedDigit())
@@ -263,13 +235,14 @@ struct CalendarTypeChips: View {
         .buttonStyle(.plain)
         .disabled(store.readOnly)
         .help(chipHelp(type, index: index, stats: stats))
-        .accessibilityLabel(type.name)
+        .accessibilityLabel(store.member(of: type).map { "\(type.name) (\($0.name))" } ?? type.name)
         .accessibilityValue(CalendarText.workdays(stats.workdays))
         .accessibilityAddTraits(active ? .isSelected : [])
     }
 
     private func chipHelp(_ type: CalendarEntryType, index: Int, stats: CalendarTypeStats) -> String {
-        var text = String(localized: "\(type.name) – \(type.role.title): \(CalendarText.days(stats.days)) in \(String(store.year)), \(CalendarText.workdays(stats.workdays))")
+        let name = store.member(of: type).map { "\(type.name) (\($0.name))" } ?? type.name
+        var text = String(localized: "\(name) – \(type.role.title): \(CalendarText.days(stats.days)) in \(String(store.year)), \(CalendarText.workdays(stats.workdays))")
         if !store.readOnly && index < 9 {
             text += "\n" + String(localized: "Click (or press \(index + 1)) to toggle it on the selected days")
         }

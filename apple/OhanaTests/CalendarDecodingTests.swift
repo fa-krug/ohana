@@ -12,18 +12,19 @@ struct CalendarDecodingTests {
           "session": {"id":"f1","name":"Krug","access":"edit","readOnly":false,"updatedAt":"2026-10-01T08:00:00.000Z"},
           "types": [
             {"id":"holiday","year":2026,"name":"Holiday","color":"#f59e0b","role":"day_off","position":0,"away":false},
-            {"id":"vacation","year":2026,"name":"Vacation","color":"#22c55e","role":"covers","position":1,"away":true},
+            {"id":"vacation","year":2026,"name":"Vacation","memberId":"p1","color":"#30a46c","role":"covers","icon":"beach.umbrella","position":1,"away":true},
             {"id":"kita","year":2026,"name":"Kita closed","color":"#ef4444","role":"needs_cover","position":2,"away":false}
           ],
           "typeYears": [2025, 2026],
           "entries": {"2026-01-01":["holiday"],"2026-08-03":["vacation","kita"]},
-          "notes": {"2026-12-24":{"icon":"🎄","comment":"Christmas"}},
+          "notes": {"2026-12-24":{"icon":"star","comment":"Christmas"}},
           "events": {"2026-11-03":[
             {"id":"e2","occurrence":null,"date":"2026-11-02","endDate":"2026-11-04","start":null,"end":null,"title":"Trip","location":"","person":"","note":"","url":"","source":"manual","searchId":null,"externalId":null,"rrule":null},
             {"id":"e1","occurrence":null,"date":"2026-11-03","endDate":"2026-11-03","start":"10:30","end":"11:00","title":"Dr. Berg","location":"Hauptstr. 1","person":"Mia","note":"","url":"https://example.com","source":"appointment","searchId":"s1","externalId":null,"rrule":null},
             {"id":"s9","occurrence":"2026-11-03","date":"2026-11-03","endDate":"2026-11-03","start":"16:00","end":"17:00","title":"Swimming","location":"","person":"Leo","note":"","url":"","source":"manual","searchId":null,"externalId":null,"rrule":"FREQ=WEEKLY"}
           ]},
-          "birthdays": {"2026-05-04":[{"name":"Mia","age":8}]}
+          "birthdays": {"2026-05-04":[{"name":"Mia","age":8}]},
+          "members": [{"id":"u1","name":"Anna","account":true,"color":"blue"},{"id":"p1","name":"Mia","account":false,"color":"green"}]
         }
         """
         let state = try JSONDecoder().decode(CalendarState.self, from: Data(json.utf8))
@@ -32,7 +33,10 @@ struct CalendarDecodingTests {
         #expect(state.types[1].isAway)
         #expect(state.typeYears == [2025, 2026])
         #expect(state.entries["2026-08-03"] == ["vacation", "kita"])
-        #expect(state.notes?["2026-12-24"]?.text == "🎄 Christmas")
+        #expect(state.notes?["2026-12-24"]?.icon == "star")
+        #expect(state.notes?["2026-12-24"]?.text == "\(CalendarSymbol.title("star")): Christmas")
+        // Its own icon, or (from a server without them) its role's.
+        #expect(state.types.map(\.icon) == ["sun.max", "beach.umbrella", "exclamationmark.triangle"])
         let events = try #require(state.events?["2026-11-03"])
         #expect(events[1].date == Day("2026-11-03"))
         #expect(events[1].timeText == "10:30–11:00")
@@ -44,6 +48,10 @@ struct CalendarDecodingTests {
         // An occurrence of a weekly series: addressed by the series' id and its day.
         #expect(events[2].repeats && events[2].occurrence == Day("2026-11-03") && events[2].uid == "s9@2026-11-03")
         #expect(state.birthdays?["2026-05-04"]?.first == CalendarBirthday(name: "Mia", age: 8))
+        // Types belong to a member (or nobody: an older type); the members name them.
+        #expect(state.types.map(\.memberId) == [nil, "p1", nil])
+        #expect(state.members?.map(\.account) == [true, false])
+        #expect(MemberColor(key: state.members?[1].color) == .green)
 
         let client = APIClient(baseURL: URL(string: "https://ohana.invalid")!, token: nil)
         let store = CalendarStore(api: FamilyAPI(client: client, familyID: "f1"), year: 2026, readOnly: false)
@@ -51,6 +59,8 @@ struct CalendarDecodingTests {
         #expect(store.types.map(\.id) == ["holiday", "vacation", "kita"])
         #expect(store.types(on: Day("2026-08-03")!).map(\.id) == ["vacation", "kita"])
         #expect(store.events[Day("2026-11-03")!]?.count == 3)
+        #expect(store.member(of: store.types[1])?.name == "Mia")
+        #expect(store.member(of: store.types[0]) == nil)
         #expect(store.event("s9@2026-11-03")?.title == "Swimming")
         #expect(!store.readOnly)
     }
@@ -67,6 +77,45 @@ struct CalendarDecodingTests {
         #expect(state.family.readOnly)
         #expect(state.types[0].away == nil && !state.types[0].isAway)
         #expect(state.typeYears == nil && state.notes == nil && state.events == nil && state.birthdays == nil)
+        #expect(state.members == nil && state.types[0].memberId == nil)
+    }
+
+    @Test func typeIconsDefaultToTheirRoles() throws {
+        #expect(CalendarRole.allCases.map(\.defaultIcon) == ["tag", "exclamationmark.triangle", "checkmark.shield", "sun.max"])
+        #expect(Array(CalendarSymbol.typeIcons.prefix(4)) == CalendarRole.allCases.map(\.defaultIcon))
+        #expect(Set(CalendarSymbol.typeIcons).count == CalendarSymbol.typeIcons.count)
+        #expect(Set(CalendarSymbol.noteIcons).count == CalendarSymbol.noteIcons.count)
+        // Every symbol to pick exists on this system and has a name in words.
+        for name in CalendarSymbol.typeIcons + CalendarSymbol.noteIcons {
+            #expect(CalendarSymbol.exists(name), "\(name)")
+            #expect(CalendarSymbol.title(name) != name.replacingOccurrences(of: ".", with: " "), "\(name)")
+        }
+        #expect(!CalendarSymbol.exists("🎄") && CalendarSymbol.drawable("🎄") == nil)
+        #expect(CalendarSymbol.drawable("🎄", fallback: "tag") == "tag")
+
+        let decoder = JSONDecoder()
+        func type(_ json: String) throws -> CalendarEntryType { try decoder.decode(CalendarEntryType.self, from: Data(json.utf8)) }
+        #expect(try type(##"{"id":"a","name":"A","color":"#000000","role":"covers","icon":"airplane"}"##).icon == "airplane")
+        #expect(try type(##"{"id":"a","name":"A","color":"#000000","role":"covers"}"##).icon == "checkmark.shield")
+        #expect(try type(##"{"id":"a","name":"A","color":"#000000","role":"none","icon":""}"##).icon == "tag")
+        #expect(CalendarEntryType(id: "a", name: "A", color: "#000000", role: .dayOff).icon == "sun.max")
+        // Written back with its icon (the offline copies).
+        let round = try type(String(decoding: try JSONEncoder().encode(CalendarEntryType(id: "a", name: "A", color: "#000000",
+                                                                                         role: .none, icon: "car")), as: UTF8.self))
+        #expect(round.icon == "car")
+    }
+
+    @Test func encodesNoteIcons() throws {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        func text(_ value: some Encodable) throws -> String { String(decoding: try encoder.encode(value), as: UTF8.self) }
+        let ops = CalendarMath.noteOps([Day("2026-12-24")!: CalendarNote(icon: "gift", comment: "Christmas")])
+        #expect(try text(CalendarOpsBody(ops: ops))
+                == #"{"ops":[{"action":"set","comment":"Christmas","dates":["2026-12-24"],"icon":"gift"}]}"#)
+        let note = try JSONDecoder().decode(CalendarNote.self, from: Data(#"{"icon":"gift","comment":""}"#.utf8))
+        #expect(note == CalendarNote(icon: "gift", comment: "") && note.text == CalendarSymbol.title("gift"))
+        let none = try JSONDecoder().decode(CalendarNote.self, from: Data(#"{"comment":"Dentist"}"#.utf8))
+        #expect(none.icon == "" && none.text == "Dentist")
     }
 
     @Test func decodesTypesAndEventsAnswers() throws {
@@ -144,8 +193,16 @@ struct CalendarDecodingTests {
         #expect(try text(CalendarOpsBody(ops: [CalendarNoteOp(action: .clear, dates: [Day("2026-12-31")!])]))
                 == #"{"ops":[{"action":"clear","dates":["2026-12-31"]}]}"#)
         #expect(try text(CalendarTypePatch(away: true)) == #"{"away":true}"#)
-        #expect(try text(CalendarTypePatch(name: "Sick", color: "#ef4444", role: CalendarRole.none))
-                == ##"{"color":"#ef4444","name":"Sick","role":"none"}"##)
+        #expect(try text(CalendarTypePatch(name: "Sick", role: CalendarRole.none)) == #"{"name":"Sick","role":"none"}"#)
+        // A member, or nobody (null); left out, the server keeps it (or gives a new type to the caller).
+        #expect(try text(CalendarTypePatch(memberId: "p1")) == #"{"memberId":"p1"}"#)
+        #expect(try text(CalendarTypePatch(memberId: .some(nil))) == #"{"memberId":null}"#)
+        #expect(CalendarTypePatch().isEmpty && !CalendarTypePatch(memberId: .some(nil)).isEmpty)
+        // An icon, or back to the role's default (null); left out, the server keeps it.
+        #expect(try text(CalendarTypePatch(role: .covers)) == #"{"role":"covers"}"#)
+        #expect(try text(CalendarTypePatch(icon: "airplane")) == #"{"icon":"airplane"}"#)
+        #expect(try text(CalendarTypePatch(icon: .some(nil))) == #"{"icon":null}"#)
+        #expect(!CalendarTypePatch(icon: .some(nil)).isEmpty)
 
         // An all-day event clears start and end (PATCH merges what is sent), and the rule.
         let allDay = CalendarEventInput(date: Day("2026-11-03")!, start: nil, end: "11:00", title: "Trip")

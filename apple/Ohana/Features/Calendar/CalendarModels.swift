@@ -38,23 +38,68 @@ enum CalendarRole: String, Codable, CaseIterable, Hashable, Identifiable {
             String(localized: "Just a color, no coverage logic.")
         }
     }
+
+    /// The SF Symbol of a type with this role that has no icon of its own (the server's
+    /// `ROLE_ICONS`, server/lib/calendar/vacation.ts).
+    var defaultIcon: String {
+        switch self {
+        case .none: "tag"
+        case .needsCover: "exclamationmark.triangle"
+        case .covers: "checkmark.shield"
+        case .dayOff: "sun.max"
+        }
+    }
 }
 
-/// An entry type of one year (vacation.ts `publicType`).
+/// An entry type of one year (vacation.ts `publicType`). It belongs to a member, whose color it
+/// takes (the server works it out: their first type of the year has it, further ones shades of it).
 struct CalendarEntryType: Codable, Hashable, Identifiable {
     var id: String
     var year: Int?
     var name: String
+    /// The member (account or person) it belongs to; nil: nobody (gray).
+    var memberId: String?
+    /// "#rrggbb", derived from the member's color; read-only.
     var color: String
     var role: CalendarRole
+    /// Its SF Symbol: its own, or its role's default (`CalendarRole.defaultIcon`); always sent,
+    /// older servers and files without it get the role's.
+    var icon: String
     var position: Int?
     /// The whole family is away from home on its days: the meal plan skips them.
     var away: Bool?
 
     var isAway: Bool { away ?? false }
+
+    init(id: String, year: Int? = nil, name: String, memberId: String? = nil, color: String, role: CalendarRole,
+         icon: String? = nil, position: Int? = nil, away: Bool? = nil) {
+        self.id = id
+        self.year = year
+        self.name = name
+        self.memberId = memberId
+        self.color = color
+        self.role = role
+        self.icon = icon ?? role.defaultIcon
+        self.position = position
+        self.away = away
+    }
+
+    init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        year = try c.decodeIfPresent(Int.self, forKey: .year)
+        name = try c.decode(String.self, forKey: .name)
+        memberId = try c.decodeIfPresent(String.self, forKey: .memberId)
+        color = try c.decode(String.self, forKey: .color)
+        role = try c.decode(CalendarRole.self, forKey: .role)
+        let icon = try c.decodeIfPresent(String.self, forKey: .icon) ?? ""
+        self.icon = icon.isEmpty ? role.defaultIcon : icon
+        position = try c.decodeIfPresent(Int.self, forKey: .position)
+        away = try c.decodeIfPresent(Bool.self, forKey: .away)
+    }
 }
 
-/// Icon and/or comment on a day.
+/// Icon and/or comment on a day. The icon is an SF Symbol's name ("" none; `CalendarSymbol`).
 struct CalendarNote: Codable, Hashable {
     var icon: String
     var comment: String
@@ -70,7 +115,21 @@ struct CalendarNote: Codable, Hashable {
         comment = try c.decodeIfPresent(String.self, forKey: .comment) ?? ""
     }
 
-    var text: String { [icon, comment].filter { !$0.isEmpty }.joined(separator: " ") }
+    /// The note in words, where it can only be text (VoiceOver, tooltips): the icon's name, then
+    /// the comment.
+    var text: String {
+        [icon.isEmpty ? "" : CalendarSymbol.title(icon), comment].filter { !$0.isEmpty }.joined(separator: ": ")
+    }
+}
+
+/// A member of the family as the calendar names them (family-routes.ts `familyState` `members`):
+/// an account or a person without one, with their `MemberColor` key.
+struct CalendarMember: Codable, Hashable, Identifiable {
+    let id: String
+    let name: String
+    /// Has an account (nil where it isn't sent: the overview).
+    var account: Bool?
+    let color: String
 }
 
 /// A member's birthday on a day: who, and the age they turn.
@@ -343,6 +402,8 @@ struct CalendarState: Codable {
     let notes: [String: CalendarNote]?
     let events: [String: [CalendarEvent]]?
     let birthdays: [String: [CalendarBirthday]]?
+    /// The family's members, for the types' `memberId`s.
+    var members: [CalendarMember]?
 }
 
 // MARK: Requests
@@ -368,13 +429,32 @@ struct CalendarOpsBody<Op: Encodable>: Encodable {
     let ops: [Op]
 }
 
-/// POST /types and PATCH /types/{id}: only the fields that are set are sent.
+/// POST /types and PATCH /types/{id}: only the fields that are set are sent. `memberId` is sent as
+/// null for `.some(nil)` (nobody); left out, POST gives the type to the caller and PATCH keeps it.
+/// `icon` likewise: null for `.some(nil)` (back to the role's default), left out kept.
 struct CalendarTypePatch: Encodable {
     var name: String?
-    var color: String?
+    var memberId: String??
     var role: CalendarRole?
+    var icon: String??
     var away: Bool?
     var position: Int?
+
+    private enum CodingKeys: String, CodingKey { case name, memberId, role, icon, away, position }
+
+    func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encodeIfPresent(name, forKey: .name)
+        if let memberId { try c.encode(memberId, forKey: .memberId) }
+        try c.encodeIfPresent(role, forKey: .role)
+        if let icon { try c.encode(icon, forKey: .icon) }
+        try c.encodeIfPresent(away, forKey: .away)
+        try c.encodeIfPresent(position, forKey: .position)
+    }
+
+    var isEmpty: Bool {
+        name == nil && memberId == nil && role == nil && icon == nil && away == nil && position == nil
+    }
 }
 
 struct CalendarCopyTypesBody: Encodable {

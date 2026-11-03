@@ -26,6 +26,13 @@ struct DemoCalendarTests {
         #expect(state.types.allSatisfy { $0.year == 2026 })
         #expect(state.types.first { $0.id == "vacation" }?.isAway == true)
         #expect(state.typeYears == [2025, 2026, 2027])
+        // Each type belongs to a member of the household, in their color.
+        let members = try #require(state.members)
+        #expect(members.map(\.name) == ["Anna Parker", "Ben Parker", "Grandma Rose", "Leo", "Mia"])
+        #expect(Set(members.map(\.color)).count == members.count && members.allSatisfy { MemberColor(key: $0.color) != nil })
+        #expect(state.types.allSatisfy { type in members.contains { $0.id == type.memberId } })
+        #expect(members.first { $0.id == state.types[0].memberId }.flatMap { MemberColor(key: $0.color)?.hex }
+                == state.types[0].color)
 
         // Vacation during the school holidays, {{day:12}}…{{day:19}}; Grandma {{day:24}}…{{day:26}}.
         for offset in 12...19 {

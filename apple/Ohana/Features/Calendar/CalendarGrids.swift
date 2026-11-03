@@ -165,8 +165,11 @@ struct CalendarDayCell: View, Equatable {
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                         .padding(2)
                 }
-                if let note, !note.icon.isEmpty {
-                    Text(note.icon).font(.system(size: iconSize))
+                if let icon = note.flatMap({ CalendarSymbol.drawable($0.icon) }) {
+                    // The theme color; on a type's color the cell's ink, which reads on it.
+                    Image(systemName: icon)
+                        .font(.system(size: iconSize, weight: .semibold))
+                        .foregroundStyle(filled ? ink : Color.accentColor)
                 }
                 marks(note: note, events: events, birthdays: birthdays, dot: yearMark, cake: .system(size: yearCake),
                       inset: 2, ink: ink, filled: filled)
@@ -180,7 +183,9 @@ struct CalendarDayCell: View, Equatable {
                         .font(.callout.weight(isToday ? .bold : .medium).monospacedDigit())
                         .foregroundStyle(isToday ? Color.accentColor : (weekend ? Color.secondary : Color.primary))
                     Spacer(minLength: 0)
-                    if let note, !note.icon.isEmpty { Text(note.icon).font(.callout) }
+                    if let icon = note.flatMap({ CalendarSymbol.drawable($0.icon) }) {
+                        Image(systemName: icon).font(.callout).foregroundStyle(Color.accentColor)
+                    }
                 }
                 ForEach(types) { type in
                     Text(type.name)
@@ -230,12 +235,17 @@ struct CalendarDayCell: View, Equatable {
             .foregroundStyle(filled ? ink : (weekend ? Color.secondary : Color.primary))
             .lineLimit(1)
             .minimumScaleFactor(0.6)
-        let icon = note.map(\.icon).flatMap { $0.isEmpty ? nil : $0 }
+        let icon = note.flatMap { CalendarSymbol.drawable($0.icon) }
+        // The theme color; on a type's color the cell's ink, which reads on it.
+        let iconStyle = filled ? ink : Color.accentColor
         return ZStack(alignment: .topLeading) {
             if large {
                 VStack(alignment: .leading, spacing: 0) {
                     number
-                    if let icon { Text(icon).font(.title3).dynamicTypeSize(...DynamicTypeSize.xxxLarge) }
+                    if let icon {
+                        Image(systemName: icon).font(.title3).foregroundStyle(iconStyle)
+                            .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+                    }
                 }
                 .padding(.top, 4)
                 .padding(.horizontal, 6)
@@ -244,10 +254,10 @@ struct CalendarDayCell: View, Equatable {
                     .padding(.top, 5)
                     .padding(.leading, 7)
                 if let icon {
-                    Text(icon)
+                    Image(systemName: icon)
                         .font(.title3)
+                        .foregroundStyle(iconStyle)
                         .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-                        .shadow(color: .black.opacity(0.3), radius: 1, y: 1)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .offset(y: 4)
                 }

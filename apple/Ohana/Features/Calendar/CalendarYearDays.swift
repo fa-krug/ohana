@@ -155,8 +155,11 @@ struct CalendarYearDays: View, Equatable {
             cell.draw(cache.letter(letter, ink: ink, size: letterSize, in: context),
                       at: CGPoint(x: rect.minX + 2, y: rect.minY + 2), anchor: .topLeading)
         }
-        if let note = info.note, !note.icon.isEmpty {
-            cell.draw(Text(note.icon).font(.system(size: iconSize)), at: CGPoint(x: rect.midX, y: rect.midY))
+        if let note = info.note, let icon = CalendarSymbol.drawable(note.icon) {
+            // The theme color; on a type's color the cell's ink, which reads on it.
+            cell.draw(Text(Image(systemName: icon)).font(.system(size: iconSize, weight: .semibold))
+                        .foregroundStyle(filled ? ink : Color.accentColor),
+                      at: CGPoint(x: rect.midX, y: rect.midY))
         }
         drawMarks(info, in: rect, ink: ink, filled: filled, cell)
 

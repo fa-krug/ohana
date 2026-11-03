@@ -59,7 +59,8 @@ final class CalendarActions {
 
 // MARK: Note
 
-/// Icon and/or comment for the days (the web's note dialog).
+/// Icon (an SF Symbol, `CalendarSymbol.noteIcons`) and/or comment for the days (the web's note
+/// dialog).
 struct CalendarNoteSheet: View {
     let store: CalendarStore
     let days: [Day]
@@ -73,35 +74,11 @@ struct CalendarNoteSheet: View {
     /// cover the icons.
     @FocusState private var commentFocused: Bool
 
-    static let icons = ["🎄", "🎅", "🎁", "🎆", "🐣", "🐰", "🎃", "🎂", "🎉", "❤️",
-                        "⭐", "📌", "✈️", "🏖️", "⛷️", "🏫", "🏥", "🎓", "💼", "⚽"]
-
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 5), spacing: 6) {
-                        ForEach(Self.icons, id: \.self) { e in
-                            Button {
-                                icon = icon == e ? "" : e
-                            } label: {
-                                Text(e)
-                                    .font(.title2)
-                                    .frame(maxWidth: .infinity, minHeight: 40)
-                                    .background(icon == e ? Color.accentColor.opacity(0.25) : Color.primary.opacity(0.06),
-                                                in: .rect(cornerRadius: 10))
-                                    .overlay {
-                                        if icon == e { RoundedRectangle(cornerRadius: 10).strokeBorder(Color.accentColor, lineWidth: 2) }
-                                    }
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityAddTraits(icon == e ? .isSelected : [])
-                        }
-                    }
-                    .padding(.vertical, 4)
-                    TextField("Or any other emoji", text: $icon)
-                        .onChange(of: icon) { _, value in if value.utf16.count > 16 { icon = String(value.prefix(4)) } }
-                        .onSubmit { save() }
+                    CalendarSymbolGrid(symbols: CalendarSymbol.noteIcons, selection: $icon, allowsNone: true)
                 } header: {
                     Text("Icon")
                 }
@@ -253,31 +230,22 @@ struct CalendarSelectionDetails: View {
                 }
             }
             if !types.isEmpty {
-                HStack(spacing: 6) {
-                    ForEach(types) { type in
-                        HStack(spacing: 4) {
-                            CalendarSwatch(type: type, size: 10)
-                            Text(type.name).font(.subheadline)
-                        }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(Color(calendarHex: type.color).opacity(0.18), in: .capsule)
-                    }
-                }
+                CalendarDayTypes(types: types, store: store)
             }
             if let note {
                 Button {
                     if !store.readOnly { actions.sheet = .note([day]) }
                 } label: {
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        Text(note.icon.isEmpty ? "📝" : note.icon)
-                        Text(note.comment.isEmpty ? String(localized: "Icon") : note.comment)
+                        CalendarNoteSymbol(icon: note.icon.isEmpty ? "note.text" : note.icon)
+                        Text(note.comment.isEmpty ? CalendarSymbol.title(note.icon) : note.comment)
                             .foregroundStyle(.primary)
                             .multilineTextAlignment(.leading)
                     }
                 }
                 .buttonStyle(.plain)
                 .disabled(store.readOnly)
+                .accessibilityLabel(Text(note.text))
             }
             ForEach(events, id: \.uid) { event in
                 eventRow(event, on: day)

@@ -92,8 +92,8 @@ struct CalendarMathTests {
     }
 
     @Test func turnsNoteChangesIntoOps() {
-        let xmas = CalendarNote(icon: "🎄", comment: "")
-        let notes: CalendarNotes = [d("2026-12-24"): xmas, d("2026-12-31"): CalendarNote(icon: "🎆", comment: "")]
+        let xmas = CalendarNote(icon: "star", comment: "")
+        let notes: CalendarNotes = [d("2026-12-24"): xmas, d("2026-12-31"): CalendarNote(icon: "party.popper", comment: "")]
         let next: [Day: CalendarNote?] = [
             d("2026-12-24"): xmas, // unchanged
             d("2026-12-25"): xmas,
@@ -106,7 +106,7 @@ struct CalendarMathTests {
         let ops = CalendarMath.noteOps(changes)
         #expect(ops == [
             CalendarNoteOp(action: .clear, dates: [d("2026-12-31")]),
-            CalendarNoteOp(action: .set, dates: [d("2026-12-25"), d("2026-12-26")], icon: "🎄", comment: ""),
+            CalendarNoteOp(action: .set, dates: [d("2026-12-25"), d("2026-12-26")], icon: "star", comment: ""),
         ])
     }
 
@@ -132,14 +132,23 @@ struct CalendarMathTests {
         #expect(column.unknown == ["Sick"])
     }
 
-    @Test func picksColors() {
-        #expect(CalendarMath.nextColor(types) == "#3b82f6")
+    @Test func readsColors() {
         #expect(CalendarMath.prefersDarkText(on: "#f59e0b"))
         #expect(!CalendarMath.prefersDarkText(on: "#3b82f6"))
-        #expect(CalendarMath.hex(r: 1, g: 0.5, b: 0) == "#ff8000")
         let rgb = CalendarMath.rgb("#22c55e")
         #expect(rgb?.g == 197.0 / 255.0)
         #expect(CalendarMath.rgb("nope") == nil)
+    }
+
+    @Test func knowsTheMembersPalette() {
+        // The server's keys, in its order.
+        #expect(MemberColor.allCases.map(\.rawValue)
+                == ["blue", "orange", "green", "red", "purple", "yellow", "teal", "pink", "indigo", "brown"])
+        #expect(MemberColor(key: "teal")?.hex == "#12a594")
+        #expect(MemberColor.allCases.allSatisfy { CalendarMath.rgb($0.hex) != nil })
+        // An unknown key (a newer server's) or none is gray.
+        #expect(MemberColor(key: "magenta") == nil && MemberColor(key: nil) == nil)
+        #expect(MemberColor.color("magenta") == .gray)
     }
 }
 

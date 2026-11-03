@@ -47,7 +47,10 @@ struct DemoSearchTests {
         let grandma = try search("grandma")
         #expect(grandma.results.contains { $0.kind == .note && $0.route != nil })
         #expect(grandma.results.contains { $0.kind == .person && $0.title == "Grandma Rose" && $0.account == false })
-        #expect(try search("grandma hauptbahnhof").results.map(\.kind) == [.note])
+        let note = try search("grandma hauptbahnhof").results
+        #expect(note.map(\.kind) == [.note])
+        // A note's hit has its icon (an SF Symbol's name), the title only the comment.
+        #expect(note.first?.icon == "tram" && note.first?.title.hasPrefix("Grandma") == true)
         #expect(try search("mia check").results.contains { $0.kind == .chat && $0.route == .assistantChat(id: $0.itemID) })
         #expect(try search("   ").results.isEmpty)
         #expect(try search("zzzz nothing").groups.isEmpty)

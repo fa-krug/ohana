@@ -297,12 +297,14 @@ final class AppleCalendarSync {
         if state.entries {
             var types: [Int: [CalendarEntryType]] = [:]
             var entries: [Day: [String]] = [:]
+            var members: [String: String] = [:]
             for year in window.lowerBound.year...window.upperBound.year {
                 let calendarYear: CalendarState = try await context.api.get("", query: ["year": String(year)])
                 types[year] = calendarYear.types
                 for (day, ids) in calendarYear.entries { if let day = Day(day), day.year == year { entries[day] = ids } }
+                for member in calendarYear.members ?? [] { members[member.id] = member.name }
             }
-            spans = AppleSyncMapping.spans(entries: entries, types: types, window: window)
+            spans = AppleSyncMapping.spans(entries: entries, types: types, members: members, window: window)
         }
         guard self.state(for: context.api)?.calendarID == state.calendarID else { return Pass() } // stopped meanwhile
 

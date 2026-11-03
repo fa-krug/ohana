@@ -3,8 +3,8 @@
   "calendar": {
     "nextGap": null,
     "upcoming": [
-      { "name": "Vacation", "color": "#22c55e", "from": "{{day:12}}", "to": "{{day:19}}" },
-      { "name": "Grandma visits", "color": "#f97316", "from": "{{day:24}}", "to": "{{day:26}}" }
+      { "name": "Vacation", "color": "#f76b15", "from": "{{day:12}}", "to": "{{day:19}}" },
+      { "name": "Grandma visits", "color": "#8e4ec6", "from": "{{day:24}}", "to": "{{day:26}}" }
     ]
   },
   "awayToday": [],
@@ -170,8 +170,10 @@
         "rrule": null
       }
     },
-    { "kind": "entry", "date": "{{day:12}}", "to": "{{day:19}}", "name": "Vacation", "color": "#22c55e" },
-    { "kind": "entry", "date": "{{day:24}}", "to": "{{day:26}}", "name": "Grandma visits", "color": "#f97316" }
+    { "kind": "entry", "date": "{{day:12}}", "to": "{{day:19}}", "name": "Vacation", "color": "#f76b15", "icon": "beach.umbrella",
+      "member": { "id": "demo-user", "name": "Ben Parker", "color": "orange" } },
+    { "kind": "entry", "date": "{{day:24}}", "to": "{{day:26}}", "name": "Grandma visits", "color": "#8e4ec6", "icon": "figure.and.child.holdinghands",
+      "member": { "id": "person-grandma-rose", "name": "Grandma Rose", "color": "purple" } }
   ],
   "meals": {
     "today": { "recipeId": "recipe-lasagne", "recipeTitle": "Vegetable lasagne", "isLeftover": false }

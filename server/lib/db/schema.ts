@@ -124,6 +124,8 @@ export const familyMembers = sqliteTable(
     role: text("role").notNull().default("editor"), // editor | viewer
     /** "YYYY-MM-DD", or null when not known; per family, like a member without an account's. */
     birthday: text("birthday"),
+    /** A key of MEMBER_COLORS (lib/families/colors.ts): their entry types' colors. */
+    color: text("color").notNull().default("blue"),
     joinedAt: integer("joined_at", { mode: "timestamp" }).notNull(),
   },
   (t) => ({
@@ -144,6 +146,8 @@ export const familyPeople = sqliteTable(
     name: text("name").notNull(),
     /** "YYYY-MM-DD", or null when not known. */
     birthday: text("birthday"),
+    /** A key of MEMBER_COLORS (lib/families/colors.ts). */
+    color: text("color").notNull().default("blue"),
     createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   },
   (t) => ({ familyPeopleFamilyNameIdx: uniqueIndex("family_people_family_name_idx").on(t.familyId, t.name) }),
@@ -181,8 +185,13 @@ export const calEntryTypes = sqliteTable(
     /** Unique within the family's year (a slug of the name, e.g. "vacation"). */
     id: text("id").notNull(),
     name: text("name").notNull(),
-    color: text("color").notNull(),
+    /** Whose type it is: an account (`memberUserId`) or a member without one
+     *  (`memberPersonId`), or nobody; its color comes from theirs. */
+    memberUserId: text("member_user_id").references(() => users.id, { onDelete: "set null" }),
+    memberPersonId: text("member_person_id").references(() => familyPeople.id, { onDelete: "set null" }),
     role: text("role").notNull().default("none"), // none | needs_cover | covers | day_off
+    /** An SF Symbol name the app draws; null: the role's (`lib/calendar/icons.ts`). */
+    icon: text("icon"),
     position: integer("position").notNull().default(0),
     /** The whole family is away from home on its days: the meal plan leaves them out. */
     away: integer("away", { mode: "boolean" }).notNull().default(false),
@@ -221,6 +230,7 @@ export const calNotes = sqliteTable(
       .notNull()
       .references(() => families.id, { onDelete: "cascade" }),
     day: text("day").notNull(),
+    /** An SF Symbol name the app draws, or "" (none). */
     icon: text("icon").notNull().default(""),
     comment: text("comment").notNull().default(""),
   },

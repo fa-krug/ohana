@@ -57,8 +57,8 @@ function setup() {
     .run();
   db.insert(calNotes)
     .values([
-      { familyId, day: "2026-12-24", icon: "🎄", comment: "Lasagne at grandma's\nbring wine" },
-      { familyId, day: "2026-12-25", icon: "🎁", comment: "" },
+      { familyId, day: "2026-12-24", icon: "tree", comment: "Lasagne at grandma's\nbring wine" },
+      { familyId, day: "2026-12-25", icon: "gift", comment: "" },
     ])
     .run();
   db.insert(finCategories).values({ familyId, id: "home", name: "Möbel", color: "#888" }).run();
@@ -92,7 +92,7 @@ describe("GET /search", () => {
     expect(data.currency).toBe("EUR");
     expect(pick(data.results, "recipe").map((r: any) => r.id)).toEqual(["r1", "r2", "r3"]);
     expect(pick(data.results, "note")).toEqual([
-      { kind: "note", id: "2026-12-24", title: "🎄 · Lasagne at grandma's", detail: "", day: "2026-12-24" },
+      { kind: "note", id: "2026-12-24", title: "Lasagne at grandma's", detail: "", day: "2026-12-24", icon: "tree" },
     ]);
     expect(pick(data.results, "chat").map((r: any) => r.id)).toEqual(["c1"]);
     // Grouped in the kinds' order.
