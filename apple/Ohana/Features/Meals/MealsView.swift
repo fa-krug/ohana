@@ -137,7 +137,6 @@ struct MealsView: View {
         .cookPresentation($cooking)
         .sheet(isPresented: $creatingRecipe) {
             RecipeEditorSheet(mode: .create(.known)) { id in
-                ErrorBanner.shared.success(String(localized: "Recipe created"))
                 family.open(.recipe(id: id))
             }
         }

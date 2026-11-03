@@ -403,11 +403,7 @@ struct AssistantChatView: View {
         .overlay(alignment: .bottomTrailing) {
             if !following { jumpToLatest }
         }
-        .overlay(alignment: .topTrailing) {
-            if let saved = store.savedCopy {
-                SavedCopyBadge(date: saved.date, updating: saved.updating, retry: store.retrySaved)
-            }
-        }
+        .reloadsWhenReconnected(stale: store.savedCopy?.updating == false, store.retrySaved)
         .animation(reduceMotion ? nil : .snappy, value: following)
     }
 

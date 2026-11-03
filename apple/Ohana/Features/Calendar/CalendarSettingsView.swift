@@ -41,11 +41,6 @@ private struct CalendarSettingsContent: View {
             .formStyle(.grouped)
             .appleCalendarSyncPrompts(appleSync)
         }
-        .overlay(alignment: .topTrailing) {
-            if let copy = store.savedCopy {
-                SavedCopyBadge(date: copy.date, updating: copy.updating, retry: { await store.load() })
-            }
-        }
         .ohanaBackground(ModuleTint.calendar)
         .task(id: [family.revision(.calendar), family.revision(.family)]) { await store.load(quiet: store.isLoaded) }
         .onAppear {
@@ -138,10 +133,7 @@ private struct CalendarSettingsContent: View {
                     Menu {
                         ForEach(others.reversed(), id: \.self) { y in
                             Button(String(y)) {
-                                perform {
-                                    try await store.copyTypes(from: y)
-                                    store.showToast(String(localized: "Types copied."))
-                                }
+                                perform { try await store.copyTypes(from: y) }
                             }
                         }
                     } label: {

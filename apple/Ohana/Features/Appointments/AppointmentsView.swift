@@ -390,7 +390,6 @@ struct AppointmentButtonStyle: ViewModifier {
 enum AppointmentActions {
     static func runNow(_ family: FamilyContext, _ searchID: String) async throws {
         try await family.api.perform(.post, "/appointments/searches/\(searchID)/run")
-        ErrorBanner.shared.success(String(localized: "Queued: the search runs in a few seconds."))
     }
 
     static func setEnabled(_ family: FamilyContext, _ searchID: String, _ enabled: Bool) async throws {
@@ -401,25 +400,21 @@ enum AppointmentActions {
     static func delete(_ family: FamilyContext, _ searchID: String) async throws {
         try await family.api.perform(.delete, "/appointments/searches/\(searchID)")
         family.didChange(.appointments, .events, .calendar)
-        ErrorBanner.shared.success(String(localized: "Search deleted."))
     }
 
     static func ignore(_ family: FamilyContext, resultID: Int) async throws {
         try await family.api.perform(.post, "/appointments/results/\(resultID)/ignore")
         family.didChange(.appointments)
-        ErrorBanner.shared.success(String(localized: "Ignored."))
     }
 
     static func unignore(_ family: FamilyContext, entryID: Int) async throws {
         try await family.api.perform(.delete, "/appointments/ignored/\(entryID)")
         family.didChange(.appointments)
-        ErrorBanner.shared.success(String(localized: "Removed from the ignore list."))
     }
 
     static func removeBooking(_ family: FamilyContext, _ eventID: String) async throws {
         try await family.api.perform(.delete, "/appointments/bookings/\(eventID)")
         family.didChange(.appointments, .events, .calendar)
-        ErrorBanner.shared.success(String(localized: "Appointment removed."))
     }
 
     /// "last run 3 Nov 2026 at 09:30" or "never run".

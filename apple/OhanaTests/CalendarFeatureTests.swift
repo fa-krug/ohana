@@ -648,7 +648,7 @@ struct CalendarSavedCopyTests {
         store.toggleOnSelection("sick")
         #expect(store.entries[d("2026-03-03")] == ["sick"])
         #expect(FileManager.default.fileExists(atPath: queueFile.path()))
-        #expect(await until { store.sync == .retrying })
+        #expect(await until { store.isRetrying })
 
         // The server's answer replaces the copy; what's still queued shows on top of it.
         store.apply(state)
@@ -706,7 +706,7 @@ struct CalendarSavedCopyTests {
         store.apply(state)
         store.select(d("2026-03-05"))
         store.toggleOnSelection("sick")
-        #expect(await until { store.sync == .retrying })
+        #expect(await until { store.isRetrying })
         await store.load()
         #expect(store.entries[d("2026-03-02")] == ["sick"])
         #expect(store.entries[d("2026-03-05")] == ["sick"])

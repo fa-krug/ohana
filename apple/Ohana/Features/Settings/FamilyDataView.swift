@@ -14,7 +14,6 @@ struct FamilyDataView: View {
     @State private var showImporter = false
     @State private var pendingImport: FamilyPendingImport?
     @State private var importing = false
-    @State private var imported = false
 
     var body: some View {
         Form {
@@ -76,9 +75,6 @@ struct FamilyDataView: View {
         } message: { pending in
             Text("Replace the calendar and the finances of “\(familyName)” with the contents of “\(pending.fileName)”? All years, entry types, entries, notes and finances are overwritten; the name, the members and the links stay. This can’t be undone.")
         }
-        .alert("Imported.", isPresented: $imported) {
-            Button("OK", role: .cancel) {}
-        }
     }
 
     private func export() {
@@ -114,7 +110,6 @@ struct FamilyDataView: View {
             do {
                 _ = try await api.client.data(for: api.client.request(.post, api.path("/import"), body: pending.data))
                 family.didChange(.calendar, .events, .finance, .family)
-                imported = true
             } catch is CancellationError {
             } catch {
                 ErrorBanner.shared.show(String(localized: "Couldn’t import the file: \(error.localizedDescription)"))

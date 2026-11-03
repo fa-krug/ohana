@@ -64,13 +64,13 @@ struct FamilyMemberPage: View {
             switch sheet {
             case let .birthday(member):
                 FamilyBirthdaySheet(title: member.label, birthday: member.birthday) { birthday in
-                    try await model.update(family, success: String(localized: "Birthday saved.")) { api in
+                    try await model.update(family) { api in
                         try await api.perform(.patch, "/household/members/\(member.userId)", body: FamilyBirthdayInput(birthday: birthday))
                     }
                 }
             case let .editPerson(person):
                 FamilyPersonSheet(person: person) { input in
-                    try await model.update(family, success: String(localized: "Saved.")) { api in
+                    try await model.update(family) { api in
                         try await api.perform(.patch, "/household/people/\(person.id)", body: input)
                     }
                 }
@@ -212,8 +212,7 @@ struct FamilyMemberPage: View {
                         button: String(localized: "Revoke"),
                         message: String(localized: "Whoever has it can’t join with it anymore.")
                     ) {
-                        remove("/household/invites/\(invite.id)", refreshApp: false,
-                               success: String(localized: "Invite link revoked."))
+                        remove("/household/invites/\(invite.id)", refreshApp: false)
                     }
                 } label: {
                     Label("Revoke", systemImage: "link.badge.minus")
@@ -365,14 +364,14 @@ struct FamilyMemberPage: View {
     private func setRole(_ member: FamilyMember, _ role: FamilyRole) {
         guard role != member.role else { return }
         let api = family.api
-        model.change(family, success: String(localized: "Role changed.")) {
+        model.change(family) {
             try await api.perform(.patch, "/household/members/\(member.userId)", body: FamilyRoleInput(role: role))
         }
     }
 
-    private func remove(_ path: String, refreshApp: Bool, success: String = String(localized: "Removed.")) {
+    private func remove(_ path: String, refreshApp: Bool) {
         let api = family.api
-        model.change(family, success: success) {
+        model.change(family) {
             try await api.perform(.delete, path)
             if refreshApp { await app.refresh() }
         }
@@ -442,7 +441,7 @@ struct FamilyMemberPage: View {
                                      body: try APIClient.encoder.encode(MemberPhotoCropInput(crop: crop)))
             }
             let (answer, _) = try await client.data(for: req)
-            await photoChanged(answer, success: String(localized: "Photo saved."))
+            await photoChanged(answer)
         }
     }
 
@@ -452,19 +451,18 @@ struct FamilyMemberPage: View {
             defer { photoBusy = false }
             let client = family.api.client
             let (answer, _) = try await client.data(for: client.request(.delete, family.api.path(photoRoute)))
-            await photoChanged(answer, success: String(localized: "Photo removed."))
+            await photoChanged(answer)
         }
     }
 
     /// Shows the member's new state from the server's answer, then reloads, and has the other
     /// screens (the calendar's types, the overview) show the new photo.
-    private func photoChanged(_ answer: Data, success: String) async {
+    private func photoChanged(_ answer: Data) async {
         let client = family.api.client
         switch subject {
         case .member: if let member = try? client.decode(FamilyMember.self, from: answer) { model.replace(member) }
         case .person: if let person = try? client.decode(FamilyPerson.self, from: answer) { model.replace(person) }
         }
-        ErrorBanner.shared.success(success)
         await model.load(family.api)
         family.didChange(.family, .calendar)
     }

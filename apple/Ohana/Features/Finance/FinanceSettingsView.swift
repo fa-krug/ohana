@@ -62,11 +62,7 @@ struct FinanceSettingsForm: View {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .overlay(alignment: .topTrailing) {
-            if let copy = store.savedCopy {
-                SavedCopyBadge(date: copy.date, updating: copy.updating, retry: { await store.loadOverview() })
-            }
-        }
+        .reloadsWhenReconnected(stale: store.savedCopy?.updating == false) { await store.loadOverview() }
         .task(id: family.revision(.finance)) { await store.openSettings(family.revision(.finance)) }
         .sheet(item: $sheet) { sheet in
             switch sheet {

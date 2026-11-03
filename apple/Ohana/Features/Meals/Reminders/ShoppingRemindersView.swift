@@ -126,29 +126,12 @@ struct ShoppingRemindersView: View {
 
     private var status: some View {
         Section {
-            Button {
+            Button("Sync Now", systemImage: "arrow.triangle.2.circlepath") {
                 Task { await reminders.sync(family, reason: .manual) }
-            } label: {
-                if reminders.isSyncing(family.api) {
-                    HStack(spacing: 8) {
-                        ProgressView().controlSize(.small)
-                        Text("Syncing…")
-                    }
-                } else {
-                    Label("Sync Now", systemImage: "arrow.triangle.2.circlepath")
-                }
             }
-            .disabled(reminders.isSyncing(family.api))
             if let error = settings.lastError {
                 Label(error, systemImage: "exclamationmark.triangle")
                     .foregroundStyle(.red)
-            } else if let last = settings.lastSync {
-                LabeledContent("Last synced") {
-                    Text(last, format: .relative(presentation: .named))
-                }
-                if let result = settings.lastResult {
-                    Text(Self.summary(result)).foregroundStyle(.secondary)
-                }
             }
             Button("Open Reminders", systemImage: "arrow.up.forward.app") { RemindersStore.openRemindersApp() }
         } header: {
@@ -156,16 +139,6 @@ struct ShoppingRemindersView: View {
         } footer: {
             Text("It syncs by itself when you open Ohana and when the meal plan changes. Tick items off in the Reminders app while you shop.")
         }
-    }
-
-    /// "3 added, 1 updated, 2 removed", "Nothing to change".
-    static func summary(_ result: ShoppingSyncResult) -> String {
-        guard !result.changedNothing else { return String(localized: "Nothing to change") }
-        var parts: [String] = []
-        if result.added > 0 { parts.append(String(localized: "\(result.added) added")) }
-        if result.updated > 0 { parts.append(String(localized: "\(result.updated) updated")) }
-        if result.removed > 0 { parts.append(String(localized: "\(result.removed) removed")) }
-        return parts.joined(separator: ", ")
     }
 
     private func choose(_ listID: String?) {

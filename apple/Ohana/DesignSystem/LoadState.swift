@@ -26,6 +26,12 @@ enum LoadState<Value> {
     var isSaved: Bool {
         if case .saved = self { true } else { false }
     }
+
+    /// The copy on the device after the server couldn't be reached: worth loading again once
+    /// the connection is back.
+    var isStale: Bool {
+        if case .saved(_, _, false) = self { true } else { false }
+    }
 }
 
 extension LoadState {
@@ -64,11 +70,13 @@ extension LoadState {
     }
 
     /// The state after a load failed: the copy on the device stays while the failure may pass
-    /// (offline, the server down), a value from the server stays with the error in the banner.
+    /// (offline, the server down; silently, unless the server answered with an error), a value
+    /// from the server stays with the error in the banner.
     func failing(_ error: any Error) -> LoadState {
         switch self {
         case let .saved(value, date, _):
             if APIError.isTemporary(error) {
+                ErrorBanner.shared.showUnlessUnreachable(error)
                 return .saved(value, date: date, updating: false)
             }
             return .failed(error.localizedDescription)
@@ -88,8 +96,8 @@ extension LoadState where Value: Decodable {
     }
 }
 
-/// Shows a `LoadState`: a spinner, the failure with a retry, or the content — with
-/// `SavedCopyBadge` over it while it's the copy on the device.
+/// Shows a `LoadState`: a spinner, the failure with a retry, or the content — the copy on the
+/// device just like the server's, loaded again when the connection comes back.
 struct LoadStateView<Value, Content: View>: View {
     let state: LoadState<Value>
     var retry: (() async -> Void)?
@@ -114,91 +122,41 @@ struct LoadStateView<Value, Content: View>: View {
             }
         case let .loaded(value):
             content(value)
-        case let .saved(value, date, updating):
+        case let .saved(value, _, _):
             content(value)
-                .overlay(alignment: .topTrailing) {
-                    SavedCopyBadge(date: date, updating: updating, retry: retry)
-                }
+                .reloadsWhenReconnected(stale: state.isStale, retry)
         }
     }
 }
 
-/// The quiet sign over a screen showing its copy on the device: "Updating…" while the server is
-/// asked (only after a moment, so a quick answer shows nothing), then that it's offline or the
-/// server can't be reached, and from when the copy is. A tap tries again; so does the connection
-/// coming back.
-struct SavedCopyBadge: View {
-    let date: Date
-    let updating: Bool
-    var retry: (() async -> Void)?
+/// A screen showing its copy on the device after the server couldn't be reached (`stale`) loads
+/// again when the connection comes back. Nothing shows: the copy looks like the server's.
+private struct ReloadWhenReconnected: ViewModifier {
+    let stale: Bool
+    let reload: (() async -> Void)?
     @State private var connectivity = Connectivity.shared
-    @State private var showsUpdating = false
 
-    var body: some View {
-        Group {
-            if updating {
-                if showsUpdating {
-                    Label {
-                        Text("Updating…")
-                    } icon: {
-                        ProgressView().controlSize(.mini)
-                    }
-                    .badgeStyle()
-                }
-            } else {
-                Button {
-                    if let retry { Task { await retry() } }
-                } label: {
-                    Label(problem, systemImage: connectivity.isOnline ? "exclamationmark.icloud" : "wifi.slash")
-                        .badgeStyle()
-                }
-                .buttonStyle(.plain)
-                .disabled(retry == nil)
-                .accessibilityHint(retry == nil ? "" : String(localized: "Tries again"))
-            }
+    func body(content: Content) -> some View {
+        content.onChange(of: connectivity.isOnline) { _, online in
+            if online, stale, let reload { Task { await reload() } }
         }
-        .padding(8)
-        .animation(.snappy, value: updating)
-        .animation(.snappy, value: showsUpdating)
-        .task(id: updating) {
-            showsUpdating = false
-            guard updating else { return }
-            try? await Task.sleep(for: .milliseconds(600))
-            if !Task.isCancelled { showsUpdating = true }
-        }
-        .onChange(of: connectivity.isOnline) { _, online in
-            if online, !updating, let retry { Task { await retry() } }
-        }
-    }
-
-    private var problem: String {
-        let time = date.formatted(Calendar.current.isDateInToday(date)
-                                  ? .dateTime.hour().minute() : .dateTime.day().month().hour().minute())
-        return connectivity.isOnline
-            ? String(localized: "Server unreachable · as of \(time)")
-            : String(localized: "Offline · as of \(time)")
     }
 }
 
-private extension View {
-    func badgeStyle() -> some View {
-        font(.caption)
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .glassEffect(.regular, in: .capsule)
-            .transition(.opacity)
+extension View {
+    /// Loads again when the connection comes back while `stale` (see `ReloadWhenReconnected`).
+    func reloadsWhenReconnected(stale: Bool, _ reload: (() async -> Void)?) -> some View {
+        modifier(ReloadWhenReconnected(stale: stale, reload: reload))
     }
 }
 
-/// Errors of actions (saving, deleting) shown as a glass banner at the top of the window, and
-/// short confirmations ("Saved.") with `success(_:)`. Sheets show it too when their content
-/// has `.errorBanner()`.
+/// Errors of actions (saving, deleting) shown as a glass banner at the top of the window; the
+/// app tells only of errors, never of success. Sheets show it too when their content has
+/// `.errorBanner()`.
 @Observable
 final class ErrorBanner {
     static let shared = ErrorBanner()
     private(set) var message: String?
-    private(set) var isSuccess = false
     private var hideTask: Task<Void, Never>?
 
     func show(_ error: any Error) {
@@ -207,26 +165,16 @@ final class ErrorBanner {
     }
 
     func show(_ text: String) {
-        present(text, success: false)
-    }
-
-    /// A confirmation, e.g. `ErrorBanner.shared.success(String(localized: "Test message sent."))`.
-    func success(_ text: String) {
-        present(text, success: true)
-    }
-
-    private func present(_ text: String, success: Bool) {
         message = text
-        isSuccess = success
-        // VoiceOver reads it out; errors get a higher priority than confirmations.
+        // VoiceOver reads it out at a high priority.
         var announcement = AttributedString(text)
-        announcement.accessibilitySpeechAnnouncementPriority = success ? .default : .high
+        announcement.accessibilitySpeechAnnouncementPriority = .high
         AccessibilityNotification.Announcement(announcement).post()
         hideTask?.cancel()
-        // Errors stay until dismissed while VoiceOver runs, and longer than confirmations.
-        if !success, Self.voiceOverRunning { return }
+        // It stays until dismissed while VoiceOver runs.
+        if Self.voiceOverRunning { return }
         hideTask = Task {
-            try? await Task.sleep(for: .seconds(success ? 4 : 8))
+            try? await Task.sleep(for: .seconds(8))
             if !Task.isCancelled { message = nil }
         }
     }
@@ -256,8 +204,8 @@ struct ErrorBannerOverlay: ViewModifier {
         content.overlay(alignment: .top) {
             if let message = banner.message {
                 HStack(spacing: 10) {
-                    Image(systemName: banner.isSuccess ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
-                        .foregroundStyle(banner.isSuccess ? .green : .red)
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .foregroundStyle(.red)
                     Text(message).font(.callout)
                     Button { banner.dismiss() } label: { Image(systemName: "xmark") }
                         .buttonStyle(.plain)
@@ -265,7 +213,7 @@ struct ErrorBannerOverlay: ViewModifier {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
-                .glassEffect(.regular.tint((banner.isSuccess ? Color.green : .red).opacity(0.15)), in: .capsule)
+                .glassEffect(.regular.tint(Color.red.opacity(0.15)), in: .capsule)
                 .padding(.top, 8)
                 .transition(.move(edge: .top).combined(with: .opacity))
             }

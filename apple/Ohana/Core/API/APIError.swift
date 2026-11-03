@@ -43,8 +43,29 @@ enum APIError: LocalizedError, Equatable {
         }
     }
 
+    /// No connection, or the server can't be reached at all (no answer, a timeout, a gateway in
+    /// front of it that can't reach it): what a screen showing its copy on the device keeps
+    /// quiet about. An error the server itself answers (500, 4xx) or an answer that can't be
+    /// read is not.
+    static func isUnreachable(_ error: any Error) -> Bool {
+        switch error {
+        case is URLError, is CancellationError: true
+        case APIError.transport: true
+        case let APIError.http(status, _): [408, 502, 503, 504].contains(status)
+        default: false
+        }
+    }
+
     /// The message of an error body, whichever key the route used.
     static func message(from data: Data) -> String? {
         ServerErrorText.message(from: data)
+    }
+}
+
+extension ErrorBanner {
+    /// For a refresh behind the copy on the device: the error in the banner, unless the device
+    /// is offline or the server can't be reached (the copy just stays, and loads again later).
+    func showUnlessUnreachable(_ error: any Error) {
+        if !APIError.isUnreachable(error) { show(error) }
     }
 }

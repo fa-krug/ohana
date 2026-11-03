@@ -135,11 +135,7 @@ private struct AccountForm: View {
             }
         }
         .formStyle(.grouped)
-        .overlay(alignment: .topTrailing) {
-            if case let .saved(_, date, updating) = state {
-                SavedCopyBadge(date: date, updating: updating, retry: load)
-            }
-        }
+        .reloadsWhenReconnected(stale: state.isStale, load)
         .navigationTitle(page == .developer ? "API tokens" : "Account")
         .toolbar {
             if inSheet {
@@ -483,12 +479,8 @@ private struct AccountForm: View {
                     additionalHeaderFields: [:]
                 )
                 switch ServerAccountPage.outcome(of: callback, attempt: attempt) {
-                case let .finished(changed):
-                    switch changed {
-                    case .passkey?: ErrorBanner.shared.success(String(localized: "Passkey added."))
-                    case .email?: ErrorBanner.shared.success(String(localized: "Email updated."))
-                    case nil: break
-                    }
+                case .finished:
+                    break
                 case .stateMismatch, .malformed:
                     ErrorBanner.shared.show(String(localized: "The account page didn’t finish. Please try again."))
                 }
@@ -510,24 +502,20 @@ private struct AccountForm: View {
         case let .email(current):
             AccountEmailSheet(current: current) { input in
                 try await change(.put, "/api/v1/me/email", body: input, as: UserAccount.self)
-                ErrorBanner.shared.success(String(localized: "Email updated."))
             }
         case let .password(hasPassword):
             AccountPasswordSheet(hasPassword: hasPassword) { input in
                 try await change(.put, "/api/v1/me/password", body: input, as: UserAccount.self)
-                ErrorBanner.shared.success(String(localized: "Password saved. Your browsers were signed out."))
             }
         case .removePassword:
             AccountRemovePasswordSheet { password in
                 try await change(.delete, "/api/v1/me/password", body: AccountRemovePasswordInput(currentPassword: password),
                                  as: UserAccount.self)
-                ErrorBanner.shared.success(String(localized: "Password removed."))
             }
         case let .renamePasskey(passkey):
             AccountPasskeyRenameSheet(passkey: passkey) { name in
                 try await change(.patch, "/api/v1/me/passkeys/\(passkey.id)", body: AccountPasskeyRenameInput(deviceName: name),
                                  as: AccountPasskeyList.self)
-                ErrorBanner.shared.success(String(localized: "Passkey renamed."))
             }
         case .createToken:
             AccountCreateTokenSheet { name in
@@ -568,7 +556,6 @@ private struct AccountForm: View {
         nameFocused = false
         perform {
             let _: UserAccount = try await client.send(.patch, "/api/v1/me/profile", body: AccountProfileInput(name: new))
-            ErrorBanner.shared.success(String(localized: "Name saved."))
             await load()
             await app.refresh()
         }
@@ -587,7 +574,6 @@ private struct AccountForm: View {
         guard let client = app.client else { return }
         perform {
             let _: AccountPasskeyList = try await client.send(.delete, "/api/v1/me/passkeys/\(passkey.id)")
-            ErrorBanner.shared.success(String(localized: "Passkey removed."))
             await load()
             await app.refresh()
         }
@@ -627,8 +613,6 @@ private struct AccountForm: View {
                 dismiss()
                 return
             }
-            ErrorBanner.shared.success(AccountRules.isDevice(token) ? String(localized: "Signed out.")
-                                                                    : String(localized: "Token deleted."))
             await load()
         }
     }
@@ -637,7 +621,6 @@ private struct AccountForm: View {
         guard let client = app.client else { return }
         perform {
             let _: JSONValue = try await client.send(.delete, "/api/v1/me/sessions")
-            ErrorBanner.shared.success(String(localized: "Browsers signed out."))
             await load()
         }
     }

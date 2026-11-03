@@ -91,8 +91,7 @@ struct FinanceScreen: View {
                 if compact && !selecting { viewPicker.padding(.horizontal).padding(.vertical, 8) }
             }
             #endif
-            // Beside the period; on the iPhone at the bottom (its period scrolls with the list).
-            .overlay(alignment: compact ? .bottom : .topTrailing) { savedCopyBadge }
+            .reloadsWhenReconnected(stale: store.savedCopy?.updating == false) { await store.reloadAll() }
             .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar }
             .overlay { if dropping { dropHint } }
             // A bank statement dragged from the Finder or Files opens the import with it.
@@ -253,14 +252,6 @@ struct FinanceScreen: View {
             }
             .allowsHitTesting(false)
             .transition(.opacity)
-    }
-
-    /// What's shown is the copy on the device: from when, a tap reloads.
-    @ViewBuilder
-    private var savedCopyBadge: some View {
-        if let copy = store.savedCopy {
-            SavedCopyBadge(date: copy.date, updating: copy.updating, retry: { await store.reloadAll() })
-        }
     }
 
     @ViewBuilder

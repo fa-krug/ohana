@@ -430,9 +430,12 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `Core/API/APIClient.swift` (errors `{error}` / `{message}` → `APIError`, 401 signs out),
   `Core/API/ResponseCache.swift` (offline: the last answer of each screen's GET kept under
   Caches per server, `api.cached("/meals/plan")` → `CachedGet` `saved()` / `fetch()`;
-  `LoadState.run($state, api.cached(…))` shows the copy at once as `.saved(…, updating:)` with
-  `SavedCopyBadge` ("Updating…", "Offline · as of …") and keeps it while the server can't be
-  reached; editing waits for the server's answer; `AppModel` opens on the saved account and
+  `LoadState.run($state, api.cached(…))` shows the copy at once as `.saved(…, updating:)`,
+  silently (no sync or save indicators anywhere: only errors show, in the error banner), and
+  keeps it while the server can't be reached (`APIError.isUnreachable`: offline, no answer, a
+  gateway's 502–504; any other failure goes to the banner, `showUnlessUnreachable`), loading
+  again when the connection is back (`reloadsWhenReconnected`); editing waits for the server's
+  answer; `AppModel` opens on the saved account and
   families; signing out or a new pairing clears it; `Core/Support/Connectivity.swift`;
   `Core/API/Prefetch.swift` loads the selected family's main screens and the meal plan's
   recipes in the background after launch / a family switch / reconnecting (every 15 min at most,

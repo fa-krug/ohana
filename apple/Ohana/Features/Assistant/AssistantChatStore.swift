@@ -165,7 +165,8 @@ final class AssistantChatStore {
         await loadChats()
     }
 
-    /// Tries again to reach the server for the open chat's copy and the list (the badge over it).
+    /// Tries again to reach the server for the open chat's copy and the list (the connection is
+    /// back).
     func retrySaved() async {
         if let id = currentID, savedCopy?.updating == false { await fetch(id, follow: true) }
         await loadChats()
@@ -242,7 +243,9 @@ final class AssistantChatStore {
         } catch {
             guard currentID == id, !(error is CancellationError) else { return }
             if savedCopy != nil, APIError.isTemporary(error) {
+                // The copy stays: silently, unless the server answered with an error.
                 savedCopy?.updating = false
+                ErrorBanner.shared.showUnlessUnreachable(error)
                 return
             }
             if (error as? APIError)?.status == 404 {
@@ -932,7 +935,6 @@ final class AssistantChatStore {
                 current?.items[index] = .change(done)
             }
             onChange(AssistantChangeAreas.areas(change: change.change, undo: change.undo))
-            ErrorBanner.shared.success(String(localized: "Undone"))
         } catch {
             ErrorBanner.shared.show(String(localized: "Couldn’t undo: \(error.localizedDescription)"))
             return

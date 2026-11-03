@@ -51,11 +51,7 @@ struct RecipeListView: View {
             .padding(.bottom, 24)
         }
         .scrollDismissesKeyboard(.interactively)
-        .overlay(alignment: .topTrailing) {
-            if let saved = model.saved {
-                SavedCopyBadge(date: saved.date, updating: saved.updating) { await model.reload(family.api, key) }
-            }
-        }
+        .reloadsWhenReconnected(stale: model.saved?.updating == false) { await model.reload(family.api, key) }
         .searchable(text: $query, prompt: Text("Search recipes"))
         .refreshable { await model.reload(family.api, key) }
         .task(id: RecipeListModel.Load(query: key, revision: family.revision(.recipes))) {
@@ -85,7 +81,6 @@ struct RecipeListView: View {
         }
         .sheet(isPresented: $creating) {
             RecipeEditorSheet(mode: .create(list)) { id in
-                ErrorBanner.shared.success(String(localized: "Recipe created"))
                 family.open(.recipe(id: id))
             }
         }
@@ -480,7 +475,9 @@ final class RecipeListModel {
             if let shown = saved, loadedQuery == q { saved = (shown.date, false) }
         } catch {
             if let shown = saved, loadedQuery == q, APIError.isTemporary(error) {
+                // The copy stays: silently, unless the server answered with an error.
                 saved = (shown.date, false)
+                ErrorBanner.shared.showUnlessUnreachable(error)
             } else if items.isEmpty || loadedQuery != q || saved != nil {
                 saved = nil
                 self.error = error.localizedDescription

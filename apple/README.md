@@ -229,7 +229,8 @@ scripts/merge-localizations.py build/dd   # rewrites Ohana/Resources/Localizable
   `LoadStateView`; after a change it calls `family.didChange(.area)` so other screens showing the
   same data reload (the assistant does this for what its tools changed).
 - Errors of actions go to the window's banner: `perform { try await … }` (VoiceOver announces it);
-  every sheet's content has `.errorBanner()` so it shows there too.
+  every sheet's content has `.errorBanner()` so it shows there too. Only errors are told:
+  nothing confirms a save, add or delete (a toast only when it offers Undo).
 - Liquid Glass only for the navigation layer and controls floating above the content (bars,
   toasts, floating buttons: `.buttonStyle(.glass)`, `.glassProminent`, `GlassEffectContainer`).
   Content sits on solid `contentCard()` / `CardSection` on `ohanaBackground()`.

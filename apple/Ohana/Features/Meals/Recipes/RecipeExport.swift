@@ -381,6 +381,5 @@ struct RecipeExportSheet: View {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(markdown, forType: .string)
         #endif
-        ErrorBanner.shared.success(String(localized: "Copied to clipboard."))
     }
 }

@@ -160,7 +160,6 @@
   "In and out": "Ein und aus",
   "Transfers": "Umbuchungen",
   "Undone": "Rückgängig gemacht",
-  "Redone": "Wiederhergestellt",
   "Saved": "Gespeichert",
   "Transaction deleted": "Buchung gelöscht",
   "^[%lld transaction](inflect: true) deleted": {
@@ -205,7 +204,6 @@
   "(%lld like similar ones)": "(%lld wie ähnliche)",
   "The AI couldn’t sort: %@": "Die KI konnte nicht einsortieren: %@",
   "No transaction could be sorted": "Keine Buchung konnte einsortiert werden",
-  "All finance data deleted": "Alle Finanzdaten gelöscht",
   "No transactions in this period yet.": "Noch keine Buchungen in diesem Zeitraum.",
   "Comparison": "Vergleich",
   "all per month": "alles pro Monat",

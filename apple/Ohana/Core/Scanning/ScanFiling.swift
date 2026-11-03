@@ -104,6 +104,7 @@ final class ScanFiling {
 
     /// Saves `pages` as a PDF when "Save as PDF" is on; returns its file name (nil when off or
     /// saved before).
+    @discardableResult
     func save(_ pages: [ScanPage]) async throws -> String? {
         guard savesPDF, savedFile == nil else { return nil }
         guard let folderURL = folder.url else {
@@ -128,8 +129,8 @@ final class ScanFiling {
         }
     }
 
-    /// Saves (asking for a folder first when there's none), confirms with a banner, then runs
-    /// `done`; errors go to the banner and `done` doesn't run.
+    /// Saves (asking for a folder first when there's none), then runs `done`; errors go to the
+    /// banner and `done` doesn't run.
     func saveThen(_ pages: @escaping () -> [ScanPage], done: @escaping () -> Void) {
         if needsFolder {
             chooseFolder { [weak self] in self?.saveThen(pages, done: done) }
@@ -137,9 +138,7 @@ final class ScanFiling {
         }
         Task {
             do {
-                if let file = try await save(pages()) {
-                    ErrorBanner.shared.success(String(localized: "Saved “\(file)”"))
-                }
+                try await save(pages())
                 done()
             } catch {
                 ErrorBanner.shared.show(error)

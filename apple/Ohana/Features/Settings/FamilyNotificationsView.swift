@@ -10,7 +10,6 @@ struct FamilyNotificationsView: View {
     @State private var editing: FamilyChannelEditing?
     @State private var confirmation: FamilyConfirmation?
     @State private var testing: String?
-    @State private var testSent = false
 
     var body: some View {
         Group {
@@ -31,13 +30,9 @@ struct FamilyNotificationsView: View {
                 }
                 await model.load(family.api)
                 family.didChange(.family)
-                ErrorBanner.shared.success(String(localized: "Channel saved."))
             }
         }
         .familyConfirmation($confirmation)
-        .alert("Test message sent.", isPresented: $testSent) {
-            Button("OK", role: .cancel) {}
-        }
     }
 
     private func form(_ household: FamilyHousehold) -> some View {
@@ -140,7 +135,7 @@ struct FamilyNotificationsView: View {
                 message: String(localized: "Searches stop sending to it.")
             ) {
                 let api = family.api
-                model.change(family, success: String(localized: "Channel deleted.")) {
+                model.change(family) {
                     try await api.perform(.delete, "/household/notifications/channels/\(channel.id)")
                 }
             }
@@ -155,7 +150,6 @@ struct FamilyNotificationsView: View {
         Task {
             do {
                 try await api.perform(.post, "/household/notifications/channels/\(channel.id)/test")
-                testSent = true
             } catch is CancellationError {
             } catch {
                 ErrorBanner.shared.show(String(localized: "Sending failed: \(error.localizedDescription)"))

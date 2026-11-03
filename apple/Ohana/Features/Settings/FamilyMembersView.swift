@@ -35,7 +35,7 @@ struct FamilyMembersView: View {
                 }
             case .addByEmail:
                 FamilyAddByEmailSheet { input in
-                    try await model.update(family, success: String(localized: "Added.")) { api in
+                    try await model.update(family) { api in
                         try await api.perform(.post, "/household/members", body: input)
                     }
                     await app.refresh()
@@ -217,7 +217,7 @@ struct FamilyMembersView: View {
 
     private func revoke(_ invite: FamilyInvite) {
         let api = family.api
-        model.change(family, success: String(localized: "Invite link revoked.")) {
+        model.change(family) {
             try await api.perform(.delete, "/household/invites/\(invite.id)")
         }
     }

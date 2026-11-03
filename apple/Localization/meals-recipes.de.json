@@ -21,16 +21,6 @@
       "other": "%lld Rezepte"
     }
   },
-  "%lld recipes added to “Want to try”": {
-    "en": {
-      "one": "%lld recipe added to “Want to try”",
-      "other": "%lld recipes added to “Want to try”"
-    },
-    "de": {
-      "one": "%lld Rezept zu „Ausprobieren“ hinzugefügt",
-      "other": "%lld Rezepte zu „Ausprobieren“ hinzugefügt"
-    }
-  },
   "%lld selected": "%lld ausgewählt",
   "%lld servings": {
     "en": {
@@ -68,7 +58,6 @@
   "Cook together": "Zusammen kochen",
   "Cooking %lld min": "Kochen %lld Min.",
   "Cooking (min)": "Kochen (Min.)",
-  "Copied to clipboard.": "In Zwischenablage kopiert.",
   "Couldn’t load": "Konnte nicht geladen werden",
   "Couldn’t share the recipe. Try again?": "Konnte das Rezept nicht teilen. Nochmal versuchen?",
   "Create a meal plan": "Essensplan erstellen",
@@ -151,7 +140,6 @@
   "Organize your recipes with tags.": "Organisiere deine Rezepte mit Tags.",
   "PDF": "PDF",
   "Photo": "Foto",
-  "Photo removed": "Foto entfernt",
   "Plan": "Planung",
   "Plan your meals for the week": "Plane deine Mahlzeiten für die Woche",
   "Portions": "Portionen",
@@ -166,10 +154,8 @@
   "Quantities must be numbers": "Mengen müssen Zahlen sein",
   "Recently updated": "Zuletzt bearbeitet",
   "Recipe": "Rezept",
-  "Recipe created": "Rezept erstellt",
   "Recipe deleted.": "Rezept gelöscht.",
   "Recipe name": "Rezeptname",
-  "Recipe saved": "Rezept gespeichert",
   "Recipes": "Rezepte",
   "Remove": "Entfernen",
   "Remove Photo": "Foto entfernen",
@@ -247,7 +233,6 @@
   "—": "—",
   "Undo Import": "Import rückgängig machen",
   "Open Recipe": "Rezept öffnen",
-  "Import undone": "Import rückgängig gemacht",
   "Importing %lld recipes into “Want to try”": {
     "en": {
       "one": "Importing %lld recipe into “Want to try”",

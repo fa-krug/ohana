@@ -261,7 +261,6 @@ struct MealPlanView: View {
         // be restored any more, and the server keeps nothing to restore this one from.
         if let undo { expire(undo) }
         family.didChange(.mealPlan)
-        ErrorBanner.shared.success(String(localized: "Meal plan generated."))
     }
 
     private func change(_ message: String, _ call: @escaping () async throws -> MealPlanChangeResult) {

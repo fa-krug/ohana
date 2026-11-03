@@ -426,7 +426,6 @@ struct AppointmentSearchEditor: View {
                     id = created.id
                 }
                 family.didChange(.appointments)
-                ErrorBanner.shared.success(search == nil ? String(localized: "Search created.") : String(localized: "Search saved."))
                 dismiss()
                 saved(id)
             } catch is CancellationError {

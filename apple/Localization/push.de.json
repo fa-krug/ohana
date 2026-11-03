@@ -2,7 +2,6 @@
   "PUSH_FALLBACK": {"en": "New notification from Ohana", "de": "Neue Benachrichtigung von Ohana"},
   "Notifications on this device": "Benachrichtigungen auf diesem Gerät",
   "Send a test notification": "Testbenachrichtigung senden",
-  "Test notification sent": "Testbenachrichtigung gesendet",
   "They go through Ohana’s notification service, which can’t read them: only this device can. What is sent is chosen under Household → Notifications.": "Sie laufen über Ohanas Benachrichtigungsdienst, der sie nicht lesen kann: Das kann nur dieses Gerät. Was gesendet wird, legst du unter Haushalt → Benachrichtigungen fest.",
   "Ohana app": "Ohana-App",
   "On the devices that have notifications turned on": "Auf den Geräten, auf denen Benachrichtigungen eingeschaltet sind",

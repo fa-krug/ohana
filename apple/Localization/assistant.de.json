@@ -132,7 +132,6 @@
   "Return sends, Shift-Return starts a new line. Paste (⌘V) or drop screenshots and files.": "Return sendet, Umschalt-Return beginnt eine neue Zeile. Screenshots und Dateien einfügen (⌘V) oder hier ablegen.",
   "Running": "Läuft",
   "Save": "Speichern",
-  "Saved.": "Gespeichert.",
   "Saving a recipe": "Speichert ein Rezept",
   "Search API key": "API-Schlüssel der Suche",
   "Search provider": "Suchanbieter",

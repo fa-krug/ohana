@@ -95,7 +95,7 @@ struct FamilyHomeAddressView: View {
         .scrollContentBackground(.hidden)
         .confirmationDialog("Remove the home address?", isPresented: $confirmClear, titleVisibility: .visible) {
             Button("Remove", role: .destructive) {
-                save(FamilyHomeInput(address: "", lat: nil, lng: nil), success: String(localized: "Home address removed."))
+                save(FamilyHomeInput(address: "", lat: nil, lng: nil))
             }
         }
     }
@@ -121,7 +121,7 @@ struct FamilyHomeAddressView: View {
         guard let lat = Double(suggestion.latitude), let lng = Double(suggestion.longitude) else { return }
         query = ""
         suggestions = []
-        save(FamilyHomeInput(address: suggestion.label, lat: lat, lng: lng), success: String(localized: "Home address saved."))
+        save(FamilyHomeInput(address: suggestion.label, lat: lat, lng: lng))
     }
 
     private func edited(_ home: FamilyHome) -> Bool {
@@ -133,12 +133,12 @@ struct FamilyHomeAddressView: View {
     private func rename(_ home: FamilyHome) {
         guard edited(home), let lat = home.lat, let lng = home.lng else { return }
         let text = addressText.trimmingCharacters(in: .whitespaces)
-        save(FamilyHomeInput(address: text, lat: lat, lng: lng), success: String(localized: "Home address saved."))
+        save(FamilyHomeInput(address: text, lat: lat, lng: lng))
     }
 
-    private func save(_ input: FamilyHomeInput, success: String) {
+    private func save(_ input: FamilyHomeInput) {
         let api = family.api
-        model.change(family, success: success) {
+        model.change(family) {
             try await api.perform(.put, "/household/home", body: input)
         }
     }

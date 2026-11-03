@@ -213,7 +213,6 @@ struct AdminFamilyDetailView: View {
         guard let client = app.client else { return }
         perform {
             let _: JSONValue = try await client.send(.delete, "/api/v1/admin/families/\(family.id)")
-            ErrorBanner.shared.success(String(localized: "Family deleted."))
             dismiss()
             await reload()
         }

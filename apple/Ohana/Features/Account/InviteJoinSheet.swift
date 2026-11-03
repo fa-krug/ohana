@@ -203,7 +203,6 @@ struct InviteJoinSheet: View {
                 await app.refresh()
                 app.selectedFamilyID = family.id
                 Module.overview.open()
-                ErrorBanner.shared.success(String(localized: "Welcome to \(family.name)."))
                 dismiss()
             } catch is CancellationError {
             } catch {

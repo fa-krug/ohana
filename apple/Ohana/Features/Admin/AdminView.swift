@@ -181,7 +181,6 @@ struct AdminUsersView: View {
         if let user {
             let _: JSONValue = try await client.send(.patch, "/api/v1/admin/users/\(user.id)",
                                                      body: AdminUserUpdateInput(email: input.email, name: input.name, isAdmin: input.isAdmin))
-            ErrorBanner.shared.success(String(localized: "User saved."))
             if AdminRules.isSelf(user, me: app.me) { await app.refresh() }
         } else {
             let created: AdminCreatedUser = try await client.send(.post, "/api/v1/admin/users",
@@ -203,7 +202,6 @@ struct AdminUsersView: View {
         guard let client = app.client else { return }
         perform {
             let _: JSONValue = try await client.send(.delete, "/api/v1/admin/users/\(user.id)")
-            ErrorBanner.shared.success(String(localized: "User deleted."))
             await load()
         }
     }

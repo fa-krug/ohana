@@ -58,11 +58,6 @@ struct AppleCalendarSyncSection: View {
         Toggle("Day entries as all-day events", isOn: Binding(get: { state.entries }, set: { on in
             Task { await sync.setEntries(on, for: family) }
         }))
-        if sync.isRunning(family.api) {
-            LabeledContent("Syncing…") { ProgressView().controlSize(.small) }
-        } else if let last = state.lastSync {
-            LabeledContent("Last synced") { Text(last, format: .relative(presentation: .named)) }
-        }
         if let error = sync.error(family.api) {
             Label(error, systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
         }
@@ -73,7 +68,6 @@ struct AppleCalendarSyncSection: View {
                 .foregroundStyle(.orange)
         }
         Button("Sync now", systemImage: "arrow.clockwise") { Task { await sync.sync(family) } }
-            .disabled(sync.isRunning(family.api))
         if calendar == nil {
             Button("Pick another calendar", systemImage: "calendar") {
                 Task { if await sync.requestAccess() { prompts.picking = true } }

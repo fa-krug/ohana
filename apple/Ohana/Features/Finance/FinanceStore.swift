@@ -200,16 +200,16 @@ final class FinanceStore {
 
     init(family: FamilyContext) {
         self.family = family
-        undoRegistry.apply = { [weak self] ops, redoing in
-            await self?.apply(ops, message: redoing ? String(localized: "Redone") : String(localized: "Undone"))
+        undoRegistry.apply = { [weak self] ops, _ in
+            await self?.apply(ops)
         }
         undoRegistry.used = { [weak self] token in
             if self?.toast?.undoToken === token { self?.toast = nil }
         }
     }
 
-    /// The page's copies on the device together (one badge): the oldest one's date, updating
-    /// until one of them couldn't be.
+    /// The page's copies on the device together: the oldest one's date, updating until one of
+    /// them couldn't be.
     var savedCopy: SavedCopy? {
         let copies = [overviewCopy, listCopy, balancesCopy, summaryCopy].compactMap { $0 }
         guard let date = copies.map(\.date).min() else { return nil }
@@ -280,9 +280,11 @@ final class FinanceStore {
             error = nil
         } catch {
             if overviewCopy != nil {
-                // The copy stays while the failure may pass (offline, the server down).
+                // The copy stays while the failure may pass (offline, the server down): silently,
+                // unless the server answered with an error.
                 if APIError.isTemporary(error) {
                     overviewCopy?.updating = false
+                    ErrorBanner.shared.showUnlessUnreachable(error)
                     return
                 }
                 overview = nil
@@ -331,6 +333,7 @@ final class FinanceStore {
             guard seq == listSeq else { return }
             if listCopy != nil, APIError.isTemporary(error) {
                 listCopy?.updating = false
+                ErrorBanner.shared.showUnlessUnreachable(error)
             } else if !(error is CancellationError) {
                 if listCopy != nil {
                     // Refused: as if nothing had been kept.
@@ -412,6 +415,7 @@ final class FinanceStore {
             guard seq == summarySeq else { return }
             if summaryCopy != nil, APIError.isTemporary(error) {
                 summaryCopy?.updating = false
+                ErrorBanner.shared.showUnlessUnreachable(error)
             } else if !(error is CancellationError) {
                 if summaryCopy != nil {
                     summary = nil
@@ -610,13 +614,13 @@ final class FinanceStore {
         guard let toast, let inverse = toast.undo else { return }
         self.toast = nil
         if let token = toast.undoToken { undoRegistry.forget(token) }
-        await apply(inverse, message: String(localized: "Undone"))
+        await apply(inverse)
     }
 
     /// Applies undo (or redo) ops in chunks the API takes; returns the ops that revert them
     /// (the last chunk's first), nil on failure.
     @discardableResult
-    private func apply(_ ops: [JSONValue], message: String) async -> [JSONValue]? {
+    private func apply(_ ops: [JSONValue]) async -> [JSONValue]? {
         do {
             var inverse: [JSONValue] = []
             var start = 0
@@ -628,7 +632,6 @@ final class FinanceStore {
                 start += Self.maxOps
             }
             await changed()
-            show(message)
             return inverse
         } catch {
             ErrorBanner.shared.show(error)
@@ -638,14 +641,15 @@ final class FinanceStore {
 
     // MARK: Transactions
 
-    /// Applies transaction ops; the toast offers to undo them. Returns the new ids, nil on error.
+    /// Applies transaction ops; the toast offers to undo them (no toast when there's nothing to
+    /// undo). Returns the new ids, nil on error.
     @discardableResult
     func change(_ ops: [JSONValue], message: String) async -> [String]? {
         do {
             let res: FinanceChangeResult = try await api.send(.post, "/finance/transactions",
                                                               body: JSONValue.object(["ops": .array(ops)]))
             await changed()
-            show(message, undo: res.inverse)
+            if !res.inverse.isEmpty { show(message, undo: res.inverse) }
             return res.added
         } catch {
             ErrorBanner.shared.show(error)
@@ -1018,9 +1022,8 @@ final class FinanceStore {
 
     /// Deletes all transactions, accounts, categories and settings; there is no undo.
     func clearAll() async {
-        let done: Void? = await withOverview {
+        await withOverview {
             overview = try await api.send(.delete, "/finance", as: FinanceOverview.self)
         }
-        if done != nil { show(String(localized: "All finance data deleted")) }
     }
 }

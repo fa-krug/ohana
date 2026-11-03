@@ -396,7 +396,6 @@ private struct AssistantSettingsForm: View {
             saved(result)
             apply(result)
             family.didChange(.settings)
-            ErrorBanner.shared.success(String(localized: "Saved."))
         } catch {
             ErrorBanner.shared.show(String(localized: "Couldn’t save: \(error.localizedDescription)"))
         }

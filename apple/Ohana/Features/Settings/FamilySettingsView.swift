@@ -75,23 +75,20 @@ final class FamilySettingsModel {
         api.cached("/household")
     }
 
-    /// Runs a change (errors go to the banner), then reloads, tells the other screens and
-    /// confirms with `success`.
-    func change(_ family: FamilyContext, success: String? = nil, _ action: @escaping () async throws -> Void) {
+    /// Runs a change (errors go to the banner), then reloads and tells the other screens.
+    func change(_ family: FamilyContext, _ action: @escaping () async throws -> Void) {
         perform {
             try await action()
             await self.load(family.api)
             family.didChange(.family)
-            if let success { ErrorBanner.shared.success(success) }
         }
     }
 
     /// A change from a sheet: thrown errors stay in the sheet.
-    func update(_ family: FamilyContext, success: String, _ action: (FamilyAPI) async throws -> Void) async throws {
+    func update(_ family: FamilyContext, _ action: (FamilyAPI) async throws -> Void) async throws {
         try await action(family.api)
         await load(family.api)
         family.didChange(.family)
-        ErrorBanner.shared.success(success)
     }
 
     /// A new invite link, for `personId`'s member without an account or anyone.
@@ -353,7 +350,7 @@ private struct FamilySettingsForm: View {
         let new = trimmedName
         guard model.canEdit, !new.isEmpty, new != household.name else { return }
         let api = family.api
-        model.change(family, success: String(localized: "Family renamed.")) {
+        model.change(family) {
             try await api.perform(.patch, "", body: FamilyNameInput(name: new))
             await app.refresh()
         }
@@ -364,7 +361,6 @@ private struct FamilySettingsForm: View {
         perform {
             try await api.perform(.delete, "/household/members/\(selfId)")
             await app.refresh()
-            ErrorBanner.shared.success(String(localized: "You left the family."))
         }
     }
 
@@ -373,7 +369,6 @@ private struct FamilySettingsForm: View {
         perform {
             try await api.perform(.delete, "/household")
             await app.refresh()
-            ErrorBanner.shared.success(String(localized: "Family deleted."))
         }
     }
 }

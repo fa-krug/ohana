@@ -7,7 +7,6 @@ struct PushSettingsSection: View {
     @Environment(AppModel.self) private var app
     @State private var push = PushNotifications.shared
     @State private var testing = false
-    @State private var testSent = false
 
     var body: some View {
         if let client = app.client, !client.isDemo, PushNotifications.isAvailable(app.serverInfo) {
@@ -53,8 +52,7 @@ struct PushSettingsSection: View {
                         if testing {
                             ProgressView()
                         } else {
-                            Label(testSent ? "Test notification sent" : "Send a test notification",
-                                  systemImage: testSent ? "checkmark" : "bell.badge")
+                            Label("Send a test notification", systemImage: "bell.badge")
                         }
                     }
                     .disabled(testing)
@@ -73,7 +71,6 @@ struct PushSettingsSection: View {
         Task {
             do {
                 try await push.sendTest(client: client)
-                testSent = true
             } catch {
                 ErrorBanner.shared.show(String(localized: "Sending failed: \(error.localizedDescription)"))
             }

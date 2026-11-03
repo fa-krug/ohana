@@ -85,6 +85,19 @@ struct ResponseCacheTests {
         #expect(!box.state.isSaved)
     }
 
+    /// Behind the copy, being offline or the server out of reach stays quiet; an error the
+    /// server answered goes to the banner.
+    @Test func onlyAnUnreachableServerIsQuiet() {
+        #expect(APIError.isUnreachable(URLError(.notConnectedToInternet)))
+        #expect(APIError.isUnreachable(APIError.transport("The request timed out.")))
+        #expect(APIError.isUnreachable(APIError.http(status: 503, message: nil)))
+        #expect(APIError.isUnreachable(APIError.http(status: 502, message: nil)))
+        #expect(!APIError.isUnreachable(APIError.http(status: 500, message: "Boom")))
+        #expect(!APIError.isUnreachable(APIError.http(status: 429, message: nil)))
+        #expect(!APIError.isUnreachable(APIError.http(status: 404, message: nil)))
+        #expect(!APIError.isUnreachable(APIError.decoding("bad")))
+    }
+
     @Test func aRefusalDropsTheCopy() async throws {
         let api = FamilyAPI(client: client("gone.example", cache: cache()), familyID: "f1")
         CacheStubProtocol.answer("gone.example", status: 200, body: #"{"name":"Saved"}"#)

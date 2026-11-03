@@ -96,14 +96,6 @@ struct CalendarPlannerView: View {
         }
         .environment(actions)
         .environment(\.calendarGridFocused, focused)
-        .overlay(alignment: .topTrailing) {
-            VStack(alignment: .trailing, spacing: 0) {
-                if let copy = store.savedCopy {
-                    SavedCopyBadge(date: copy.date, updating: copy.updating, retry: { await store.load() })
-                }
-                syncBadge
-            }
-        }
         .background { zoomShortcuts }
         .focusedSceneValue(\.newItem, store.readOnly ? nil : NewItemAction(title: "New Event") {
             actions.addEvent(on: store.selection.isEmpty ? nil : store.focus)
@@ -125,7 +117,7 @@ struct CalendarPlannerView: View {
         .background { CalendarFocusedMonth(store: store, month: $month) }
     }
 
-    /// The saved copy shows as loaded: its badge is the calendar's own, beside `syncBadge`.
+    /// The saved copy shows as loaded.
     private var loadState: LoadState<Bool> {
         switch store.phase {
         case .loading: .loading
@@ -326,38 +318,6 @@ struct CalendarPlannerView: View {
         if m < 1 { store.setYear(store.year - 1); m = 12 }
         if m > 12 { store.setYear(store.year + 1); m = 1 }
         month = m
-    }
-
-    /// "Saving…" while changes are on their way, "Offline – retrying" while the server can't
-    /// be reached (the changes stay on the device and are sent again). Under the saved copy's
-    /// badge, which already says the server can't be reached, only that the changes wait.
-    @ViewBuilder
-    private var syncBadge: some View {
-        switch store.sync {
-        case .idle:
-            EmptyView()
-        case .saving:
-            Label("Saving…", systemImage: "arrow.triangle.2.circlepath")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .chip()
-                .padding(8)
-        case .retrying:
-            if store.savedCopy != nil {
-                Label("Saved on this device – will sync", systemImage: "tray.and.arrow.up")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .chip()
-                    .padding(.horizontal, 8)
-                    .padding(.bottom, 8)
-            } else {
-                Label("Offline – retrying", systemImage: "wifi.slash")
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .chip(tint: .red)
-                    .padding(8)
-            }
-        }
     }
 
     private var readOnlyNote: some View {

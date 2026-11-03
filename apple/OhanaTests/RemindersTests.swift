@@ -295,9 +295,4 @@ struct ShoppingRemindersSettingsTests {
         await reminders.sync(family, reason: .manual)
         #expect(reminders.settings(for: api).lastSync == nil && reminders.settings(for: api).lastError == nil)
     }
-
-    @Test func summarizesASync() {
-        #expect(ShoppingRemindersView.summary(ShoppingSyncResult()) == "Nothing to change")
-        #expect(ShoppingRemindersView.summary(ShoppingSyncResult(added: 3, updated: 0, removed: 2)) == "3 added, 2 removed")
-    }
 }

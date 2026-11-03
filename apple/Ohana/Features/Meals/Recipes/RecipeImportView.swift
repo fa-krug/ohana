@@ -145,7 +145,6 @@ struct RecipeImportView: View {
             do {
                 try await api.perform(.delete, "/meals/recipes/\(recipe.id)")
                 family.didChange(.recipes, .meals, .mealPlan)
-                ErrorBanner.shared.success(String(localized: "Import undone"))
                 dismiss()
             } catch {
                 ErrorBanner.shared.show(error)

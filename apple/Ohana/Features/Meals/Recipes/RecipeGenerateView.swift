@@ -200,10 +200,8 @@ struct RecipeGenerateView: View {
             var req = client.request(.post, family.api.path("/meals/recipes/bulk"),
                                      body: try APIClient.encoder.encode(RecipeBulkInput(recipes: chosen)))
             req.timeoutInterval = 120
-            let (data, _) = try await client.data(for: req)
-            let created = (try? APIClient.decoder.decode(RecipeBulkResponse.self, from: data).createdIds.count) ?? chosen.count
+            _ = try await client.data(for: req)
             family.didChange(.recipes, .meals)
-            ErrorBanner.shared.success(String(localized: "\(created) recipes added to “Want to try”"))
             onSaved()
             dismiss()
         }

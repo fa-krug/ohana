@@ -296,16 +296,6 @@
         }
       }
     },
-    "%lld added": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld hinzugefügt"
-          }
-        }
-      }
-    },
     "%lld adults free": {
       "localizations": {
         "de": {
@@ -800,56 +790,6 @@
         }
       }
     },
-    "%lld recipes added to “Want to try”": {
-      "localizations": {
-        "de": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld Rezept zu „Ausprobieren“ hinzugefügt"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld Rezepte zu „Ausprobieren“ hinzugefügt"
-                }
-              }
-            }
-          }
-        },
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld recipe added to “Want to try”"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld recipes added to “Want to try”"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "%lld removed": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld entfernt"
-          }
-        }
-      }
-    },
     "%lld selected": {
       "localizations": {
         "de": {
@@ -946,16 +886,6 @@
                 }
               }
             }
-          }
-        }
-      }
-    },
-    "%lld updated": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld geändert"
           }
         }
       }
@@ -1962,32 +1892,12 @@
         }
       }
     },
-    "Added to the calendar.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In den Kalender eingetragen."
-          }
-        }
-      }
-    },
     "Added “%@” to the calendar on %@.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "„%@“ steht jetzt im Kalender: %@."
-          }
-        }
-      }
-    },
-    "Added.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hinzugefügt."
           }
         }
       }
@@ -2238,16 +2148,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Alles erledigt!"
-          }
-        }
-      }
-    },
-    "All finance data deleted": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alle Finanzdaten gelöscht"
           }
         }
       }
@@ -2548,16 +2448,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Termin gefunden"
-          }
-        }
-      }
-    },
-    "Appointment removed.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Termin entfernt."
           }
         }
       }
@@ -3084,16 +2974,6 @@
         }
       }
     },
-    "Birthday saved.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Geburtstag gespeichert."
-          }
-        }
-      }
-    },
     "Birthdays": {
       "localizations": {
         "de": {
@@ -3280,16 +3160,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Im Web angemeldete Browser"
-          }
-        }
-      }
-    },
-    "Browsers signed out.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Browser abgemeldet."
           }
         }
       }
@@ -3660,26 +3530,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ändert Buchungen"
-          }
-        }
-      }
-    },
-    "Channel deleted.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kanal gelöscht."
-          }
-        }
-      }
-    },
-    "Channel saved.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kanal gespeichert."
           }
         }
       }
@@ -4440,26 +4290,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kochen (Min.)"
-          }
-        }
-      }
-    },
-    "Copied %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ kopiert"
-          }
-        }
-      }
-    },
-    "Copied to clipboard.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In Zwischenablage kopiert."
           }
         }
       }
@@ -6194,16 +6024,6 @@
         }
       }
     },
-    "Email updated.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "E-Mail geändert."
-          }
-        }
-      }
-    },
     "End": {
       "localizations": {
         "de": {
@@ -6814,16 +6634,6 @@
         }
       }
     },
-    "Family deleted.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Familie gelöscht."
-          }
-        }
-      }
-    },
     "Family name": {
       "localizations": {
         "de": {
@@ -6840,16 +6650,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Familie nicht gefunden"
-          }
-        }
-      }
-    },
-    "Family renamed.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Familie umbenannt."
           }
         }
       }
@@ -7624,26 +7424,6 @@
         }
       }
     },
-    "Home address removed.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Heimatadresse entfernt."
-          }
-        }
-      }
-    },
-    "Home address saved.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Heimatadresse gespeichert."
-          }
-        }
-      }
-    },
     "House": {
       "localizations": {
         "de": {
@@ -7844,16 +7624,6 @@
         }
       }
     },
-    "Ignored.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ignoriert."
-          }
-        }
-      }
-    },
     "Image": {
       "localizations": {
         "de": {
@@ -7984,16 +7754,6 @@
         }
       }
     },
-    "Import undone": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Import rückgängig gemacht"
-          }
-        }
-      }
-    },
     "Important": {
       "localizations": {
         "de": {
@@ -8042,16 +7802,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aus einem Kontoauszug importiert"
-          }
-        }
-      }
-    },
-    "Imported.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importiert."
           }
         }
       }
@@ -8316,16 +8066,6 @@
         }
       }
     },
-    "Invite link revoked.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Einladungslink widerrufen."
-          }
-        }
-      }
-    },
     "Invite links": {
       "localizations": {
         "de": {
@@ -8584,16 +8324,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Letzter Monat"
-          }
-        }
-      }
-    },
-    "Last synced": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zuletzt abgeglichen"
           }
         }
       }
@@ -9128,16 +8858,6 @@
         }
       }
     },
-    "Meal plan generated.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Speiseplan erstellt."
-          }
-        }
-      }
-    },
     "Meal removed": {
       "localizations": {
         "de": {
@@ -9574,16 +9294,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Name Z–A"
-          }
-        }
-      }
-    },
-    "Name saved.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Name gespeichert."
           }
         }
       }
@@ -10920,16 +10630,6 @@
         }
       }
     },
-    "Nothing to change": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nichts zu ändern"
-          }
-        }
-      }
-    },
     "Nothing to do": {
       "localizations": {
         "de": {
@@ -11090,26 +10790,6 @@
         }
       }
     },
-    "Offline · as of %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Offline · Stand %@"
-          }
-        }
-      }
-    },
-    "Offline – retrying": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Offline – neuer Versuch"
-          }
-        }
-      }
-    },
     "Ohana": {
       "localizations": {
         "de": {
@@ -11206,16 +10886,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ohana hat keinen Zugriff auf deine Erinnerungen. Du kannst ihn in den Einstellungen erlauben."
-          }
-        }
-      }
-    },
-    "Ohana is adding the recipe in the background.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ohana fügt das Rezept im Hintergrund hinzu."
           }
         }
       }
@@ -11956,36 +11626,6 @@
         }
       }
     },
-    "Passkey added.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Passkey hinzugefügt."
-          }
-        }
-      }
-    },
-    "Passkey removed.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Passkey entfernt."
-          }
-        }
-      }
-    },
-    "Passkey renamed.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Passkey umbenannt."
-          }
-        }
-      }
-    },
     "Passkeys": {
       "localizations": {
         "de": {
@@ -12012,26 +11652,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Passwort"
-          }
-        }
-      }
-    },
-    "Password removed.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Passwort entfernt."
-          }
-        }
-      }
-    },
-    "Password saved. Your browsers were signed out.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Passwort gespeichert. Deine Browser wurden abgemeldet."
           }
         }
       }
@@ -12222,36 +11842,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fotovorschau"
-          }
-        }
-      }
-    },
-    "Photo removed": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Foto entfernt"
-          }
-        }
-      }
-    },
-    "Photo removed.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Foto entfernt."
-          }
-        }
-      }
-    },
-    "Photo saved.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Foto gespeichert."
           }
         }
       }
@@ -12896,16 +12486,6 @@
         }
       }
     },
-    "Queued: the search runs in a few seconds.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eingereiht: die Suche läuft in ein paar Sekunden."
-          }
-        }
-      }
-    },
     "Rain": {
       "localizations": {
         "de": {
@@ -13146,16 +12726,6 @@
         }
       }
     },
-    "Recipe created": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rezept erstellt"
-          }
-        }
-      }
-    },
     "Recipe deleted.": {
       "localizations": {
         "de": {
@@ -13192,16 +12762,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rezept erkannt"
-          }
-        }
-      }
-    },
-    "Recipe saved": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rezept gespeichert"
           }
         }
       }
@@ -13282,16 +12842,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wiederholen (⇧⌘Z)"
-          }
-        }
-      }
-    },
-    "Redone": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wiederhergestellt"
           }
         }
       }
@@ -13542,26 +13092,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "„%@“ entfernen?"
-          }
-        }
-      }
-    },
-    "Removed from the ignore list.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Von der Ignorierliste entfernt."
-          }
-        }
-      }
-    },
-    "Removed.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Entfernt."
           }
         }
       }
@@ -13936,16 +13466,6 @@
         }
       }
     },
-    "Role changed.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rolle geändert."
-          }
-        }
-      }
-    },
     "Role of %@": {
       "localizations": {
         "de": {
@@ -14236,16 +13756,6 @@
         }
       }
     },
-    "Saved on this device – will sync": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Auf diesem Gerät gespeichert – wird synchronisiert"
-          }
-        }
-      }
-    },
     "Saved on this device. Weekends are left out when filling, pasting or toggling ranges.": {
       "localizations": {
         "de": {
@@ -14256,32 +13766,12 @@
         }
       }
     },
-    "Saved “%@”": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "„%@“ gesichert"
-          }
-        }
-      }
-    },
     "Saved “%@” to “Want to try”.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "„%@“ ist unter „Ausprobieren“ gespeichert."
-          }
-        }
-      }
-    },
-    "Saved.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gespeichert."
           }
         }
       }
@@ -14322,16 +13812,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Speichern plant ab heute neu: die aktuellen Mahlzeiten werden ersetzt."
-          }
-        }
-      }
-    },
-    "Saving…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Speichert …"
           }
         }
       }
@@ -14466,26 +13946,6 @@
         }
       }
     },
-    "Search created.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Suche angelegt."
-          }
-        }
-      }
-    },
-    "Search deleted.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Suche gelöscht."
-          }
-        }
-      }
-    },
     "Search families": {
       "localizations": {
         "de": {
@@ -14542,16 +14002,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rezepte suchen"
-          }
-        }
-      }
-    },
-    "Search saved.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Suche gespeichert."
           }
         }
       }
@@ -14902,16 +14352,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Server"
-          }
-        }
-      }
-    },
-    "Server unreachable · as of %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Server nicht erreichbar · Stand %@"
           }
         }
       }
@@ -15532,16 +14972,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Angemeldet als %@"
-          }
-        }
-      }
-    },
-    "Signed out.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abgemeldet."
           }
         }
       }
@@ -16440,16 +15870,6 @@
         }
       }
     },
-    "Syncing…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wird abgeglichen …"
-          }
-        }
-      }
-    },
     "System": {
       "localizations": {
         "de": {
@@ -16626,26 +16046,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Testen"
-          }
-        }
-      }
-    },
-    "Test message sent.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Testnachricht verschickt."
-          }
-        }
-      }
-    },
-    "Test notification sent": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Testbenachrichtigung gesendet"
           }
         }
       }
@@ -17880,16 +17280,6 @@
         }
       }
     },
-    "Token deleted.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Token gelöscht."
-          }
-        }
-      }
-    },
     "Tokens and passwords are stored encrypted.": {
       "localizations": {
         "de": {
@@ -18090,16 +17480,6 @@
         }
       }
     },
-    "Tries again": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Versucht es erneut"
-          }
-        }
-      }
-    },
     "Trip": {
       "localizations": {
         "de": {
@@ -18186,16 +17566,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Art-Schaltfläche"
-          }
-        }
-      }
-    },
-    "Types copied.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Arten übernommen."
           }
         }
       }
@@ -18400,16 +17770,6 @@
         }
       }
     },
-    "Updating…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wird aktualisiert …"
-          }
-        }
-      }
-    },
     "Upload Photo": {
       "localizations": {
         "de": {
@@ -18460,32 +17820,12 @@
         }
       }
     },
-    "User deleted.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Benutzer gelöscht."
-          }
-        }
-      }
-    },
     "User key": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "User Key"
-          }
-        }
-      }
-    },
-    "User saved.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Benutzer gespeichert."
           }
         }
       }
@@ -18756,16 +18096,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Gewicht (g)"
-          }
-        }
-      }
-    },
-    "Welcome to %@.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Willkommen bei %@."
           }
         }
       }
@@ -19396,16 +18726,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Du trittst als %@ bei: Dein Konto nimmt den Platz dieser Person ein."
-          }
-        }
-      }
-    },
-    "You left the family.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Du hast die Familie verlassen."
           }
         }
       }

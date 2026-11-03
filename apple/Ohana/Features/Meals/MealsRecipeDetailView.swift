@@ -44,9 +44,7 @@ struct MealsRecipeDetailView: View {
         .toolbar { if let recipe = state.value { toolbar(recipe) } }
         .sheet(isPresented: $editing) {
             if let recipe = state.value {
-                RecipeEditorSheet(mode: .edit(recipe)) { _ in
-                    ErrorBanner.shared.success(String(localized: "Recipe saved"))
-                }
+                RecipeEditorSheet(mode: .edit(recipe))
             }
         }
         .sheet(isPresented: $sharing) {
@@ -344,7 +342,6 @@ struct MealsRecipeDetailView: View {
         perform {
             try await family.api.perform(.delete, "/meals/recipes/\(recipeID)/image")
             family.didChange(.recipes, .meals)
-            ErrorBanner.shared.success(String(localized: "Photo removed"))
         }
     }
 }

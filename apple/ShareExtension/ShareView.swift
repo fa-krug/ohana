@@ -20,8 +20,6 @@ final class ShareModel {
         case checking
         case asking(Recognition)
         case sending
-        /// Handed over; `title` when an older server already saved the recipe.
-        case sent(title: String?)
         case failed(String)
     }
 
@@ -91,7 +89,7 @@ final class ShareModel {
         return preview.recipe ? .recipe(name: title.isEmpty ? nil : title, imageUrl: preview.imageUrl) : .notRecipe
     }
 
-    /// Hands the page to the server, which imports it in the background; closes shortly after.
+    /// Hands the page to the server, which imports it in the background, and closes.
     func save() {
         guard case let .asking(recognition) = state, let target, let url = page.url else { return }
         var name: String?
@@ -102,11 +100,7 @@ final class ShareModel {
         state = .sending
         task = Task {
             do {
-                switch try await target.connection.startImport(familyID: target.familyID, request) {
-                case .queued: state = .sent(title: nil)
-                case let .imported(recipe): state = .sent(title: recipe.title)
-                }
-                try await Task.sleep(for: .seconds(1.2))
+                _ = try await target.connection.startImport(familyID: target.familyID, request)
                 done()
             } catch is CancellationError {
             } catch {
@@ -154,10 +148,6 @@ struct ShareView: View {
                                 ProgressView()
                             }
                         }
-                    case .sent:
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button("Done", role: .confirm) { model.done() }
-                        }
                     case .failed:
                         ToolbarItem(placement: .confirmationAction) {
                             Button("Close") { model.cancel() }
@@ -177,9 +167,6 @@ struct ShareView: View {
                     Button("Cancel", role: .cancel) { model.cancel() }
                         .keyboardShortcut(.cancelAction)
                     if case let .asking(recognition) = model.state { saveButton(recognition) }
-                case .sent:
-                    Button("Done") { model.done() }
-                        .keyboardShortcut(.defaultAction)
                 case .failed:
                     Button("Close") { model.cancel() }
                         .keyboardShortcut(.defaultAction)
@@ -286,20 +273,6 @@ struct ShareView: View {
             progress("Looking for a recipe…")
         case .sending:
             progress("Sending to Ohana…")
-        case let .sent(title):
-            Label {
-                Group {
-                    if let title {
-                        Text("Saved “\(title)” to “Want to try”.")
-                    } else {
-                        Text("Ohana is adding the recipe in the background.")
-                    }
-                }
-                .fixedSize(horizontal: false, vertical: true)
-            } icon: {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-            }
         case let .failed(message):
             Label {
                 Text(verbatim: message)

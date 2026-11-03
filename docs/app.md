@@ -32,8 +32,8 @@ The app keeps a copy of what your server last sent: your families and every scre
 past chats). Shortly after it starts it also loads the selected family's main screens and the
 recipes of the current meal plan in the background (on Wi-Fi or mobile data, not in Low Data
 Mode), so they're there before you open them. It opens on that copy at once and asks the
-server behind; a small *Updating…* shows meanwhile. Without a connection the copy stays
-readable, marked *Offline · as of 9:41*, and is replaced as soon as the server answers again.
+server behind, quietly. Without a connection the copy stays readable and is replaced as soon
+as the server answers again; only an error the server answers shows, as a message at the top.
 
 Some changes work offline too and are sent when you're back online, even after quitting the
 app: **calendar days and notes**. If the server refuses one (say, a type was deleted

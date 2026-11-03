@@ -419,7 +419,6 @@ struct AppointmentBookSheet: View {
                 .post, "/appointments/searches/\(detail.searchId)/slots/\(detail.slot.resultId)/book", body: body
             )
             family.didChange(.appointments, .events, .calendar)
-            ErrorBanner.shared.success(String(localized: "Added to the calendar."))
             await saved()
             dismiss()
         }

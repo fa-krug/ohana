@@ -20,8 +20,6 @@ struct ShoppingSyncResult: Codable, Equatable {
     var added = 0
     var updated = 0
     var removed = 0
-
-    var changedNothing: Bool { added == 0 && updated == 0 && removed == 0 }
 }
 
 /// Writes what the meal plan needs (GET /meals/shopping) into the Reminders list the user chose
@@ -110,8 +108,6 @@ final class ShoppingReminders {
         settings = ShoppingRemindersSettings(listID: listID)
         save(settings, key)
     }
-
-    func isSyncing(_ api: FamilyAPI) -> Bool { syncing.contains(Self.key(api)) }
 
     /// Signing out of `server`: its families' settings go.
     static func forget(server: URL, defaults: UserDefaults = .standard) {

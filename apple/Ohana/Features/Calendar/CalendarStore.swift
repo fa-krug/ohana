@@ -14,10 +14,6 @@ final class CalendarStore {
         case failed(String)
     }
 
-    enum Sync: Equatable {
-        case idle, saving, retrying
-    }
-
     /// The year shows the copy kept on the device (`ResponseCache`), from `date`, until the server
     /// answers: `updating` while it's asked, false once it couldn't be reached.
     struct SavedCopy: Equatable {
@@ -86,7 +82,6 @@ final class CalendarStore {
 
     private(set) var undoStack: [Step] = []
     private(set) var redoStack: [Step] = []
-    private(set) var sync: Sync = .idle
     /// A short message (copied, nothing to undo…), shown for a moment.
     private(set) var toast: String?
     /// The toast follows a change that can be undone: it offers Undo.
@@ -151,7 +146,12 @@ final class CalendarStore {
             queue = saved
             Task { await flush() }
         }
-        Connectivity.shared.whenReconnected { [weak self] in self?.retryNow() }
+        Connectivity.shared.whenReconnected { [weak self] in
+            guard let self else { return }
+            retryNow()
+            // The copy on the device shows after the server couldn't be reached: ask again.
+            if savedCopy?.updating == false, !pending { Task { await self.load(quiet: true) } }
+        }
     }
 
     /// Where a family's queue is kept: Application Support, `Ohana/Calendar/<server>_<family>/
@@ -188,6 +188,8 @@ final class CalendarStore {
 
     var isLoaded: Bool { phase == .loaded }
     var pending: Bool { !queue.isEmpty || flushing }
+    /// The server couldn't be reached: the changes wait on the device and are sent again later.
+    var isRetrying: Bool { retryWait != nil }
     /// Types are changed on the server at once, not queued: not while the copy
     /// on the device shows.
     var typesReadOnly: Bool { readOnly || savedCopy != nil }
@@ -332,8 +334,10 @@ final class CalendarStore {
         } catch {
             guard year == self.year else { return }
             if let copy = savedCopy {
-                // The copy stays while the failure may pass (offline, the server down).
+                // The copy stays while the failure may pass (offline, the server down): silently,
+                // unless the server answered with an error.
                 if APIError.isTemporary(error) {
+                    if !quiet { ErrorBanner.shared.showUnlessUnreachable(error) }
                     update(\.savedCopy, SavedCopy(date: copy.date, updating: false))
                 } else {
                     phase = .failed(error.localizedDescription)
@@ -404,10 +408,8 @@ final class CalendarStore {
     private func flush() async {
         guard !flushing else { return }
         flushing = true
-        var saved = false, resync = false
+        var saved = false, resync = false, reported = false
         while let first = queue.first {
-            // While retrying the badge stays: each try would flash "Saving…".
-            if sync != .retrying { sync = .saving }
             // Send consecutive batches of one kind as one request: ops apply in order.
             var n = 0, days = 0
             var entryOps: [CalendarEntryOp] = [], noteOps: [CalendarNoteOp] = []
@@ -429,7 +431,6 @@ final class CalendarStore {
                 }
                 dequeue(n)
                 retryDelay = 2
-                sync = .saving
                 saved = true
             } catch let error as APIError where Self.isRejection(error) {
                 // The server refused (e.g. a type was deleted elsewhere): it wins, drop it and resync.
@@ -438,7 +439,11 @@ final class CalendarStore {
                 resync = true
             } catch {
                 // Offline or the server down: try again after a while, or once the connection is back.
-                sync = .retrying
+                // Quietly, unless the server answered with an error (told once).
+                if !reported, !APIError.isUnreachable(error) {
+                    ErrorBanner.shared.show(error)
+                    reported = true
+                }
                 let delay = retryDelay
                 retryDelay = min(retryDelay * 2, 30)
                 let wait = Task { _ = try? await Task.sleep(for: .seconds(delay)) }
@@ -448,7 +453,6 @@ final class CalendarStore {
             }
         }
         flushing = false
-        sync = .idle
         if saved { notify?(.calendar) }
         // The copy on the device shows: the server's state now has the changes.
         if resync || reloadAfterSave || (saved && savedCopy != nil) { await load(quiet: !resync) }
@@ -600,7 +604,6 @@ final class CalendarStore {
         let pattern = CalendarMath.pattern(entries, days: span)
         let text = CalendarMath.clipboardText(days: span, pattern: pattern, types: types)
         clipboard = (pattern, text, year)
-        showToast(String(localized: "Copied \(CalendarText.days(span.count))"))
         return text
     }
 

@@ -160,7 +160,7 @@ nonisolated final class AssistantStubProtocol: URLProtocol {
     override func stopLoading() {}
 }
 
-/// The store's part in asking (new chats without empty duplicates) and undo's confirmation.
+/// The store's part in asking (new chats without empty duplicates) and undo.
 struct AssistantAskTests {
     private func store() -> AssistantChatStore {
         let config = URLSessionConfiguration.ephemeral
@@ -181,7 +181,7 @@ struct AssistantAskTests {
         #expect(store.currentID == nil)
     }
 
-    @Test func undoConfirmsInTheBanner() async {
+    @Test func undoMarksTheChangeUndone() async {
         let store = store()
         store.show(AssistantChat(id: "c1", title: "Hi", status: "idle", items: [
             .change(AssistantChange(id: "chg", change: "entries", summary: "Added", undo: [], undone: false)),
@@ -189,7 +189,5 @@ struct AssistantAskTests {
         await store.undo("chg")
         #expect(store.current?.items.first == .change(AssistantChange(id: "chg", change: "entries", summary: "Added",
                                                                        undo: [], undone: true)))
-        #expect(ErrorBanner.shared.message == "Undone")
-        #expect(ErrorBanner.shared.isSuccess)
     }
 }
