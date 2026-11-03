@@ -224,8 +224,8 @@ struct CalendarDayCell: View, Equatable {
         }
     }
 
-    /// The web's month view: the day number top left, the note's icon at the trailing edge, the
-    /// marks in the corners. The icon stays clear of the number. At accessibility sizes the icon goes under the
+    /// The web's month view: the day number top left, the note's icon beside it at the trailing
+    /// edge, the marks in the corners. At accessibility sizes the icon goes under the
     /// number and the cake is left out (the day's label still has it), so the number never gets clipped.
     private func monthContent(note: CalendarNote?, events: [CalendarEvent], birthdays: [CalendarBirthday],
                               weekend: Bool, ink: Color, filled: Bool) -> some View {
@@ -245,29 +245,36 @@ struct CalendarDayCell: View, Equatable {
                 .padding(.top, 4)
                 .padding(.horizontal, 6)
             } else {
-                number
-                    .padding(.top, 5)
-                    .padding(.leading, 7)
-                if let icon {
-                    noteIcon(icon, ink: ink, filled: filled)
-                        .padding(.trailing, 6)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
-                        .offset(y: 3)
+                // One row: the number keeps its size and the icon takes what's left (up to its
+                // own size), so they never overlap. The icon sits a little lower, clear of the
+                // comment's corner.
+                HStack(alignment: .top, spacing: 2) {
+                    number.layoutPriority(1)
+                    Spacer(minLength: 0)
+                    if let icon {
+                        noteIcon(icon, ink: ink, filled: filled)
+                            .padding(.top, 3)
+                    }
                 }
+                .padding(.top, 5)
+                .padding(.leading, 7)
+                .padding(.trailing, 4)
             }
             marks(note: note, events: events, birthdays: large ? [] : birthdays, dot: 8, cake: .caption,
                   inset: 6, ink: ink, filled: filled)
         }
     }
 
-    /// The month view's note icon: the theme color, on a type's color the cell's ink with a soft
-    /// shadow, so it stands out from the stripes.
+    /// The month view's note icon, at most 16 pt and smaller where the cell has less room: the theme
+    /// color, on a type's color the cell's ink with a soft shadow, so it stands out from the stripes.
     private func noteIcon(_ icon: String, ink: Color, filled: Bool) -> some View {
         Image(systemName: icon)
-            .font(.system(size: 17, weight: .semibold))
+            .resizable()
+            .fontWeight(.semibold)
+            .scaledToFit()
+            .frame(maxWidth: 16, maxHeight: 16)
             .foregroundStyle(filled ? ink : Color.accentColor)
             .shadow(color: filled ? (ink == .white ? Color.black : Color.white).opacity(0.6) : .clear, radius: 1.5)
-            .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
             .accessibilityHidden(true)
     }
 
