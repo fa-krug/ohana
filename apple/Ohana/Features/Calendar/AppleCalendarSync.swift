@@ -579,12 +579,15 @@ final class AppleCalendarSync {
     }
 
     /// Writes Ohana's event into the Apple event: the days and times, the texts and (`rule`, a series
-    /// or a single event as a whole) the rule. A timed event without an end keeps its length.
+    /// or a single event as a whole) the rule. A timed event without an end keeps its length; a text
+    /// that only reads the same as Ohana keeps it stays as Apple has it (a long note isn't cut).
     static func write(_ o: OhanaSyncFields, to event: EKEvent, isNew: Bool, rule: Bool) {
         let a = AppleSyncMapping.apple(o)
-        event.title = a.title
-        event.location = a.location.isEmpty ? nil : a.location
-        event.notes = a.notes.isEmpty ? nil : a.notes
+        let same = isNew ? (title: false, location: false, notes: false)
+            : AppleSyncMapping.unchangedTexts(o, over: fields(event, rule: false))
+        if !same.title { event.title = a.title }
+        if !same.location { event.location = a.location.isEmpty ? nil : a.location }
+        if !same.notes { event.notes = a.notes.isEmpty ? nil : a.notes }
         let calendar = Day.calendar
         let midnight = calendar.startOfDay(for: o.date.date)
         let oldStart: Date? = isNew ? nil : event.startDate

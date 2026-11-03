@@ -89,6 +89,23 @@ struct AppleSyncMappingTests {
         #expect(AppleSyncMapping.ohana(oneDay, current: nil).end == nil)
     }
 
+    @Test func leavesALongNoteAsAppleHasIt() {
+        let long = String(repeating: "Dial in: 0800 123 456\n", count: 600) // longer than the server takes
+        let a = AppleSyncFields(day: d("2026-11-05"), lastDay: d("2026-11-05"), start: "09:00", end: "10:00",
+                                title: "Team call", location: "", notes: long)
+        let imported = AppleSyncMapping.ohana(a, current: nil)
+        #expect(imported.note.count == AppleSyncMapping.maxNote)
+        // Moved in Ohana: the times are written, the cut note is not.
+        var moved = imported
+        moved.start = "10:00"
+        moved.end = "11:00"
+        #expect(AppleSyncMapping.unchangedTexts(moved, over: a) == (true, true, true))
+        // The note edited in Ohana is.
+        var edited = imported
+        edited.note = "Dial in moved"
+        #expect(AppleSyncMapping.unchangedTexts(edited, over: a).notes == false)
+    }
+
     @Test func importsAnAppleEventWithinTheServersLimits() {
         let a = AppleSyncFields(day: d("2026-11-05"), lastDay: d("2026-11-05"), start: nil, end: nil,
                                 title: "  ", location: String(repeating: "x", count: 400), notes: "")

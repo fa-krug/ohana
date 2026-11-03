@@ -5366,7 +5366,7 @@ components:
         title: {type: string, minLength: 1, maxLength: 200}
         location: {type: string, maxLength: 300, default: ""}
         person: {type: string, maxLength: 80, default: ""}
-        note: {type: string, maxLength: 1000, default: ""}
+        note: {type: string, maxLength: 10000, default: ""}
         url: {type: string, maxLength: 2000, default: "", description: "http(s) only."}
     EventInput:
       allOf:
@@ -5401,7 +5401,7 @@ components:
         title: {type: string, minLength: 1, maxLength: 200}
         location: {type: string, maxLength: 300}
         person: {type: string, maxLength: 80}
-        note: {type: string, maxLength: 1000}
+        note: {type: string, maxLength: 10000}
         url: {type: string, maxLength: 2000}
         rrule: {$ref: "#/components/schemas/RRule"}
         exdates:

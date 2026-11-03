@@ -214,13 +214,25 @@ enum AppleSyncMapping {
             date: a.day, endDate: a.lastDay, start: a.start, end: end,
             title: title.isEmpty ? String(localized: "Event") : title,
             location: cut(a.location.trimmingCharacters(in: .whitespacesAndNewlines), 300), person: person,
-            note: cut(note.trimmingCharacters(in: .whitespacesAndNewlines), 1000), url: url.count <= 2000 ? url : "",
+            note: cut(note.trimmingCharacters(in: .whitespacesAndNewlines), maxNote), url: url.count <= 2000 ? url : "",
             rrule: a.rrule
         )
     }
 
+    /// The server's longest note (`MAX_EVENT_NOTE`).
+    static let maxNote = 10_000
+
     private static func cut(_ s: String, _ max: Int) -> String {
         s.count <= max ? s : String(s.prefix(max))
+    }
+
+    /// Writing `o` over an Apple event that is now `a`: the texts to leave as Apple has them,
+    /// because Ohana's say the same, only as Ohana keeps them (cut, the person's brackets, the
+    /// link in the notes). So a note longer than Ohana takes isn't cut in Apple when the event's
+    /// time is changed in Ohana.
+    static func unchangedTexts(_ o: OhanaSyncFields, over a: AppleSyncFields) -> (title: Bool, location: Bool, notes: Bool) {
+        let read = ohana(a, current: o)
+        return (read.title == o.title, read.location == o.location, read.note == o.note)
     }
 
     /// The runs of days with the same type, in `window` (types are per year: a run ends with it).

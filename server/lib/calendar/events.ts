@@ -46,6 +46,9 @@ export const MAX_EVENT_RANGE_DAYS = 3 * 366;
 const MAX_OCCURRENCES = 2000;
 const MAX_EXDATES = 1000;
 const MAX_OVERRIDES = 1000;
+/** An event's note at most (characters): room for what Apple Calendar events carry, such as a
+ *  meeting invitation's dial-in text, so the app's sync doesn't have to cut it. */
+export const MAX_EVENT_NOTE = 10_000;
 
 /** The fields of an event or of one occurrence. `end` needs a `start` and, on a one-day event,
  *  must not be before it; `url` only http(s). */
@@ -58,7 +61,7 @@ const fieldsSchema = z
     title: z.string().trim().min(1, "title is required").max(200),
     location: blank(300),
     person: blank(80),
-    note: blank(1000),
+    note: blank(MAX_EVENT_NOTE),
     url: z
       .string()
       .trim()
