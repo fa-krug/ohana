@@ -56,6 +56,11 @@ struct FamilyMember: Codable, Hashable, Identifiable {
     /// Their profile picture (a path under the media root, `MemberPhoto.path`); nil: none, or an
     /// older server.
     var photo: String?
+    /// The uploaded original the picture is cut from (`MemberPhoto.path`); nil: none, a photo
+    /// from before crops (Change / Remove only), or an older server.
+    var photoOriginal: String?
+    /// Where the picture is cut from the original; nil: the centre (or an older server).
+    var photoCrop: MemberPhotoCrop?
 
     var id: String { userId }
     var label: String { name.isEmpty ? email : name }
@@ -70,6 +75,10 @@ struct FamilyPerson: Codable, Hashable, Identifiable {
     var color: String?
     /// Their profile picture (`MemberPhoto.path`); nil: none, or an older server.
     var photo: String?
+    /// The original the picture is cut from (`FamilyMember.photoOriginal`).
+    var photoOriginal: String?
+    /// Where the picture is cut from the original (`FamilyMember.photoCrop`).
+    var photoCrop: MemberPhotoCrop?
 }
 
 struct FamilyInvite: Codable, Hashable, Identifiable {

@@ -109,12 +109,15 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   one, accepting a person's invite keeps theirs; members change their own, editors anyone's
   (`PATCH /household/members/{id}` / `people/{id}` `color`; duplicates allowed). **Photos**
   (`photos.ts`): `family_members.photo` / `family_people.photo` (path under `MEDIA_ROOT`,
-  `members/<familyId>/<id>_<ms>.webp`, 512² WebP cropped by sharp's attention; `photo` in every
-  member DTO, the app loads `/api/images/<photo>`, `serveImage` gives it to the family's members
-  only); `PUT` / `DELETE /household/members/{id}/photo` (own, editors anyone's) and
+  `members/<familyId>/<id>_<ms>.webp`, a 512² WebP; `photo` in every member DTO, the app loads
+  `/api/images/<photo>`, `serveImage` gives it to the family's members only). The upload is kept
+  too (`photo_original`, upright, ≤ 2048 px, `…_original.webp`) with the chosen crop
+  (`photo_crop`, JSON `{x, y, w, h}` fractions of the original; household DTOs `photoOriginal`,
+  `photoCrop`): `PUT /household/members/{id}/photo[?x=&y=&w=&h=]` (own, editors anyone's) and
   `…/people/{id}/photo` (editors), raw image or multipart `image` (`lib/api/upload.ts`, shared
-  with recipe photos); replacing / removing a member, person or family deletes the files, accepting
-  a person's invite keeps theirs.
+  with recipe photos; no crop: sharp's attention), `PATCH …/photo {crop}` re-cuts the square from
+  the original (409 without one), `DELETE`; replacing / removing a member, person or family deletes
+  the files, accepting a person's invite keeps theirs.
 - **Family REST API** (`lib/api/family-api.ts`, family-planner's `handler.ts`): `http/api.ts`
   runs `createFamilyApi([...routes])` for `/api/v1/families/{id}[/…]`; the first route is
   `handleDisabledModules` (`lib/api/disabled-modules.ts`).
@@ -539,8 +542,12 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   shared Keychain access group next to the token, and removes them on sign out.
   Member colors: `DesignSystem/MemberColor.swift` (the server's palette by key, `FamilyAvatar`
   (the member's photo when there is one, `RemoteImage` over the initials), `MemberIcon`: the small
-  tinted avatar, `MemberPhoto`: path, the upload shrunk to ≤ 1024 px JPEG; set on
-  `FamilyMemberPage` with a `PhotosPicker` or a file); a member's name as text only where there is room (the
+  tinted avatar, `MemberPhoto`: path, the upload as an upright ≤ 2048 px JPEG; on `FamilyMemberPage`
+  the big avatar is the control: a tap opens `MemberPhotoCropper` (gestures only: pinch anchored at
+  the fingers, drag, rubber-band then settle, double-tap 2×; on the Mac also scroll / ⌘-scroll;
+  VoiceOver adjustable; pure math in `MemberPhotoCropGeometry`) on the original, or the library
+  first without a photo; choosing another picture or a file and removing are in the editor and the
+  avatar's context menu); a member's name as text only where there is room (the
   type editor's member picker, Apple Calendar runs titled "Type (Member)"), elsewhere (type
   chips, settings rows, the overview) the icon only; grid cells are the plain color. The color is
   chosen on `FamilyMemberPage`; a type's member in `CalendarTypeEditor` (changing it or the order

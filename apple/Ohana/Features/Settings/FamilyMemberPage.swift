@@ -21,7 +21,13 @@ struct FamilyMemberPage: View {
     @State private var sharedLink: FamilySharedLink?
     @State private var photoItem: PhotosPickerItem?
     @State private var importingPhoto = false
+    /// The photo library, opened by tapping the avatar without a photo (or its context menu).
+    @State private var pickingPhoto = false
+    /// Whose photo the editor opens for (the removal's question).
+    @State private var photoOwner = ""
     @State private var photoBusy = false
+    /// The crop editor, open for a picked picture or the stored original.
+    @State private var cropping: MemberPhotoCropRequest?
 
     private var member: FamilyMember? {
         guard case let .member(id) = subject else { return nil }
@@ -81,9 +87,10 @@ struct FamilyMemberPage: View {
             perform {
                 defer { photoBusy = false }
                 guard let data = try await item.loadTransferable(type: Data.self) else { return }
-                try await uploadPhoto(data)
+                try await cropPicked(data)
             }
         }
+        .photosPicker(isPresented: $pickingPhoto, selection: $photoItem, matching: .images)
         .fileImporter(isPresented: $importingPhoto, allowedContentTypes: [.image]) { result in
             guard case let .success(url) = result else { return }
             let access = url.startAccessingSecurityScopedResource()
@@ -92,8 +99,17 @@ struct FamilyMemberPage: View {
             photoBusy = true
             perform {
                 defer { photoBusy = false }
-                try await uploadPhoto(data)
+                try await cropPicked(data)
             }
+        }
+        .sheet(item: $cropping) { request in
+            MemberPhotoCropper(photo: request.photo, initial: request.initial, stored: request.stored,
+                               name: request.name, canRemove: request.canRemove) { photo, crop in
+                savePhoto(photo.jpeg, crop: crop)
+            } remove: {
+                removePhoto()
+            }
+            .errorBanner()
         }
     }
 
@@ -111,6 +127,7 @@ struct FamilyMemberPage: View {
 
         // Photo and color: everyone their own, editors anyone's.
         photoSection(name: member.label, color: member.color, photo: member.photo,
+                     original: member.photoOriginal, crop: member.photoCrop,
                      canChange: !app.isDemo && !model.state.isSaved
                          && (household.canEdit || member.userId == household.selfId))
 
@@ -164,7 +181,8 @@ struct FamilyMemberPage: View {
             .tint(.primary)
         }
 
-        photoSection(name: person.name, color: person.color, photo: person.photo, canChange: !app.isDemo && model.canEdit)
+        photoSection(name: person.name, color: person.color, photo: person.photo,
+                     original: person.photoOriginal, crop: person.photoCrop, canChange: !app.isDemo && model.canEdit)
 
         colorSection(person.color, id: person.id, household: household, canChange: model.canEdit) { color in
             FamilyColorChange(path: "/household/people/\(person.id)",
@@ -249,46 +267,87 @@ struct FamilyMemberPage: View {
         }
     }
 
-    /// The member's photo, large, and the way to choose or remove one (the server crops it to a
-    /// square); shown in place of their initials everywhere. Nothing without a photo and the
-    /// right to give them one.
+    /// The member's photo, large, shown in place of their initials everywhere. For those who may
+    /// change it, a button (with a badge): it opens the photo's editor (move and scale, another
+    /// picture, remove), or without a photo the library first; its context menu has the same.
+    /// Nothing without a photo and the right to give them one.
     @ViewBuilder
-    private func photoSection(name: String, color: String?, photo: String?, canChange: Bool) -> some View {
-        if canChange || MemberPhoto.path(photo) != nil {
+    private func photoSection(name: String, color: String?, photo: String?, original: String?,
+                              crop: MemberPhotoCrop?, canChange: Bool) -> some View {
+        let hasPhoto = MemberPhoto.path(photo) != nil
+        if canChange || hasPhoto {
             Section {
-                FamilyAvatar(name: name, tint: MemberColor.color(color), photo: photo, size: 96)
-                    .overlay {
-                        if photoBusy {
-                            ProgressView()
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                .background(.ultraThinMaterial, in: .circle)
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 4)
-                if canChange {
-                    PhotosPicker(selection: $photoItem, matching: .images) {
-                        Label(MemberPhoto.path(photo) == nil ? "Choose Photo" : "Change Photo",
-                              systemImage: "photo.badge.plus")
-                    }
-                    Button {
-                        importingPhoto = true
-                    } label: {
-                        Label("Choose File", systemImage: "folder")
-                    }
-                    if MemberPhoto.path(photo) != nil {
-                        Button(role: .destructive) {
-                            removePhoto()
+                Group {
+                    if canChange {
+                        Button {
+                            editPhoto(name: name, photo: photo, original: original, crop: crop)
                         } label: {
-                            Label("Remove Photo", systemImage: "photo.badge.minus")
+                            largeAvatar(name: name, color: color, photo: photo)
+                                .overlay(alignment: .bottomTrailing) {
+                                    MemberPhotoEditBadge(systemImage: hasPhoto ? "pencil" : "plus")
+                                }
+                                .contentShape(.circle)
                         }
+                        .buttonStyle(.plain)
+                        #if os(iOS)
+                        .hoverEffect(.lift)
+                        #else
+                        .pointerStyle(.link)
+                        #endif
+                        .contextMenu {
+                            if hasPhoto {
+                                Button {
+                                    editPhoto(name: name, photo: photo, original: original, crop: crop)
+                                } label: {
+                                    Label("Adjust Photo", systemImage: "crop")
+                                }
+                            }
+                            Button {
+                                photoOwner = name
+                                pickingPhoto = true
+                            } label: {
+                                Label("Choose Photo", systemImage: "photo.on.rectangle")
+                            }
+                            Button {
+                                photoOwner = name
+                                importingPhoto = true
+                            } label: {
+                                Label("Choose File", systemImage: "folder")
+                            }
+                            if hasPhoto {
+                                Button(role: .destructive) {
+                                    confirmation = FamilyConfirmation(
+                                        title: String(localized: "Remove the photo of \(name)?"),
+                                        button: String(localized: "Remove")
+                                    ) { removePhoto() }
+                                } label: {
+                                    Label("Remove Photo", systemImage: "trash")
+                                }
+                            }
+                        }
+                        .accessibilityLabel(hasPhoto ? Text("Edit Photo") : Text("Choose Photo"))
+                    } else {
+                        largeAvatar(name: name, color: color, photo: photo)
                     }
                 }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 4)
             } header: {
                 Text("Photo")
             }
             .disabled(photoBusy)
         }
+    }
+
+    private func largeAvatar(name: String, color: String?, photo: String?) -> some View {
+        FamilyAvatar(name: name, tint: MemberColor.color(color), photo: photo, size: 96)
+            .overlay {
+                if photoBusy {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(.ultraThinMaterial, in: .circle)
+                }
+            }
     }
 
     private func birthdayRow(_ birthday: Day?) -> some View {
@@ -319,7 +378,8 @@ struct FamilyMemberPage: View {
         }
     }
 
-    /// The member's photo route: PUT (raw image bytes) and DELETE answer the member's new state.
+    /// The member's photo route: PUT (raw image bytes and the crop), PATCH (a new crop) and DELETE
+    /// answer the member's new state.
     private var photoRoute: String {
         switch subject {
         case let .member(id): "/household/members/\(id)/photo"
@@ -327,16 +387,63 @@ struct FamilyMemberPage: View {
         }
     }
 
-    /// Downscales the picked image to a JPEG (off the main thread), uploads it and shows the answer.
-    private func uploadPhoto(_ data: Data) async throws {
-        guard let jpeg = await Task.detached(operation: { MemberPhoto.jpeg(from: data) }).value else {
+    /// Downscales a newly picked image to a JPEG (off the main thread) and opens the editor on
+    /// it, centred; nothing is uploaded until it's saved.
+    private func cropPicked(_ data: Data) async throws {
+        guard let photo = await Task.detached(operation: { MemberPhoto.prepare(from: data) }).value else {
             throw APIError.http(status: 400, message: String(localized: "That file isn’t a picture."))
         }
-        let client = family.api.client
-        var req = client.request(.put, family.api.path(photoRoute), body: jpeg, contentType: "image/jpeg")
-        req.timeoutInterval = 120
-        let (answer, _) = try await client.data(for: req)
-        await photoChanged(answer, success: String(localized: "Photo saved."))
+        let hasPhoto = MemberPhoto.path(member?.photo ?? person?.photo) != nil
+        cropping = MemberPhotoCropRequest(photo: photo, initial: nil, stored: false,
+                                          name: photoOwner, canRemove: hasPhoto)
+    }
+
+    /// Opens the photo's editor: on the stored original with its crop (saving changes the crop
+    /// only), on the square itself for a photo from before originals (saving uploads it anew
+    /// with the crop), or without a photo the library first. Progress on the avatar while the
+    /// picture loads.
+    private func editPhoto(name: String, photo: String?, original: String?, crop: MemberPhotoCrop?) {
+        photoOwner = name
+        let originalPath = MemberPhoto.path(original)
+        guard let path = originalPath ?? MemberPhoto.path(photo) else {
+            pickingPhoto = true
+            return
+        }
+        photoBusy = true
+        perform {
+            defer { photoBusy = false }
+            let client = family.api.client
+            let (data, _) = try await client.data(for: client.request(.get, path))
+            let prepared = await Task.detached {
+                originalPath != nil ? MemberPhoto.image(from: data) : MemberPhoto.prepare(from: data)
+            }.value
+            guard let prepared else {
+                throw APIError.http(status: 400, message: String(localized: "That file isn’t a picture."))
+            }
+            cropping = MemberPhotoCropRequest(photo: prepared, initial: originalPath != nil ? crop : nil,
+                                              stored: true, name: name, canRemove: true)
+        }
+    }
+
+    /// The editor's Save: a new picture is uploaded with its crop (PUT, the JPEG as the body, the
+    /// crop in the query), the stored original only cut anew (PATCH).
+    private func savePhoto(_ jpeg: Data?, crop: MemberPhotoCrop) {
+        photoBusy = true
+        perform {
+            defer { photoBusy = false }
+            let client = family.api.client
+            var req: URLRequest
+            if let jpeg {
+                req = client.request(.put, family.api.path(photoRoute), query: crop.query, body: jpeg,
+                                     contentType: "image/jpeg")
+                req.timeoutInterval = 120
+            } else {
+                req = client.request(.patch, family.api.path(photoRoute),
+                                     body: try APIClient.encoder.encode(MemberPhotoCropInput(crop: crop)))
+            }
+            let (answer, _) = try await client.data(for: req)
+            await photoChanged(answer, success: String(localized: "Photo saved."))
+        }
     }
 
     private func removePhoto() {
@@ -423,6 +530,37 @@ struct FamilyColorChoice: View {
         .accessibilityValue(owners.isEmpty ? "" : String(localized: "Used by \(owners.formatted(.list(type: .and)))"))
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
+}
+
+/// The small round badge on the big avatar that says it can be tapped: a pencil to edit the
+/// photo, a plus to choose one.
+private struct MemberPhotoEditBadge: View {
+    let systemImage: String
+    @ScaledMetric(relativeTo: .caption) private var size: CGFloat = 28
+
+    var body: some View {
+        Image(systemName: systemImage)
+            .font(.system(size: size * 0.45, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(width: size, height: size)
+            .background(Color.accentColor, in: .circle)
+            .padding(2.5)
+            .background(.background, in: .circle)
+            .accessibilityHidden(true)
+    }
+}
+
+/// The photo editor's picture: a picked one or an old square photo (with the JPEG to upload), or
+/// the stored original.
+struct MemberPhotoCropRequest: Identifiable {
+    let id = UUID()
+    let photo: PreparedMemberPhoto
+    /// The crop to start from; nil: the centre.
+    let initial: MemberPhotoCrop?
+    /// The member's current photo: Save waits for a change.
+    let stored: Bool
+    let name: String
+    let canRemove: Bool
 }
 
 enum FamilyMemberSheet: Identifiable {

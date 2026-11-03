@@ -134,6 +134,13 @@
       "when": 1793707080619,
       "tag": "0018_member_photos",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1793721986186,
+      "tag": "0019_member_photo_crops",
+      "breakpoints": true
     }
   ]
 }

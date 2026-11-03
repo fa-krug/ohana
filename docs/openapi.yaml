@@ -176,8 +176,9 @@ paths:
       operationId: getRecipeImage
       summary: A recipe's or a member's photo (WebP)
       description: >-
-        `path` is a recipe's `image` value (e.g. `recipes/<id>_<ts>.webp`, slashes included) or
-        a member's or person's `photo` (`members/<familyId>/<id>_<ts>.webp`). Only members of
+        `path` is a recipe's `image` value (e.g. `recipes/<id>_<ts>.webp`, slashes included), a
+        member's or person's `photo` (`members/<familyId>/<id>_<ts>.webp`) or its
+        `photoOriginal` (`members/<familyId>/<id>_<ts>_original.webp`). Only members of
         the family it belongs to get it; everyone else gets 404. Paths are unique per upload and
         cached privately for a year. Errors are plain text.
       x-ohana-role: viewer
@@ -185,7 +186,7 @@ paths:
         - name: path
           in: path
           required: true
-          description: The recipe's `image` or the member's `photo` path (may contain `/`).
+          description: The recipe's `image` or the member's `photo` / `photoOriginal` path (may contain `/`).
           schema: {type: string}
           example: recipes/0b6c…_1730000000000.webp
       responses:
@@ -1187,14 +1188,23 @@ paths:
       summary: Upload a member's photo (JPEG, PNG or WebP, max. 5 MB)
       description: >-
         The raw image as the body (with its `Content-Type`), or `multipart/form-data` with a
-        file field `image`. Stored as a 512×512 WebP (turned as its EXIF says, cropped to a
-        square); it replaces the member's photo before. Members set their own, editors anyone's.
-        Bytes that aren't an image: 400 "Invalid image".
+        file field `image`. The server keeps the original (`photoOriginal`: turned upright as its
+        EXIF says, at most 2048×2048, WebP) and cuts the 512×512 WebP `photo` from it: at the
+        crop the query gives (`x`, `y`, `w`, `h`, all four, stored as `photoCrop`), or without
+        one where sharp's attention strategy finds what matters (`photoCrop` null). It replaces
+        the member's photo before (both files). Members set their own, editors anyone's. Bytes
+        that aren't an image: 400 "Invalid image"; only some of the crop's values: 400 "A crop
+        needs x, y, w and h."; a crop outside the picture: 400 "Invalid crop.".
       x-ohana-role: viewer
+      parameters:
+        - $ref: "#/components/parameters/PhotoCropX"
+        - $ref: "#/components/parameters/PhotoCropY"
+        - $ref: "#/components/parameters/PhotoCropW"
+        - $ref: "#/components/parameters/PhotoCropH"
       requestBody: {$ref: "#/components/requestBodies/PhotoUpload"}
       responses:
         "200":
-          description: The member, with the new `photo`.
+          description: The member, with the new `photo`, `photoOriginal` and `photoCrop`.
           content:
             application/json:
               schema: {$ref: "#/components/schemas/Member"}
@@ -1202,15 +1212,38 @@ paths:
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
         "404": {$ref: "#/components/responses/NotFound"}
+    patch:
+      tags: [Household]
+      operationId: cropMemberPhoto
+      summary: Choose a new crop of a member's photo
+      description: >-
+        Cuts a new 512×512 `photo` (a new path; the square before is deleted) from the kept
+        `photoOriginal` and stores the crop. Members change their own, editors anyone's. 404
+        "No photo." without a photo; 409 "This photo can't be adjusted." for a photo without
+        an original (uploaded before originals were kept). A crop outside the picture: 400
+        "Invalid crop.".
+      x-ohana-role: viewer
+      requestBody: {$ref: "#/components/requestBodies/PhotoCropChange"}
+      responses:
+        "200":
+          description: The member, with the new `photo` and `photoCrop`.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Member"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
     delete:
       tags: [Household]
       operationId: removeMemberPhoto
       summary: Remove a member's photo
-      description: Members remove their own, editors anyone's.
+      description: Deletes the photo and its original. Members remove their own, editors anyone's.
       x-ohana-role: viewer
       responses:
         "200":
-          description: The member, `photo` null.
+          description: The member, `photo`, `photoOriginal` and `photoCrop` null.
           content:
             application/json:
               schema: {$ref: "#/components/schemas/Member"}
@@ -1315,12 +1348,19 @@ paths:
       tags: [Household]
       operationId: setPersonPhoto
       summary: Upload the photo of a member without an account
-      description: As a member's photo (JPEG, PNG or WebP, max. 5 MB, stored as a 512×512 WebP).
+      description: >-
+        As a member's photo (JPEG, PNG or WebP, max. 5 MB; the original kept, a 512×512 WebP cut
+        at the query's crop or sharp's pick).
       x-ohana-role: editor
+      parameters:
+        - $ref: "#/components/parameters/PhotoCropX"
+        - $ref: "#/components/parameters/PhotoCropY"
+        - $ref: "#/components/parameters/PhotoCropW"
+        - $ref: "#/components/parameters/PhotoCropH"
       requestBody: {$ref: "#/components/requestBodies/PhotoUpload"}
       responses:
         "200":
-          description: The person, with the new `photo`.
+          description: The person, with the new `photo`, `photoOriginal` and `photoCrop`.
           content:
             application/json:
               schema: {$ref: "#/components/schemas/Person"}
@@ -1328,14 +1368,35 @@ paths:
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
         "404": {$ref: "#/components/responses/NotFound"}
+    patch:
+      tags: [Household]
+      operationId: cropPersonPhoto
+      summary: Choose a new crop of the photo of a member without an account
+      description: >-
+        As a member's (a new `photo` from the kept original; 404 "No photo.", 409 "This photo
+        can't be adjusted." without an original).
+      x-ohana-role: editor
+      requestBody: {$ref: "#/components/requestBodies/PhotoCropChange"}
+      responses:
+        "200":
+          description: The person, with the new `photo` and `photoCrop`.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Person"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
     delete:
       tags: [Household]
       operationId: removePersonPhoto
       summary: Remove the photo of a member without an account
+      description: Deletes the photo and its original.
       x-ohana-role: editor
       responses:
         "200":
-          description: The person, `photo` null.
+          description: The person, `photo`, `photoOriginal` and `photoCrop` null.
           content:
             application/json:
               schema: {$ref: "#/components/schemas/Person"}
@@ -4844,6 +4905,26 @@ components:
       in: path
       required: true
       schema: {type: string, format: uuid}
+    PhotoCropX:
+      name: x
+      in: query
+      description: The crop's left edge, a fraction of the upright original's width (with `y`, `w`, `h`; all four or none).
+      schema: {type: number, minimum: 0, maximum: 1}
+    PhotoCropY:
+      name: y
+      in: query
+      description: The crop's top edge, a fraction of the upright original's height.
+      schema: {type: number, minimum: 0, maximum: 1}
+    PhotoCropW:
+      name: w
+      in: query
+      description: The crop's width, a fraction of the original's width (`x + w ≤ 1`).
+      schema: {type: number, exclusiveMinimum: 0, maximum: 1}
+    PhotoCropH:
+      name: h
+      in: query
+      description: The crop's height, a fraction of the original's height (`y + h ≤ 1`).
+      schema: {type: number, exclusiveMinimum: 0, maximum: 1}
 
   responses:
     Ok:
@@ -5072,6 +5153,15 @@ components:
                 deleted: {type: boolean}
 
   requestBodies:
+    PhotoCropChange:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [crop]
+            properties:
+              crop: {$ref: "#/components/schemas/PhotoCrop"}
     PhotoUpload:
       required: true
       description: The image (JPEG, PNG or WebP, max. 5 MB) as the body, or a form's `image` file.
@@ -5135,8 +5225,29 @@ components:
       type: [string, "null"]
       description: >-
         The member's photo, a path to load from `/api/images/{photo}` (a 512×512 WebP, a new
-        path per upload); null without one.
+        path per upload or crop); null without one.
       example: members/7f3c…/0b6c…_1730000000000.webp
+    PhotoOriginal:
+      type: [string, "null"]
+      description: >-
+        The original the member's photo was cut from (upright, at most 2048×2048 WebP), a path
+        to load from `/api/images/{photoOriginal}`; null without a photo or for one uploaded
+        before originals were kept (it can't be adjusted).
+      example: members/7f3c…/0b6c…_1730000000000_original.webp
+    PhotoCrop:
+      type: object
+      description: >-
+        Where the square photo is cut from the upright original: fractions of its width (`x`,
+        `w`) and height (`y`, `h`), the top-left corner and the size; `x + w ≤ 1`, `y + h ≤ 1`
+        (a slack of 1e-6 is clamped). A square in pixels (`w·width ≈ h·height`); the server
+        takes the rounded pixel rectangle and scales it to 512×512.
+      required: [x, y, w, h]
+      properties:
+        x: {type: number, minimum: 0, maximum: 1}
+        y: {type: number, minimum: 0, maximum: 1}
+        w: {type: number, exclusiveMinimum: 0, maximum: 1}
+        h: {type: number, exclusiveMinimum: 0, maximum: 1}
+      example: {x: 0.25, y: 0, w: 0.5, h: 1}
     TypeMember:
       type: [object, "null"]
       description: Whose the type is, with their color key and photo; null for nobody's.
@@ -6028,7 +6139,7 @@ components:
     # ---------------------------------------------------------------- household
     Member:
       type: object
-      required: [userId, email, name, role, birthday, color, photo, joinedAt]
+      required: [userId, email, name, role, birthday, color, photo, photoOriginal, photoCrop, joinedAt]
       properties:
         userId: {type: string}
         email: {type: string}
@@ -6037,17 +6148,29 @@ components:
         birthday: {type: [string, "null"], format: date}
         color: {$ref: "#/components/schemas/MemberColor"}
         photo: {$ref: "#/components/schemas/MemberPhoto"}
+        photoOriginal: {$ref: "#/components/schemas/PhotoOriginal"}
+        photoCrop:
+          description: The photo's crop of `photoOriginal`; null for sharp's pick or without a photo.
+          oneOf:
+            - {$ref: "#/components/schemas/PhotoCrop"}
+            - {type: "null"}
         joinedAt: {type: string, format: date-time}
     Person:
       type: object
       description: A member without an account (a child, a grandparent).
-      required: [id, name, birthday, color, photo]
+      required: [id, name, birthday, color, photo, photoOriginal, photoCrop]
       properties:
         id: {type: string}
         name: {type: string}
         birthday: {type: [string, "null"], format: date}
         color: {$ref: "#/components/schemas/MemberColor"}
         photo: {$ref: "#/components/schemas/MemberPhoto"}
+        photoOriginal: {$ref: "#/components/schemas/PhotoOriginal"}
+        photoCrop:
+          description: The photo's crop of `photoOriginal`; null for sharp's pick or without a photo.
+          oneOf:
+            - {$ref: "#/components/schemas/PhotoCrop"}
+            - {type: "null"}
     CreatedInvite:
       type: object
       required: [code, expiresAt, url]

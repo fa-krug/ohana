@@ -7,7 +7,7 @@ import { hasUsablePassword } from "@/lib/auth/password";
 import { assertEmailFree } from "@/lib/auth/register";
 import { issueSetupLink } from "@/lib/auth/setup-link";
 import { deleteUserTokens } from "@/lib/auth/tokens";
-import { deletePhotoFile } from "@/lib/families/photos";
+import { deletePhotoFiles } from "@/lib/families/photos";
 
 export interface AdminUserDto {
   id: string;
@@ -109,15 +109,15 @@ export function deleteUser(db: Db, actorId: string, userId: string): void {
   if (!user) throw new AuthError(404, "User not found.");
   const photos = db.transaction((tx) => {
     const memberships = tx
-      .select({ familyId: familyMembers.familyId, photo: familyMembers.photo })
+      .select({ familyId: familyMembers.familyId, photo: familyMembers.photo, photoOriginal: familyMembers.photoOriginal })
       .from(familyMembers)
       .where(eq(familyMembers.userId, userId))
       .all();
     tx.delete(users).where(eq(users.id, userId)).run(); // cascades tokens, passkeys, memberships
     for (const { familyId } of memberships) promoteIfNoEditor(tx, familyId);
-    return memberships.map((m) => m.photo);
+    return memberships;
   });
-  for (const photo of photos) deletePhotoFile(photo);
+  for (const photo of photos) deletePhotoFiles(photo);
 }
 
 function promoteIfNoEditor(db: Db, familyId: string): void {

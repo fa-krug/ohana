@@ -128,6 +128,10 @@ export const familyMembers = sqliteTable(
     color: text("color").notNull().default("blue"),
     /** Their photo in this family: a WebP's path under MEDIA_ROOT (lib/families/photos.ts), or null. */
     photo: text("photo"),
+    /** The photo's upright original (at most 2048², WebP) the square was cut from, or null. */
+    photoOriginal: text("photo_original"),
+    /** The square's crop of the original as JSON {x, y, w, h} (fractions), or null (sharp's pick). */
+    photoCrop: text("photo_crop"),
     joinedAt: integer("joined_at", { mode: "timestamp" }).notNull(),
   },
   (t) => ({
@@ -152,6 +156,10 @@ export const familyPeople = sqliteTable(
     color: text("color").notNull().default("blue"),
     /** Their photo: a WebP's path under MEDIA_ROOT (lib/families/photos.ts), or null. */
     photo: text("photo"),
+    /** The photo's upright original (at most 2048², WebP) the square was cut from, or null. */
+    photoOriginal: text("photo_original"),
+    /** The square's crop of the original as JSON {x, y, w, h} (fractions), or null (sharp's pick). */
+    photoCrop: text("photo_crop"),
     createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   },
   (t) => ({ familyPeopleFamilyNameIdx: uniqueIndex("family_people_family_name_idx").on(t.familyId, t.name) }),

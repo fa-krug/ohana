@@ -106,6 +106,8 @@ export function acceptInvite(db: Db, userId: string, code: string, now: Date): {
       birthday: person?.birthday ?? null,
       color: person?.color ?? nextMemberColor(db, inv.familyId),
       photo: person?.photo ?? null,
+      photoOriginal: person?.photoOriginal ?? null,
+      photoCrop: person?.photoCrop ?? null,
       joinedAt: now,
     })
     .run();

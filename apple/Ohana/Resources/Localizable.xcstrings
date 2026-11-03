@@ -2052,6 +2052,16 @@
         }
       }
     },
+    "Adjust Photo": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto anpassen"
+          }
+        }
+      }
+    },
     "Admin": {
       "localizations": {
         "de": {
@@ -3490,16 +3500,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kategorie %lld"
-          }
-        }
-      }
-    },
-    "Change Photo": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Foto ändern"
           }
         }
       }
@@ -6020,6 +6020,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aufgabe bearbeiten"
+          }
+        }
+      }
+    },
+    "Edit Photo": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto bearbeiten"
           }
         }
       }
@@ -9358,6 +9368,56 @@
         }
       }
     },
+    "Move Down": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nach unten bewegen"
+          }
+        }
+      }
+    },
+    "Move Left": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nach links bewegen"
+          }
+        }
+      }
+    },
+    "Move Right": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nach rechts bewegen"
+          }
+        }
+      }
+    },
+    "Move Up": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nach oben bewegen"
+          }
+        }
+      }
+    },
+    "Move and Scale": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bewegen und skalieren"
+          }
+        }
+      }
+    },
     "Move down": {
       "localizations": {
         "de": {
@@ -12156,6 +12216,16 @@
         }
       }
     },
+    "Photo preview": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotovorschau"
+          }
+        }
+      }
+    },
     "Photo removed": {
       "localizations": {
         "de": {
@@ -12322,6 +12392,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zwei Finger zusammenziehen"
+          }
+        }
+      }
+    },
+    "Pinch or scroll to zoom, drag to move": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zum Zoomen auseinanderziehen oder scrollen, zum Bewegen ziehen"
+          }
+        }
+      }
+    },
+    "Pinch to zoom, drag to move": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zum Zoomen auseinanderziehen, zum Bewegen ziehen"
           }
         }
       }
@@ -13412,6 +13502,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Heimatadresse entfernen?"
+          }
+        }
+      }
+    },
+    "Remove the photo of %@?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Foto von %@ entfernen?"
           }
         }
       }

@@ -6,7 +6,7 @@ import { AuthError } from "@/lib/auth/errors";
 import { addDays, formatDate, isValidDate } from "@/lib/calendar/dates";
 import { createInvite } from "./invites";
 import { assertMemberColor, nextMemberColor } from "./member-colors";
-import { deletePhotoFile } from "./photos";
+import { deletePhotoFiles, type PhotoCrop, parsePhotoCrop } from "./photos";
 import { type Actor, type Role, requireRole } from "./roles";
 
 /** A family member without an account (a child, a grandparent). */
@@ -18,6 +18,10 @@ export interface PersonDto {
   color: string;
   /** Their photo's path under MEDIA_ROOT (served at /api/images/<photo>), or null. */
   photo: string | null;
+  /** The upright original the photo was cut from (path under MEDIA_ROOT), or null. */
+  photoOriginal: string | null;
+  /** Where the photo was cut from the original (fractions), or null (sharp's pick). */
+  photoCrop: PhotoCrop | null;
   createdAt: Date;
 }
 
@@ -41,8 +45,15 @@ const personColumns = {
   birthday: familyPeople.birthday,
   color: familyPeople.color,
   photo: familyPeople.photo,
+  photoOriginal: familyPeople.photoOriginal,
+  photoCrop: familyPeople.photoCrop,
   createdAt: familyPeople.createdAt,
 };
+
+const toPersonDto = (row: { photoCrop: string | null } & Omit<PersonDto, "photoCrop">): PersonDto => ({
+  ...row,
+  photoCrop: parsePhotoCrop(row.photoCrop),
+});
 
 function peopleOf(db: Db, familyId: string): PersonDto[] {
   return db
@@ -50,7 +61,8 @@ function peopleOf(db: Db, familyId: string): PersonDto[] {
     .from(familyPeople)
     .where(eq(familyPeople.familyId, familyId))
     .orderBy(asc(familyPeople.name))
-    .all();
+    .all()
+    .map(toPersonDto);
 }
 
 function assertFreeName(db: Db, familyId: string, name: string, exceptId?: string): void {
@@ -94,7 +106,7 @@ export function addPerson(
       .returning(personColumns)
       .get();
     const invite = args.invite ? createInvite(tx, actor, familyId, args.invite, now, person.id) : null;
-    return { person, invite };
+    return { person: toPersonDto(person), invite };
   });
 }
 
@@ -114,21 +126,23 @@ export function updatePerson(
   assertFreeName(db, familyId, name, personId);
   assertBirthday(args.birthday, now);
   if (args.color !== undefined) assertMemberColor(args.color);
-  return db
-    .update(familyPeople)
-    .set({ name, birthday: args.birthday, ...(args.color !== undefined ? { color: args.color } : {}) })
-    .where(eq(familyPeople.id, personId))
-    .returning(personColumns)
-    .get()!;
+  return toPersonDto(
+    db
+      .update(familyPeople)
+      .set({ name, birthday: args.birthday, ...(args.color !== undefined ? { color: args.color } : {}) })
+      .where(eq(familyPeople.id, personId))
+      .returning(personColumns)
+      .get()!,
+  );
 }
 
-/** Removes someone without an account (and their open invite and photo; their entry types
+/** Removes someone without an account (and their open invite and photo files; their entry types
  *  become nobody's through the foreign key). */
 export function removePerson(db: Db, actor: Actor, familyId: string, personId: string): void {
   requireRole(db, actor, familyId, "editor");
-  const { photo } = assertPerson(db, familyId, personId);
+  const person = assertPerson(db, familyId, personId);
   db.delete(familyPeople).where(eq(familyPeople.id, personId)).run();
-  deletePhotoFile(photo);
+  deletePhotoFiles(person);
 }
 
 /** Everyone in the family by name, with and without an account, sorted: the choices for

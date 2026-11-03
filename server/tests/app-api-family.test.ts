@@ -204,9 +204,9 @@ describe("people and invites", () => {
 
     const edited = await s.asEditor("PATCH", `${s.f}/household/people/${id}`, { name: "Mia K.", birthday: "" });
     // Anna has blue, Ben orange: Mia gets green, and keeps it while no color is sent.
-    expect(edited.data).toEqual({ id, name: "Mia K.", birthday: null, color: "green", photo: null });
+    expect(edited.data).toEqual({ id, name: "Mia K.", birthday: null, color: "green", photo: null, photoOriginal: null, photoCrop: null });
     const household = (await s.asEditor("GET", `${s.f}/household`)).data;
-    expect(household.people).toEqual([{ id, name: "Mia K.", birthday: null, color: "green", photo: null }]);
+    expect(household.people).toEqual([{ id, name: "Mia K.", birthday: null, color: "green", photo: null, photoOriginal: null, photoCrop: null }]);
     const recolored = await s.asEditor("PATCH", `${s.f}/household/people/${id}`, { name: "Mia K.", birthday: null, color: "pink" });
     expect(recolored.data.color).toBe("pink");
     expect((await s.asEditor("PATCH", `${s.f}/household/people/${id}`, { name: "Mia K.", color: "mauve" })).status).toBe(400);

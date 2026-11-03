@@ -4,7 +4,7 @@ import { calEntryTypes, choreSubscribers, chores, familyMembers, users } from "@
 import { AuthError } from "@/lib/auth/errors";
 import { assertMemberColor, nextMemberColor } from "./member-colors";
 import { assertBirthday } from "./people";
-import { deletePhotoFile } from "./photos";
+import { deletePhotoFiles, type PhotoCrop, parsePhotoCrop } from "./photos";
 import { type Actor, type Role, isRole, requireRole } from "./roles";
 
 export interface MemberDto {
@@ -17,6 +17,10 @@ export interface MemberDto {
   color: string;
   /** Their photo's path under MEDIA_ROOT (served at /api/images/<photo>), or null. */
   photo: string | null;
+  /** The upright original the photo was cut from (path under MEDIA_ROOT), or null. */
+  photoOriginal: string | null;
+  /** Where the photo was cut from the original (fractions), or null (sharp's pick). */
+  photoCrop: PhotoCrop | null;
   joinedAt: Date;
 }
 
@@ -31,6 +35,8 @@ export function listMembers(db: Db, actor: Actor, familyId: string): MemberDto[]
       birthday: familyMembers.birthday,
       color: familyMembers.color,
       photo: familyMembers.photo,
+      photoOriginal: familyMembers.photoOriginal,
+      photoCrop: familyMembers.photoCrop,
       joinedAt: familyMembers.joinedAt,
     })
     .from(familyMembers)
@@ -38,7 +44,7 @@ export function listMembers(db: Db, actor: Actor, familyId: string): MemberDto[]
     .where(eq(familyMembers.familyId, familyId))
     .orderBy(asc(users.email))
     .all()
-    .map((m) => ({ ...m, role: isRole(m.role) ? m.role : "viewer" }));
+    .map((m) => ({ ...m, role: isRole(m.role) ? m.role : "viewer", photoCrop: parsePhotoCrop(m.photoCrop) }));
 }
 
 function memberRows(db: Db, familyId: string) {
@@ -78,7 +84,18 @@ export function addMember(
   if (!user.lastFamilyId) {
     db.update(users).set({ lastFamilyId: familyId }).where(eq(users.id, user.id)).run();
   }
-  return { userId: user.id, email: user.email, name: user.name, role: args.role, birthday: null, color, photo: null, joinedAt: now };
+  return {
+    userId: user.id,
+    email: user.email,
+    name: user.name,
+    role: args.role,
+    birthday: null,
+    color,
+    photo: null,
+    photoOriginal: null,
+    photoCrop: null,
+    joinedAt: now,
+  };
 }
 
 /** A member's birthday in this family; members set their own, editors anyone's. */
@@ -161,5 +178,5 @@ export function removeMember(db: Db, actor: Actor, familyId: string, userId: str
       ),
     )
     .run();
-  deletePhotoFile(removed.photo);
+  deletePhotoFiles(removed);
 }

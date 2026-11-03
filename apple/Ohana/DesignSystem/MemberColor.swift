@@ -100,8 +100,11 @@ struct FamilyAvatar: View {
 
 /// A member's profile picture: where the server keeps it, and how the app prepares one to upload.
 nonisolated enum MemberPhoto {
-    /// The longest side of an uploaded photo, in pixels (the server crops the centre square).
-    static let maxPixels = 1024
+    /// The longest side of an uploaded original, in pixels (the server cuts the square from it
+    /// with the crop the user chose).
+    static let maxPixels = 2048
+    /// The server's limit for an upload's body.
+    static let maxBytes = 5 * 1024 * 1024
 
     /// The server path of a member's photo (served to the family's members only); nil for none.
     static func path(_ photo: String?) -> String? {
@@ -112,13 +115,14 @@ nonisolated enum MemberPhoto {
     /// A picked image (JPEG, PNG, HEIC, …) as a JPEG of at most `maxPixels` on its longest side,
     /// upright and drawn onto white (transparency would turn black); nil if it isn't an image.
     static func jpeg(from data: Data, maxPixels: Int = maxPixels, quality: Double = 0.85) -> Data? {
-        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
-        let options: [CFString: Any] = [
-            kCGImageSourceCreateThumbnailFromImageAlways: true,
-            kCGImageSourceCreateThumbnailWithTransform: true,
-            kCGImageSourceThumbnailMaxPixelSize: maxPixels,
-        ]
-        guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
+        prepare(from: data, maxPixels: maxPixels, quality: quality)?.jpeg
+    }
+
+    /// The picked image as `jpeg(from:)` makes it, together with the decoded picture (what the
+    /// crop editor shows: crops are fractions of exactly this image). Lowers the quality until it
+    /// fits `maxBytes`.
+    static func prepare(from data: Data, maxPixels: Int = maxPixels, quality: Double = 0.85) -> PreparedMemberPhoto? {
+        guard let image = upright(data, maxPixels: maxPixels) else { return nil }
         let w = image.width, h = image.height
         guard let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
                                   space: CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB(),
@@ -127,12 +131,44 @@ nonisolated enum MemberPhoto {
         ctx.fill(CGRect(x: 0, y: 0, width: w, height: h))
         ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
         guard let flat = ctx.makeImage() else { return nil }
+        for q in [quality, 0.7, 0.55, 0.4] where q <= quality {
+            guard let jpeg = encode(flat, quality: q) else { return nil }
+            if jpeg.count <= maxBytes { return PreparedMemberPhoto(jpeg: jpeg, image: flat) }
+        }
+        return nil
+    }
+
+    /// A stored original (as the server serves it) as an upright picture for the crop editor; nil
+    /// if it isn't an image.
+    static func image(from data: Data) -> PreparedMemberPhoto? {
+        guard let image = upright(data, maxPixels: maxPixels) else { return nil }
+        return PreparedMemberPhoto(jpeg: nil, image: image)
+    }
+
+    private static func upright(_ data: Data, maxPixels: Int) -> CGImage? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixels,
+        ]
+        return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
+    }
+
+    private static func encode(_ image: CGImage, quality: Double) -> Data? {
         let out = NSMutableData()
         guard let dest = CGImageDestinationCreateWithData(out, UTType.jpeg.identifier as CFString, 1, nil) else { return nil }
-        CGImageDestinationAddImage(dest, flat, [kCGImageDestinationLossyCompressionQuality: quality] as CFDictionary)
+        CGImageDestinationAddImage(dest, image, [kCGImageDestinationLossyCompressionQuality: quality] as CFDictionary)
         guard CGImageDestinationFinalize(dest) else { return nil }
         return out as Data
     }
+}
+
+/// A picture ready for the crop editor: the upright image, and for a new one the JPEG to upload.
+nonisolated struct PreparedMemberPhoto: @unchecked Sendable {
+    /// What to upload; nil for a stored original (only its crop changes).
+    let jpeg: Data?
+    let image: CGImage
 }
 
 /// A member as an icon only: their avatar (photo or initials) in their color, small, the name on

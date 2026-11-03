@@ -13,14 +13,20 @@
 // POST   /household/members {email, role}      adds an account by its sign-in name
 // PATCH  /household/members/{userId} {role?, birthday?, color?}
 // DELETE /household/members/{userId}           removes a member (oneself: leave)
-// PUT    /household/members/{userId}/photo     raw image/jpeg|png|webp bytes, or multipart "image" →
-//                                              the member (own photo, editors anyone's; photos.ts)
-// DELETE /household/members/{userId}/photo     → the member, photo null
+// PUT    /household/members/{userId}/photo[?x=&y=&w=&h=]  raw image/jpeg|png|webp bytes, or
+//                                              multipart "image" (≤ 5 MB) → the member (own photo,
+//                                              editors anyone's; photos.ts): keeps the original and
+//                                              cuts the square at the crop (fractions of the upright
+//                                              original, all four or none: none = sharp's pick)
+// PATCH  /household/members/{userId}/photo {crop: {x, y, w, h}}  a new square from the original
+//                                              → the member (404 no photo, 409 no original)
+// DELETE /household/members/{userId}/photo     → the member, photo, original and crop null
 // POST   /household/people {name, birthday?, color?, invite?: role | null}
 // PATCH  /household/people/{id} {name, birthday, color?}  (no color: kept)
 // DELETE /household/people/{id}
-// PUT    /household/people/{id}/photo          (editors) as a member's → the person
-// DELETE /household/people/{id}/photo          → the person, photo null
+// PUT    /household/people/{id}/photo[?x=&y=&w=&h=]  (editors) as a member's → the person
+// PATCH  /household/people/{id}/photo {crop}   (editors) as a member's → the person
+// DELETE /household/people/{id}/photo          → the person, photo, original and crop null
 // POST   /household/invites {role, personId?}
 // DELETE /household/invites/{id}
 // PUT    /household/home {address, lat, lng}    (an empty address clears it)
@@ -59,7 +65,16 @@ import { createInvite, listInvites, revokeInvite } from "./invites";
 import { createFamily, deleteFamily, type FamilyDto } from "./manage";
 import { addMember, listMembers, removeMember, setMemberBirthday, setMemberColor, setRole } from "./members";
 import { addPerson, listPeople, type PersonDto, removePerson, updatePerson } from "./people";
-import { removeMemberPhoto, removePersonPhoto, setMemberPhoto, setPersonPhoto } from "./photos";
+import {
+  cropFromQuery,
+  cropMemberPhoto,
+  cropPersonPhoto,
+  photoCropSchema,
+  removeMemberPhoto,
+  removePersonPhoto,
+  setMemberPhoto,
+  setPersonPhoto,
+} from "./photos";
 import type { Role } from "./roles";
 import { SEARCH_DEFAULT_LIMIT, SEARCH_MAX_LIMIT, searchFamily } from "./search";
 
@@ -80,10 +95,10 @@ export function handleFamilyApp(ctx: Ctx): Promise<Response> | null {
     [[], { GET: household, DELETE: removeFamily }],
     [["members"], { POST: addMemberRoute }],
     [["members", "*"], { PATCH: updateMember, DELETE: removeMemberRoute }],
-    [["members", "*", "photo"], { PUT: setMemberPhotoRoute, DELETE: removeMemberPhotoRoute }],
+    [["members", "*", "photo"], { PUT: setMemberPhotoRoute, PATCH: cropMemberPhotoRoute, DELETE: removeMemberPhotoRoute }],
     [["people"], { POST: addPersonRoute }],
     [["people", "*"], { PATCH: updatePersonRoute, DELETE: removePersonRoute }],
-    [["people", "*", "photo"], { PUT: setPersonPhotoRoute, DELETE: removePersonPhotoRoute }],
+    [["people", "*", "photo"], { PUT: setPersonPhotoRoute, PATCH: cropPersonPhotoRoute, DELETE: removePersonPhotoRoute }],
     [["invites"], { POST: createInviteRoute }],
     [["invites", "*"], { DELETE: revokeInviteRoute }],
     [["home"], { PUT: setHome }],
@@ -222,10 +237,23 @@ function memberOut(ctx: Ctx, user: User, familyId: string, userId: string) {
   return updated;
 }
 
-/** A member's photo (the upload's body); members set their own, editors anyone's. */
+/** A new crop of a photo: PATCH's body {crop: {x, y, w, h}}. */
+const photoCropBody = z.object({ crop: photoCropSchema });
+
+/** A member's photo (the upload's body, cut at the query's crop if any); members set their own,
+ *  editors anyone's. */
 const setMemberPhotoRoute: Handler = async (ctx, [userId]) => {
   const { user, familyId } = await member(ctx);
-  await setMemberPhoto(ctx.db, { id: user.id }, familyId, userId, await uploadedImage(ctx.req), ctx.now);
+  const crop = cropFromQuery(ctx.url.searchParams);
+  await setMemberPhoto(ctx.db, { id: user.id }, familyId, userId, await uploadedImage(ctx.req), ctx.now, crop);
+  return json(memberOut(ctx, user, familyId, userId));
+};
+
+/** A new crop of a member's photo, cut from its original. */
+const cropMemberPhotoRoute: Handler = async (ctx, [userId]) => {
+  const { user, familyId } = await member(ctx);
+  const { crop } = photoCropBody.parse(await readBody(ctx.req));
+  await cropMemberPhoto(ctx.db, { id: user.id }, familyId, userId, crop, ctx.now);
   return json(memberOut(ctx, user, familyId, userId));
 };
 
@@ -250,6 +278,8 @@ const personOut = (p: PersonDto) => ({
   birthday: p.birthday,
   color: p.color,
   photo: p.photo,
+  photoOriginal: p.photoOriginal,
+  photoCrop: p.photoCrop,
 });
 
 function personById(ctx: Ctx, user: User, familyId: string, personId: string) {
@@ -285,7 +315,15 @@ const removePersonRoute: Handler = async (ctx, [personId]) => {
 
 const setPersonPhotoRoute: Handler = async (ctx, [personId]) => {
   const { user, familyId } = await member(ctx, "edit");
-  await setPersonPhoto(ctx.db, { id: user.id }, familyId, personId, await uploadedImage(ctx.req), ctx.now);
+  const crop = cropFromQuery(ctx.url.searchParams);
+  await setPersonPhoto(ctx.db, { id: user.id }, familyId, personId, await uploadedImage(ctx.req), ctx.now, crop);
+  return json(personById(ctx, user, familyId, personId));
+};
+
+const cropPersonPhotoRoute: Handler = async (ctx, [personId]) => {
+  const { user, familyId } = await member(ctx, "edit");
+  const { crop } = photoCropBody.parse(await readBody(ctx.req));
+  await cropPersonPhoto(ctx.db, { id: user.id }, familyId, personId, crop, ctx.now);
   return json(personById(ctx, user, familyId, personId));
 };
 
