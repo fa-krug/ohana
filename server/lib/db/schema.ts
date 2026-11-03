@@ -126,6 +126,8 @@ export const familyMembers = sqliteTable(
     birthday: text("birthday"),
     /** A key of MEMBER_COLORS (lib/families/colors.ts): their entry types' colors. */
     color: text("color").notNull().default("blue"),
+    /** Their photo in this family: a WebP's path under MEDIA_ROOT (lib/families/photos.ts), or null. */
+    photo: text("photo"),
     joinedAt: integer("joined_at", { mode: "timestamp" }).notNull(),
   },
   (t) => ({
@@ -148,6 +150,8 @@ export const familyPeople = sqliteTable(
     birthday: text("birthday"),
     /** A key of MEMBER_COLORS (lib/families/colors.ts). */
     color: text("color").notNull().default("blue"),
+    /** Their photo: a WebP's path under MEDIA_ROOT (lib/families/photos.ts), or null. */
+    photo: text("photo"),
     createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   },
   (t) => ({ familyPeopleFamilyNameIdx: uniqueIndex("family_people_family_name_idx").on(t.familyId, t.name) }),

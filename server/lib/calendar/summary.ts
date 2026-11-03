@@ -8,8 +8,8 @@ import { typeIcon } from "./icons";
 import { DrizzleCalendarStore } from "./store";
 import { familyNames } from "@/lib/families/people";
 
-/** Whose a run is: the type's member with their color key. */
-export type RunMember = { id: string; name: string; color: string } | null;
+/** Whose a run is: the type's member with their color key and photo. */
+export type RunMember = { id: string; name: string; color: string; photo: string | null } | null;
 
 export interface CalendarSummary {
   /** The first uncovered weekday from today on (within `days`), or null. */
@@ -36,7 +36,7 @@ export async function calendarSummary(
   for (const r of rows) entries.set(r.day, [...(entries.get(r.day) ?? []), r.type_id]);
 
   const nextGap = gapDays(types, entries).find((d) => d >= today) ?? null;
-  const members = new Map(familyNames(db, familyId).map((m) => [m.id, { id: m.id, name: m.name, color: m.color }]));
+  const members = new Map(familyNames(db, familyId).map((m) => [m.id, { id: m.id, name: m.name, color: m.color, photo: m.photo }]));
 
   const upcoming: CalendarSummary["upcoming"] = [];
   for (const type of types) {

@@ -127,7 +127,7 @@ struct FamilyMembersView: View {
 
     private func memberLabel(_ member: FamilyMember, isSelf: Bool) -> some View {
         HStack(spacing: 12) {
-            FamilyAvatar(name: member.label, tint: MemberColor.color(member.color))
+            FamilyAvatar(name: member.label, tint: MemberColor.color(member.color), photo: member.photo)
             VStack(alignment: .leading, spacing: 2) {
                 Text(isSelf ? String(localized: "\(member.label) (you)") : member.label)
                     .fontWeight(.medium)
@@ -160,7 +160,7 @@ struct FamilyMembersView: View {
 
     private func personLabel(_ person: FamilyPerson, household: FamilyHousehold) -> some View {
         HStack(spacing: 12) {
-            FamilyAvatar(name: person.name, tint: MemberColor.color(person.color))
+            FamilyAvatar(name: person.name, tint: MemberColor.color(person.color), photo: person.photo)
             VStack(alignment: .leading, spacing: 2) {
                 Text(person.name).fontWeight(.medium).lineLimit(2)
                 let status = household.invite(for: person) == nil

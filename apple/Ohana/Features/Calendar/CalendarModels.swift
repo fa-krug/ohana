@@ -123,13 +123,15 @@ struct CalendarNote: Codable, Hashable {
 }
 
 /// A member of the family as the calendar names them (family-routes.ts `familyState` `members`):
-/// an account or a person without one, with their `MemberColor` key.
+/// an account or a person without one, with their `MemberColor` key and profile picture.
 struct CalendarMember: Codable, Hashable, Identifiable {
     let id: String
     let name: String
     /// Has an account (nil where it isn't sent: the overview).
     var account: Bool?
     let color: String
+    /// Their profile picture (`MemberPhoto.path`); nil: none, or an older server.
+    var photo: String? = nil
 }
 
 /// A member's birthday on a day: who, and the age they turn.

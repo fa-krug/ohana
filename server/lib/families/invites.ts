@@ -89,7 +89,7 @@ function personOf(db: Db, inv: Invite) {
 
 /** Makes `userId` a member with the invite's role and uses the invite up; an invite for a
  *  member without an account replaces that person (the membership takes their birthday, color,
- *  chores and entry types, an account without a name their name); otherwise the account gets a
+ *  photo, chores and entry types, an account without a name their name); otherwise the account gets a
  *  color nobody in the family has yet.
  *  Runs inside the caller's transaction when it registers a new account. */
 export function acceptInvite(db: Db, userId: string, code: string, now: Date): { familyId: string } {
@@ -105,6 +105,7 @@ export function acceptInvite(db: Db, userId: string, code: string, now: Date): {
       role: isRole(inv.role) ? inv.role : "viewer",
       birthday: person?.birthday ?? null,
       color: person?.color ?? nextMemberColor(db, inv.familyId),
+      photo: person?.photo ?? null,
       joinedAt: now,
     })
     .run();

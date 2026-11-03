@@ -1,8 +1,9 @@
+import PhotosUI
 import SwiftUI
 
-/// One member's page, opened from their row in Settings → Members: an account's color, birthday
-/// and role, or a member without an account's name, color, birthday and invite link; editors
-/// remove them here. It shows what `model` holds, so it follows the reloads, and closes once they're gone.
+/// One member's page, opened from their row in Settings → Members: an account's photo, color,
+/// birthday and role, or a member without an account's name, photo, color, birthday and invite
+/// link; editors remove them here. It shows what `model` holds, so it follows the reloads, and closes once they're gone.
 struct FamilyMemberPage: View {
     enum Subject: Hashable {
         case member(String)
@@ -18,6 +19,9 @@ struct FamilyMemberPage: View {
     @State private var sheet: FamilyMemberSheet?
     @State private var confirmation: FamilyConfirmation?
     @State private var sharedLink: FamilySharedLink?
+    @State private var photoItem: PhotosPickerItem?
+    @State private var importingPhoto = false
+    @State private var photoBusy = false
 
     private var member: FamilyMember? {
         guard case let .member(id) = subject else { return nil }
@@ -70,6 +74,27 @@ struct FamilyMemberPage: View {
             FamilyInviteLinkSheet(link: link)
         }
         .familyConfirmation($confirmation)
+        .onChange(of: photoItem) { _, item in
+            guard let item else { return }
+            photoItem = nil
+            photoBusy = true
+            perform {
+                defer { photoBusy = false }
+                guard let data = try await item.loadTransferable(type: Data.self) else { return }
+                try await uploadPhoto(data)
+            }
+        }
+        .fileImporter(isPresented: $importingPhoto, allowedContentTypes: [.image]) { result in
+            guard case let .success(url) = result else { return }
+            let access = url.startAccessingSecurityScopedResource()
+            defer { if access { url.stopAccessingSecurityScopedResource() } }
+            guard let data = try? Data(contentsOf: url) else { return }
+            photoBusy = true
+            perform {
+                defer { photoBusy = false }
+                try await uploadPhoto(data)
+            }
+        }
     }
 
     // MARK: Account
@@ -84,7 +109,11 @@ struct FamilyMemberPage: View {
             LabeledContent("Email", value: member.email)
         }
 
-        // Everyone their own, editors anyone's.
+        // Photo and color: everyone their own, editors anyone's.
+        photoSection(name: member.label, color: member.color, photo: member.photo,
+                     canChange: !app.isDemo && !model.state.isSaved
+                         && (household.canEdit || member.userId == household.selfId))
+
         colorSection(member.color, id: member.userId, household: household,
                      canChange: !model.state.isSaved && (household.canEdit || member.userId == household.selfId)) { color in
             FamilyColorChange(path: "/household/members/\(member.userId)", body: FamilyColorInput(color: color))
@@ -134,6 +163,8 @@ struct FamilyMemberPage: View {
             }
             .tint(.primary)
         }
+
+        photoSection(name: person.name, color: person.color, photo: person.photo, canChange: !app.isDemo && model.canEdit)
 
         colorSection(person.color, id: person.id, household: household, canChange: model.canEdit) { color in
             FamilyColorChange(path: "/household/people/\(person.id)",
@@ -218,6 +249,48 @@ struct FamilyMemberPage: View {
         }
     }
 
+    /// The member's photo, large, and the way to choose or remove one (the server crops it to a
+    /// square); shown in place of their initials everywhere. Nothing without a photo and the
+    /// right to give them one.
+    @ViewBuilder
+    private func photoSection(name: String, color: String?, photo: String?, canChange: Bool) -> some View {
+        if canChange || MemberPhoto.path(photo) != nil {
+            Section {
+                FamilyAvatar(name: name, tint: MemberColor.color(color), photo: photo, size: 96)
+                    .overlay {
+                        if photoBusy {
+                            ProgressView()
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .background(.ultraThinMaterial, in: .circle)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 4)
+                if canChange {
+                    PhotosPicker(selection: $photoItem, matching: .images) {
+                        Label(MemberPhoto.path(photo) == nil ? "Choose Photo" : "Change Photo",
+                              systemImage: "photo.badge.plus")
+                    }
+                    Button {
+                        importingPhoto = true
+                    } label: {
+                        Label("Choose File", systemImage: "folder")
+                    }
+                    if MemberPhoto.path(photo) != nil {
+                        Button(role: .destructive) {
+                            removePhoto()
+                        } label: {
+                            Label("Remove Photo", systemImage: "photo.badge.minus")
+                        }
+                    }
+                }
+            } header: {
+                Text("Photo")
+            }
+            .disabled(photoBusy)
+        }
+    }
+
     private func birthdayRow(_ birthday: Day?) -> some View {
         LabeledContent("Birthday") {
             if let birthday {
@@ -244,6 +317,49 @@ struct FamilyMemberPage: View {
             try await api.perform(.delete, path)
             if refreshApp { await app.refresh() }
         }
+    }
+
+    /// The member's photo route: PUT (raw image bytes) and DELETE answer the member's new state.
+    private var photoRoute: String {
+        switch subject {
+        case let .member(id): "/household/members/\(id)/photo"
+        case let .person(id): "/household/people/\(id)/photo"
+        }
+    }
+
+    /// Downscales the picked image to a JPEG (off the main thread), uploads it and shows the answer.
+    private func uploadPhoto(_ data: Data) async throws {
+        guard let jpeg = await Task.detached(operation: { MemberPhoto.jpeg(from: data) }).value else {
+            throw APIError.http(status: 400, message: String(localized: "That file isn’t a picture."))
+        }
+        let client = family.api.client
+        var req = client.request(.put, family.api.path(photoRoute), body: jpeg, contentType: "image/jpeg")
+        req.timeoutInterval = 120
+        let (answer, _) = try await client.data(for: req)
+        await photoChanged(answer, success: String(localized: "Photo saved."))
+    }
+
+    private func removePhoto() {
+        photoBusy = true
+        perform {
+            defer { photoBusy = false }
+            let client = family.api.client
+            let (answer, _) = try await client.data(for: client.request(.delete, family.api.path(photoRoute)))
+            await photoChanged(answer, success: String(localized: "Photo removed."))
+        }
+    }
+
+    /// Shows the member's new state from the server's answer, then reloads, and has the other
+    /// screens (the calendar's types, the overview) show the new photo.
+    private func photoChanged(_ answer: Data, success: String) async {
+        let client = family.api.client
+        switch subject {
+        case .member: if let member = try? client.decode(FamilyMember.self, from: answer) { model.replace(member) }
+        case .person: if let person = try? client.decode(FamilyPerson.self, from: answer) { model.replace(person) }
+        }
+        ErrorBanner.shared.success(success)
+        await model.load(family.api)
+        family.didChange(.family, .calendar)
     }
 
     private func createInvite(role: FamilyRole, person: FamilyPerson) {

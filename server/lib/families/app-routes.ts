@@ -13,9 +13,14 @@
 // POST   /household/members {email, role}      adds an account by its sign-in name
 // PATCH  /household/members/{userId} {role?, birthday?, color?}
 // DELETE /household/members/{userId}           removes a member (oneself: leave)
+// PUT    /household/members/{userId}/photo     raw image/jpeg|png|webp bytes, or multipart "image" →
+//                                              the member (own photo, editors anyone's; photos.ts)
+// DELETE /household/members/{userId}/photo     → the member, photo null
 // POST   /household/people {name, birthday?, color?, invite?: role | null}
 // PATCH  /household/people/{id} {name, birthday, color?}  (no color: kept)
 // DELETE /household/people/{id}
+// PUT    /household/people/{id}/photo          (editors) as a member's → the person
+// DELETE /household/people/{id}/photo          → the person, photo null
 // POST   /household/invites {role, personId?}
 // DELETE /household/invites/{id}
 // PUT    /household/home {address, lat, lng}    (an empty address clears it)
@@ -29,6 +34,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import type { Ctx } from "@/lib/api/family-api";
 import { HttpError, json, readBody } from "@/lib/api/http";
+import { uploadedImage } from "@/lib/api/upload";
 import type { Db } from "@/lib/db";
 import { families } from "@/lib/db/schema";
 import type { User } from "@/lib/auth/tokens";
@@ -52,7 +58,8 @@ import { homeAddressSchema, setHomeAddress } from "./home";
 import { createInvite, listInvites, revokeInvite } from "./invites";
 import { createFamily, deleteFamily, type FamilyDto } from "./manage";
 import { addMember, listMembers, removeMember, setMemberBirthday, setMemberColor, setRole } from "./members";
-import { addPerson, listPeople, removePerson, updatePerson } from "./people";
+import { addPerson, listPeople, type PersonDto, removePerson, updatePerson } from "./people";
+import { removeMemberPhoto, removePersonPhoto, setMemberPhoto, setPersonPhoto } from "./photos";
 import type { Role } from "./roles";
 import { SEARCH_DEFAULT_LIMIT, SEARCH_MAX_LIMIT, searchFamily } from "./search";
 
@@ -73,8 +80,10 @@ export function handleFamilyApp(ctx: Ctx): Promise<Response> | null {
     [[], { GET: household, DELETE: removeFamily }],
     [["members"], { POST: addMemberRoute }],
     [["members", "*"], { PATCH: updateMember, DELETE: removeMemberRoute }],
+    [["members", "*", "photo"], { PUT: setMemberPhotoRoute, DELETE: removeMemberPhotoRoute }],
     [["people"], { POST: addPersonRoute }],
     [["people", "*"], { PATCH: updatePersonRoute, DELETE: removePersonRoute }],
+    [["people", "*", "photo"], { PUT: setPersonPhotoRoute, DELETE: removePersonPhotoRoute }],
     [["invites"], { POST: createInviteRoute }],
     [["invites", "*"], { DELETE: revokeInviteRoute }],
     [["home"], { PUT: setHome }],
@@ -134,7 +143,7 @@ export interface HouseholdDto {
   role: Role;
   selfId: string;
   members: ReturnType<typeof listMembers>;
-  people: { id: string; name: string; birthday: string | null; color: string }[];
+  people: ReturnType<typeof personOut>[];
   /** Open invites (editors only; [] for viewers). */
   invites: { id: string; url: string; role: string; personId: string | null; expiresAt: Date }[];
   home: { address: string | null; lat: number | null; lng: number | null };
@@ -204,9 +213,26 @@ const updateMember: Handler = async (ctx, [userId]) => {
   if (input.role !== undefined) setRole(ctx.db, actor, familyId, userId, input.role);
   if ("birthday" in raw) setMemberBirthday(ctx.db, actor, familyId, userId, input.birthday ?? null, ctx.now);
   if (input.color !== undefined) setMemberColor(ctx.db, actor, familyId, userId, input.color);
-  const updated = listMembers(ctx.db, actor, familyId).find((m) => m.userId === userId);
+  return json(memberOut(ctx, user, familyId, userId));
+};
+
+function memberOut(ctx: Ctx, user: User, familyId: string, userId: string) {
+  const updated = listMembers(ctx.db, { id: user.id }, familyId).find((m) => m.userId === userId);
   if (!updated) throw new HttpError(404, "Member not found.");
-  return json(updated);
+  return updated;
+}
+
+/** A member's photo (the upload's body); members set their own, editors anyone's. */
+const setMemberPhotoRoute: Handler = async (ctx, [userId]) => {
+  const { user, familyId } = await member(ctx);
+  await setMemberPhoto(ctx.db, { id: user.id }, familyId, userId, await uploadedImage(ctx.req), ctx.now);
+  return json(memberOut(ctx, user, familyId, userId));
+};
+
+const removeMemberPhotoRoute: Handler = async (ctx, [userId]) => {
+  const { user, familyId } = await member(ctx);
+  removeMemberPhoto(ctx.db, { id: user.id }, familyId, userId);
+  return json(memberOut(ctx, user, familyId, userId));
 };
 
 /** Everyone may remove themselves (leave), editors anyone. */
@@ -218,12 +244,19 @@ const removeMemberRoute: Handler = async (ctx, [userId]) => {
 
 // ---- People without an account ----
 
-const personOut = (p: { id: string; name: string; birthday: string | null; color: string }) => ({
+const personOut = (p: PersonDto) => ({
   id: p.id,
   name: p.name,
   birthday: p.birthday,
   color: p.color,
+  photo: p.photo,
 });
+
+function personById(ctx: Ctx, user: User, familyId: string, personId: string) {
+  const person = listPeople(ctx.db, { id: user.id }, familyId).find((p) => p.id === personId);
+  if (!person) throw new HttpError(404, "Member not found.");
+  return personOut(person);
+}
 
 const addPersonRoute: Handler = async (ctx) => {
   const { user, familyId } = await member(ctx, "edit");
@@ -248,6 +281,18 @@ const removePersonRoute: Handler = async (ctx, [personId]) => {
   const { user, familyId } = await member(ctx, "edit");
   removePerson(ctx.db, { id: user.id }, familyId, personId);
   return json({ ok: true });
+};
+
+const setPersonPhotoRoute: Handler = async (ctx, [personId]) => {
+  const { user, familyId } = await member(ctx, "edit");
+  await setPersonPhoto(ctx.db, { id: user.id }, familyId, personId, await uploadedImage(ctx.req), ctx.now);
+  return json(personById(ctx, user, familyId, personId));
+};
+
+const removePersonPhotoRoute: Handler = async (ctx, [personId]) => {
+  const { user, familyId } = await member(ctx, "edit");
+  removePersonPhoto(ctx.db, { id: user.id }, familyId, personId);
+  return json(personById(ctx, user, familyId, personId));
 };
 
 // ---- Invites ----

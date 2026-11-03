@@ -104,8 +104,31 @@ final class FamilySettingsModel {
 
     /// Shows an event's new state right away (the switch shouldn't wait for the server).
     func replace(_ pref: FamilyEventPref) {
-        guard var household = state.value, let i = household.events.firstIndex(where: { $0.id == pref.id }) else { return }
-        household.events[i] = pref
+        edit { household in
+            guard let i = household.events.firstIndex(where: { $0.id == pref.id }) else { return }
+            household.events[i] = pref
+        }
+    }
+
+    /// Shows a member as the server answered a change of theirs (their photo), before the reload.
+    func replace(_ member: FamilyMember) {
+        edit { household in
+            guard let i = household.members.firstIndex(where: { $0.userId == member.userId }) else { return }
+            household.members[i] = member
+        }
+    }
+
+    /// Shows a member without an account as the server answered a change of theirs.
+    func replace(_ person: FamilyPerson) {
+        edit { household in
+            guard let i = household.people.firstIndex(where: { $0.id == person.id }) else { return }
+            household.people[i] = person
+        }
+    }
+
+    private func edit(_ change: (inout FamilyHousehold) -> Void) {
+        guard var household = state.value else { return }
+        change(&household)
         if case let .saved(_, date, updating) = state {
             state = .saved(household, date: date, updating: updating)
         } else {

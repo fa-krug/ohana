@@ -9,8 +9,8 @@ struct FamilyHousehold: Codable, Hashable {
     let name: String
     let role: FamilyRole
     let selfId: String
-    let members: [FamilyMember]
-    let people: [FamilyPerson]
+    var members: [FamilyMember]
+    var people: [FamilyPerson]
     /// Open invites; empty for viewers.
     let invites: [FamilyInvite]
     let home: FamilyHome
@@ -53,6 +53,9 @@ struct FamilyMember: Codable, Hashable, Identifiable {
     let joinedAt: String
     /// Their `MemberColor` key; nil from an older server.
     var color: String?
+    /// Their profile picture (a path under the media root, `MemberPhoto.path`); nil: none, or an
+    /// older server.
+    var photo: String?
 
     var id: String { userId }
     var label: String { name.isEmpty ? email : name }
@@ -65,6 +68,8 @@ struct FamilyPerson: Codable, Hashable, Identifiable {
     let birthday: Day?
     /// Their `MemberColor` key; nil from an older server.
     var color: String?
+    /// Their profile picture (`MemberPhoto.path`); nil: none, or an older server.
+    var photo: String?
 }
 
 struct FamilyInvite: Codable, Hashable, Identifiable {

@@ -6,6 +6,7 @@ import { AuthError } from "@/lib/auth/errors";
 import { addDays, formatDate, isValidDate } from "@/lib/calendar/dates";
 import { createInvite } from "./invites";
 import { assertMemberColor, nextMemberColor } from "./member-colors";
+import { deletePhotoFile } from "./photos";
 import { type Actor, type Role, requireRole } from "./roles";
 
 /** A family member without an account (a child, a grandparent). */
@@ -15,6 +16,8 @@ export interface PersonDto {
   birthday: string | null;
   /** A key of MEMBER_COLORS. */
   color: string;
+  /** Their photo's path under MEDIA_ROOT (served at /api/images/<photo>), or null. */
+  photo: string | null;
   createdAt: Date;
 }
 
@@ -37,6 +40,7 @@ const personColumns = {
   name: familyPeople.name,
   birthday: familyPeople.birthday,
   color: familyPeople.color,
+  photo: familyPeople.photo,
   createdAt: familyPeople.createdAt,
 };
 
@@ -118,12 +122,13 @@ export function updatePerson(
     .get()!;
 }
 
-/** Removes someone without an account (and their open invite; their entry types become
- *  nobody's through the foreign key). */
+/** Removes someone without an account (and their open invite and photo; their entry types
+ *  become nobody's through the foreign key). */
 export function removePerson(db: Db, actor: Actor, familyId: string, personId: string): void {
   requireRole(db, actor, familyId, "editor");
-  assertPerson(db, familyId, personId);
+  const { photo } = assertPerson(db, familyId, personId);
   db.delete(familyPeople).where(eq(familyPeople.id, personId)).run();
+  deletePhotoFile(photo);
 }
 
 /** Everyone in the family by name, with and without an account, sorted: the choices for
@@ -131,14 +136,35 @@ export function removePerson(db: Db, actor: Actor, familyId: string, personId: s
 export function familyNames(
   db: Db,
   familyId: string,
-): { id: string; name: string; account: boolean; birthday: string | null; color: string }[] {
+): { id: string; name: string; account: boolean; birthday: string | null; color: string; photo: string | null }[] {
   const accounts = db
-    .select({ id: users.id, name: users.name, email: users.email, birthday: familyMembers.birthday, color: familyMembers.color })
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      birthday: familyMembers.birthday,
+      color: familyMembers.color,
+      photo: familyMembers.photo,
+    })
     .from(familyMembers)
     .innerJoin(users, eq(users.id, familyMembers.userId))
     .where(eq(familyMembers.familyId, familyId))
     .all()
-    .map((u) => ({ id: u.id, name: u.name.trim() || u.email.split("@")[0], account: true, birthday: u.birthday, color: u.color }));
-  const people = peopleOf(db, familyId).map((p) => ({ id: p.id, name: p.name, account: false, birthday: p.birthday, color: p.color }));
+    .map((u) => ({
+      id: u.id,
+      name: u.name.trim() || u.email.split("@")[0],
+      account: true,
+      birthday: u.birthday,
+      color: u.color,
+      photo: u.photo,
+    }));
+  const people = peopleOf(db, familyId).map((p) => ({
+    id: p.id,
+    name: p.name,
+    account: false,
+    birthday: p.birthday,
+    color: p.color,
+    photo: p.photo,
+  }));
   return [...accounts, ...people].sort((a, b) => a.name.localeCompare(b.name));
 }

@@ -14,10 +14,14 @@ export async function processToWebp(input: Buffer): Promise<Buffer> {
 
 /** Write a processed image and return its path relative to the media root. */
 export function writeRecipeImage(recipeId: string, webp: Buffer, now: Date): string {
-  const rel = `recipes/${recipeId}_${now.getTime()}.webp`;
+  return writeMediaFile(`recipes/${recipeId}_${now.getTime()}.webp`, webp);
+}
+
+/** Write `bytes` at `rel` under the media root (creating its folders); returns `rel`. */
+export function writeMediaFile(rel: string, bytes: Buffer): string {
   const abs = join(mediaRoot(), rel);
   mkdirSync(dirname(abs), { recursive: true });
-  writeFileSync(abs, webp);
+  writeFileSync(abs, bytes);
   return rel;
 }
 

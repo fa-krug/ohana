@@ -757,7 +757,7 @@ describe("calendar summary", () => {
       ["Kita zu", "2026-11-02", "2026-11-06"],
       ["Holiday", "2026-12-25", "2026-12-25"],
     ]);
-    expect(summary.upcoming[0].member).toEqual({ id: s.owner.id, name: s.owner.name.trim() || "owner", color: "blue" });
+    expect(summary.upcoming[0].member).toEqual({ id: s.owner.id, name: s.owner.name.trim() || "owner", color: "blue", photo: null });
     expect(summary.upcoming[0].color).toBe(typeShade(memberColorHex("blue"), 1));
     expect((await calendarSummary(s.db, f.id, "2026-11-07")).nextGap).toBeNull();
   });

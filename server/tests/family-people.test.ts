@@ -28,9 +28,9 @@ describe("members without an account", () => {
 
     updatePerson(db, { id: editor.id }, f.id, person.id, { name: "Mia Sophie", birthday: "2019-05-03" }, NOW);
     expect(familyNames(db, f.id).map(({ id: _, ...p }) => p)).toEqual([
-      { name: "Mia Sophie", account: false, birthday: "2019-05-03", color: "green" },
-      { name: "oma", account: true, birthday: null, color: "orange" },
-      { name: "Sascha", account: true, birthday: null, color: "blue" },
+      { name: "Mia Sophie", account: false, birthday: "2019-05-03", color: "green", photo: null },
+      { name: "oma", account: true, birthday: null, color: "orange", photo: null },
+      { name: "Sascha", account: true, birthday: null, color: "blue", photo: null },
     ]);
     removePerson(db, { id: editor.id }, f.id, person.id);
     expect(listPeople(db, { id: editor.id }, f.id)).toEqual([]);
@@ -79,7 +79,7 @@ describe("members without an account", () => {
     const user = await registerWithPassword(db, { email: "leo@x.test", name: "", password: "Tr0ub4dour&3", inviteCode: invite!.code }, NOW);
     expect(getRole(db, f.id, user.id)).toBe("viewer");
     expect(listPeople(db, { id: editor.id }, f.id)).toEqual([]);
-    expect(familyNames(db, f.id).find((n) => n.name === "Leo")).toEqual({ id: user.id, name: "Leo", account: true, birthday: "2010-04-01", color: "orange" });
+    expect(familyNames(db, f.id).find((n) => n.name === "Leo")).toEqual({ id: user.id, name: "Leo", account: true, birthday: "2010-04-01", color: "orange", photo: null });
   });
 
   it("lose their open invite when removed, and keep a named account's name", () => {

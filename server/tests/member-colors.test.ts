@@ -145,7 +145,7 @@ describe("entry types and members", () => {
       name: "Vacation",
       color: typeShade(blue, 1),
       icon: "beach.umbrella",
-      member: { id: s.editor.id, name: "Anna", color: "blue" },
+      member: { id: s.editor.id, name: "Anna", color: "blue", photo: null },
     });
   });
 

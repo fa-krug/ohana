@@ -7,6 +7,7 @@ import { hasUsablePassword } from "@/lib/auth/password";
 import { assertEmailFree } from "@/lib/auth/register";
 import { issueSetupLink } from "@/lib/auth/setup-link";
 import { deleteUserTokens } from "@/lib/auth/tokens";
+import { deletePhotoFile } from "@/lib/families/photos";
 
 export interface AdminUserDto {
   id: string;
@@ -106,16 +107,17 @@ export function deleteUser(db: Db, actorId: string, userId: string): void {
   if (userId === actorId) throw new AuthError(400, "You can't delete your own account.");
   const user = db.select().from(users).where(eq(users.id, userId)).get();
   if (!user) throw new AuthError(404, "User not found.");
-  db.transaction((tx) => {
-    const familyIds = tx
-      .select({ familyId: familyMembers.familyId })
+  const photos = db.transaction((tx) => {
+    const memberships = tx
+      .select({ familyId: familyMembers.familyId, photo: familyMembers.photo })
       .from(familyMembers)
       .where(eq(familyMembers.userId, userId))
-      .all()
-      .map((m) => m.familyId);
+      .all();
     tx.delete(users).where(eq(users.id, userId)).run(); // cascades tokens, passkeys, memberships
-    for (const familyId of familyIds) promoteIfNoEditor(tx, familyId);
+    for (const { familyId } of memberships) promoteIfNoEditor(tx, familyId);
+    return memberships.map((m) => m.photo);
   });
+  for (const photo of photos) deletePhotoFile(photo);
 }
 
 function promoteIfNoEditor(db: Db, familyId: string): void {

@@ -34,6 +34,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import type { Ctx } from "@/lib/api/family-api";
 import { HttpError, json, readBody } from "@/lib/api/http";
+import { uploadedImage } from "@/lib/api/upload";
 import { type AiEnv, defaultAiEnv, familyModel } from "@/lib/assistant/routes";
 import { AuthError } from "@/lib/auth/errors";
 import type { Db } from "@/lib/db";
@@ -43,7 +44,6 @@ import { importRecipe, importRecipeSchema, previewImport } from "./ai/import";
 import { deleteImport, enqueueImport, listImports, retryImport } from "./ai/import-queue";
 import { generateRecipeImage } from "./ai/recipes";
 import { mealsAi } from "./ai/status";
-import { ALLOWED_UPLOAD_TYPES, MAX_UPLOAD_BYTES } from "./images/config";
 import { countRecipes, getRecipe, listIngredients, listRecipes, listTags, listUnits } from "./queries/recipes";
 import { bulkCreateRecipes } from "./recipes/bulk-create";
 import { removeRecipeImage, setRecipeImage } from "./recipes/images";
@@ -299,29 +299,4 @@ function imageOf(db: Db, familyId: string, id: string): string {
       .where(and(eq(recipes.id, id), eq(recipes.familyId, familyId)))
       .get()?.image ?? ""
   );
-}
-
-/** The uploaded photo: the body itself (Content-Type image/…) or a form's "image" file, with
- *  uploadRecipeImageAction's checks. */
-async function uploadedImage(req: Request): Promise<Buffer> {
-  const type = (req.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
-  let fileType: string;
-  let bytes: Buffer;
-  if (type === "multipart/form-data") {
-    const file = (await req.formData().catch(() => null))?.get("image");
-    if (!(file instanceof File)) throw new AuthError(400, "No file provided");
-    fileType = file.type;
-    if (file.size > MAX_UPLOAD_BYTES) throw new AuthError(400, "File too large (max 5MB)");
-    bytes = Buffer.from(await file.arrayBuffer());
-  } else {
-    fileType = type;
-    if (!ALLOWED_UPLOAD_TYPES.has(fileType)) throw new AuthError(400, "Invalid file type");
-    const length = Number(req.headers.get("content-length") ?? 0);
-    if (length > MAX_UPLOAD_BYTES) throw new AuthError(400, "File too large (max 5MB)");
-    bytes = Buffer.from(await req.arrayBuffer());
-  }
-  if (!ALLOWED_UPLOAD_TYPES.has(fileType)) throw new AuthError(400, "Invalid file type");
-  if (bytes.length === 0) throw new AuthError(400, "No file provided");
-  if (bytes.length > MAX_UPLOAD_BYTES) throw new AuthError(400, "File too large (max 5MB)");
-  return bytes;
 }

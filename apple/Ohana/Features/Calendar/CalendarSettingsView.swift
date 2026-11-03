@@ -270,6 +270,9 @@ struct CalendarTypeEditor: View {
     /// The icon picked on this page; until one is, the type keeps its own (or its role's default,
     /// following the role chosen here).
     @State private var pickedIcon: String?
+    /// Whether an icon was tapped here: until then a renamed type that shows its role's icon takes
+    /// the new name's best suggestion.
+    @State private var iconTouched = false
     @State private var away = false
     @State private var confirmDelete = false
     /// The fields hold the type's values (only once: coming back to the page would reset them).
@@ -279,6 +282,7 @@ struct CalendarTypeEditor: View {
         Form {
             Section {
                 TextField("Name", text: $name)
+                    .onChange(of: name) { _, value in suggestIcon(for: value) }
             } header: {
                 Text("Name")
             } footer: {
@@ -313,7 +317,8 @@ struct CalendarTypeEditor: View {
                     CalendarTypeBadge(name: name, color: previewHex, icon: icon, member: store.member(memberId), size: 28)
                 }
                 CalendarSymbolGrid(symbols: CalendarSymbol.typeIcons,
-                                   selection: Binding(get: { icon }, set: { pickedIcon = $0 }))
+                                   selection: Binding(get: { icon }, set: { pickedIcon = $0; iconTouched = true }),
+                                   suggested: CalendarSymbol.suggestions(for: name))
             } header: {
                 Text("Icon")
             }
@@ -366,7 +371,7 @@ struct CalendarTypeEditor: View {
         } label: {
             HStack(spacing: 12) {
                 if let member {
-                    FamilyAvatar(name: member.name, tint: MemberColor.color(member.color), size: 28)
+                    FamilyAvatar(name: member.name, tint: MemberColor.color(member.color), photo: member.photo, size: 28)
                     Text(member.name).foregroundStyle(.primary)
                 } else {
                     Image(systemName: "person.slash")
@@ -403,6 +408,11 @@ struct CalendarTypeEditor: View {
     }
 
     private var icon: String { pickedIcon ?? keptIcon }
+
+    private func suggestIcon(for value: String) {
+        guard loaded, !iconTouched, type.icon == type.role.defaultIcon, value != type.name else { return }
+        pickedIcon = CalendarSymbol.suggestions(for: value).first
+    }
 
     private var hasChanges: Bool {
         loaded && (name.trimmingCharacters(in: .whitespaces) != type.name || memberId != type.memberId

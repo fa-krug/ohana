@@ -37,7 +37,7 @@ export function publicFamily({ family, access }: Loaded) {
 }
 
 /** The family's accounts and people as the calendar shows them (familyNames' order). */
-export type FamilyMemberColor = { id: string; name: string; account: boolean; color: string };
+export type FamilyMemberColor = { id: string; name: string; account: boolean; color: string; photo: string | null };
 
 /** What the calendar shows next to the entries: events, the members' birthdays and the
  *  members with their colors. */
@@ -59,7 +59,7 @@ export function dayExtras(db: Db, familyId: string, range: Range, now?: Date): D
     range: events,
     events: listOccurrences(db, familyId, events),
     birthdays: range.from && range.to ? birthdaysIn(names, range.from, range.to) : [],
-    members: names.map(({ id, name, account, color }) => ({ id, name, account, color })),
+    members: names.map(({ id, name, account, color, photo }) => ({ id, name, account, color, photo })),
   };
 }
 

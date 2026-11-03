@@ -210,38 +210,56 @@ struct CalendarTypeChips: View {
         }
     }
 
-    /// A chip of the type's badge: the type's color around it and tinted while every selected day has it.
+    /// A chip of the type's badge: the type's color around it and tinted while every selected day
+    /// has it. A tap toggles it; its name, member and counts are in the tip (hover on the Mac, a
+    /// long press elsewhere, which doesn't toggle it) and the accessibility label. Not a `Button`:
+    /// a button would also fire when a long press ends.
     private func chip(_ type: CalendarEntryType, index: Int, stats: CalendarTypeStats) -> some View {
         let active = store.selectionHas(type.id)
         let color = Color(calendarHex: type.color)
-        return Button {
-            store.toggleOnSelection(type.id)
-        } label: {
-            // Icons only: the name and the counts are in the help and the accessibility label.
-            CalendarTypeBadge(type: type, member: store.member(of: type), size: 24, help: false)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 7)
-                .frame(minHeight: 36)
-                .background(active ? color.opacity(0.28) : Color.primary.opacity(0.06), in: .capsule)
-                .overlay(Capsule().strokeBorder(active ? color : Color.primary.opacity(0.12), lineWidth: active ? 1.5 : 1))
-                .contentShape(.capsule)
-        }
-        .buttonStyle(.plain)
-        .disabled(store.readOnly)
-        .help(chipHelp(type, index: index, stats: stats))
-        .accessibilityLabel(store.member(of: type).map { "\(type.name) (\($0.name))" } ?? type.name)
-        .accessibilityValue(CalendarText.workdays(stats.workdays))
-        .accessibilityAddTraits(active ? .isSelected : [])
+        let member = store.member(of: type)
+        return CalendarTypeBadge(type: type, member: member, size: 24, help: false)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 7)
+            .frame(minHeight: 36)
+            .background(active ? color.opacity(0.28) : Color.primary.opacity(0.06), in: .capsule)
+            .overlay(Capsule().strokeBorder(active ? color : Color.primary.opacity(0.12), lineWidth: active ? 1.5 : 1))
+            .contentShape(.capsule)
+            #if os(iOS)
+            .hoverEffect()
+            #endif
+            .onTapGesture { toggle(type) }
+            .longPressTip(chipHelp(type, index: index, stats: stats))
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(member.map { "\(type.name) (\($0.name))" } ?? type.name)
+            .accessibilityValue(CalendarText.workdays(stats.workdays))
+            .accessibilityAddTraits(store.readOnly ? [] : .isButton)
+            .accessibilityAddTraits(active ? .isSelected : [])
+            .accessibilityAction { toggle(type) }
     }
 
+    private func toggle(_ type: CalendarEntryType) {
+        guard !store.readOnly else { return }
+        store.toggleOnSelection(type.id)
+    }
+
+    /// "Holiday (Anna) – Vacation: 12 days in 2026, 9 workdays", on the Mac with how to toggle it.
     private func chipHelp(_ type: CalendarEntryType, index: Int, stats: CalendarTypeStats) -> String {
         let name = store.member(of: type).map { "\(type.name) (\($0.name))" } ?? type.name
         var text = String(localized: "\(name) – \(type.role.title): \(CalendarText.days(stats.days)) in \(String(store.year)), \(CalendarText.workdays(stats.workdays))")
-        if !store.readOnly && index < 9 {
+        if Self.tipsHover && !store.readOnly && index < 9 {
             text += "\n" + String(localized: "Click (or press \(index + 1)) to toggle it on the selected days")
         }
         return text
     }
+
+    /// Whether the tip shows on hover (the Mac), where it says how to toggle; elsewhere a long
+    /// press shows it, after which one knows. (Not `#if`: the iOS build extracts the strings.)
+    #if os(macOS)
+    private static let tipsHover = true
+    #else
+    private static let tipsHover = false
+    #endif
 }
 
 /// "No entry types for 2027 yet", with copying from the closest year.

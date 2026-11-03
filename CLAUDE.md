@@ -107,7 +107,14 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `pickMemberColor`: the first unused, else the least used; `member-colors.ts`
   `nextMemberColor`), `family_members.color` / `family_people.color`; new members get a free
   one, accepting a person's invite keeps theirs; members change their own, editors anyone's
-  (`PATCH /household/members/{id}` / `people/{id}` `color`; duplicates allowed).
+  (`PATCH /household/members/{id}` / `people/{id}` `color`; duplicates allowed). **Photos**
+  (`photos.ts`): `family_members.photo` / `family_people.photo` (path under `MEDIA_ROOT`,
+  `members/<familyId>/<id>_<ms>.webp`, 512² WebP cropped by sharp's attention; `photo` in every
+  member DTO, the app loads `/api/images/<photo>`, `serveImage` gives it to the family's members
+  only); `PUT` / `DELETE /household/members/{id}/photo` (own, editors anyone's) and
+  `…/people/{id}/photo` (editors), raw image or multipart `image` (`lib/api/upload.ts`, shared
+  with recipe photos); replacing / removing a member, person or family deletes the files, accepting
+  a person's invite keeps theirs.
 - **Family REST API** (`lib/api/family-api.ts`, family-planner's `handler.ts`): `http/api.ts`
   runs `createFamilyApi([...routes])` for `/api/v1/families/{id}[/…]`; the first route is
   `handleDisabledModules` (`lib/api/disabled-modules.ts`).
@@ -530,8 +537,10 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   page's text via `Preprocess.js`). Code both use is in `apple/Shared/` (`Keychain`,
   `SharedConnection`): no App Group — the app mirrors the server URL and selected family into the
   shared Keychain access group next to the token, and removes them on sign out.
-  Member colors: `DesignSystem/MemberColor.swift` (the server's palette by key, `FamilyAvatar`,
-  `MemberIcon`: the small tinted avatar); a member's name as text only where there is room (the
+  Member colors: `DesignSystem/MemberColor.swift` (the server's palette by key, `FamilyAvatar`
+  (the member's photo when there is one, `RemoteImage` over the initials), `MemberIcon`: the small
+  tinted avatar, `MemberPhoto`: path, the upload shrunk to ≤ 1024 px JPEG; set on
+  `FamilyMemberPage` with a `PhotosPicker` or a file); a member's name as text only where there is room (the
   type editor's member picker, Apple Calendar runs titled "Type (Member)"), elsewhere (type
   chips, settings rows, the overview) the icon only; grid cells are the plain color. The color is
   chosen on `FamilyMemberPage`; a type's member in `CalendarTypeEditor` (changing it or the order
@@ -539,7 +548,13 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   (`Features/Calendar/CalendarSymbols.swift`): the member's initials, then its SF Symbol on its
   color (`CalendarRole.defaultIcon` until one is picked in the editor's `CalendarSymbolGrid`); a
   note's icon is an SF Symbol too (`CalendarSymbol.noteIcons`), tinted in the theme color (on a
-  type-filled cell the cell's ink).
+  type-filled cell the cell's ink). The pickers' symbols, their names and the words (German and
+  English, folded) that suggest them are `CalendarSymbol.catalog` (`CalendarSymbolCatalog.swift`);
+  `suggestions(for:)` (an emoji in the text first, then keywords: ≥ 5 letters anywhere, shorter at
+  a word's start) fills the grid's Suggested row, and a new comment / a renamed type showing its
+  role's icon takes the best one until an icon is tapped. Tooltips on touch: `.longPressTip(_:)`
+  (`DesignSystem/LongPressTip.swift`, a popover bubble after a long press, `.help` on the Mac;
+  not inside a Button: the selection bar's type chips are tap-gesture views for that).
   Calendar events in the app: `CalendarEvent` is an occurrence (list identity `uid` = "id@occurrence"),
   `CalendarEventSeries` the stored form; `RepeatRule` (+`Text`: summaries, the editor's presets)
   parses / writes RRULEs; `CalendarEventEditor` / `CalendarEventRepeatViews` (Apple-like Repeat and End

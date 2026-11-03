@@ -157,7 +157,8 @@ struct CalendarEventRef: Hashable {
     var day: Day
 }
 
-/// A day's entry types as tinted capsules, each with its double icon (`CalendarTypeBadge`).
+/// A day's entry types as tinted capsules, each with its double icon (`CalendarTypeBadge`); whose
+/// type it is in the tip (hover, or a long press).
 struct CalendarDayTypes: View {
     let types: [CalendarEntryType]
     let store: CalendarStore
@@ -165,8 +166,9 @@ struct CalendarDayTypes: View {
     var body: some View {
         HStack(spacing: 6) {
             ForEach(types) { type in
+                let badge = CalendarTypeBadge(type: type, member: store.member(of: type), size: 16, help: false)
                 HStack(spacing: 4) {
-                    CalendarTypeBadge(type: type, member: store.member(of: type), size: 16)
+                    badge
                     // The badge reads the name (with the member's).
                     Text(type.name).font(.subheadline).lineLimit(1).accessibilityHidden(true)
                 }
@@ -174,6 +176,8 @@ struct CalendarDayTypes: View {
                 .padding(.trailing, 8)
                 .padding(.vertical, 3)
                 .background(Color(calendarHex: type.color).opacity(0.18), in: .capsule)
+                .contentShape(.capsule)
+                .longPressTip(badge.label)
             }
         }
     }

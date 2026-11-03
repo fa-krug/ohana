@@ -2142,6 +2142,16 @@
         }
       }
     },
+    "Alarm": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wecker"
+          }
+        }
+      }
+    },
     "All Chores": {
       "localizations": {
         "de": {
@@ -2592,6 +2602,16 @@
         }
       }
     },
+    "Arts and crafts": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Basteln"
+          }
+        }
+      }
+    },
     "As table": {
       "localizations": {
         "de": {
@@ -2924,12 +2944,32 @@
         }
       }
     },
+    "Balloons": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Luftballons"
+          }
+        }
+      }
+    },
     "Bandage": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Pflaster"
+          }
+        }
+      }
+    },
+    "Basketball": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Basketball"
           }
         }
       }
@@ -2980,6 +3020,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Am besten ein eigener Kalender: Jeder Termin darin kommt zu Ohana."
+          }
+        }
+      }
+    },
+    "Bicycle": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fahrrad"
+          }
+        }
+      }
+    },
+    "Bird": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vogel"
           }
         }
       }
@@ -3164,6 +3224,16 @@
         }
       }
     },
+    "Box": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Karton"
+          }
+        }
+      }
+    },
     "Briefcase": {
       "localizations": {
         "de": {
@@ -3210,6 +3280,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Browser abgemeldet."
+          }
+        }
+      }
+    },
+    "Bus": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bus"
           }
         }
       }
@@ -3374,6 +3454,16 @@
         }
       }
     },
+    "Cat": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Katze"
+          }
+        }
+      }
+    },
     "Categories": {
       "localizations": {
         "de": {
@@ -3400,6 +3490,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kategorie %lld"
+          }
+        }
+      }
+    },
+    "Change Photo": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto ändern"
           }
         }
       }
@@ -3714,6 +3814,16 @@
         }
       }
     },
+    "Choose Photo": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto auswählen"
+          }
+        }
+      }
+    },
     "Choose a Reminders list for the shopping list in Ohana first: Meals → Plan → Shopping List.": {
       "localizations": {
         "de": {
@@ -3780,6 +3890,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aufgaben"
+          }
+        }
+      }
+    },
+    "Cinema": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kino"
           }
         }
       }
@@ -3904,12 +4024,42 @@
         }
       }
     },
+    "Clock": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uhr"
+          }
+        }
+      }
+    },
     "Close": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Schließen"
+          }
+        }
+      }
+    },
+    "Clothes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kleidung"
+          }
+        }
+      }
+    },
+    "Coffee": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaffee"
           }
         }
       }
@@ -4684,6 +4834,16 @@
         }
       }
     },
+    "Cross": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kreuz"
+          }
+        }
+      }
+    },
     "Cuisine": {
       "localizations": {
         "de": {
@@ -4770,6 +4930,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Täglich"
+          }
+        }
+      }
+    },
+    "Dance": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tanzen"
           }
         }
       }
@@ -5324,6 +5494,16 @@
         }
       }
     },
+    "Dentist": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zahnarzt"
+          }
+        }
+      }
+    },
     "Dermatologist": {
       "localizations": {
         "de": {
@@ -5504,12 +5684,32 @@
         }
       }
     },
+    "Document": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dokument"
+          }
+        }
+      }
+    },
     "Doesn’t notify you": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Benachrichtigt dich nicht"
+          }
+        }
+      }
+    },
+    "Dog": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hund"
           }
         }
       }
@@ -6564,6 +6764,16 @@
         }
       }
     },
+    "Eyes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Augen"
+          }
+        }
+      }
+    },
     "Failed": {
       "localizations": {
         "de": {
@@ -6680,6 +6890,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fermentieren"
+          }
+        }
+      }
+    },
+    "Ferry": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fähre"
           }
         }
       }
@@ -6814,6 +7034,16 @@
         }
       }
     },
+    "Fireworks": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Feuerwerk"
+          }
+        }
+      }
+    },
     "First aid kit": {
       "localizations": {
         "de": {
@@ -6860,6 +7090,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fahne"
+          }
+        }
+      }
+    },
+    "Flame": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flamme"
           }
         }
       }
@@ -7044,6 +7284,16 @@
         }
       }
     },
+    "Games": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spiele"
+          }
+        }
+      }
+    },
     "General": {
       "localizations": {
         "de": {
@@ -7214,6 +7464,36 @@
         }
       }
     },
+    "Guitar": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gitarre"
+          }
+        }
+      }
+    },
+    "Hairdresser": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Friseur"
+          }
+        }
+      }
+    },
+    "Hare": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hase"
+          }
+        }
+      }
+    },
     "Has an Ohana account already? Add them with the email of their account.": {
       "localizations": {
         "de": {
@@ -7284,12 +7564,32 @@
         }
       }
     },
+    "Hiking": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wandern"
+          }
+        }
+      }
+    },
     "History": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Verlauf"
+          }
+        }
+      }
+    },
+    "Holiday home": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ferienhaus"
           }
         }
       }
@@ -8198,6 +8498,16 @@
         }
       }
     },
+    "Key": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schlüssel"
+          }
+        }
+      }
+    },
     "Keyboard": {
       "localizations": {
         "de": {
@@ -8244,6 +8554,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sprache"
+          }
+        }
+      }
+    },
+    "Laptop": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Laptop"
           }
         }
       }
@@ -8384,6 +8704,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Damit kann der Assistent im Web suchen (z. B. nach Schulferien). Ohne kann er trotzdem Seiten lesen, die du verlinkst."
+          }
+        }
+      }
+    },
+    "Letter": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brief"
           }
         }
       }
@@ -8748,6 +9078,16 @@
         }
       }
     },
+    "Martial arts": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kampfsport"
+          }
+        }
+      }
+    },
     "Meal": {
       "localizations": {
         "de": {
@@ -8838,6 +9178,26 @@
         }
       }
     },
+    "Medal": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Medaille"
+          }
+        }
+      }
+    },
+    "Meeting": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Treffen"
+          }
+        }
+      }
+    },
     "Member": {
       "localizations": {
         "de": {
@@ -8884,6 +9244,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bereiche"
+          }
+        }
+      }
+    },
+    "Money": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geld"
           }
         }
       }
@@ -8954,6 +9324,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Das meiste ging an %@"
+          }
+        }
+      }
+    },
+    "Mountains": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Berge"
           }
         }
       }
@@ -9644,6 +10024,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nächstes Jahr (Bild ↓)"
+          }
+        }
+      }
+    },
+    "Night": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nacht"
           }
         }
       }
@@ -11656,6 +12046,16 @@
         }
       }
     },
+    "Payment": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zahlung"
+          }
+        }
+      }
+    },
     "Pediatrician · Leo": {
       "localizations": {
         "de": {
@@ -11716,6 +12116,16 @@
         }
       }
     },
+    "Phone call": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anruf"
+          }
+        }
+      }
+    },
     "Photo": {
       "localizations": {
         "de": {
@@ -11752,6 +12162,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Foto entfernt"
+          }
+        }
+      }
+    },
+    "Photo removed.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto entfernt."
+          }
+        }
+      }
+    },
+    "Photo saved.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto gespeichert."
+          }
+        }
+      }
+    },
+    "Piano": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klavier"
           }
         }
       }
@@ -11896,6 +12336,16 @@
         }
       }
     },
+    "Place": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ort"
+          }
+        }
+      }
+    },
     "Plan": {
       "localizations": {
         "de": {
@@ -11972,6 +12422,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Plant das Essen"
+          }
+        }
+      }
+    },
+    "Popcorn": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Popcorn"
           }
         }
       }
@@ -12236,6 +12696,16 @@
         }
       }
     },
+    "Public building": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Amt"
+          }
+        }
+      }
+    },
     "Purple": {
       "localizations": {
         "de": {
@@ -12272,6 +12742,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Setzt es ins Nachrichtenfeld"
+          }
+        }
+      }
+    },
+    "Puzzle": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Puzzle"
           }
         }
       }
@@ -12332,6 +12812,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Eingereiht: die Suche läuft in ein paar Sekunden."
+          }
+        }
+      }
+    },
+    "Rain": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Regen"
           }
         }
       }
@@ -13036,6 +13526,16 @@
         }
       }
     },
+    "Repairs": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reparatur"
+          }
+        }
+      }
+    },
     "Repeat": {
       "localizations": {
         "de": {
@@ -13296,6 +13796,16 @@
         }
       }
     },
+    "Riding": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reiten"
+          }
+        }
+      }
+    },
     "Right": {
       "localizations": {
         "de": {
@@ -13346,6 +13856,16 @@
         }
       }
     },
+    "Rolling suitcase": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rollkoffer"
+          }
+        }
+      }
+    },
     "Rows": {
       "localizations": {
         "de": {
@@ -13362,6 +13882,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zeilen vor der Tabelle"
+          }
+        }
+      }
+    },
+    "Rubbish": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Müll"
           }
         }
       }
@@ -14556,6 +15086,16 @@
         }
       }
     },
+    "Shopping bag": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einkaufstasche"
+          }
+        }
+      }
+    },
     "Shopping day": {
       "localizations": {
         "de": {
@@ -14936,6 +15476,26 @@
         }
       }
     },
+    "Singing": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Singen"
+          }
+        }
+      }
+    },
+    "Skiing": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skifahren"
+          }
+        }
+      }
+    },
     "Skip this doctor with this reason for the visit in this search from now on": {
       "localizations": {
         "de": {
@@ -14952,6 +15512,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wochenenden auslassen"
+          }
+        }
+      }
+    },
+    "Sleep": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schlafen"
           }
         }
       }
@@ -15134,6 +15704,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sous Vide"
+          }
+        }
+      }
+    },
+    "Special": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Besonderes"
           }
         }
       }
@@ -15520,6 +16100,16 @@
         }
       }
     },
+    "Stroller": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kinderwagen"
+          }
+        }
+      }
+    },
     "Subcategory of %@": {
       "localizations": {
         "de": {
@@ -15536,6 +16126,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Schlag Kategorien für unsere Finanzen vor und leg sie an."
+          }
+        }
+      }
+    },
+    "Suggested": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorschläge"
           }
         }
       }
@@ -15646,6 +16246,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tauschen …"
+          }
+        }
+      }
+    },
+    "Swimming": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schwimmen"
           }
         }
       }
@@ -15870,12 +16480,42 @@
         }
       }
     },
+    "Teddy bear": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teddybär"
+          }
+        }
+      }
+    },
     "Temperature (°C)": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Temperatur (°C)"
+          }
+        }
+      }
+    },
+    "Tennis": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tennis"
+          }
+        }
+      }
+    },
+    "Tent": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zelt"
           }
         }
       }
@@ -16610,6 +17250,16 @@
         }
       }
     },
+    "Theatre": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Theater"
+          }
+        }
+      }
+    },
     "Their families stay.": {
       "localizations": {
         "de": {
@@ -16956,6 +17606,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dieses Jahr"
+          }
+        }
+      }
+    },
+    "Ticket": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ticket"
           }
         }
       }
@@ -17320,12 +17980,42 @@
         }
       }
     },
+    "Tree": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Baum"
+          }
+        }
+      }
+    },
     "Tries again": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Versucht es erneut"
+          }
+        }
+      }
+    },
+    "Trip": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausflug"
+          }
+        }
+      }
+    },
+    "Trophy": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pokal"
           }
         }
       }
@@ -17406,6 +18096,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Arten übernommen."
+          }
+        }
+      }
+    },
+    "Umbrella": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Regenschirm"
           }
         }
       }
@@ -17710,6 +18410,16 @@
         }
       }
     },
+    "Vaccination": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impfung"
+          }
+        }
+      }
+    },
     "Valid until": {
       "localizations": {
         "de": {
@@ -17776,6 +18486,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ansehen"
+          }
+        }
+      }
+    },
+    "Visit": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Besuch"
           }
         }
       }
@@ -18300,6 +19020,16 @@
         }
       }
     },
+    "Wine": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wein"
+          }
+        }
+      }
+    },
     "With a keyboard, Return sends and Shift-Return starts a new line. Attach, paste or drop screenshots and files.": {
       "localizations": {
         "de": {
@@ -18360,6 +19090,16 @@
         }
       }
     },
+    "Workout": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Training"
+          }
+        }
+      }
+    },
     "Worth a look": {
       "localizations": {
         "de": {
@@ -18376,6 +19116,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Einen Blick wert: %@"
+          }
+        }
+      }
+    },
+    "Writing": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schreiben"
           }
         }
       }
@@ -18426,6 +19176,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Gestern"
+          }
+        }
+      }
+    },
+    "Yoga": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yoga"
           }
         }
       }

@@ -179,8 +179,10 @@ struct CalendarSelectionBar: View {
                 Button {
                     actions.showDetails()
                 } label: {
+                    // The chevron at the trailing edge, however long the title is.
                     HStack(spacing: 4) {
                         selection(days)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         Image(systemName: "chevron.right")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.tertiary)

@@ -5,76 +5,41 @@ import UIKit
 import AppKit
 #endif
 
-/// The SF Symbols a calendar type or a day's note can have: curated lists to pick from, and their
-/// names in words (VoiceOver, the pickers' labels). Types and notes store the symbol's name.
+/// The SF Symbols a calendar type or a day's note can have: curated lists to pick from, their
+/// names in words (VoiceOver, the pickers' labels) and suggestions by a name. Types and notes store
+/// the symbol's name.
 enum CalendarSymbol {
     /// For types: the roles' defaults first, then what a type of days may be about.
     static let typeIcons: [String] = CalendarRole.allCases.map(\.defaultIcon) + [
-        "beach.umbrella", "airplane", "suitcase", "house", "building.2", "briefcase", "graduationcap", "backpack",
-        "figure.and.child.holdinghands", "cross.case", "bandage", "pills", "thermometer.medium", "stethoscope",
-        "bed.double", "car", "tram", "gift", "party.popper", "star", "heart", "flag", "calendar", "books.vertical",
-        "sportscourt", "music.note", "leaf", "snowflake", "pawprint",
+        "beach.umbrella", "airplane", "suitcase", "suitcase.rolling", "house.lodge", "tent", "mountain.2", "map",
+        "house", "building.2", "building.columns", "briefcase", "laptopcomputer", "graduationcap", "backpack",
+        "books.vertical", "figure.and.child.holdinghands", "figure.2.and.child.holdinghands", "teddybear", "stroller",
+        "person.2", "cross.case", "stethoscope", "bandage", "pills", "syringe", "thermometer.medium", "mouth",
+        "bed.double", "moon.zzz", "car", "bus", "tram", "bicycle", "gift", "party.popper", "star", "heart", "flag",
+        "calendar", "clock", "hourglass", "sportscourt", "figure.run", "soccerball", "figure.pool.swim",
+        "figure.skiing.downhill", "music.note", "theatermasks", "paintpalette", "wrench.and.screwdriver", "shippingbox",
+        "leaf", "tree", "snowflake", "pawprint",
     ]
 
     /// For a day's note.
     static let noteIcons: [String] = [
-        "star", "heart", "gift", "birthday.cake", "party.popper", "flag", "bell", "exclamationmark.circle",
-        "info.circle", "pin", "house", "car", "airplane", "tram", "figure.walk", "figure.run", "sportscourt",
-        "soccerball", "music.note", "book", "graduationcap", "briefcase", "cross.case", "pills", "stethoscope",
-        "cart", "fork.knife", "camera", "pawprint", "leaf", "sun.max", "snowflake",
+        "star", "heart", "gift", "birthday.cake", "party.popper", "balloon.2", "sparkles", "fireworks", "tree", "hare",
+        "flame", "moon.stars", "cross", "flag", "bell", "alarm", "clock", "hourglass", "exclamationmark.circle",
+        "info.circle", "questionmark.circle", "checkmark.circle", "pin", "mappin", "house", "key", "person.2",
+        "person.3", "figure.and.child.holdinghands", "figure.2.and.child.holdinghands", "teddybear", "stroller",
+        "car", "bus", "tram", "bicycle", "airplane", "ferry", "suitcase", "beach.umbrella", "tent", "mountain.2", "map",
+        "figure.walk", "figure.run", "figure.hiking", "figure.pool.swim", "figure.skiing.downhill", "figure.yoga",
+        "figure.equestrian.sports", "figure.martial.arts", "figure.socialdance", "sportscourt", "soccerball",
+        "basketball", "tennis.racket", "dumbbell", "trophy", "medal", "music.note", "music.mic", "guitars",
+        "pianokeys", "theatermasks", "ticket", "film", "popcorn", "gamecontroller", "puzzlepiece", "paintpalette",
+        "camera", "book", "pencil", "backpack", "graduationcap", "building.columns", "briefcase", "laptopcomputer",
+        "phone", "envelope", "doc.text", "cross.case", "stethoscope", "pills", "syringe", "bandage",
+        "thermometer.medium", "mouth", "eye", "bed.double", "cart", "bag", "eurosign", "creditcard", "scissors",
+        "tshirt", "wrench.and.screwdriver", "shippingbox", "trash", "fork.knife", "cup.and.saucer", "wineglass",
+        "pawprint", "dog", "cat", "bird", "leaf", "sun.max", "cloud.rain", "umbrella", "snowflake",
     ]
 
-    /// The symbol's name in words; for one not in the lists its name, readable.
-    static func title(_ name: String) -> String {
-        switch name {
-        case "tag": String(localized: "Tag")
-        case "exclamationmark.triangle": String(localized: "Warning")
-        case "checkmark.shield": String(localized: "Shield")
-        case "sun.max": String(localized: "Sun")
-        case "beach.umbrella": String(localized: "Beach umbrella")
-        case "airplane": String(localized: "Airplane")
-        case "suitcase": String(localized: "Suitcase")
-        case "house": String(localized: "House")
-        case "building.2": String(localized: "Office")
-        case "briefcase": String(localized: "Briefcase")
-        case "graduationcap": String(localized: "Graduation cap")
-        case "backpack": String(localized: "Backpack")
-        case "figure.and.child.holdinghands": String(localized: "Adult and child")
-        case "cross.case": String(localized: "First aid kit")
-        case "bandage": String(localized: "Bandage")
-        case "pills": String(localized: "Pills")
-        case "thermometer.medium": String(localized: "Thermometer")
-        case "stethoscope": String(localized: "Stethoscope")
-        case "bed.double": String(localized: "Bed")
-        case "car": String(localized: "Car")
-        case "tram": String(localized: "Train")
-        case "gift": String(localized: "Gift")
-        case "party.popper": String(localized: "Party")
-        case "star": String(localized: "Star")
-        case "heart": String(localized: "Heart")
-        case "flag": String(localized: "Flag")
-        case "calendar": String(localized: "Calendar")
-        case "books.vertical": String(localized: "Books")
-        case "sportscourt": String(localized: "Sports")
-        case "music.note": String(localized: "Music")
-        case "leaf": String(localized: "Leaf")
-        case "snowflake": String(localized: "Snowflake")
-        case "pawprint": String(localized: "Paw print")
-        case "birthday.cake": String(localized: "Birthday cake")
-        case "bell": String(localized: "Bell")
-        case "exclamationmark.circle": String(localized: "Important")
-        case "info.circle": String(localized: "Info")
-        case "pin": String(localized: "Pin")
-        case "figure.walk": String(localized: "Walk")
-        case "figure.run": String(localized: "Run")
-        case "soccerball": String(localized: "Football")
-        case "book": String(localized: "Reading")
-        case "cart": String(localized: "Shopping")
-        case "fork.knife": String(localized: "Meal")
-        case "camera": String(localized: "Camera")
-        default: name.replacingOccurrences(of: ".", with: " ")
-        }
-    }
+    // Their names in words and the words that suggest them: `catalog`, CalendarSymbolCatalog.swift.
 
     private static var known: [String: Bool] = [:]
 
@@ -97,8 +62,9 @@ enum CalendarSymbol {
     }
 }
 
-/// A type as a double icon: its member's initials (`MemberIcon`; none without a member), then the
-/// type's own symbol in a circle of the same size, filled with its color. Reads "Type (Member)".
+/// A type as a double icon: its member's avatar (their photo or initials, as `MemberIcon`; none
+/// without a member), then the type's own symbol in a circle of the same size, filled with its
+/// color. Reads "Type (Member)".
 struct CalendarTypeBadge: View {
     let name: String
     /// "#rrggbb".
@@ -138,7 +104,7 @@ struct CalendarTypeBadge: View {
     private var icons: some View {
         HStack(spacing: max(2, size * 0.12)) {
             if let member {
-                FamilyAvatar(name: member.name, tint: MemberColor.color(member.color), size: baseSize)
+                FamilyAvatar(name: member.name, tint: MemberColor.color(member.color), photo: member.photo, size: baseSize)
             }
             CalendarTypeIcon(color: color, icon: icon, size: size)
         }
@@ -178,21 +144,39 @@ struct CalendarNoteSymbol: View {
 
 /// A grid of symbols to pick one from, the chosen one filled in the theme color and checked.
 /// With `allowsNone`, a first cell clears the choice (`""`), and tapping the chosen one does too.
+/// `suggested` (`CalendarSymbol.suggestions`, by the name or comment) come first in a row of their own.
 struct CalendarSymbolGrid: View {
     let symbols: [String]
     @Binding var selection: String
     var allowsNone = false
+    var suggested: [String] = []
+
+    private let columns = [GridItem(.adaptive(minimum: 44, maximum: 64), spacing: 6)]
 
     var body: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 44, maximum: 64), spacing: 6)], spacing: 6) {
-            if allowsNone {
-                cell("", label: String(localized: "No icon"), systemImage: "circle.slash")
+        VStack(alignment: .leading, spacing: 10) {
+            if !suggested.isEmpty {
+                Label("Suggested", systemImage: "sparkles")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                LazyVGrid(columns: columns, spacing: 6) {
+                    ForEach(suggested, id: \.self) { name in
+                        cell(name, label: CalendarSymbol.title(name), systemImage: name)
+                    }
+                }
+                Divider()
             }
-            ForEach(symbols, id: \.self) { name in
-                cell(name, label: CalendarSymbol.title(name), systemImage: name)
+            LazyVGrid(columns: columns, spacing: 6) {
+                if allowsNone {
+                    cell("", label: String(localized: "No icon"), systemImage: "circle.slash")
+                }
+                ForEach(symbols, id: \.self) { name in
+                    cell(name, label: CalendarSymbol.title(name), systemImage: name)
+                }
             }
         }
         .padding(.vertical, 4)
+        .animation(.snappy, value: suggested)
     }
 
     private func cell(_ name: String, label: String, systemImage: String) -> some View {

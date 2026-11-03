@@ -174,17 +174,18 @@ paths:
     get:
       tags: [Media]
       operationId: getRecipeImage
-      summary: A recipe photo (WebP)
+      summary: A recipe's or a member's photo (WebP)
       description: >-
-        `path` is a recipe's `image` value (e.g. `recipes/<id>_<ts>.webp`, slashes included).
-        Only members of the recipe's family get it; everyone else gets 404. Paths are unique
-        per upload and cached privately for a year. Errors are plain text.
+        `path` is a recipe's `image` value (e.g. `recipes/<id>_<ts>.webp`, slashes included) or
+        a member's or person's `photo` (`members/<familyId>/<id>_<ts>.webp`). Only members of
+        the family it belongs to get it; everyone else gets 404. Paths are unique per upload and
+        cached privately for a year. Errors are plain text.
       x-ohana-role: viewer
       parameters:
         - name: path
           in: path
           required: true
-          description: The recipe's `image` path (may contain `/`).
+          description: The recipe's `image` or the member's `photo` path (may contain `/`).
           schema: {type: string}
           example: recipes/0b6c…_1730000000000.webp
       responses:
@@ -1176,6 +1177,46 @@ paths:
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
         "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/families/{familyId}/household/members/{userId}/photo:
+    parameters:
+      - $ref: "#/components/parameters/FamilyId"
+      - {name: userId, in: path, required: true, schema: {type: string}}
+    put:
+      tags: [Household]
+      operationId: setMemberPhoto
+      summary: Upload a member's photo (JPEG, PNG or WebP, max. 5 MB)
+      description: >-
+        The raw image as the body (with its `Content-Type`), or `multipart/form-data` with a
+        file field `image`. Stored as a 512×512 WebP (turned as its EXIF says, cropped to a
+        square); it replaces the member's photo before. Members set their own, editors anyone's.
+        Bytes that aren't an image: 400 "Invalid image".
+      x-ohana-role: viewer
+      requestBody: {$ref: "#/components/requestBodies/PhotoUpload"}
+      responses:
+        "200":
+          description: The member, with the new `photo`.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Member"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    delete:
+      tags: [Household]
+      operationId: removeMemberPhoto
+      summary: Remove a member's photo
+      description: Members remove their own, editors anyone's.
+      x-ohana-role: viewer
+      responses:
+        "200":
+          description: The member, `photo` null.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Member"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
   /api/v1/families/{familyId}/household/people:
     post:
       tags: [Household]
@@ -1184,8 +1225,8 @@ paths:
       description: >-
         Names are unique per family. Without `color` the person gets one nobody in the family
         has yet (else the least used). With `invite` (a role), an invite for that person is
-        created: whoever accepts it becomes the member in their place (with their color and
-        entry types).
+        created: whoever accepts it becomes the member in their place (with their color, photo
+        and entry types).
       x-ohana-role: editor
       parameters:
         - $ref: "#/components/parameters/FamilyId"
@@ -1263,6 +1304,41 @@ paths:
       x-ohana-role: editor
       responses:
         "200": {$ref: "#/components/responses/Ok"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/families/{familyId}/household/people/{personId}/photo:
+    parameters:
+      - $ref: "#/components/parameters/FamilyId"
+      - {name: personId, in: path, required: true, schema: {type: string}}
+    put:
+      tags: [Household]
+      operationId: setPersonPhoto
+      summary: Upload the photo of a member without an account
+      description: As a member's photo (JPEG, PNG or WebP, max. 5 MB, stored as a 512×512 WebP).
+      x-ohana-role: editor
+      requestBody: {$ref: "#/components/requestBodies/PhotoUpload"}
+      responses:
+        "200":
+          description: The person, with the new `photo`.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Person"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    delete:
+      tags: [Household]
+      operationId: removePersonPhoto
+      summary: Remove the photo of a member without an account
+      x-ohana-role: editor
+      responses:
+        "200":
+          description: The person, `photo` null.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Person"}
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
         "404": {$ref: "#/components/responses/NotFound"}
@@ -4995,6 +5071,24 @@ components:
               properties:
                 deleted: {type: boolean}
 
+  requestBodies:
+    PhotoUpload:
+      required: true
+      description: The image (JPEG, PNG or WebP, max. 5 MB) as the body, or a form's `image` file.
+      content:
+        image/jpeg:
+          schema: {type: string, contentMediaType: image/jpeg}
+        image/png:
+          schema: {type: string, contentMediaType: image/png}
+        image/webp:
+          schema: {type: string, contentMediaType: image/webp}
+        multipart/form-data:
+          schema:
+            type: object
+            required: [image]
+            properties:
+              image: {type: string, contentMediaType: application/octet-stream}
+
   schemas:
     # ---------------------------------------------------------------- common
     Error:
@@ -5037,14 +5131,21 @@ components:
         A family member's color, a key of the palette (blue #0090ff, orange #f76b15, green
         #30a46c, red #e5484d, purple #8e4ec6, yellow #f2b705, teal #12a594, pink #d6409f, indigo
         #3e63dd, brown #8a5a3c); new members get them in this order. Their entry types take it.
+    MemberPhoto:
+      type: [string, "null"]
+      description: >-
+        The member's photo, a path to load from `/api/images/{photo}` (a 512×512 WebP, a new
+        path per upload); null without one.
+      example: members/7f3c…/0b6c…_1730000000000.webp
     TypeMember:
       type: [object, "null"]
-      description: Whose the type is, with their color key; null for nobody's.
-      required: [id, name, color]
+      description: Whose the type is, with their color key and photo; null for nobody's.
+      required: [id, name, color, photo]
       properties:
         id: {type: string}
         name: {type: string}
         color: {$ref: "#/components/schemas/MemberColor"}
+        photo: {$ref: "#/components/schemas/MemberPhoto"}
     Role:
       type: string
       enum: [editor, viewer]
@@ -5231,15 +5332,16 @@ components:
             items: {$ref: "#/components/schemas/Event"}
         members:
           type: array
-          description: The family's accounts and people by name, with their colors.
+          description: The family's accounts and people by name, with their colors and photos.
           items:
             type: object
-            required: [id, name, account, color]
+            required: [id, name, account, color, photo]
             properties:
               id: {type: string, description: "The user id, or the person's id."}
               name: {type: string}
               account: {type: boolean, description: "false: a member without an account."}
               color: {$ref: "#/components/schemas/MemberColor"}
+              photo: {$ref: "#/components/schemas/MemberPhoto"}
         birthdays:
           type: object
           description: Day → birthdays that day (only when the range has both ends).
@@ -5926,7 +6028,7 @@ components:
     # ---------------------------------------------------------------- household
     Member:
       type: object
-      required: [userId, email, name, role, birthday, color, joinedAt]
+      required: [userId, email, name, role, birthday, color, photo, joinedAt]
       properties:
         userId: {type: string}
         email: {type: string}
@@ -5934,16 +6036,18 @@ components:
         role: {$ref: "#/components/schemas/Role"}
         birthday: {type: [string, "null"], format: date}
         color: {$ref: "#/components/schemas/MemberColor"}
+        photo: {$ref: "#/components/schemas/MemberPhoto"}
         joinedAt: {type: string, format: date-time}
     Person:
       type: object
       description: A member without an account (a child, a grandparent).
-      required: [id, name, birthday, color]
+      required: [id, name, birthday, color, photo]
       properties:
         id: {type: string}
         name: {type: string}
         birthday: {type: [string, "null"], format: date}
         color: {$ref: "#/components/schemas/MemberColor"}
+        photo: {$ref: "#/components/schemas/MemberPhoto"}
     CreatedInvite:
       type: object
       required: [code, expiresAt, url]

@@ -4,6 +4,7 @@ import { calEntryTypes, choreSubscribers, chores, familyMembers, users } from "@
 import { AuthError } from "@/lib/auth/errors";
 import { assertMemberColor, nextMemberColor } from "./member-colors";
 import { assertBirthday } from "./people";
+import { deletePhotoFile } from "./photos";
 import { type Actor, type Role, isRole, requireRole } from "./roles";
 
 export interface MemberDto {
@@ -14,6 +15,8 @@ export interface MemberDto {
   birthday: string | null;
   /** A key of MEMBER_COLORS. */
   color: string;
+  /** Their photo's path under MEDIA_ROOT (served at /api/images/<photo>), or null. */
+  photo: string | null;
   joinedAt: Date;
 }
 
@@ -27,6 +30,7 @@ export function listMembers(db: Db, actor: Actor, familyId: string): MemberDto[]
       role: familyMembers.role,
       birthday: familyMembers.birthday,
       color: familyMembers.color,
+      photo: familyMembers.photo,
       joinedAt: familyMembers.joinedAt,
     })
     .from(familyMembers)
@@ -74,7 +78,7 @@ export function addMember(
   if (!user.lastFamilyId) {
     db.update(users).set({ lastFamilyId: familyId }).where(eq(users.id, user.id)).run();
   }
-  return { userId: user.id, email: user.email, name: user.name, role: args.role, birthday: null, color, joinedAt: now };
+  return { userId: user.id, email: user.email, name: user.name, role: args.role, birthday: null, color, photo: null, joinedAt: now };
 }
 
 /** A member's birthday in this family; members set their own, editors anyone's. */
@@ -124,11 +128,12 @@ export function setRole(db: Db, actor: Actor, familyId: string, userId: string, 
 }
 
 /** Removes a member (their chores and entry types in the family become nobody's, their
- *  subscriptions to its chores end); everyone may remove themselves (leave), editors anyone. */
+ *  subscriptions to its chores end, their photo is deleted); everyone may remove themselves (leave), editors anyone. */
 export function removeMember(db: Db, actor: Actor, familyId: string, userId: string): void {
   requireRole(db, actor, familyId, userId === actor.id ? "viewer" : "editor");
   const rows = memberRows(db, familyId);
-  if (!rows.some((m) => m.userId === userId)) throw new AuthError(404, "Member not found.");
+  const removed = rows.find((m) => m.userId === userId);
+  if (!removed) throw new AuthError(404, "Member not found.");
   if (rows.length === 1 && !actor.admin) {
     throw new AuthError(400, "You are the only member: delete the family instead.");
   }
@@ -156,4 +161,5 @@ export function removeMember(db: Db, actor: Actor, familyId: string, userId: str
       ),
     )
     .run();
+  deletePhotoFile(removed.photo);
 }

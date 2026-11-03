@@ -35,7 +35,7 @@ import { generationStream } from "@/lib/meals/ai/stream";
 import { handleMealsApp } from "@/lib/meals/app-routes";
 import { handleMealPlanApp } from "@/lib/meals/app-routes-plan";
 import { handleMeals } from "@/lib/meals/family-routes";
-import { serveRecipeImage } from "@/lib/meals/images/serve";
+import { serveImage } from "@/lib/meals/images/serve";
 import { getRecipe, listIngredients, listRecipes, listUnits } from "@/lib/meals/queries/recipes";
 import { requireFamilyRequest } from "@/lib/meals/route-auth";
 import { generateRecipesSchema } from "@/lib/meals/schemas/generate";
@@ -217,10 +217,10 @@ export function apiRoutes(db: Db): Hono {
   api.all("/v1/families/:familyId", (c) => familyApi(c.req.raw));
   api.all("/v1/families/:familyId/*", (c) => familyApi(c.req.raw));
 
-  // ---- recipe photos, for members of the recipe's family (API token) ----
+  // ---- recipe and member photos, for members of their family (API token) ----
   api.get("/images/*", async (c) => {
     const user = getApiUser(c.req.raw);
-    return serveRecipeImage(db, user?.id ?? null, pathAfter(c, "/api/images").join("/"));
+    return serveImage(db, user?.id ?? null, pathAfter(c, "/api/images").join("/"));
   });
 
   return api;

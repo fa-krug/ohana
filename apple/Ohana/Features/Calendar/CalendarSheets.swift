@@ -70,6 +70,9 @@ struct CalendarNoteSheet: View {
     /// What the days had when the sheet opened, for Cancel.
     @State private var initial = CalendarNote(icon: "", comment: "")
     @State private var same = true
+    /// Whether an icon was picked on the sheet: until then a new comment's best suggestion is taken
+    /// (for days without an icon).
+    @State private var iconPicked = false
     /// With a keyboard (Mac) the comment has the focus; on touch screens the keyboard would
     /// cover the icons.
     @FocusState private var commentFocused: Bool
@@ -78,14 +81,21 @@ struct CalendarNoteSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    CalendarSymbolGrid(symbols: CalendarSymbol.noteIcons, selection: $icon, allowsNone: true)
+                    CalendarSymbolGrid(symbols: CalendarSymbol.noteIcons,
+                                       selection: Binding(get: { icon }, set: { icon = $0; iconPicked = true }),
+                                       allowsNone: true, suggested: suggested)
                 } header: {
                     Text("Icon")
                 }
                 Section("Comment") {
                     TextField("e.g. Christmas", text: $comment, axis: .vertical)
                         .lineLimit(3...6)
-                        .onChange(of: comment) { _, value in if value.count > 500 { comment = String(value.prefix(500)) } }
+                        .onChange(of: comment) { _, value in
+                            if value.count > 500 { comment = String(value.prefix(500)) }
+                            if !iconPicked && initial.icon.isEmpty && value != initial.comment {
+                                icon = CalendarSymbol.suggestions(for: value).first ?? ""
+                            }
+                        }
                         .focused($commentFocused)
                 }
                 if !same {
@@ -137,6 +147,9 @@ struct CalendarNoteSheet: View {
             #endif
         }
     }
+
+    /// The icons the comment suggests (an emoji in it too).
+    private var suggested: [String] { CalendarSymbol.suggestions(for: comment) }
 
     private var hasChanges: Bool {
         icon.trimmingCharacters(in: .whitespacesAndNewlines) != initial.icon

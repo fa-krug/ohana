@@ -150,7 +150,8 @@ the widgets then delete their copy. Deleting the app removes the rest.
 The app only asks for these permissions, and only when you use the feature:
 
 - **Camera and photos:** to add pictures to recipes. The picture is uploaded to your server.
-  And to scan receipts: the receipt is read on your device (Apple's text recognition); the
+  The same for a family member's profile picture: it is uploaded to your server, made smaller
+  there and shown only to the members of that family. And to scan receipts: the receipt is read on your device (Apple's text recognition); the
   picture stays there, only the amount, date and shop you save are sent to your server.
   And to scan letters (a school letter, a notice, an invitation): the letter is read on your
   device the same way and the picture stays there. With the assistant on, its text is sent to
