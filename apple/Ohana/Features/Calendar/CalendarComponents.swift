@@ -87,10 +87,18 @@ enum CalendarText {
     static func weekdays(_ n: Int) -> String { plural("^[\(n) weekday](inflect: true)") }
     static func workdays(_ n: Int) -> String { plural("^[\(n) workday](inflect: true)") }
 
-    /// "5 days selected (3 weekdays): Mon 3 Mar – Fri 7 Mar".
-    static func selection(_ days: [Day]) -> String {
+    /// The selection bar's title: "Saturday, 7 March", or "Mon 3 Mar – Fri 7 Mar".
+    static func selectionTitle(_ days: [Day]) -> String {
+        guard days.count == 1, let first = days.first else { return span(days) }
+        return first.formatted(.dateTime.weekday(.wide).day().month(.wide))
+    }
+
+    /// Under it for several days: "5 days", "7 days, 5 weekdays" (the weekdays only when some
+    /// are weekends and some aren't).
+    static func selectionCount(_ days: [Day]) -> String {
         let work = days.filter { !CalendarMath.isWeekend($0) }.count
-        return String(localized: "\(Self.days(days.count)) selected (\(weekdays(work))): \(span(days))")
+        guard work > 0, work < days.count else { return Self.days(days.count) }
+        return "\(Self.days(days.count)), \(weekdays(work))"
     }
 
     /// While the fill handle is dragged: how many days it fills.

@@ -362,34 +362,3 @@ struct CalendarSelectionDetails: View {
         }
     }
 }
-
-/// The details in a sheet (phones).
-struct CalendarDetailsSheet: View {
-    let store: CalendarStore
-    let actions: CalendarActions
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                CalendarSelectionDetails(store: store, actions: actions)
-                    .padding()
-            }
-            .navigationTitle(CalendarText.span(store.selectedDays))
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                        .keyboardShortcut(.defaultAction)
-                }
-            }
-        }
-        .errorBanner()
-        .presentationDetents([.medium, .large])
-        #if os(macOS)
-        .frame(minWidth: 420, minHeight: 480)
-        #endif
-    }
-}

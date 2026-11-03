@@ -781,6 +781,8 @@ struct CalendarPluralTests {
         #expect(CalendarText.usedOn(1, year: 2026) == "It is used on 1 day in 2026. This can’t be undone.")
         #expect(CalendarText.usedOn(4, year: 2026) == "It is used on 4 days in 2026. This can’t be undone.")
         let days = [d("2026-03-07")] // a Saturday
-        #expect(CalendarText.selection(days).hasPrefix("1 day selected (0 weekdays): "))
+        #expect(CalendarText.selectionCount(days) == "1 day")
+        #expect(CalendarText.selectionCount([d("2026-03-06"), d("2026-03-07")]) == "2 days, 1 weekday")
+        #expect(CalendarText.selectionCount([d("2026-03-05"), d("2026-03-06")]) == "2 days")
     }
 }

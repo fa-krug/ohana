@@ -192,7 +192,6 @@
     "one": "Sie ist an %lld Tag in %@ eingetragen. Das lässt sich nicht rückgängig machen.",
     "other": "Sie ist an %lld Tagen in %@ eingetragen. Das lässt sich nicht rückgängig machen."
   },
-  "%@ selected (%@): %@": "%@ ausgewählt (%@): %@",
   "%@ with “%@” not covered yet": "%@ mit „%@“ noch nicht abgedeckt",
   "%@ – %@: %@ in %@, %@": "%@ – %@: %@ in %@, %@",
   "Copied %@": "%@ kopiert",

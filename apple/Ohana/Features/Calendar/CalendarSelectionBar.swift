@@ -12,50 +12,71 @@ let calendarTouchInput: Bool = {
 
 /// The selection's actions: note, clear, event, repeat, skip weekends and (touch) the range and
 /// multi-select modes. Editors only: viewers have none (their details button is in the bar's
-/// header).
+/// header). `compact` (the phone's bar): icons only, the modes in one menu, so they fit a row.
 struct CalendarSelectionActions: View {
     @Bindable var store: CalendarStore
     let actions: CalendarActions
     var touch: Bool
+    var compact = false
 
     var body: some View {
         if !store.readOnly {
             Button("Icon & note", systemImage: "face.smiling") { actions.editNote() }
                 .help("Add an icon or comment to the selected days (N)")
-            Button("Clear", systemImage: "eraser") { store.clearSelectedDays() }
-                .help("Remove all entries from the selected days (Delete)")
             Button("Event", systemImage: "calendar.badge.plus") { actions.addEvent() }
                 .help("Add a timed event on the first selected day")
             if store.canRepeat {
                 Button("Repeat…", systemImage: "repeat") { actions.repeatSelection() }
                     .help("Repeat the selected days forwards or backwards (or drag the ▪ handle)")
             }
-            Toggle(isOn: $store.skipWeekends) {
-                Label("Skip weekends", systemImage: "calendar.day.timeline.leading")
-            }
-            .toggleStyle(.button)
-            .help("Weekends are left out when filling, pasting or toggling ranges")
-            if touch {
-                Toggle(isOn: $store.rangeMode) {
-                    Label("Range", systemImage: "arrow.left.and.right")
+            Button("Clear", systemImage: "eraser") { store.clearSelectedDays() }
+                .help("Remove all entries from the selected days (Delete)")
+            if compact {
+                Menu {
+                    modes
+                } label: {
+                    Label("More", systemImage: modeIcon ?? "ellipsis")
                 }
-                .toggleStyle(.button)
-                .help("Tap a start day, enable this, then tap the end day")
-                Toggle(isOn: $store.multiSelect) {
-                    Label("Multi-select", systemImage: "checklist")
-                }
-                .toggleStyle(.button)
-                .help("Tap days to add them to the selection or remove them")
+                .menuIndicator(.hidden)
+                .tint(modeIcon == nil ? nil : .accentColor)
+            } else {
+                modes.toggleStyle(.button)
             }
         }
+    }
+
+    @ViewBuilder
+    private var modes: some View {
+        Toggle(isOn: $store.skipWeekends) {
+            Label("Skip weekends", systemImage: "calendar.day.timeline.leading")
+        }
+        .help("Weekends are left out when filling, pasting or toggling ranges")
+        if touch {
+            Toggle(isOn: $store.rangeMode) {
+                Label("Range", systemImage: "arrow.left.and.right")
+            }
+            .help("Tap a start day, enable this, then tap the end day")
+            Toggle(isOn: $store.multiSelect) {
+                Label("Multi-select", systemImage: "checklist")
+            }
+            .help("Tap days to add them to the selection or remove them")
+        }
+    }
+
+    /// The menu shows a mode that is on: taps on the days do something else then.
+    private var modeIcon: String? {
+        guard touch else { return nil }
+        if store.rangeMode { return "arrow.left.and.right" }
+        if store.multiSelect { return "checklist" }
+        return nil
     }
 }
 
 /// The glass bar floating at the bottom of the calendar, on every size, so the selection's
 /// actions are always next to the days: the selection (or how to select), its actions, the
-/// type chips that apply a type, and (year grid) the zoom. `showDetails`: the details open in
-/// a sheet (the list of months has no room for them under the grid), from a round button next
-/// to the close button, so it takes no row of its own.
+/// type chips that apply a type, and (year grid) the zoom. `showDetails` (the list of months:
+/// phones, narrow windows): the details open in a sheet from the selection's title, as there is
+/// no room for them under the grid, and the actions are a row of icons.
 struct CalendarSelectionBar: View {
     let store: CalendarStore
     let actions: CalendarActions
@@ -88,16 +109,6 @@ struct CalendarSelectionBar: View {
                     .buttonStyle(.borderless)
                     .help("Help & shortcuts (?)")
                 } else if !days.isEmpty {
-                    if showDetails {
-                        Button {
-                            actions.showDetails()
-                        } label: {
-                            roundIcon("list.bullet.below.rectangle")
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Details")
-                        .help("Show the selected days’ details")
-                    }
                     Button {
                         store.deselect()
                     } label: {
@@ -109,16 +120,27 @@ struct CalendarSelectionBar: View {
                 }
             }
             if !days.isEmpty && store.fill == nil && !store.readOnly {
-                ScrollView(.horizontal) {
-                    HStack(spacing: 8) {
-                        CalendarSelectionActions(store: store, actions: actions, touch: calendarTouchInput)
+                if showDetails {
+                    HStack(spacing: 10) {
+                        CalendarSelectionActions(store: store, actions: actions, touch: calendarTouchInput, compact: true)
                     }
+                    .labelStyle(.iconOnly)
+                    .font(.body.weight(.medium))
                     .buttonStyle(.bordered)
-                    .buttonBorderShape(.capsule)
-                    .padding(.vertical, 2)
+                    .buttonBorderShape(.circle)
+                    .controlSize(.large)
+                } else {
+                    ScrollView(.horizontal) {
+                        HStack(spacing: 8) {
+                            CalendarSelectionActions(store: store, actions: actions, touch: calendarTouchInput)
+                        }
+                        .buttonStyle(.bordered)
+                        .buttonBorderShape(.capsule)
+                        .padding(.vertical, 2)
+                    }
+                    .scrollIndicators(.hidden)
+                    .scrollClipDisabled()
                 }
-                .scrollIndicators(.hidden)
-                .scrollClipDisabled()
             }
             CalendarTypeChips(store: store)
         }
@@ -137,7 +159,7 @@ struct CalendarSelectionBar: View {
         }
     }
 
-    /// The header's round buttons (details, close): a tinted circle in a 44 pt target.
+    /// The header's close button: a tinted circle in a 44 pt target.
     private func roundIcon(_ systemName: String) -> some View {
         Image(systemName: systemName)
             .font(.body.weight(.semibold))
@@ -153,13 +175,22 @@ struct CalendarSelectionBar: View {
             Text(CalendarText.fill(fill))
                 .font(.subheadline.weight(.semibold))
         } else if !days.isEmpty {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(CalendarText.selection(days))
-                    .font(.subheadline.weight(.semibold))
-                    .lineLimit(2)
-                if let line = singleDayLine(days) {
-                    Text(line).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+            if showDetails {
+                Button {
+                    actions.showDetails()
+                } label: {
+                    HStack(spacing: 4) {
+                        selection(days)
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .contentShape(.rect)
                 }
+                .buttonStyle(.plain)
+                .accessibilityHint(Text("Show the selected days’ details"))
+            } else {
+                selection(days)
             }
         } else if store.readOnly {
             Text("View only").font(.caption).foregroundStyle(.secondary)
@@ -171,9 +202,20 @@ struct CalendarSelectionBar: View {
         }
     }
 
+    /// The day (or first and last), and under it the count or, one day, what is on it.
+    private func selection(_ days: [Day]) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(CalendarText.selectionTitle(days))
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
+            if let line = days.count == 1 ? dayLine(days[0]) : CalendarText.selectionCount(days) {
+                Text(line).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            }
+        }
+    }
+
     /// One day: its note, events and birthdays in a line (touch screens have no tooltips).
-    private func singleDayLine(_ days: [Day]) -> String? {
-        guard days.count == 1, let day = days.first else { return nil }
+    private func dayLine(_ day: Day) -> String? {
         var parts: [String] = []
         if let note = store.notes[day], !note.text.isEmpty { parts.append(note.text) }
         parts += (store.events[day] ?? []).map { "🕑 " + $0.line(on: day) }
