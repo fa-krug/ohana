@@ -38,6 +38,7 @@ struct CreateFamilySheet: View {
                 }
             }
             .formStyle(.grouped)
+            .readableWidth()
             .navigationTitle("New family")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)

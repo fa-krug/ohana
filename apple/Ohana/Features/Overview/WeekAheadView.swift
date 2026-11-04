@@ -111,6 +111,7 @@ struct WeekAheadView: View {
         #else
         .listStyle(.inset)
         #endif
+        .readableWidth()
         .scrollContentBackground(.hidden)
         .refreshable { await load() }
     }

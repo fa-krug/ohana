@@ -173,6 +173,7 @@ struct CalendarEventSheet: View {
                 }
             }
             .formStyle(.grouped)
+            .readableWidth()
             .navigationTitle(draft.eventID == nil ? LocalizedStringKey("New event") : LocalizedStringKey("Edit event"))
             .navigationDestination(isPresented: $customRepeat) {
                 CalendarRepeatRuleEditor(draft: $draft)

@@ -36,6 +36,7 @@ struct AdminFamiliesView: View {
                 }
             }
             .formStyle(.grouped)
+            .readableWidth()
             .pageSearchable(text: $query, prompt: Text("Search families"))
         }
         .task { await load() }
@@ -137,6 +138,7 @@ struct AdminFamilyDetailView: View {
             }
         }
         .formStyle(.grouped)
+        .readableWidth()
     }
 
     private func memberRow(_ member: AdminFamilyMember, family: AdminFamily) -> some View {

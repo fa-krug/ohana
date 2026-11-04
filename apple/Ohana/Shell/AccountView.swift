@@ -135,6 +135,7 @@ private struct AccountForm: View {
             }
         }
         .formStyle(.grouped)
+        .readableWidth()
         .reloadsWhenReconnected(stale: state.isStale, load)
         .navigationTitle(page == .developer ? "API tokens" : "Account")
         .toolbar {
@@ -647,6 +648,7 @@ private struct AccountPasskeyPage: View {
             }
         }
         .formStyle(.grouped)
+        .readableWidth()
         .navigationTitle(passkey?.title ?? String(localized: "Passkey"))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)

@@ -42,6 +42,7 @@ struct CalendarRepeatSheet: View {
                 }
             }
             .formStyle(.grouped)
+            .readableWidth()
             .navigationTitle("Repeat days")
             .navigationSubtitleCompat("\(CalendarText.days(source.count)): \(CalendarText.span(source))")
             #if os(iOS)

@@ -28,6 +28,7 @@ struct FamilyChannelPage: View {
             }
         }
         .formStyle(.grouped)
+        .readableWidth()
         .scrollContentBackground(.hidden)
         .ohanaBackground(ModuleTint.settings)
         .navigationTitle(channel?.name ?? "")

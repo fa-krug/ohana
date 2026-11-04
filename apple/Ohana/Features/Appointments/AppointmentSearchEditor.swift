@@ -69,6 +69,7 @@ struct AppointmentSearchEditor: View {
                 advanced
             }
             .formStyle(.grouped)
+            .readableWidth()
             .navigationTitle(search == nil ? "New search" : "Edit search")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)

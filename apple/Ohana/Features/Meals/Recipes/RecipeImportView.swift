@@ -67,6 +67,7 @@ struct RecipeImportView: View {
                 }
             }
             .formStyle(.grouped)
+            .readableWidth()
             .navigationTitle("Import from Web")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)

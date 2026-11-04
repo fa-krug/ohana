@@ -316,6 +316,7 @@ private struct FamilySettingsForm: View {
             }
         }
         .formStyle(.grouped)
+        .readableWidth()
         .scrollContentBackground(.hidden)
         .refreshable { await model.load(family.api) }
         .onAppear { name = household.name }

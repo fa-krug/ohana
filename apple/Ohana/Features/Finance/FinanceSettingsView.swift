@@ -145,6 +145,7 @@ struct FinanceSettingsForm: View {
             }
         }
         .formStyle(.grouped)
+        .readableWidth()
     }
 
     private var accounts: some View {
@@ -438,6 +439,7 @@ struct FinanceAccountEditor: View {
                 if store.canEdit || link != nil { bankSection }
             }
             .formStyle(.grouped)
+            .readableWidth()
             .navigationTitle(account == nil ? String(localized: "New account") : String(localized: "Account"))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
@@ -652,6 +654,7 @@ struct FinanceCategoryEditor: View {
             }
             .disabled(!store.canEdit)
             .formStyle(.grouped)
+            .readableWidth()
             .navigationTitle(category == nil ? String(localized: "New category") : String(localized: "Category"))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
@@ -765,6 +768,7 @@ struct FinanceBenchmarkEditor: View {
             }
         }
         .formStyle(.grouped)
+        .readableWidth()
         .disabled(!store.canEdit)
         .navigationTitle("Statistic average")
         .confirmationDialog("Remove the statistic average?", isPresented: $removing, titleVisibility: .visible) {

@@ -21,6 +21,8 @@ export interface FakeCard {
   /** The last 4 digits of its number. */
   suffix: string;
   holder: string;
+  /** Its booked balance, a decimal string; default "-12.34". */
+  balance?: string;
 }
 
 export interface FakeComdirectOptions {
@@ -259,8 +261,8 @@ export function fakeComdirect(overrides: Partial<FakeComdirectOptions> = {}) {
           balance: {
             cardId: c.cardId,
             card: { cardId: c.cardId, cardType: { key: "VISA_CREDIT" }, status: "ACTIVE", holderName: c.holder, cardLimit: { value: "1000", unit: "EUR" } },
-            balance: { value: "-12.34", unit: "EUR" },
-            availableCashAmount: { value: "987.66", unit: "EUR" },
+            balance: { value: c.balance ?? "-12.34", unit: "EUR" },
+            availableCashAmount: { value: (1000 + Number(c.balance ?? "-12.34")).toFixed(2), unit: "EUR" },
           },
         })),
       });

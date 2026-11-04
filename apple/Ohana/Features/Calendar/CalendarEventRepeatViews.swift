@@ -123,6 +123,7 @@ struct CalendarRepeatRuleEditor<Draft: RepeatEditing>: View {
             }
         }
         .formStyle(.grouped)
+        .readableWidth()
         .navigationTitle("Custom")
     }
 

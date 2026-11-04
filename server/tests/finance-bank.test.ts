@@ -1003,6 +1003,68 @@ describe("a credit card", () => {
     expect(visaLink.syncedFrom).toBe(addDays(oldest, 1));
   });
 
+  it("sets the card's opening balance by a full import, so its balance is the bank's", async () => {
+    // 50.00 € spent since the last bill.
+    const { db, call, f, sync, bank } = await cardLinked(undefined, { cards: [VISA_2, { ...VISA, balance: "-50.00" }] });
+    // From a CSV file: a purchase before the bank's first row (the 11th) and one it lists.
+    const csv = [
+      { date: "2026-10-01", amountCents: -300, payee: "OLD", description: "" },
+      { date: "2026-10-19", amountCents: -499, payee: "PAYPAL LEBARA LEBARA GER", description: "" },
+    ];
+    await call("POST", `${f}/transactions`, { ops: csv.map(({ date, amountCents, payee }) => ({ date, amountCents, payee, accountId: "visa" })) });
+    const done = await sync("visa", { full: true });
+    expect(done.status, JSON.stringify(done)).toBe("done");
+    expect(done.result).toMatchObject({ added: 3, adopted: 1, unmatched: 0 });
+    // The card's rows: 61.98 − 11.52 − 4.99 + 15.00 = 60.47, so −110.47 before them; before the
+    // 11th the account holds −3.00.
+    expect(done.result.openingCents).toEqual({ from: 0, to: -5000 - 6047 + 300 });
+    expect(db.select().from(finBankLinks).where(eq(finBankLinks.accountId, "visa")).get()).toMatchObject({ bankBalanceCents: -5000 });
+    const visa = (await call("GET", f)).data.accounts.find((a: { id: string }) => a.id === "visa");
+    expect(visa.balanceCents).toBe(-5000);
+    expect(visa.bank).toMatchObject({ card: "0175", balanceCents: -5000 });
+    expect(bank.state.problems).toEqual([]);
+  });
+
+  it("leaves out a card's rows bought before the day its rows are complete from", async () => {
+    const rows = Array.from({ length: 502 }, (_, i) => {
+      const day = addDays("2026-10-31", -Math.floor(i / 2));
+      return {
+        reference: `R${i}`,
+        bookingStatus: "BOOKED",
+        bookingDate: day,
+        transactionValueInEUR: { value: "-1.00", unit: "EUR" },
+        transaktionDate: day,
+        remittanceInfo: [`Shop ${i}`],
+        transactionDirection: "OUT",
+      };
+    });
+    const oldest = addDays("2026-10-31", -249);
+    // Bought a week before the oldest booking day, booked after it: not among the complete days.
+    rows.splice(400, 0, {
+      reference: "LATE",
+      bookingStatus: "BOOKED",
+      bookingDate: addDays(oldest, 3),
+      transactionValueInEUR: { value: "-7.00", unit: "EUR" },
+      transaktionDate: addDays(oldest, -7),
+      remittanceInfo: ["Booked late"],
+      transactionDirection: "OUT",
+    });
+    const { call, f, sync, transactions } = await cardLinked(undefined, {
+      cards: [{ ...VISA, balance: "-600.00" }],
+      cardTransactions: { [VISA.cardId]: rows },
+    });
+    // Already in the account (a CSV file), as everything before the complete days would be.
+    await call("POST", `${f}/transactions`, {
+      ops: [{ date: addDays(oldest, -7), amountCents: -700, payee: "Booked late", accountId: "visa" }],
+    });
+    const done = await sync("visa", { full: true });
+    expect(done.status, JSON.stringify(done)).toBe("done");
+    expect(done.result).toMatchObject({ added: 498, adopted: 0, unmatched: 0 });
+    expect(transactions().filter((t) => t.payee === "Booked late")).toHaveLength(1);
+    const visa = (await call("GET", f)).data.accounts.find((a: { id: string }) => a.id === "visa");
+    expect(visa.balanceCents).toBe(-60000);
+  });
+
   it("says which cards there are when none ends in the digits given", async () => {
     const { sync, transactions } = await cardLinked("1234");
     const failed = await sync("visa");

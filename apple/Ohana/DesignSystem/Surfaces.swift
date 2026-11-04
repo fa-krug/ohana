@@ -122,3 +122,40 @@ struct TintedIcon: View {
             .accessibilityHidden(true)
     }
 }
+
+extension View {
+    /// Keeps a list's or form's rows to a readable column (760 pt, as the meal plan and the slot
+    /// page) on a wide window, iPad and Mac: the margins beside the rows grow, while the list,
+    /// its scroll bar and the page's background still fill the page. Narrower, the system's
+    /// margins stay.
+    func readableWidth(_ maxWidth: CGFloat = 760) -> some View {
+        modifier(ReadableWidth(maxWidth: maxWidth))
+    }
+}
+
+private struct ReadableWidth: ViewModifier {
+    let maxWidth: CGFloat
+    /// The margin on each side; nil (the system's) until the page is wide enough to need one.
+    /// Only changes past `maxWidth`, so a narrow page never updates it while it's resized.
+    @State private var margin: CGFloat?
+
+    func body(content: Content) -> some View {
+        let maxWidth = maxWidth
+        content
+            #if os(macOS)
+            // The Mac's lists ignore content margins; both they and forms take the padding
+            // (on top of their own margins).
+            .safeAreaPadding(.horizontal, margin ?? 0)
+            #else
+            .contentMargins(.horizontal, margin, for: .scrollContent)
+            #endif
+            .onGeometryChange(for: CGFloat?.self) { proxy in
+                ReadableWidth.margin(width: proxy.size.width, maxWidth: maxWidth)
+            } action: { margin = $0 }
+    }
+
+    nonisolated static func margin(width: CGFloat, maxWidth: CGFloat) -> CGFloat? {
+        let side = ((width - maxWidth) / 2).rounded()
+        return side > 24 ? side : nil
+    }
+}

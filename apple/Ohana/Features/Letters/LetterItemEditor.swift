@@ -47,6 +47,7 @@ struct LetterItemEditor: View {
                 }
             }
             .formStyle(.grouped)
+            .readableWidth()
             .navigationTitle(Self.name(draft.kind))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
