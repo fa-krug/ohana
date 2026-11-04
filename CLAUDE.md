@@ -632,8 +632,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `DesignSystem/` (solid content cards — Liquid Glass only on bars and floating controls —, error banner, `CancelButton`/`discardGuard`; the module sets `newItem`/`moduleMenu` focused values for File ▸ New and its menu), `Features/<Module>/` (plus `Account/`, `Admin/`).
   On iPhone a page's toolbar stays small (the main action, perhaps a filter, one More menu in
   sections, the ✨): what doesn't fit iOS moves into an overflow menu of its own, with the page's
-  More as a submenu, so a full page puts the ✨ into its More as the last section instead
-  (`AssistantMenuSection` + `.assistantInMenu()`, which hides the button; Finance); segmented pickers go under the navigation bar there (`safeAreaBar`, as in
+  More as a submenu, so a full page leaves something out instead (Finance has no search field
+  there: its search button took the ✨'s place); segmented pickers go under the navigation bar there (`safeAreaBar`, as in
   Meals and Finance), not in it (they can't shrink).
   Drag and drop (iPad, Mac) carries the payloads of `Core/Support/DragItems.swift` (own UTTypes,
   declared in `project.yml`, each naming its family): a recipe or a planned meal onto a day of the

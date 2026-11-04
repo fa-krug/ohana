@@ -349,24 +349,17 @@ struct ShellToolbar: ViewModifier {
 /// onto a module's stack adds it itself (a pushed page has its own toolbar).
 struct AssistantButton: ViewModifier {
     @Environment(\.shellAssistant) private var showAssistant
-    /// The page has the assistant in its own menu (`assistantInMenu()`).
-    @State private var inMenu = false
 
     func body(content: Content) -> some View {
         // From an overlay: toolbar items line up in view order, so the page's own buttons come
         // first and the assistant's is the last at the top right.
         content
-            .onPreferenceChange(AssistantInMenuKey.self) { value in
-                MainActor.assumeIsolated { inMenu = value }
-            }
-            // A page pushed over this one has its own button.
-            .transformPreference(AssistantInMenuKey.self) { $0 = false }
             .overlay {
                 Color.clear
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
                     .toolbar {
-                        if let showAssistant, !inMenu {
+                        if let showAssistant {
                             #if os(iOS)
                             ToolbarSpacer(.fixed, placement: .primaryAction)
                             #endif
@@ -393,34 +386,6 @@ extension View {
 
     func assistantButton() -> some View {
         modifier(AssistantButton())
-    }
-
-    /// The page's More menu holds the assistant (`AssistantMenuSection`), so the ✨ button steps
-    /// aside: on iPhone a full toolbar then stays one menu, instead of iOS folding its last items
-    /// into a menu of their own with the page's More inside.
-    func assistantInMenu(_ inMenu: Bool = true) -> some View {
-        preference(key: AssistantInMenuKey.self, value: inMenu)
-    }
-}
-
-struct AssistantInMenuKey: PreferenceKey {
-    static let defaultValue = false
-
-    static func reduce(value: inout Bool, nextValue: () -> Bool) {
-        value = value || nextValue()
-    }
-}
-
-/// The assistant as the last section of a page's More menu (with `assistantInMenu()`).
-struct AssistantMenuSection: View {
-    @Environment(\.shellAssistant) private var showAssistant
-
-    var body: some View {
-        if let showAssistant {
-            Section {
-                Button("Assistant", systemImage: "sparkles") { showAssistant.wrappedValue.toggle() }
-            }
-        }
     }
 }
 

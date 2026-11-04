@@ -104,9 +104,10 @@ struct FinanceScreen: View {
             } isTargeted: { over in
                 dropping = over && store.canEdit
             }
-            .searchable(text: $query, prompt: Text("Search payee, description, note"))
+            // Not on the iPhone: its search button took the assistant's place at the top right
+            // (the search tab finds transactions too).
+            .financeSearch(compact ? nil : $query)
             #if os(iOS)
-            .searchToolbarBehavior(compact ? .minimize : .automatic)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .task(id: query) {
@@ -118,9 +119,6 @@ struct FinanceScreen: View {
             .task(id: family.revision(.finance)) { await store.revisionChanged(family.revision(.finance)) }
             .refreshable { await store.reloadAll() }
             .toolbar { toolbar }
-            // On iPhone the assistant is the More menu's last section: with its own button the
-            // toolbar didn't fit and iOS put More and it into a menu of their own.
-            .assistantInMenu(compact)
             .sheet(item: $editing) { target in
                 FinanceTransactionEditor(store: store, target: target)
             }
@@ -446,7 +444,7 @@ struct FinanceScreen: View {
     }
 
     /// Everything the toolbar has no button for, in one list: selecting, adding, tidying up,
-    /// the settings, on iPhone the assistant.
+    /// the settings.
     private var moreMenu: some View {
         Menu {
             if store.canEdit {
@@ -465,7 +463,6 @@ struct FinanceScreen: View {
             Section {
                 Button("Finance settings", systemImage: "gearshape") { family.open(.settings(.finance)) }
             }
-            if compact { AssistantMenuSection() }
         } label: {
             Label("More", systemImage: "ellipsis")
         }
@@ -540,5 +537,17 @@ struct FinanceScreen: View {
         }
         Divider()
         Button("Finance Settings") { family.open(.settings(.finance)) }
+    }
+}
+
+private extension View {
+    /// The list's search field, when there is one.
+    @ViewBuilder
+    func financeSearch(_ query: Binding<String>?) -> some View {
+        if let query {
+            searchable(text: query, prompt: Text("Search payee, description, note"))
+        } else {
+            self
+        }
     }
 }
