@@ -110,7 +110,9 @@ enum AssistantMarkdownBlock: Equatable {
         let options = AttributedString.MarkdownParsingOptions(
             interpretedSyntax: .inlineOnlyPreservingWhitespace, failurePolicy: .returnPartiallyParsedIfPossible
         )
-        guard var s = try? AttributedString(markdown: text, options: options) else { return AttributedString(text) }
+        guard var s = try? AttributedString(markdown: text, options: options) else {
+            return AssistantSourceMarkers.chips(in: AttributedString(text))
+        }
         for run in s.runs {
             // The app's own pages (/f/{id}/…, e.g. a recipe the assistant saved) open in the app.
             if let link = run.link, !["http", "https"].contains(link.scheme?.lowercased() ?? ""),
@@ -118,17 +120,21 @@ enum AssistantMarkdownBlock: Equatable {
                 s[run.range].link = nil
             }
         }
-        return s
+        // The source chips (`AssistantSourceMarkers.prepare`), after the links are sorted out.
+        return AssistantSourceMarkers.chips(in: s)
     }
 }
 
-/// An answer of the assistant, rendered from its Markdown.
+/// An answer of the assistant, rendered from its Markdown: its source markers as chips (those
+/// without a source, and one still being written, hidden).
 struct AssistantMarkdownView: View {
     let text: String
+    var sources: [AssistantSource] = []
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            ForEach(Array(AssistantMarkdownBlock.parse(text).enumerated()), id: \.offset) { _, block in
+            let prepared = AssistantSourceMarkers.prepare(text, sources: sources)
+            ForEach(Array(AssistantMarkdownBlock.parse(prepared).enumerated()), id: \.offset) { _, block in
                 blockView(block)
             }
         }
@@ -157,7 +163,7 @@ struct AssistantMarkdownView: View {
             }
         case let .code(code):
             ScrollView(.horizontal, showsIndicators: false) {
-                Text(verbatim: code)
+                Text(verbatim: AssistantSourceMarkers.stripPlaceholders(code))
                     .font(.system(.caption, design: .monospaced))
                     .padding(10)
             }

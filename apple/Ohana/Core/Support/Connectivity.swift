@@ -12,6 +12,9 @@ final class Connectivity {
     private(set) var isOnline = true
     /// Low Data Mode (or a network that asks for it): nothing is loaded ahead (`Prefetcher`).
     private(set) var isConstrained = false
+    /// A network that costs (cellular, a personal hotspot): the knowledge base loads no iCloud
+    /// files over it on iOS (`KnowledgeDownloads`).
+    private(set) var isExpensive = false
     @ObservationIgnored private var monitor: NWPathMonitor?
     @ObservationIgnored private var onReconnect: [() -> Void] = []
 
@@ -23,8 +26,8 @@ final class Connectivity {
         let monitor = NWPathMonitor()
         monitor.pathUpdateHandler = { path in
             let online = path.status == .satisfied
-            let constrained = path.isConstrained
-            Task { @MainActor in Connectivity.shared.update(online, constrained: constrained) }
+            let constrained = path.isConstrained, expensive = path.isExpensive
+            Task { @MainActor in Connectivity.shared.update(online, constrained: constrained, expensive: expensive) }
         }
         monitor.start(queue: DispatchQueue(label: "ohana.connectivity"))
         self.monitor = monitor
@@ -35,8 +38,9 @@ final class Connectivity {
         onReconnect.append(action)
     }
 
-    private func update(_ online: Bool, constrained: Bool) {
+    private func update(_ online: Bool, constrained: Bool, expensive: Bool) {
         if constrained != isConstrained { isConstrained = constrained }
+        if expensive != isExpensive { isExpensive = expensive }
         guard online != isOnline else { return }
         isOnline = online
         if online { onReconnect.forEach { $0() } }

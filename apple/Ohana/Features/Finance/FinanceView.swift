@@ -200,7 +200,8 @@ struct FinanceScreen: View {
             defer { readingReceipt = false }
             do {
                 let pages = try await ReceiptReader.read(images(), needsCrop: needsCrop)
-                editing = .scanned(ScannedReceipt(scan: ReceiptParser.scan(pages), pages: pages))
+                editing = .scanned(ScannedReceipt(scan: ReceiptParser.scan(pages), pages: pages,
+                                                  filing: ScanFiling(kind: .receipt, knowledge: family.scanKnowledge)))
             } catch {
                 ErrorBanner.shared.show(error)
             }

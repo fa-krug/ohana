@@ -213,7 +213,7 @@ struct AssistantChatView: View {
     /// Links in answers: the app's own pages (`/f/{id}/…`) open in the app, web links in the
     /// browser.
     private func openLink(_ url: URL) -> OpenURLAction.Result {
-        if url.scheme == nil, let (familyID, route) = AppRoute.parse(webPath: url.path), familyID == family.family.id {
+        if url.scheme == nil, let (familyID, route) = AppRoute.parse(url: url), familyID == family.family.id {
             open(route)
             return .handled
         }
@@ -435,8 +435,10 @@ struct AssistantChatView: View {
     /// tool results.
     @ViewBuilder private func itemMenu(items: [(offset: Int, item: AssistantItem)], index: Int) -> some View {
         let item = items[index].item
-        if case let .assistant(text) = item {
-            Button("Copy", systemImage: "doc.on.doc") { AssistantTranscript.copy(text) }
+        if case let .assistant(text, sources) = item {
+            Button("Copy", systemImage: "doc.on.doc") {
+                AssistantTranscript.copy(AssistantSourceMarkers.transcript(text, sources: sources))
+            }
         }
         if case let .user(text, _) = item, !text.isEmpty {
             Button("Copy", systemImage: "doc.on.doc") { AssistantTranscript.copy(text) }

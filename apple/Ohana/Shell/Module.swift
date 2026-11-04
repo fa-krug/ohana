@@ -1,13 +1,15 @@
 import SwiftUI
 
-/// The pages of the shell, in sidebar order (the web app's components/shell/modules.ts plus
-/// the overview, the assistant's own page and the settings), and the search across them (its
-/// own tab, ⌘K; last, so the others keep their ⌘-numbers).
+/// The pages of the shell (the web app's components/shell/modules.ts plus the overview, the
+/// assistant's own page and the settings), and the search across them (its own tab, ⌘K). The
+/// order gives the ⌘-numbers: the knowledge base came later, so it's after the settings (⌘9) and
+/// the others keep theirs; the search is last (no number).
 enum Module: String, CaseIterable, Identifiable, Hashable {
-    case overview, calendar, finance, meals, appointments, chores, assistant, settings, search
+    case overview, calendar, finance, meals, appointments, chores, assistant, settings, knowledge, search
 
-    /// The sidebar's "Modules" section; the overview stands above it, the settings at its foot.
-    static let modules: [Module] = [.calendar, .finance, .meals, .appointments, .chores, .assistant]
+    /// The sidebar's "Modules" section, in its order; the overview stands above it, the settings
+    /// at its foot.
+    static let modules: [Module] = [.calendar, .finance, .meals, .appointments, .chores, .knowledge, .assistant]
 
     var id: String { rawValue }
 
@@ -15,7 +17,7 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
     /// modules and the search): sheets opened from the family page (`FamilySidebarHost`).
     static var phonePages: [Module] {
         #if os(iOS)
-        UIDevice.current.userInterfaceIdiom == .phone ? [.appointments, .chores, .settings] : []
+        UIDevice.current.userInterfaceIdiom == .phone ? [.appointments, .chores, .knowledge, .settings] : []
         #else
         []
         #endif
@@ -34,6 +36,7 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
         case .meals: "Meals"
         case .appointments: "Appointments"
         case .chores: "Chores"
+        case .knowledge: "Knowledge"
         case .assistant: "Assistant"
         case .settings: "Settings"
         case .search: "Search"
@@ -48,6 +51,7 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
         case .meals: "fork.knife"
         case .appointments: "stethoscope"
         case .chores: "checklist.checked"
+        case .knowledge: "books.vertical"
         case .assistant: "sparkles"
         case .settings: "gearshape"
         case .search: "magnifyingglass"
@@ -62,14 +66,18 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
         case .meals: ModuleTint.meals
         case .appointments: ModuleTint.appointments
         case .chores: ModuleTint.chores
+        case .knowledge: ModuleTint.knowledge
         case .assistant: ModuleTint.assistant
         case .settings: ModuleTint.settings
         case .search: ModuleTint.overview
         }
     }
 
-    /// ⌘1 … ⌘9
-    var shortcut: KeyEquivalent { KeyEquivalent(Character("\(Module.allCases.firstIndex(of: self)! + 1)")) }
+    /// ⌘1 … ⌘9; nil after the ninth (the search).
+    var shortcut: KeyEquivalent? {
+        let number = Module.allCases.firstIndex(of: self)! + 1
+        return number <= 9 ? KeyEquivalent(Character("\(number)")) : nil
+    }
 
     @ViewBuilder var root: some View {
         switch self {
@@ -79,6 +87,7 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
         case .meals: MealsView()
         case .appointments: AppointmentsView()
         case .chores: ChoresView()
+        case .knowledge: KnowledgeView()
         case .assistant: AssistantPage()
         case .settings: FamilySettingsView()
         case .search: FamilySearchView()
@@ -146,7 +155,7 @@ struct ShellCommands: Commands {
             // The modules the server has on; each keeps its ⌘-number.
             ForEach((shell?.modules ?? Module.allCases).filter { $0 != .search }) { module in
                 Button(module.title) { shell?.module.wrappedValue = module }
-                    .keyboardShortcut(module.shortcut, modifiers: .command)
+                    .keyboardShortcut(module.shortcut.map { KeyboardShortcut($0, modifiers: .command) })
             }
             Divider()
             Button("Search") { shell?.search() }

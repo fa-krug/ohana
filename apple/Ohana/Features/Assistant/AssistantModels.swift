@@ -367,7 +367,8 @@ struct AssistantCalendarOp: Decodable, Equatable {
 /// `.unknown` (and isn't shown).
 enum AssistantItem: Decodable, Equatable {
     case user(text: String, attachments: [AssistantAttachmentRef])
-    case assistant(text: String)
+    /// An answer; `sources`: the knowledge passages its `[[k:<n>]]` markers cite (`AssistantSource`).
+    case assistant(text: String, sources: [AssistantSource] = [])
     case tool(AssistantToolCall)
     case change(AssistantChange)
     case question(AssistantQuestion)
@@ -385,7 +386,7 @@ enum AssistantItem: Decodable, Equatable {
 
     private enum Keys: String, CodingKey {
         case kind, text, attachments, id, name, args, status, summary, result, interrupted
-        case change, undo, undone, question, options, multiple, answer, skipped, ops, source
+        case change, undo, undone, question, options, multiple, answer, skipped, ops, source, sources
     }
 
     init(from decoder: any Decoder) throws {
@@ -406,7 +407,8 @@ enum AssistantItem: Decodable, Equatable {
             let attachments = try? c.decodeIfPresent([AssistantAttachmentRef].self, forKey: .attachments)
             self = .user(text: str(.text), attachments: attachments ?? [])
         case "assistant":
-            self = .assistant(text: str(.text))
+            let sources = try? c.decodeIfPresent([AssistantSource].self, forKey: .sources)
+            self = .assistant(text: str(.text), sources: AssistantSource.list(sources))
         case "tool":
             let args = (try? c.decodeIfPresent(JSONValue.self, forKey: .args))?.objectValue ?? [:]
             self = .tool(AssistantToolCall(
@@ -458,7 +460,7 @@ enum AssistantItem: Decodable, Equatable {
     /// aren't.
     var isVisible: Bool {
         switch self {
-        case let .assistant(text): !text.isEmpty
+        case let .assistant(text, _): !text.isEmpty
         case .unknown: false
         default: true
         }

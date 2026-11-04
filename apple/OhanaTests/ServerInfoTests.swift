@@ -16,7 +16,11 @@ struct ServerInfoTests {
         #expect(info.version == "0.2.0")
         #expect(info.apiVersion == 1)
         #expect(info.isSupported)
-        #expect(Module.allCases.allSatisfy { info.isEnabled($0) })
+        // The knowledge base isn't in the list: off.
+        #expect(Module.allCases.filter { $0 != .knowledge }.allSatisfy { info.isEnabled($0) })
+        #expect(!info.isEnabled(.knowledge))
+        let withKnowledge = try decode(#"{"name":"Ohana","version":"0.3.0","apiVersion":1,"modules":["calendar","knowledge"]}"#)
+        #expect(withKnowledge.isEnabled(.knowledge) && withKnowledge.hasKnowledge)
     }
 
     @Test func hidesTheModulesAServerTurnedOff() throws {
@@ -36,9 +40,9 @@ struct ServerInfoTests {
         #expect(ServerInfo.requiredAPIVersion == 1)
         #expect(!ServerInfo.legacy.isSupported)
         #expect(ServerInfo.legacy.apiVersion == 0)
-        // Everything but the chores, which came after the route.
-        #expect(Module.allCases.filter { $0 != .chores }.allSatisfy { ServerInfo.legacy.isEnabled($0) })
-        #expect(!ServerInfo.legacy.isEnabled(.chores))
+        // Everything but the chores and the knowledge base, which came after the route.
+        #expect(Module.allCases.filter { $0 != .chores && $0 != .knowledge }.allSatisfy { ServerInfo.legacy.isEnabled($0) })
+        #expect(!ServerInfo.legacy.isEnabled(.chores) && !ServerInfo.legacy.isEnabled(.knowledge))
         let old = try decode(#"{"name":"Ohana","version":"0.1.0","apiVersion":0,"modules":["calendar"]}"#)
         #expect(!old.isSupported)
         let newer = try decode(#"{"name":"Ohana","version":"1.0.0","apiVersion":2,"modules":["calendar"]}"#)
@@ -54,7 +58,8 @@ struct ServerInfoTests {
     @Test func theDemoHasEveryModule() async throws {
         let info = try await ServerInfo.fetch(from: APIClient(demo: DemoServer()))
         #expect(info.isSupported)
-        #expect(Module.allCases.allSatisfy { info.isEnabled($0) })
+        // But the knowledge base (no sample documents yet).
+        #expect(Module.allCases.filter { $0 != .knowledge }.allSatisfy { info.isEnabled($0) })
 
         let app = AppModel(signedOutPreview: ())
         await app.refresh()

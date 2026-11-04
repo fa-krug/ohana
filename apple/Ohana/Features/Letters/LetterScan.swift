@@ -4,7 +4,8 @@ import SwiftUI
 // Scanning a letter (a school letter, a daycare's closure notice, an invitation): the pages are
 // photographed with the document camera (or picked as a photo or PDF, then cropped to the paper:
 // `ScanCrop`), their text is read on the device, and a review sheet (`LetterReviewSheet`) offers
-// to save them as a searchable PDF in a folder of the user's (`ScanFiling`) and, from the shell,
+// to save them as a searchable PDF in a folder of the user's (`ScanFiling`; the family's knowledge
+// folder while it's linked on this device, the text queued for its index) and, from the shell,
 // lists the events, tasks and deadlines the server found in the text (`LetterFind.swift`: only
 // the text goes to the server), to edit and tick; Done adds the ticked ones. From the family
 // menu, Spotlight / Siri / Shortcuts (`ScanLetterIntent`; both `FamilyContext.scanLetter()`,
@@ -145,7 +146,8 @@ private struct LetterScanFlow: ViewModifier {
 
     private func show(_ images: [CGImage], needsCrop: Bool) {
         let review = LetterReview(images: images, needsCrop: needsCrop,
-                                  finder: findsItems ? FamilyLetterFinder(api: family.api) : nil)
+                                  finder: findsItems ? FamilyLetterFinder(api: family.api) : nil,
+                                  knowledge: family.scanKnowledge)
         review.start(names: LetterReview.familyNames(family.api))
         self.review = review
     }

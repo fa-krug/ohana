@@ -56,6 +56,9 @@ export interface ChatRow {
   queue: Record<string, unknown>[];
   /** Counts the changes of the items. */
   rev: number;
+  /** The chunk ids the chat's knowledge tools returned (recorded as they ran; an imported
+   *  history adds none). */
+  knowledge_refs?: number[];
   /** When someone last followed the chat (ISO), or null. */
   seen_at?: string | null;
   created_at: string;
@@ -75,6 +78,7 @@ export type ChatPatch = Partial<
     | "activity"
     | "notes"
     | "usage"
+    | "knowledge_refs"
     | "updated_at"
   >
 >;
@@ -162,6 +166,7 @@ export function chatRow(c: ChatRecord): ChatRow {
     usage: parse(c.usage, null),
     queue: parse(c.queue, []),
     rev: c.rev,
+    knowledge_refs: parse<unknown[]>(c.knowledgeRefs, []).filter((n): n is number => Number.isSafeInteger(n)),
     seen_at: iso(c.seenAt),
     created_at: c.createdAt.toISOString(),
     updated_at: c.updatedAt.toISOString(),
@@ -198,6 +203,7 @@ function columns(patch: ChatPatch): Partial<ChatRecord> {
   if (patch.activity !== undefined) out.activity = patch.activity === null ? null : JSON.stringify(patch.activity);
   if (patch.notes !== undefined) out.notes = JSON.stringify(patch.notes);
   if (patch.usage !== undefined) out.usage = patch.usage === null ? null : JSON.stringify(patch.usage);
+  if (patch.knowledge_refs !== undefined) out.knowledgeRefs = JSON.stringify(patch.knowledge_refs);
   if (patch.updated_at !== undefined) out.updatedAt = date(patch.updated_at);
   return out;
 }

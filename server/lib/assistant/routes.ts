@@ -28,6 +28,8 @@ import { type ChatContext, systemPrompt } from "./chat";
 import { handleChats } from "./chat-routes";
 import type { ChatEnv, RunnerEnv, Turn } from "./chats";
 import { DEFAULT_WINDOW } from "./context";
+import { retryFailedCards } from "@/lib/knowledge/documents";
+import { knowledgeForUser } from "@/lib/knowledge/sources";
 import { letterInput, readLetter } from "./letter";
 import { checkUrl, type NetOptions } from "./net";
 import { contextWindow, listModels, type Provider, streamChat } from "./provider";
@@ -187,7 +189,8 @@ async function getSettings({ load }: Ctx, env: AiEnv) {
 
 /** PUT /ai/settings {baseUrl, apiKey ("" removes it), model, searchProvider, searchKey,
  *  allowWrites, contextWindow (tokens, 0: from the endpoint), imageModel ("" = no recipe
- *  photos)}: only the fields given change. */
+ *  photos)}: only the fields given change. Saving lets the knowledge base's failed cards be made
+ *  again. */
 async function putSettings({ req, load }: Ctx, env: AiEnv) {
   const { family } = await load("edit");
   const body = await readBody(req);
@@ -230,6 +233,8 @@ async function putSettings({ req, load }: Ctx, env: AiEnv) {
   }
   row.updated_at = new Date().toISOString();
   await env.store.saveAiSettings(row);
+  // The knowledge base's failed cards get another go: the settings may be fixed now.
+  retryFailedCards(env.db, family.id);
   return json(publicSettings(env, row), 200, NO_STORE);
 }
 
@@ -296,7 +301,8 @@ function storesOf(env: AiEnv, familyId: string) {
 }
 
 /** A chat turn of the family (in the worker): its model, the instructions for the context, and
- *  the tools. Viewers (and families that switched changes off) get only the tools that read. */
+ *  the tools. Viewers (and families that switched changes off) get only the tools that read;
+ *  the knowledge base's tools only editors. */
 export async function prepareTurn(
   env: AiEnv,
   chat: ChatRow,
@@ -312,6 +318,8 @@ export async function prepareTurn(
   const search = searchOf(row, env);
   const stores = storesOf(env, family.id);
   const writes = row.allow_writes && role === "editor";
+  // The knowledge base is the editors' (viewers never get its tools), read-only.
+  const knowledge = knowledgeForUser(env.db, family.id, chat.user_id);
   const [types, categories, accounts, settings, window] = await Promise.all([
     stores.calendar.listTypes(family.id),
     stores.finance.listCategories(family.id),
@@ -332,6 +340,7 @@ export async function prepareTurn(
     search: !!search,
     reminders: !!context.reminders,
     appleCalendar: !!context.appleCalendar,
+    knowledge,
     mealTags: mealTagNames(env.db, family.id, context.lang),
     home: homeAddressOf(env.db, family.id),
     people: familyNames(env.db, family.id),
@@ -350,6 +359,7 @@ export async function prepareTurn(
       lookups: env.lookups,
       reminders: context.reminders,
       appleCalendar: context.appleCalendar,
+      knowledge,
     },
     modelNet: env.modelNet,
     writes,

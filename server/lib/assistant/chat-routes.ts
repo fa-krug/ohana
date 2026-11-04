@@ -57,6 +57,7 @@ import {
   withMessage,
 } from "./chats";
 import type { StoredMessage } from "./context";
+import { withoutMarkers } from "./sources";
 import type { ChatMessage, ContentPart } from "./provider";
 import type { AppleCalendarOp, ReminderOp, SuggestionOp } from "./tools";
 import type { AssistantStore, ChatRow } from "./store";
@@ -642,7 +643,8 @@ function cleanItems(raw: unknown): Item[] {
         return [{ kind: "user", text: str(o.text), ...(attachments.length ? { attachments } : {}) }];
       }
       case "assistant":
-        return [{ kind: "assistant", text: str(o.text) }];
+        // No tool of this server gave its source markers.
+        return [{ kind: "assistant", text: withoutMarkers(str(o.text)) }];
       case "error":
         return [{ kind: "error", text: str(o.text, 2000) }];
       case "tool":

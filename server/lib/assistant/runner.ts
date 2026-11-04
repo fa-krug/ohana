@@ -10,6 +10,7 @@ import { type RunnerEnv, Runner, leaseUntil } from "./chats";
 import { type AiEnv, prepareTurn } from "./routes";
 import { DrizzleAssistantStore } from "./store";
 import { notifyTurnFinished } from "./notify";
+import { chunkSources, knowledgeForUser } from "@/lib/knowledge/sources";
 
 export class ChatRunner {
   private readonly running = new Map<string, Runner>();
@@ -33,6 +34,8 @@ export class ChatRunner {
       store,
       prepare: (chat, family, context, signal) => prepareTurn(env, chat, family, context, signal),
       family: (id) => calendar.getFamily(id),
+      sources: (chat, ids) =>
+        knowledgeForUser(env.db, chat.family_id, chat.user_id) ? chunkSources(env.db, chat.family_id, ids) : new Map(),
       turnEnded: env.turnEnded ?? (async (chat, info) => {
         await notifyTurnFinished(env.db, chat, info);
       }),

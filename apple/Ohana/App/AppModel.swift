@@ -83,7 +83,11 @@ final class AppModel {
 
     /// Whether the server has `module` on (all of them while that isn't known yet).
     func isEnabled(_ module: Module) -> Bool {
-        serverInfo?.isEnabled(module) ?? true
+        // The knowledge base: the selected family's editors, not the demo (`FamilyContext.knowledgeAvailable`).
+        if module == .knowledge {
+            return !isDemo && selectedFamily?.canEdit == true && serverInfo?.hasKnowledge == true
+        }
+        return serverInfo?.isEnabled(module) ?? true
     }
 
     /// Family contexts by id, so a family's caches and change signals survive switching away.
@@ -103,10 +107,19 @@ final class AppModel {
     /// Whether this model tells the widgets what to show (`WidgetSync`): the app's, not the
     /// previews' and tests'.
     private var syncsWidgets = false
+    #if os(macOS)
+    /// Reads the knowledge folders every 15 minutes while the app runs (`indexKnowledge`).
+    @ObservationIgnored private var knowledgeTimer: Timer?
+    #endif
 
     init() {
         syncsWidgets = true
         Connectivity.shared.start()
+        #if os(macOS)
+        knowledgeTimer = Timer.scheduledTimer(withTimeInterval: 15 * 60, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.indexKnowledge() }
+        }
+        #endif
         Connectivity.shared.whenReconnected { [weak self] in
             guard let self, !isDemo else { return }
             // Offline at launch, the account is asked again (and the screens loaded ahead then).
@@ -170,6 +183,7 @@ final class AppModel {
             // It may be another account: nothing of the last one shows.
             ResponseCache(server: server).clear()
             ChoresStore.removeQueues(server: server)
+            KnowledgeIndexer.removeAll(server: server)
             connect(server: server, token: token)
             SharedConnection.remember(server: server, familyID: selectedFamilyID)
             await refresh()
@@ -291,6 +305,7 @@ final class AppModel {
     private func prefetch() {
         guard answered, phase == .ready, let family = selectedFamily, let context = context(for: family) else { return }
         sendQueuedChanges()
+        indexKnowledge()
         prefetcher.start(context)
     }
 
@@ -299,6 +314,19 @@ final class AppModel {
     func sendQueuedChanges() {
         guard !isDemo, let family = selectedFamily, let context = context(for: family) else { return }
         context.sendQueuedChanges(me: me?.id)
+    }
+
+    /// Reads the knowledge folders linked on this device into the server's index, for every family
+    /// the account edits (`FamilyContext.indexKnowledge`): at launch, when the app is active again,
+    /// the connection back, and every 15 minutes on the Mac. Each family's indexer runs at most
+    /// every few minutes this way.
+    func indexKnowledge() {
+        guard !isDemo, answered, phase == .ready, let server = serverURL, serverInfo?.hasKnowledge == true else { return }
+        for family in families where family.canEdit {
+            let location = KnowledgeLocation(server: server, familyID: family.id)
+            guard KnowledgeFolder(location: location).isLinked else { continue }
+            context(for: family)?.indexKnowledge()
+        }
     }
 
     /// Signs the device out: the server forgets its token, the app forgets the server and shows
@@ -317,6 +345,7 @@ final class AppModel {
             ShoppingReminders.forget(server: client.baseURL)
             CalendarStore.removeQueues(server: client.baseURL)
             ChoresStore.removeQueues(server: client.baseURL)
+            KnowledgeIndexer.removeAll(server: client.baseURL)
             AppleCalendarSync.shared.removeAll(server: client.baseURL)
             SharedConnection.forget()
             if syncsWidgets { WidgetSync.reload() }
@@ -381,8 +410,8 @@ final class AppModel {
             return true
         }
         let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
-        let tab = items.first { $0.name == "tab" }?.value, day = items.first { $0.name == "day" }?.value
-        guard let (familyID, route) = AppRoute.parse(webPath: path, tab: tab, day: day),
+        let value = { (name: String) in items.first { $0.name == name }?.value }
+        guard let (familyID, route) = AppRoute.parse(webPath: path, tab: value("tab"), day: value("day"), page: value("page")),
               let family = families.first(where: { $0.id == familyID }) else { return false }
         selectedFamilyID = family.id
         context(for: family)?.open(route)
@@ -425,9 +454,11 @@ final class FamilyContext {
     var serverInfo: ServerInfo?
 
     /// Whether the server has `module` on (all of them while that isn't known yet). Screens hide
-    /// what belongs to a module that is off.
+    /// what belongs to a module that is off. The knowledge base only where it's available
+    /// (`knowledgeAvailable`: an editor, not the demo).
     func isEnabled(_ module: Module) -> Bool {
-        serverInfo?.isEnabled(module) ?? true
+        if module == .knowledge { return knowledgeAvailable }
+        return serverInfo?.isEnabled(module) ?? true
     }
 
     private(set) var revisions: [DataArea: Int] = [:]
@@ -450,6 +481,7 @@ final class FamilyContext {
     fileprivate func adoptRevisions(from other: FamilyContext) {
         revisions = other.revisions
         if let store = other.choresStore { adopt(store) }
+        knowledgeIndexer = other.knowledgeIndexer
     }
 
     // MARK: Chores
@@ -476,6 +508,45 @@ final class FamilyContext {
         guard isEnabled(.chores), choresStore != nil || ChoresStore.hasQueue(for: api) else { return }
         if chores.me == nil { chores.me = me }
         chores.retryNow()
+    }
+
+    // MARK: Knowledge
+
+    @ObservationIgnored private var knowledgeIndexer: KnowledgeIndexer?
+
+    /// The family's knowledge indexer on this device; made when first needed, kept while the
+    /// family's context is (a newer context of the family takes it over).
+    var knowledge: KnowledgeIndexer {
+        if let knowledgeIndexer { return knowledgeIndexer }
+        let indexer = KnowledgeIndexer(api: api)
+        knowledgeIndexer = indexer
+        return indexer
+    }
+
+    /// The knowledge base is this device's to read: the server has it on, the account edits the
+    /// family (viewers don't see it), and it isn't the demo.
+    var knowledgeAvailable: Bool {
+        !api.client.isDemo && canEdit && serverInfo?.hasKnowledge == true
+    }
+
+    /// Where the family's scans go on this device (`ScanFiling`): the knowledge folder while the
+    /// knowledge base is available and its folder is linked here; nil: the scan folder.
+    var scanKnowledge: ScanKnowledge? {
+        guard knowledgeAvailable else { return nil }
+        let location = KnowledgeLocation(server: api.client.baseURL, familyID: api.familyID)
+        guard knowledgeIndexer != nil || KnowledgeFolder(location: location).isLinked else { return nil }
+        let indexer = knowledge, tags = api.knowledgeTags()
+        return ScanKnowledge(state: { indexer.folder.state() },
+                             enqueue: { try await indexer.enqueue(file: $0, pages: $1) },
+                             tags: { await ScanKnowledge.serverTags(tags) })
+    }
+
+    /// Reads the family's knowledge folder when one is linked on this device: `force` (*Read now*)
+    /// at once, else unless it was read a few minutes ago.
+    func indexKnowledge(force: Bool = false) {
+        guard knowledgeAvailable, knowledge.folder.isLinked else { return }
+        let indexer = knowledge
+        Task { force ? await indexer.run() : await indexer.runIfDue() }
     }
 
     // MARK: Routes
@@ -568,6 +639,8 @@ extension Notification.Name {
 /// What a change can touch, for `FamilyContext.didChange`.
 enum DataArea: String, CaseIterable, Hashable {
     case family, calendar, events, finance, meals, recipes, mealPlan, appointments, chores, settings
+    /// The knowledge base's documents (read again, left out, the indexer's runs).
+    case knowledge
     /// The week ahead's dismissed issues.
     case digest
 }

@@ -183,7 +183,28 @@ review suggests a name ("date_Person_Title"), the date and tags (only ones you a
 the name of whose letter it is), and saves the letter as a **searchable PDF** into the folder you
 chose last. With the assistant on, editors also see the **events, tasks and deadlines** found in
 it, ticked and editable: *Done* adds the events to the family's calendar and the tasks and
-deadlines to Reminders. Receipts scanned in Finance can be kept as PDFs the same way.
+deadlines to Reminders. Receipts scanned in Finance can be kept as PDFs the same way. Once the
+family's knowledge folder is chosen on the device (Settings → Knowledge), scans are saved into
+that folder instead, with no folder to pick, and their text goes into the knowledge base.
+
+## Knowledge base
+
+Where the server has it on, editors get a **Knowledge** page (on iPhone in the family menu): the
+family's paperwork, read from one folder, usually an iCloud Drive folder the parents share. Choose
+it once on each device in Settings → Knowledge; the app reads the files' text on the device and
+sends only the text to your server, never the files.
+
+The page lists the documents newest first with their date, whose they are, their tags and a short
+summary (when the assistant is set up). Search them, or narrow the list by folder, person or tag. A
+document shows its summary and the facts in it, each with the passage it comes from, and its text
+page by page. **Open Original** opens the file itself from the folder on your device: a PDF at the
+page of the fact you tapped, with its passage marked. A device without the folder offers to choose
+it. *Read Again* has the server read a document once more, *Leave Out* keeps it out of the
+knowledge base (*Show Left Out* lists those), and on the Mac *Show in Finder* finds the file.
+
+The assistant answers from the knowledge base too, and names its sources: a small number after a
+statement, and a list of the documents below the answer. Tap one to read the passage, open the
+original at its page or show the document; the search tab finds documents as well.
 
 ## Recipes from the web
 

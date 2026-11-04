@@ -143,12 +143,14 @@ async function overview(ctx: Ctx): Promise<Response> {
 // ---- Search ----
 
 async function search(ctx: Ctx): Promise<Response> {
-  const { user, familyId } = await member(ctx);
+  const { user, familyId, role } = await member(ctx);
   const params = ctx.url.searchParams;
   const asked = params.get("today");
   const today = asked && isValidDate(asked) ? asked : ctx.now.toISOString().slice(0, 10);
   const limit = Math.min(SEARCH_MAX_LIMIT, Math.max(1, Number(params.get("limit")) || SEARCH_DEFAULT_LIMIT));
-  return json(searchFamily(ctx.db, familyId, user.id, params.get("q") ?? "", { today, limit }));
+  // The knowledge base is the editors' only.
+  const knowledge = role === "editor";
+  return json(searchFamily(ctx.db, familyId, user.id, params.get("q") ?? "", { today, limit, knowledge }));
 }
 
 // ---- Household ----

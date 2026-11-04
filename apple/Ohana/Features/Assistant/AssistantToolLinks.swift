@@ -38,6 +38,11 @@ enum AssistantToolLinks {
             }
         case "get_meal_plan", "plan_meals", "get_shopping_items":
             return .mealPlan
+        case "read_knowledge":
+            if let id = text(a["documentId"]) {
+                let page = a["page"]?.doubleValue.flatMap { $0 >= 1 ? Int($0) : nil }
+                return .knowledgeDocument(id: id, page: page)
+            }
         case "manage_categories":
             // Added or changed (a deleted one is gone).
             if r?["deleted"] == nil, let id = field("id") { return .financeTransactions(categoryID: id) }
@@ -47,7 +52,7 @@ enum AssistantToolLinks {
         }
         // A page the result names (`page` / `url`: /f/{family}/…).
         for key in ["page", "url"] {
-            if let path = field(key), let (family, route) = AppRoute.parse(webPath: path), family == familyID,
+            if let path = field(key), let (family, route) = AppRoute.parse(link: path), family == familyID,
                route != .module(.overview) {
                 return route
             }

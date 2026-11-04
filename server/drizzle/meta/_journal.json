@@ -180,8 +180,15 @@
     {
       "idx": 25,
       "version": "6",
-      "when": 1793796544331,
-      "tag": "0025_bank_full_sync",
+      "when": 1793808885282,
+      "tag": "0025_knowledge",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1793809449242,
+      "tag": "0026_bank_full_sync",
       "breakpoints": true
     }
   ]
