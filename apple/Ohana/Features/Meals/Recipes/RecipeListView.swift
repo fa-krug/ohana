@@ -52,7 +52,7 @@ struct RecipeListView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .reloadsWhenReconnected(stale: model.saved?.updating == false) { await model.reload(family.api, key) }
-        .searchable(text: $query, prompt: Text("Search recipes"))
+        .pageSearchable(text: $query, prompt: Text("Search recipes"))
         .refreshable { await model.reload(family.api, key) }
         .task(id: RecipeListModel.Load(query: key, revision: family.revision(.recipes))) {
             // Typing waits a moment before asking the server.

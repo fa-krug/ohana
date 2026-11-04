@@ -568,10 +568,26 @@ final class FamilyContext {
     /// field when it changes.
     private(set) var searchRequest = 0
 
-    /// Shows the search ready to type (the shell switches to its tab).
+    /// What is searched for. On the Mac the toolbar's field (`ShellSearchField`, on every page)
+    /// and the search page share it; elsewhere the search page keeps its own.
+    var searchQuery = ""
+
+    /// Grows with each Return in the Mac's toolbar field: the search page opens its first hit.
+    private(set) var searchSubmitRequest = 0
+
+    func submitSearch() { searchSubmitRequest += 1 }
+
+    /// Set when typing in a page's toolbar field switched to the search page: its own field takes
+    /// the keyboard as it appears.
+    var searchHandoff = false
+
+    /// Shows the search ready to type: on the Mac the toolbar's field takes the keyboard where it
+    /// is (typing then shows the search page), elsewhere the shell switches to the search tab.
     func startSearch() {
         searchRequest += 1
+        #if !os(macOS)
         open(.module(.search))
+        #endif
     }
 
     // MARK: Asking the assistant

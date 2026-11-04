@@ -23,7 +23,7 @@ struct AppointmentsView: View {
         }
         .ohanaBackground(ModuleTint.appointments)
         .navigationTitle("Appointments")
-        .searchable(text: $query, prompt: Text("Search searches"))
+        .pageSearchable(text: $query, prompt: Text("Search searches"))
         .toolbar {
             if family.canEdit {
                 ToolbarItem(placement: .primaryAction) {

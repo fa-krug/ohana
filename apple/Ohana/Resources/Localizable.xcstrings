@@ -14977,6 +14977,16 @@
         }
       }
     },
+    "Search (⌘K)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suchen (⌘K)"
+          }
+        }
+      }
+    },
     "Search API key": {
       "localizations": {
         "de": {

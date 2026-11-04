@@ -101,7 +101,7 @@ private struct KnowledgeList: View {
         LoadStateView(state: state, retry: { await refresh(full: true) }) { _ in
             content
         }
-        .searchable(text: $typed, prompt: Text("Search documents"))
+        .pageSearchable(text: $typed, prompt: Text("Search documents"))
         .safeAreaBar(edge: .top) {
             if state.value != nil, !documents.isEmpty || query.isFiltered {
                 filterBar

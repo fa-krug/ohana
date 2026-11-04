@@ -641,7 +641,12 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   page, `AppRoute`: `family.open(.recipe(id:))` etc. switches to the module, whose root takes it
   with `family.takeRoute(for:)`; server paths `/f/{id}/…` and `ohana://f/{id}/…` map onto routes;
   the search tab (`Module.search`, `Tab(role: .search)`, ⌘K → `family.startSearch()`,
-  `Features/Search/`) opens its hits the same way, a transaction as `.financeTransaction`),
+  `Features/Search/`) opens its hits the same way, a transaction as `.financeTransaction`; on the
+  Mac it's no sidebar row but a field at the right end of every page's toolbar, `ShellSearchField`
+  (added with the ✨ by `.assistantButton()`, `family.searchQuery`; typing shows the search page,
+  whose field then takes the keyboard, `searchHandoff`): every toolbar ends the page's items, ✨,
+  search; a page's own filter is `.pageSearchable` (on the Mac a field among its items: the
+  system's `.searchable` field always goes last)),
   `DesignSystem/` (solid content cards — Liquid Glass only on bars and floating controls —, error banner, `CancelButton`/`discardGuard`; the module sets `newItem`/`moduleMenu` focused values for File ▸ New and its menu), `Features/<Module>/` (plus `Account/`, `Admin/`).
   On iPhone a page's toolbar stays small (the main action, perhaps a filter, one More menu in
   sections, the ✨): what doesn't fit iOS moves into an overflow menu of its own, with the page's

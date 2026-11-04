@@ -36,7 +36,7 @@ struct AdminFamiliesView: View {
                 }
             }
             .formStyle(.grouped)
-            .searchable(text: $query, prompt: Text("Search families"))
+            .pageSearchable(text: $query, prompt: Text("Search families"))
         }
         .task { await load() }
         .refreshable { await load() }
