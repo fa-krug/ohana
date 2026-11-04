@@ -33,6 +33,9 @@ export interface SyncResult {
   /** A full sync's: the account's transactions in the fetched days the bank doesn't list (left
    *  as they are; perhaps a CSV file's duplicates). */
   unmatched?: number;
+  /** A full sync with the bank's balance: the account's opening balance it set (from the old
+   *  value to the new), so the balance is the bank's from its first booking day on. */
+  openingCents?: { from: number; to: number };
 }
 
 export interface SyncDto {
