@@ -13,7 +13,7 @@ import { and, asc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { randomToken } from "@/lib/api/http";
 import { addDays } from "@/lib/calendar/dates";
 import type { Db } from "@/lib/db";
-import { finBankLinks, finBankSyncs, finTransactions } from "@/lib/db/schema";
+import { finAccounts, finBankLinks, finBankSyncs, finTransactions } from "@/lib/db/schema";
 import { importHashes, importHashOf, importTransactions } from "@/lib/finance/finance";
 import { DrizzleFinanceStore, type TransactionRow } from "@/lib/finance/store";
 import { getSecretBox } from "@/lib/secrets";
@@ -34,6 +34,9 @@ export const FIRST_SYNC_DAYS = 730;
 /** A full sync (the bank's whole history) asks for this many days back; the bank gives what it
  *  has (comdirect pages through up to 100 × 500 rows, a card's newest 500). */
 export const FULL_SYNC_DAYS = 3653;
+
+/** The largest opening balance (cents) the account's checks allow (fin_transactions' bound). */
+const MAX_OPENING_CENTS = 100_000_000_000_000;
 
 const DEFAULT_TIMING: SyncTiming = {
   requestTimeoutMs: 30_000,
@@ -303,7 +306,9 @@ export class BankSyncRunner {
    *  as that one (one to one; see `matchExisting`). A full sync does that on every day fetched
    *  and the transaction takes the bank row's import hash and source (adopted: its category,
    *  note, links and text stay), so later syncs know it; the account's transactions from the bank's first
-   *  row on that the bank doesn't list are counted (unmatched) and left alone. */
+   *  row on that the bank doesn't list are counted (unmatched) and left alone. A full sync with
+   *  the bank's balance also sets the account's opening balance (see `setOpening`); every sync
+   *  with one keeps it on the link (bank_balance_cents / _at). */
   private async import(link: LinkRow, statement: BankStatement, requested: string, full: boolean): Promise<SyncResult> {
     const store = new DrizzleFinanceStore(this.db);
     const now = this.now();
@@ -377,11 +382,24 @@ export class BankSyncRunner {
     );
     const last = statement.rows.reduce<string | null>((m, r) => (!m || r.day > m ? r.day : m), link.syncedThrough);
     const syncedFrom = full ? { syncedFrom: from } : first && last ? { syncedFrom: from } : {};
-    this.db
-      .update(finBankLinks)
-      .set({ syncedThrough: last, ...syncedFrom, lastSyncAt: now, updatedAt: now })
-      .where(and(eq(finBankLinks.familyId, link.familyId), eq(finBankLinks.accountId, link.accountId)))
-      .run();
+    const balance = statement.balanceCents;
+    const known = balance !== undefined && Number.isSafeInteger(balance);
+    const opening = this.db.transaction(
+      (tx) => {
+        tx.update(finBankLinks)
+          .set({
+            syncedThrough: last,
+            ...syncedFrom,
+            ...(known ? { bankBalanceCents: balance, bankBalanceAt: now } : {}),
+            lastSyncAt: now,
+            updatedAt: now,
+          })
+          .where(and(eq(finBankLinks.familyId, link.familyId), eq(finBankLinks.accountId, link.accountId)))
+          .run();
+        return full && known ? this.setOpening(tx, link, statement, balance) : null;
+      },
+      { behavior: "immediate" },
+    );
     return {
       added: outcome.added,
       duplicates: outcome.duplicates.length + (full ? 0 : matched.size),
@@ -389,7 +407,46 @@ export class BankSyncRunner {
       splits: outcome.splits,
       ids: outcome.ids,
       ...(full ? { adopted: matched.size, unmatched } : {}),
+      ...(opening ? { openingCents: opening } : {}),
     };
+  }
+
+  /** A full sync's opening balance, so that the account's balance is the bank's from the bank's
+   *  first booking day on: the balance before the bank's first row (its balance now minus its
+   *  rows) minus the account's transactions before that day (parts of split bookings aside, as
+   *  in the balance). Worked out from the bank's rows, not the account's sum: the account may
+   *  still hold duplicates (e.g. a CSV file's) among the bank's days; once they're deleted it
+   *  matches the bank today too. Nothing without rows (no day to start from). */
+  private setOpening(
+    tx: Parameters<Parameters<Db["transaction"]>[0]>[0],
+    link: LinkRow,
+    statement: BankStatement,
+    balanceCents: number,
+  ): { from: number; to: number } | null {
+    if (!statement.rows.length) return null;
+    const firstDay = statement.rows.reduce((m, r) => (r.day < m ? r.day : m), statement.rows[0].day);
+    const before = balanceCents - statement.rows.reduce((sum, r) => sum + r.amountCents, 0);
+    const where = and(eq(finAccounts.familyId, link.familyId), eq(finAccounts.id, link.accountId));
+    const account = tx.select({ openingCents: finAccounts.openingCents }).from(finAccounts).where(where).get();
+    if (!account) return null;
+    const earlier = Number(
+      tx
+        .select({ total: sql<number>`coalesce(sum(${finTransactions.amountCents}), 0)` })
+        .from(finTransactions)
+        .where(
+          and(
+            eq(finTransactions.familyId, link.familyId),
+            eq(finTransactions.accountId, link.accountId),
+            sql`${finTransactions.day} < ${firstDay}`,
+            sql`${finTransactions.splitOf} is null`,
+          ),
+        )
+        .get()?.total ?? 0,
+    );
+    const to = before - earlier;
+    if (!Number.isSafeInteger(to) || Math.abs(to) > MAX_OPENING_CENTS) return null;
+    tx.update(finAccounts).set({ openingCents: to }).where(where).run();
+    return { from: account.openingCents, to };
   }
 
   /** Matches the bank's rows `indices` to the account's transactions (not parts of a split) on

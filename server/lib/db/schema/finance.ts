@@ -144,6 +144,10 @@ export const finBankLinks = sqliteTable(
      *  account's days before it came from elsewhere, e.g. CSV files); null: no floor. */
     syncedFrom: text("synced_from"),
     lastSyncAt: integer("last_sync_at", { mode: "timestamp_ms" }),
+    /** The account's booked balance at the bank when it was last told (a sync that brought one)
+     *  and when; null: not yet. Cleared when the link moves to another account or card. */
+    bankBalanceCents: integer("bank_balance_cents"),
+    bankBalanceAt: integer("bank_balance_at", { mode: "timestamp_ms" }),
     /** TAN challenges in a row that ended without a confirmed TAN (the bank locks the online
      *  banking after a few): no sync starts at BANK_MAX_UNCONFIRMED. */
     unconfirmedTans: integer("unconfirmed_tans").notNull().default(0),

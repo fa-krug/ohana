@@ -296,7 +296,7 @@ describe("linking an account to its bank", () => {
       openingCents: 0,
       position: 0,
       balanceCents: 0,
-      bank: { provider: "comdirect", iban: "DE89370400440532013000", card: null, lastSyncAt: null },
+      bank: { provider: "comdirect", iban: "DE89370400440532013000", card: null, lastSyncAt: null, balanceCents: null, balanceAt: null },
     });
     // Sealed in the database, never in an answer.
     const stored = link()!;
@@ -305,7 +305,7 @@ describe("linking an account to its bank", () => {
       expect(stored.credentials).not.toContain(secret);
     }
     const overview = await view("GET", f);
-    expect(overview.data.accounts[0].bank).toEqual({ provider: "comdirect", iban: "DE89370400440532013000", card: null, lastSyncAt: null });
+    expect(overview.data.accounts[0].bank).toEqual({ provider: "comdirect", iban: "DE89370400440532013000", card: null, lastSyncAt: null, balanceCents: null, balanceAt: null });
     expect((await call("GET", `${f}/accounts`)).data.accounts[0].bank.provider).toBe("comdirect");
     const everything = JSON.stringify([overview.data, (await call("GET", `/families/${link()!.familyId}/export`)).data]);
     for (const secret of Object.values(CREDENTIALS)) expect(everything).not.toContain(secret);
@@ -767,6 +767,84 @@ describe("syncing with comdirect", () => {
     expect(transactions()).toHaveLength(2);
   });
 
+  it("sets the opening balance by a full import, so the balance is the bank's from its first day on", async () => {
+    // Booked 2.355,04 €; available (pending bookings taken off) only 2.227,56 €.
+    const { call, f, bank, sync, transactions, link } = setup({
+      accounts: [{ ...GIRO, balance: "2355.04", available: "2227.56" }],
+    });
+    expect((await call("POST", `${f}/accounts`, { name: "Giro", color: "#3b82f6", openingCents: 12345 })).status).toBe(201);
+    // Before the bank's first day (1 October): two CSV rows and a split booking (its part doesn't
+    // count, as in the balance). From it on: the bank's rows from the CSV file, one of them twice
+    // (a duplicate the user deletes afterwards), and one the bank doesn't have.
+    const csv = [
+      { date: "2026-09-01", amountCents: -1200, payee: "OLD", description: "" },
+      { date: "2026-09-15", amountCents: 30000, payee: "OLD INCOME", description: "" },
+      { date: "2026-10-01", amountCents: 250000, payee: "ACME GMBH", description: "GEHALT" },
+      { date: "2026-10-07", amountCents: -777, payee: "NOT AT THE BANK", description: "" },
+      { date: "2026-10-10", amountCents: -500, payee: "COMDIRECT", description: "ENTGELT" },
+      { date: "2026-10-10", amountCents: -500, payee: "COMDIRECT", description: "ENTGELT (again)" },
+    ];
+    expect((await call("POST", `${f}/import`, { accountId: "giro", rows: csv })).status).toBe(200);
+    const added = await call("POST", `${f}/transactions`, {
+      ops: [
+        { date: "2026-09-20", amountCents: -5000, payee: "Shop", accountId: "giro" },
+        { date: "2026-09-20", amountCents: -2000, payee: "Shop: part", accountId: "giro" },
+      ],
+    });
+    const [booking, part] = added.data.added as string[];
+    expect((await call("POST", `${f}/transactions`, { ops: [{ action: "split", id: booking, ids: [part] }] })).status).toBe(200);
+    expect((await call("PUT", `${f}/accounts/giro/bank`, { provider: "comdirect", ...CREDENTIALS, iban: null })).status).toBe(200);
+
+    const done = await sync("giro", { full: true });
+    expect(done.status, JSON.stringify(done)).toBe("done");
+    // The bank's rows: 2500.00 − 100.10 − 5.00 − 49.99 − 23.45 = 2321.46, so 33.58 before them;
+    // before the 1st the account holds −12.00 + 300.00 − 50.00.
+    const opening = 235504 - 232146 - (-1200 + 30000 - 5000);
+    expect(done.result.openingCents).toEqual({ from: 12345, to: opening });
+    expect(link()).toMatchObject({ bankBalanceCents: 235504, bankBalanceAt: NOW });
+    const account = () => call("GET", f).then((r) => r.data.accounts[0]);
+    const before = await account();
+    expect(before.openingCents).toBe(opening);
+    expect(before.bank).toMatchObject({ balanceCents: 235504, balanceAt: NOW.toISOString() });
+    // Off by the leftovers the bank doesn't list: the duplicate and the one it doesn't have.
+    expect(before.balanceCents).toBe(235504 - 500 - 777);
+    const left = (await call("GET", `${f}/transactions?account=giro&source=manual,csv&from=2026-10-01`)).data.transactions;
+    expect(left.map((t: { payee: string }) => t.payee).sort()).toEqual(["COMDIRECT", "NOT AT THE BANK"]);
+    const del = await call("POST", `${f}/transactions`, { ops: [{ action: "delete", ids: left.map((t: { id: string }) => t.id) }] });
+    expect(del.status, JSON.stringify(del.data)).toBe(200);
+    expect((await account()).balanceCents).toBe(235504);
+    expect(transactions().filter((t) => t.day >= "2026-10-01")).toHaveLength(5);
+    expect(bank.state.problems).toEqual([]);
+  });
+
+  it("leaves the opening balance to the full import, but keeps the bank's balance on every sync", async () => {
+    const { call, f, bank, sync, link } = setup({ accounts: [{ ...GIRO, balance: "2355.04", available: "2227.56" }] });
+    expect((await call("POST", `${f}/accounts`, { name: "Giro", color: "#3b82f6", openingCents: 12345 })).status).toBe(201);
+    expect((await call("PUT", `${f}/accounts/giro/bank`, { provider: "comdirect", ...CREDENTIALS, iban: null })).status).toBe(200);
+    const done = await sync();
+    expect(done.status).toBe("done");
+    expect(done.result.openingCents).toBeUndefined();
+    expect(link()).toMatchObject({ bankBalanceCents: 235504, bankBalanceAt: NOW });
+    bank.opts.accounts[0].balance = "2300.00";
+    await sync();
+    const account = (await call("GET", f)).data.accounts[0];
+    expect(account.openingCents).toBe(12345);
+    expect(account.bank).toMatchObject({ balanceCents: 230000, balanceAt: NOW.toISOString() });
+    // Another account at the bank: its balance isn't this one's.
+    expect((await call("PUT", `${f}/accounts/giro/bank`, { provider: "comdirect", ...CREDENTIALS, iban: SAVINGS.iban })).status).toBe(200);
+    expect(link()).toMatchObject({ bankBalanceCents: null, bankBalanceAt: null });
+  });
+
+  it("sets no opening balance without the bank's balance or rows", async () => {
+    const { call, f, sync } = setup({ cards: [VISA], transactions: {} });
+    expect((await call("POST", `${f}/accounts`, { name: "Giro", color: "#3b82f6", openingCents: 500 })).status).toBe(201);
+    expect((await call("PUT", `${f}/accounts/giro/bank`, { provider: "comdirect", ...CREDENTIALS, iban: null })).status).toBe(200);
+    const done = await sync("giro", { full: true });
+    expect(done.status).toBe("done");
+    expect(done.result.openingCents).toBeUndefined();
+    expect((await call("GET", f)).data.accounts[0].openingCents).toBe(500);
+  });
+
   it("keeps a link synced before the floor existed off the CSV's days (the migration's floor)", async () => {
     const { db, call, f, bank, sync, transactions } = await linked();
     const csv = [
@@ -848,7 +926,7 @@ describe("a credit card", () => {
 
     const res = await put({ ...CREDENTIALS, card: "4871 78XX XXXX 0175" });
     expect(res.status).toBe(200);
-    expect(res.data.bank).toEqual({ provider: "comdirect", iban: null, card: "0175", lastSyncAt: null });
+    expect(res.data.bank).toEqual({ provider: "comdirect", iban: null, card: "0175", lastSyncAt: null, balanceCents: null, balanceAt: null });
     expect(linkOf().card).toBe("0175");
     expect((await call("GET", f)).data.accounts[0].bank.card).toBe("0175");
 

@@ -385,6 +385,11 @@ struct FinanceAccountEditor: View {
 
     /// The link the account has now.
     private var link: FinanceBankLink? { (account ?? created)?.bank }
+    /// The account as the store has it now (a sync changes its balance, a full import its
+    /// opening balance), else as the editor got it.
+    private var current: FinanceAccount? {
+        (account ?? created).map { a in store.accounts.first { $0.id == a.id } ?? a }
+    }
     /// nil while the IBAN / card field is neither.
     private var parsedTarget: FinanceBankTarget? { FinanceBankTarget(parsing: target) }
     private var bankIncomplete: Bool {
@@ -421,8 +426,8 @@ struct FinanceAccountEditor: View {
                         Text("Opening balance (\(store.currency))")
                     }
                     .disabled(!store.canEdit)
-                    if let account {
-                        LabeledContent("Balance", value: store.money(account.balanceCents))
+                    if account != nil, let current {
+                        LabeledContent("Balance", value: store.money(current.balanceCents))
                     }
                 } footer: {
                     if openingCents == nil {
@@ -447,7 +452,9 @@ struct FinanceAccountEditor: View {
         .discardGuard(hasChanges: hasChanges)
         .presentationDetents([.medium, .large])
         .financeSheetFrame(minWidth: 400, minHeight: 360)
-        .sheet(item: $importingAll) { account in FinanceBankSyncSheet(store: store, account: account, full: true) }
+        .sheet(item: $importingAll, onDismiss: takeOpening) { account in
+            FinanceBankSyncSheet(store: store, account: account, full: true)
+        }
         .onAppear {
             guard original == nil else { return }
             name = account?.name ?? String(localized: "Account \(store.accounts.count + 1)")
@@ -505,6 +512,13 @@ struct FinanceAccountEditor: View {
                 LabeledContent("Last synced") {
                     Text(link.lastSync?.formatted(.relative(presentation: .named)) ?? String(localized: "Never"))
                 }
+                // The bank's booked balance, when Ohana's differs (e.g. duplicates from a CSV file).
+                if let bankCents = current?.bank?.balanceCents, let ohana = current?.balanceCents, bankCents != ohana {
+                    LabeledContent("Balance differs") {
+                        Text("Bank: \(store.money(bankCents)) · Ohana: \(store.money(ohana))")
+                            .monospacedDigit()
+                    }
+                }
                 // The link as saved: not while the editor holds changes to it.
                 if store.canEdit {
                     Button("Import All Transactions…", systemImage: "clock.arrow.circlepath") { importingAll = account ?? created }
@@ -525,6 +539,14 @@ struct FinanceAccountEditor: View {
         }
     }
 
+    /// A full import may have set the opening balance: the field shows it (it starts only
+    /// without unsaved changes, so nothing typed is lost).
+    private func takeOpening() {
+        guard let current, !hasChanges else { return }
+        opening = FinanceMoney.signedInput(current.openingCents)
+        original = snapshot
+    }
+
     private func save() async {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, let cents = openingCents, !bankIncomplete else { return }
@@ -532,7 +554,7 @@ struct FinanceAccountEditor: View {
         let iconText = String(icon.trimmingCharacters(in: .whitespaces).prefix(8))
         busy = true
         defer { busy = false }
-        if let account = account ?? created {
+        if let account = current {
             var patch: [String: JSONValue] = [:]
             if trimmed != account.name { patch["name"] = .string(trimmed) }
             if iconText != account.icon { patch["icon"] = .string(iconText) }

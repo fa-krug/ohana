@@ -237,7 +237,7 @@ export const financeTools: Record<string, Tool> = {
     spec: {
       name: "finance_summary",
       description:
-        "Income and expenses (integer cents) per month and per category between two days (a transfer between the family's accounts counts once by its net), plus the currency, the categories and the accounts with their current balances (balanceCents) and their balances at the end of `to` (balanceAtToCents). Categories nest: per category its own transactions, and for one with subcategories also withSubcategories (it and all below it).",
+        "Income and expenses (integer cents) per month and per category between two days (a transfer between the family's accounts counts once by its net), plus the currency, the categories and the accounts with their current balances (balanceCents) and their balances at the end of `to` (balanceAtToCents); a linked account's bank.balanceCents is its booked balance at the bank as of the last sync (bank.balanceAt). Categories nest: per category its own transactions, and for one with subcategories also withSubcategories (it and all below it).",
       parameters: {
         type: "object",
         properties: { from: { type: "string" }, to: { type: "string" } },

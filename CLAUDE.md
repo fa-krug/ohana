@@ -213,11 +213,15 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   importing a family file drops it; never exported): `provider`, `credentials` (sealed JSON, never
   in a DTO or log), `iban` or `card` (a credit card's last 4 digits), `session` (sealed refresh
   token, ~20 min: no new TAN), `synced_through`, `last_sync_at`, `synced_from` (the first sync's
-  first day: a floor), the lockout guards `unconfirmed_tans` / `login_refused`. Providers implement
+  first day: a floor), `bank_balance_cents` / `bank_balance_at` (the booked balance the last sync
+  that brought one told; cleared with the history), the lockout guards `unconfirmed_tans` /
+  `login_refused`. Providers implement
   `types.ts` `BankProvider` (`fetchStatement` with `SyncHooks`), registry `providers.ts`; the only
   one is `comdirect.ts` (its REST API: password grant → session → validate asking for
   P_TAN_PUSH → push polled / photoTAN or SMS TAN typed → PATCH → `cd_secondary` → v2 balances
-  (by IBAN, else the only Girokonto) → BOOKED transactions, 500 per page, `min-bookingDate`;
+  (by IBAN, else the only Girokonto; its `balance`, the booked Kontostand, is
+  `BankStatement.balanceCents`, never `availableCashAmount`, which takes pending bookings off) →
+  BOOKED transactions, 500 per page, `min-bookingDate`;
   `mapTransaction` / `remittanceLines`: exact cents, payee by direction, 37-char remittance
   windows, SEPA reference lines dropped; a card: `allbalances?productType=CARD`, each card's
   suffix from `GET /api/banking/v1/cards/{cardId}` (`primaryAccountNumberSuffix`), then
@@ -227,7 +231,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `routes.ts` (from `handleFinance`): `PUT/DELETE /finance/accounts/{id}/bank` (blank secrets
   keep the stored ones; saving resets the guards; `iban` or `card` (last 4 digits kept, 400 for
   both / fewer digits; a changed one restarts the history)), `POST/GET/DELETE …/bank/sync`,
-  `POST …/bank/sync/tan`; the account DTO's `bank` ({provider, iban, card, lastSyncAt}, from
+  `POST …/bank/sync/tan`; the account DTO's `bank` ({provider, iban, card, lastSyncAt, balanceCents,
+  balanceAt}, from
   `listAccounts`' join); a linked account refuses `POST /finance/import` (409). Syncs are
   `fin_bank_syncs` rows (`queue.ts`: waiting → running → tan → done | failed, `step`, `tan`
   challenge, `tan_input` sealed until used, `result`; finished ones pruned after a day by
@@ -249,7 +254,13 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   (its text, category, note, transfer and split stay), only unmatched rows are added, the
   account's other transactions from the bank's first row on are counted (`result.adopted` / `unmatched`) and left
   alone; adopted rows become `source` bank, so the account's manual / csv rows in the bank's
-  days are the ones to look at; `synced_from` becomes its first day. A comdirect card gives only its newest 500 rows: when
+  days are the ones to look at; `synced_from` becomes its first day. With the statement's
+  `balanceCents` (and rows) a full sync also sets the account's `opening_cents` (`setOpening`,
+  `result.openingCents {from, to}`; a normal sync never does): the bank's balance minus the sum of
+  its rows, minus the account's transactions (not split parts) before the bank's first day —
+  from the bank's rows, not the account's sum, so leftover CSV duplicates don't skew it; the
+  balance is the bank's from its first day on, and today's once the "Not from the bank" rows in
+  its days are deleted. A comdirect card gives only its newest 500 rows: when
   there are more, `BankStatement.from` says from which day they're complete (the oldest day's
   rows dropped). Import through `importTransactions`
   (shared with the CSV route, autoTransfers on); hashes
@@ -257,11 +268,13 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `importHashes`; a card's Visa-Kartenabrechnung pairs with the Girokonto's debit by
   autoTransfers. Tests: the fake comdirect `lib/test/comdirect.ts` (accounts and cards). App:
   `FinanceAccountEditor`'s Bank connection section (`FinanceBankProvider`: the providers and their
-  fields; one field "IBAN or card number"), `FinanceIntake` (pure: Import CSV, Sync of the shown
+  fields; one field "IBAN or card number"; "Balance differs: Bank … · Ohana …" when the link's
+  `balanceCents` isn't the account's balance; after *Import All* the opening field takes the new
+  value), `FinanceIntake` (pure: Import CSV, Sync of the shown
   account, or a menu of both; the CSV sheet leaves linked accounts out), `FinanceBankSyncSheet`
   (starts the sync, polls it every second: push / photoTAN / SMS TAN, then the CSV import's sort
   into categories; `full`: the account editor's *Import All Transactions*, after a confirmation,
-  shows the adopted / added / unmatched counts; the rows show their `source` as an icon,
+  shows the adopted / added / unmatched counts and "Opening balance set to …" (was …); the rows show their `source` as an icon,
   `FinanceSource`, and the list's Origin filter, `FinanceFilter.Source`, has "Not from the bank").
 - **Assistant (`lib/assistant/`):** family-planner's `ai/*`. Tables
   `ai_settings` (keys sealed with `getSecretBox()`), `chats` (status, lease `run_token` /
