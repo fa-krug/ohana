@@ -90,7 +90,10 @@ What a server sends to other services depends on what its families set up, for e
   searched),
 - **Photon** by komoot to find addresses (the address typed) and, for the *Week ahead*'s travel
   checks, where the next two weeks' events are (their locations, unless the server turned that
-  off),
+  off), and, when a family imports holidays, the region its home is in (the home address's
+  coordinates),
+- **OpenHolidays** (`openholidaysapi.org`) for the public and school holidays a family imports
+  (only a country and a region, like "DE-BY"),
 - the **notification services** a family sets up (Pushover, Pushbullet, Telegram, an email
   provider, ntfy) with the text of the notifications.
 

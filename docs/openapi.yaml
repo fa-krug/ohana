@@ -100,6 +100,10 @@ tags:
     description: Members, people without an account, invites, home address and notifications.
   - name: Calendar
     description: Entry types per year, day entries and day notes.
+  - name: Holidays
+    description: >-
+      Public and school holidays of the family's region (OpenHolidays), imported as day
+      entries of the types `holiday` and `school-holidays` by the worker.
   - name: Week ahead
     description: >-
       The next two weeks checked for clashes and plans that don't work out (rules, not the
@@ -937,8 +941,9 @@ paths:
       description: >-
         All entry types of the range's years (`typeYears`: every year that has types), the
         entries and notes in the range, the events by day (every occurrence under each day of
-        the range it covers) and the members' birthdays by day (only when the range has both
-        ends, e.g. `?year=`). Without a range: all entries and notes; the events then cover the
+        the range it covers), the members' birthdays by day (only when the range has both
+        ends, e.g. `?year=`) and the holidays of the kinds the family imports by day (over the
+        events' range). Without a range: all entries and notes; the events then cover the
         year of the given end, or the current year. A range longer than 3 years is a 400.
       x-ohana-role: viewer
       parameters:
@@ -996,8 +1001,9 @@ paths:
       summary: Replace the calendar (and finances) with an export file
       description: >-
         Replaces all years, types, entries and notes, and the finances if the file has them
-        (version 2), all or nothing. The name stays. Answers like
-        `GET /families/{familyId}` with the range given.
+        (version 2), all or nothing. The name stays. The holiday import starts over: it adds
+        its days again at its next sync. Answers like `GET /families/{familyId}` with the range
+        given.
       x-ohana-role: editor
       parameters:
         - $ref: "#/components/parameters/FamilyId"
@@ -1843,6 +1849,87 @@ paths:
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
         "404": {$ref: "#/components/responses/NotFound"}
+
+  # ------------------------------------------------------------------ holidays
+  /api/v1/families/{familyId}/holidays:
+    parameters:
+      - $ref: "#/components/parameters/FamilyId"
+    get:
+      tags: [Holidays]
+      operationId: getHolidays
+      summary: The holiday import's settings
+      description: The region is named in the caller's language.
+      x-ohana-role: viewer
+      responses:
+        "200":
+          description: The settings.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/HolidaySettings"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    put:
+      tags: [Holidays]
+      operationId: setHolidays
+      summary: Turn the import of public / school holidays on or off, set the region
+      description: >-
+        Fields left out stay. `region`: `null` follows the home address (detected with a
+        reverse look-up of its coordinates: the state's region, a municipality's below it,
+        else the country's nationwide days), a code (`DE`, `DE-BY`, `DE-BY-AU`) is fixed. Asks
+        the worker for a sync; the region is detected right away when that is quick. A kind
+        turned off, or another region, removes the imported days from today on at once (the
+        past stays); days the user deleted aren't added again.
+      x-ohana-role: editor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                public: {type: boolean}
+                school: {type: boolean}
+                region:
+                  type: [string, "null"]
+                  pattern: "^[A-Za-z]{2}(-[A-Za-z0-9]+)*$"
+                  example: DE-BY
+      responses:
+        "200":
+          description: The settings.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/HolidaySettings"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/families/{familyId}/holidays/regions:
+    get:
+      tags: [Holidays]
+      operationId: listHolidayRegions
+      summary: The countries, or a country's regions, holidays can be imported for
+      description: >-
+        Without `country`: the countries; with it: the country's regions with their smaller
+        ones (municipalities, districts). Named in the caller's language, sorted by name. From
+        OpenHolidays (kept for a day); 404 when the server turned holidays off.
+      x-ohana-role: viewer
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+        - name: country
+          in: query
+          schema: {type: string, pattern: "^[A-Za-z]{2}$", example: DE}
+      responses:
+        "200":
+          description: The countries or regions.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: "#/components/schemas/HolidayRegion"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "502": {$ref: "#/components/responses/BadGateway"}
 
   # ------------------------------------------------------------------ events
   /api/v1/families/{familyId}/events:
@@ -5268,10 +5355,46 @@ components:
           pattern: "^(\\d{4}-\\d{2}-\\d{2})?$"
         - type: "null"
 
+    # ---------------------------------------------------------------- holidays
+    HolidaySettings:
+      type: object
+      required: [public, school, auto, region, status, syncedAt]
+      properties:
+        public: {type: boolean, description: "Public holidays are imported (type `holiday`)."}
+        school: {type: boolean, description: "School holidays are imported (type `school-holidays`)."}
+        auto: {type: boolean, description: "The region follows the home address."}
+        region:
+          oneOf:
+            - type: object
+              required: [code, name]
+              properties:
+                code: {type: string, example: DE-BY}
+                name: {type: string, example: "Bavaria, Germany"}
+            - type: "null"
+        status:
+          type: string
+          enum: [ok, pending, no_address, unsupported, failed, off]
+          description: >-
+            `pending`: a sync is waiting for the worker; `no_address`: the region follows the
+            home and there is none; `unsupported`: OpenHolidays doesn't know the country;
+            `failed`: the last sync failed (tried again); `off`: nothing is imported, or the
+            server turned holidays off.
+        syncedAt: {type: [string, "null"], format: date-time}
+    HolidayRegion:
+      type: object
+      required: [code, name]
+      properties:
+        code: {type: string, example: DE-BY}
+        name: {type: string, example: Bavaria}
+        children:
+          type: array
+          description: Smaller regions with holidays of their own (only for regions).
+          items: {$ref: "#/components/schemas/HolidayRegion"}
+
     # ---------------------------------------------------------------- server / account
     ServerInfo:
       type: object
-      required: [name, version, apiVersion, modules, push]
+      required: [name, version, apiVersion, modules, push, holidays]
       properties:
         name: {type: string, const: Ohana}
         version: {type: string, description: "The server release, e.g. `0.1.0`."}
@@ -5290,6 +5413,9 @@ components:
               properties:
                 relay: {type: string, format: uri, description: "The relay the app registers with."}
             - type: "null"
+        holidays:
+          type: boolean
+          description: Public and school holidays can be imported (`HOLIDAYS_URL` isn't empty).
     PushDevice:
       type: object
       required: [registered, platform, mutedFamilyIds, lastSentAt, lastError]
@@ -5464,6 +5590,20 @@ components:
               properties:
                 name: {type: string}
                 age: {type: integer, description: "The age they turn."}
+        holidays:
+          type: object
+          description: >-
+            Day → the holidays of the family's region that day, of the kinds it imports (a
+            school holiday over several days is under each of them), named in the caller's
+            language. Read from the server's cache; empty when nothing is imported.
+          additionalProperties:
+            type: array
+            items:
+              type: object
+              required: [name, kind]
+              properties:
+                name: {type: string, example: Christmas Day}
+                kind: {type: string, enum: [public, school]}
     EntryTypeRole:
       type: string
       enum: [none, needs_cover, covers, day_off]

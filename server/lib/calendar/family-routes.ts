@@ -12,6 +12,8 @@ import type { Db } from "@/lib/db";
 import { type BirthdayDay, birthdaysIn } from "@/lib/families/birthdays";
 import { familyNames } from "@/lib/families/people";
 import { eventRange, eventsByDay, listOccurrences, type PublicEvent } from "./events";
+import { holidaysUrl } from "./holidays/openholidays";
+import { entriesReplaced, type HolidayDay, holidaysByDay } from "./holidays/settings";
 import { EXPORT_FORMAT, EXPORT_VERSION, isExportFormat } from "./export-file";
 import {
   exportType,
@@ -39,34 +41,38 @@ export function publicFamily({ family, access }: Loaded) {
 /** The family's accounts and people as the calendar shows them (familyNames' order). */
 export type FamilyMemberColor = { id: string; name: string; account: boolean; color: string; photo: string | null };
 
-/** What the calendar shows next to the entries: events, the members' birthdays and the
- *  members with their colors. */
+/** What the calendar shows next to the entries: events, the members' birthdays, the public
+ *  and school holidays the family imports and the members with their colors. */
 export interface DayExtras {
   /** The days the events were listed for. */
   range: { from: string; to: string };
   /** The occurrences overlapping `range`. */
   events: PublicEvent[];
   birthdays: BirthdayDay[];
+  /** Day -> the holidays of the region (the kinds the family imports, from the cache). */
+  holidays: Record<string, HolidayDay[]>;
   members: FamilyMemberColor[];
 }
 
-/** The range's events (a missing end: the year of the other one, else the current year; at
- *  most 3 years), and its birthdays when the range has both ends. */
-export function dayExtras(db: Db, familyId: string, range: Range, now?: Date): DayExtras {
+/** The range's events and holidays (named in `lang`; a missing end: the year of the other
+ *  one, else the current year; at most 3 years), and its birthdays when the range has both
+ *  ends. */
+export function dayExtras(db: Db, familyId: string, range: Range, now?: Date, lang = "en"): DayExtras {
   const events = eventRange(range, now);
   const names = familyNames(db, familyId);
   return {
     range: events,
     events: listOccurrences(db, familyId, events),
     birthdays: range.from && range.to ? birthdaysIn(names, range.from, range.to) : [],
+    holidays: holidaysByDay(db, familyId, events, lang, holidaysUrl() !== null),
     members: names.map(({ id, name, account, color, photo }) => ({ id, name, account, color, photo })),
   };
 }
 
 /** GET /families/{id}: the family and its calendar in the range, with the events (`events`:
  *  day -> the occurrences covering it), the members' birthdays (`birthdays`: day ->
- *  [{name, age}]) of the range by day and the members with their colors (`members`) when
- *  given. */
+ *  [{name, age}]) of the range by day, the holidays (`holidays`: day -> [{name, kind}]) and
+ *  the members with their colors (`members`) when given. */
 export function familyState(loaded: Loaded, range: Range, data: VacationData, extras?: DayExtras) {
   const family = publicFamily(loaded);
   // "session" is the name from before families, kept for scripts that read it.
@@ -75,7 +81,12 @@ export function familyState(loaded: Loaded, range: Range, data: VacationData, ex
     session: family,
     ...vacationState(range, data),
     ...(extras
-      ? { events: eventsByDay(extras.events, extras.range), birthdays: birthdaysByDay(extras.birthdays), members: extras.members }
+      ? {
+          events: eventsByDay(extras.events, extras.range),
+          birthdays: birthdaysByDay(extras.birthdays),
+          holidays: extras.holidays,
+          members: extras.members,
+        }
       : {}),
   };
 }
@@ -141,10 +152,10 @@ export function handleFamily(ctx: Ctx): Promise<Response> | null {
   return fn ? fn(ctx) : Promise.reject(new HttpError(405, "Method not allowed"));
 }
 
-async function read({ db, store, url, loadWith, now }: Ctx): Promise<Response> {
+async function read({ db, store, url, loadWith, now, principal }: Ctx): Promise<Response> {
   const range = rangeFromQuery(url);
   const [loaded, data] = await loadWith("view", (id) => listVacation(store, id, range));
-  return json(familyState(loaded, range, data, dayExtras(db, loaded.family.id, range, now)));
+  return json(familyState(loaded, range, data, dayExtras(db, loaded.family.id, range, now, principal?.preferredLanguage)));
 }
 
 async function rename({ db, store, req, url, loadWith, now, requireUser }: Ctx): Promise<Response> {
@@ -152,9 +163,10 @@ async function rename({ db, store, req, url, loadWith, now, requireUser }: Ctx):
   const [loaded, data] = await loadWith("edit", (id) => listVacation(store, id, range));
   const name = (await readBody(req)).name;
   if (typeof name !== "string") throw new HttpError(400, "name is required");
-  renameFamily(db, { id: requireUser().id }, loaded.family.id, name, now);
+  const user = requireUser();
+  renameFamily(db, { id: user.id }, loaded.family.id, name, now);
   const family = (await store.getFamily(loaded.family.id))!;
-  return json(familyState({ ...loaded, family }, range, data, dayExtras(db, family.id, range, now)));
+  return json(familyState({ ...loaded, family }, range, data, dayExtras(db, family.id, range, now, user.preferredLanguage)));
 }
 
 /** Viewers may export too: they can read all of that anyway. */
@@ -169,8 +181,9 @@ async function exportFamily({ db, store, finance, loadWith, now }: Ctx): Promise
 
 /** Replaces all years, types, entries and notes, and the finances if the file has them, with
  *  those of an export file; the name stays. A type's `member` is found by name among the
- *  family's members (else nobody's). Answers like GET /families/{id} (with ?year= etc.). */
-async function importFamily({ db, store, req, url, load, now }: Ctx): Promise<Response> {
+ *  family's members (else nobody's). The holiday import starts over (it re-adds its days).
+ *  Answers like GET /families/{id} (with ?year= etc.). */
+async function importFamily({ db, store, req, url, load, now, principal }: Ctx): Promise<Response> {
   const range = rangeFromQuery(url);
   const loaded = await load("edit");
   const { family } = loaded;
@@ -182,8 +195,14 @@ async function importFamily({ db, store, req, url, load, now }: Ctx): Promise<Re
     member_id: (member && byName.get(member.toLowerCase())) ?? null,
   }));
   await store.replaceContents(family.id, types, data.entries, data.notes, data.finance);
+  entriesReplaced(db, family.id, now);
   const updated = (await store.getFamily(family.id))!;
   return json(
-    familyState({ ...loaded, family: updated }, range, await listVacation(store, family.id, range), dayExtras(db, family.id, range, now)),
+    familyState(
+      { ...loaded, family: updated },
+      range,
+      await listVacation(store, family.id, range),
+      dayExtras(db, family.id, range, now, principal?.preferredLanguage),
+    ),
   );
 }

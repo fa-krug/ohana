@@ -54,6 +54,13 @@ back and a year ahead, and runs while the app is open: at launch, when it comes 
 every 15 minutes, and when either side changes. Viewers only get the family's events, nothing
 goes back. Several devices can sync into the same iCloud calendar without copying events twice.
 
+## Holidays
+
+In Settings → Calendar an editor can import the public and / or school holidays of the family's
+region as day entries ("Holiday", "School holidays"), this year's and next year's, kept up to
+date by the server. The region comes from the home address, or pick one. Days you delete stay
+deleted; turning a kind off removes its days from today on.
+
 ## Families, roles and modules
 
 - If you're in several families, switch between them in the menu at the top of the sidebar (iPad

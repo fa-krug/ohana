@@ -52,7 +52,7 @@ struct CalendarYearDays: View, Equatable {
                                 .accessibilityElement()
                                 .accessibilityLabel(CalendarDayCell.accessibilityText(
                                     day: day, types: info.types, note: info.note, events: info.events,
-                                    birthdays: info.birthdays, gap: info.gap))
+                                    holidays: info.holidays, birthdays: info.birthdays, gap: info.gap))
                                 .accessibilityAddTraits(info.selected ? [.isButton, .isSelected] : .isButton)
                                 .modifier(CalendarDayAccessibilityActions(store: store, actions: actions, day: day,
                                                                           info: info))
@@ -254,7 +254,8 @@ struct CalendarYearPointer: View {
 
     private func tooltip(_ day: Day) -> String {
         CalendarDayCell.tooltip(day: day, types: store.types(on: day), note: store.notes[day],
-                                events: store.events[day] ?? [], birthdays: store.birthdays[day] ?? [])
+                                events: store.events[day] ?? [], holidays: store.holidays[day] ?? [],
+                                birthdays: store.birthdays[day] ?? [])
     }
 }
 #endif

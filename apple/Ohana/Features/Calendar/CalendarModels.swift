@@ -140,6 +140,15 @@ struct CalendarBirthday: Codable, Hashable {
     let age: Int
 }
 
+/// A public holiday or a day of school holidays of the family's region (`GET /holidays`), by
+/// name: its day also has an entry of the type it was imported into (`holiday`,
+/// `school-holidays`), which colors it.
+struct CalendarHoliday: Codable, Hashable {
+    let name: String
+    /// "public" or "school" (kept as sent: a newer server may add kinds).
+    let kind: String
+}
+
 /// An event on the calendar (events.ts `PublicEvent`): a booked appointment, one added by hand or
 /// imported from Apple Calendar; one occurrence of it when it repeats. It may span several days
 /// (`date` to `endDate`); the lists by day show it on each of them. An occurrence is addressed as
@@ -406,6 +415,8 @@ struct CalendarState: Codable {
     let birthdays: [String: [CalendarBirthday]]?
     /// The family's members, for the types' `memberId`s.
     var members: [CalendarMember]?
+    /// The imported holidays' names by day; nil from a server without them.
+    var holidays: [String: [CalendarHoliday]]?
 }
 
 // MARK: Requests
