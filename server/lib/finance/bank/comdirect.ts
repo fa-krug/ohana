@@ -14,7 +14,7 @@
 
 import { randomBytes } from "node:crypto";
 import { setTimeout as sleep } from "node:timers/promises";
-import { isValidDate } from "@/lib/calendar/dates";
+import { addDays, isValidDate } from "@/lib/calendar/dates";
 import { BankError, type BankProvider, type BankRow, type BankStatement, type SyncRequest } from "./types";
 
 export const COMDIRECT_BASE = "https://api.comdirect.de";
@@ -451,7 +451,8 @@ async function cardStatement(api: Api, req: SyncRequest, token: string, suffix: 
   const card = pickCard(cards, suffix);
   // One page only: comdirect answers 422 to paging-first on cards. paging-count 500 gives every
   // row since min-bookingDate (a card books far fewer than that between syncs); should there be
-  // more (paging.matches), the newest 500 come and the rest are left out.
+  // more (paging.matches), the newest 500 come: the rows count as complete only from the day
+  // after the oldest booking day among them (statement.from), the rest are left out.
   const query = new URLSearchParams({
     transactionState: "BOOKED",
     "paging-count": String(PAGE),
@@ -462,15 +463,24 @@ async function cardStatement(api: Api, req: SyncRequest, token: string, suffix: 
     token,
     `/api/banking/v1/cards/${encodeURIComponent(card.id)}/transactions?${query}`,
     "comdirect didn't list the card's transactions",
-  )) as { values?: unknown } | null;
-  const rows: BankRow[] = [];
-  for (const v of Array.isArray(body?.values) ? body.values : []) {
+  )) as { values?: unknown; paging?: { matches?: unknown } } | null;
+  const values = Array.isArray(body?.values) ? body.values : [];
+  // Filtered by the booking day (as comdirect does), not the purchase day the row has.
+  const got = values.flatMap((v) => {
     const row = mapCardTransaction(v);
-    // Filtered by the booking day (as comdirect does), not the purchase day the row has.
+    if (!row) return [];
     const booked = (v as { bookingDate?: unknown })?.bookingDate;
-    if (row && (typeof booked === "string" && isValidDate(booked) ? booked : row.day) >= req.from) rows.push(row);
+    return [{ row, booked: typeof booked === "string" && isValidDate(booked) ? booked : row.day }];
+  });
+  const matches = typeof body?.paging?.matches === "number" ? body.paging.matches : 0;
+  let from = req.from;
+  let cut: string | undefined;
+  if (matches > values.length && got.length) {
+    const oldest = got.reduce((m, r) => (r.booked < m ? r.booked : m), got[0].booked);
+    if (addDays(oldest, 1) > from) from = cut = addDays(oldest, 1);
   }
-  return { accountRef: card.id, rows };
+  const rows = got.flatMap((r) => (r.booked >= from ? [r.row] : []));
+  return { accountRef: card.id, rows, ...(cut ? { from: cut } : {}) };
 }
 
 // ------------------------------------------------------------------ mapping

@@ -374,6 +374,9 @@ struct FinanceAccountEditor: View {
     @State private var busy = false
     /// Made by a save whose bank link then failed: saving again links it, without another account.
     @State private var created: FinanceAccount?
+    /// Asks before importing the bank's whole history, then shows that sync.
+    @State private var confirmingFullImport = false
+    @State private var importingAll: FinanceAccount?
 
     private var snapshot: FinanceEditorSnapshot {
         FinanceEditorSnapshot(name: name, icon: icon, color: FinanceColor.hex(color),
@@ -445,6 +448,12 @@ struct FinanceAccountEditor: View {
         .discardGuard(hasChanges: hasChanges)
         .presentationDetents([.medium, .large])
         .financeSheetFrame(minWidth: 400, minHeight: 360)
+        .confirmationDialog("Import all transactions?", isPresented: $confirmingFullImport, titleVisibility: .visible) {
+            Button("Import All") { importingAll = account ?? created }
+        } message: {
+            Text("Ohana loads every booking the bank still has. Transactions already here with the same day and amount are kept and linked to the bank instead of being added again.")
+        }
+        .sheet(item: $importingAll) { account in FinanceBankSyncSheet(store: store, account: account, full: true) }
         .onAppear {
             guard original == nil else { return }
             name = account?.name ?? String(localized: "Account \(store.accounts.count + 1)")
@@ -494,6 +503,11 @@ struct FinanceAccountEditor: View {
             if let link, provider?.rawValue == link.provider || !store.canEdit {
                 LabeledContent("Last synced") {
                     Text(link.lastSync?.formatted(.relative(presentation: .named)) ?? String(localized: "Never"))
+                }
+                // The link as saved: not while the editor holds changes to it.
+                if store.canEdit {
+                    Button("Import All Transactions…", systemImage: "clock.arrow.circlepath") { confirmingFullImport = true }
+                        .disabled(hasChanges || busy)
                 }
             }
         } header: {

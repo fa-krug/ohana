@@ -223,6 +223,12 @@ struct FinanceBankSync: Codable, Hashable, Identifiable {
         var splits: Int
         /// The added transactions.
         var ids: [String]
+        /// A full sync's: the account's transactions that now stand for a bank row (same day and
+        /// amount; kept as they were).
+        var adopted: Int?
+        /// A full sync's: the account's transactions of the days fetched the bank doesn't list
+        /// (left as they are; perhaps a CSV file's duplicates).
+        var unmatched: Int?
     }
 
     var id: String
@@ -235,6 +241,8 @@ struct FinanceBankSync: Codable, Hashable, Identifiable {
     var error: String?
     var createdAt: String?
     var updatedAt: String?
+    /// Imports the bank's whole history (nil: an older server's, never one).
+    var full: Bool?
 
     var stage: Step? { step.flatMap(Step.init) }
     /// Waiting, running or waiting for the TAN: it's polled.

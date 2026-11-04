@@ -37,10 +37,12 @@ extension FinanceBankSync {
 /// Syncs a linked account with its bank: starts the sync on the server, polls it about once a
 /// second, and shows what the bank asks for (approve the login in its app, or type a photoTAN /
 /// SMS TAN). When done it reports the new transactions and, as after a CSV import, can sort
-/// them into categories. Cancel stops the sync on the server too.
+/// them into categories. Cancel stops the sync on the server too. `full` imports the bank's whole
+/// history: the account's transactions it already has are taken over, not added again.
 struct FinanceBankSyncSheet: View {
     @Bindable var store: FinanceStore
     let account: FinanceAccount
+    var full = false
     @Environment(\.dismiss) private var dismiss
     @Environment(FamilyContext.self) private var family
 
@@ -64,7 +66,7 @@ struct FinanceBankSyncSheet: View {
         NavigationStack {
             Form { content }
                 .formStyle(.grouped)
-                .navigationTitle(account.label)
+                .navigationTitle(full ? String(localized: "Import All Transactions") : account.label)
                 #if os(iOS)
                 .navigationBarTitleDisplayMode(.inline)
                 #endif
@@ -209,6 +211,11 @@ struct FinanceBankSyncSheet: View {
         Section {
             Label(FinanceText.inflected("^[\(result.added) new transaction](inflect: true)"), systemImage: "checkmark.circle.fill")
                 .font(.headline)
+            if let adopted = result.adopted, adopted > 0 {
+                Label(FinanceText.inflected("^[\(adopted) transaction](inflect: true) already there – kept and linked to the bank"),
+                      systemImage: "link.circle")
+                    .foregroundStyle(.secondary)
+            }
             if result.duplicates > 0 {
                 Label("\(result.duplicates) already imported – skipped", systemImage: "arrow.uturn.left.circle")
                     .foregroundStyle(.secondary)
@@ -216,6 +223,14 @@ struct FinanceBankSyncSheet: View {
             if result.transfers > 0 || result.splits > 0 {
                 Label(FinanceStore.combinedText(transfers: result.transfers, splits: result.splits), systemImage: "link")
                     .foregroundStyle(.secondary)
+            }
+        }
+        if let unmatched = result.unmatched, unmatched > 0 {
+            Section {
+                Label(FinanceText.inflected("^[\(unmatched) transaction](inflect: true) the bank doesn’t list"),
+                      systemImage: "questionmark.circle")
+            } footer: {
+                Text("They were left as they are. They may be duplicates from a CSV import: check them in the account’s list.")
             }
         }
         // As after a CSV import; sorting goes through the assistant's routes: not without it.
@@ -246,7 +261,7 @@ struct FinanceBankSyncSheet: View {
         sync = nil
         tan = ""
         do {
-            sync = try await store.startSync(account.id)
+            sync = try await store.startSync(account.id, full: full)
             while sync?.isRunning == true {
                 try await Task.sleep(for: Self.pollInterval)
                 do {

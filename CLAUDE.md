@@ -238,8 +238,16 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   transactions from its latest day on, of an empty one 2 years back (saving another IBAN / card /
   provider clears both; links synced before it existed got `synced_through` as their floor); on
   days up to `synced_from` a bank row with the day and amount of one of the account's other
-  transactions (not a split's part) counts as that one, one to one, its own (same hash) first
-  (`sameDayMatches`: a CSV file's last day isn't doubled). Import through `importTransactions`
+  transactions (not a split's part) counts as that one, one to one, its own (same hash) first,
+  else the one with its payee (`matchExisting`: a CSV file's last day isn't doubled). A **full
+  sync** (`POST …/bank/sync {full: true}`, `fin_bank_syncs.full`; the user's explicit "import all
+  transactions" after a CSV import) asks for `FULL_SYNC_DAYS` (10 years) back and matches the same
+  way on every day fetched, but *adopts*: the matched transaction takes the bank row's import hash
+  (its text, category, note, transfer and split stay), only unmatched rows are added, the
+  account's other transactions from the bank's first row on are counted (`result.adopted` / `unmatched`) and left
+  alone; `synced_from` becomes its first day. A comdirect card gives only its newest 500 rows: when
+  there are more, `BankStatement.from` says from which day they're complete (the oldest day's
+  rows dropped). Import through `importTransactions`
   (shared with the CSV route, autoTransfers on); hashes
   `"bank|<provider>|<bank account id / cardId>|<reference>"`, rows without a reference by
   `importHashes`; a card's Visa-Kartenabrechnung pairs with the Girokonto's debit by
@@ -248,7 +256,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   fields; one field "IBAN or card number"), `FinanceIntake` (pure: Import CSV, Sync of the shown
   account, or a menu of both; the CSV sheet leaves linked accounts out), `FinanceBankSyncSheet`
   (starts the sync, polls it every second: push / photoTAN / SMS TAN, then the CSV import's sort
-  into categories).
+  into categories; `full`: the account editor's *Import All Transactions*, after a confirmation,
+  shows the adopted / added / unmatched counts).
 - **Assistant (`lib/assistant/`):** family-planner's `ai/*`. Tables
   `ai_settings` (keys sealed with `getSecretBox()`), `chats` (status, lease `run_token` /
   `run_until`, `stop`, JSON `context` / `activity` / `notes` / `usage` / `queue`, `rev`),

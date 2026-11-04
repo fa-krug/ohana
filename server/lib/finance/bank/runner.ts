@@ -9,7 +9,7 @@
 
 import { randomUUID } from "node:crypto";
 import { setTimeout as sleep } from "node:timers/promises";
-import { and, asc, eq, inArray, lte, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { randomToken } from "@/lib/api/http";
 import { addDays } from "@/lib/calendar/dates";
 import type { Db } from "@/lib/db";
@@ -31,6 +31,9 @@ export const SYNC_TIMEOUT_MS = 12 * 60_000;
 export const RESYNC_DAYS = 14;
 /** The first sync of an empty account goes this far back. */
 export const FIRST_SYNC_DAYS = 730;
+/** A full sync (the bank's whole history) asks for this many days back; the bank gives what it
+ *  has (comdirect pages through up to 100 × 500 rows, a card's newest 500). */
+export const FULL_SYNC_DAYS = 3653;
 
 const DEFAULT_TIMING: SyncTiming = {
   requestTimeoutMs: 30_000,
@@ -181,7 +184,7 @@ export class BankSyncRunner {
       if (link.unconfirmedTans >= BANK_MAX_UNCONFIRMED) throw new BankError(UNCONFIRMED_MESSAGE);
       const credentials = openCredentials(link);
       if (!credentials) throw new BankError("The bank connection can't be read any more: save it again");
-      const from = this.firstDay(link);
+      const from = row.full ? addDays(localDay(this.now()), -FULL_SYNC_DAYS) : this.firstDay(link);
       const statement = await provider.fetchStatement({
         credentials,
         iban: link.iban,
@@ -195,7 +198,7 @@ export class BankSyncRunner {
         hooks: this.hooks(link, row.id, run, signal, update),
       });
       update({ status: "running", step: "import", tan: null });
-      const result = await this.import(link, statement, from);
+      const result = await this.import(link, statement, from, row.full);
       update({ status: "done", step: null, tanInput: null, result: JSON.stringify(result), runToken: null, lockedUntil: null });
     } catch (err) {
       if (run.abort.signal.aborted) {
@@ -297,11 +300,16 @@ export class BankSyncRunner {
   /** Adds the bank's rows that aren't there yet to the account. On the floor's day (the first
    *  sync's first day: the account's latest day then) the account may hold the same bookings
    *  from elsewhere: a bank row with the amount of one of that day's other transactions counts
-   *  as that one (one to one; see `sameDayMatches`). */
-  private async import(link: LinkRow, statement: BankStatement, from: string): Promise<SyncResult> {
+   *  as that one (one to one; see `matchExisting`). A full sync does that on every day fetched
+   *  and the transaction takes the bank row's import hash (adopted: its category, note, links
+   *  and text stay), so later syncs know it; the account's transactions from the bank's first
+   *  row on that the bank doesn't list are counted (unmatched) and left alone. */
+  private async import(link: LinkRow, statement: BankStatement, requested: string, full: boolean): Promise<SyncResult> {
     const store = new DrizzleFinanceStore(this.db);
     const now = this.now();
     const createdAt = now.toISOString();
+    // The bank may have given fewer rows than asked for (a card's newest 500).
+    const from = statement.from && statement.from > requested ? statement.from : requested;
     const rows: TransactionRow[] = statement.rows.map((r) => ({
       family_id: link.familyId,
       id: randomUUID(),
@@ -328,8 +336,36 @@ export class BankSyncRunner {
       );
     }
     const first = !link.syncedThrough;
-    const floor = first ? from : link.syncedFrom;
-    const matched = floor ? await this.sameDayMatches(link, floor, rows, hashes) : new Set<number>();
+    let matched = new Map<number, string>();
+    let unmatched = 0;
+    if (full) {
+      const today = localDay(now);
+      const earliest = rows.reduce((m, r) => (r.day < m ? r.day : m), rows[0]?.day ?? from);
+      const found = await this.matchExisting(link, store, rows, hashes, rows.map((_, i) => i), {
+        since: earliest < from ? earliest : from,
+      });
+      matched = found.matched;
+      // From the bank's first booking on: before it, the bank may just not go back that far.
+      const covered = rows.length ? (earliest > from ? earliest : from) : null;
+      unmatched = covered
+        ? found.existing.filter((t) => t.day >= covered && t.day <= today && !found.taken.has(t.id)).length
+        : 0;
+      this.db.transaction((tx) => {
+        for (const [i, id] of matched) {
+          tx.update(finTransactions)
+            .set({ importHash: hashes[i] })
+            .where(and(eq(finTransactions.familyId, link.familyId), eq(finTransactions.id, id)))
+            .run();
+        }
+      });
+    } else {
+      const floor = first ? from : link.syncedFrom;
+      const onFloor = floor ? rows.flatMap((r, i) => (r.day <= floor ? [i] : [])) : [];
+      if (onFloor.length) {
+        const days = [...new Set(onFloor.map((i) => rows[i].day))];
+        ({ matched } = await this.matchExisting(link, store, rows, hashes, onFloor, { days }));
+      }
+    }
     const keep = rows.flatMap((_, i) => (matched.has(i) ? [] : [i]));
     const outcome = await importTransactions(
       store,
@@ -339,59 +375,92 @@ export class BankSyncRunner {
       { autoTransfers: true },
     );
     const last = statement.rows.reduce<string | null>((m, r) => (!m || r.day > m ? r.day : m), link.syncedThrough);
+    const syncedFrom = full ? { syncedFrom: from } : first && last ? { syncedFrom: from } : {};
     this.db
       .update(finBankLinks)
-      .set({ syncedThrough: last, ...(first && last ? { syncedFrom: from } : {}), lastSyncAt: now, updatedAt: now })
+      .set({ syncedThrough: last, ...syncedFrom, lastSyncAt: now, updatedAt: now })
       .where(and(eq(finBankLinks.familyId, link.familyId), eq(finBankLinks.accountId, link.accountId)))
       .run();
     return {
       added: outcome.added,
-      duplicates: outcome.duplicates.length + matched.size,
+      duplicates: outcome.duplicates.length + (full ? 0 : matched.size),
       transfers: outcome.transfers,
       splits: outcome.splits,
       ids: outcome.ids,
+      ...(full ? { adopted: matched.size, unmatched } : {}),
     };
   }
 
-  /** The bank's rows on days up to `floor` that the account already has from elsewhere: each of
-   *  those days' transactions (not parts of a split) stands for one bank row of its day and
-   *  amount, its own (same import hash) first, then any other. So a booking of a CSV file's last
-   *  day isn't added twice, also not by a later sync reaching that day again (counted afresh
-   *  each time), while one more booking of that day and amount is. */
-  private async sameDayMatches(link: LinkRow, floor: string, rows: TransactionRow[], hashes: string[]): Promise<Set<number>> {
-    const matched = new Set<number>();
-    const onFloor = rows.flatMap((r, i) => (r.day <= floor ? [i] : []));
-    if (!onFloor.length) return matched;
-    const days = [...new Set(onFloor.map((i) => rows[i].day))];
+  /** Matches the bank's rows `indices` to the account's transactions (not parts of a split) on
+   *  `days`, or from `since` on: each transaction stands for one bank row of its day and amount.
+   *  A row whose import hash the family has already (imported before) takes its own transaction
+   *  and is left to importTransactions (a duplicate); any other takes one of its day and amount,
+   *  the one with its payee first. So a booking of a CSV file's last day isn't added twice, also
+   *  not by a later sync reaching that day again (counted afresh each time), while one more
+   *  booking of that day and amount is. `matched`: row → the other transaction it took;
+   *  `taken`: every transaction taken; `existing`: those looked at. */
+  private async matchExisting(
+    link: LinkRow,
+    store: DrizzleFinanceStore,
+    rows: TransactionRow[],
+    hashes: string[],
+    indices: number[],
+    where: { days: string[] } | { since: string },
+  ) {
     const existing = this.db
-      .select({ day: finTransactions.day, amountCents: finTransactions.amountCents, importHash: finTransactions.importHash })
+      .select({
+        id: finTransactions.id,
+        day: finTransactions.day,
+        amountCents: finTransactions.amountCents,
+        payee: finTransactions.payee,
+        importHash: finTransactions.importHash,
+      })
       .from(finTransactions)
       .where(
         and(
           eq(finTransactions.familyId, link.familyId),
           eq(finTransactions.accountId, link.accountId),
-          inArray(finTransactions.day, days),
+          "days" in where ? inArray(finTransactions.day, where.days) : gte(finTransactions.day, where.since),
           sql`${finTransactions.splitOf} is null`,
         ),
       )
+      .orderBy(asc(finTransactions.day), asc(finTransactions.createdAt), asc(sql`rowid`))
       .all();
-    const pool = new Map<string, number>(); // day|amount → transactions not yet standing for a row
-    const own = new Set<string>();
+    type Existing = (typeof existing)[number];
+    const known = await store.existingImportHashes(link.familyId, indices.map((i) => hashes[i]));
+    const keyOf = (day: string, cents: number) => `${day}|${cents}`;
+    const pool = new Map<string, Existing[]>(); // day|amount → transactions not taken yet
+    const byHash = new Map<string, Existing>();
     for (const t of existing) {
-      const key = `${t.day}|${t.amountCents}`;
-      pool.set(key, (pool.get(key) ?? 0) + 1);
-      if (t.importHash) own.add(t.importHash);
+      const key = keyOf(t.day, t.amountCents);
+      pool.set(key, [...(pool.get(key) ?? []), t]);
+      if (t.importHash) byHash.set(t.importHash, t);
     }
-    const take = (i: number) => {
-      const key = `${rows[i].day}|${rows[i].amount_cents}`;
-      const n = pool.get(key) ?? 0;
-      if (n) pool.set(key, n - 1);
-      return n > 0;
+    const taken = new Set<string>();
+    const take = (t: Existing) => {
+      const key = keyOf(t.day, t.amountCents);
+      pool.set(key, pool.get(key)!.filter((x) => x !== t));
+      taken.add(t.id);
     };
-    // Rows already imported (same hash) take their own transaction; importTransactions skips them.
-    const others = onFloor.filter((i) => !(own.has(hashes[i]) && take(i)));
-    for (const i of others) if (take(i)) matched.add(i);
-    return matched;
+    const seen = new Set<string>();
+    const others: number[] = [];
+    for (const i of indices) {
+      if (known.has(hashes[i]) || seen.has(hashes[i])) {
+        const own = byHash.get(hashes[i]);
+        if (own && !taken.has(own.id) && keyOf(own.day, own.amountCents) === keyOf(rows[i].day, rows[i].amount_cents)) take(own);
+      } else others.push(i);
+      seen.add(hashes[i]);
+    }
+    const fold = (s: string) => s.trim().toLowerCase();
+    const matched = new Map<number, string>();
+    for (const i of others) {
+      const left = pool.get(keyOf(rows[i].day, rows[i].amount_cents)) ?? [];
+      if (!left.length) continue;
+      const t = left.find((x) => fold(x.payee) === fold(rows[i].payee)) ?? left[0];
+      take(t);
+      matched.set(i, t.id);
+    }
+    return { matched, taken, existing };
   }
 
   /** Waits for the running syncs until all ended or `ms` passed. */

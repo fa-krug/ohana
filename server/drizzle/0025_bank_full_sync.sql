@@ -1,0 +1,1 @@
+ALTER TABLE `fin_bank_syncs` ADD `full` integer DEFAULT false NOT NULL;

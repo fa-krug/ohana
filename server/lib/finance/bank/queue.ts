@@ -27,12 +27,20 @@ export interface SyncResult {
   transfers: number;
   splits: number;
   ids: string[];
+  /** A full sync's: the account's transactions that now stand for a bank row (same day and
+   *  amount; they took the bank's import hash and kept everything else). */
+  adopted?: number;
+  /** A full sync's: the account's transactions in the fetched days the bank doesn't list (left
+   *  as they are; perhaps a CSV file's duplicates). */
+  unmatched?: number;
 }
 
 export interface SyncDto {
   id: string;
   accountId: string;
   status: SyncStatus;
+  /** Imports the bank's whole history (see SyncResult's adopted / unmatched). */
+  full: boolean;
   step: SyncStep | null;
   tan: TanChallenge | null;
   result: SyncResult | null;
@@ -55,6 +63,7 @@ export function syncDto(r: SyncRow): SyncDto {
     id: r.id,
     accountId: r.accountId,
     status: r.status as SyncStatus,
+    full: r.full,
     step: (r.step as SyncStep | null) ?? null,
     tan: r.status === "tan" ? parse<TanChallenge>(r.tan) : null,
     result: r.status === "done" ? parse<SyncResult>(r.result) : null,
@@ -100,8 +109,8 @@ export const failedSet = (error: string, now: Date) => ({
 });
 
 /**
- * Starts a sync of the linked account: the one that hasn't ended yet if there is one (created:
- * false), else a new waiting one. 409 without a link, and while a lockout guard holds (the
+ * Starts a sync of the linked account (`full`: of the bank's whole history): the one that hasn't
+ * ended yet if there is one (created: false; it stays what it is), else a new waiting one. 409 without a link, and while a lockout guard holds (the
  * bank refused the login last time; too many TAN challenges without a confirmed TAN).
  */
 export function startSync(
@@ -110,6 +119,7 @@ export function startSync(
   accountId: string,
   userId: string | null,
   now: Date,
+  full = false,
 ): { sync: SyncRow; created: boolean } {
   // Synchronous (better-sqlite3), so no other request comes in between.
   const link = getLink(db, familyId, accountId);
@@ -133,6 +143,7 @@ export function startSync(
     accountId,
     userId,
     status: "waiting",
+    full,
     step: null,
     tan: null,
     tanInput: null,

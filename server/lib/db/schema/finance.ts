@@ -174,7 +174,10 @@ export const finBankSyncs = sqliteTable(
     tan: text("tan"),
     /** The TAN the user typed (sealed) until the worker sent it. */
     tanInput: text("tan_input"),
-    /** JSON {added, duplicates, transfers, splits, ids} once done. */
+    /** Imports the bank's whole history (POST …/bank/sync {full: true}): from as far back as the
+     *  bank allows, adopting the account's matching transactions (runner.ts). */
+    full: integer("full", { mode: "boolean" }).notNull().default(false),
+    /** JSON {added, duplicates, transfers, splits, ids[, adopted, unmatched]} once done. */
     result: text("result"),
     error: text("error"),
     runToken: text("run_token"),

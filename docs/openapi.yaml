@@ -2788,11 +2788,26 @@ paths:
         banking after 5 TAN challenges without a confirmed TAN, or 3 wrong TANs) after the bank
         refused the login, or after 3 TAN challenges in a row without a confirmed TAN, until the
         link is saved again (PUT …/bank).
+
+
+        `{"full": true}` imports the bank's whole history instead (e.g. after a CSV import): from
+        ten years back, or as far as the bank goes (a comdirect card: its newest 500 bookings). A
+        bank row with the day and amount of one of the account's transactions (not a split's part;
+        one to one, the one with the same payee first) is that transaction: it takes the bank's
+        import hash and keeps its text, category, note, transfer and split, so later syncs know it
+        (`adopted`). Only the other rows are added. The account's transactions from the bank's
+        first booking on that the bank doesn't list stay as they are (`unmatched`; perhaps a CSV
+        file's duplicates). Later
+        syncs never reach back before its first day. While another sync runs, that one is
+        answered (200) as it is.
       x-ohana-role: editor
       requestBody:
         content:
           application/json:
-            schema: {type: object}
+            schema:
+              type: object
+              properties:
+                full: {type: boolean, description: "Import the bank's whole history, adopting the matching transactions."}
       responses:
         "200":
           description: The sync that hasn't ended yet.
@@ -6664,11 +6679,12 @@ components:
     BankSync:
       type: object
       description: A sync of a linked account with its bank. `done` and `failed` are final.
-      required: [id, accountId, status, step, tan, result, error, createdAt, updatedAt]
+      required: [id, accountId, status, full, step, tan, result, error, createdAt, updatedAt]
       properties:
         id: {type: string, format: uuid}
         accountId: {type: string}
         status: {type: string, enum: [waiting, running, tan, done, failed]}
+        full: {type: boolean, description: "Imports the bank's whole history (POST {full: true})."}
         step:
           type: [string, "null"]
           enum: [login, tan, fetch, import, null]
@@ -6698,6 +6714,8 @@ components:
               type: array
               description: The added transactions.
               items: {type: string, format: uuid}
+            adopted: {type: integer, description: "A full sync's: the account's transactions that took a bank row's import hash."}
+            unmatched: {type: integer, description: "A full sync's: the account's transactions from the bank's first booking on that the bank doesn't list (left as they are)."}
         error: {type: [string, "null"], description: "Set when failed: what went wrong (English), e.g. a wrong PIN, a TAN not confirmed in time, \"Cancelled\", \"Interrupted\"."}
         createdAt: {type: string, format: date-time}
         updatedAt: {type: string, format: date-time}

@@ -822,9 +822,10 @@ final class FinanceStore {
 
     private static func syncPath(_ accountId: String) -> String { "/finance/accounts/\(accountId)/bank/sync" }
 
-    /// Starts a sync (or answers the one under way).
-    func startSync(_ accountId: String) async throws -> FinanceBankSync {
-        try await api.send(.post, Self.syncPath(accountId), body: JSONValue.object([:]))
+    /// Starts a sync (or answers the one under way); `full`: of the bank's whole history,
+    /// taking over the account's matching transactions.
+    func startSync(_ accountId: String, full: Bool = false) async throws -> FinanceBankSync {
+        try await api.send(.post, Self.syncPath(accountId), body: JSONValue.object(full ? ["full": .bool(true)] : [:]))
     }
 
     /// The account's latest sync.

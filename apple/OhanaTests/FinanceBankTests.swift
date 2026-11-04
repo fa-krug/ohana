@@ -68,6 +68,17 @@ struct FinanceBankTests {
         #expect(!done.isRunning)
         #expect(done.result?.ids == ["a", "b"])
         #expect(done.result?.duplicates == 3)
+        #expect(done.result?.adopted == nil)
+        #expect(done.full == nil)
+
+        let full = try decode(FinanceBankSync.self, """
+        {"id":"7d1d","accountId":"giro","status":"done","full":true,"step":null,"tan":null,
+         "result":{"added":1,"duplicates":0,"transfers":0,"splits":0,"ids":["c"],"adopted":4,"unmatched":1},
+         "error":null,"createdAt":"x","updatedAt":"x"}
+        """)
+        #expect(full.full == true)
+        #expect(full.result?.adopted == 4)
+        #expect(full.result?.unmatched == 1)
 
         let failed = try decode(FinanceBankSync.self, """
         {"id":"7d1c","accountId":"giro","status":"failed","step":"login","tan":null,"result":null,

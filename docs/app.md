@@ -137,6 +137,14 @@ on the way, as after a CSV import. Pending transactions come once they're booked
   transactions (from CSV files, say) only gets the ones after its latest, so nothing comes
   twice. Later syncs look two weeks back from the last booking they brought, for late bookings;
   what is there already is recognized.
+- **Import All Transactions** (in the account's settings, for an account that is linked) brings
+  in the bank's whole history once, e.g. after you imported CSV files first. A transaction
+  already in Ohana with the same day and amount as one of the bank's is kept as it is (text,
+  category, note) and from then on counts as the bank's, so it never comes twice; only the
+  others are added. At the end Ohana says how many it kept, added, and how many of the
+  account's transactions the bank doesn't list: those stay untouched, but they may be
+  duplicates from a CSV file worth a look. comdirect gives a credit card's newest 500 bookings
+  only.
 - A sync within about 20 minutes of the last one usually needs no new TAN.
 - comdirect **locks the online banking** after five TAN requests without a confirmed TAN in
   between, or three wrong TANs. So Ohana never asks twice by itself: a wrong TAN ends the sync,

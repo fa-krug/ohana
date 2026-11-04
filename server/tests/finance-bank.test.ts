@@ -19,7 +19,7 @@ import { addDays } from "@/lib/calendar/dates";
 import * as schema from "@/lib/db/schema";
 import { finBankLinks, finBankSyncs, finTransactions } from "@/lib/db/schema";
 import { centsOf, mapCardTransaction, mapTransaction, remittanceLines } from "@/lib/finance/bank/comdirect";
-import { BankSyncRunner } from "@/lib/finance/bank/runner";
+import { BankSyncRunner, FULL_SYNC_DAYS } from "@/lib/finance/bank/runner";
 import { pruneSyncs } from "@/lib/finance/bank/queue";
 import { handleFinance } from "@/lib/finance/finance";
 import {
@@ -36,6 +36,11 @@ import { createTestDb } from "@/lib/test/db";
 import { NOW, makeFamily, makeUser } from "@/lib/test/factories";
 
 const BASE = "http://ohana.test/api/v1";
+
+/** The server's local day of NOW, and the first day a full sync asks for. */
+const pad = (n: number) => String(n).padStart(2, "0");
+const TODAY = `${NOW.getFullYear()}-${pad(NOW.getMonth() + 1)}-${pad(NOW.getDate())}`;
+const FULL_FROM = addDays(TODAY, -FULL_SYNC_DAYS);
 
 type Res = { status: number; data: any }; // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -250,8 +255,8 @@ function setup(options: Parameters<typeof fakeComdirect>[0] = {}) {
     throw new Error(`the sync didn't get to ${status}: ${JSON.stringify((await call("GET", `${f}/accounts/${account}/bank/sync`)).data)}`);
   };
   /** Starts a sync and runs it to the end. */
-  const sync = async (account = "giro") => {
-    const started = await call("POST", `${f}/accounts/${account}/bank/sync`, {});
+  const sync = async (account = "giro", body: Record<string, unknown> = {}) => {
+    const started = await call("POST", `${f}/accounts/${account}/bank/sync`, body);
     expect(started.status, JSON.stringify(started.data)).toBe(202);
     runner.tick();
     await runner.idle(5000);
@@ -669,6 +674,74 @@ describe("syncing with comdirect", () => {
     expect(account.balanceCents).toBe(250000 - 10010 - 500 - 320 - 4999 - 4999 - 2345);
   });
 
+  it("imports the bank's whole history on request, adopting the CSV file's transactions", async () => {
+    const { db, call, view, f, bank, sync, transactions, link } = await linked();
+    // The account's history from a CSV file (other texts than the bank's), and a row the bank
+    // doesn't have (perhaps the file's duplicate); the bank's history starts on 1 October, so the
+    // September row isn't counted.
+    const csv = [
+      { date: "2026-09-01", amountCents: -1200, payee: "OLDER THAN THE BANK", description: "" },
+      { date: "2026-10-01", amountCents: 250000, payee: "ACME GMBH", description: "GEHALT" },
+      { date: "2026-10-05", amountCents: -10010, payee: "ERIKA MUSTERMANN", description: "MIETE" },
+      { date: "2026-10-07", amountCents: -777, payee: "NOT AT THE BANK", description: "" },
+      { date: "2026-10-10", amountCents: -500, payee: "COMDIRECT", description: "ENTGELT" },
+      { date: "2026-10-15", amountCents: -4999, payee: "STADTWERKE", description: "ABSCHLAG" },
+    ];
+    expect((await call("POST", `${f}/transactions`, { ops: csv.map((t) => ({ ...t, accountId: "giro" })) })).status).toBe(200);
+    const category = db.select().from(schema.finCategories).get()!;
+    const rent = transactions().find((t) => t.amountCents === -10010)!;
+    db.update(finTransactions).set({ categoryId: category.id, note: "Rent" }).where(eq(finTransactions.id, rent.id)).run();
+    const csvHashes = new Map(transactions().map((t) => [t.id, t.importHash]));
+
+    expect((await view("POST", `${f}/accounts/giro/bank/sync`, { full: true })).status).toBe(403);
+    expect((await call("POST", `${f}/accounts/giro/bank/sync`, { full: "yes" })).status).toBe(400);
+    const done = await sync("giro", { full: true });
+    expect(done.status, JSON.stringify(done)).toBe("done");
+    expect(done.full).toBe(true);
+    expect(bank.state.minBookingDates).toEqual([FULL_FROM]);
+    // Four of the bank's rows are the CSV's; the card payment of the 20th is new.
+    expect(done.result).toMatchObject({ added: 1, duplicates: 0, adopted: 4, unmatched: 1 });
+    expect(link()).toMatchObject({ syncedFrom: FULL_FROM, syncedThrough: "2026-10-20" });
+
+    const after = transactions();
+    expect(after).toHaveLength(7);
+    // Adopted: the bank's hash, everything else as it was.
+    const adopted = after.filter((t) => csvHashes.has(t.id) && t.importHash !== csvHashes.get(t.id));
+    expect(adopted.map((t) => t.payee).sort()).toEqual(["ACME GMBH", "COMDIRECT", "ERIKA MUSTERMANN", "STADTWERKE"]);
+    expect(after.find((t) => t.id === rent.id)).toMatchObject({ categoryId: category.id, note: "Rent", description: "MIETE" });
+    const extra = after.find((t) => t.amountCents === -777)!;
+    expect(extra.importHash).toBe(csvHashes.get(extra.id));
+
+    // Later syncs know them: nothing comes twice.
+    const next = await sync();
+    expect(next.full).toBe(false);
+    expect(next.result).toEqual({ added: 0, duplicates: 3, transfers: 0, splits: 0, ids: [] });
+    const again = await sync("giro", { full: true });
+    expect(again.result).toMatchObject({ added: 0, duplicates: 5, adopted: 0, unmatched: 1 });
+    expect(transactions()).toHaveLength(7);
+    expect(bank.state.problems).toEqual([]);
+  });
+
+  it("adopts one transaction per bank row of a day and amount, the one with its payee first", async () => {
+    const { call, f, bank, sync, transactions } = await linked();
+    // Two rows of the 15th with the Stadtwerke's amount: the bank has one.
+    const csv = [
+      { date: "2026-10-15", amountCents: -4999, payee: "Someone else", description: "" },
+      { date: "2026-10-15", amountCents: -4999, payee: "stadtwerke musterstadt gmbh", description: "" },
+    ];
+    await call("POST", `${f}/transactions`, { ops: csv.map((t) => ({ ...t, accountId: "giro" })) });
+    const hashOf = (payee: string) => transactions().find((t) => t.payee === payee)!.importHash;
+    const other = hashOf("Someone else");
+    const own = hashOf("stadtwerke musterstadt gmbh");
+    bank.opts.transactions[GIRO.accountId] = giroTransactions().filter((t) => (t as { reference?: string }).reference === "5012345678901234/2");
+    const done = await sync("giro", { full: true });
+    expect(done.result).toMatchObject({ added: 0, adopted: 1, unmatched: 1 });
+    expect(hashOf("Someone else")).toBe(other);
+    expect(hashOf("stadtwerke musterstadt gmbh")).not.toBe(own);
+    expect((await sync("giro", { full: true })).result).toMatchObject({ added: 0, duplicates: 1, adopted: 0, unmatched: 1 });
+    expect(transactions()).toHaveLength(2);
+  });
+
   it("keeps a link synced before the floor existed off the CSV's days (the migration's floor)", async () => {
     const { db, call, f, bank, sync, transactions } = await linked();
     const csv = [
@@ -801,6 +874,30 @@ describe("a credit card", () => {
     expect(bank.state.minBookingDates[1]).toBe("2026-10-17");
     expect(visa()).toHaveLength(4);
     expect(bank.state.problems).toEqual([]);
+  });
+
+  it("counts a full sync of a card complete only from the oldest day comdirect gave", async () => {
+    const rows = Array.from({ length: 502 }, (_, i) => {
+      const day = addDays("2026-10-31", -Math.floor(i / 2));
+      return {
+        reference: `R${i}`,
+        bookingStatus: "BOOKED",
+        bookingDate: day,
+        transactionValueInEUR: { value: "-1.00", unit: "EUR" },
+        transaktionDate: day,
+        remittanceInfo: [`Shop ${i}`],
+        transactionDirection: "OUT",
+      };
+    });
+    const { db, sync, transactions } = await cardLinked(undefined, { cardTransactions: { [VISA.cardId]: rows } });
+    const done = await sync("visa", { full: true });
+    expect(done.status, JSON.stringify(done)).toBe("done");
+    // The newest 500 reach back to the 250th day; that day's rows may be partial, so it's left out.
+    const oldest = addDays("2026-10-31", -249);
+    expect(done.result).toMatchObject({ added: 498, adopted: 0, unmatched: 0 });
+    expect(transactions().every((t) => t.day > oldest)).toBe(true);
+    const visaLink = db.select().from(finBankLinks).where(eq(finBankLinks.accountId, "visa")).get()!;
+    expect(visaLink.syncedFrom).toBe(addDays(oldest, 1));
   });
 
   it("says which cards there are when none ends in the digits given", async () => {

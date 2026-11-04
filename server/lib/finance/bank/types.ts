@@ -29,6 +29,9 @@ export interface BankStatement {
   /** The bank's id of the account (or card) the rows are from (part of their import hashes). */
   accountRef: string;
   rows: BankRow[];
+  /** Set when the bank gave fewer rows than asked for: the first booking day the rows are
+   *  complete from (later than the request's `from`). */
+  from?: string;
 }
 
 /** A failure the user can act on; its message (English) becomes the sync's error. */
