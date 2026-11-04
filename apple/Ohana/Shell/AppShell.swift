@@ -60,10 +60,14 @@ struct AppShell: View {
                     tab(.settings, assistantOn: assistantOn)
                 }
                 #endif
-                // The iPhone's tab bar shows it apart, at its end; the sidebar at its top.
+                // The iPhone's tab bar shows it apart, at its end; the sidebar at its top. The Mac
+                // has the toolbar's field instead (`ShellSearchField`).
                 Tab(value: Module.search, role: .search) {
                     page(.search, assistantOn: assistantOn)
                 }
+                #if os(macOS)
+                .hidden()
+                #endif
             }
             .tabViewStyle(.sidebarAdaptable)
             .tabViewSidebarHeader { FamilySwitcher() }
@@ -209,6 +213,7 @@ struct AppShell: View {
         }
         // Not on the assistant's own page (iPad, Mac), nor without the assistant.
         .environment(\.shellAssistant, item == .assistant || !assistantOn ? nil : $showAssistant)
+        .environment(\.shellModule, selection)
     }
 }
 
@@ -274,6 +279,9 @@ extension EnvironmentValues {
     /// The shell's assistant toggle, inside a module's navigation stack (nil elsewhere: sheets
     /// of their own, the assistant's own page).
     @Entry var shellAssistant: Binding<Bool>?
+    /// The shell's page on screen, inside a module's navigation stack (nil elsewhere): on the Mac
+    /// every page there gets the search field (`ShellSearchField`).
+    @Entry var shellModule: Binding<Module>?
 }
 
 /// The assistant beside the modules: an inspector (iPad, Mac), a sheet on iPhone. Not an
@@ -351,14 +359,16 @@ struct ShellToolbar: ViewModifier {
     }
 }
 
-/// The assistant toggle at the top right. The shell gives it to the module roots; a page pushed
-/// onto a module's stack adds it itself (a pushed page has its own toolbar).
+/// The assistant toggle at the top right; on the Mac right of it the search across the modules
+/// (`ShellSearchField`), the page's own items left of both. The shell gives them to the module
+/// roots; a page pushed onto a module's stack adds them itself (a pushed page has its own toolbar).
 struct AssistantButton: ViewModifier {
     @Environment(\.shellAssistant) private var showAssistant
+    @Environment(\.shellModule) private var module
 
     func body(content: Content) -> some View {
         // From an overlay: toolbar items line up in view order, so the page's own buttons come
-        // first and the assistant's is the last at the top right.
+        // first, then the assistant's, then (Mac) the search field at the top right.
         content
             .overlay {
                 Color.clear
@@ -366,11 +376,16 @@ struct AssistantButton: ViewModifier {
                     .accessibilityHidden(true)
                     .toolbar {
                         if let showAssistant {
-                            #if os(iOS)
                             ToolbarSpacer(.fixed, placement: .primaryAction)
-                            #endif
                             ToolbarItem(placement: .primaryAction) { button(showAssistant) }
                         }
+                        #if os(macOS)
+                        if let module {
+                            // Its own capsule, not one with the assistant's button.
+                            ToolbarSpacer(.fixed, placement: .primaryAction)
+                            ToolbarItem(placement: .primaryAction) { ShellSearchField(module: module) }
+                        }
+                        #endif
                     }
             }
     }

@@ -545,7 +545,7 @@ private extension View {
     @ViewBuilder
     func financeSearch(_ query: Binding<String>?) -> some View {
         if let query {
-            searchable(text: query, prompt: Text("Search payee, description, note"))
+            pageSearchable(text: query, prompt: Text("Search payee, description, note"))
         } else {
             self
         }

@@ -4,13 +4,18 @@ import SwiftUI
 /// transactions, appointment searches, people, knowledge documents (editors) and the user's
 /// assistant chats. A hit opens where
 /// it lives with `family.open(_:)`. Inside the shell's navigation stack; on iPhone the field
-/// sits in the tab bar.
+/// sits in the tab bar, on the Mac it is the toolbar's (`ShellSearchField`, on every page:
+/// `family.searchQuery`).
 struct FamilySearchView: View {
     @Environment(FamilyContext.self) private var family
+    #if os(macOS)
+    private var query: String { family.searchQuery }
+    #else
     @State private var query = ""
+    @FocusState private var focused: Bool
+    #endif
     @State private var result: FamilySearchResult?
     @State private var failure: String?
-    @FocusState private var focused: Bool
 
     private var trimmed: String { query.trimmingCharacters(in: .whitespacesAndNewlines) }
 
@@ -23,16 +28,22 @@ struct FamilySearchView: View {
         content
             .ohanaBackground()
             .navigationTitle("Search")
+            .task(id: searchKey) { await search() }
+            #if os(macOS)
+            .onChange(of: family.searchSubmitRequest) { openFirstHit() }
+            #else
             .searchable(text: $query, prompt: Text("Recipes, events, transactions, people…"))
             .searchFocused($focused)
             // Return opens the first hit.
-            .onSubmit(of: .search) {
-                if let route = result?.results.lazy.compactMap(\.route).first { family.open(route) }
-            }
-            .task(id: searchKey) { await search() }
+            .onSubmit(of: .search) { openFirstHit() }
             .onChange(of: family.searchRequest, initial: true) {
                 if family.searchRequest > 0 { focused = true }
             }
+            #endif
+    }
+
+    private func openFirstHit() {
+        if let route = result?.results.lazy.compactMap(\.route).first { family.open(route) }
     }
 
     private func search() async {
