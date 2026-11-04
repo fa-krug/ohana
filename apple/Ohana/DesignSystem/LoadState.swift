@@ -152,12 +152,24 @@ extension View {
 
 /// Errors of actions (saving, deleting) shown as a glass banner at the top of the window; the
 /// app tells only of errors, never of success. Sheets show it too when their content has
-/// `.errorBanner()`.
+/// `.errorBanner()`, but only the frontmost one: the places that can show it sign in while on
+/// screen, and the latest to appear (the sheet on top) shows it.
 @Observable
 final class ErrorBanner {
     static let shared = ErrorBanner()
     private(set) var message: String?
     private var hideTask: Task<Void, Never>?
+    /// The overlays on screen, in the order they appeared.
+    private var hosts: [UUID] = []
+
+    func appeared(_ host: UUID) {
+        hosts.removeAll { $0 == host }
+        hosts.append(host)
+    }
+
+    func disappeared(_ host: UUID) { hosts.removeAll { $0 == host } }
+
+    func isFront(_ host: UUID) -> Bool { hosts.last == host }
 
     func show(_ error: any Error) {
         if error is CancellationError { return }
@@ -199,10 +211,11 @@ func perform(_ action: @escaping () async throws -> Void) {
 
 struct ErrorBannerOverlay: ViewModifier {
     @State private var banner = ErrorBanner.shared
+    @State private var host = UUID()
 
     func body(content: Content) -> some View {
         content.overlay(alignment: .top) {
-            if let message = banner.message {
+            if let message = banner.message, banner.isFront(host) {
                 HStack(spacing: 10) {
                     Image(systemName: "exclamationmark.circle.fill")
                         .foregroundStyle(.red)
@@ -219,6 +232,8 @@ struct ErrorBannerOverlay: ViewModifier {
             }
         }
         .animation(.spring(duration: 0.35), value: banner.message)
+        .onAppear { banner.appeared(host) }
+        .onDisappear { banner.disappeared(host) }
     }
 }
 
