@@ -1,6 +1,7 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ %@": {},
     "%@ (%@) becomes the booking, the others its parts": {
       "localizations": {
         "de": {
@@ -2157,6 +2158,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Alle seine Buchungen werden ebenfalls gelöscht. Das lässt sich nicht rückgängig machen."
+          }
+        }
+      }
+    },
+    "All of %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (gesamt)"
           }
         }
       }
@@ -4499,6 +4510,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zählt Kalendertage"
+          }
+        }
+      }
+    },
+    "Country": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Land"
           }
         }
       }
@@ -7083,6 +7104,16 @@
         }
       }
     },
+    "From home address": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus der Heimatadresse"
+          }
+        }
+      }
+    },
     "From the ingredient list": {
       "localizations": {
         "de": {
@@ -7409,6 +7440,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ferienhaus"
+          }
+        }
+      }
+    },
+    "Holidays": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Feiertage & Ferien"
           }
         }
       }
@@ -9987,6 +10028,16 @@
         }
       }
     },
+    "No home address yet: set one under Household → Home address, or pick a region.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Heimatadresse: Lege unter Haushalt → Heimatadresse eine fest oder wähle eine Region."
+          }
+        }
+      }
+    },
     "No icon": {
       "localizations": {
         "de": {
@@ -10895,6 +10946,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ohana hat keinen Zugriff auf deine Erinnerungen. Du kannst ihn in den Einstellungen erlauben."
+          }
+        }
+      }
+    },
+    "Ohana knows no holidays for this region.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für diese Region kennt Ohana keine Feiertage."
           }
         }
       }
@@ -12395,6 +12456,16 @@
         }
       }
     },
+    "Public holidays": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Feiertage"
+          }
+        }
+      }
+    },
     "Purple": {
       "localizations": {
         "de": {
@@ -12861,6 +12932,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Auffrischen"
+          }
+        }
+      }
+    },
+    "Region": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Region"
           }
         }
       }
@@ -13911,6 +13992,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Schule"
+          }
+        }
+      }
+    },
+    "School holidays": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schulferien"
           }
         }
       }
@@ -16249,6 +16340,16 @@
         }
       }
     },
+    "The days go into the types “Holiday” and “School holidays”.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Tage kommen in die Typen „Feiertag“ und „Schulferien“."
+          }
+        }
+      }
+    },
     "The day’s actions: details, note, event, repeat, clear": {
       "localizations": {
         "de": {
@@ -16345,6 +16446,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Der Ordner ist nicht mehr auffindbar. Wähle ihn erneut."
+          }
+        }
+      }
+    },
+    "The holidays couldn’t be loaded.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Feiertage konnten nicht geladen werden."
           }
         }
       }

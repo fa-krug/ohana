@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import type { Db } from "@/lib/db";
 import { families } from "@/lib/db/schema";
+import { homeChanged } from "@/lib/calendar/holidays/settings";
 import { type Actor, requireRole } from "./roles";
 import { z } from "zod";
 
@@ -24,4 +25,6 @@ export function setHomeAddress(db: Db, actor: Actor, familyId: string, input: Ho
     })
     .where(eq(families.id, familyId))
     .run();
+  // Holidays of a region that follows the home are looked up again.
+  homeChanged(db, familyId, now);
 }

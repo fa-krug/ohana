@@ -52,6 +52,12 @@ Only `APP_URL` and `AUTH_SECRET` are required. Developers running from source us
 | `DIGEST_HOUR` | `18` | From this hour (server time) on that day the week ahead is sent. |
 | `DIGEST_GEOCODE` | on | `0` stops the worker from looking up event locations with Photon (photon.komoot.io). The week ahead's travel checks then only compare the locations' text. |
 
+## Holidays
+
+| Variable | Default | |
+| --- | --- | --- |
+| `HOLIDAYS_URL` | `https://openholidaysapi.org` | Where public and school holidays come from (OpenHolidays; only a country and a region code are sent). Empty turns the import off. The region is detected from the family's home coordinates with a reverse look-up at Photon (photon.komoot.io). See [Holidays](/self-hosting#holidays). |
+
 ## Assistant
 
 | Variable | Default | |

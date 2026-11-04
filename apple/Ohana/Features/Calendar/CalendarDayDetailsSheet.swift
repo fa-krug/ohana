@@ -72,6 +72,7 @@ struct CalendarDetailsSheet: View {
 
     private func hasContent(_ day: Day) -> Bool {
         store.entries[day] != nil || store.notes[day] != nil || store.events[day] != nil || store.birthdays[day] != nil
+            || store.holidays[day] != nil
     }
 
     @ViewBuilder
@@ -88,6 +89,9 @@ struct CalendarDetailsSheet: View {
                     CalendarDayTypes(types: types, store: store)
                 }
             }
+        }
+        ForEach(store.holidays[day] ?? [], id: \.self) { h in
+            Text(CalendarText.holiday(h))
         }
         if let note = store.notes[day] {
             Button {

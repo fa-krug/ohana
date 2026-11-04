@@ -38,6 +38,7 @@ Edit `.env`:
 | `DISABLED_MODULES` | Optional: `finance`, `meals`, `appointments`, `chores`, `assistant` (comma list). |
 | `AI_ALLOW_PRIVATE_ENDPOINT` | `1` to allow an AI endpoint on your own network (Ollama, LM Studio). |
 | `PUSH_RELAY_URL` | Notifications to the app go through fa-krug's push relay by default; empty turns them off (see *Notifications*). |
+| `HOLIDAYS_URL` | Public and school holidays come from OpenHolidays by default; empty turns their import off (see *Holidays*). |
 | `TZ` | Time zone of the daily jobs (in `docker-compose.yml`, default `Europe/Berlin`). |
 | `OHANA_VERSION` | Image tag to run (in `docker-compose.yml`, default `latest`; `sha-<commit>` pins one version). |
 
@@ -183,6 +184,23 @@ For the travel checks the worker looks up where events are once a day: the locat
 next two weeks' events go to **Photon** (`photon.komoot.io`, at most 25 new ones per family and
 day; the results are kept in the database). Set `DIGEST_GEOCODE=0` to keep event locations at
 home; the checks then only compare the locations' text.
+
+## Holidays
+
+A family can import the **public holidays** and **school holidays** of its region (*Settings →
+Calendar*): the worker adds them as day entries ("Holiday", "School holidays") from the start of
+this year to the end of the next, and keeps them up to date once a day. Days someone deletes stay
+deleted. The region follows the family's home address unless a family picks one.
+
+- The holidays come from **OpenHolidays** (`openholidaysapi.org`, free, no key). Only a
+  country and a region code go there (`DE`, `DE-BY`); what comes back is kept in the database
+  for a week and shared by all families.
+- To find the region, the home address's **coordinates** go to **Photon**
+  (`photon.komoot.io`, a reverse look-up) when the address changes; a family that picks its
+  region by hand sends nothing.
+
+Set `HOLIDAYS_URL=` (empty) to turn the import off (the app then hides the setting), or point it
+at your own OpenHolidays instance.
 
 ## Backups
 

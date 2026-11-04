@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// Settings → Calendar (the web's calendar tab): the entry types of a year (name, member, role,
-/// away, order; add, delete, copy from another year), the view settings of this device and this
-/// device's sync with Apple Calendar.
+/// away, order; add, delete, copy from another year), the view settings of this device, the
+/// imported public and school holidays and this device's sync with Apple Calendar.
 struct CalendarSettingsView: View {
     @Environment(FamilyContext.self) private var family
     @State private var store: CalendarStore?
@@ -28,6 +28,7 @@ private struct CalendarSettingsContent: View {
     @State private var editing: CalendarEntryType?
     @State private var deleting: CalendarEntryType?
     @State private var appleSync = AppleCalendarSyncPrompts()
+    @State private var holidays = CalendarHolidaysModel()
     @AppStorage("ohana.calendar.showWeekdays") private var alwaysWeekdays = false
 
     var body: some View {
@@ -36,10 +37,12 @@ private struct CalendarSettingsContent: View {
                 typesSection
                 rolesSection
                 viewSection
+                CalendarHolidaysSection(model: holidays)
                 AppleCalendarSyncSection(prompts: appleSync)
             }
             .formStyle(.grouped)
             .appleCalendarSyncPrompts(appleSync)
+            .calendarHolidays(holidays)
         }
         .ohanaBackground(ModuleTint.calendar)
         .task(id: [family.revision(.calendar), family.revision(.family)]) { await store.load(quiet: store.isLoaded) }

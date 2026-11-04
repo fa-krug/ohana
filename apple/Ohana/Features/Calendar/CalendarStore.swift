@@ -2,8 +2,8 @@ import CoreGraphics
 import Foundation
 import Observation
 
-/// One open family calendar: the types, entries, notes, events and birthdays of one year, the
-/// queue that saves local edits, undo / redo and the day selection (the web app's
+/// One open family calendar: the types, entries, notes, events, holidays and birthdays of one
+/// year, the queue that saves local edits, undo / redo and the day selection (the web app's
 /// components/calendar/planner-store.ts). Edits work offline: the queue is kept on the device
 /// (`queueFile`) until the server took it, and shows on top of what's loaded meanwhile. The
 /// server wins: what it refuses is dropped, and the calendar loads its state again.
@@ -60,6 +60,8 @@ final class CalendarStore {
     private(set) var notes: CalendarNotes = [:]
     private(set) var events: [Day: [CalendarEvent]] = [:]
     private(set) var birthdays: [Day: [CalendarBirthday]] = [:]
+    /// The names of the imported public and school holidays (their days are entries too).
+    private(set) var holidays: [Day: [CalendarHoliday]] = [:]
     /// The family's members, whom the types belong to (the same in every year).
     private(set) var members: [CalendarMember] = []
     /// Nothing can be changed: a viewer. On the copy on the device changes are queued like any
@@ -234,7 +236,8 @@ final class CalendarStore {
         let dayTypes = types(on: day)
         let selected = selection.contains(day)
         return CalendarDayCell.Info(
-            types: dayTypes, note: notes[day], events: events[day] ?? [], birthdays: birthdays[day] ?? [],
+            types: dayTypes, note: notes[day], events: events[day] ?? [], holidays: holidays[day] ?? [],
+            birthdays: birthdays[day] ?? [],
             selected: selected, preview: fill?.targetSet.contains(day) ?? false, dropTarget: dropTarget == day,
             focused: context.focus == day,
             isToday: day == context.today, gap: CalendarMath.isGap(day, entries[day], roles: context.roles),
@@ -286,6 +289,7 @@ final class CalendarStore {
         update(\.notes, notes)
         update(\.events, Self.byDay(state.events ?? [:]))
         update(\.birthdays, Self.byDay(state.birthdays ?? [:]))
+        update(\.holidays, Self.byDay(state.holidays ?? [:]))
         if let members = state.members { update(\.members, members) }
         update(\.phase, .loaded)
     }
@@ -799,6 +803,7 @@ final class CalendarStore {
         notes = [:]
         events = [:]
         birthdays = [:]
+        holidays = [:]
         // The new year shows its own copy on the device, if it has one, or nothing until loaded.
         savedCopy = nil
         updateReadOnly()

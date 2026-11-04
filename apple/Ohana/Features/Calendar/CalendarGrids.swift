@@ -22,8 +22,9 @@ struct CalendarCellContext {
 }
 
 /// One day of a grid: filled with its types' colors, with marks for its note, events and
-/// birthdays, today, the selection and coverage gaps (the web grid's cell). `.month` is the web's
-/// month view (phones, narrow windows), `.year` the 12 × 31 grid, `.detail` the month in detail.
+/// birthdays (and the holidays' names in detail), today, the selection and coverage gaps (the web
+/// grid's cell). `.month` is the web's month view (phones, narrow windows), `.year` the 12 × 31
+/// grid, `.detail` the month in detail.
 /// The grid hands it its values (`CalendarStore.cell`) instead of the cell reading the store:
 /// a year has 365 of them, and a cell that read the store would redraw on every change of the
 /// selection. Equal values skip the redraw (`.equatable()`).
@@ -35,6 +36,8 @@ struct CalendarDayCell: View, Equatable {
         var types: [CalendarEntryType] = []
         var note: CalendarNote?
         var events: [CalendarEvent] = []
+        /// The imported holidays' names (the day's types color it).
+        var holidays: [CalendarHoliday] = []
         var birthdays: [CalendarBirthday] = []
         var selected = false
         /// The fill handle would fill it.
@@ -75,6 +78,7 @@ struct CalendarDayCell: View, Equatable {
         let types = info.types
         let note = info.note
         let events = info.events
+        let holidays = info.holidays
         let birthdays = info.birthdays
         let selected = info.selected
         let preview = info.preview
@@ -92,7 +96,7 @@ struct CalendarDayCell: View, Equatable {
             if !types.isEmpty {
                 CalendarFills(types: types).opacity(style == .detail ? 0.28 : 1)
             }
-            content(types: types, note: note, events: events, birthdays: birthdays,
+            content(types: types, note: note, events: events, holidays: holidays, birthdays: birthdays,
                     isToday: isToday, weekend: weekend, ink: ink, filled: filled)
         }
         .clipShape(shape)
@@ -132,12 +136,13 @@ struct CalendarDayCell: View, Equatable {
         .contentShape(.rect)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Self.accessibilityText(day: day, types: types, note: note, events: events,
-                                                   birthdays: birthdays, gap: gap))
+                                                   holidays: holidays, birthdays: birthdays, gap: gap))
         .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
         .modifier(CalendarDayAccessibilityActions(store: store, actions: actions, day: day, info: info))
         #if os(macOS)
-        // The web grid's tooltip: the day, its types, note, events and birthdays.
-        .help(Self.tooltip(day: day, types: types, note: note, events: events, birthdays: birthdays))
+        // The web grid's tooltip: the day, its types, holidays, note, events and birthdays.
+        .help(Self.tooltip(day: day, types: types, note: note, events: events, holidays: holidays,
+                           birthdays: birthdays))
         #endif
     }
 
@@ -153,8 +158,8 @@ struct CalendarDayCell: View, Equatable {
 
     @ViewBuilder
     private func content(types: [CalendarEntryType], note: CalendarNote?, events: [CalendarEvent],
-                         birthdays: [CalendarBirthday], isToday: Bool, weekend: Bool, ink: Color,
-                         filled: Bool) -> some View {
+                         holidays: [CalendarHoliday], birthdays: [CalendarBirthday], isToday: Bool, weekend: Bool,
+                         ink: Color, filled: Bool) -> some View {
         switch style {
         case .year:
             ZStack {
@@ -195,6 +200,9 @@ struct CalendarDayCell: View, Equatable {
                         .padding(.vertical, 1)
                         .foregroundStyle(CalendarMath.prefersDarkText(on: type.color) ? Color.black : Color.white)
                         .background(Color(calendarHex: type.color), in: .capsule)
+                }
+                ForEach(holidays, id: \.self) { h in
+                    Text(CalendarText.holiday(h)).font(.caption2).lineLimit(1)
                 }
                 ForEach(events, id: \.uid) { event in
                     Label {
@@ -308,11 +316,12 @@ struct CalendarDayCell: View, Equatable {
         }
     }
 
-    /// What VoiceOver reads for a day: the date, its types, note, events, birthdays and a gap.
+    /// What VoiceOver reads for a day: the date, its types, holidays, note, events, birthdays and a gap.
     static func accessibilityText(day: Day, types: [CalendarEntryType], note: CalendarNote?, events: [CalendarEvent],
-                                  birthdays: [CalendarBirthday], gap: Bool) -> String {
+                                  holidays: [CalendarHoliday] = [], birthdays: [CalendarBirthday], gap: Bool) -> String {
         var parts = [CalendarText.longDay(day)]
         parts += types.map(\.name)
+        parts += holidays.map(CalendarText.holiday)
         if let note, !note.text.isEmpty { parts.append(note.text) }
         parts += events.map { $0.line(on: day) }
         parts += birthdays.map(CalendarText.birthday)
@@ -320,11 +329,13 @@ struct CalendarDayCell: View, Equatable {
         return parts.joined(separator: ", ")
     }
 
-    /// The Mac's tooltip for a day (the web grid's): the day, its types, note, events and birthdays.
+    /// The Mac's tooltip for a day (the web grid's): the day, its types, holidays, note, events and
+    /// birthdays.
     static func tooltip(day: Day, types: [CalendarEntryType], note: CalendarNote?, events: [CalendarEvent],
-                        birthdays: [CalendarBirthday]) -> String {
+                        holidays: [CalendarHoliday] = [], birthdays: [CalendarBirthday]) -> String {
         var lines = [CalendarText.longDay(day)]
         if !types.isEmpty { lines.append(types.map(\.name).joined(separator: ", ")) }
+        lines += holidays.map(CalendarText.holiday)
         if let note, !note.text.isEmpty { lines.append(note.text) }
         lines += events.map { "🕑 " + $0.line(on: day) }
         lines += birthdays.map(CalendarText.birthday)

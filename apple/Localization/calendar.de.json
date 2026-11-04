@@ -518,5 +518,16 @@
   "Rain": "Regen",
   "Umbrella": "Regenschirm",
   "Holiday home": "Ferienhaus",
-  "Suggested": "Vorschläge"
+  "Suggested": "Vorschläge",
+  "All of %@": "%@ (gesamt)",
+  "Country": "Land",
+  "From home address": "Aus der Heimatadresse",
+  "Holidays": "Feiertage & Ferien",
+  "No home address yet: set one under Household → Home address, or pick a region.": "Noch keine Heimatadresse: Lege unter Haushalt → Heimatadresse eine fest oder wähle eine Region.",
+  "Ohana knows no holidays for this region.": "Für diese Region kennt Ohana keine Feiertage.",
+  "Public holidays": "Feiertage",
+  "Region": "Region",
+  "School holidays": "Schulferien",
+  "The days go into the types “Holiday” and “School holidays”.": "Die Tage kommen in die Typen „Feiertag“ und „Schulferien“.",
+  "The holidays couldn’t be loaded.": "Die Feiertage konnten nicht geladen werden."
 }
