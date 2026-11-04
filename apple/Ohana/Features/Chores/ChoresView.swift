@@ -138,7 +138,7 @@ struct ChoresView: View {
         }
         ToolbarItem {
             Menu {
-                Picker("Whose chores", selection: $filter) { ChoreFilterChoices(people: store.page?.people ?? []) }
+                Picker("Whose chores", selection: $filter) { ChoreFilterChoices(people: store.page?.people ?? [], me: store.me) }
                     .pickerStyle(.inline)
             } label: {
                 Label("Filter", systemImage: filter == .everyone
@@ -153,7 +153,7 @@ struct ChoresView: View {
     /// The Chores menu (Mac menu bar, the iPad's ⌘-hold list).
     @ViewBuilder
     private var moduleMenu: some View {
-        Picker("Whose Chores", selection: $filter) { ChoreFilterChoices(people: store.page?.people ?? []) }
+        Picker("Whose Chores", selection: $filter) { ChoreFilterChoices(people: store.page?.people ?? [], me: store.me) }
             .pickerStyle(.inline)
         Divider()
         Button("Previous Day") { shown = shown.adding(days: -1) }
@@ -288,17 +288,20 @@ struct ChoresView: View {
     }
 }
 
-/// Whose chores a list shows: everyone, mine, each person, nobody in particular.
+/// Whose chores a list shows: everyone, mine, each person, nobody in particular. Takes `me` rather
+/// than reading the environment: it is also drawn into the Mac's menu bar (the Chores menu), which
+/// has no `AppModel` in its environment (reading it there crashes).
 struct ChoreFilterChoices: View {
-    @Environment(AppModel.self) private var app
     let people: [ChorePerson]
+    /// The signed-in account's id.
+    let me: String?
 
     var body: some View {
         Text("Everyone").tag(ChoreFilter.everyone)
-        if let me = app.me?.id, people.contains(where: { $0.id == me }) {
+        if let me, people.contains(where: { $0.id == me }) {
             Text("Only mine").tag(ChoreFilter.person(me))
         }
-        ForEach(people.filter { $0.id != app.me?.id }) { person in
+        ForEach(people.filter { $0.id != me }) { person in
             Text(verbatim: person.name).tag(ChoreFilter.person(person.id))
         }
         Text("Nobody in particular").tag(ChoreFilter.nobody)

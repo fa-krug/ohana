@@ -26,7 +26,7 @@ struct ChoresAllView: View {
             }
             ToolbarItem {
                 Menu {
-                    Picker("Whose chores", selection: $filter) { ChoreFilterChoices(people: store.page?.people ?? []) }
+                    Picker("Whose chores", selection: $filter) { ChoreFilterChoices(people: store.page?.people ?? [], me: store.me) }
                         .pickerStyle(.inline)
                 } label: {
                     Label("Filter", systemImage: filter == .everyone
