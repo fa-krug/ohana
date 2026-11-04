@@ -162,6 +162,13 @@
       "when": 1793792797741,
       "tag": "0022_type_colors",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1793793988742,
+      "tag": "0023_bank_synced_from",
+      "breakpoints": true
     }
   ]
 }

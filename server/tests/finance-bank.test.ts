@@ -517,15 +517,85 @@ describe("syncing with comdirect", () => {
     expect(ambiguous.transactions()).toHaveLength(0);
   });
 
-  it("first syncs an account with transactions only after its latest one", async () => {
-    const { call, f, bank, sync, transactions } = await linked();
+  it("first syncs an account with transactions from its latest day on", async () => {
+    const { call, f, bank, sync, transactions, link } = await linked();
     await call("POST", `${f}/transactions`, {
       ops: [{ date: "2026-10-12", amountCents: -999, payee: "From a CSV file", accountId: "giro" }],
     });
     const done = await sync();
     expect(done.result.added).toBe(2);
-    expect(bank.state.minBookingDates).toEqual(["2026-10-13"]);
+    expect(bank.state.minBookingDates).toEqual(["2026-10-12"]);
+    expect(link()!.syncedFrom).toBe("2026-10-12");
     expect(transactions().map((t) => t.day)).toEqual(["2026-10-20", "2026-10-15", "2026-10-12"]);
+  });
+
+  it("never adds a CSV file's bookings again, also not on its last day or in a later sync", async () => {
+    const { call, f, bank, sync, transactions, link } = await linked();
+    // The account's history from a CSV file (other texts than the bank's), up to 15 October.
+    const csv = [
+      { date: "2026-10-01", amountCents: 250000, payee: "ACME GMBH", description: "GEHALT" },
+      { date: "2026-10-05", amountCents: -10010, payee: "ERIKA MUSTERMANN", description: "MIETE" },
+      { date: "2026-10-10", amountCents: -500, payee: "COMDIRECT", description: "ENTGELT" },
+      { date: "2026-10-15", amountCents: -4999, payee: "STADTWERKE", description: "ABSCHLAG" },
+    ];
+    expect((await call("POST", `${f}/transactions`, { ops: csv.map((t) => ({ ...t, accountId: "giro" })) })).status).toBe(200);
+    // Later on the CSV's last day: a booking the file didn't have yet.
+    const giro = bank.opts.transactions[GIRO.accountId];
+    giro.unshift({
+      reference: "5012345678901234/6",
+      bookingStatus: "BOOKED",
+      bookingDate: "2026-10-15",
+      amount: { value: "-3.20", unit: "EUR" },
+      creditor: { holderName: "Kiosk" },
+      transactionType: { key: "CARD_TRANSACTION", text: "Card transaction" },
+    });
+
+    const first = await sync();
+    expect(first.status).toBe("done");
+    expect(bank.state.minBookingDates).toEqual(["2026-10-15"]);
+    // The Stadtwerke's is the CSV's; the kiosk's and the card payment of the 20th are new.
+    expect(first.result).toMatchObject({ added: 2, duplicates: 1 });
+    expect(link()!.syncedFrom).toBe("2026-10-15");
+
+    // A few days later: 14 days before the 20th would reach the CSV's 10th; it starts at the 15th.
+    // One more booking of the 15th with the CSV's amount is a booking of its own.
+    giro.unshift({
+      reference: "5012345678901234/7",
+      bookingStatus: "BOOKED",
+      bookingDate: "2026-10-15",
+      amount: { value: "-49.99", unit: "EUR" },
+      creditor: { holderName: "Stadtwerke Musterstadt GmbH" },
+      transactionType: { key: "DIRECT_DEBIT", text: "Direct Debit" },
+    });
+    const second = await sync();
+    expect(second.status).toBe("done");
+    expect(bank.state.minBookingDates[1]).toBe("2026-10-15");
+    expect(second.result).toMatchObject({ added: 1, duplicates: 3 });
+    const third = await sync();
+    expect(third.result).toMatchObject({ added: 0, duplicates: 4 });
+
+    expect(transactions().map((t) => [t.day, t.amountCents]).sort()).toEqual([
+      ["2026-10-01", 250000],
+      ["2026-10-05", -10010],
+      ["2026-10-10", -500],
+      ["2026-10-15", -320],
+      ["2026-10-15", -4999],
+      ["2026-10-15", -4999],
+      ["2026-10-20", -2345],
+    ]);
+    const account = (await call("GET", f)).data.accounts[0];
+    expect(account.balanceCents).toBe(250000 - 10010 - 500 - 320 - 4999 - 4999 - 2345);
+  });
+
+  it("forgets the floor with the sync history when the link gets another IBAN", async () => {
+    const { call, f, sync, link } = await linked();
+    await call("POST", `${f}/transactions`, {
+      ops: [{ date: "2026-10-12", amountCents: -999, payee: "From a CSV file", accountId: "giro" }],
+    });
+    await sync();
+    expect(link()).toMatchObject({ syncedFrom: "2026-10-12", syncedThrough: "2026-10-20" });
+    await call("PUT", `${f}/accounts/giro/bank`, { provider: "comdirect", iban: GIRO.iban });
+    expect(link()).toMatchObject({ syncedFrom: null, syncedThrough: null });
   });
 
   it("links transfers between the family's accounts as it imports", async () => {

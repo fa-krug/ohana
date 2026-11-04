@@ -1,0 +1,1 @@
+ALTER TABLE `fin_bank_links` ADD `synced_from` text;

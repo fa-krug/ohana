@@ -134,6 +134,9 @@ export const finBankLinks = sqliteTable(
     session: text("session"),
     /** The last booking day imported (later syncs start a while before it). */
     syncedThrough: text("synced_through"),
+    /** The first booking day the first sync fetched: later syncs never fetch earlier (the
+     *  account's days before it came from elsewhere, e.g. CSV files); null: no floor. */
+    syncedFrom: text("synced_from"),
     lastSyncAt: integer("last_sync_at", { mode: "timestamp_ms" }),
     /** TAN challenges in a row that ended without a confirmed TAN (the bank locks the online
      *  banking after a few): no sync starts at BANK_MAX_UNCONFIRMED. */
