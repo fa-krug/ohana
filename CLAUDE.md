@@ -50,8 +50,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   migrations, then loops every `APPT_TICK_SECONDS` (15): the appointment `SearchRunner`, and
   every `WORKER_TICK_SECONDS` (60) `lib/maintenance/cleanup.ts`, the nightly
   `lib/maintenance/backup.ts` and `lib/notifications/daily.ts`; the loop itself ticks every
-  `ASSISTANT_TICK_MS` (1000) for the assistant's `ChatRunner` and the meals' `ImportRunner`;
-  turned-off modules' runners don't run). `docker-entrypoint.sh setup-link <email>` prints a setup link. Long-running jobs
+  `ASSISTANT_TICK_MS` (1000) for the assistant's `ChatRunner`, the meals' `ImportRunner` and the
+  knowledge base's `KnowledgeRunner`; turned-off modules' runners don't run). `docker-entrypoint.sh setup-link <email>` prints a setup link. Long-running jobs
   (appointment searches, assistant turns, notifications) belong in the worker, never in a
   request.
 - **HTTP (`http/`):** `app.ts` `createApp({ db })` (tests: `app.request(…)`, see
@@ -280,7 +280,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `lib/appointments/app-routes.ts`; autocomplete routes in `http/api.ts` (members; API token).
 - **Schema files:** `lib/db/schema.ts` holds accounts + families and re-exports one file per
   module from `lib/db/schema/` (`notifications.ts`, `appointments.ts`, `finance.ts`,
-  `meals.ts`, `connections.ts`, `chores.ts`,
+  `meals.ts`, `connections.ts`, `chores.ts`, `digest.ts`, `knowledge.ts`,
   `assistant.ts`).
 - **Chores (`lib/chores/`):** table `chores` (`lib/db/schema/chores.ts`): title, note, assigned to
   one account (`assignee_user_id`) or person (`assignee_person_id`) of the family or nobody, `day`
@@ -302,6 +302,42 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   removing a member unassigns theirs and drops their subscriptions. Assistant tools
   `tools/chores.ts` (`get_chores`, `add_chore`, `update_chore`, `remove_chore`, `set_chore_done`);
   search kind `chore`.
+- **Knowledge base (`lib/knowledge/`, phase 12):** a derived index of the family's paperwork
+  folder (an iCloud Drive folder the app reads; the server never holds a file). Tables
+  (`lib/db/schema/knowledge.ts`): `kb_folders` (one per family; its id goes into the folder's
+  marker file), `kb_documents` (folder + `path` unique: NFC, "/"-separated, no hidden or ".."
+  parts; `name`, `tags` JSON, `size`, `mtime` ms, `hash` SHA-256, `pages`, `text` the uploaded
+  pages as JSON, `status` pending | ready | failed | missing | excluded, `error`, the card
+  `summary` / `facts` / `doc_date` / `person_*` (invite acceptance and member removal handle it as
+  chores' assignee), `indexed_at`, `missing_since`, the worker's lease `run_token` / `run_until` /
+  `attempts`), `kb_chunks` (integer id = FTS rowid and the source ref `k:<id>`, `seq`, `page`,
+  `text`) with `kb_chunks_fts` (FTS5, external content, `unicode61 remove_diacritics 2`, kept in
+  step by triggers: hand-written SQL at the end of `drizzle/0020_knowledge.sql`). `routes.ts`
+  `handleKnowledge`, **editors only: viewers get 404 on every path** (as an unknown one): `GET/POST
+  /knowledge/folder` (created on first use), `POST /knowledge/manifest {folderId, files: [{path,
+  size, mtime, hash, tags}]}` → `{upload: [path]}`, `PUT /knowledge/documents {folderId, path,
+  hash, size, mtime, tags, pages}` → 202 `{id, status}` (≤ 2000 pages, ≤ 2 MB of text, else 413),
+  `GET /knowledge/documents?q=&tag=&folder=&status=&cursor=&limit=` (newest `mtime` first, excluded
+  ones only with `status=excluded`), `GET /knowledge/documents/{id}` (card, `chunks`), `POST
+  …/{id}/reindex`, `POST …/{id}/exclude {excluded}`, `GET /knowledge/tags`. The manifest
+  (`manifest.ts`, the device's complete list): same hash → tags / size / time in place; another
+  hash → upload; a new path with the hash of a document whose path is gone → that document moves;
+  documents not listed → `missing` (an excluded one keeps its status with `missing_since`); an
+  empty manifest changes nothing (a folder the device can't read). An upload with the same hash is
+  a no-op (a missing document comes back), unless it brings text to one stored without any; new
+  text deletes the chunks and card at once. Status rule (`documents.ts`): ready ⇔ `indexed_at`
+  set, failed ⇔ `error`, else pending; a missing document listed again gets its status back from
+  that (`restoredStatus`). Whatever makes a document pending again (new text, reindex, un-exclude,
+  back from missing) clears the lease and `attempts`. `runner.ts` `KnowledgeRunner` (worker, like
+  the `ImportRunner`; `KNOWLEDGE_MAX_CONCURRENT`, 2): claims pending documents by CAS + run token,
+  `chunk.ts` `chunkPages` (about 1 000 characters at paragraph / line / sentence boundaries, at
+  most 1 500, never across pages), writes chunks + ready (or failed) in one immediate transaction
+  that checks the token; a lost run runs once more, then is failed. Read-then-write transactions
+  here are `{ behavior: "immediate" }` (WAL with the worker writing). `search.ts`
+  `searchKnowledge(db, familyId, query, {limit, tags, folder})`: each word a quoted prefix term,
+  all words, else any, bm25 order, chunks of ready and pending (a reindex keeps them findable)
+  documents → `{chunkId, documentId, name, path, page, text, snippet}`. `cleanup.ts` deletes
+  documents gone for 30 days.
 - **Connections between modules (phase 7):**
   - *Appointments → Calendar:* `cal_events` (`lib/db/schema/connections.ts`): events from
     `day` to `end_day` (wall-clock `start` on the first / `end` on the last "HH:MM", or null =
@@ -397,9 +433,9 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `{ name, version (OHANA_VERSION, else package.json), apiVersion: API_VERSION, modules }`.
   The app requires its `requiredAPIVersion` (apple `Core/Models/ServerInfo.swift`); raise
   `API_VERSION` only for a change an older app can't handle — otherwise the API only grows.
-  `DISABLED_MODULES` (finance, meals, appointments, chores, assistant; never calendar):
+  `DISABLED_MODULES` (finance, meals, appointments, chores, assistant, knowledge; never calendar):
   `moduleEnabled()`; `moduleOfFamilyPath` maps family API paths (finance, meals / recipes,
-  appointments, ai / agent) for `handleDisabledModules`; the worker, the dashboard's searches, `mealsAi` and the assistant's tools check it.
+  appointments, chores, ai / agent, knowledge) for `handleDisabledModules`; the worker, the dashboard's searches, `mealsAi` and the assistant's tools check it.
 - **Native app (`apple/`):** SwiftUI, one source tree `apple/Ohana/` for two XcodeGen targets
   (`Ohana` iOS 26, `Ohana-macOS` macOS 26; `project.yml`, the `.xcodeproj` is generated and not
   committed: `cd apple && xcodegen generate`). Pairing: the app opens `/device/pair?state=…&deviceName=…`

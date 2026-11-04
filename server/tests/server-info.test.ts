@@ -17,11 +17,11 @@ afterEach(() => {
 
 describe("server info", () => {
   it("lists every module by default", () => {
-    expect(enabledModules({})).toEqual(["calendar", "finance", "meals", "appointments", "chores", "assistant"]);
+    expect(enabledModules({})).toEqual(["calendar", "finance", "meals", "appointments", "chores", "assistant", "knowledge"]);
   });
 
   it("leaves out the turned-off modules, never the calendar, ignoring unknown names", () => {
-    expect(enabledModules({ DISABLED_MODULES: " Appointments, assistant ,calendar,unknown" })).toEqual(["calendar", "finance", "meals", "chores"]);
+    expect(enabledModules({ DISABLED_MODULES: " Appointments, assistant ,calendar,unknown" })).toEqual(["calendar", "finance", "meals", "chores", "knowledge"]);
   });
 
   it("reports the version from OHANA_VERSION, else package.json", () => {
@@ -31,7 +31,7 @@ describe("server info", () => {
       name: "Ohana",
       version: "1.2.3",
       apiVersion: API_VERSION,
-      modules: ["calendar", "finance", "appointments", "chores", "assistant"],
+      modules: ["calendar", "finance", "appointments", "chores", "assistant", "knowledge"],
       push: { relay: "https://ohana-push.fa-krug.de" },
     });
   });
@@ -44,6 +44,7 @@ describe("server info", () => {
     expect(moduleOfFamilyPath(["appointments"])).toBe("appointments");
     expect(moduleOfFamilyPath(["ai", "chats"])).toBe("assistant");
     expect(moduleOfFamilyPath(["agent"])).toBe("assistant");
+    expect(moduleOfFamilyPath(["knowledge", "documents"])).toBe("knowledge");
     expect(moduleOfFamilyPath(["entries"])).toBeNull();
     expect(moduleOfFamilyPath([])).toBeNull();
   });

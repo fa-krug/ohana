@@ -259,3 +259,4 @@ export * from "./schema/connections";
 export * from "./schema/assistant";
 export * from "./schema/digest";
 export * from "./schema/chores";
+export * from "./schema/knowledge";

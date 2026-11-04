@@ -5,7 +5,7 @@ info:
   license:
     name: AGPL-3.0-only
     identifier: AGPL-3.0-only
-  summary: The JSON API of a self-hosted Ohana server (calendar, finance, meals, appointments, chores, assistant).
+  summary: The JSON API of a self-hosted Ohana server (calendar, finance, meals, appointments, chores, assistant, knowledge base).
   description: |
     Ohana is one app for a family: a calendar, finances, meals, doctor appointments and an AI
     assistant. A server holds any number of **families**; every piece of data belongs to one.
@@ -38,7 +38,7 @@ info:
     ## Modules
 
     The calendar is always on. A server may turn off `finance`, `meals`, `appointments`,
-    `chores` and `assistant` (`DISABLED_MODULES`); `GET /api/v1/server` lists the enabled ones, and the
+    `chores`, `assistant` and `knowledge` (`DISABLED_MODULES`); `GET /api/v1/server` lists the enabled ones, and the
     routes of a disabled module answer 404.
 
     ## Errors and status codes
@@ -126,6 +126,12 @@ tags:
       a whole, a repeating one per occurrence. Accounts subscribe to a chore to get a push
       notification on their devices when it is due (its time, else 07:00 morning, 12:00 day,
       18:00 evening, server time; at most 3 hours late).
+  - name: Knowledge base
+    description: >-
+      An index of the family's paperwork folder (module `knowledge`): the app sends a manifest of
+      the folder's files and the text of those the server asks for; the worker cuts it into chunks
+      for the search. The files never reach the server. **Editors only**: for viewers every
+      knowledge route answers 404.
   - name: Assistant
     description: The AI assistant's chats and agent instructions (module `assistant`).
   - name: AI settings
@@ -2344,6 +2350,274 @@ paths:
       responses:
         "200": {$ref: "#/components/responses/ChoreResult"}
         "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+
+  # ------------------------------------------------------------------ knowledge
+  /api/v1/families/{familyId}/knowledge/folder:
+    parameters:
+      - $ref: "#/components/parameters/FamilyId"
+    get:
+      tags: [Knowledge base]
+      operationId: getKnowledgeFolder
+      summary: The family's knowledge folder
+      x-ohana-role: editor
+      responses:
+        "200":
+          description: The folder, or null before a device chose one.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [folder]
+                properties:
+                  folder:
+                    oneOf:
+                      - $ref: "#/components/schemas/KnowledgeFolder"
+                      - type: "null"
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    post:
+      tags: [Knowledge base]
+      operationId: createKnowledgeFolder
+      summary: The family's knowledge folder, created on first use
+      description: Idempotent (one folder per family). The app writes its id into the folder's marker file.
+      x-ohana-role: editor
+      responses:
+        "200": {$ref: "#/components/responses/KnowledgeFolderResult"}
+        "201": {$ref: "#/components/responses/KnowledgeFolderResult"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/families/{familyId}/knowledge/manifest:
+    parameters:
+      - $ref: "#/components/parameters/FamilyId"
+    post:
+      tags: [Knowledge base]
+      operationId: postKnowledgeManifest
+      summary: Every file of the folder as one device sees it; answers the paths whose text is needed
+      description: >-
+        A known path with the same hash: tags, size and time updated in place. Another hash: its
+        text is needed. A new path with the hash of a document whose path is no longer listed: the
+        file moved, the document moves along (chunks and card kept). Any other new path: its text is
+        needed. Documents not listed become `missing` (deleted after 30 days; listed again, they get
+        their status back); excluded ones are never asked for and stay excluded. An empty `files`
+        changes nothing (a folder the device can't read must not empty the index). At most 20 000
+        files (else 413); a path listed twice (after NFC) is a 400.
+      x-ohana-role: editor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [folderId, files]
+              properties:
+                folderId: {type: string, description: "The family's folder (else 404)."}
+                files:
+                  type: array
+                  maxItems: 20000
+                  items: {$ref: "#/components/schemas/KnowledgeFile"}
+      responses:
+        "200":
+          description: The paths to upload, in the manifest's order.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [upload]
+                properties:
+                  upload:
+                    type: array
+                    items: {type: string}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "413": {$ref: "#/components/responses/PayloadTooLarge"}
+  /api/v1/families/{familyId}/knowledge/documents:
+    parameters:
+      - $ref: "#/components/parameters/FamilyId"
+    get:
+      tags: [Knowledge base]
+      operationId: listKnowledgeDocuments
+      summary: The documents, newest first
+      description: By the file's modification time, then id. Excluded documents only with `status=excluded`.
+      x-ohana-role: editor
+      parameters:
+        - name: q
+          in: query
+          description: Name, path or tags contain it (case ignored for ASCII letters).
+          schema: {type: string}
+        - name: tag
+          in: query
+          description: Documents carrying this tag.
+          schema: {type: string}
+        - name: folder
+          in: query
+          description: A subfolder of the folder, e.g. `Versicherungen/Auto` (its subfolders too).
+          schema: {type: string}
+        - name: status
+          in: query
+          schema: {$ref: "#/components/schemas/KnowledgeStatus"}
+        - name: cursor
+          in: query
+          description: The previous page's `nextCursor`.
+          schema: {type: string}
+        - name: limit
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 200, default: 50}
+      responses:
+        "200":
+          description: A page of documents.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [documents, nextCursor]
+                properties:
+                  documents:
+                    type: array
+                    items: {$ref: "#/components/schemas/KnowledgeDocumentSummary"}
+                  nextCursor: {type: [string, "null"], description: "null on the last page."}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    put:
+      tags: [Knowledge base]
+      operationId: uploadKnowledgeDocument
+      summary: The text the app read from a file, by folder + path
+      description: >-
+        Idempotent: the same hash changes only tags, size and time (a missing document comes
+        back), unless the stored text is empty and this one isn't. New text replaces the old: its
+        chunks and card go at once and the document waits for the worker (`pending`; an excluded
+        one stays excluded). At most 2000 pages and 2 MB of text (else 413).
+      x-ohana-role: editor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/KnowledgeFile"
+                - type: object
+                  required: [folderId, pages]
+                  properties:
+                    folderId: {type: string}
+                    pages:
+                      type: array
+                      maxItems: 2000
+                      description: The text by page.
+                      items: {type: string}
+      responses:
+        "202":
+          description: Stored (or unchanged).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, status]
+                properties:
+                  id: {type: string, format: uuid}
+                  status: {$ref: "#/components/schemas/KnowledgeStatus"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "413": {$ref: "#/components/responses/PayloadTooLarge"}
+  /api/v1/families/{familyId}/knowledge/documents/{documentId}:
+    parameters:
+      - $ref: "#/components/parameters/FamilyId"
+      - $ref: "#/components/parameters/KnowledgeDocumentId"
+    get:
+      tags: [Knowledge base]
+      operationId: getKnowledgeDocument
+      summary: A document with its card and chunks
+      x-ohana-role: editor
+      responses:
+        "200": {$ref: "#/components/responses/KnowledgeDocumentResult"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/families/{familyId}/knowledge/documents/{documentId}/reindex:
+    parameters:
+      - $ref: "#/components/parameters/FamilyId"
+      - $ref: "#/components/parameters/KnowledgeDocumentId"
+    post:
+      tags: [Knowledge base]
+      operationId: reindexKnowledgeDocument
+      summary: Read the stored text again
+      description: The document waits for the worker (`pending`); its chunks stay findable until replaced. 409 for an excluded or missing one.
+      x-ohana-role: editor
+      responses:
+        "202":
+          description: The document (without facts or chunks).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [document]
+                properties:
+                  document: {$ref: "#/components/schemas/KnowledgeDocumentSummary"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /api/v1/families/{familyId}/knowledge/documents/{documentId}/exclude:
+    parameters:
+      - $ref: "#/components/parameters/FamilyId"
+      - $ref: "#/components/parameters/KnowledgeDocumentId"
+    post:
+      tags: [Knowledge base]
+      operationId: excludeKnowledgeDocument
+      summary: Keep a document out of the index, or let it back in
+      description: >-
+        Excluded: its chunks go, the manifest never asks for it. Let back in: `pending` (the worker
+        reads the stored text again), or `missing` while its file is gone.
+      x-ohana-role: editor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [excluded]
+              properties:
+                excluded: {type: boolean}
+      responses:
+        "200":
+          description: The document.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [document]
+                properties:
+                  document: {$ref: "#/components/schemas/KnowledgeDocumentSummary"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/families/{familyId}/knowledge/tags:
+    parameters:
+      - $ref: "#/components/parameters/FamilyId"
+    get:
+      tags: [Knowledge base]
+      operationId: listKnowledgeTags
+      summary: The documents' tags with how many carry each, most used first
+      description: Excluded documents don't count.
+      x-ohana-role: editor
+      responses:
+        "200":
+          description: The tags.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [tags]
+                properties:
+                  tags:
+                    type: array
+                    items:
+                      type: object
+                      required: [tag, count]
+                      properties:
+                        tag: {type: string}
+                        count: {type: integer}
         "401": {$ref: "#/components/responses/Unauthorized"}
         "404": {$ref: "#/components/responses/NotFound"}
 
@@ -4900,6 +5174,11 @@ components:
       in: path
       required: true
       schema: {type: string}
+    KnowledgeDocumentId:
+      name: documentId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
     ChatId:
       name: chatId
       in: path
@@ -4958,6 +5237,11 @@ components:
           schema: {$ref: "#/components/schemas/Error"}
     Conflict:
       description: A conflict (already exists, already booked, still answering) (`{error}`).
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/Error"}
+    PayloadTooLarge:
+      description: Too many files or pages, or too much text (`{error}`).
       content:
         application/json:
           schema: {$ref: "#/components/schemas/Error"}
@@ -5036,6 +5320,24 @@ components:
             required: [chore]
             properties:
               chore: {$ref: "#/components/schemas/Chore"}
+    KnowledgeFolderResult:
+      description: The family's folder (201 when this call made it).
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [folder]
+            properties:
+              folder: {$ref: "#/components/schemas/KnowledgeFolder"}
+    KnowledgeDocumentResult:
+      description: The document.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [document]
+            properties:
+              document: {$ref: "#/components/schemas/KnowledgeDocument"}
     FinanceOverview:
       description: Settings, categories and accounts.
       content:
@@ -5281,7 +5583,7 @@ components:
           description: The enabled modules (`calendar` always).
           items:
             type: string
-            enum: [calendar, finance, meals, appointments, chores, assistant]
+            enum: [calendar, finance, meals, appointments, chores, assistant, knowledge]
         push:
           description: Push to the app through a relay; null when the server turned it off.
           oneOf:
@@ -5807,6 +6109,86 @@ components:
             - $ref: "#/components/schemas/ChorePerson"
             - type: "null"
         subscribed: {type: boolean, description: "Whether the caller gets its notification."}
+    KnowledgeFolder:
+      type: object
+      required: [id, createdAt]
+      properties:
+        id: {type: string, format: uuid}
+        createdAt: {type: string, format: date-time}
+    KnowledgeStatus:
+      type: string
+      description: >-
+        `pending` waits for the worker, `ready` is in the search, `failed` has an `error`,
+        `missing`: the file is gone (since `missingSince`), `excluded`: kept out by an editor.
+      enum: [pending, ready, failed, missing, excluded]
+    KnowledgeFile:
+      type: object
+      description: A file of the folder.
+      required: [path, size, mtime, hash]
+      properties:
+        path:
+          type: string
+          maxLength: 1024
+          description: >-
+            Relative to the folder, "/"-separated (NFC on the server); no leading or trailing "/",
+            no empty, "." or ".." parts, no hidden ones (starting with ".").
+        size: {type: integer, minimum: 0, description: "Bytes."}
+        mtime: {type: integer, minimum: 0, description: "Modification time, ms since 1970."}
+        hash: {type: string, pattern: "^[0-9a-fA-F]{64}$", description: "SHA-256 of the file."}
+        tags:
+          type: array
+          maxItems: 50
+          description: Finder tags (trimmed, duplicates dropped).
+          items: {type: string, maxLength: 100}
+    KnowledgeDocumentSummary:
+      type: object
+      required: [id, folderId, path, name, tags, size, mtime, hash, pages, status, error, summary, docDate, person, indexedAt, missingSince, createdAt, updatedAt]
+      properties:
+        id: {type: string, format: uuid}
+        folderId: {type: string}
+        path: {type: string}
+        name: {type: string, description: "The path's last part."}
+        tags:
+          type: array
+          items: {type: string}
+        size: {type: integer}
+        mtime: {type: integer, description: "ms since 1970."}
+        hash: {type: string}
+        pages: {type: integer}
+        status: {$ref: "#/components/schemas/KnowledgeStatus"}
+        error: {type: [string, "null"], description: "Why it failed."}
+        summary: {type: [string, "null"], description: "The card's (from the worker, with the AI set up)."}
+        docDate: {type: [string, "null"], format: date}
+        person:
+          description: Whose it is (the card's), while they are in the family.
+          oneOf:
+            - $ref: "#/components/schemas/ChorePerson"
+            - type: "null"
+        indexedAt: {type: [string, "null"], format: date-time, description: "When the current text was chunked."}
+        missingSince: {type: [string, "null"], format: date-time}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+    KnowledgeDocument:
+      allOf:
+        - $ref: "#/components/schemas/KnowledgeDocumentSummary"
+        - type: object
+          required: [facts, chunks]
+          properties:
+            facts:
+              type: [array, "null"]
+              description: The card's facts, each with its verbatim quote; null without a card.
+              items: {type: object}
+            chunks:
+              type: array
+              description: The text in pieces (about 1 000 characters, never across pages), in order.
+              items:
+                type: object
+                required: [id, seq, page, text]
+                properties:
+                  id: {type: integer, description: "The source ref the assistant cites (`k:<id>`)."}
+                  seq: {type: integer}
+                  page: {type: integer, description: "From 1."}
+                  text: {type: string}
     ExportFile:
       type: object
       description: >-
