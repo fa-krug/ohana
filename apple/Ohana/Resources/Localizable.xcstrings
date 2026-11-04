@@ -1534,16 +1534,6 @@
         }
       }
     },
-    "Actions for %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aktionen für %@"
-          }
-        }
-      }
-    },
     "Active": {
       "localizations": {
         "de": {
@@ -5346,6 +5336,16 @@
         }
       }
     },
+    "Delete channel": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kanal löschen"
+          }
+        }
+      }
+    },
     "Delete chat": {
       "localizations": {
         "de": {
@@ -5372,6 +5372,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Familie löschen"
+          }
+        }
+      }
+    },
+    "Delete passkey": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passkey löschen"
           }
         }
       }
@@ -8830,6 +8840,16 @@
         }
       }
     },
+    "Last used": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zuletzt benutzt"
+          }
+        }
+      }
+    },
     "Last year": {
       "localizations": {
         "de": {
@@ -10416,6 +10436,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nacht"
+          }
+        }
+      }
+    },
+    "No": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nein"
           }
         }
       }
@@ -15148,16 +15178,6 @@
         }
       }
     },
-    "Send a test message to %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Testnachricht an %@ senden"
-          }
-        }
-      }
-    },
     "Send a test notification": {
       "localizations": {
         "de": {
@@ -15174,6 +15194,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nach dieser Antwort senden"
+          }
+        }
+      }
+    },
+    "Send test message": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Testnachricht senden"
           }
         }
       }
@@ -18182,6 +18212,16 @@
         }
       }
     },
+    "This is your only way to sign in: set a password or add another passkey before you delete it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das ist dein einziger Weg zum Anmelden: Lege ein Passwort fest oder füge einen weiteren Passkey hinzu, bevor du ihn löschst."
+          }
+        }
+      }
+    },
     "This isn’t a family export (a .json file from Settings → Data → Export).": {
       "localizations": {
         "de": {
@@ -19858,6 +19898,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Gelb"
+          }
+        }
+      }
+    },
+    "Yes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ja"
           }
         }
       }

@@ -282,7 +282,7 @@ struct KnowledgeDocumentView: View {
                         .disabled(state.isSaved)
                 }
             } label: {
-                Label("More", systemImage: "ellipsis.circle")
+                Label("More", systemImage: "ellipsis")
             }
         }
     }

@@ -1,8 +1,9 @@
 import SwiftUI
 
 /// Settings → Notifications: which events reach the family's channels (and which channels),
-/// and the channels themselves (Pushbullet, Pushover, Telegram, ntfy, email). Editors change
-/// them; viewers see them. Events of a module the server has off don't show.
+/// and the channels themselves (Pushbullet, Pushover, Telegram, ntfy, email; editors open each
+/// one's page, `FamilyChannelPage`). Editors change them; viewers see them. Events of a module the
+/// server has off don't show.
 struct FamilyNotificationsView: View {
     @Environment(FamilyContext.self) private var family
     let model: FamilySettingsModel
@@ -23,13 +24,7 @@ struct FamilyNotificationsView: View {
         .navigationTitle("Notifications")
         .sheet(item: $editing) { editing in
             FamilyChannelSheet(channel: editing.channel) { input in
-                if let channel = editing.channel {
-                    try await family.api.perform(.patch, "/household/notifications/channels/\(channel.id)", body: input)
-                } else {
-                    try await family.api.perform(.post, "/household/notifications/channels", body: input)
-                }
-                await model.load(family.api)
-                family.didChange(.family)
+                try await editing.save(input, family: family, model: model)
             }
         }
         .familyConfirmation($confirmation)
@@ -75,7 +70,22 @@ struct FamilyNotificationsView: View {
         .refreshable { await model.load(family.api) }
     }
 
+    /// A channel's row; editors open its page (and have its actions in the context menu).
+    @ViewBuilder
     private func channelRow(_ channel: FamilyChannel, canEdit: Bool) -> some View {
+        if canEdit {
+            NavigationLink {
+                FamilyChannelPage(model: model, channelId: channel.id).assistantButton()
+            } label: {
+                channelLabel(channel)
+            }
+            .contextMenu { channelActions(channel) }
+        } else {
+            channelLabel(channel)
+        }
+    }
+
+    private func channelLabel(_ channel: FamilyChannel) -> some View {
         HStack(spacing: 12) {
             TintedIcon(systemImage: channel.kind?.systemImage ?? "bell", tint: channel.enabled ? .red : .gray, size: 30)
             VStack(alignment: .leading, spacing: 2) {
@@ -88,30 +98,10 @@ struct FamilyNotificationsView: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
             }
-            Spacer(minLength: 8)
-            if canEdit {
-                if testing == channel.id {
-                    ProgressView().controlSize(.small)
-                } else {
-                    Button("Test") { test(channel) }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                        .accessibilityLabel(Text("Send a test message to \(channel.name)"))
-                }
-                Menu {
-                    channelActions(channel)
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                        .rowHitTarget()
-                        .accessibilityLabel(Text("Actions for \(channel.name)"))
-                }
-                .menuStyle(.button)
-                .buttonStyle(.borderless)
-                .fixedSize()
+            if testing == channel.id {
+                Spacer(minLength: 8)
+                ProgressView().controlSize(.small)
             }
-        }
-        .contextMenu {
-            if canEdit { channelActions(channel) }
         }
     }
 
@@ -129,16 +119,7 @@ struct FamilyNotificationsView: View {
         }
         Divider()
         Button(role: .destructive) {
-            confirmation = FamilyConfirmation(
-                title: String(localized: "Delete the channel “\(channel.name)”?"),
-                button: String(localized: "Delete"),
-                message: String(localized: "Searches stop sending to it.")
-            ) {
-                let api = family.api
-                model.change(family) {
-                    try await api.perform(.delete, "/household/notifications/channels/\(channel.id)")
-                }
-            }
+            confirmation = .deleteChannel(channel, family: family, model: model)
         } label: {
             Label("Delete", systemImage: "trash")
         }
@@ -148,12 +129,7 @@ struct FamilyNotificationsView: View {
         let api = family.api
         testing = channel.id
         Task {
-            do {
-                try await api.perform(.post, "/household/notifications/channels/\(channel.id)/test")
-            } catch is CancellationError {
-            } catch {
-                ErrorBanner.shared.show(String(localized: "Sending failed: \(error.localizedDescription)"))
-            }
+            await channel.sendTest(api)
             testing = nil
         }
     }

@@ -459,7 +459,7 @@ struct NoFamilyView: View {
                     }
                 }
                 ToolbarItem(placement: .primaryAction) {
-                    Button("Account", systemImage: "person.crop.circle") { showAccount = true }
+                    Button("Account", systemImage: "person") { showAccount = true }
                 }
             }
             .sheet(isPresented: $creating) { CreateFamilySheet().errorBanner() }

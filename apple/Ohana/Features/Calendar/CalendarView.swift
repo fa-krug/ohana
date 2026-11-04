@@ -379,7 +379,7 @@ struct CalendarPlannerView: View {
                 Button {
                     actions.showHelp()
                 } label: {
-                    Label("Help & shortcuts", systemImage: "questionmark.circle")
+                    Label("Help & shortcuts", systemImage: "questionmark")
                 }
                 .help("Help & shortcuts (?)")
             }

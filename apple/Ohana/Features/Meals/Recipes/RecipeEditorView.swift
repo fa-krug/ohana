@@ -380,7 +380,7 @@ private struct RecipeStepEditor: View {
                     Divider()
                     Button("Remove", systemImage: "trash", role: .destructive, action: remove)
                 } label: {
-                    Image(systemName: "ellipsis.circle")
+                    Image(systemName: "ellipsis")
                 }
                 .menuStyle(.borderlessButton)
                 .fixedSize()

@@ -307,40 +307,33 @@ private struct AccountForm: View {
         }
     }
 
+    /// A passkey's row, opening its page (rename, delete); on the Mac also a context menu.
     private func passkeyRow(_ passkey: AccountPasskey, canDelete: Bool) -> some View {
-        let title = passkey.deviceName.isEmpty ? String(localized: "Passkey") : passkey.deviceName
-        return HStack(spacing: 12) {
-            Image(systemName: "person.badge.key.fill").foregroundStyle(Color.ohana).accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).lineLimit(2)
-                Text(AccountDates.line(created: passkey.createdDate, lastUsed: passkey.lastUsedDate))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+        NavigationLink {
+            AccountPasskeyPage(id: passkey.id, state: $state) { passkey, name in
+                try await renamePasskey(passkey, to: name)
+            } delete: { passkey in
+                deletePasskey(passkey)
             }
-            Spacer(minLength: 8)
-            Menu {
-                passkeyActions(passkey, title: title, canDelete: canDelete)
-            } label: {
-                Image(systemName: "ellipsis.circle")
-                    .rowHitTarget()
-                    .accessibilityLabel(Text("Actions for \(title)"))
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "person.badge.key.fill").foregroundStyle(Color.ohana).accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(passkey.title).lineLimit(2)
+                    Text(AccountDates.line(created: passkey.createdDate, lastUsed: passkey.lastUsedDate))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
-            .menuStyle(.button)
-            .buttonStyle(.borderless)
-            .fixedSize()
         }
-        .contextMenu { passkeyActions(passkey, title: title, canDelete: canDelete) }
+        .contextMenu { passkeyActions(passkey, canDelete: canDelete) }
     }
 
     @ViewBuilder
-    private func passkeyActions(_ passkey: AccountPasskey, title: String, canDelete: Bool) -> some View {
+    private func passkeyActions(_ passkey: AccountPasskey, canDelete: Bool) -> some View {
         Button("Rename", systemImage: "pencil") { sheet = .renamePasskey(passkey) }
         Button("Delete", systemImage: "trash", role: .destructive) {
-            confirmation = AccountConfirmation(
-                title: String(localized: "Delete the passkey \(title)?"),
-                button: String(localized: "Delete"),
-                message: String(localized: "You can’t sign in with it anymore.")
-            ) { deletePasskey(passkey) }
+            confirmation = .deletePasskey(passkey) { deletePasskey(passkey) }
         }
         .disabled(!canDelete)
     }
@@ -514,8 +507,7 @@ private struct AccountForm: View {
             }
         case let .renamePasskey(passkey):
             AccountPasskeyRenameSheet(passkey: passkey) { name in
-                try await change(.patch, "/api/v1/me/passkeys/\(passkey.id)", body: AccountPasskeyRenameInput(deviceName: name),
-                                 as: AccountPasskeyList.self)
+                try await renamePasskey(passkey, to: name)
             }
         case .createToken:
             AccountCreateTokenSheet { name in
@@ -568,6 +560,11 @@ private struct AccountForm: View {
             await load()
             await app.refresh()
         }
+    }
+
+    private func renamePasskey(_ passkey: AccountPasskey, to name: String) async throws {
+        try await change(.patch, "/api/v1/me/passkeys/\(passkey.id)", body: AccountPasskeyRenameInput(deviceName: name),
+                         as: AccountPasskeyList.self)
     }
 
     private func deletePasskey(_ passkey: AccountPasskey) {
@@ -623,6 +620,86 @@ private struct AccountForm: View {
             let _: JSONValue = try await client.send(.delete, "/api/v1/me/sessions")
             await load()
         }
+    }
+}
+
+/// One passkey's page, opened from its row: its name (renamed in a sheet), when it was created and
+/// last used, and deleting it. It shows the form's `state`, so it follows the reloads, and closes
+/// once the passkey is gone (deleted here or elsewhere).
+private struct AccountPasskeyPage: View {
+    let id: String
+    @Binding var state: LoadState<AccountOverview>
+    let rename: (AccountPasskey, String) async throws -> Void
+    let delete: (AccountPasskey) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var renaming: AccountPasskey?
+    @State private var confirmation: AccountConfirmation?
+
+    private var passkey: AccountPasskey? { state.value?.passkeys.first { $0.id == id } }
+    private var gone: Bool { state.value != nil && passkey == nil }
+
+    var body: some View {
+        Form {
+            if let overview = state.value, let passkey {
+                sections(passkey, canDelete: AccountRules.canDeletePasskey(overview))
+                    .disabled(state.isSaved)
+            }
+        }
+        .formStyle(.grouped)
+        .navigationTitle(passkey?.title ?? String(localized: "Passkey"))
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
+        .onChange(of: gone, initial: true) { if gone { dismiss() } }
+        .sheet(item: $renaming) { passkey in
+            AccountPasskeyRenameSheet(passkey: passkey) { name in
+                try await rename(passkey, name)
+            }
+        }
+        .accountConfirmation($confirmation)
+    }
+
+    @ViewBuilder
+    private func sections(_ passkey: AccountPasskey, canDelete: Bool) -> some View {
+        Section {
+            LabeledContent("Name", value: passkey.title)
+            Button("Rename", systemImage: "pencil") { renaming = passkey }
+        }
+        Section {
+            if let created = passkey.createdDate {
+                LabeledContent("Created", value: created.formatted(date: .abbreviated, time: .omitted))
+            }
+            LabeledContent("Last used",
+                           value: passkey.lastUsedDate?.formatted(.relative(presentation: .named)) ?? String(localized: "Never"))
+        }
+        Section {
+            Button("Delete passkey", role: .destructive) {
+                confirmation = .deletePasskey(passkey) { delete(passkey) }
+            }
+            .disabled(!canDelete)
+        } footer: {
+            if !canDelete {
+                Text("This is your only way to sign in: set a password or add another passkey before you delete it.")
+            }
+        }
+    }
+}
+
+private extension AccountPasskey {
+    /// Its name, or "Passkey" when it has none.
+    var title: String { deviceName.isEmpty ? String(localized: "Passkey") : deviceName }
+}
+
+private extension AccountConfirmation {
+    /// Asks before deleting a passkey.
+    static func deletePasskey(_ passkey: AccountPasskey, action: @escaping () -> Void) -> AccountConfirmation {
+        AccountConfirmation(
+            title: String(localized: "Delete the passkey \(passkey.title)?"),
+            button: String(localized: "Delete"),
+            message: String(localized: "You can’t sign in with it anymore."),
+            action: action
+        )
     }
 }
 

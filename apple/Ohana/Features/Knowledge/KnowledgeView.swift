@@ -385,7 +385,7 @@ private struct KnowledgeList: View {
             Menu {
                 moduleMenu
             } label: {
-                Label("More", systemImage: "ellipsis.circle")
+                Label("More", systemImage: "ellipsis")
             }
         }
     }
