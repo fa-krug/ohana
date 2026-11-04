@@ -50,10 +50,16 @@ struct AppShell: View {
                     ForEach(Module.modules.filter { context.isEnabled($0) && !Module.notTabs.contains($0) }) {
                         tab($0, assistantOn: assistantOn)
                     }
+                    #if os(macOS)
+                    // The Mac's sidebar lists tabs outside a section first: here they're last.
+                    tab(.settings, assistantOn: assistantOn)
+                    #endif
                 }
+                #if os(iOS)
                 if !Module.notTabs.contains(.settings) {
                     tab(.settings, assistantOn: assistantOn)
                 }
+                #endif
                 // The iPhone's tab bar shows it apart, at its end; the sidebar at its top.
                 Tab(value: Module.search, role: .search) {
                     page(.search, assistantOn: assistantOn)
@@ -61,9 +67,11 @@ struct AppShell: View {
             }
             .tabViewStyle(.sidebarAdaptable)
             .tabViewSidebarHeader { FamilySwitcher() }
+            #if os(iOS)
             .tabViewSidebarBottomBar {
                 SidebarSettingsButton(selected: selection.wrappedValue == .settings) { module = .settings }
             }
+            #endif
             .sheet(item: $phonePage) { page in
                 PhonePageSheet(page: page)
             }
@@ -179,10 +187,10 @@ struct AppShell: View {
         // The assistant (a sheet from the toolbar) and the settings (the family picker) live in
         // the sidebar; a compact tab bar (iPad) keeps the modules. On iPhone they aren't tabs.
         .defaultVisibility(item == .assistant || item == .settings ? .hidden : .automatic, for: .tabBar)
-        // The settings stand at the sidebar's foot instead (`SidebarSettingsButton`).
-        #if os(macOS)
-        .hidden(item == .settings)
-        #else
+        #if os(iOS)
+        // The settings stand at the sidebar's foot instead (`SidebarSettingsButton`). The Mac
+        // can't hide a tab from the sidebar alone (a `.hidden` tab draws nothing when picked), so
+        // there they are the sidebar's last row.
         .defaultVisibility(item == .settings ? .hidden : .automatic, for: .sidebar)
         #endif
     }
@@ -224,8 +232,9 @@ private struct PhonePageSheet: View {
     }
 }
 
-/// The settings at the foot of the sidebar, below the modules however many there are: a row
-/// like the sidebar's own, highlighted while the settings are on screen.
+#if os(iOS)
+/// The settings at the foot of the sidebar (iPad), below the modules however many there are: a
+/// row like the sidebar's own, highlighted while the settings are on screen.
 private struct SidebarSettingsButton: View {
     let selected: Bool
     let action: () -> Void
@@ -236,11 +245,7 @@ private struct SidebarSettingsButton: View {
             Label(Module.settings.title, systemImage: Module.settings.systemImage)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 10)
-                #if os(macOS)
-                .padding(.vertical, 6)
-                #else
                 .padding(.vertical, 11)
-                #endif
                 .background(
                     .primary.opacity(selected ? 0.1 : hovering ? 0.05 : 0),
                     in: .rect(cornerRadius: 10)
@@ -252,6 +257,7 @@ private struct SidebarSettingsButton: View {
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
+#endif
 
 extension Notification.Name {
     /// Switches the shell to a module (`object`: a `Module`), e.g. from an overview card.
