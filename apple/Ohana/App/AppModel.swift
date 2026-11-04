@@ -83,7 +83,11 @@ final class AppModel {
 
     /// Whether the server has `module` on (all of them while that isn't known yet).
     func isEnabled(_ module: Module) -> Bool {
-        serverInfo?.isEnabled(module) ?? true
+        // The knowledge base: the selected family's editors, not the demo (`FamilyContext.knowledgeAvailable`).
+        if module == .knowledge {
+            return !isDemo && selectedFamily?.canEdit == true && serverInfo?.hasKnowledge == true
+        }
+        return serverInfo?.isEnabled(module) ?? true
     }
 
     /// Family contexts by id, so a family's caches and change signals survive switching away.
@@ -406,8 +410,8 @@ final class AppModel {
             return true
         }
         let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
-        let tab = items.first { $0.name == "tab" }?.value, day = items.first { $0.name == "day" }?.value
-        guard let (familyID, route) = AppRoute.parse(webPath: path, tab: tab, day: day),
+        let value = { (name: String) in items.first { $0.name == name }?.value }
+        guard let (familyID, route) = AppRoute.parse(webPath: path, tab: value("tab"), day: value("day"), page: value("page")),
               let family = families.first(where: { $0.id == familyID }) else { return false }
         selectedFamilyID = family.id
         context(for: family)?.open(route)
@@ -450,9 +454,11 @@ final class FamilyContext {
     var serverInfo: ServerInfo?
 
     /// Whether the server has `module` on (all of them while that isn't known yet). Screens hide
-    /// what belongs to a module that is off.
+    /// what belongs to a module that is off. The knowledge base only where it's available
+    /// (`knowledgeAvailable`: an editor, not the demo).
     func isEnabled(_ module: Module) -> Bool {
-        serverInfo?.isEnabled(module) ?? true
+        if module == .knowledge { return knowledgeAvailable }
+        return serverInfo?.isEnabled(module) ?? true
     }
 
     private(set) var revisions: [DataArea: Int] = [:]
@@ -633,6 +639,8 @@ extension Notification.Name {
 /// What a change can touch, for `FamilyContext.didChange`.
 enum DataArea: String, CaseIterable, Hashable {
     case family, calendar, events, finance, meals, recipes, mealPlan, appointments, chores, settings
+    /// The knowledge base's documents (read again, left out, the indexer's runs).
+    case knowledge
     /// The week ahead's dismissed issues.
     case digest
 }

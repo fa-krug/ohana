@@ -30,9 +30,9 @@ export const kbFolders = sqliteTable(
  *  missing (the path is no longer in the folder, since `missingSince`; deleted after 30 days) |
  *  excluded (kept out of the index; `missingSince` set while its file is gone). `text` is the
  *  uploaded text, a JSON array of pages, kept so the worker can chunk it again. The card
- *  (`summary`, `facts`, `docDate`, whose it is) comes from the worker. `runToken` / `runUntil`
- *  are the worker's lease (lib/knowledge/runner.ts): every change of the text or the status
- *  clears it, so a run that lost it writes nothing. */
+ *  (`summary`, `facts`, `docDate`, whose it is; `cardStatus`) comes from the worker. `runToken` /
+ *  `runUntil` are the worker's lease (lib/knowledge/runner.ts): every change of the text or the
+ *  status clears it, so a run that lost it writes nothing. */
 export const kbDocuments = sqliteTable(
   "kb_documents",
   {
@@ -73,6 +73,20 @@ export const kbDocuments = sqliteTable(
     /** The worker's claims of the current text (a lost lease is run again once, then failed);
      *  back to 0 with new text, a reindex or letting it back in. */
     attempts: integer("attempts").notNull().default(0),
+    /** The card (lib/knowledge/card.ts): pending (waiting for the worker, or for the family's AI) |
+     *  ready | failed (`cardError`) | none (no text to make one of). Back to pending, without
+     *  summary, facts, date and person, whenever the chunks change. */
+    cardStatus: text("card_status").notNull().default("pending"),
+    /** The card runner's lease (lib/knowledge/card-runner.ts), cleared like `runToken`; without
+     *  a token `cardRunUntil` is when a card that failed for the time being is tried again. */
+    cardRunToken: text("card_run_token"),
+    cardRunUntil: integer("card_run_until", { mode: "timestamp" }),
+    /** Claims of the current card (a lost lease runs once more, then the card failed). */
+    cardAttempts: integer("card_attempts").notNull().default(0),
+    /** Temporary failures of the current card (the AI busy or unreachable): each waits longer
+     *  (`cardRunUntil` without a token is "not before"), the fifth fails the card. */
+    cardRetries: integer("card_retries").notNull().default(0),
+    cardError: text("card_error"),
     createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
     updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
   },
@@ -81,6 +95,8 @@ export const kbDocuments = sqliteTable(
     kbDocumentsStatusIdx: index("kb_documents_status_idx").on(t.familyId, t.status),
     /** The worker's queue: pending documents whose lease is free or ran out. */
     kbDocumentsQueueIdx: index("kb_documents_queue_idx").on(t.status, t.runUntil),
+    /** The card runner's queue: ready documents waiting for a card. */
+    kbDocumentsCardQueueIdx: index("kb_documents_card_queue_idx").on(t.cardStatus, t.status, t.cardRunUntil),
   }),
 );
 

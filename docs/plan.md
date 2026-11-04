@@ -581,6 +581,24 @@ Notes (deviations and details):
   keep the picker); a scan without text isn't queued; a name iCloud holds as `.Name.icloud` counts as taken.
   A scan queued during a run joins that run's manifest and is sent after it; a flush under way
   goes on until the queue is empty; the scan's text is written only while the sign-out gate holds.
+- **Step 4 built** (server part: cards): migration `0022_knowledge_cards` (`card_status` pending |
+  ready | failed | none, the card's own lease, attempts and error; ready documents without chunks
+  backfilled to none), `card.ts` + the worker's `KnowledgeCardRunner` (`KNOWLEDGE_CARD_CONCURRENT`,
+  default 1). The card is a runner of its own, not the tail of the chunking run: documents of
+  families without AI wait (pending) and are made once it is set up, without touching the index.
+  New chunks always empty the card (the facts point at chunk ids). A quote counts when it is in a
+  chunk or runs across two consecutive ones, compared after NFC with whitespace, case and
+  typographic quotation marks / dashes ignored; the stored quote is the document's wording. The
+  person is set from the model's answer (no UI to set it by hand yet). The model sees at most the
+  first 30 000 characters, between `<document>` delimiters (escaped inside), told it is data and
+  that instructions in it don't count. A quote needs 3 words and 15 characters, matches at word
+  boundaries only, and a quote under a quarter of its statement that is also under 25 characters
+  is a scrap: dropped. Temporary failures (429, 5xx, timeouts, network) don't fail a card: it waits
+  5 min, 30 min, 2 h (`card_retries`), the 5th fails it; saving the AI settings gives failed cards
+  another go. One card per family at a time, the family waiting longest first. API: `cardStatus` /
+  `cardError` on every document, `facts` `[{text, quote, chunkId, page}]`, `GET /knowledge/status`
+  `cards`, `GET /knowledge/documents?person=`, `POST /knowledge/documents/{id}/card` (202, 409
+  unless ready with text).
 - Limits: 20 000 files per manifest, 2 000 pages and 2 MB of text per upload (413); paths NFC, at
   most 1 024 characters, no hidden or ".." parts. The document list's `q` uses LIKE (case ignored
   for ASCII only) for now.

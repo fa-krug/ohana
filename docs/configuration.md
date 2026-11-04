@@ -67,6 +67,7 @@ Only `APP_URL` and `AUTH_SECRET` are required. Developers running from source us
 | Variable | Default | |
 | --- | --- | --- |
 | `KNOWLEDGE_MAX_CONCURRENT` | `2` | Uploaded documents the worker chunks for the search at once. |
+| `KNOWLEDGE_CARD_CONCURRENT` | `1` | Document cards (summary, facts) the worker has the family's AI write at once. Only for families that set up the assistant. |
 
 ## Appointment searches
 

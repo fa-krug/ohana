@@ -51,7 +51,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   every `WORKER_TICK_SECONDS` (60) `lib/maintenance/cleanup.ts`, the nightly
   `lib/maintenance/backup.ts` and `lib/notifications/daily.ts`; the loop itself ticks every
   `ASSISTANT_TICK_MS` (1000) for the assistant's `ChatRunner`, the meals' `ImportRunner` and the
-  knowledge base's `KnowledgeRunner`; turned-off modules' runners don't run). `docker-entrypoint.sh setup-link <email>` prints a setup link. Long-running jobs
+  knowledge base's `KnowledgeRunner` and `KnowledgeCardRunner`; turned-off modules' runners don't run). `docker-entrypoint.sh setup-link <email>` prints a setup link. Long-running jobs
   (appointment searches, assistant turns, notifications) belong in the worker, never in a
   request.
 - **HTTP (`http/`):** `app.ts` `createApp({ db })` (tests: `app.request(…)`, see
@@ -309,18 +309,22 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   parts; `name`, `tags` JSON, `size`, `mtime` ms, `hash` SHA-256, `pages`, `text` the uploaded
   pages as JSON, `status` pending | ready | failed | missing | excluded, `error`, the card
   `summary` / `facts` / `doc_date` / `person_*` (invite acceptance and member removal handle it as
-  chores' assignee), `indexed_at`, `missing_since`, the worker's lease `run_token` / `run_until` /
-  `attempts`), `kb_chunks` (integer id = FTS rowid and the source ref `k:<id>`, `seq`, `page`,
+  chores' assignee) / `card_status` pending | ready | failed | none / `card_error`, `indexed_at`,
+  `missing_since`, the worker's leases `run_token` / `run_until` / `attempts` and `card_run_token`
+  / `card_run_until` / `card_attempts` / `card_retries`), `kb_chunks` (integer id = FTS rowid and the source ref `k:<id>`, `seq`, `page`,
   `text`) with `kb_chunks_fts` (FTS5, external content, `unicode61 remove_diacritics 2`, kept in
   step by triggers: hand-written SQL at the end of `drizzle/0020_knowledge.sql`). `routes.ts`
   `handleKnowledge`, **editors only: viewers get 404 on every path** (as an unknown one): `GET/POST
   /knowledge/folder` (created on first use; `{replace: true}`: a new id, the old folder's documents
   deleted; `last_manifest_at` / `_device`: the last non-empty manifest, the device name cut to 100),
-  `GET /knowledge/status` (folder, `counts` by status, `chunks`), `POST
+  `GET /knowledge/status` (folder, `counts` by status, `chunks`, `cards`: the family's AI set up and
+  the assistant on), `POST
   /knowledge/manifest {folderId, device?, files: [{path, size, mtime, hash | null, tags}]}` → `{upload: [path]}`, `PUT /knowledge/documents {folderId, path,
   hash, size, mtime, tags, pages}` → 202 `{id, status}` (≤ 2000 pages, ≤ 2 MB of text, else 413),
-  `GET /knowledge/documents?q=&tag=&folder=&status=&cursor=&limit=` (newest `mtime` first, excluded
-  ones only with `status=excluded`), `GET /knowledge/documents/{id}` (card, `chunks`), `POST
+  `GET /knowledge/documents?q=&tag=&folder=&person=&status=&cursor=&limit=` (newest `mtime` first,
+  excluded ones only with `status=excluded`; DTOs carry `cardStatus`), `GET /knowledge/documents/{id}`
+  (card: `facts` `[{text, quote, chunkId, page}]`, `chunks`), `POST …/{id}/card` (202: the card
+  made again; 409 unless ready with text; DTOs carry `cardError` when failed), `POST
   …/{id}/reindex`, `POST …/{id}/exclude {excluded}`, `GET /knowledge/tags`. The manifest
   (`manifest.ts`, the device's complete list): same hash → tags / size / time in place; another
   hash → upload; a new path with the hash of a document whose path is gone → that document moves;
@@ -336,7 +340,25 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   the `ImportRunner`; `KNOWLEDGE_MAX_CONCURRENT`, 2): claims pending documents by CAS + run token,
   `chunk.ts` `chunkPages` (about 1 000 characters at paragraph / line / sentence boundaries, at
   most 1 500, never across pages), writes chunks + ready (or failed) in one immediate transaction
-  that checks the token; a lost run runs once more, then is failed. Read-then-write transactions
+  that checks the token; a lost run runs once more, then is failed. New chunks (and new text,
+  reindex, un-exclude: `CARD_RESET`) empty the card, `card_status` pending (none without chunks).
+  `card-runner.ts` `KnowledgeCardRunner` (same pattern, `KNOWLEDGE_CARD_CONCURRENT`, 1; off without
+  the assistant) claims ready documents with a pending card only of families whose AI is set up
+  (the others wait), round-robin: one per family at a time, the family with the oldest waiting
+  document first; it runs `card.ts` `makeCard` (one completion with `familyModel`, the family's
+  language and `familyNames`; name, path, tags and the text by page "[Page n]", cut at 30 000
+  characters, between `<document>` delimiters escaped inside, the prompt saying it is data; zod-checked
+  JSON summary / date / person / ≤ 12 facts; `findQuote`: each quote ≥ 3 words and ≥ 15 characters,
+  at word boundaries, in a chunk or across two consecutive ones (NFC, whitespace runs, case,
+  typographic quotes ignored); a quote under ¼ of its fact and under 25 characters is a scrap;
+  dropped facts are logged; the stored quote is the document's wording); the write checks status
+  ready, same hash / `indexed_at` and its card token. Failures → `card_status` failed +
+  `card_error`; temporary ones (`TemporaryCardError`: `UpstreamError` 408 / 429 / 5xx, timeouts,
+  network) wait 5 min / 30 min / 2 h (`card_run_until` without token = not before, `card_retries`),
+  the 5th fails. Saving the AI settings (`PUT /ai/settings`) resets the family's failed cards
+  (`retryFailedCards`). The mock AI answers the card prompt from "Date: / For: / Fact: / Shout: /
+  Invent:" lines.
+  Read-then-write transactions
   here are `{ behavior: "immediate" }` (WAL with the worker writing). `search.ts`
   `searchKnowledge(db, familyId, query, {limit, tags, folder})`: each word a quoted prefix term,
   all words, else any, bm25 order, chunks of ready and pending (a reindex keeps them findable)
@@ -484,8 +506,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   writes, server wins (a refusal drops the change and reloads): the calendar's queue of entry /
   note ops is kept on disk (`CalendarStore.queueFile`, shown on top of what's loaded)),
   `Shell/` (sidebar-adaptable `TabView`; on iPhone five tabs, overview, calendar, finance, meals and
-  search: more would go under iOS's "More" with a second navigation bar, so appointments, chores and settings
-  open as sheets from the family sidebar there, `Module.phonePages`; family switcher: on iPad and Mac
+  search: more would go under iOS's "More" with a second navigation bar, so appointments, chores, the knowledge
+  base and settings open as sheets from the family sidebar there, `Module.phonePages`; family switcher: on iPad and Mac
   a system `Menu` (`FamilyMenu`) at the top of the sidebar, where the tab view has no sidebar (iPhone,
   a narrow iPad window) a family page behind the tabs as in Mail (`FamilySidebar.swift`:
   `FamilySidebarHost` slides the tabs away, `AppModel.showsFamilySidebar`; the toolbar's family
@@ -658,6 +680,35 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   the folder (`.fileImporter`, the conflict as an alert offering to use it anyway), the index
   (`GET /knowledge/status` through `api.cached`, with the indexer's progress, waiting and unreadable
   files, the last manifest's time and device), *Read Now*.
+  The knowledge base page (`Module.knowledge`, ⌘9; shown where `FamilyContext.isEnabled(.knowledge)` /
+  `AppModel.isEnabled` say `knowledgeAvailable`, `ServerInfo.isEnabled` only says the server has it;
+  the demo hides it for now): `Features/Knowledge/KnowledgeView.swift`, `GET /knowledge/documents`
+  (`KnowledgeDocumentQuery`: `q` (not kept on the device), a tag (chips from `/knowledge/tags`), a
+  folder (subfolders of the paths seen), a person (`/household`'s members), *Show Left Out* =
+  `status=excluded`; `nextCursor` pages), cards with the date (`docDate`, else the file's), whose it
+  is (`MemberIcon`), tags, the summary's start (marked with a sparkle: the assistant's) and a badge
+  unless ready; empty: no folder on this device nor on the server → Settings → Knowledge, else
+  "Nothing read yet". Another query starts from `.idle` (never the last one's documents under it),
+  answers for an older query are dropped; a refresh asks for as many as are loaded (≤ 200,
+  `KnowledgeDocumentsPage.refreshed`), so it keeps the pages; it reloads on becoming active, after the
+  indexer's runs and on `didChange(.knowledge)` (with status, tags, members), and polls every 15 s
+  (documents only, while active) while something shown waits for the worker. `KnowledgeDocumentView`: path as a breadcrumb, date, person, tags, its
+  status (failed: `error`; "Summary is being written" while `/knowledge/status` `cards`; a failed
+  card: `cardError` quietly and *Write Summary Again*, `POST …/{id}/card`), summary and facts
+  ("Summary" with sparkles, "By the assistant"; each fact keeps its quote and page) (a tap opens the original at the fact's page and quote), the text by page (collapsed;
+  a route's page open, its quote marked); *Open Original*, More: *Show in Finder* (Mac), *Read
+  Again*, *Leave Out* (confirmed) / *Include Again*. Routes `AppRoute.knowledgeDocument(id:page:quote:)`,
+  `/f/{id}/knowledge[/{documentId}[?page=]]`; links in the assistant's answers and tool results keep
+  their query (`AppRoute.parse(url:)` / `parse(link:)`). *Open original* (`Core/Knowledge/KnowledgeOriginal.swift`,
+  `Features/Knowledge/KnowledgeOriginalView.swift`: `KnowledgeOriginalOpener` + `.knowledgeOriginal(_:)`):
+  the folder's bookmark + the path (`locate`: each part compared NFC, an iCloud placeholder by its
+  real name), copied coordinated (iCloud loads it; `KnowledgeOriginalLoader`: Cancel and a 120 s
+  timeout stop the wait with `NSFileCoordinator.cancel()`, a file not on the device fails at once
+  while offline) into the temporary directory within the security scope, the copy deleted when the
+  viewer closes (and `KnowledgeOriginals` swept at launch); a PDF in PDFKit at the page with the quote marked
+  (`KnowledgeQuoteMatch`: the words in order, whitespace, case, accents and punctuation ignored, else
+  its first 8, 5, 3 words; on its page, then the pages beside it), anything else in Quick Look; no
+  folder here (or missing, replaced) → an alert offering Settings → Knowledge.
   The cook view (`MealsCookView`) turns durations in a step's
   text into timer links (`StepDurations`, English and German); `CookTimers` (app-wide, kept in
   `UserDefaults`) schedules a time-sensitive local notification per timer (shown in the

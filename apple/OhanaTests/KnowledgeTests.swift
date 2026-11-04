@@ -347,7 +347,8 @@ struct KnowledgeSettingsTests {
     @Test func pageRoute() {
         #expect(AppRoute.parse(webPath: "/f/fam1/settings", tab: "knowledge")?.route == .settings(.knowledge))
         #expect(FamilySettingsPageView.page(for: .settings(.knowledge)) == .knowledge)
-        #expect(AppRoute.settings(.knowledge).requiredModule == .settings)
+        // The page needs the knowledge base (an editor, not the demo).
+        #expect(AppRoute.settings(.knowledge).requiredModule == .knowledge)
     }
 }
 

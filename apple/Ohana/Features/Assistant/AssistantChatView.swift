@@ -213,7 +213,7 @@ struct AssistantChatView: View {
     /// Links in answers: the app's own pages (`/f/{id}/…`) open in the app, web links in the
     /// browser.
     private func openLink(_ url: URL) -> OpenURLAction.Result {
-        if url.scheme == nil, let (familyID, route) = AppRoute.parse(webPath: url.path), familyID == family.family.id {
+        if url.scheme == nil, let (familyID, route) = AppRoute.parse(url: url), familyID == family.family.id {
             open(route)
             return .handled
         }

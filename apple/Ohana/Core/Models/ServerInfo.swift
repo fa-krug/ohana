@@ -23,12 +23,13 @@ struct ServerInfo: Codable, Equatable {
     static let requiredAPIVersion = 1
 
     /// The modules a server can turn off.
-    static let optionalModules: [Module] = [.finance, .meals, .appointments, .chores, .assistant]
+    static let optionalModules: [Module] = [.finance, .meals, .appointments, .chores, .assistant, .knowledge]
 
     /// What a server without /api/v1/server is taken for: everything it had then on (the
-    /// chores came later, so such a server has none).
+    /// chores and the knowledge base came later, so such a server has neither).
     static let legacy = ServerInfo(name: "Ohana", version: "", apiVersion: 0,
-                                   modules: ([Module.calendar] + optionalModules.filter { $0 != .chores }).map(\.rawValue))
+                                   modules: ([Module.calendar] + optionalModules.filter { $0 != .chores && $0 != .knowledge })
+                                       .map(\.rawValue))
 
     init(name: String, version: String, apiVersion: Int, modules: [String], push: Push? = nil) {
         self.name = name
@@ -57,11 +58,12 @@ struct ServerInfo: Codable, Equatable {
     var isSupported: Bool { apiVersion >= Self.requiredAPIVersion }
 
     /// Whether the server has `module` on. The overview, the calendar and the settings are
-    /// always there.
+    /// always there. The knowledge base is for editors only, outside the demo, too: the family's
+    /// `FamilyContext.isEnabled` adds that.
     func isEnabled(_ module: Module) -> Bool {
         switch module {
         case .overview, .calendar, .settings, .search: true
-        case .finance, .meals, .appointments, .chores, .assistant: modules.contains(module.rawValue)
+        case .finance, .meals, .appointments, .chores, .assistant, .knowledge: modules.contains(module.rawValue)
         }
     }
 

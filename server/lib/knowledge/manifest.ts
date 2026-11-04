@@ -58,6 +58,8 @@ const MANIFEST_COLUMNS = {
   attempts: kbDocuments.attempts,
   runToken: kbDocuments.runToken,
   runUntil: kbDocuments.runUntil,
+  cardRunToken: kbDocuments.cardRunToken,
+  cardRunUntil: kbDocuments.cardRunUntil,
 };
 type Row = Pick<DocumentRow, keyof typeof MANIFEST_COLUMNS>;
 
@@ -156,7 +158,7 @@ export function applyManifest(db: Db, folderId: string, files: ManifestFile[], n
         if (listed.has(r.path) || moved.has(r.id)) continue;
         const status = r.status as DocumentStatus;
         if (status === "excluded") save(r, { missingSince: r.missingSince ?? now });
-        else if (status !== "missing") save(r, { status: "missing", missingSince: now, runToken: null, runUntil: null });
+        else if (status !== "missing") save(r, { status: "missing", missingSince: now, runToken: null, runUntil: null, cardRunToken: null, cardRunUntil: null });
       }
       tx.update(kbFolders).set({ lastManifestAt: now, lastManifestDevice: device }).where(eq(kbFolders.id, folderId)).run();
       return { upload };

@@ -130,8 +130,10 @@ tags:
     description: >-
       An index of the family's paperwork folder (module `knowledge`): the app sends a manifest of
       the folder's files and the text of those the server asks for; the worker cuts it into chunks
-      for the search. The files never reach the server. **Editors only**: for viewers every
-      knowledge route answers 404.
+      for the search, then, with the family's AI set up, makes a card per document (a summary,
+      the document's date, whose it is, facts each with a verbatim quote checked against the
+      text). The files never reach the server. **Editors only**: for viewers every knowledge route
+      answers 404.
   - name: Assistant
     description: The AI assistant's chats and agent instructions (module `assistant`).
   - name: AI settings
@@ -2407,7 +2409,7 @@ paths:
     get:
       tags: [Knowledge base]
       operationId: getKnowledgeStatus
-      summary: The folder, the family's documents by status and the number of chunks
+      summary: The folder, the family's documents by status, the number of chunks and whether cards are made
       description: For the app's settings. Without a folder every count is 0.
       x-ohana-role: editor
       responses:
@@ -2417,7 +2419,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [folder, counts, chunks]
+                required: [folder, counts, chunks, cards]
                 properties:
                   folder:
                     oneOf:
@@ -2433,6 +2435,11 @@ paths:
                       missing: {type: integer}
                       excluded: {type: integer}
                   chunks: {type: integer}
+                  cards:
+                    type: boolean
+                    description: >-
+                      Whether the worker makes cards: the family's AI is set up and the server has
+                      the assistant on. Without, documents wait with `cardStatus` pending.
         "401": {$ref: "#/components/responses/Unauthorized"}
         "404": {$ref: "#/components/responses/NotFound"}
   /api/v1/families/{familyId}/knowledge/manifest:
@@ -2506,6 +2513,10 @@ paths:
           in: query
           description: A subfolder of the folder, e.g. `Versicherungen/Auto` (its subfolders too).
           schema: {type: string}
+        - name: person
+          in: query
+          description: "Whose it is (the card's `person`): a member's id (an account's, or a person's without one)."
+          schema: {type: string, maxLength: 100}
         - name: status
           in: query
           schema: {$ref: "#/components/schemas/KnowledgeStatus"}
@@ -2595,6 +2606,31 @@ paths:
       operationId: reindexKnowledgeDocument
       summary: Read the stored text again
       description: The document waits for the worker (`pending`); its chunks stay findable until replaced. 409 for an excluded or missing one.
+      x-ohana-role: editor
+      responses:
+        "202":
+          description: The document (without facts or chunks).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [document]
+                properties:
+                  document: {$ref: "#/components/schemas/KnowledgeDocumentSummary"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /api/v1/families/{familyId}/knowledge/documents/{documentId}/card:
+    parameters:
+      - $ref: "#/components/parameters/FamilyId"
+      - $ref: "#/components/parameters/KnowledgeDocumentId"
+    post:
+      tags: [Knowledge base]
+      operationId: remakeKnowledgeCard
+      summary: Make the card again
+      description: >-
+        The card is emptied and waits for the worker (`cardStatus` pending), e.g. after it
+        failed. 409 unless the document is `ready` and has text.
       x-ohana-role: editor
       responses:
         "202":
@@ -4500,7 +4536,8 @@ paths:
       summary: Change the AI settings (only the fields given)
       description: >-
         `baseUrl` is an OpenAI-compatible API (private addresses only when the server allows
-        them). Keys are stored encrypted; `apiKey: ""` removes the key.
+        them). Keys are stored encrypted; `apiKey: ""` removes the key. Saving makes the
+        knowledge base's failed cards wait for the worker again.
       x-ohana-role: editor
       requestBody:
         required: true
@@ -6174,6 +6211,29 @@ components:
         `pending` waits for the worker, `ready` is in the search, `failed` has an `error`,
         `missing`: the file is gone (since `missingSince`), `excluded`: kept out by an editor.
       enum: [pending, ready, failed, missing, excluded]
+    KnowledgeCardStatus:
+      type: string
+      description: >-
+        The card's state: `pending` waits for the worker (or for the family's AI to be set up),
+        `ready`, `failed` (`cardError`: the AI refused or gave no usable answer, or was busy or
+        unreachable five times; a temporary failure keeps it pending and tries again after 5 min,
+        30 min, 2 h), `none`: no text to make one of. Back to `pending` (the card emptied) whenever
+        the document is chunked again (new text, a reindex, let back in), on `POST …/card`, and
+        for failed cards when the family's AI settings are saved.
+      enum: [pending, ready, failed, none]
+    KnowledgeFact:
+      type: object
+      description: >-
+        A fact of the card: a short statement and the verbatim quote it rests on, as the document
+        words it. Facts whose quote isn't in the text (at word boundaries) are dropped, and so are
+        quotes under 3 words or 15 characters, and those under a quarter of their statement's
+        length that are also under 25 characters.
+      required: [text, quote, chunkId, page]
+      properties:
+        text: {type: string}
+        quote: {type: string, description: "At least 3 words and 15 characters, at most about 300; may run on into the next chunk."}
+        chunkId: {type: integer, description: "The chunk the quote is in (where it starts)."}
+        page: {type: integer, description: "That chunk's page, from 1."}
     KnowledgeFile:
       type: object
       description: A file of the folder.
@@ -6208,7 +6268,7 @@ components:
         tags: {$ref: "#/components/schemas/KnowledgeFile/properties/tags"}
     KnowledgeDocumentSummary:
       type: object
-      required: [id, folderId, path, name, tags, size, mtime, hash, pages, status, error, summary, docDate, person, indexedAt, missingSince, createdAt, updatedAt]
+      required: [id, folderId, path, name, tags, size, mtime, hash, pages, status, error, cardStatus, cardError, summary, docDate, person, indexedAt, missingSince, createdAt, updatedAt]
       properties:
         id: {type: string, format: uuid}
         folderId: {type: string}
@@ -6223,8 +6283,10 @@ components:
         pages: {type: integer}
         status: {$ref: "#/components/schemas/KnowledgeStatus"}
         error: {type: [string, "null"], description: "Why it failed."}
-        summary: {type: [string, "null"], description: "The card's (from the worker, with the AI set up)."}
-        docDate: {type: [string, "null"], format: date}
+        cardStatus: {$ref: "#/components/schemas/KnowledgeCardStatus"}
+        cardError: {type: [string, "null"], description: "Why the card failed (only with `cardStatus` failed)."}
+        summary: {type: [string, "null"], description: "The card's: 2 to 4 sentences (from the worker, with the AI set up)."}
+        docDate: {type: [string, "null"], format: date, description: "The card's: the document's own date."}
         person:
           description: Whose it is (the card's), while they are in the family.
           oneOf:
@@ -6242,8 +6304,8 @@ components:
           properties:
             facts:
               type: [array, "null"]
-              description: The card's facts, each with its verbatim quote; null without a card.
-              items: {type: object}
+              description: The card's facts (at most 12), each with its verbatim quote; null without a card.
+              items: {$ref: "#/components/schemas/KnowledgeFact"}
             chunks:
               type: array
               description: The text in pieces (about 1 000 characters, never across pages), in order.

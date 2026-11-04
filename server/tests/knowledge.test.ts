@@ -380,7 +380,7 @@ describe("knowledge: status", () => {
   it("is empty without a folder", async () => {
     expect(await call(editorId)("GET", "/knowledge/status")).toEqual({
       status: 200,
-      data: { folder: null, counts: { pending: 0, ready: 0, failed: 0, missing: 0, excluded: 0 }, chunks: 0 },
+      data: { folder: null, counts: { pending: 0, ready: 0, failed: 0, missing: 0, excluded: 0 }, chunks: 0, cards: false },
     });
   });
 
@@ -443,6 +443,7 @@ describe("knowledge: status", () => {
         folder: { id: folderId, createdAt: NOW.toISOString(), lastManifestAt: now.toISOString(), lastManifestDevice: "iPad" },
         counts: { pending: 1, ready: 2, failed: 1, missing: 1, excluded: 1 },
         chunks: 3,
+        cards: false,
       },
     });
   });
@@ -567,6 +568,8 @@ describe("knowledge: documents", () => {
       pages: 1,
       status: "pending",
       error: null,
+      cardStatus: "pending",
+      cardError: null,
       summary: null,
       docDate: null,
       person: null,

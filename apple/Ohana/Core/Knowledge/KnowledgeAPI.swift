@@ -46,6 +46,8 @@ nonisolated struct KnowledgeStatusInfo: Codable, Equatable, Sendable {
     var folder: KnowledgeFolderInfo?
     var counts: Counts
     var chunks: Int
+    /// Cards are made (the family's AI is set up); nil from a server from before them.
+    var cards: Bool?
 }
 
 /// GET /knowledge/tags: the tags of the family's documents (every subfolder's), the most used first.

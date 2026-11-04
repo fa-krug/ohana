@@ -36,6 +36,10 @@ enum AppRoute: Hashable {
     /// notification's `?day=`; nil: today).
     case chore(id: String, day: Day? = nil)
     case newChore
+    // Knowledge
+    /// One document of the knowledge base (`/f/{id}/knowledge/{documentId}?page=`): `page` (from 1)
+    /// shows that page's text, with `quote` marked in it (an assistant's source).
+    case knowledgeDocument(id: String, page: Int? = nil, quote: String? = nil)
     // Assistant
     /// The assistant's page, optionally on one chat.
     case assistantChat(id: String?)
@@ -52,6 +56,7 @@ enum AppRoute: Hashable {
         case .recipe, .recipeList, .cook, .newRecipe, .mealPlan, .mealTags: .meals
         case .appointmentSearch, .appointmentSlot, .newAppointmentSearch: .appointments
         case .chore, .newChore: .chores
+        case .knowledgeDocument: .knowledge
         case .assistantChat: .assistant
         case .settings: .settings
         }
@@ -69,15 +74,15 @@ enum AppRoute: Hashable {
 enum SettingsPage: String, Hashable, CaseIterable {
     case members, home, notifications, calendar, finance, shopping, assistant, knowledge, data
 
-    /// The module whose settings the page holds; nil for the family's own pages (and the knowledge
-    /// base, which isn't a module of the app's: its page checks `FamilyContext.knowledgeAvailable`).
+    /// The module whose settings the page holds; nil for the family's own pages.
     var module: Module? {
         switch self {
         case .calendar: .calendar
         case .finance: .finance
         case .shopping: .meals
         case .assistant: .assistant
-        case .members, .home, .notifications, .knowledge, .data: nil
+        case .knowledge: .knowledge
+        case .members, .home, .notifications, .data: nil
         }
     }
 }
@@ -86,14 +91,35 @@ extension AppRoute {
     /// The route of a web app path inside a family: `/f/{familyId}/meals/recipes/{id}` → `.recipe`.
     /// Returns the family's id too. Nil for paths outside a family.
     /// `tab`: the settings page's `?tab=` (the web's settings tabs); `day`: the `?day=` of a
-    /// chore's link (its notification's).
-    static func parse(webPath path: String, tab: String? = nil, day: String? = nil) -> (familyID: String, route: AppRoute)? {
+    /// chore's link (its notification's); `page`: the `?page=` of a knowledge document's.
+    static func parse(webPath path: String, tab: String? = nil, day: String? = nil,
+                      page: String? = nil) -> (familyID: String, route: AppRoute)? {
         let parts = path.split(separator: "/").map(String.init)
         guard parts.count >= 2, parts[0] == "f" else { return nil }
         let familyID = parts[1]
         let rest = Array(parts.dropFirst(2))
         if rest.first == "settings", let page = settingsPage(tab: tab) { return (familyID, .settings(page)) }
-        return (familyID, route(rest, day: day.flatMap(Day.init)))
+        let pageNumber = page.flatMap { Int($0) }.flatMap { $0 >= 1 ? $0 : nil }
+        return (familyID, route(rest, day: day.flatMap(Day.init), page: pageNumber))
+    }
+
+    /// A link's route with its query (`?tab=`, `?day=`, `?page=`): a path as an answer or a tool
+    /// result names it ("/f/{id}/knowledge/{doc}?page=2"; a "#…" left out). Nil outside a family.
+    static func parse(link: String) -> (familyID: String, route: AppRoute)? {
+        var text = link
+        if let hash = text.firstIndex(of: "#") { text = String(text[..<hash]) }
+        guard let mark = text.firstIndex(of: "?") else { return parse(webPath: text) }
+        let items = URLComponents(string: "x:/?" + text[text.index(after: mark)...])?.queryItems ?? []
+        let value = { (name: String) in items.first { $0.name == name }?.value }
+        return parse(webPath: String(text[..<mark]), tab: value("tab"), day: value("day"), page: value("page"))
+    }
+
+    /// A URL's route with its query (a relative link in an answer).
+    static func parse(url: URL) -> (familyID: String, route: AppRoute)? {
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return nil }
+        let items = components.queryItems ?? []
+        let value = { (name: String) in items.first { $0.name == name }?.value }
+        return parse(webPath: components.path, tab: value("tab"), day: value("day"), page: value("page"))
     }
 
     /// The web's settings tabs (components/families/settings-tabs.tsx) as the app's pages.
@@ -109,7 +135,7 @@ extension AppRoute {
         }
     }
 
-    private static func route(_ rest: [String], day: Day?) -> AppRoute {
+    private static func route(_ rest: [String], day: Day?, page: Int?) -> AppRoute {
         guard let first = rest.first else { return .module(.overview) }
         let at = { (i: Int) in rest.count > i ? rest[i] : nil }
         switch first {
@@ -139,6 +165,10 @@ extension AppRoute {
             // `/chores/{id}?day=`: a chore on a day (its notification's link).
             guard let chore = at(1) else { return .module(.chores) }
             return chore == "new" ? .newChore : .chore(id: chore, day: day)
+        case "knowledge":
+            // `/knowledge/{documentId}?page=`: a document, at a page of its text.
+            guard let document = at(1) else { return .module(.knowledge) }
+            return .knowledgeDocument(id: document, page: page)
         case "assistant":
             return .assistantChat(id: nil)
         case "settings":

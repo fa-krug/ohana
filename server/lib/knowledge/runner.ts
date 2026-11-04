@@ -1,5 +1,6 @@
 // The worker's KnowledgeRunner: turns pending documents (text the app uploaded, waiting) into
-// chunks for the search, like the meals' ImportRunner runs recipe imports.
+// chunks for the search, like the meals' ImportRunner runs recipe imports. The cards come after,
+// from the KnowledgeCardRunner (card-runner.ts).
 //
 // Claiming is a compare-and-swap UPDATE … RETURNING (still pending, the lease as the tick read
 // it) that takes a lease with a fresh run token (`run_token`, `run_until`) and reads the text in
@@ -19,9 +20,9 @@ import type { Db } from "@/lib/db";
 import { kbChunks, kbDocuments } from "@/lib/db/schema";
 import { moduleEnabled } from "@/lib/server-info";
 import { type TextChunk, chunkPages, storedPages } from "./chunk";
-import { deleteChunks } from "./documents";
+import { CARD_RESET, deleteChunks } from "./documents";
 
-/** How long one document may take (the chunks now; the card, an AI call, later). */
+/** How long one document's chunks may take. */
 export const KNOWLEDGE_TIMEOUT_MS = 4 * 60_000;
 /** The lease a running document holds (longer than it may take). */
 export const KNOWLEDGE_LEASE_MS = 6 * 60_000;
@@ -196,15 +197,12 @@ export class KnowledgeRunner {
       this.log(`document ${doc.id} changed while it was indexed, its result is dropped`);
       return;
     }
-    // TODO(phase 12, cards): the card (summary, facts each with a verbatim quote, the date, whose
-    // it is from `familyNames`) is made here, after the chunks, only when the family's AI is set
-    // up (`familyModel`): one completion with the document's text; a fact whose quote isn't in
-    // the text is dropped. The document is already ready (searchable) by then and the lease is
-    // gone, so the card's write must check the document still has the text it was made from
-    // (same `indexedAt` and `hash`), and a failing card leaves the document ready without one.
+    // The card comes after, from the KnowledgeCardRunner (card-runner.ts): the document is
+    // searchable without one.
   }
 
-  /** The chunks in, the document ready; false (nothing written) when the run lost its lease. */
+  /** The chunks in, the document ready, its card to be made again (new chunks, new ids for the
+   *  facts' sources; none without text); false (nothing written) when the run lost its lease. */
   private finish(doc: Due, run: Running, chunks: TextChunk[]): boolean {
     const now = this.now();
     return this.db.transaction(
@@ -222,7 +220,16 @@ export class KnowledgeRunner {
           tx.insert(kbChunks).values(values).run();
         }
         tx.update(kbDocuments)
-          .set({ status: "ready", indexedAt: now, error: null, runToken: null, runUntil: null, updatedAt: now })
+          .set({
+            status: "ready",
+            indexedAt: now,
+            error: null,
+            runToken: null,
+            runUntil: null,
+            ...CARD_RESET,
+            cardStatus: chunks.length ? "pending" : "none",
+            updatedAt: now,
+          })
           .where(eq(kbDocuments.id, doc.id))
           .run();
         return true;

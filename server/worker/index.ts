@@ -4,7 +4,7 @@
 // searches (every APPT_TICK_SECONDS), the daily notifications (coverage), chores that are due, the week ahead
 // (geocoding event locations daily, the weekly digest), the assistant's chat turns, the
 // recipe imports the share extension handed over and the knowledge base's documents waiting to
-// be chunked (all looked for every ASSISTANT_TICK_MS, a cheap indexed query).
+// be chunked or for their card (all looked for every ASSISTANT_TICK_MS, a cheap indexed query).
 import { setTimeout as sleep } from "node:timers/promises";
 import { db, sqlite } from "../lib/db/client";
 import { backupDatabase, hasBackupFor } from "../lib/maintenance/backup";
@@ -13,6 +13,7 @@ import { SearchRunner } from "../lib/appointments/runner";
 import { ChatRunner } from "../lib/assistant/runner";
 import { ImportRunner } from "../lib/meals/ai/import-queue";
 import { KnowledgeRunner } from "../lib/knowledge/runner";
+import { KnowledgeCardRunner } from "../lib/knowledge/card-runner";
 import { defaultAiEnv } from "../lib/assistant/routes";
 import { migrationsApplied } from "../lib/maintenance/migrations";
 import { dailyNotifications } from "../lib/notifications/daily";
@@ -75,13 +76,16 @@ async function main(): Promise<void> {
   const searches = new SearchRunner(db);
   if (runSearches) searches.start(new Date());
   // Assistant turns: claimed through the database, run without awaiting.
-  const chats = new ChatRunner(defaultAiEnv(db));
+  const aiEnv = defaultAiEnv(db);
+  const chats = new ChatRunner(aiEnv);
   // Recipe imports in the background (meals + assistant), started like the turns.
   const runImports = moduleEnabled("meals") && moduleEnabled("assistant");
   const imports = new ImportRunner(db);
   // The knowledge base's uploaded documents, chunked for the search (phase 12).
   const runKnowledge = moduleEnabled("knowledge");
   const knowledge = new KnowledgeRunner(db);
+  // Their cards, with the family's AI (only where it is set up; off with the assistant).
+  const cards = new KnowledgeCardRunner(aiEnv);
   let lastTick = 0;
   let lastSearches = 0;
   while (!stopping) {
@@ -89,6 +93,7 @@ async function main(): Promise<void> {
     if (runChats) chats.tick(now);
     if (runImports) imports.tick(now);
     if (runKnowledge) knowledge.tick(now);
+    if (runKnowledge && runChats) cards.tick(now);
     if (runSearches && now.getTime() - lastSearches >= APPT_TICK_MS) {
       lastSearches = now.getTime();
       searches.tick(now);
@@ -103,7 +108,7 @@ async function main(): Promise<void> {
     }
     await sleep(ASSISTANT_TICK_MS, undefined, { signal: wake.signal }).catch(() => undefined);
   }
-  await Promise.all([searches.stop(5000), chats.stop(5000), imports.stop(5000), knowledge.stop(5000)]);
+  await Promise.all([searches.stop(5000), chats.stop(5000), imports.stop(5000), knowledge.stop(5000), cards.stop(5000)]);
   sqlite.close();
 }
 

@@ -25,6 +25,20 @@ export type DocumentRow = typeof kbDocuments.$inferSelect;
 export const STATUSES = ["pending", "ready", "failed", "missing", "excluded"] as const;
 export type DocumentStatus = (typeof STATUSES)[number];
 
+/** The card's state (card.ts): pending (waiting for the worker, or for the family's AI to be set
+ *  up), ready, failed (`cardError`), none (the document has no text to make one of). */
+export const CARD_STATUSES = ["pending", "ready", "failed", "none"] as const;
+export type CardStatus = (typeof CARD_STATUSES)[number];
+
+/** A fact of a card: a short statement and the verbatim quote it rests on, found in the chunk
+ *  `chunkId` (on `page`). */
+export interface KnowledgeFact {
+  text: string;
+  quote: string;
+  chunkId: number;
+  page: number;
+}
+
 /** How long a document whose file is gone is kept (a file put back in time keeps its card). */
 export const MISSING_KEEP_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -52,6 +66,9 @@ export interface KnowledgeDocumentSummary {
   pages: number;
   status: DocumentStatus;
   error: string | null;
+  cardStatus: CardStatus;
+  /** Why the card failed (with `cardStatus` failed). */
+  cardError: string | null;
   summary: string | null;
   docDate: string | null;
   /** Whose it is (the card's), while they are in the family. */
@@ -71,7 +88,7 @@ export interface KnowledgeChunk {
 
 /** A document with its card's facts and its chunks. */
 export interface KnowledgeDocument extends KnowledgeDocumentSummary {
-  facts: unknown[] | null;
+  facts: KnowledgeFact[] | null;
   chunks: KnowledgeChunk[];
 }
 
@@ -122,6 +139,8 @@ function summaryDto(row: DocumentRow, people: People): KnowledgeDocumentSummary 
     pages: row.pages,
     status: row.status as DocumentStatus,
     error: row.error,
+    cardStatus: (CARD_STATUSES as readonly string[]).includes(row.cardStatus) ? (row.cardStatus as CardStatus) : "pending",
+    cardError: row.cardStatus === "failed" ? row.cardError : null,
     summary: row.summary,
     docDate: row.docDate,
     person: (personId && people.get(personId)) || null,
@@ -156,7 +175,7 @@ export function getDocument(db: Db, familyId: string, id: string): KnowledgeDocu
     .where(eq(kbChunks.documentId, id))
     .orderBy(kbChunks.seq)
     .all();
-  return { ...summaryDto(row, peopleOf(db, familyId)), facts: parseJsonArray(row.facts), chunks };
+  return { ...summaryDto(row, peopleOf(db, familyId)), facts: parseJsonArray<KnowledgeFact>(row.facts), chunks };
 }
 
 // ---- the list ----
@@ -167,6 +186,8 @@ export interface ListOptions {
   tag?: string | null;
   /** A subfolder: its documents and those of its subfolders. */
   folder?: string | null;
+  /** Whose it is (the card's person): a member's id, an account's or a person's. */
+  person?: string | null;
   /** One status; without one everything but the excluded. */
   status?: DocumentStatus | null;
   cursor?: string | null;
@@ -226,6 +247,7 @@ export function listDocuments(
   }
   if (opts.tag) where.push(hasTag(opts.tag.normalize("NFC")));
   if (opts.folder) where.push(inFolder(opts.folder));
+  if (opts.person) where.push(or(eq(kbDocuments.personUserId, opts.person), eq(kbDocuments.personPersonId, opts.person)));
   if (opts.cursor) {
     const c = decodeCursor(opts.cursor);
     where.push(or(lt(kbDocuments.mtime, c.mtime), and(eq(kbDocuments.mtime, c.mtime), lt(kbDocuments.id, c.id))));
@@ -295,6 +317,21 @@ export function deleteChunks(db: Tx, documentId: string): void {
   db.delete(kbChunks).where(eq(kbChunks.documentId, documentId)).run();
 }
 
+/** A card made again: none yet, waiting for the worker (card-runner.ts), without its lease. */
+export const CARD_RESET = {
+  summary: null,
+  facts: null,
+  docDate: null,
+  personUserId: null,
+  personPersonId: null,
+  cardStatus: "pending",
+  cardRunToken: null,
+  cardRunUntil: null,
+  cardAttempts: 0,
+  cardRetries: 0,
+  cardError: null,
+} as const;
+
 /** What a document's columns become with new text: waiting for the worker, without the old
  *  text's error, card and lease. */
 function freshText(input: UploadInput) {
@@ -306,11 +343,7 @@ function freshText(input: UploadInput) {
     pages: input.pages.length,
     text: JSON.stringify(input.pages),
     error: null,
-    summary: null,
-    facts: null,
-    docDate: null,
-    personUserId: null,
-    personPersonId: null,
+    ...CARD_RESET,
     indexedAt: null,
     runToken: null,
     runUntil: null,
@@ -373,7 +406,8 @@ export function uploadDocument(
 }
 
 /** Asks the worker to read the document's text again. Its chunks stay until it has, and so it
- *  stays searchable meanwhile (the search takes pending documents' chunks too). */
+ *  stays searchable meanwhile (the search takes pending documents' chunks too); the card is made
+ *  again after it. */
 export function reindexDocument(db: Db, familyId: string, id: string, now: Date): KnowledgeDocumentSummary {
   db.transaction(
     (tx) => {
@@ -381,7 +415,7 @@ export function reindexDocument(db: Db, familyId: string, id: string, now: Date)
       if (row.status === "excluded") throw new HttpError(409, "The document is excluded");
       if (row.status === "missing") throw new HttpError(409, "The document's file is missing");
       tx.update(kbDocuments)
-        .set({ status: "pending", error: null, indexedAt: null, runToken: null, runUntil: null, attempts: 0, updatedAt: now })
+        .set({ status: "pending", error: null, indexedAt: null, runToken: null, runUntil: null, attempts: 0, ...CARD_RESET, updatedAt: now })
         .where(eq(kbDocuments.id, id))
         .run();
     },
@@ -391,7 +425,7 @@ export function reindexDocument(db: Db, familyId: string, id: string, now: Date)
 }
 
 /** Keeps a document out of the index (its chunks go) or lets it back in: pending (the worker
- *  reads its stored text again), or missing while its file is gone. */
+ *  reads its stored text again, then makes a new card), or missing while its file is gone. */
 export function setExcluded(db: Db, familyId: string, id: string, excluded: boolean, now: Date): KnowledgeDocumentSummary {
   db.transaction(
     (tx) => {
@@ -400,12 +434,12 @@ export function setExcluded(db: Db, familyId: string, id: string, excluded: bool
       if (excluded && !isExcluded) {
         deleteChunks(tx, id);
         tx.update(kbDocuments)
-          .set({ status: "excluded", error: null, indexedAt: null, runToken: null, runUntil: null, updatedAt: now })
+          .set({ status: "excluded", error: null, indexedAt: null, runToken: null, runUntil: null, cardRunToken: null, cardRunUntil: null, updatedAt: now })
           .where(eq(kbDocuments.id, id))
           .run();
       } else if (!excluded && isExcluded) {
         tx.update(kbDocuments)
-          .set({ status: row.missingSince ? "missing" : "pending", attempts: 0, updatedAt: now })
+          .set({ status: row.missingSince ? "missing" : "pending", attempts: 0, ...CARD_RESET, updatedAt: now })
           .where(eq(kbDocuments.id, id))
           .run();
       }
@@ -413,6 +447,31 @@ export function setExcluded(db: Db, familyId: string, id: string, excluded: bool
     { behavior: "immediate" },
   );
   return summaryDto(requireDocument(db, familyId, id), peopleOf(db, familyId));
+}
+
+/** Makes a ready document's card again (POST …/{id}/card): emptied, waiting for the worker.
+ *  409 for a document that isn't ready or has no text. */
+export function remakeCard(db: Db, familyId: string, id: string, now: Date): KnowledgeDocumentSummary {
+  db.transaction(
+    (tx) => {
+      const row = requireDocument(tx, familyId, id);
+      if (row.status !== "ready") throw new HttpError(409, "The document isn't ready");
+      const chunk = tx.select({ id: kbChunks.id }).from(kbChunks).where(eq(kbChunks.documentId, id)).limit(1).get();
+      if (!chunk) throw new HttpError(409, "The document has no text");
+      tx.update(kbDocuments).set({ ...CARD_RESET, updatedAt: now }).where(eq(kbDocuments.id, id)).run();
+    },
+    { behavior: "immediate" },
+  );
+  return summaryDto(requireDocument(db, familyId, id), peopleOf(db, familyId));
+}
+
+/** The family's failed cards wait for the worker again (its AI settings changed: maybe fixed). */
+export function retryFailedCards(db: Pick<Db, "update">, familyId: string): number {
+  return db
+    .update(kbDocuments)
+    .set({ cardStatus: "pending", cardError: null, cardAttempts: 0, cardRetries: 0, cardRunToken: null, cardRunUntil: null })
+    .where(and(eq(kbDocuments.familyId, familyId), eq(kbDocuments.cardStatus, "failed")))
+    .run().changes;
 }
 
 /** Deletes the documents whose file has been gone for MISSING_KEEP_MS (maintenance). */

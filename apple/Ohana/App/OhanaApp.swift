@@ -18,6 +18,8 @@ struct OhanaApp: App {
         // The notification center's delegate: every notification (a push, a cook timer's) shows
         // while the app is open too, and a push's tap opens its page.
         PushNotifications.shared.start(app)
+        // Copies of knowledge originals a viewer left behind (the app quit while it was open).
+        Task.detached(priority: .utility) { KnowledgeOriginal.sweepCopies() }
         // Apple Calendar syncs (Settings → Calendar), per device and family.
         AppleCalendarSync.shared.start(app)
         #if os(macOS)

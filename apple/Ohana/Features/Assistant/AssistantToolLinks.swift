@@ -47,7 +47,7 @@ enum AssistantToolLinks {
         }
         // A page the result names (`page` / `url`: /f/{family}/…).
         for key in ["page", "url"] {
-            if let path = field(key), let (family, route) = AppRoute.parse(webPath: path), family == familyID,
+            if let path = field(key), let (family, route) = AppRoute.parse(link: path), family == familyID,
                route != .module(.overview) {
                 return route
             }

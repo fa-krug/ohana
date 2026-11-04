@@ -4,18 +4,20 @@
 //
 // GET  /knowledge/folder                       {folder: {id, createdAt, lastManifestAt, lastManifestDevice} | null}
 // POST /knowledge/folder                       {replace?} → {folder} (201 when this made it; replace: a new one, the old one's documents gone)
-// GET  /knowledge/status                       {folder | null, counts: {pending, ready, failed, missing, excluded}, chunks}
+// GET  /knowledge/status                       {folder | null, counts: {pending, ready, failed, missing, excluded}, chunks, cards}
 // POST /knowledge/manifest                     {folderId, device?, files: [{path, size, mtime, hash | null, tags}]} → {upload: [path]}
 // PUT  /knowledge/documents                    {folderId, path, hash, size, mtime, tags, pages: [text]} → 202 {id, status}
-// GET  /knowledge/documents?q=&tag=&folder=&status=&cursor=&limit=   {documents, nextCursor}
-// GET  /knowledge/documents/{id}               {document} (with facts and chunks)
+// GET  /knowledge/documents?q=&tag=&folder=&person=&status=&cursor=&limit=   {documents, nextCursor}
+// GET  /knowledge/documents/{id}               {document} (with the card's facts and the chunks)
 // POST /knowledge/documents/{id}/reindex       202 {document}
 // POST /knowledge/documents/{id}/exclude       {excluded} → {document}
+// POST /knowledge/documents/{id}/card          202 {document} (the card made again; 409 unless ready with text)
 // GET  /knowledge/tags                         {tags: [{tag, count}]}
 
 import type { Ctx, Loaded } from "@/lib/api/family-api";
 import { HttpError, json } from "@/lib/api/http";
-import { STATUSES, type DocumentStatus, cleanPages, countDocuments, getDocument, listDocuments, listTags, reindexDocument, setExcluded, uploadDocument } from "./documents";
+import { cardsEnabled } from "./card";
+import { STATUSES, type DocumentStatus, cleanPages, countDocuments, getDocument, listDocuments, listTags, reindexDocument, remakeCard, setExcluded, uploadDocument } from "./documents";
 import { ensureFolder, folderDto, getFolder, replaceFolder, requireFolder } from "./folders";
 import { cleanFileInfo, cleanFolderFilter, readLimitedBody } from "./input";
 import { applyManifest, cleanDevice, cleanManifestFiles } from "./manifest";
@@ -77,6 +79,10 @@ function route(ctx: Ctx, { family }: Loaded): Promise<Response> {
         if (method === "POST") return Promise.resolve(json({ document: reindexDocument(ctx.db, familyId, id, ctx.now) }, 202));
         throw notAllowed();
       }
+      if (action === "card") {
+        if (method === "POST") return Promise.resolve(json({ document: remakeCard(ctx.db, familyId, id, ctx.now) }, 202));
+        throw notAllowed();
+      }
       if (action === "exclude") {
         if (method === "POST") return excludeRoute(ctx, familyId, id);
         throw notAllowed();
@@ -102,11 +108,12 @@ async function createFolderRoute(ctx: Ctx, familyId: string): Promise<Response> 
   return json({ folder: folderDto(folder) }, created ? 201 : 200);
 }
 
-/** The settings screen's view: the folder (with the last manifest), documents by status, chunks. */
+/** The settings screen's view: the folder (with the last manifest), documents by status, chunks,
+ *  and whether cards are made (the family's AI set up, the assistant on). */
 async function statusRoute(ctx: Ctx, familyId: string): Promise<Response> {
   const folder = getFolder(ctx.db, familyId);
   const { counts, chunks } = countDocuments(ctx.db, familyId);
-  return json({ folder: folder ? folderDto(folder) : null, counts, chunks });
+  return json({ folder: folder ? folderDto(folder) : null, counts, chunks, cards: cardsEnabled(ctx.db, familyId) });
 }
 
 async function manifestRoute(ctx: Ctx, familyId: string): Promise<Response> {
@@ -134,11 +141,14 @@ async function listRoute(ctx: Ctx, familyId: string): Promise<Response> {
   const rawLimit = p.get("limit");
   const limit = rawLimit ? Number(rawLimit) : undefined;
   if (limit !== undefined && (!Number.isInteger(limit) || limit < 1)) throw new HttpError(400, "limit must be a whole number ≥ 1");
+  const person = p.get("person") || null;
+  if (person !== null && person.length > 100) throw new HttpError(400, "person is not a member's id");
   return json(
     listDocuments(ctx.db, familyId, {
       q: p.get("q"),
       tag: p.get("tag") || null,
       folder: cleanFolderFilter(p.get("folder")),
+      person,
       status: status as DocumentStatus | null,
       cursor: p.get("cursor") || null,
       limit,

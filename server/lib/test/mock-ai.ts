@@ -55,6 +55,12 @@
 // one saying "sloppy" gets wrong items too (no date, end without start, unknown kind …). Its
 // filing: the source as title, today as date, the first member as person, the first two of the
 // existing tags and a made-up one.
+// Asked for a knowledge document's card (the card prompt), it answers with JSON: the summary
+// "A document named <name>." ("Ein Dokument namens …" in German), the date of a line "Date: <x>"
+// (as written, valid or not), the person of a line "For: <name>", and a fact per line
+// "Fact: <x>" (quoting x), "Shout: <x>" (quoting x in capitals, its spaces as line breaks) or
+// "Invent: <x>" (a quote the text doesn't have). A text saying "garbage" gets an answer that
+// isn't JSON. (Quotes count with 3 words and 15 characters: write facts long enough.)
 // Asked to sort transactions into categories (the categorize prompt), it picks the category
 // whose id or name occurs in a row's payee or description, searching the web once for a payee
 // it can't place.
@@ -276,6 +282,29 @@ function letter(stream: boolean, system: string, text: string) {
   return reply(stream, "Here is what I found:\n```json\n" + JSON.stringify({ source, items, filing }, null, 1) + "\n```");
 }
 
+/** The card prompt: from the document's lines (see the top). */
+function card(stream: boolean, system: string, message: string) {
+  if (/\bgarbage\b/i.test(message)) return reply(stream, "Sorry, I can't make a card of that.");
+  const de = /^Write in German/m.test(system);
+  const name = /^Name: (.*)$/m.exec(message)?.[1] ?? "?";
+  const lines = message.split("\n").map((l) => l.trim());
+  const value = (key: string) => lines.find((l) => l.startsWith(`${key}: `))?.slice(key.length + 2) ?? null;
+  const facts: { text: string; quote: string }[] = [];
+  for (const line of lines) {
+    const m = /^(Fact|Shout|Invent): (.+)$/.exec(line);
+    if (!m) continue;
+    const quote = m[1] === "Shout" ? m[2].toUpperCase().replace(/ /g, "\n ") : m[1] === "Invent" ? `${m[2]} (as nobody wrote)` : m[2];
+    facts.push({ text: `${m[1]} ${facts.length + 1}`, quote });
+  }
+  const answer = {
+    summary: de ? `Ein Dokument namens ${name}.` : `A document named ${name}.`,
+    date: value("Date"),
+    person: value("For"),
+    facts,
+  };
+  return reply(stream, "```json\n" + JSON.stringify(answer, null, 1) + "\n```");
+}
+
 /** How often the conversation looked at the calendar: in the summary, and after it. */
 function looks(messages: Msg[]) {
   const before = messages.map((m) => /Looked (\d+) times/.exec(textOf(m.content))?.[1])
@@ -356,6 +385,7 @@ async function respond(req: Request, body: any): Promise<Response> {
   if (system.startsWith("You find the events, tasks and deadlines in a letter")) {
     return letter(stream, system, textOf(last.content));
   }
+  if (system.startsWith("You write a card for a document")) return card(stream, system, textOf(last.content));
   if (system.startsWith("You sort bank transactions into categories.")) {
     return categorize(
       stream,

@@ -28,6 +28,7 @@ import { type ChatContext, systemPrompt } from "./chat";
 import { handleChats } from "./chat-routes";
 import type { ChatEnv, RunnerEnv, Turn } from "./chats";
 import { DEFAULT_WINDOW } from "./context";
+import { retryFailedCards } from "@/lib/knowledge/documents";
 import { letterInput, readLetter } from "./letter";
 import { checkUrl, type NetOptions } from "./net";
 import { contextWindow, listModels, type Provider, streamChat } from "./provider";
@@ -187,7 +188,8 @@ async function getSettings({ load }: Ctx, env: AiEnv) {
 
 /** PUT /ai/settings {baseUrl, apiKey ("" removes it), model, searchProvider, searchKey,
  *  allowWrites, contextWindow (tokens, 0: from the endpoint), imageModel ("" = no recipe
- *  photos)}: only the fields given change. */
+ *  photos)}: only the fields given change. Saving lets the knowledge base's failed cards be made
+ *  again. */
 async function putSettings({ req, load }: Ctx, env: AiEnv) {
   const { family } = await load("edit");
   const body = await readBody(req);
@@ -230,6 +232,8 @@ async function putSettings({ req, load }: Ctx, env: AiEnv) {
   }
   row.updated_at = new Date().toISOString();
   await env.store.saveAiSettings(row);
+  // The knowledge base's failed cards get another go: the settings may be fixed now.
+  retryFailedCards(env.db, family.id);
   return json(publicSettings(env, row), 200, NO_STORE);
 }
 
