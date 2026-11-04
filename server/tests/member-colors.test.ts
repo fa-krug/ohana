@@ -179,6 +179,35 @@ describe("entry types and members", () => {
     expect(sick).toMatchObject({ memberId: null, color: NEUTRAL_COLOR });
   });
 
+  it("of nobody may have their own color, which a member's color replaces", async () => {
+    const s = setup();
+    const green = memberColorHex("green");
+    const holiday = await s.call("PATCH", `${s.f}/types/holiday?year=2026`, { memberId: null, colorKey: "green" });
+    expect(holiday.data).toMatchObject({ memberId: null, colorKey: "green", color: green });
+    // A second nobody's type of the same color gets a shade of it.
+    const trip = await s.call("POST", `${s.f}/types?year=2026`, { name: "Trip", memberId: null, colorKey: "green" });
+    expect(trip.data).toMatchObject({ colorKey: "green", color: typeShade(green, 1) });
+    expect((await s.call("PATCH", `${s.f}/types/trip?year=2026`, { colorKey: "lime" })).status).toBe(400);
+
+    // Given to a member, the type takes theirs and forgets its own.
+    const anna = await s.call("PATCH", `${s.f}/types/trip?year=2026`, { memberId: s.editor.id, colorKey: "red" });
+    expect(anna.data).toMatchObject({ memberId: s.editor.id, colorKey: null });
+    await s.call("PATCH", `${s.f}/types/trip?year=2026`, { memberId: null });
+    const back = (await s.call("GET", `${s.f}/types?year=2026`)).data.find((t: any) => t.id === "trip");
+    expect(back).toMatchObject({ colorKey: null, color: NEUTRAL_COLOR });
+
+    // null: gray again; the export keeps it, and so do copies into another year.
+    await s.call("PATCH", `${s.f}/types/holiday?year=2026`, { colorKey: null });
+    await s.call("PATCH", `${s.f}/types/trip?year=2026`, { colorKey: "pink" });
+    const file = (await s.call("GET", `${s.f}/export`)).data;
+    expect(file.types.find((t: any) => t.id === "trip").colorKey).toBe("pink");
+    expect(file.types.find((t: any) => t.id === "holiday").colorKey).toBeNull();
+    const copied = await s.call("POST", `${s.f}/types/copy`, { from: 2026, to: 2027 });
+    expect(copied.data.find((t: any) => t.id === "trip")).toMatchObject({ colorKey: "pink", color: memberColorHex("pink") });
+    const imported = await s.call("POST", `${s.f}/import?year=2026`, file);
+    expect(imported.data.types.find((t: any) => t.id === "trip")).toMatchObject({ colorKey: "pink" });
+  });
+
   it("are exported by name and found by name on import", async () => {
     const s = setup();
     const mia = addPerson(s.db, { id: s.editor.id }, s.family.id, { name: "Mia" }, NOW).person;
@@ -238,8 +267,10 @@ describe("the assistant's manage_entry_types", () => {
     const changed = await run(s, { action: "update", type: "kita", member: null });
     expect(changed.result).toMatchObject({ memberId: null, member: null, color: NEUTRAL_COLOR });
     expect(changed.change!.undo).toEqual([
-      { method: "PATCH", path: "/types/kita?year=2026", body: { name: "Kita", memberId: s.editor.id, role: "none", icon: null } },
+      { method: "PATCH", path: "/types/kita?year=2026", body: { name: "Kita", memberId: s.editor.id, colorKey: null, role: "none", icon: null } },
     ]);
+    const teal = await run(s, { action: "update", type: "kita", color: "teal" });
+    expect(teal.result).toMatchObject({ colorKey: "teal", color: memberColorHex("teal") });
     const listed = await calendarTools.get_calendar.run({ from: "2026-01-01", to: "2026-12-31" }, ctx(s, s.editor.id));
     expect((listed.result as any).types.find((t: any) => t.id === "swimming").member).toBe("Mia");
 
@@ -249,7 +280,7 @@ describe("the assistant's manage_entry_types", () => {
     await expect(run(s, { action: "add", name: "Y", icon: "✈️" })).rejects.toThrow(/SF Symbol/);
     const reset = await run(s, { action: "update", type: "trip", icon: null, role: "covers" });
     expect(reset.result).toMatchObject({ icon: "checkmark.shield" });
-    expect(reset.change!.undo[0].body).toEqual({ name: "Trip", memberId: s.editor.id, role: "none", icon: "airplane" });
+    expect(reset.change!.undo[0].body).toEqual({ name: "Trip", memberId: s.editor.id, colorKey: null, role: "none", icon: "airplane" });
   });
 });
 

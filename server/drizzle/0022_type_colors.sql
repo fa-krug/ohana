@@ -1,0 +1,1 @@
+ALTER TABLE `cal_entry_types` ADD `color_key` text;

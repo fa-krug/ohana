@@ -142,10 +142,13 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   family+year+id), `cal_entries` (with the day's `year`, composite FK to its type: deleting a
   type cascades to its days; never `INSERT OR REPLACE` a type), `cal_notes`. A type belongs to
   a member (`member_user_id` / `member_person_id`, API `memberId`; POST without one: the
-  caller; removing the member clears it) and has no color of its own: `listTypes` derives
-  `color` from the member's (`typeShade`: their first type of the year by position the color
-  itself, each further one another shade; nobody's: gray); GET `/families/{id}` lists
-  `members` with their colors. Export files name a type's member (matched by name on import).
+  caller; removing the member clears it) and takes the member's color: `listTypes` derives
+  `color` from it (`typeShade`: their first type of the year by position the color itself, each
+  further one another shade); a nobody's type (e.g. the holiday types) may have a palette color
+  of its own (`color_key`, API `colorKey`, shaded per color the same way; none: gray; giving the
+  type to a member clears it; the type editor shows the palette for "Nobody"); GET
+  `/families/{id}` lists `members` with their colors. Export files name a type's member (matched
+  by name on import) and keep `colorKey`.
   Icons are SF Symbol names the app draws (`icons.ts`): a type's `icon` (null: its role's,
   `ROLE_ICONS`; the API always answers one) and a note's `icon` ("" or a symbol; an import's
   emoji moves into the comment).

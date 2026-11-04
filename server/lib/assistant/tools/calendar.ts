@@ -11,6 +11,7 @@ import { cleanTypeIcon } from "@/lib/calendar/icons";
 import {
   applyEntryOps,
   applyNoteOps,
+  cleanColorKey,
   cleanRole,
   MAX_TYPES,
   parseEntryOps,
@@ -290,7 +291,7 @@ export const calendarTools: Record<string, Tool> = {
     spec: {
       name: "manage_entry_types",
       description:
-        'Adds, changes, deletes or copies entry types. Every year has its own types. Each type belongs to a family member (or nobody: member null) and takes its color from theirs; icon: an SF Symbol name (null: its role default). "add": name, role, member (name; default: the user), icon. "update": type (id or name) and any of name, role, member, icon. "delete": type (also deletes its entries in that year; needs confirmed). "copy_year": from and to (years).',
+        `Adds, changes, deletes or copies entry types. Every year has its own types. Each type belongs to a family member (or nobody: member null) and takes its color from theirs; nobody's may have a color of its own (null: gray); icon: an SF Symbol name (null: its role default). "add": name, role, member (name; default: the user), color, icon. "update": type (id or name) and any of name, role, member, color, icon. "delete": type (also deletes its entries in that year; needs confirmed). "copy_year": from and to (years).`,
       parameters: {
         type: "object",
         properties: {
@@ -299,6 +300,7 @@ export const calendarTools: Record<string, Tool> = {
           type: { type: "string" },
           name: { type: "string" },
           member: { type: ["string", "null"], description: "A family member's name; null: nobody's" },
+          color: { type: ["string", "null"] },
           role: { type: "string", enum: ["none", "needs_cover", "covers", "day_off"] },
           icon: { type: ["string", "null"] },
           from: { type: "integer" },
@@ -330,6 +332,7 @@ export const calendarTools: Record<string, Tool> = {
             id: uniqueId(slug(name), new Set(types.map((t) => t.id))),
             name,
             member_id: args.member === undefined ? self : resolveMember(args.member, members),
+            color_key: cleanColorKey(args.color),
             role: cleanRole(args.role),
             icon: cleanTypeIcon(args.icon),
             position: types.reduce((m, t) => Math.max(m, t.position + 1), 0),
@@ -350,6 +353,7 @@ export const calendarTools: Record<string, Tool> = {
           const next = { ...type };
           if (args.name !== undefined) next.name = cleanName(args.name);
           if (args.member !== undefined) next.member_id = resolveMember(args.member, members);
+          if (args.color !== undefined) next.color_key = cleanColorKey(args.color);
           if (args.role !== undefined) next.role = cleanRole(args.role);
           if (args.icon !== undefined) next.icon = cleanTypeIcon(args.icon);
           await store.upsertTypes([next]);
@@ -362,7 +366,13 @@ export const calendarTools: Record<string, Tool> = {
               undo: [{
                 method: "PATCH",
                 path: path(type.id),
-                body: { name: type.name, memberId: type.member_id, role: type.role, icon: type.icon },
+                body: {
+                  name: type.name,
+                  memberId: type.member_id,
+                  colorKey: type.color_key ?? null,
+                  role: type.role,
+                  icon: type.icon,
+                },
               }],
             },
           };

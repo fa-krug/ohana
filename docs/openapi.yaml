@@ -1648,6 +1648,9 @@ paths:
                   description: >-
                     Whose type it is: a member's user id or a person's id of this family (else
                     400); `null`: nobody's; left out: the caller's.
+                colorKey:
+                  oneOf: [{$ref: "#/components/schemas/MemberColor"}, {type: "null"}]
+                  description: "A nobody's type's own color (ignored for a member's); `null` or left out: gray."
                 role: {$ref: "#/components/schemas/EntryTypeRole"}
                 icon:
                   oneOf: [{$ref: "#/components/schemas/SymbolName"}, {type: "null"}]
@@ -1719,7 +1722,12 @@ paths:
                 name: {type: string, minLength: 1, maxLength: 80}
                 memberId:
                   type: [string, "null"]
-                  description: A member's user id or a person's id of this family, or `null` (nobody's).
+                  description: >-
+                    A member's user id or a person's id of this family, or `null` (nobody's).
+                    Giving the type to a member clears its own color.
+                colorKey:
+                  oneOf: [{$ref: "#/components/schemas/MemberColor"}, {type: "null"}]
+                  description: "A nobody's type's own color (ignored for a member's); `null`: gray; left out: kept."
                 role: {$ref: "#/components/schemas/EntryTypeRole"}
                 icon:
                   oneOf: [{$ref: "#/components/schemas/SymbolName"}, {type: "null"}]
@@ -5471,7 +5479,8 @@ components:
       description: >-
         A family member's color, a key of the palette (blue #0090ff, orange #f76b15, green
         #30a46c, red #e5484d, purple #8e4ec6, yellow #f2b705, teal #12a594, pink #d6409f, indigo
-        #3e63dd, brown #8a5a3c); new members get them in this order. Their entry types take it.
+        #3e63dd, brown #8a5a3c); new members get them in this order. Their entry types take it
+        (a nobody's type may have one of its own, `EntryType.colorKey`).
     MemberPhoto:
       type: [string, "null"]
       description: >-
@@ -5777,7 +5786,7 @@ components:
         `covers` (covers a day), `day_off` (no cover needed, e.g. a holiday), `none`.
     EntryType:
       type: object
-      required: [id, year, name, memberId, color, role, icon, position, away]
+      required: [id, year, name, memberId, color, colorKey, role, icon, position, away]
       properties:
         id: {type: string, pattern: "^[a-z0-9][a-z0-9-]{0,47}$", description: "Unique within the year (made from the name)."}
         year: {type: integer}
@@ -5788,7 +5797,11 @@ components:
           readOnly: true
           description: >-
             Derived: the member's color for their first type of the year (by position), a shade
-            of it for each further one; shades of gray (`#8e8e93`) for nobody's types.
+            of it for each further one; a nobody's type takes its `colorKey` the same way (shades
+            per color), else gray (`#8e8e93`).
+        colorKey:
+          oneOf: [{$ref: "#/components/schemas/MemberColor"}, {type: "null"}]
+          description: "A nobody's type's own color; `null`: gray, and always for a member's type."
         role: {$ref: "#/components/schemas/EntryTypeRole"}
         icon:
           allOf: [{$ref: "#/components/schemas/SymbolName"}]
@@ -6137,6 +6150,9 @@ components:
               year: {type: integer}
               name: {type: string, maxLength: 80}
               member: {type: [string, "null"], description: "The member's name."}
+              colorKey:
+                oneOf: [{$ref: "#/components/schemas/MemberColor"}, {type: "null"}]
+                description: "A nobody's type's own color (missing in older files: `null`)."
               role: {$ref: "#/components/schemas/EntryTypeRole"}
               icon:
                 oneOf: [{$ref: "#/components/schemas/SymbolName"}, {type: "null"}]

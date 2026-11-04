@@ -201,6 +201,9 @@ export const calEntryTypes = sqliteTable(
      *  (`memberPersonId`), or nobody; its color comes from theirs. */
     memberUserId: text("member_user_id").references(() => users.id, { onDelete: "set null" }),
     memberPersonId: text("member_person_id").references(() => familyPeople.id, { onDelete: "set null" }),
+    /** A nobody's type's own color, a palette key (`lib/families/colors.ts`); null: gray. A
+     *  member's type takes theirs (set to null when it gets one). */
+    colorKey: text("color_key"),
     role: text("role").notNull().default("none"), // none | needs_cover | covers | day_off
     /** An SF Symbol name the app draws; null: the role's (`lib/calendar/icons.ts`). */
     icon: text("icon"),

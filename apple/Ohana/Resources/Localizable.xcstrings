@@ -1,7 +1,6 @@
 {
   "sourceLanguage": "en",
   "strings": {
-    "%@ %@": {},
     "%@ (%@) becomes the booking, the others its parts": {
       "localizations": {
         "de": {
@@ -18866,6 +18865,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Innerhalb von (Tagen) muss zwischen 1 und 365 liegen."
+          }
+        }
+      }
+    },
+    "Without a color the type is gray. Tap the chosen one again to remove it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohne Farbe ist die Art grau. Ein erneuter Tipp auf die gewählte entfernt sie."
           }
         }
       }

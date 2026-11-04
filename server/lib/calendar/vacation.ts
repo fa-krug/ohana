@@ -6,6 +6,7 @@ import { cleanName, cleanYear, currentYear, HttpError, json, objectOf, readBody,
 import { dateRange, isValidDate, isWeekend } from "./dates";
 import type { Lang } from "@/lib/i18n/config";
 import { familyNames } from "@/lib/families/people";
+import { isMemberColor, MEMBER_COLORS } from "@/lib/families/colors";
 import type { Db } from "@/lib/db";
 import { cleanSymbol, cleanTypeIcon, isSymbolName, typeIcon } from "./icons";
 import { type CalendarStore as Store, type EntryRow, type NoteRow, type Role, ROLES, type TypeInput, type TypeRow } from "./store";
@@ -41,6 +42,16 @@ export function cleanMemberId(v: unknown, memberIds: Set<string>): string | null
   if (v === null) return null;
   if (typeof v !== "string" || !memberIds.has(v)) {
     throw new HttpError(400, "memberId must be a member of the family");
+  }
+  return v;
+}
+
+/** A type's `colorKey`: a palette key (`MEMBER_COLORS`), or null (gray). Only a nobody's type
+ *  keeps one; a member's takes theirs. */
+export function cleanColorKey(v: unknown): string | null {
+  if (v === undefined || v === null) return null;
+  if (!isMemberColor(v)) {
+    throw new HttpError(400, `colorKey must be one of ${MEMBER_COLORS.map((c) => c.key).join(", ")}, or null`);
   }
   return v;
 }
@@ -114,6 +125,8 @@ export function publicType(t: TypeRow) {
     name: t.name,
     memberId: t.member_id,
     color: t.color,
+    /** A nobody's type's own color (a palette key), else null. */
+    colorKey: t.color_key ?? null,
     role: t.role,
     /** The icon to draw: the type's own, else its role's. */
     icon: typeIcon(t),
@@ -122,13 +135,15 @@ export function publicType(t: TypeRow) {
   };
 }
 
-/** A type in the export file: whose it is by name (the file never holds ids), no color. */
+/** A type in the export file: whose it is by name (the file never holds ids); a color only a
+ *  nobody's type's own (`colorKey`). */
 export function exportType(t: TypeRow, names: Map<string, string>) {
   return {
     id: t.id,
     year: t.year,
     name: t.name,
     member: (t.member_id && names.get(t.member_id)) ?? null,
+    colorKey: t.color_key ?? null,
     role: t.role,
     icon: t.icon,
     position: t.position,
@@ -193,7 +208,7 @@ function dayMap(v: unknown, field: string): [string, unknown][] {
 export type ImportType = Omit<TypeInput, "family_id" | "member_id"> & { member: string | null };
 
 /** Validates the calendar part of an export file (types, entries, notes) for importing. A
- *  type's `color` (older files) is ignored. */
+ *  type's `color` (older files) is ignored, its `colorKey` kept for a nobody's type. */
 export function parseVacationImport(body: Record<string, unknown>) {
   if (!Array.isArray(body.types)) throw new HttpError(400, "types must be an array");
   const types: ImportType[] = [];
@@ -216,6 +231,7 @@ export function parseVacationImport(body: Record<string, unknown>) {
       id: t.id,
       name: cleanName(t.name),
       member: typeof t.member === "string" && t.member.trim() ? t.member.trim() : null,
+      color_key: cleanColorKey(t.colorKey),
       role: cleanRole(t.role),
       icon: cleanTypeIcon(t.icon),
       position: Number.isInteger(t.position) ? (t.position as number) : i,
@@ -416,7 +432,8 @@ async function types({ db, store, req, url, method, rest, loadWith, now, require
     if (types.length >= MAX_TYPES) throw new HttpError(400, "Too many entry types");
     const name = cleanName(body.name);
     const memberIds = memberIdsOf(db, family.id);
-    // No memberId: the caller's own type; null: nobody's. A color is the member's, not given.
+    // No memberId: the caller's own type; null: nobody's. A color is the member's; a nobody's
+    // type may have its own (`colorKey`).
     const self = requireUser().id;
     const type: TypeInput = {
       family_id: family.id,
@@ -424,6 +441,7 @@ async function types({ db, store, req, url, method, rest, loadWith, now, require
       id: uniqueId(slug(name), new Set(types.map((t) => t.id))),
       name,
       member_id: body.memberId === undefined ? (memberIds.has(self) ? self : null) : cleanMemberId(body.memberId, memberIds),
+      color_key: cleanColorKey(body.colorKey),
       role: cleanRole(body.role),
       // None (or null): the role's icon, which follows the role when it changes.
       icon: cleanTypeIcon(body.icon),
@@ -440,6 +458,7 @@ async function types({ db, store, req, url, method, rest, loadWith, now, require
       const next = { ...type };
       if (body.name !== undefined) next.name = cleanName(body.name);
       if (body.memberId !== undefined) next.member_id = cleanMemberId(body.memberId, memberIdsOf(db, family.id));
+      if (body.colorKey !== undefined) next.color_key = cleanColorKey(body.colorKey);
       if (body.role !== undefined) next.role = cleanRole(body.role);
       if (body.icon !== undefined) next.icon = cleanTypeIcon(body.icon);
       if (body.away !== undefined) next.away = cleanAway(body.away);
