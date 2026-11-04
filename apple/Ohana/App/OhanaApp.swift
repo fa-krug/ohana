@@ -59,6 +59,7 @@ struct OhanaApp: App {
                 CookTimers.shared.refresh()
                 AppleCalendarSync.shared.syncAllSoon()
                 app.sendQueuedChanges()
+                app.indexKnowledge()
             }
             if phase == .background, !app.isDemo { WidgetSync.reload() }
         }

@@ -1,6 +1,7 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ %@": {},
     "%@ (%@) becomes the booking, the others its parts": {
       "localizations": {
         "de": {
@@ -547,6 +548,86 @@
         }
       }
     },
+    "%lld files couldn’t be loaded from iCloud.": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Datei konnte nicht aus iCloud geladen werden."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Dateien konnten nicht aus iCloud geladen werden."
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld file couldn’t be loaded from iCloud."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld files couldn’t be loaded from iCloud."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld files wait to be loaded from iCloud.": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Datei wartet darauf, aus iCloud geladen zu werden."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Dateien warten darauf, aus iCloud geladen zu werden."
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld file waits to be loaded from iCloud."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld files wait to be loaded from iCloud."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld found · %lld matching · ": {
       "localizations": {
         "de": {
@@ -723,6 +804,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld weitere – ein weiteres Wort grenzt die Suche ein."
+          }
+        }
+      }
+    },
+    "%lld of %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld von %lld"
           }
         }
       }
@@ -2321,6 +2412,16 @@
         }
       }
     },
+    "Another device now reads a different folder.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein anderes Gerät liest jetzt einen anderen Ordner."
+          }
+        }
+      }
+    },
     "Another interval": {
       "localizations": {
         "de": {
@@ -3483,6 +3584,16 @@
         }
       }
     },
+    "Change…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ändern …"
+          }
+        }
+      }
+    },
     "Changing an appointment search": {
       "localizations": {
         "de": {
@@ -3623,6 +3734,16 @@
         }
       }
     },
+    "Checking files": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dateien werden geprüft"
+          }
+        }
+      }
+    },
     "Child": {
       "localizations": {
         "de": {
@@ -3639,6 +3760,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nur kinderfreundlich"
+          }
+        }
+      }
+    },
+    "Choose Again…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erneut auswählen …"
           }
         }
       }
@@ -5533,6 +5664,16 @@
         }
       }
     },
+    "Documents": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dokumente"
+          }
+        }
+      }
+    },
     "Doesn’t notify you": {
       "localizations": {
         "de": {
@@ -6753,6 +6894,16 @@
         }
       }
     },
+    "Files this device can’t read: %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dateien, die dieses Gerät nicht lesen kann: %lld"
+          }
+        }
+      }
+    },
     "Fill %@": {
       "localizations": {
         "de": {
@@ -7945,6 +8096,16 @@
         }
       }
     },
+    "Index": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Index"
+          }
+        }
+      }
+    },
     "Indigo": {
       "localizations": {
         "de": {
@@ -8147,6 +8308,16 @@
         }
       }
     },
+    "Its text couldn’t be read (a locked PDF, or text recognition failed).": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Text konnte nicht gelesen werden (ein geschütztes PDF, oder die Texterkennung ist fehlgeschlagen)."
+          }
+        }
+      }
+    },
     "Its transactions and subcategories move to “%@”.": {
       "localizations": {
         "de": {
@@ -8297,6 +8468,16 @@
         }
       }
     },
+    "Knowledge": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wissen"
+          }
+        }
+      }
+    },
     "Known-recipe ratio": {
       "localizations": {
         "de": {
@@ -8333,6 +8514,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Letzter Monat"
+          }
+        }
+      }
+    },
+    "Last read": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zuletzt gelesen"
           }
         }
       }
@@ -8643,6 +8834,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Suche nach Terminen und Aufgaben …"
+          }
+        }
+      }
+    },
+    "Looking through the folder…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ordner wird durchsucht …"
           }
         }
       }
@@ -8963,6 +9164,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zubereitung"
+          }
+        }
+      }
+    },
+    "Missing": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fehlend"
           }
         }
       }
@@ -9967,6 +10178,16 @@
         }
       }
     },
+    "No folder chosen on this device": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf diesem Gerät kein Ordner ausgewählt"
+          }
+        }
+      }
+    },
     "No folder chosen yet": {
       "localizations": {
         "de": {
@@ -10407,6 +10628,16 @@
         }
       }
     },
+    "Not available": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht verfügbar"
+          }
+        }
+      }
+    },
     "Not covered": {
       "localizations": {
         "de": {
@@ -10433,6 +10664,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nicht alles konnte abgeglichen werden: %@"
+          }
+        }
+      }
+    },
+    "Not found": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht gefunden"
           }
         }
       }
@@ -10829,6 +11070,26 @@
         }
       }
     },
+    "Ohana can’t open the folder “%@”, so nothing was sent. It’s tried again next time.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohana kann den Ordner „%@“ nicht öffnen, deshalb wurde nichts gesendet. Beim nächsten Mal wird es erneut versucht."
+          }
+        }
+      }
+    },
+    "Ohana can’t open this folder.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohana kann diesen Ordner nicht öffnen."
+          }
+        }
+      }
+    },
     "Ohana checks on its own and tells you when an appointment frees up. Within (days): how far ahead an appointment may be.": {
       "localizations": {
         "de": {
@@ -11115,6 +11376,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nur möglich, wenn du das letzte Mitglied bist."
+          }
+        }
+      }
+    },
+    "Only the files’ text goes to the family’s server, never the files.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur der Text der Dateien geht an den Server der Familie, nie die Dateien selbst."
           }
         }
       }
@@ -12515,6 +12786,16 @@
         }
       }
     },
+    "Read Now": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jetzt lesen"
+          }
+        }
+      }
+    },
     "Read on this device. Check the amount and the date before saving.": {
       "localizations": {
         "de": {
@@ -12571,6 +12852,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Liest einen Termin"
+          }
+        }
+      }
+    },
+    "Reading and sending": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird gelesen und gesendet"
           }
         }
       }
@@ -12985,6 +13276,16 @@
         }
       }
     },
+    "Remove from This Device": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Von diesem Gerät entfernen"
+          }
+        }
+      }
+    },
     "Remove from selection": {
       "localizations": {
         "de": {
@@ -13301,6 +13602,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Daten der Familie ersetzen?"
+          }
+        }
+      }
+    },
+    "Replaced": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ersetzt"
           }
         }
       }
@@ -15569,6 +15880,16 @@
         }
       }
     },
+    "Stop reading this folder on this device?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diesen Ordner auf diesem Gerät nicht mehr lesen?"
+          }
+        }
+      }
+    },
     "Stop syncing": {
       "localizations": {
         "de": {
@@ -16329,6 +16650,16 @@
         }
       }
     },
+    "The file isn’t in the knowledge folder.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Datei liegt nicht im Wissensordner."
+          }
+        }
+      }
+    },
     "The folder can’t be found any more.": {
       "localizations": {
         "de": {
@@ -16349,6 +16680,16 @@
         }
       }
     },
+    "The folder looks empty.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Ordner scheint leer zu sein."
+          }
+        }
+      }
+    },
     "The image is no longer stored.": {
       "localizations": {
         "de": {
@@ -16365,6 +16706,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Das Intervall muss zwischen 1 und 1440 Minuten liegen."
+          }
+        }
+      }
+    },
+    "The knowledge folder can’t be found any more. Choose it again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Wissensordner ist nicht mehr zu finden. Wähle ihn erneut aus."
+          }
+        }
+      }
+    },
+    "The knowledge folder holds more than 20,000 files. Choose a folder with fewer.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Wissensordner enthält mehr als 20.000 Dateien. Wähle einen Ordner mit weniger Dateien."
           }
         }
       }
@@ -16939,6 +17300,16 @@
         }
       }
     },
+    "This device can’t read this format.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Gerät kann dieses Format nicht lesen."
+          }
+        }
+      }
+    },
     "This device is no longer connected to a server. Until you connect one, Ohana shows a demo family.": {
       "localizations": {
         "de": {
@@ -16955,6 +17326,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nur auf diesem Gerät. Bei einer in iCloud geteilten Liste sehen alle die Artikel: Schalte es dann auf einem Gerät ein."
+          }
+        }
+      }
+    },
+    "This family already has a knowledge folder, read by “%@”. Use this folder instead?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Familie hat schon einen Wissensordner, gelesen von „%@“. Stattdessen diesen Ordner verwenden?"
+          }
+        }
+      }
+    },
+    "This family already has a knowledge folder. Use this folder instead?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Familie hat schon einen Wissensordner. Stattdessen diesen Ordner verwenden?"
+          }
+        }
+      }
+    },
+    "This folder belongs to another family. Use it for this family instead?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieser Ordner gehört zu einer anderen Familie. Stattdessen für diese Familie verwenden?"
+          }
+        }
+      }
+    },
+    "This folder was this family’s knowledge folder once, but the family has another one now. Use this folder instead?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieser Ordner war einmal der Wissensordner dieser Familie, inzwischen hat sie einen anderen. Stattdessen diesen Ordner verwenden?"
           }
         }
       }
@@ -17789,6 +18200,16 @@
         }
       }
     },
+    "Use This Folder": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diesen Ordner verwenden"
+          }
+        }
+      }
+    },
     "Use a cron schedule": {
       "localizations": {
         "de": {
@@ -17945,6 +18366,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Besuch"
+          }
+        }
+      }
+    },
+    "Waiting": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wartend"
           }
         }
       }

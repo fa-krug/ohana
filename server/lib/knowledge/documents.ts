@@ -255,6 +255,20 @@ export function listTags(db: Db, familyId: string): { tag: string; count: number
     order by count desc, tag`);
 }
 
+/** How many of the family's documents have each status, and how many chunks the index holds. */
+export function countDocuments(db: Db, familyId: string): { counts: Record<DocumentStatus, number>; chunks: number } {
+  const counts = Object.fromEntries(STATUSES.map((s) => [s, 0])) as Record<DocumentStatus, number>;
+  const rows = db
+    .select({ status: kbDocuments.status, n: sql<number>`count(*)` })
+    .from(kbDocuments)
+    .where(eq(kbDocuments.familyId, familyId))
+    .groupBy(kbDocuments.status)
+    .all();
+  for (const { status, n } of rows) if (status in counts) counts[status as DocumentStatus] = n;
+  const chunks = db.select({ n: sql<number>`count(*)` }).from(kbChunks).where(eq(kbChunks.familyId, familyId)).get()?.n ?? 0;
+  return { counts, chunks };
+}
+
 // ---- changes ----
 
 /** What an upload carries: the file's details and its text by page. */

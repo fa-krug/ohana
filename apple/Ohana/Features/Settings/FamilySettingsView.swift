@@ -3,7 +3,7 @@ import SwiftUI
 /// All settings in one place, like the system's Settings: the account (a card that opens its
 /// page) on top, then the family's (the web app's settings page with its tabs: the name, the
 /// household (members, people without an account and invites; the home address; notifications),
-/// links to the modules' settings (the shopping list in Reminders among them, this device's), export / import, and leaving or deleting the family; viewers
+/// links to the modules' settings (the shopping list in Reminders and the knowledge folder among them, this device's), export / import, and leaving or deleting the family; viewers
 /// see them read-only), this device's, and the server's administration for administrators. The
 /// settings of a module the server has off don't show.
 struct FamilySettingsView: View {
@@ -50,6 +50,7 @@ struct FamilySettingsPageView: View {
         case .finance: FinanceSettingsView()
         case .shopping: ShoppingRemindersView()
         case .assistant: AssistantSettingsView()
+        case .knowledge: KnowledgeSettingsView()
         case .data: FamilyDataView(familyName: model.household?.name ?? "", canEdit: model.household?.canEdit ?? false)
         }
     }
@@ -257,6 +258,17 @@ private struct FamilySettingsForm: View {
                         FamilySettingsPageView(page: .assistant, model: model).assistantButton()
                     } label: {
                         FamilySettingsLabel(title: "Assistant", systemImage: "sparkles", tint: ModuleTint.assistant)
+                    }
+                }
+                if family.knowledgeAvailable {
+                    NavigationLink {
+                        FamilySettingsPageView(page: .knowledge, model: model).assistantButton()
+                    } label: {
+                        LabeledContent {
+                            KnowledgeFolderStatus()
+                        } label: {
+                            FamilySettingsLabel(title: "Knowledge", systemImage: "books.vertical.fill", tint: ModuleTint.knowledge)
+                        }
                     }
                 }
             }

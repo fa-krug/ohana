@@ -4,18 +4,34 @@
 
 import { eq } from "drizzle-orm";
 import type { Db } from "@/lib/db";
-import { kbDocuments } from "@/lib/db/schema";
+import { kbDocuments, kbFolders } from "@/lib/db/schema";
 import { HttpError } from "@/lib/api/http";
 import { type DocumentRow, type DocumentStatus, restoredColumns } from "./documents";
-import { type FileInfo, cleanFileInfo, nameOf } from "./input";
+import { type ManifestFile, cleanFileInfo, nameOf } from "./input";
 
 export const MAX_MANIFEST_FILES = 20_000;
+export const MAX_DEVICE_LENGTH = 100;
 
-/** The manifest's files, checked; 400 for a bad entry or a path listed twice (after NFC). */
-export function cleanManifestFiles(v: unknown): FileInfo[] {
+/** The name of the device that sends the manifest (optional; trimmed, null when blank; cut to
+ *  100 UTF-16 units, never inside a surrogate pair). */
+export function cleanDevice(v: unknown): string | null {
+  if (v === undefined || v === null) return null;
+  if (typeof v !== "string") throw new HttpError(400, "device must be text");
+  let device = v.normalize("NFC").trim();
+  if (device.length > MAX_DEVICE_LENGTH) {
+    const lead = device.charCodeAt(MAX_DEVICE_LENGTH - 1);
+    const cut = lead >= 0xd800 && lead <= 0xdbff ? MAX_DEVICE_LENGTH - 1 : MAX_DEVICE_LENGTH;
+    device = device.slice(0, cut).trimEnd();
+  }
+  return device || null;
+}
+
+/** The manifest's files, checked; 400 for a bad entry or a path listed twice (after NFC). A
+ *  file's `hash` may be null (seen, but not hashed). */
+export function cleanManifestFiles(v: unknown): ManifestFile[] {
   if (!Array.isArray(v)) throw new HttpError(400, "files must be a list");
   if (v.length > MAX_MANIFEST_FILES) throw new HttpError(413, `Too many files (max. ${MAX_MANIFEST_FILES})`);
-  const files = v.map((f) => cleanFileInfo(f));
+  const files = v.map((f) => cleanFileInfo(f, "file", { nullHash: true }));
   const seen = new Set<string>();
   for (const f of files) {
     if (seen.has(f.path)) throw new HttpError(400, `${f.path} is listed twice`);
@@ -47,9 +63,10 @@ type Row = Pick<DocumentRow, keyof typeof MANIFEST_COLUMNS>;
 
 /** The columns of a document seen again at `path` (its own or, moved, a new one) whose file
  *  is there: tags always, size and time only for the same content (another hash waits for its
- *  upload, so the stored details keep matching the stored text). A missing document goes back to
- *  its status; an excluded one stays excluded, no longer gone. */
-function seenAgain(row: Row, f: FileInfo): Changes {
+ *  upload, so the stored details keep matching the stored text; an unknown hash, null, changes
+ *  only the tags). A missing document goes back to its status; an excluded one stays excluded, no
+ *  longer gone. */
+function seenAgain(row: Row, f: ManifestFile): Changes {
   const changes: Changes = { tags: JSON.stringify(f.tags) };
   if (row.hash === f.hash) Object.assign(changes, { size: f.size, mtime: f.mtime });
   if (row.status === "missing") Object.assign(changes, restoredColumns(row));
@@ -73,6 +90,9 @@ function changed(row: Row, changes: Changes): Changes {
  * Applies a manifest of the folder (the complete list of its files as one device sees them):
  * - a known path with the same hash: tags, size and time updated in place;
  * - a known path with another hash: its text is needed (tags updated);
+ * - a known path with hash null (the device sees the file but couldn't hash it, e.g. an iCloud
+ *   file it couldn't download): present, tags updated, nothing else; never asked for, never moved;
+ * - a new path with hash null: ignored (nothing to compare or ask for yet);
  * - a new path whose hash is that of a document whose path isn't listed any more: the file was
  *   moved or renamed; the document moves along (chunks and card kept), no upload;
  * - any other new path: its text is needed;
@@ -85,8 +105,11 @@ function changed(row: Row, changes: Changes): Changes {
  * folder (iCloud not signed in, the share left) sees no files, and that mustn't mark the whole
  * index missing. Emptying the folder for real leaves the documents as they are until a file
  * appears in it again.
+ *
+ * A non-empty manifest is noted on the folder: when, and from which `device` (the app's settings
+ * show it).
  */
-export function applyManifest(db: Db, folderId: string, files: FileInfo[], now: Date): { upload: string[] } {
+export function applyManifest(db: Db, folderId: string, files: ManifestFile[], now: Date, device: string | null = null): { upload: string[] } {
   if (files.length === 0) return { upload: [] };
   // Immediate: the rows are read, then written; under WAL a deferred transaction whose snapshot
   // the worker wrote past in between fails with SQLITE_BUSY_SNAPSHOT.
@@ -116,9 +139,10 @@ export function applyManifest(db: Db, folderId: string, files: FileInfo[], now: 
         const row = byPath.get(f.path);
         if (row) {
           save(row, seenAgain(row, f));
-          if (row.hash !== f.hash && row.status !== "excluded") upload.push(f.path);
+          if (f.hash !== null && row.hash !== f.hash && row.status !== "excluded") upload.push(f.path);
           continue;
         }
+        if (f.hash === null) continue;
         const from = movable.get(f.hash)?.shift();
         if (from) {
           moved.add(from.id);
@@ -134,6 +158,7 @@ export function applyManifest(db: Db, folderId: string, files: FileInfo[], now: 
         if (status === "excluded") save(r, { missingSince: r.missingSince ?? now });
         else if (status !== "missing") save(r, { status: "missing", missingSince: now, runToken: null, runUntil: null });
       }
+      tx.update(kbFolders).set({ lastManifestAt: now, lastManifestDevice: device }).where(eq(kbFolders.id, folderId)).run();
       return { upload };
     },
     { behavior: "immediate" },

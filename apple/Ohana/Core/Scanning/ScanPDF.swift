@@ -59,6 +59,25 @@ nonisolated struct ScanFilingSettings: @unchecked Sendable {
         nonmutating set { defaults.set(newValue, forKey: Self.folderKey) }
     }
 
+    /// Remembers `url` (a folder from the file picker, security-scoped).
+    func rememberFolder(_ url: URL) throws {
+        folderBookmark = try FolderBookmark.make(url)
+    }
+
+    /// The remembered folder: `.none` without one, `.missing` when it can't be found or reached
+    /// any more (deleted, in the trash, another device's), else the folder (a stale bookmark is
+    /// renewed).
+    func folder() -> ScanFolder {
+        guard let bookmark = folderBookmark else { return .none }
+        guard let resolved = FolderBookmark.resolve(bookmark) else { return .missing }
+        if let renewed = resolved.renewed { folderBookmark = renewed }
+        return .folder(resolved.url)
+    }
+}
+
+/// A folder the user picked, kept as a bookmark so the app finds it again after a restart (the
+/// scan folder, the knowledge folder).
+nonisolated enum FolderBookmark {
     #if os(macOS)
     /// The sandbox lets the app back into the folder after a restart only with a security-scoped
     /// bookmark (entitlement `com.apple.security.files.bookmarks.app-scope`).
@@ -69,31 +88,27 @@ nonisolated struct ScanFilingSettings: @unchecked Sendable {
     private static let resolutionOptions: URL.BookmarkResolutionOptions = []
     #endif
 
-    /// Remembers `url` (a folder from the file picker, security-scoped).
-    func rememberFolder(_ url: URL) throws {
+    /// The bookmark of `url` (a folder from the file picker, security-scoped).
+    static func make(_ url: URL) throws -> Data {
         let access = url.startAccessingSecurityScopedResource()
         defer { if access { url.stopAccessingSecurityScopedResource() } }
-        folderBookmark = try url.bookmarkData(options: Self.creationOptions, includingResourceValuesForKeys: nil,
-                                              relativeTo: nil)
+        return try url.bookmarkData(options: creationOptions, includingResourceValuesForKeys: nil, relativeTo: nil)
     }
 
-    /// The remembered folder: `.none` without one, `.missing` when it can't be found or reached
-    /// any more (deleted, in the trash, another device's), else the folder (a stale bookmark is
-    /// renewed).
-    func folder() -> ScanFolder {
-        guard let bookmark = folderBookmark else { return .none }
+    /// The folder of `bookmark`, nil when it can't be found or reached any more (deleted, in the
+    /// trash, another device's); `renewed`: a new bookmark to keep in place of a stale one.
+    static func resolve(_ bookmark: Data) -> (url: URL, renewed: Data?)? {
         var stale = false
-        guard let url = try? URL(resolvingBookmarkData: bookmark, options: Self.resolutionOptions, relativeTo: nil,
+        guard let url = try? URL(resolvingBookmarkData: bookmark, options: resolutionOptions, relativeTo: nil,
                                  bookmarkDataIsStale: &stale)
-        else { return .missing }
+        else { return nil }
         let access = url.startAccessingSecurityScopedResource()
         defer { if access { url.stopAccessingSecurityScopedResource() } }
-        guard ScanFiler.isFolder(url), !url.pathComponents.contains(".Trash") else { return .missing }
-        if stale, let renewed = try? url.bookmarkData(options: Self.creationOptions, includingResourceValuesForKeys: nil,
-                                                      relativeTo: nil) {
-            folderBookmark = renewed
-        }
-        return .folder(url)
+        guard ScanFiler.isFolder(url), !url.pathComponents.contains(".Trash") else { return nil }
+        let renewed = stale
+            ? try? url.bookmarkData(options: creationOptions, includingResourceValuesForKeys: nil, relativeTo: nil)
+            : nil
+        return (url, renewed)
     }
 }
 

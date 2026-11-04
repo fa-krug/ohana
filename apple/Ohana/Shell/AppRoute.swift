@@ -67,16 +67,17 @@ enum AppRoute: Hashable {
 
 /// The pages of the family's settings a route can open.
 enum SettingsPage: String, Hashable, CaseIterable {
-    case members, home, notifications, calendar, finance, shopping, assistant, data
+    case members, home, notifications, calendar, finance, shopping, assistant, knowledge, data
 
-    /// The module whose settings the page holds; nil for the family's own pages.
+    /// The module whose settings the page holds; nil for the family's own pages (and the knowledge
+    /// base, which isn't a module of the app's: its page checks `FamilyContext.knowledgeAvailable`).
     var module: Module? {
         switch self {
         case .calendar: .calendar
         case .finance: .finance
         case .shopping: .meals
         case .assistant: .assistant
-        case .members, .home, .notifications, .data: nil
+        case .members, .home, .notifications, .knowledge, .data: nil
         }
     }
 }
@@ -102,6 +103,7 @@ extension AppRoute {
         case "calendar", "feed": .calendar
         case "finance": .finance
         case "ai": .assistant
+        case "knowledge": .knowledge
         case "data": .data
         default: nil
         }

@@ -94,10 +94,46 @@ describe("knowledge: access", () => {
     const edit = call(editorId);
     expect(await edit("GET", "/knowledge/folder")).toEqual({ status: 200, data: { folder: null } });
     const first = await edit("POST", "/knowledge/folder");
-    expect(first).toEqual({ status: 201, data: { folder: { id: expect.any(String), createdAt: NOW.toISOString() } } });
+    expect(first).toEqual({
+      status: 201,
+      data: { folder: { id: expect.any(String), createdAt: NOW.toISOString(), lastManifestAt: null, lastManifestDevice: null } },
+    });
     const again = await edit("POST", "/knowledge/folder");
     expect(again).toEqual({ status: 200, data: first.data });
     expect((await edit("GET", "/knowledge/folder")).data).toEqual(first.data);
+  });
+
+  it("replaces the folder on request: a new id, the old one's documents and FTS rows gone", async () => {
+    const { edit, folderId, upload, manifest } = await setup();
+    const { data } = await upload(file("a.pdf"));
+    index(data.id, [{ page: 1, text: "Kündigung der Hausratversicherung" }]);
+    const fts = () => db.all<{ rowid: number }>(sql`SELECT rowid FROM kb_chunks_fts WHERE kb_chunks_fts MATCH 'kundigung'`);
+    expect(fts()).toHaveLength(1);
+    // Without replace (or with false) it stays the same folder.
+    expect(await edit("POST", "/knowledge/folder", { replace: false })).toMatchObject({ status: 200, data: { folder: { id: folderId } } });
+    expect((await edit("POST", "/knowledge/folder", { replace: "yes" })).status).toBe(400);
+
+    now = new Date(NOW.getTime() + 60_000);
+    const replaced = await edit("POST", "/knowledge/folder", { replace: true });
+    expect(replaced).toEqual({
+      status: 201,
+      data: { folder: { id: expect.any(String), createdAt: now.toISOString(), lastManifestAt: null, lastManifestDevice: null } },
+    });
+    const newId = replaced.data.folder.id;
+    expect(newId).not.toBe(folderId);
+    expect((await edit("GET", "/knowledge/folder")).data.folder.id).toBe(newId);
+    expect(db.select().from(kbDocuments).all()).toEqual([]);
+    expect(db.select().from(kbChunks).all()).toEqual([]);
+    expect(fts()).toEqual([]);
+    db.run(sql`INSERT INTO kb_chunks_fts(kb_chunks_fts) VALUES ('integrity-check')`);
+
+    // The old id is gone.
+    expect((await manifest([file("a.pdf")])).status).toBe(404);
+    expect((await upload(file("a.pdf"))).status).toBe(404);
+    const fresh = await edit("POST", "/knowledge/manifest", { folderId: newId, files: [file("a.pdf")] });
+    expect(fresh).toEqual({ status: 200, data: { upload: ["a.pdf"] } });
+    // Without replace it's idempotent again: the new folder.
+    expect(await edit("POST", "/knowledge/folder")).toMatchObject({ status: 200, data: { folder: { id: newId } } });
   });
 
   it("answers viewers 404 on every route, as if it didn't exist", async () => {
@@ -114,6 +150,7 @@ describe("knowledge: access", () => {
       ["POST", `/knowledge/documents/${data.id}/reindex`],
       ["POST", `/knowledge/documents/${data.id}/exclude`, { excluded: true }],
       ["GET", "/knowledge/tags"],
+      ["GET", "/knowledge/status"],
       ["DELETE", "/knowledge/folder"],
       ["GET", "/knowledge/nothing"],
     ];
@@ -147,6 +184,8 @@ describe("knowledge: access", () => {
     const edit = call(editorId);
     expect((await edit("GET", "/knowledge/nothing")).status).toBe(404);
     expect((await edit("DELETE", "/knowledge/folder")).status).toBe(405);
+    expect((await edit("POST", "/knowledge/status")).status).toBe(405);
+    expect((await edit("GET", "/knowledge/status/x")).status).toBe(404);
     expect((await edit("GET", "/knowledge/documents/x/reindex")).status).toBe(405);
   });
 });
@@ -290,10 +329,122 @@ describe("knowledge: manifest", () => {
     expect(normalizePath("Ordner/Unterordner/Datei.pdf")).toBe("Ordner/Unterordner/Datei.pdf");
   });
 
+  it("counts a file listed without a hash as present, without asking for or moving it", async () => {
+    const { manifest, upload, edit, folderId } = await setup();
+    const unhashed = (f: ReturnType<typeof file>, tags: string[] = f.tags) => ({ ...f, hash: null, size: 1, mtime: 2, tags });
+    const a = file("a.pdf", "v1");
+    const gone = file("gone.pdf", "gone");
+    await upload(a);
+    await upload(gone);
+    index(docByPath("a.pdf")!.id, [{ page: 1, text: "x" }]);
+    const sendRaw = (files: unknown[]) => edit("POST", "/knowledge/manifest", { folderId, files });
+
+    // Known path: present (not missing), tags updated, size / time / hash kept, not asked for.
+    expect((await sendRaw([unhashed(a, ["Neu"]), gone])).data).toEqual({ upload: [] });
+    expect(docByPath("a.pdf")).toMatchObject({ status: "ready", missingSince: null, hash: a.hash, size: a.size, mtime: a.mtime });
+    expect(JSON.parse(docByPath("a.pdf")!.tags)).toEqual(["Neu"]);
+
+    // Missing, then listed without a hash: back.
+    await manifest([gone]);
+    expect(docByPath("a.pdf")!.status).toBe("missing");
+    expect((await sendRaw([unhashed(a), gone])).data).toEqual({ upload: [] });
+    expect(docByPath("a.pdf")).toMatchObject({ status: "ready", missingSince: null });
+
+    // An unknown path without a hash: ignored, nothing created.
+    expect((await sendRaw([unhashed(a), gone, unhashed(file("new.pdf"))])).data).toEqual({ upload: [] });
+    expect(docByPath("new.pdf")).toBeUndefined();
+
+    // Not a move target: gone.pdf's document stays, missing, instead of moving to b.pdf.
+    expect((await sendRaw([unhashed(a), unhashed(file("b.pdf", "gone"))])).data).toEqual({ upload: [] });
+    expect(docByPath("gone.pdf")).toMatchObject({ status: "missing" });
+    expect(docByPath("b.pdf")).toBeUndefined();
+
+    // Not a move source: a.pdf listed without a hash stays; its content at another path is a copy.
+    const copy = file("copy.pdf", "v1");
+    expect((await sendRaw([unhashed(a), copy])).data).toEqual({ upload: ["copy.pdf"] });
+    expect(docByPath("a.pdf")).toMatchObject({ status: "ready" });
+
+    // size and mtime are still required.
+    expect((await sendRaw([{ ...unhashed(a), size: undefined }])).status).toBe(400);
+    expect((await sendRaw([{ ...unhashed(a), mtime: null }])).status).toBe(400);
+  });
+
   it("limits the number of files", async () => {
     const { manifest } = await setup();
     const files = Array.from({ length: 20_001 }, (_, i) => file(`f${i}.pdf`));
     expect((await manifest(files)).status).toBe(413);
+  });
+});
+
+describe("knowledge: status", () => {
+  it("is empty without a folder", async () => {
+    expect(await call(editorId)("GET", "/knowledge/status")).toEqual({
+      status: 200,
+      data: { folder: null, counts: { pending: 0, ready: 0, failed: 0, missing: 0, excluded: 0 }, chunks: 0 },
+    });
+  });
+
+  it("notes the last non-empty manifest and its device", async () => {
+    const { edit, folderId, manifest } = await setup();
+    const folder = () => edit("GET", "/knowledge/folder").then((r) => r.data.folder);
+    await manifest([file("a.pdf")]);
+    expect(await folder()).toMatchObject({ lastManifestAt: NOW.toISOString(), lastManifestDevice: null });
+
+    now = new Date(NOW.getTime() + 61_500);
+    const sent = await edit("POST", "/knowledge/manifest", { folderId, device: "  Annas iPhone  ", files: [file("a.pdf")] });
+    expect(sent.status).toBe(200);
+    expect(await folder()).toMatchObject({ lastManifestAt: now.toISOString(), lastManifestDevice: "Annas iPhone" });
+
+    // An empty manifest (a folder the device can't read) changes nothing.
+    const before = now;
+    now = new Date(NOW.getTime() + 120_000);
+    await edit("POST", "/knowledge/manifest", { folderId, device: "Mac", files: [] });
+    expect(await folder()).toMatchObject({ lastManifestAt: before.toISOString(), lastManifestDevice: "Annas iPhone" });
+
+    // A blank name is none; one that isn't text is a 400.
+    await edit("POST", "/knowledge/manifest", { folderId, device: "   ", files: [file("a.pdf")] });
+    expect(await folder()).toMatchObject({ lastManifestAt: now.toISOString(), lastManifestDevice: null });
+    expect((await edit("POST", "/knowledge/manifest", { folderId, device: 7, files: [file("b.pdf")] })).status).toBe(400);
+    // A long one is cut to 100 UTF-16 units, never inside a surrogate pair.
+    const device = async (name: string) => {
+      expect((await edit("POST", "/knowledge/manifest", { folderId, device: name, files: [file("a.pdf")] })).status).toBe(200);
+      return (await folder()).lastManifestDevice as string;
+    };
+    expect(await device("x".repeat(100))).toBe("x".repeat(100));
+    expect(await device("x".repeat(150))).toBe("x".repeat(100));
+    expect(await device("x".repeat(99) + "😀" + "y")).toBe("x".repeat(99));
+    expect(await device("x".repeat(98) + "😀" + "y")).toBe("x".repeat(98) + "😀");
+    expect(await device("x".repeat(90) + " ".repeat(20) + "y")).toBe("x".repeat(90));
+  });
+
+  it("counts the family's documents by status and its chunks", async () => {
+    const { edit, folderId, upload } = await setup();
+    for (const name of ["ready.pdf", "ready2.pdf", "failed.pdf", "gone.pdf", "excluded.pdf", "pending.pdf"]) await upload(file(name));
+    index(docByPath("ready.pdf")!.id, [{ page: 1, text: "a" }, { page: 1, text: "b" }]);
+    index(docByPath("ready2.pdf")!.id, [{ page: 1, text: "c" }]);
+    db.update(kbDocuments).set({ status: "failed", error: "Unreadable" }).where(eq(kbDocuments.path, "failed.pdf")).run();
+    await edit("POST", `/knowledge/documents/${docByPath("excluded.pdf")!.id}/exclude`, { excluded: true });
+    now = new Date(NOW.getTime() + 1000);
+    await edit("POST", "/knowledge/manifest", {
+      folderId,
+      device: "iPad",
+      files: ["ready.pdf", "ready2.pdf", "failed.pdf", "excluded.pdf", "pending.pdf"].map((n) => file(n)),
+    });
+    // Another family's documents don't count.
+    const otherEditor = makeUser(db).id;
+    const otherFamily = makeFamily(db, otherEditor).id;
+    const other = call(otherEditor, otherFamily);
+    const otherFolder = (await other("POST", "/knowledge/folder")).data.folder.id;
+    await other("PUT", "/knowledge/documents", { folderId: otherFolder, ...file("x.pdf"), pages: ["x"] });
+
+    expect(await edit("GET", "/knowledge/status")).toEqual({
+      status: 200,
+      data: {
+        folder: { id: folderId, createdAt: NOW.toISOString(), lastManifestAt: now.toISOString(), lastManifestDevice: "iPad" },
+        counts: { pending: 1, ready: 2, failed: 1, missing: 1, excluded: 1 },
+        chunks: 3,
+      },
+    });
   });
 });
 

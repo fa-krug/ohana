@@ -8,7 +8,8 @@ import { families, familyPeople, users } from "../schema";
 // `kb_chunks`, kept in step by triggers) is hand-written SQL in the migration 0020_knowledge.
 
 /** The family's knowledge folder (one per family for now): the id the app writes into the
- *  folder's marker file so a second device recognises it. */
+ *  folder's marker file so a second device recognises it. `lastManifestAt` / `lastManifestDevice`:
+ *  the last non-empty manifest and the device that sent it (the app's settings show them). */
 export const kbFolders = sqliteTable(
   "kb_folders",
   {
@@ -18,6 +19,8 @@ export const kbFolders = sqliteTable(
       .references(() => families.id, { onDelete: "cascade" }),
     createdById: text("created_by_id").references(() => users.id, { onDelete: "set null" }),
     createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+    lastManifestAt: integer("last_manifest_at", { mode: "timestamp_ms" }),
+    lastManifestDevice: text("last_manifest_device"),
   },
   (t) => ({ kbFoldersFamilyUniq: uniqueIndex("kb_folders_family_uniq").on(t.familyId) }),
 );

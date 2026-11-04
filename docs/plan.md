@@ -571,6 +571,12 @@ Notes (deviations and details):
   chunks and card at once.
 - **A reindex keeps the document searchable:** the search takes chunks of ready and pending
   documents (a pending one has chunks only while a reindex waits).
+- **Files without a hash, another folder:** a manifest entry may have `hash: null` (a file the
+  device sees but couldn't hash, e.g. an iCloud file it couldn't download): a known path counts as
+  present (back from missing, tags updated, nothing else), an unknown one is ignored; neither is
+  uploaded or moved. `POST /knowledge/folder {replace: true}` (the device chose another folder)
+  deletes the folder with its documents and makes a new one with a new id. A device name longer
+  than 100 is cut, not refused.
 - Limits: 20 000 files per manifest, 2 000 pages and 2 MB of text per upload (413); paths NFC, at
   most 1 024 characters, no hidden or ".." parts. The document list's `q` uses LIKE (case ignored
   for ASCII only) for now.

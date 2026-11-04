@@ -314,15 +314,19 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `text`) with `kb_chunks_fts` (FTS5, external content, `unicode61 remove_diacritics 2`, kept in
   step by triggers: hand-written SQL at the end of `drizzle/0020_knowledge.sql`). `routes.ts`
   `handleKnowledge`, **editors only: viewers get 404 on every path** (as an unknown one): `GET/POST
-  /knowledge/folder` (created on first use), `POST /knowledge/manifest {folderId, files: [{path,
-  size, mtime, hash, tags}]}` → `{upload: [path]}`, `PUT /knowledge/documents {folderId, path,
+  /knowledge/folder` (created on first use; `{replace: true}`: a new id, the old folder's documents
+  deleted; `last_manifest_at` / `_device`: the last non-empty manifest, the device name cut to 100),
+  `GET /knowledge/status` (folder, `counts` by status, `chunks`), `POST
+  /knowledge/manifest {folderId, device?, files: [{path, size, mtime, hash | null, tags}]}` → `{upload: [path]}`, `PUT /knowledge/documents {folderId, path,
   hash, size, mtime, tags, pages}` → 202 `{id, status}` (≤ 2000 pages, ≤ 2 MB of text, else 413),
   `GET /knowledge/documents?q=&tag=&folder=&status=&cursor=&limit=` (newest `mtime` first, excluded
   ones only with `status=excluded`), `GET /knowledge/documents/{id}` (card, `chunks`), `POST
   …/{id}/reindex`, `POST …/{id}/exclude {excluded}`, `GET /knowledge/tags`. The manifest
   (`manifest.ts`, the device's complete list): same hash → tags / size / time in place; another
   hash → upload; a new path with the hash of a document whose path is gone → that document moves;
-  documents not listed → `missing` (an excluded one keeps its status with `missing_since`); an
+  documents not listed → `missing` (an excluded one keeps its status with `missing_since`); `hash:
+  null` (not hashed, e.g. not downloaded) → a known path is present (tags only), an unknown one
+  ignored, never uploaded or moved; an
   empty manifest changes nothing (a folder the device can't read). An upload with the same hash is
   a no-op (a missing document comes back), unless it brings text to one stored without any; new
   text deletes the chunks and card at once. Status rule (`documents.ts`): ready ⇔ `indexed_at`
@@ -617,6 +621,36 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   after a series changed as a whole), day entries as all-day runs to Apple only; Ohana's copies
   carry `ohana://f/{id}/calendar/{day}?event=|entry=` as their URL and imports keep their
   `externalId`, so devices sharing an iCloud calendar link instead of copying twice.
+  The knowledge base on the device (`Core/Knowledge/`, phase 12; editors, module on, not the demo:
+  `FamilyContext.knowledgeAvailable`): `KnowledgeFolder` links the family's folder per server and
+  family (a security-scoped bookmark in `UserDefaults`; choosing reads or writes the marker
+  `.ohana-knowledge.json`, `KnowledgeLinkDecision`: another family's marker, another folder of the
+  family, or a folder another device reads throw `KnowledgeFolderError`, chosen again with
+  `accepted`; a server folder another device reads is then replaced, `POST /knowledge/folder
+  {replace: true}`, and a device whose manifest / upload gets 404 checks the folder and becomes
+  `.replaced`: it stops until a folder is chosen again), `KnowledgeWalker` lists it (hidden files,
+  packages, all symbolic links and files over 100 MB skipped; a folder it can't list fails the run,
+  nothing sent; NFC paths, Finder tags, iCloud placeholders by their real name),
+  `KnowledgeHashCache` (path + size + mtime → SHA-256; size only for a file not on the device; a
+  hash whose text failed to read isn't read again) hashes only what changed, a file it can't hash
+  is still listed, with its last hash or `hash: null`; iCloud loads files on the Mac as needed, on
+  iOS only off Low Data Mode and expensive networks, up to 300 MB a run (`KnowledgeDownloads`), and
+  they're evicted again once read, `KnowledgeText` reads the text by page
+  (PDFKit, Vision OCR, images, txt / md / rtf / html, `NSAttributedString`'s formats; nil: this
+  device can't, another may), `KnowledgeUploadQueue` keeps the uploads on disk (by path; removed by
+  path + hash; a refusal drops, an outage waits with backoff; a file changed since it was hashed
+  waits for the next run, never a run at once), all in Application Support `Ohana/Knowledge/<server>/<family>/`
+  (written off the main actor, in order, nothing after *Change…* / *Remove* / sign out; removed on
+  sign out / pairing and by *Remove from This Device*). `KnowledgeIndexer` (one per
+  family, `FamilyContext.knowledge`, observable `phase` / `lastRun` / `unreadable` / `waiting`)
+  walks, hashes, sends the manifest (with the device's name), then reads and uploads what the
+  server asks for; one run at a time. Triggers: `AppModel.indexKnowledge()` at launch, on becoming
+  active, on reconnecting and every 15 min on the Mac (each family at most every 5 min),
+  `FamilyContext.indexKnowledge(force:)` for *Read Now*, `enqueue(file:pages:)` for a scan with its
+  text. Settings → Knowledge (`Features/Knowledge/KnowledgeSettingsView.swift`, `.settings(.knowledge)`):
+  the folder (`.fileImporter`, the conflict as an alert offering to use it anyway), the index
+  (`GET /knowledge/status` through `api.cached`, with the indexer's progress, waiting and unreadable
+  files, the last manifest's time and device), *Read Now*.
   The cook view (`MealsCookView`) turns durations in a step's
   text into timer links (`StepDurations`, English and German); `CookTimers` (app-wide, kept in
   `UserDefaults`) schedules a time-sensitive local notification per timer (shown in the

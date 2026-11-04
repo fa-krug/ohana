@@ -77,14 +77,20 @@ export interface FileInfo {
   tags: string[];
 }
 
-export function cleanFileInfo(raw: unknown, what = "file"): FileInfo {
+/** A manifest's entry: `hash` null for a file the device sees but couldn't hash (an iCloud file
+ *  it couldn't download). */
+export type ManifestFile = Omit<FileInfo, "hash"> & { hash: string | null };
+
+export function cleanFileInfo(raw: unknown, what?: string): FileInfo;
+export function cleanFileInfo(raw: unknown, what: string, opts: { nullHash: true }): ManifestFile;
+export function cleanFileInfo(raw: unknown, what = "file", opts: { nullHash?: boolean } = {}): ManifestFile {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new HttpError(400, `${what} must be an object`);
   const f = raw as Record<string, unknown>;
   return {
     path: cleanPath(f.path),
     size: cleanCount(f.size, "size"),
     mtime: cleanCount(f.mtime, "mtime"),
-    hash: cleanHash(f.hash),
+    hash: opts.nullHash && f.hash === null ? null : cleanHash(f.hash),
     tags: cleanTags(f.tags),
   };
 }

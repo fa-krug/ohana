@@ -1,0 +1,879 @@
+import CoreGraphics
+import Foundation
+import Testing
+@testable import Ohana
+
+private func folder() throws -> URL {
+    try LetterFilingTests.temporaryFolder()
+}
+
+private func write(_ text: String, _ path: String, in root: URL) throws -> URL {
+    let url = root.appending(path: path)
+    try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+    try Data(text.utf8).write(to: url)
+    return url
+}
+
+/// Listing the folder: what's left out, NFC paths, tags, iCloud placeholders.
+struct KnowledgeWalkerTests {
+    @Test func listsFilesAndSkipsHiddenPackagesAndLinksOut() throws {
+        let root = try folder(), outside = try folder()
+        defer { try? FileManager.default.removeItem(at: root); try? FileManager.default.removeItem(at: outside) }
+        let policy = try write("Policy", "Policy.pdf", in: root)
+        try FinderTags.write(["Versicherung", "Auto"], to: policy)
+        _ = try write("Note", "Sub/Deeper/note.txt", in: root)
+        _ = try write("{}", KnowledgeMarker.fileName, in: root)
+        _ = try write("x", ".DS_Store", in: root)
+        _ = try write("x", ".hidden/inside.txt", in: root)
+        _ = try write("x", "Thing.app/Contents/Info.plist", in: root)
+        _ = try write("x", "back\\slash.txt", in: root)
+        let secret = try write("secret", "secret.txt", in: outside)
+        try FileManager.default.createSymbolicLink(at: root.appending(path: "link-out.txt"), withDestinationURL: secret)
+        try FileManager.default.createSymbolicLink(at: root.appending(path: "folder-link"), withDestinationURL: outside)
+
+        let listing = KnowledgeWalker.walk(root)
+        #expect(listing.files.map(\.path) == ["Policy.pdf", "Sub/Deeper/note.txt"])
+        #expect(!listing.truncated && listing.tooLarge == 0)
+        let file = try #require(listing.files.first)
+        #expect(file.size == 6 && file.mtime > 0 && file.downloaded)
+        #expect(file.tags == ["Versicherung", "Auto"])
+    }
+
+    @Test func linksAreSkippedEvenInsideTheFolder() throws {
+        let root = try folder()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let target = try write("Text", "a.txt", in: root)
+        try FileManager.default.createSymbolicLink(at: root.appending(path: "b.txt"), withDestinationURL: target)
+        // A loop: a folder linking back to the folder.
+        _ = try write("x", "Sub/c.txt", in: root)
+        try FileManager.default.createSymbolicLink(at: root.appending(path: "Sub/loop"), withDestinationURL: root)
+        let listing = KnowledgeWalker.walk(root)
+        #expect(listing.files.map(\.path) == ["Sub/c.txt", "a.txt"])
+        #expect(listing.unlistable.isEmpty && !listing.truncated)
+    }
+
+    @Test func aFolderThatCantBeListedIsRecorded() throws {
+        let root = try folder()
+        let locked = root.appending(path: "Locked")
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: locked.path)
+            try? FileManager.default.removeItem(at: root)
+        }
+        _ = try write("x", "a.txt", in: root)
+        _ = try write("x", "Locked/b.txt", in: root)
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: locked.path)
+        let listing = KnowledgeWalker.walk(root)
+        #expect(listing.unlistable == ["Locked"])
+        #expect(listing.files.map(\.path) == ["a.txt"])
+        #expect(KnowledgeWalker.walk(root.appending(path: "none")).unlistable == [""])
+    }
+
+    @Test func pathsAreNFC() throws {
+        let root = try folder()
+        defer { try? FileManager.default.removeItem(at: root) }
+        // Decomposed on the disk, as macOS file names often are.
+        let decomposed = "Bu\u{0308}cher/Re\u{0301}sume\u{0301}.txt"
+        _ = try write("x", decomposed, in: root)
+        let file = try #require(KnowledgeWalker.walk(root).files.first)
+        #expect(file.path == "B\u{00FC}cher/R\u{00E9}sum\u{00E9}.txt")
+        #expect(file.path.unicodeScalars.elementsEqual("Bücher/Résumé.txt".precomposedStringWithCanonicalMapping.unicodeScalars))
+    }
+
+    @Test func sizeAndCountLimits() throws {
+        let root = try folder()
+        defer { try? FileManager.default.removeItem(at: root) }
+        _ = try write("short", "a.txt", in: root)
+        _ = try write("a longer text", "b.txt", in: root)
+        _ = try write("c", "c.txt", in: root)
+        let small = KnowledgeWalker.walk(root, maxFileSize: 5)
+        #expect(small.files.map(\.path) == ["a.txt", "c.txt"] && small.tooLarge == 1)
+        let few = KnowledgeWalker.walk(root, maxFiles: 2)
+        #expect(few.truncated)
+        #expect(!KnowledgeWalker.walk(root, maxFiles: 3).truncated)
+    }
+
+    @Test func iCloudPlaceholdersShowUnderTheirRealName() throws {
+        let root = try folder()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let info: [String: Any] = ["NSURLNameKey": "Vertrag.pdf", "NSURLFileSizeKey": 123_456,
+                                   "NSURLFileResourceTypeKey": "NSURLFileResourceTypeRegular"]
+        let data = try PropertyListSerialization.data(fromPropertyList: info, format: .binary, options: 0)
+        try FileManager.default.createDirectory(at: root.appending(path: "Sub"), withIntermediateDirectories: true)
+        try data.write(to: root.appending(path: "Sub/.Vertrag.pdf.icloud"))
+        // Without a readable property list: the name alone.
+        try Data("x".utf8).write(to: root.appending(path: ".Brief.txt.icloud"))
+        // A hidden file's placeholder stays hidden.
+        try Data("x".utf8).write(to: root.appending(path: "..hidden.icloud"))
+        let files = KnowledgeWalker.walk(root).files
+        #expect(files.map(\.path) == ["Brief.txt", "Sub/Vertrag.pdf"])
+        let contract = try #require(files.last)
+        #expect(!contract.downloaded && contract.size == 123_456 && contract.tags.isEmpty)
+        #expect(contract.url.lastPathComponent == "Vertrag.pdf")
+    }
+
+    @Test func pathsTheServerRefuses() {
+        #expect(KnowledgeWalker.isValidPath("a/b.pdf"))
+        #expect(!KnowledgeWalker.isValidPath(""))
+        #expect(!KnowledgeWalker.isValidPath("a/.b"))
+        #expect(!KnowledgeWalker.isValidPath("a//b"))
+        #expect(!KnowledgeWalker.isValidPath("a\\b"))
+        #expect(!KnowledgeWalker.isValidPath("a\u{7}b"))
+        #expect(!KnowledgeWalker.isValidPath(String(repeating: "a", count: 1025)))
+    }
+
+    @Test func tagsAsTheServerTakesThem() {
+        let many = (1...60).map { "t\($0)" }
+        #expect(KnowledgeTags.cleaned([" Auto ", "", "Auto", "auto", String(repeating: "x", count: 101)]) == ["Auto", "auto"])
+        #expect(KnowledgeTags.cleaned(many).count == 50)
+        #expect(KnowledgeTags.cleaned(["Bu\u{0308}ro"]) == ["B\u{00FC}ro"])
+    }
+}
+
+/// Hashes: only what changed is read again.
+struct KnowledgeHashTests {
+    private func file(_ path: String = "a.pdf", size: Int64 = 10, mtime: Int64 = 1000) -> KnowledgeLocalFile {
+        KnowledgeLocalFile(path: path, url: URL(filePath: "/tmp/\(path)"), size: size, mtime: mtime, tags: ["T"])
+    }
+
+    @Test func cacheIsInvalidatedBySizeOrDate() throws {
+        var cache = KnowledgeHashCache()
+        #expect(cache.hash(for: file()) == nil)
+        cache.set(file(), hash: "h1")
+        #expect(cache.hash(for: file()) == "h1")
+        #expect(cache.hash(for: file(size: 11)) == nil)
+        #expect(cache.hash(for: file(mtime: 1001)) == nil)
+        #expect(cache.tags(for: "a.pdf") == ["T"])
+        // Not on the device: the placeholder's date isn't the file's, its size counts.
+        var placeholder = file(mtime: 5)
+        placeholder.downloaded = false
+        #expect(cache.hash(for: placeholder) == "h1")
+        placeholder.size = 11
+        #expect(cache.hash(for: placeholder) == nil)
+        #expect(cache.lastHash(path: "a.pdf", size: 10) == "h1" && cache.lastHash(path: "a.pdf", size: 11) == nil)
+        cache.set(file("b.pdf"), hash: "h2")
+        cache.keep(only: ["b.pdf"])
+        #expect(cache.entries.keys.sorted() == ["b.pdf"])
+
+        let root = try folder()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let saved = root.appending(path: "x/hashes.json")
+        try cache.save(to: saved)
+        #expect(KnowledgeHashCache.load(saved) == cache)
+        #expect(KnowledgeHashCache.load(root.appending(path: "none.json")) == KnowledgeHashCache())
+    }
+
+    @Test func aFailedReadIsRememberedUntilTheFileChanges() {
+        var cache = KnowledgeHashCache()
+        cache.set(file(), hash: "h1")
+        #expect(!cache.readFailed(path: "a.pdf", hash: "h1"))
+        cache.setReadFailed(path: "a.pdf", hash: "h1")
+        #expect(cache.readFailed(path: "a.pdf", hash: "h1") && !cache.readFailed(path: "a.pdf", hash: "h2"))
+        // The same content again (a new date): still known.
+        cache.set(file(mtime: 2000), hash: "h1")
+        #expect(cache.readFailed(path: "a.pdf", hash: "h1"))
+        // New content: read again.
+        cache.set(file(mtime: 3000), hash: "h2")
+        #expect(!cache.readFailed(path: "a.pdf", hash: "h2"))
+    }
+
+    @Test func iCloudDownloadsWithinTheBudget() {
+        func placeholder(_ path: String, size: Int64) -> KnowledgeLocalFile {
+            var local = file(path, size: size, mtime: 1)
+            local.downloaded = false
+            return local
+        }
+        var cache = KnowledgeHashCache()
+        cache.set(file("known.pdf", size: 50, mtime: 9), hash: "hk")
+        let files = [file("here.pdf"), placeholder("known.pdf", size: 50), placeholder("a.pdf", size: 60),
+                     placeholder("b.pdf", size: 60), placeholder("c.pdf", size: 30)]
+        let entry = cache.entries["known.pdf"]!
+        #expect(KnowledgeHashStep.plan(files, cache: cache, downloads: KnowledgeDownloads(allowed: true, budget: 100))
+            == [.hash, .cached(entry), .download, .later, .download])
+        #expect(KnowledgeHashStep.plan(files, cache: cache, downloads: .none) == [.hash, .cached(entry), .later, .later, .later])
+        #expect(KnowledgeHashStep.plan(files, cache: cache, downloads: .unlimited)
+            == [.hash, .cached(entry), .download, .download, .download])
+    }
+
+    @Test func sha256OfAFile() throws {
+        let root = try folder()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let url = try write("abc", "abc.txt", in: root)
+        let result = try KnowledgeHasher.sha256(url)
+        #expect(result.hash == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
+        #expect(result.size == 3 && result.mtime > 0)
+        // Bigger than a chunk.
+        let big = root.appending(path: "big.bin")
+        try Data(repeating: 0x61, count: KnowledgeHasher.chunkSize + 5).write(to: big)
+        #expect(try KnowledgeHasher.sha256(big).size == Int64(KnowledgeHasher.chunkSize + 5))
+        #expect(throws: (any Error).self) { try KnowledgeHasher.sha256(root.appending(path: "none")) }
+    }
+}
+
+/// Choosing a folder: its marker against the family's folder on the server.
+struct KnowledgeMarkerTests {
+    private let here = KnowledgeLocation(server: URL(string: "https://Ohana.Example/")!, familyID: "f1")
+
+    private func folder(_ id: String, used: Bool = false, device: String? = nil) -> KnowledgeFolderInfo {
+        KnowledgeFolderInfo(id: id, createdAt: "2026-11-01T00:00:00Z", lastManifestAt: used ? "2026-11-02T00:00:00Z" : nil,
+                            lastManifestDevice: device)
+    }
+
+    private func marker(server: String = "https://ohana.example", family: String = "f1", folder: String = "k1") -> KnowledgeMarker {
+        KnowledgeMarker(server: server, familyId: family, folderId: folder)
+    }
+
+    @Test func serverIDs() {
+        #expect(KnowledgeMarker.serverID(URL(string: "https://Ohana.Example/")!) == "https://ohana.example")
+        #expect(KnowledgeMarker.serverID(URL(string: "http://localhost:3000")!) == "http://localhost:3000")
+        #expect(KnowledgeMarker.serverID(URL(string: "https://x.example/ohana/")!) == "https://x.example/ohana")
+        #expect(here.server == "https://ohana.example")
+    }
+
+    @Test func decisions() {
+        func decide(_ marker: KnowledgeMarker?, _ server: KnowledgeFolderInfo?,
+                    accepted: KnowledgeFolderError? = nil) -> KnowledgeLinkDecision {
+            KnowledgeLinkDecision.decide(marker: marker, location: here, serverFolder: server, accepted: accepted)
+        }
+        // No marker: the family's folder (made, or the one no device reads yet).
+        #expect(decide(nil, nil) == .create)
+        #expect(decide(nil, folder("k1")) == .create)
+        // …but one another device reads: asked first.
+        #expect(decide(nil, folder("k1", used: true, device: "Mac")) == .conflict(.serverHasFolder(device: "Mac")))
+        // This family's marker.
+        #expect(decide(marker(), folder("k1", used: true)) == .use(folderID: "k1"))
+        #expect(decide(marker(), nil) == .create)
+        #expect(decide(marker(), folder("k2")) == .conflict(.otherFolder))
+        // Another family's, or another server's.
+        #expect(decide(marker(family: "f2"), folder("k1")) == .conflict(.otherFamily))
+        #expect(decide(marker(server: "https://other.example"), nil) == .conflict(.otherFamily))
+        // Asked and confirmed: the server's folder another device reads is replaced.
+        #expect(decide(nil, folder("k1", used: true), accepted: .serverHasFolder(device: "Mac")) == .replace)
+        #expect(decide(marker(), folder("k2"), accepted: .otherFolder) == .replace)
+        // Another family's marker, confirmed: as a folder without one (which may ask again).
+        #expect(decide(marker(family: "f2"), folder("k1"), accepted: .otherFamily) == .create)
+        #expect(decide(marker(family: "f2"), nil, accepted: .otherFamily) == .create)
+        #expect(decide(marker(family: "f2"), folder("k1", used: true, device: "Mac"), accepted: .otherFamily)
+            == .conflict(.serverHasFolder(device: "Mac")))
+        // Confirming one question doesn't answer another.
+        #expect(decide(marker(family: "f2"), folder("k1"), accepted: .otherFolder) == .conflict(.otherFamily))
+    }
+
+    @Test func markerFile() throws {
+        let root = try LetterFilingTests.temporaryFolder()
+        defer { try? FileManager.default.removeItem(at: root) }
+        #expect(KnowledgeMarker.read(in: root) == nil)
+        try marker().write(in: root)
+        #expect(KnowledgeMarker.read(in: root) == marker())
+        try marker(folder: "k2").write(in: root)
+        #expect(KnowledgeMarker.read(in: root)?.folderId == "k2")
+        let json = try String(contentsOf: root.appending(path: ".ohana-knowledge.json"), encoding: .utf8)
+        #expect(json.contains(#""folderId" : "k2""#) && json.contains(#""server" : "https://ohana.example""#))
+        try Data("not json".utf8).write(to: root.appending(path: KnowledgeMarker.fileName))
+        #expect(KnowledgeMarker.read(in: root) == nil)
+    }
+
+    @Test func linkIsRememberedPerServerAndFamilyAndForgottenOnSignOut() throws {
+        let defaults = UserDefaults(suiteName: "ohana-tests-\(UUID().uuidString)")!
+        let root = try LetterFilingTests.temporaryFolder(), base = try LetterFilingTests.temporaryFolder()
+        defer { try? FileManager.default.removeItem(at: root); try? FileManager.default.removeItem(at: base) }
+        let link = KnowledgeFolder(location: here, defaults: defaults)
+        let other = KnowledgeFolder(location: KnowledgeLocation(server: URL(string: "https://other.example")!, familyID: "f1"),
+                                    defaults: defaults)
+        #expect(link.state() == .none && !link.isLinked)
+        try link.remember(root, folderID: "k1")
+        try other.remember(root, folderID: "k9")
+        #expect(link.state().folderID == "k1")
+        #expect(link.state().url?.standardizedFileURL.path == root.standardizedFileURL.path)
+        try FileManager.default.createDirectory(at: here.directory(base: base), withIntermediateDirectories: true)
+        KnowledgeFolder.removeAll(server: URL(string: "https://ohana.example")!, defaults: defaults, base: base)
+        #expect(!link.isLinked && other.isLinked)
+        #expect(!FileManager.default.fileExists(atPath: here.directory(base: base).path))
+        other.unlink()
+        #expect(!other.isLinked)
+        // Replaced by another device's folder: kept as such until chosen again.
+        link.markReplaced()
+        #expect(link.state() == .none)
+        try link.remember(root, folderID: "k1")
+        link.markReplaced()
+        #expect(link.state() == .replaced && link.isLinked)
+        try link.remember(root, folderID: "k2")
+        #expect(link.state().folderID == "k2")
+    }
+
+    @Test func deviceNamesAsTheServerKeepsThem() {
+        #expect(KnowledgeDevice.normalized("  Anna’s iPhone \n") == "Anna’s iPhone")
+        #expect(KnowledgeDevice.normalized("   ") == nil && KnowledgeDevice.normalized(nil) == nil)
+        #expect(KnowledgeDevice.normalized("Bu\u{0308}ro") == "B\u{00FC}ro")
+        // At most 100 UTF-16 units, never inside a character (an emoji is two).
+        let long = String(repeating: "a", count: 99) + "😀b"
+        #expect(KnowledgeDevice.normalized(long) == String(repeating: "a", count: 99))
+        #expect(KnowledgeDevice.normalized(String(repeating: "x", count: 150))?.utf16.count == 100)
+        #expect(KnowledgeDevice.isThisDevice("Ma\u{0301}c", own: " Mác "))
+        #expect(KnowledgeDevice.isThisDevice(String(repeating: "x", count: 100), own: String(repeating: "x", count: 120)))
+        #expect(!KnowledgeDevice.isThisDevice("Other", own: "Mac") && !KnowledgeDevice.isThisDevice(nil, own: "Mac"))
+    }
+}
+
+/// Settings → Knowledge: the server's status, where the folder is, the page's route.
+struct KnowledgeSettingsTests {
+    @Test func statusDecodes() throws {
+        let json = #"""
+        {"folder": {"id": "k1", "createdAt": "2026-11-01T00:00:00.000Z", "lastManifestAt": "2026-11-02T08:30:00.000Z",
+                    "lastManifestDevice": "Anna’s iPhone"},
+         "counts": {"pending": 2, "ready": 40, "failed": 1, "missing": 0, "excluded": 3}, "chunks": 512}
+        """#
+        let status = try APIClient.decoder.decode(KnowledgeStatusInfo.self, from: Data(json.utf8))
+        #expect(status.folder?.lastManifestDevice == "Anna’s iPhone")
+        #expect(status.folder?.lastManifestAt.flatMap(Date.server) != nil)
+        #expect(status.counts == KnowledgeStatusInfo.Counts(pending: 2, ready: 40, failed: 1, missing: 0, excluded: 3))
+        #expect(status.chunks == 512)
+        let none = try APIClient.decoder.decode(KnowledgeStatusInfo.self, from: Data(#"""
+        {"folder": null, "counts": {"pending": 0, "ready": 0, "failed": 0, "missing": 0, "excluded": 0}, "chunks": 0}
+        """#.utf8))
+        #expect(none.folder == nil && none.counts == KnowledgeStatusInfo.Counts())
+    }
+
+    @Test func folderPlaces() {
+        let drive = "/Users/anna/Library/Mobile Documents/com~apple~CloudDocs"
+        #expect(KnowledgeFolderPlace.describe(URL(filePath: "\(drive)/Family/Papers")) == "iCloud Drive › Family")
+        #expect(KnowledgeFolderPlace.describe(URL(filePath: "\(drive)/Papers")) == "iCloud Drive")
+        #expect(KnowledgeFolderPlace.describe(URL(filePath: drive)) == nil)
+        #expect(KnowledgeFolderPlace.describe(URL(filePath: "/private/var/mobile/Library/Mobile Documents/com~apple~CloudDocs/A/B/C"))
+            == "iCloud Drive › A › B")
+        #expect(KnowledgeFolderPlace.describe(URL(filePath: "/Volumes/Disk/Papers")) == "Disk")
+        #expect(KnowledgeFolderPlace.describe(URL(filePath: "/Papers")) == nil)
+    }
+
+    @Test func pageRoute() {
+        #expect(AppRoute.parse(webPath: "/f/fam1/settings", tab: "knowledge")?.route == .settings(.knowledge))
+        #expect(FamilySettingsPageView.page(for: .settings(.knowledge)) == .knowledge)
+        #expect(AppRoute.settings(.knowledge).requiredModule == .settings)
+    }
+}
+
+/// Reading the text of the formats the device knows.
+struct KnowledgeTextTests {
+    @Test func plainTextUTF8AndLatin1() async throws {
+        let root = try folder()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let utf8 = try write("\u{FEFF}Grüße aus Köln", "a.txt", in: root)
+        #expect(await KnowledgeText.pages(of: utf8) == ["Grüße aus Köln"])
+        let latin1 = root.appending(path: "b.csv")
+        try "Straße;Größe".data(using: .isoLatin1)!.write(to: latin1)
+        #expect(await KnowledgeText.pages(of: latin1) == ["Straße;Größe"])
+        let markdown = try write("# Titel\n\nText", "c.md", in: root)
+        #expect(await KnowledgeText.pages(of: markdown) == ["# Titel\n\nText"])
+    }
+
+    @Test func rtf() async throws {
+        let root = try folder()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let text = NSAttributedString(string: "Hausratversicherung\nPolice 4711")
+        let data = try text.data(from: NSRange(location: 0, length: text.length),
+                                 documentAttributes: [.documentType: NSAttributedString.DocumentType.rtf])
+        let url = root.appending(path: "police.rtf")
+        try data.write(to: url)
+        let pages = try #require(await KnowledgeText.pages(of: url))
+        #expect(pages.count == 1 && pages[0].contains("Hausratversicherung") && pages[0].contains("Police 4711"))
+    }
+
+    @Test func html() async throws {
+        let html = """
+        <html><head><title>T</title><style>p { color: red }</style></head>
+        <body><script>alert("x")</script><h1>Gr&uuml;&szlig;e</h1><p>Erste&nbsp;Zeile<br>zweite &amp; dritte</p>
+        <!-- ein Kommentar --><ul><li>A &#228; &#x20AC;</li><li>B</li></ul></body></html>
+        """
+        #expect(KnowledgeText.htmlText(html) == "Grüße\n\nErste Zeile\nzweite & dritte\n\nA ä €\n\nB")
+        let root = try folder()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let url = try write(html, "page.htm", in: root)
+        #expect(await KnowledgeText.pages(of: url)?.first?.contains("zweite & dritte") == true)
+    }
+
+    @Test func pdfWithText() async throws {
+        let pages = [
+            ScanPage(image: LetterFilingTests.image(width: 1240, height: 1754), lines: [
+                ScanLine(text: "Versicherungsschein Hausrat Nummer 4711", box: CGRect(x: 0.1, y: 0.8, width: 0.7, height: 0.03)),
+            ]),
+            ScanPage(image: LetterFilingTests.image(width: 1240, height: 1754), lines: [
+                ScanLine(text: "Beitrag jährlich 120 Euro, fällig am 1. Januar", box: CGRect(x: 0.1, y: 0.5, width: 0.8, height: 0.03)),
+            ]),
+        ]
+        let root = try folder()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let url = root.appending(path: "police.pdf")
+        try ScanPDF.make(pages: pages, title: "Police", tags: []).write(to: url)
+        let text = try #require(await KnowledgeText.pages(of: url))
+        #expect(text.count == 2)
+        #expect(text[0].contains("Versicherungsschein Hausrat"))
+        #expect(text[1].contains("120 Euro"))
+    }
+
+    @Test func formatsThisDeviceCantRead() async throws {
+        let root = try folder()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let pages = try write("x", "Brief.pages", in: root)
+        #expect(await KnowledgeText.pages(of: pages) == nil)
+        #expect(!KnowledgeText.canRead(pages))
+        let broken = try write("not a pdf", "broken.pdf", in: root)
+        #expect(await KnowledgeText.pages(of: broken) == nil)
+        #expect(KnowledgeText.canRead(URL(filePath: "/x/Scan.HEIC")))
+        #if os(macOS)
+        #expect(KnowledgeText.canRead(URL(filePath: "/x/Vertrag.docx")))
+        #endif
+    }
+
+    @Test func limitsCutTheText() {
+        #expect(KnowledgeText.limited(["a", "b", "c"], maxPages: 2) == ["a", "b"])
+        #expect(KnowledgeText.limited(["abc", "def", "ghi"], maxBytes: 5) == ["abc", "de"])
+        // Not inside a character: "ä" is two bytes.
+        #expect(KnowledgeText.limited(["aää"], maxBytes: 4) == ["aä"])
+        // NFC, as the server counts.
+        #expect(KnowledgeText.limited(["a\u{0308}"]) == ["\u{00E4}"])
+    }
+}
+
+/// The upload queue's rules, and server paths matched to the files.
+@MainActor
+struct KnowledgeQueueTests {
+    private func upload(_ path: String, text: String? = nil) -> KnowledgeUpload {
+        KnowledgeUpload(folderId: "k1", file: KnowledgeFileInfo(path: path, size: 1, mtime: 1, hash: "h", tags: []),
+                        diskPath: path, textFile: text)
+    }
+
+    @Test func aPathWaitsOnce() throws {
+        var queue = KnowledgeUploadQueue()
+        queue.add(upload("a"))
+        queue.add(upload("b", text: "t1"))
+        #expect(queue.add(upload("b", text: "t2")) == "t1")
+        #expect(queue.items.map(\.file.path) == ["a", "b"] && queue.items[1].textFile == "t2")
+        #expect(queue.count == 2 && queue.first?.file.path == "a")
+
+        let root = try folder()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appending(path: "k/queue.json")
+        try queue.save(to: file)
+        #expect(KnowledgeUploadQueue.load(file) == queue)
+        try KnowledgeUploadQueue().save(to: file)
+        #expect(!FileManager.default.fileExists(atPath: file.path))
+    }
+
+    @Test func uploadsAreRemovedByIdentity() {
+        func upload(_ path: String, hash: String) -> KnowledgeUpload {
+            KnowledgeUpload(folderId: "k1", file: KnowledgeFileInfo(path: path, size: 1, mtime: 1, hash: hash, tags: []),
+                            diskPath: path)
+        }
+        var queue = KnowledgeUploadQueue()
+        let sent = upload("a", hash: "h1")
+        queue.add(sent)
+        queue.add(upload("b", hash: "h1"))
+        // Changed while it was being sent: queued again with its new hash, at the end.
+        queue.add(upload("a", hash: "h2"))
+        #expect(queue.remove(sent) == nil)
+        #expect(queue.items.map(\.file.hash) == ["h1", "h2"] && queue.first?.file.path == "b")
+        #expect(queue.remove(upload("b", hash: "h1")) != nil)
+        #expect(queue.first == upload("a", hash: "h2"))
+        #expect(queue.remove(upload("a", hash: "h2")) != nil && queue.isEmpty && queue.first == nil)
+
+        // Many changes stay in order (the order list is compacted on the way).
+        for round in 0..<5 {
+            for index in 0..<100 { queue.add(upload("p\(index)", hash: "r\(round)")) }
+        }
+        #expect(queue.count == 100 && queue.items.map(\.file.path) == (0..<100).map { "p\($0)" })
+        #expect(queue.items.allSatisfy { $0.file.hash == "r4" })
+        #expect(KnowledgeUploadQueue(queue.items) == queue)
+        let dropped = queue.removeAll { $0.file.path.hasSuffix("1") }
+        #expect(dropped.isEmpty && queue.count == 90)
+    }
+
+    @Test func refusalsDropAndOutagesWait() {
+        func outcome(_ error: any Error) -> KnowledgeUploadQueue.Disposition { KnowledgeUploadQueue.disposition(of: error) }
+        #expect(outcome(APIError.http(status: 400, message: nil)) == .drop)
+        #expect(outcome(APIError.http(status: 404, message: nil)) == .drop)
+        #expect(outcome(APIError.http(status: 413, message: nil)) == .drop)
+        #expect(outcome(APIError.decoding("x")) == .drop)
+        #expect(outcome(CocoaError(.fileReadNoSuchFile)) == .drop)
+        #expect(outcome(APIError.http(status: 408, message: nil)) == .retry)
+        #expect(outcome(APIError.http(status: 429, message: nil)) == .retry)
+        #expect(outcome(APIError.http(status: 503, message: nil)) == .retry)
+        #expect(outcome(APIError.transport("offline")) == .retry)
+        #expect(outcome(URLError(.notConnectedToInternet)) == .retry)
+        #expect(outcome(APIError.unauthorized(nil)) == .retry)
+    }
+
+    @Test func serverPathsMatchDecomposedNames() {
+        let decomposed = "Bu\u{0308}cher/Re\u{0301}sume\u{0301}.pdf"
+        let file = KnowledgeLocalFile(path: decomposed.precomposedStringWithCanonicalMapping,
+                                      url: URL(filePath: "/Folder/\(decomposed)"), size: 1, mtime: 1, tags: [])
+        let other = KnowledgeLocalFile(path: "a.pdf", url: URL(filePath: "/Folder/a.pdf"), size: 1, mtime: 1, tags: [])
+        let matches = KnowledgeIndexer.match(["B\u{00FC}cher/R\u{00E9}sum\u{00E9}.pdf", "gone.pdf", "a.pdf", "a.pdf"],
+                                             in: [file, other])
+        #expect(matches.map(\.path) == [file.path, "a.pdf"])
+        #expect(matches.first?.diskPath.unicodeScalars.elementsEqual(decomposed.unicodeScalars) == true)
+        // Also a server path that came decomposed.
+        #expect(KnowledgeIndexer.match([decomposed], in: [file]).count == 1)
+        #expect(KnowledgeIndexer.relativePath(of: URL(filePath: "/Folder/Sub/x.pdf"), in: URL(filePath: "/Folder/")) == "Sub/x.pdf")
+        #expect(KnowledgeIndexer.relativePath(of: URL(filePath: "/Other/x.pdf"), in: URL(filePath: "/Folder")) == nil)
+    }
+}
+
+/// Answers the knowledge routes as set and records them; nothing leaves the test.
+nonisolated final class KnowledgeStubProtocol: URLProtocol {
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var log: [(String, Data?)] = []
+    struct State {
+        var upload: [String] = []
+        var put = 202
+        var offline = false
+        var manifest = 200
+        /// The family's folder as GET/POST /knowledge/folder answer it (JSON), "null" for none.
+        var folder = "null"
+        /// What POST /knowledge/folder answers instead, when set.
+        var created: String?
+    }
+    nonisolated(unsafe) private static var state = State()
+
+    static func set(_ change: (inout State) -> Void) { lock.withLock { change(&state) } }
+
+    static var requests: [String] { lock.withLock { log.map(\.0) } }
+    static func bodies(_ prefix: String) -> [[String: Any]] {
+        lock.withLock { log.filter { $0.0.hasPrefix(prefix) }.compactMap { $0.1 } }
+            .compactMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
+    }
+    static var upload: [String] {
+        get { lock.withLock { state.upload } }
+        set { lock.withLock { state.upload = newValue } }
+    }
+    static var putStatus: Int {
+        get { lock.withLock { state.put } }
+        set { lock.withLock { state.put = newValue } }
+    }
+    static var offline: Bool {
+        get { lock.withLock { state.offline } }
+        set { lock.withLock { state.offline = newValue } }
+    }
+    static func reset() { lock.withLock { log = []; state = State() } }
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override func startLoading() {
+        let method = request.httpMethod ?? "GET"
+        let path = request.url?.path ?? ""
+        var body = request.httpBody
+        if body == nil, let stream = request.httpBodyStream {
+            stream.open()
+            var data = Data()
+            var buffer = [UInt8](repeating: 0, count: 65_536)
+            while stream.hasBytesAvailable {
+                let read = stream.read(&buffer, maxLength: buffer.count)
+                if read <= 0 { break }
+                data.append(buffer, count: read)
+            }
+            stream.close()
+            body = data
+        }
+        Self.lock.withLock { Self.log.append(("\(method) \(path)", body)) }
+        let state = Self.lock.withLock { Self.state }
+        if state.offline {
+            client?.urlProtocol(self, didFailWithError: URLError(.notConnectedToInternet))
+            return
+        }
+        var status = 200
+        var answer = Data("{}".utf8)
+        if path.hasSuffix("/knowledge/manifest") {
+            status = state.manifest
+            answer = status >= 400 ? Data(#"{"error":"Not found"}"#.utf8)
+                : try! JSONSerialization.data(withJSONObject: ["upload": state.upload])
+        } else if path.hasSuffix("/knowledge/folder") {
+            status = method == "POST" ? 201 : 200
+            let folder = method == "POST" ? state.created ?? state.folder : state.folder
+            answer = Data(#"{"folder": \#(folder)}"#.utf8)
+        } else if path.hasSuffix("/knowledge/documents") {
+            status = state.put
+            answer = Data(status >= 400 ? #"{"error":"No"}"#.utf8 : #"{"id":"d1","status":"pending"}"#.utf8)
+        }
+        let response = HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil,
+                                       headerFields: ["Content-Type": "application/json"])!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: answer)
+        client?.urlProtocolDidFinishLoading(self)
+    }
+    override func stopLoading() {}
+}
+
+/// A run against a stub server: the manifest, then the uploads it asks for, through the queue.
+@Suite(.serialized)
+@MainActor
+struct KnowledgeIndexerTests {
+    private struct Setup {
+        let root: URL
+        let data: URL
+        let indexer: KnowledgeIndexer
+    }
+
+    private func setup() throws -> Setup {
+        KnowledgeStubProtocol.reset()
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [KnowledgeStubProtocol.self]
+        let api = FamilyAPI(client: APIClient(baseURL: URL(string: "https://kb.example")!, token: nil,
+                                              session: URLSession(configuration: config)), familyID: "f1")
+        let root = try folder(), data = try folder()
+        let link = KnowledgeFolder(location: KnowledgeLocation(server: api.client.baseURL, familyID: "f1"),
+                                   defaults: UserDefaults(suiteName: "ohana-tests-\(UUID().uuidString)")!)
+        try link.remember(root, folderID: "k1")
+        return Setup(root: root, data: data,
+                     indexer: KnowledgeIndexer(api: api, folder: link, directory: data, deviceName: "Test Mac"))
+    }
+
+    private func until(_ condition: () -> Bool) async -> Bool {
+        for _ in 0..<300 {
+            if condition() { return true }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        return condition()
+    }
+
+    @Test func anEmptyFolderSendsNothing() async throws {
+        let s = try setup()
+        defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
+        _ = try write("{}", KnowledgeMarker.fileName, in: s.root)
+        await s.indexer.run()
+        #expect(KnowledgeStubProtocol.requests.isEmpty)
+        #expect(s.indexer.lastRun?.files == 0 && s.indexer.phase == .idle)
+    }
+
+    @Test func sendsTheManifestThenWhatTheServerAsksFor() async throws {
+        let s = try setup()
+        defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
+        _ = try write("Kündigung zum 31. März", "Verträge/Ku\u{0308}ndigung.txt", in: s.root)
+        _ = try write("Rechnung", "rechnung.txt", in: s.root)
+        _ = try write("x", "Brief.pages", in: s.root)
+        KnowledgeStubProtocol.set { $0.upload = ["Verträge/Kündigung.txt", "Brief.pages"] }
+        await s.indexer.run()
+
+        #expect(KnowledgeStubProtocol.requests == ["POST /api/v1/families/f1/knowledge/manifest",
+                                                   "PUT /api/v1/families/f1/knowledge/documents"])
+        let manifest = try #require(KnowledgeStubProtocol.bodies("POST").first)
+        #expect(manifest["folderId"] as? String == "k1" && manifest["device"] as? String == "Test Mac")
+        let files = try #require(manifest["files"] as? [[String: Any]])
+        #expect(files.compactMap { $0["path"] as? String } == ["Brief.pages", "Verträge/Kündigung.txt", "rechnung.txt"])
+        #expect(files.allSatisfy { ($0["hash"] as? String)?.count == 64 })
+        let put = try #require(KnowledgeStubProtocol.bodies("PUT").first)
+        #expect(put["path"] as? String == "Verträge/Kündigung.txt")
+        #expect(put["pages"] as? [String] == ["Kündigung zum 31. März"])
+        #expect(s.indexer.unreadable == ["Brief.pages": .format])
+        #expect(s.indexer.lastRun?.files == 3 && s.indexer.lastRun?.uploaded == 1 && s.indexer.phase == .idle)
+        #expect(s.indexer.waiting == 0)
+
+        // Nothing changed: hashed from the cache, the server asks for nothing.
+        KnowledgeStubProtocol.reset()
+        await s.indexer.run()
+        #expect(KnowledgeStubProtocol.requests == ["POST /api/v1/families/f1/knowledge/manifest"])
+        #expect(s.indexer.phase == .idle)
+    }
+
+    private static let manifestPath = "POST /api/v1/families/f1/knowledge/manifest"
+
+    private func manifestFiles() throws -> [String: [String: Any]] {
+        let manifest = try #require(KnowledgeStubProtocol.bodies("POST").last)
+        let files = try #require(manifest["files"] as? [[String: Any]])
+        return Dictionary(uniqueKeysWithValues: files.map { ($0["path"] as! String, $0) })
+    }
+
+    /// An iCloud file that isn't on the device, as iOS shows it.
+    private func placeholder(_ name: String, size: Int, in root: URL) throws {
+        let info: [String: Any] = ["NSURLNameKey": name, "NSURLFileSizeKey": size,
+                                   "NSURLFileResourceTypeKey": "NSURLFileResourceTypeRegular"]
+        try PropertyListSerialization.data(fromPropertyList: info, format: .binary, options: 0)
+            .write(to: root.appending(path: ".\(name).icloud"))
+    }
+
+    @Test func filesThatCantBeHashedAreListedWithoutAHash() async throws {
+        let s = try setup()
+        defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
+        _ = try write("Text", "a.txt", in: s.root)
+        // Known from an earlier run (same size), not on the device now; and one never seen.
+        try placeholder("Known.pdf", size: 40, in: s.root)
+        try placeholder("New.pdf", size: 70, in: s.root)
+        var cache = KnowledgeHashCache()
+        cache.set(KnowledgeLocalFile(path: "Known.pdf", url: s.root.appending(path: "Known.pdf"), size: 40,
+                                     mtime: 1_700_000_000_000, tags: ["Auto"]), hash: String(repeating: "c", count: 64))
+        try cache.save(to: s.data.appending(path: "hashes.json"))
+
+        // Not allowed to load anything (Low Data Mode, cellular).
+        s.indexer.downloads = { .none }
+        await s.indexer.run()
+        var files = try manifestFiles()
+        #expect(files.keys.sorted() == ["Known.pdf", "New.pdf", "a.txt"])
+        #expect(files["Known.pdf"]?["hash"] as? String == String(repeating: "c", count: 64))
+        #expect(files["Known.pdf"]?["mtime"] as? Int64 == 1_700_000_000_000 && files["Known.pdf"]?["tags"] as? [String] == ["Auto"])
+        #expect(files["New.pdf"]?["hash"] is NSNull && files["New.pdf"]?["size"] as? Int == 70)
+        #expect(files["New.pdf"]?["mtime"] as? Int == 0)
+        #expect(s.indexer.lastRun?.files == 3 && s.indexer.lastRun?.deferred == 1 && s.indexer.lastRun?.unhashable == 0)
+
+        // Allowed: iCloud doesn't load it (there's no iCloud here): still listed, without a hash.
+        s.indexer.downloads = { .unlimited }
+        KnowledgeStubProtocol.reset()
+        await s.indexer.run()
+        files = try manifestFiles()
+        #expect(files["New.pdf"]?["hash"] is NSNull && files["Known.pdf"]?["hash"] as? String != nil)
+        #expect(s.indexer.lastRun?.files == 3 && s.indexer.lastRun?.unhashable == 1 && s.indexer.lastRun?.deferred == 0)
+    }
+
+    @Test func aFolderThatCantBeListedSendsNothing() async throws {
+        let s = try setup()
+        let locked = s.root.appending(path: "Verträge")
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: locked.path)
+            try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data)
+        }
+        _ = try write("Text", "a.txt", in: s.root)
+        _ = try write("Text", "Verträge/b.txt", in: s.root)
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: locked.path)
+        await s.indexer.run()
+        #expect(KnowledgeStubProtocol.requests.isEmpty)
+        guard case let .failed(message) = s.indexer.phase else {
+            Issue.record("phase \(s.indexer.phase)")
+            return
+        }
+        #expect(message.contains("Verträge"))
+    }
+
+    @Test func aFileThatChangedWaitsForTheNextRun() async throws {
+        let s = try setup()
+        defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
+        _ = try write("Text", "a.txt", in: s.root)
+        // Queued by an earlier run, hashed before it changed (another size now).
+        let stale = KnowledgeUpload(folderId: "k1", file: KnowledgeFileInfo(path: "a.txt", size: 99, mtime: 1,
+                                                                             hash: String(repeating: "0", count: 64), tags: []),
+                                    diskPath: "a.txt")
+        try KnowledgeUploadQueue([stale]).save(to: s.data.appending(path: "queue.json"))
+        let indexer = KnowledgeIndexer(api: s.indexer.api, folder: s.indexer.folder, directory: s.data, deviceName: "Test Mac")
+        await indexer.run()
+        // One manifest, no upload and no run at once after it.
+        #expect(KnowledgeStubProtocol.requests == [Self.manifestPath])
+        #expect(indexer.waiting == 0 && indexer.phase == .idle && !indexer.isRunning)
+    }
+
+    @Test func aTextThatCantBeReadIsntReadAgain() async throws {
+        let s = try setup()
+        defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
+        _ = try write("not a pdf", "broken.pdf", in: s.root)
+        KnowledgeStubProtocol.set { $0.upload = ["broken.pdf"] }
+        await s.indexer.run()
+        #expect(s.indexer.unreadable == ["broken.pdf": .failed])
+        let cache = KnowledgeHashCache.load(s.data.appending(path: "hashes.json"))
+        #expect(cache.entries["broken.pdf"]?.readFailed == true)
+        #expect(!KnowledgeStubProtocol.requests.contains { $0.hasPrefix("PUT") })
+        // Asked again: still not sent, still named.
+        await s.indexer.run()
+        #expect(s.indexer.unreadable == ["broken.pdf": .failed] && s.indexer.waiting == 0)
+    }
+
+    @Test func aFolderReplacedByAnotherDeviceStopsTheIndexing() async throws {
+        let s = try setup()
+        defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
+        _ = try write("Text", "a.txt", in: s.root)
+        KnowledgeStubProtocol.set {
+            $0.manifest = 404
+            $0.folder = #"{"id": "k2", "createdAt": "2026-11-04T00:00:00Z"}"#
+        }
+        await s.indexer.run()
+        #expect(KnowledgeStubProtocol.requests == [Self.manifestPath, "GET /api/v1/families/f1/knowledge/folder"])
+        #expect(s.indexer.folder.state() == .replaced && s.indexer.phase == .idle)
+        // Not read any more until a folder is chosen again.
+        KnowledgeStubProtocol.reset()
+        await s.indexer.run()
+        #expect(KnowledgeStubProtocol.requests.isEmpty)
+    }
+
+    @Test func a404ForTheSameFolderIsJustAFailure() async throws {
+        let s = try setup()
+        defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
+        _ = try write("Text", "a.txt", in: s.root)
+        KnowledgeStubProtocol.set {
+            $0.manifest = 404
+            $0.folder = #"{"id": "k1", "createdAt": "2026-11-04T00:00:00Z"}"#
+        }
+        await s.indexer.run()
+        #expect(s.indexer.folder.state().folderID == "k1")
+        if case .failed = s.indexer.phase {} else { Issue.record("phase \(s.indexer.phase)") }
+    }
+
+    @Test func usingAFolderAnywayReplacesTheServersFolder() async throws {
+        let s = try setup()
+        defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
+        let chosen = try folder()
+        defer { try? FileManager.default.removeItem(at: chosen) }
+        KnowledgeStubProtocol.set {
+            $0.folder = #"{"id": "k1", "createdAt": "2026-11-01T00:00:00Z", "lastManifestAt": "2026-11-02T00:00:00Z", "lastManifestDevice": "Mac"}"#
+        }
+        await #expect(throws: KnowledgeFolderError.serverHasFolder(device: "Mac")) {
+            try await s.indexer.link(chosen)
+        }
+        KnowledgeStubProtocol.set { $0.created = #"{"id": "k9", "createdAt": "2026-11-04T00:00:00Z"}"# }
+        try await s.indexer.link(chosen, accepted: .serverHasFolder(device: "Mac"))
+        let post = try #require(KnowledgeStubProtocol.bodies("POST").last)
+        #expect(post["replace"] as? Bool == true)
+        #expect(KnowledgeMarker.read(in: chosen)?.folderId == "k9")
+        #expect(s.indexer.folder.state().folderID == "k9")
+    }
+
+    @Test func refusedUploadsAreDroppedAndOutagesWait() async throws {
+        let s = try setup()
+        defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
+        _ = try write("Text", "a.txt", in: s.root)
+        KnowledgeStubProtocol.upload = ["a.txt"]
+        KnowledgeStubProtocol.putStatus = 413
+        await s.indexer.run()
+        #expect(s.indexer.waiting == 0)
+        #expect(!FileManager.default.fileExists(atPath: s.data.appending(path: "queue.json").path))
+
+        // The server is down: the upload waits on the device and goes once it's back.
+        KnowledgeStubProtocol.putStatus = 503
+        await s.indexer.run()
+        #expect(s.indexer.waiting == 1)
+        #expect(FileManager.default.fileExists(atPath: s.data.appending(path: "queue.json").path))
+        if case .failed = s.indexer.phase {} else { Issue.record("phase \(s.indexer.phase)") }
+        KnowledgeStubProtocol.putStatus = 202
+        s.indexer.retryNow()
+        #expect(await until { s.indexer.waiting == 0 })
+        #expect(KnowledgeStubProtocol.requests.last == "PUT /api/v1/families/f1/knowledge/documents")
+    }
+
+    @Test func removingTheFolderForgetsWhatTheDeviceKept() async throws {
+        let s = try setup()
+        defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
+        _ = try write("Text", "a.txt", in: s.root)
+        KnowledgeStubProtocol.upload = ["a.txt"]
+        KnowledgeStubProtocol.putStatus = 503
+        await s.indexer.run()
+        #expect(s.indexer.waiting == 1)
+        #expect(FileManager.default.fileExists(atPath: s.data.appending(path: "hashes.json").path))
+        await s.indexer.unlink()
+        #expect(!s.indexer.folder.isLinked && s.indexer.waiting == 0 && s.indexer.lastRun == nil)
+        #expect(s.indexer.phase == .idle)
+        #expect(!FileManager.default.fileExists(atPath: s.data.appending(path: "queue.json").path))
+        #expect(!FileManager.default.fileExists(atPath: s.data.appending(path: "hashes.json").path))
+    }
+
+    @Test func aScanIsQueuedWithItsText() async throws {
+        let s = try setup()
+        defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
+        let file = try write("%PDF scan", "2026-11-04_Brief.pdf", in: s.root)
+        try await s.indexer.enqueue(file: file, pages: ["Seite eins", "Seite zwei"])
+        #expect(await until { KnowledgeStubProtocol.requests.contains("PUT /api/v1/families/f1/knowledge/documents") })
+        #expect(await until { s.indexer.waiting == 0 })
+        let put = try #require(KnowledgeStubProtocol.bodies("PUT").first)
+        #expect(put["path"] as? String == "2026-11-04_Brief.pdf" && put["pages"] as? [String] == ["Seite eins", "Seite zwei"])
+        // The next run finds its hash in the cache.
+        let cache = KnowledgeHashCache.load(s.data.appending(path: "hashes.json"))
+        #expect(cache.entries["2026-11-04_Brief.pdf"]?.hash == put["hash"] as? String)
+        // A file elsewhere isn't the folder's.
+        let elsewhere = try folder()
+        defer { try? FileManager.default.removeItem(at: elsewhere) }
+        await #expect(throws: KnowledgeFolderError.notInFolder) {
+            try await s.indexer.enqueue(file: try write("x", "x.pdf", in: elsewhere), pages: [])
+        }
+    }
+}

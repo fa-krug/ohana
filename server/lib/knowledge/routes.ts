@@ -2,9 +2,10 @@
 // viewer every path under /knowledge answers 404 as for a family without the module, so nothing
 // tells them it exists.
 //
-// GET  /knowledge/folder                       {folder: {id, createdAt} | null}
-// POST /knowledge/folder                       {folder} (201 when this made it)
-// POST /knowledge/manifest                     {folderId, files: [{path, size, mtime, hash, tags}]} → {upload: [path]}
+// GET  /knowledge/folder                       {folder: {id, createdAt, lastManifestAt, lastManifestDevice} | null}
+// POST /knowledge/folder                       {replace?} → {folder} (201 when this made it; replace: a new one, the old one's documents gone)
+// GET  /knowledge/status                       {folder | null, counts: {pending, ready, failed, missing, excluded}, chunks}
+// POST /knowledge/manifest                     {folderId, device?, files: [{path, size, mtime, hash | null, tags}]} → {upload: [path]}
 // PUT  /knowledge/documents                    {folderId, path, hash, size, mtime, tags, pages: [text]} → 202 {id, status}
 // GET  /knowledge/documents?q=&tag=&folder=&status=&cursor=&limit=   {documents, nextCursor}
 // GET  /knowledge/documents/{id}               {document} (with facts and chunks)
@@ -14,10 +15,10 @@
 
 import type { Ctx, Loaded } from "@/lib/api/family-api";
 import { HttpError, json } from "@/lib/api/http";
-import { STATUSES, type DocumentStatus, cleanPages, getDocument, listDocuments, listTags, reindexDocument, setExcluded, uploadDocument } from "./documents";
-import { ensureFolder, folderDto, getFolder, requireFolder } from "./folders";
+import { STATUSES, type DocumentStatus, cleanPages, countDocuments, getDocument, listDocuments, listTags, reindexDocument, setExcluded, uploadDocument } from "./documents";
+import { ensureFolder, folderDto, getFolder, replaceFolder, requireFolder } from "./folders";
 import { cleanFileInfo, cleanFolderFilter, readLimitedBody } from "./input";
-import { applyManifest, cleanManifestFiles } from "./manifest";
+import { applyManifest, cleanDevice, cleanManifestFiles } from "./manifest";
 
 /** Request bodies: a manifest of 20 000 files, an upload's 2 MB of text as JSON. */
 const MAX_MANIFEST_BODY = 16_000_000;
@@ -49,6 +50,10 @@ function route(ctx: Ctx, { family }: Loaded): Promise<Response> {
       if (id !== undefined) throw notFound();
       if (method === "GET") return folderRoute(ctx, familyId);
       if (method === "POST") return createFolderRoute(ctx, familyId);
+      throw notAllowed();
+    case "status":
+      if (id !== undefined) throw notFound();
+      if (method === "GET") return statusRoute(ctx, familyId);
       throw notAllowed();
     case "manifest":
       if (id !== undefined) throw notFound();
@@ -87,16 +92,29 @@ async function folderRoute(ctx: Ctx, familyId: string): Promise<Response> {
   return json({ folder: folder ? folderDto(folder) : null });
 }
 
+/** The family's folder, made on first use; with `{replace: true}` a new one in place of the old. */
 async function createFolderRoute(ctx: Ctx, familyId: string): Promise<Response> {
-  const { folder, created } = ensureFolder(ctx.db, familyId, ctx.requireUser().id, ctx.now);
+  const body = await readLimitedBody(ctx.req, 10_000);
+  if (body.replace !== undefined && typeof body.replace !== "boolean") throw new HttpError(400, "replace must be true or false");
+  const userId = ctx.requireUser().id;
+  if (body.replace) return json({ folder: folderDto(replaceFolder(ctx.db, familyId, userId, ctx.now)) }, 201);
+  const { folder, created } = ensureFolder(ctx.db, familyId, userId, ctx.now);
   return json({ folder: folderDto(folder) }, created ? 201 : 200);
+}
+
+/** The settings screen's view: the folder (with the last manifest), documents by status, chunks. */
+async function statusRoute(ctx: Ctx, familyId: string): Promise<Response> {
+  const folder = getFolder(ctx.db, familyId);
+  const { counts, chunks } = countDocuments(ctx.db, familyId);
+  return json({ folder: folder ? folderDto(folder) : null, counts, chunks });
 }
 
 async function manifestRoute(ctx: Ctx, familyId: string): Promise<Response> {
   const body = await readLimitedBody(ctx.req, MAX_MANIFEST_BODY);
   const folder = requireFolder(ctx.db, familyId, body.folderId);
+  const device = cleanDevice(body.device);
   const files = cleanManifestFiles(body.files);
-  return json(applyManifest(ctx.db, folder.id, files, ctx.now));
+  return json(applyManifest(ctx.db, folder.id, files, ctx.now, device));
 }
 
 async function uploadRoute(ctx: Ctx, familyId: string): Promise<Response> {

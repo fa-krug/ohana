@@ -103,10 +103,19 @@ final class AppModel {
     /// Whether this model tells the widgets what to show (`WidgetSync`): the app's, not the
     /// previews' and tests'.
     private var syncsWidgets = false
+    #if os(macOS)
+    /// Reads the knowledge folders every 15 minutes while the app runs (`indexKnowledge`).
+    @ObservationIgnored private var knowledgeTimer: Timer?
+    #endif
 
     init() {
         syncsWidgets = true
         Connectivity.shared.start()
+        #if os(macOS)
+        knowledgeTimer = Timer.scheduledTimer(withTimeInterval: 15 * 60, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.indexKnowledge() }
+        }
+        #endif
         Connectivity.shared.whenReconnected { [weak self] in
             guard let self, !isDemo else { return }
             // Offline at launch, the account is asked again (and the screens loaded ahead then).
@@ -170,6 +179,7 @@ final class AppModel {
             // It may be another account: nothing of the last one shows.
             ResponseCache(server: server).clear()
             ChoresStore.removeQueues(server: server)
+            KnowledgeIndexer.removeAll(server: server)
             connect(server: server, token: token)
             SharedConnection.remember(server: server, familyID: selectedFamilyID)
             await refresh()
@@ -291,6 +301,7 @@ final class AppModel {
     private func prefetch() {
         guard answered, phase == .ready, let family = selectedFamily, let context = context(for: family) else { return }
         sendQueuedChanges()
+        indexKnowledge()
         prefetcher.start(context)
     }
 
@@ -299,6 +310,19 @@ final class AppModel {
     func sendQueuedChanges() {
         guard !isDemo, let family = selectedFamily, let context = context(for: family) else { return }
         context.sendQueuedChanges(me: me?.id)
+    }
+
+    /// Reads the knowledge folders linked on this device into the server's index, for every family
+    /// the account edits (`FamilyContext.indexKnowledge`): at launch, when the app is active again,
+    /// the connection back, and every 15 minutes on the Mac. Each family's indexer runs at most
+    /// every few minutes this way.
+    func indexKnowledge() {
+        guard !isDemo, answered, phase == .ready, let server = serverURL, serverInfo?.hasKnowledge == true else { return }
+        for family in families where family.canEdit {
+            let location = KnowledgeLocation(server: server, familyID: family.id)
+            guard KnowledgeFolder(location: location).isLinked else { continue }
+            context(for: family)?.indexKnowledge()
+        }
     }
 
     /// Signs the device out: the server forgets its token, the app forgets the server and shows
@@ -317,6 +341,7 @@ final class AppModel {
             ShoppingReminders.forget(server: client.baseURL)
             CalendarStore.removeQueues(server: client.baseURL)
             ChoresStore.removeQueues(server: client.baseURL)
+            KnowledgeIndexer.removeAll(server: client.baseURL)
             AppleCalendarSync.shared.removeAll(server: client.baseURL)
             SharedConnection.forget()
             if syncsWidgets { WidgetSync.reload() }
@@ -450,6 +475,7 @@ final class FamilyContext {
     fileprivate func adoptRevisions(from other: FamilyContext) {
         revisions = other.revisions
         if let store = other.choresStore { adopt(store) }
+        knowledgeIndexer = other.knowledgeIndexer
     }
 
     // MARK: Chores
@@ -476,6 +502,33 @@ final class FamilyContext {
         guard isEnabled(.chores), choresStore != nil || ChoresStore.hasQueue(for: api) else { return }
         if chores.me == nil { chores.me = me }
         chores.retryNow()
+    }
+
+    // MARK: Knowledge
+
+    @ObservationIgnored private var knowledgeIndexer: KnowledgeIndexer?
+
+    /// The family's knowledge indexer on this device; made when first needed, kept while the
+    /// family's context is (a newer context of the family takes it over).
+    var knowledge: KnowledgeIndexer {
+        if let knowledgeIndexer { return knowledgeIndexer }
+        let indexer = KnowledgeIndexer(api: api)
+        knowledgeIndexer = indexer
+        return indexer
+    }
+
+    /// The knowledge base is this device's to read: the server has it on, the account edits the
+    /// family (viewers don't see it), and it isn't the demo.
+    var knowledgeAvailable: Bool {
+        !api.client.isDemo && canEdit && serverInfo?.hasKnowledge == true
+    }
+
+    /// Reads the family's knowledge folder when one is linked on this device: `force` (*Read now*)
+    /// at once, else unless it was read a few minutes ago.
+    func indexKnowledge(force: Bool = false) {
+        guard knowledgeAvailable, knowledge.folder.isLinked else { return }
+        let indexer = knowledge
+        Task { force ? await indexer.run() : await indexer.runIfDue() }
     }
 
     // MARK: Routes

@@ -1,0 +1,57 @@
+{
+  "%lld files couldn’t be loaded from iCloud.": {
+    "en": {
+      "one": "%lld file couldn’t be loaded from iCloud.",
+      "other": "%lld files couldn’t be loaded from iCloud."
+    },
+    "de": {
+      "one": "%lld Datei konnte nicht aus iCloud geladen werden.",
+      "other": "%lld Dateien konnten nicht aus iCloud geladen werden."
+    }
+  },
+  "%lld files wait to be loaded from iCloud.": {
+    "en": {
+      "one": "%lld file waits to be loaded from iCloud.",
+      "other": "%lld files wait to be loaded from iCloud."
+    },
+    "de": {
+      "one": "%lld Datei wartet darauf, aus iCloud geladen zu werden.",
+      "other": "%lld Dateien warten darauf, aus iCloud geladen zu werden."
+    }
+  },
+  "%lld of %lld": "%lld von %lld",
+  "Another device now reads a different folder.": "Ein anderes Gerät liest jetzt einen anderen Ordner.",
+  "Change…": "Ändern …",
+  "Checking files": "Dateien werden geprüft",
+  "Choose Again…": "Erneut auswählen …",
+  "Documents": "Dokumente",
+  "Files this device can’t read: %lld": "Dateien, die dieses Gerät nicht lesen kann: %lld",
+  "Index": "Index",
+  "Its text couldn’t be read (a locked PDF, or text recognition failed).": "Der Text konnte nicht gelesen werden (ein geschütztes PDF, oder die Texterkennung ist fehlgeschlagen).",
+  "Knowledge": "Wissen",
+  "Last read": "Zuletzt gelesen",
+  "Looking through the folder…": "Ordner wird durchsucht …",
+  "Missing": "Fehlend",
+  "No folder chosen on this device": "Auf diesem Gerät kein Ordner ausgewählt",
+  "Not available": "Nicht verfügbar",
+  "Not found": "Nicht gefunden",
+  "Ohana can’t open the folder “%@”, so nothing was sent. It’s tried again next time.": "Ohana kann den Ordner „%@“ nicht öffnen, deshalb wurde nichts gesendet. Beim nächsten Mal wird es erneut versucht.",
+  "Ohana can’t open this folder.": "Ohana kann diesen Ordner nicht öffnen.",
+  "Only the files’ text goes to the family’s server, never the files.": "Nur der Text der Dateien geht an den Server der Familie, nie die Dateien selbst.",
+  "Read Now": "Jetzt lesen",
+  "Reading and sending": "Wird gelesen und gesendet",
+  "Remove from This Device": "Von diesem Gerät entfernen",
+  "Replaced": "Ersetzt",
+  "Stop reading this folder on this device?": "Diesen Ordner auf diesem Gerät nicht mehr lesen?",
+  "The file isn’t in the knowledge folder.": "Die Datei liegt nicht im Wissensordner.",
+  "The folder looks empty.": "Der Ordner scheint leer zu sein.",
+  "The knowledge folder can’t be found any more. Choose it again.": "Der Wissensordner ist nicht mehr zu finden. Wähle ihn erneut aus.",
+  "The knowledge folder holds more than 20,000 files. Choose a folder with fewer.": "Der Wissensordner enthält mehr als 20.000 Dateien. Wähle einen Ordner mit weniger Dateien.",
+  "This device can’t read this format.": "Dieses Gerät kann dieses Format nicht lesen.",
+  "This family already has a knowledge folder, read by “%@”. Use this folder instead?": "Diese Familie hat schon einen Wissensordner, gelesen von „%@“. Stattdessen diesen Ordner verwenden?",
+  "This family already has a knowledge folder. Use this folder instead?": "Diese Familie hat schon einen Wissensordner. Stattdessen diesen Ordner verwenden?",
+  "This folder belongs to another family. Use it for this family instead?": "Dieser Ordner gehört zu einer anderen Familie. Stattdessen für diese Familie verwenden?",
+  "This folder was this family’s knowledge folder once, but the family has another one now. Use this folder instead?": "Dieser Ordner war einmal der Wissensordner dieser Familie, inzwischen hat sie einen anderen. Stattdessen diesen Ordner verwenden?",
+  "Use This Folder": "Diesen Ordner verwenden",
+  "Waiting": "Wartend"
+}
