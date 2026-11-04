@@ -18,6 +18,7 @@ const icons: Record<string, string[]> = {
   archive: ["M3 3h18v5H3z", "M5 8v11a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8", "M10 12h4"],
   bell: ["M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9", "M10.3 21a1.94 1.94 0 0 0 3.4 0"],
   arrow: ["M5 12h14", "m12 5 7 7-7 7"],
+  listCheck: ["m3 17 2 2 4-4", "m3 7 2 2 4-4", "M13 6h8", "M13 12h8", "M13 18h8"],
   github: [],
 }
 
@@ -36,6 +37,13 @@ const dayNumber = (i: number) => i - 2
 const shopping = [
   { day: "Due Saturday", items: [["500 g Tomatoes", true], ["1 bunch Basil", true], ["3 Lemons", false]] },
   { day: "Due Tuesday", items: [["2 Mozzarella", false], ["500 g Greek yogurt", false]] },
+]
+
+// One day of chores, by part of the day; the avatar takes the member's color.
+const chores = [
+  { part: "Morning", items: [{ title: "Feed the cat", who: "E", color: "#8b5cf6", note: "Every day", done: true }] },
+  { part: "Day", items: [{ title: "Take out the recycling", who: "T", color: "#f97316", note: "Every second Thursday", done: false, bell: true }] },
+  { part: "Evening", items: [{ title: "Water the plants", who: "N", color: "#0ea5e9", note: "18:30", done: false }, { title: "Pack the swim bag", who: "A", color: "#0d9488", note: "Every Tuesday", done: false, bell: true }] },
 ]
 
 const spending = [
@@ -89,7 +97,7 @@ const faqs = [
             <span class="gradient-text">One app.</span>
           </h1>
           <p class="lead">
-            Ohana brings your family's calendar, money, meals and doctor's appointments together,
+            Ohana brings your family's calendar, money, meals, chores and doctor's appointments together,
             with an AI assistant that helps across all of them. It runs on your own server, so
             your family's life stays at home.
           </p>
@@ -119,6 +127,7 @@ const faqs = [
                 <div class="side-item"><span class="sq fin" />Finance</div>
                 <div class="side-item"><span class="sq meal" />Meals</div>
                 <div class="side-item"><span class="sq appt" />Appointments</div>
+                <div class="side-item"><span class="sq chore" />Chores</div>
               </div>
               <div class="mac-main">
                 <div class="mac-title">July <small>2027</small></div>
@@ -203,7 +212,7 @@ const faqs = [
     <section id="features" class="container features">
       <div class="section-head">
         <p class="kicker">Everything in one place</p>
-        <h2>Five apps your family no longer needs</h2>
+        <h2>One app instead of six</h2>
         <p>One shared home for the things that keep a family running, built to work together.</p>
       </div>
 
@@ -215,8 +224,8 @@ const faqs = [
           <p>Vacation, public holidays, sick days and day-care closures in one view, so you spot the days nobody can cover long before they arrive.</p>
           <ul class="checks">
             <li>Who's off, who's home, and the gaps in between</li>
-            <li>Appointments, events and everyone's birthdays</li>
-            <li>A live feed for Apple, Google or any calendar app</li>
+            <li>Events over several days or repeating, and everyone's birthdays</li>
+            <li>Two-way sync with Apple Calendar: iCloud, Google or Exchange</li>
           </ul>
         </div>
         <div class="feature-visual">
@@ -329,14 +338,43 @@ const faqs = [
         </div>
       </div>
 
-      <!-- Assistant -->
+      <!-- Chores -->
       <div class="feature">
+        <div class="feature-copy">
+          <span class="badge chore"><svg viewBox="0 0 24 24" class="icon"><path v-for="d in icons.listCheck" :key="d" :d="d" /></svg>Chores</span>
+          <h3>Everyone knows what's theirs</h3>
+          <p>Give chores to anyone in the family, with or without a phone. Each day shows them by morning, day and evening, with what's overdue on top.</p>
+          <ul class="checks">
+            <li>Single or repeating, like "every second Saturday"</li>
+            <li>Tick them off, each time they come round</li>
+            <li>A notification when the chores you chose are due</li>
+          </ul>
+        </div>
+        <div class="feature-visual">
+          <div class="panel">
+            <div class="panel-head"><b>Thursday</b><span class="chip">Today</span></div>
+            <div v-for="p in chores" :key="p.part" class="part">
+              <small>{{ p.part }}</small>
+              <div v-for="c in p.items" :key="c.title" class="chore-row" :class="{ done: c.done }">
+                <span class="box"><svg v-if="c.done" viewBox="0 0 24 24" class="icon"><path v-for="d in icons.check" :key="d" :d="d" /></svg></span>
+                <div class="chore-text"><b>{{ c.title }}</b><small>{{ c.note }}</small></div>
+                <svg v-if="c.bell" viewBox="0 0 24 24" class="icon bell"><path v-for="d in icons.bell" :key="d" :d="d" /></svg>
+                <span class="who" :style="{ background: c.color }">{{ c.who }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Assistant -->
+      <div class="feature reverse">
         <div class="feature-copy">
           <span class="badge ai"><svg viewBox="0 0 24 24" class="icon"><path v-for="d in icons.sparkles" :key="d" :d="d" /></svg>Assistant</span>
           <h3>An assistant that knows your family</h3>
-          <p>Ask in plain words. The assistant reads and changes your calendar, finances, meals and appointments, and every change it makes can be undone with a tap. It even keeps your reminders in order, once you say OK.</p>
+          <p>Ask in plain words. The assistant reads and changes your calendar, finances, meals, chores and appointments, and every change it makes can be undone with a tap. Once you say OK, it changes your Apple Calendar and reminders too.</p>
           <ul class="checks">
             <li>Any AI you like, in the cloud or running at home</li>
+            <li>Turns a school letter or an invitation into events and tasks</li>
             <li>Read-only for viewers, so nothing changes by accident</li>
             <li>Keeps working when you close the app</li>
           </ul>
@@ -372,6 +410,8 @@ const faqs = [
         <div class="link-card"><div class="flow"><span class="sq cal" />→<span class="sq meal" /></div><b>Away days skip the meal plan</b><p>Off to Grandma's? No groceries bought for meals you won't cook.</p></div>
         <div class="link-card"><div class="flow"><span class="sq appt" />→<span class="sq cal" /></div><b>Booked appointments land in the calendar</b><p>With the time, the practice and who it's for.</p></div>
         <div class="link-card"><div class="flow"><span class="sq meal" />→<span class="sq rem" /></div><b>The meal plan writes your shopping list</b><p>What the week's dinners need lands in Reminders, due on shopping day.</p></div>
+        <div class="link-card"><div class="flow"><span class="sq letter" />→<span class="sq cal" /><span class="sq rem" /></div><b>Letters become dates and tasks</b><p>Scan a school letter: its dates go into the calendar and its tasks into Reminders, the ones you tick.</p></div>
+        <div class="link-card"><div class="flow"><span class="sq cal" />→<span class="sq ov" /></div><b>A look at the week ahead</b><p>Every week Ohana checks the next two weeks for each person: overlaps, tight transfers, nobody to drive the kids, birthdays while away.</p></div>
         <div class="link-card"><div class="flow"><span class="sq ai" />→<span class="sq ov" /></div><b>One assistant for all of it</b><p>One question can touch the calendar, the meal plan and your reminders.</p></div>
       </div>
     </section>
@@ -484,6 +524,7 @@ const faqs = [
   --meal: #f97316;
   --appt: #e11d48;
   --ai: #8b5cf6;
+  --chore: #6366f1;
   --ink: var(--vp-c-text-1);
   --muted: var(--vp-c-text-2);
   --card: var(--vp-c-bg);
@@ -577,7 +618,8 @@ h1 { font-size: clamp(42px, 6.2vw, 70px); line-height: 1.04; font-weight: 800; m
 .sq { display: inline-block; width: 12px; height: 12px; border-radius: 4px; }
 .sq.ov { background: var(--teal); } .sq.cal { background: var(--cal); } .sq.fin { background: var(--fin); }
 .sq.meal { background: var(--meal); } .sq.appt { background: var(--appt); } .sq.ai { background: var(--ai); }
-.sq.rem { background: #64748b; }
+.sq.chore { background: var(--chore); }
+.sq.rem { background: #64748b; } .sq.letter { background: #a16207; }
 .mac-main { padding: 16px 18px; }
 .mac-title { font-size: 20px; font-weight: 700; margin-bottom: 10px; }
 .mac-title small { color: var(--muted); font-weight: 500; font-size: 14px; }
@@ -655,11 +697,13 @@ h1 { font-size: clamp(42px, 6.2vw, 70px); line-height: 1.04; font-weight: 800; m
 .badge.fin { background: color-mix(in srgb, var(--fin) 14%, transparent); color: #15803d; }
 .badge.appt { background: color-mix(in srgb, var(--appt) 12%, transparent); color: #be123c; }
 .badge.ai { background: color-mix(in srgb, var(--ai) 14%, transparent); color: #6d28d9; }
+.badge.chore { background: color-mix(in srgb, var(--chore) 14%, transparent); color: #4338ca; }
 :global(.dark .landing .badge.cal) { color: #7dd3fc; }
 :global(.dark .landing .badge.meal) { color: #fdba74; }
 :global(.dark .landing .badge.fin) { color: #86efac; }
 :global(.dark .landing .badge.appt) { color: #fda4af; }
 :global(.dark .landing .badge.ai) { color: #c4b5fd; }
+:global(.dark .landing .badge.chore) { color: #a5b4fc; }
 .checks { list-style: none; padding: 0; margin: 22px 0 0; display: grid; gap: 10px; }
 .checks li { position: relative; padding-left: 30px; font-size: 15.5px; }
 .checks li::before {
@@ -696,6 +740,18 @@ h1 { font-size: clamp(42px, 6.2vw, 70px); line-height: 1.04; font-weight: 800; m
 .item.done { color: var(--muted); text-decoration: line-through; }
 .box { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line); color: #fff; font-size: 11px; }
 .item.done .box { background: var(--meal); border-color: var(--meal); }
+.part { margin-bottom: 10px; }
+.part:last-child { margin-bottom: 0; }
+.part > small { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 6px; }
+.chore-row { display: flex; align-items: center; gap: 11px; padding: 9px 11px; border-radius: 11px; background: var(--soft); margin-bottom: 6px; }
+.chore-row .box { flex: none; }
+.chore-row.done .box { background: var(--chore); border-color: var(--chore); }
+.chore-text { flex: 1; min-width: 0; display: grid; }
+.chore-text b { font-size: 14px; font-weight: 600; }
+.chore-text small { font-size: 12px; color: var(--muted); }
+.chore-row.done .chore-text b { color: var(--muted); text-decoration: line-through; }
+.chore-row .bell { width: 15px; height: 15px; color: var(--chore); flex: none; }
+.who { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; color: #fff; font-size: 11px; font-weight: 700; flex: none; }
 
 .bars { display: grid; gap: 14px; margin: 6px 0 18px; }
 .bar-row { display: grid; grid-template-columns: 84px 1fr 64px; align-items: center; gap: 12px; font-size: 14px; }
@@ -725,7 +781,7 @@ h1 { font-size: clamp(42px, 6.2vw, 70px); line-height: 1.04; font-weight: 800; m
 
 /* Connected */
 .connected { padding-top: 16px; padding-bottom: 112px; }
-.links { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+.links { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
 .link-card { padding: 22px; border-radius: 18px; background: var(--soft); border: 1px solid var(--line); }
 .link-card b { display: block; font-size: 16px; line-height: 1.35; margin: 14px 0 8px; }
 .link-card p { color: var(--muted); font-size: 14.5px; line-height: 1.55; }

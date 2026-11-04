@@ -18,12 +18,12 @@ Only `APP_URL` and `AUTH_SECRET` are required. Developers running from source us
 | Variable | Default | |
 | --- | --- | --- |
 | `ENCRYPTION_KEY` | derived from `AUTH_SECRET` | A separate key for secrets at rest (32 random bytes, base64: `openssl rand -base64 32`). Changing it makes the stored secrets unreadable. |
-| `DISABLED_MODULES` | none | Modules turned off, comma list: `finance`, `meals`, `appointments`, `assistant`. The calendar is always on. See [Modules](/self-hosting#modules). |
+| `DISABLED_MODULES` | none | Modules turned off, comma list: `finance`, `meals`, `appointments`, `chores`, `assistant`. The calendar is always on. See [Modules](/self-hosting#modules). |
 | `PORT` | `8000` (image), `3000` (source) | The port the server listens on. |
 | `HOST` | `0.0.0.0` | The address the server listens on. |
 | `DATABASE_FILE` | `/app/data/ohana.db` (image), `./data/ohana.db` (source) | The SQLite database. |
-| `MEDIA_ROOT` | `/app/data/media` (image), `./data/media` (source) | Recipe photos. |
-| `TZ` | `Europe/Berlin` (compose) | Time zone of the daily jobs (backups, notifications). |
+| `MEDIA_ROOT` | `/app/data/media` (image), `./data/media` (source) | Recipe and member photos. |
+| `TZ` | `Europe/Berlin` (compose) | Time zone of the daily jobs (backups, notifications) and of when chores are due. |
 
 ## Passkeys
 
@@ -46,6 +46,7 @@ Only `APP_URL` and `AUTH_SECRET` are required. Developers running from source us
 
 | Variable | Default | |
 | --- | --- | --- |
+| `PUSH_RELAY_URL` | `https://ohana-push.fa-krug.de` | The push relay for notifications to the app; empty turns them off. See [Notifications to the app](/self-hosting#notifications-in-the-app). |
 | `NOTIFY_HOUR` | `7` | From this hour: days nobody covers in the next two weeks. |
 | `DIGEST_WEEKDAY` | `0` | The day of the week ahead (the weekly digest): 0 = Sunday … 6 = Saturday. |
 | `DIGEST_HOUR` | `18` | From this hour (server time) on that day the week ahead is sent. |
@@ -59,6 +60,7 @@ Only `APP_URL` and `AUTH_SECRET` are required. Developers running from source us
 | `ASSISTANT_TICK_MS` | `1000` | How often the worker looks for chats waiting for an answer. |
 | `ASSISTANT_MAX_CONCURRENT` | `4` | Answers written at once. |
 | `ASSISTANT_NOTIFY_AFTER_SECONDS` | `30` | The "assistant finished" notification is only sent for answers that took longer. |
+| `IMPORT_MAX_CONCURRENT` | `2` | Recipe imports shared from Safari run in the worker; this many at once. |
 
 ## Appointment searches
 

@@ -135,7 +135,7 @@ selected family and the Reminders list for each family's shopping (in the app's 
 **copy of what your server last sent** (your account, your families and the screens you opened,
 and what it loads ahead in the background: calendar, meal plan, recipes and so on), so the app
 opens on it at once and you can read it without a connection, changes made offline (calendar
-days and notes) until they're sent, and the cook view's running timers. The copy is kept in the
+days and notes, chores) until they're sent, and the cook view's running timers. The copy is kept in the
 app's cache, which the system may empty when space runs low. If you use the **widgets**, they
 load your family's overview from the same server with the same token and keep a copy of it on
 your device (today's and tomorrow's calendar, tonight's dinner, found appointments), so they can
@@ -150,11 +150,13 @@ the widgets then delete their copy. Deleting the app removes the rest.
 The app only asks for these permissions, and only when you use the feature:
 
 - **Camera and photos:** to add pictures to recipes. The picture is uploaded to your server.
-  The same for a family member's profile picture: it is uploaded to your server, made smaller
-  there and shown only to the members of that family. And to scan receipts: the receipt is read on your device (Apple's text recognition); the
+  The same for a family member's profile picture: it is uploaded to your server, which keeps it
+  (at most 2048 pixels) with the part you chose, so you can change the crop later, and shows it
+  only to the members of that family; removing the picture deletes both. And to scan receipts: the receipt is read on your device (Apple's text recognition); the
   picture stays there, only the amount, date and shop you save are sent to your server.
-  And to scan letters (a school letter, a notice, an invitation): the letter is read on your
-  device the same way and the picture stays there. With the assistant on, its text is sent to
+  And to scan letters (a school letter, a notice, an invitation), or read the photos and PDFs you
+  share with Ohana or open in it: the letter is read on your device the same way and the picture
+  stays there. With the assistant on, its text is sent to
   your server and from there to the AI provider your family set up, which finds the dates,
   tasks and deadlines in it (also when you attach a letter to a chat). What it finds is only
   added (to your family's calendar, or as reminders) once you choose it. If you save a scanned letter or receipt as a PDF, it goes only into the folder you pick
@@ -209,7 +211,10 @@ When you import a recipe from a web page (the *Save to Ohana* share extension in
 Shortcuts action or the address field in the app), the page's address and, from Safari on iPhone
 and iPad, its text are sent to your server. The server loads the page and its photo itself when
 needed and sends the page's content to the AI provider your family set up for the assistant, as
-for any request to the assistant.
+for any request to the assistant. A page shared from Safari is imported in the background: your
+server keeps the request (address, text, your language) until the recipe is saved and then
+deletes it, sends you a notification, and keeps a failed import for at most 7 days so you can try
+it again or remove it.
 
 ### Demo mode
 

@@ -36,9 +36,9 @@ server behind, quietly. Without a connection the copy stays readable and is repl
 as the server answers again; only an error the server answers shows, as a message at the top.
 
 Some changes work offline too and are sent when you're back online, even after quitting the
-app: **calendar days and notes**. If the server refuses one (say, a type was deleted
-meanwhile), the server wins: the change is dropped, a message says so, and the screen
-shows the server's state. Other changes need the server. Signing out removes the copy and the
+app: **calendar days and notes**, and **chores** (new, changed, deleted or ticked off). If the
+server refuses one (say, a type was deleted meanwhile), the server wins: the change is dropped,
+a message says so, and the screen shows the server's state. Other changes need the server. Signing out removes the copy and the
 changes not sent yet.
 
 ## Apple Calendar
@@ -56,9 +56,23 @@ goes back. Several devices can sync into the same iCloud calendar without copyin
 
 ## Families, roles and modules
 
-- If you're in several families, switch between them at the top of the sidebar.
+- If you're in several families, switch between them in the menu at the top of the sidebar (iPad
+  and Mac). On iPhone the family page sits behind the tabs, as in Mail: tap the family button at
+  the top left or swipe in from the left edge. It lists your families and opens appointments,
+  chores, *Scan letter* and the settings.
 - **Viewers** see everything but can't change anything; the app hides the editing controls.
 - Modules the server turned off disappear from the app.
+- On iPad and Mac you can drag a recipe onto a day of the meal plan, a meal onto another day, or a
+  calendar event onto another day.
+- Not sure what a button does? Long-press it for a tip (on the Mac, hover over it).
+
+## Members, colors and photos
+
+Settings → Household lists the family. Tap someone to open their page: pick their **color**
+(entry types and chores show in it) and their birthday. Tap the big picture to add a **photo**,
+then pinch and drag to choose what shows in the circle; tap it again later to change the crop,
+or use its menu to choose another picture or remove it. You change your own; editors change
+anyone's, including the people without an account.
 
 ## Shopping in Reminders
 
@@ -68,6 +82,15 @@ family, on each device), each one due on its shopping day. Tick, edit and add it
 Reminders, or share the list with the family over iCloud. When the meal plan changes, the app
 updates the items it wrote; what you changed or deleted yourself stays as it is. Viewers can use
 it too.
+
+## Chores
+
+Chores shows one day at a time, in **Morning**, **Day** and **Evening**, with what's overdue on
+top of today; move between days with the arrows or the date, or see *All Chores*. Tap the circle
+to tick a chore off (a repeating one for that day) and the bell to choose whether it notifies
+you. New chores ask for whom, when (a part of the day, or a time), how they repeat and who gets
+the notification. Changes show at once and are sent in the background, offline too. A chore's
+notification opens its day.
 
 ## Search
 
@@ -84,8 +107,36 @@ The ✨ button at the top right of every page opens the assistant next to what y
 and *Ask Ohana* is available as a Shortcut and to Siri.
 
 If you let the app use Reminders, the assistant can read your open reminders (any list) and
-suggest changes to them, such as adding groceries to your shopping list. It never changes them by
-itself: the chat shows what it wants to do, with **Apply** and **Don't apply**.
+suggest changes to them, such as adding groceries to your shopping list. With access to your
+calendars it sees your Apple Calendar events and can suggest new ones or changes. It never changes
+either by itself: the chat shows what it wants to do, with **Apply** and **Don't apply**.
+
+The paperclip attaches a scanned letter: the assistant lists its events, tasks and deadlines, and
+you tick which to add.
+
+## Letters and scanning
+
+*Scan letter* (in the family menu, as a Shortcut, or by sharing a photo or PDF with Ohana) scans a
+letter with the camera; on the Mac you pick photos or a PDF. The text is read on the device. The
+review suggests a name ("date_Person_Title"), the date and tags (only ones you already use, such as
+the name of whose letter it is), and saves the letter as a **searchable PDF** into the folder you
+chose last. With the assistant on, editors also see the **events, tasks and deadlines** found in
+it, ticked and editable: *Done* adds the events to the family's calendar and the tasks and
+deadlines to Reminders. Receipts scanned in Finance can be kept as PDFs the same way.
+
+## Recipes from the web
+
+In the recipe list, *Import from Web* takes a page's address and saves the recipe on *Want to
+try*. In Safari, share the page to **Save to Ohana**: it tells you whether the page is a recipe,
+then hands it to your server and closes. The recipe shows as a placeholder until it's ready, and
+you get a notification; a failed import stays there to try again.
+
+## Siri, Shortcuts and Spotlight
+
+Shortcuts and Siri can **ask Ohana**, **add to the shopping list** (a reminder in the family's
+list), **add an event**, **import a recipe** and **scan a letter**, most without opening the app.
+Your recipes are in Spotlight. The cook view turns durations in a step into **timers**, with a
+notification when they're done and, on iPhone, a Live Activity on the Lock Screen.
 
 ## Widgets
 
@@ -97,9 +148,16 @@ tap opens the same thing in the app. Before you connect a server they ask you to
 
 ## Notifications and links
 
-Ohana's notifications reach you through the channels your family set up (Pushover, Pushbullet,
-Telegram, email, ntfy). Their links (`https://<your server>/f/…`) open a page with an **Open the
-app** button that opens the same place in the app.
+Turn on *Settings → Notifications on this device* to get Ohana's notifications in the app, and
+mute the families you don't want to hear from on this device. They go through fa-krug's push relay,
+encrypted so that only your device can read them; what is sent is chosen per family under
+*Household → Notifications* (and per appointment search, and per chore by its bell). A tap opens
+the place it's about. Your server's operator can turn the relay off
+([configuration](/configuration)).
+
+The channels your family set up (Pushover, Pushbullet, Telegram, email, ntfy) get notifications
+too. Their links (`https://<your server>/f/…`) open a page with an **Open the app** button that
+opens the same place in the app.
 
 ## Passkeys and your account
 

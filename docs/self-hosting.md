@@ -107,7 +107,7 @@ labels like `traefik.http.routers.ohana.rule=Host(\`ohana.example.com\`)` and
 
 The family uses the app for iPhone, iPad and Mac. Enter the server's address, sign in in the
 sheet that opens (passkeys work there), confirm *Connect*, and the app gets its own API token
-(remove it any time under *Account → API tokens* in the app). Building and distributing the
+(it shows under *Settings → Account → Signed-in devices*, where it can be signed out). Building and distributing the
 app yourself: [apple/README.md](../apple/README.md).
 
 Links in notifications (`https://ohana.example.com/f/…`) open a page with an *Open the app*
@@ -156,7 +156,10 @@ every server sends them through a small **push relay** run by the project
 - Each person turns them on per device in the app (*Settings → Notifications on this device*),
   and can leave out families there. *Settings → Household → Notifications* chooses which
   events also go to the app (all of them by default); each appointment search has its own
-  *Ohana app* switch. "Assistant finished" goes only to the person whose chat it was.
+  *Ohana app* switch. "Assistant finished" goes only to the person whose chat it was. Chores
+  that are due (by their time, or 07:00 / 12:00 / 18:00 for the morning, day and evening, in the
+  server's `TZ`) go to the app only, to those who chose the chore, and so does "your recipe is
+  imported" for a recipe shared from Safari.
 - What a notification says is **encrypted end to end**: the app makes a key and gives it only to
   your server, the server encrypts every notification with it, and only the device can read it.
   The relay and Apple see that a notification goes to a device, from which server and when,

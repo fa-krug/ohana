@@ -1,7 +1,8 @@
 # Development
 
-The repository holds two projects: **[`server/`](../server)** (TypeScript on Node.js 22: Hono,
-Drizzle over SQLite, Vitest) and **[`apple/`](../apple)** (the SwiftUI app). This website is
+The repository holds three projects: **[`server/`](../server)** (TypeScript on Node.js 22: Hono,
+Drizzle over SQLite, Vitest), **[`apple/`](../apple)** (the SwiftUI app) and
+**[`relay/`](../relay)** (the push relay every server sends the app's notifications through). This website is
 [`docs/`](https://github.com/fa-krug/ohana/tree/main/docs) (VitePress).
 
 ## The server
@@ -45,6 +46,18 @@ Tests run in Xcode or with `xcodebuild test`; German strings are checked with
 `python3 apple/scripts/merge-localizations.py --check`. See
 [apple/README.md](../apple/README.md).
 
+## The push relay
+
+```bash
+cd relay
+npm install
+npm run dev     # the relay, restarts on changes
+npm test        # Vitest, with a fake APNs client
+```
+
+The protocol, its settings and how to run your own: [relay/README.md](../relay/README.md). Its
+image `ghcr.io/fa-krug/ohana-relay` is built on pushes to `main` that change `relay/`.
+
 ## This website
 
 ```bash
@@ -62,7 +75,8 @@ to `main` that changes `docs/` publishes the site to GitHub Pages.
 
 Every push to `main` that passes the tests is a release: CI publishes
 `ghcr.io/fa-krug/ohana:latest` (and `:main`, `:sha-<commit>`) for amd64 and arm64. So `main`
-must always be something you'd run at home. The app is released through the App Store / TestFlight
+must always be something you'd run at home. The relay's image follows the same way when
+`relay/` changes. The app is released through the App Store / TestFlight
 (see [apple/README.md](../apple/README.md)).
 
 ## Contributing

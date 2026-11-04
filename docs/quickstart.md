@@ -88,8 +88,9 @@ That's it. Where to go from here:
 
 - **AI:** *Settings → Assistant* in the app, with any OpenAI-compatible endpoint, or your own model
   ([details](/self-hosting#the-assistant-and-ai)).
-- **Notifications:** *Settings → Household → Notifications* (Pushover, Pushbullet, Telegram,
-  email, ntfy).
+- **Notifications:** on each device under *Settings → Notifications on this device*, and for the
+  family under *Settings → Household → Notifications* (Pushover, Pushbullet, Telegram, email,
+  ntfy).
 - **Modules you don't need:** `DISABLED_MODULES=appointments` in `.env`
   ([details](/self-hosting#modules)).
 - **Backups and updates:** [Backups](/self-hosting#backups), [Updating](/self-hosting#updating).

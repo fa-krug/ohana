@@ -61,3 +61,11 @@ the occurrences in a range; an occurrence of a repeating event carries its origi
 removes only that occurrence, or it and the ones after it. `?raw=1` lists every event as stored:
 a series with its rule, the days taken out of it (`exdates`) and the occurrences changed on their
 own (`overrides`).
+
+## Chores
+
+`GET /api/v1/families/{id}/chores/agenda?from=&to=&today=` lists the chores by day (at most 62
+days), each day's by part of the day (`morning`, `day`, `evening`) and time, with the open ones
+before `today` as `overdue`. `POST /chores/{id}/done` with `{ "done": true, "day": "…" }` ticks
+one off (`day`: the occurrence of a repeating chore); repeating chores use the same `rrule` as
+events.

@@ -53,7 +53,7 @@ export default defineConfig({
   lang: "en",
   title: "Ohana",
   description:
-    "One app for the whole family: calendar, finances, meals, doctor appointments and an AI assistant. Open source and self-hosted.",
+    "One app for the whole family: calendar, finances, meals, chores, doctor appointments and an AI assistant. Open source and self-hosted.",
   cleanUrls: true,
   lastUpdated: true,
   // README.md files and the CLAUDE-style notes aren't pages; node_modules is VitePress's own.
@@ -67,7 +67,7 @@ export default defineConfig({
       "meta",
       {
         property: "og:description",
-        content: "Calendar, finances, meals, doctor appointments and an AI assistant. Open source, self-hosted.",
+        content: "Calendar, finances, meals, chores, doctor appointments and an AI assistant. Open source, self-hosted.",
       },
     ],
     ["meta", { property: "og:url", content: "https://ohana.fa-krug.de/" }],
