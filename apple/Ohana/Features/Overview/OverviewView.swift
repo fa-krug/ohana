@@ -124,10 +124,8 @@ private struct OverviewGrid: View {
     @Environment(FamilyContext.self) private var family
     let dashboard: OverviewDashboard
 
-    private let columns = [GridItem(.adaptive(minimum: 320, maximum: 600), spacing: 16, alignment: .top)]
-
     var body: some View {
-        LazyVGrid(columns: columns, alignment: .leading, spacing: 16) {
+        OverviewColumns {
             OverviewTodayCard(dashboard: dashboard)
             if let weekAhead = dashboard.weekAhead, weekAhead.hasIssues {
                 OverviewWeekAheadCard(summary: weekAhead)
@@ -146,6 +144,65 @@ private struct OverviewGrid: View {
                 OverviewSearchesCard(searches: dashboard.searches)
             }
         }
+    }
+}
+
+/// The cards in columns, each one under the column that is shortest so far (in order, the leftmost
+/// on a tie): a short card never leaves a gap beside a tall one, as a grid's rows would. As many
+/// columns of at least `minColumnWidth` as fit, at most `maxColumns`; one on iPhone.
+struct OverviewColumns: Layout {
+    var minColumnWidth: CGFloat = 320
+    var maxColumns = 3
+    var spacing: CGFloat = 16
+
+    struct Cache {
+        var frames: [CGRect] = []
+        var height: CGFloat = 0
+    }
+
+    func makeCache(subviews: Subviews) -> Cache { Cache() }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache) -> CGSize {
+        let width = width(for: proposal)
+        arrange(width: width, subviews: subviews, cache: &cache)
+        return CGSize(width: width, height: cache.height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache) {
+        arrange(width: bounds.width, subviews: subviews, cache: &cache)
+        for (subview, frame) in zip(subviews, cache.frames) {
+            subview.place(at: CGPoint(x: bounds.minX + frame.minX, y: bounds.minY + frame.minY),
+                          proposal: ProposedViewSize(frame.size))
+        }
+    }
+
+    /// The width to lay out in: the proposal's, else (ideal, unbounded) one column or all of them.
+    private func width(for proposal: ProposedViewSize) -> CGFloat {
+        guard let width = proposal.width else { return minColumnWidth }
+        guard width.isFinite else { return minColumnWidth * CGFloat(maxColumns) + spacing * CGFloat(maxColumns - 1) }
+        return max(width, 0)
+    }
+
+    static func columnCount(width: CGFloat, minColumnWidth: CGFloat, maxColumns: Int, spacing: CGFloat) -> Int {
+        max(1, min(maxColumns, Int((width + spacing) / (minColumnWidth + spacing))))
+    }
+
+    private func arrange(width: CGFloat, subviews: Subviews, cache: inout Cache) {
+        // Measured again on every pass (a handful of cards): a card's height changes with its data.
+        let count = Self.columnCount(width: width, minColumnWidth: minColumnWidth, maxColumns: maxColumns, spacing: spacing)
+        let columnWidth = max((width - spacing * CGFloat(count - 1)) / CGFloat(count), 0)
+        var bottoms = Array(repeating: CGFloat(0), count: count)
+        var filled = Array(repeating: false, count: count)
+        var frames: [CGRect] = []
+        for subview in subviews {
+            let height = subview.sizeThatFits(ProposedViewSize(width: columnWidth, height: nil)).height
+            let column = bottoms.indices.min { bottoms[$0] < bottoms[$1] } ?? 0
+            let y = filled[column] ? bottoms[column] + spacing : 0
+            frames.append(CGRect(x: CGFloat(column) * (columnWidth + spacing), y: y, width: columnWidth, height: height))
+            bottoms[column] = y + height
+            filled[column] = true
+        }
+        cache = Cache(frames: frames, height: bottoms.max() ?? 0)
     }
 }
 
@@ -481,7 +538,11 @@ private struct OverviewUpcomingCard: View {
     private func line(@ViewBuilder lead: () -> some View, @ViewBuilder title: () -> some View,
                       @ViewBuilder trailing: () -> some View) -> some View {
         HStack(spacing: 10) {
-            lead().frame(minWidth: leadWidth, alignment: .leading)
+            // The column keeps its width without a time (an all-day event), so titles line up.
+            ZStack(alignment: .leading) {
+                Color.clear.frame(width: leadWidth, height: 0)
+                lead()
+            }
             HStack(spacing: 4) { title() }
             Spacer(minLength: 4)
             trailing()

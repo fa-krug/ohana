@@ -43,14 +43,26 @@ extension View {
 }
 
 extension Color {
-    /// A card on the page's background: the grouped list's cell color.
+    /// A card on the page's background: the grouped list's cell color. On the Mac in dark mode
+    /// the control background is the window's own gray, so the card is a step lighter there.
     static var cardBackground: Color {
         #if os(iOS)
         Color(uiColor: .secondarySystemGroupedBackground)
         #else
-        Color(nsColor: .controlBackgroundColor)
+        Color(nsColor: macCardBackground)
         #endif
     }
+
+    #if os(macOS)
+    private static let macCardBackground = NSColor(name: "ohanaCardBackground") { appearance in
+        switch appearance.bestMatch(from: [.aqua, .darkAqua, .accessibilityHighContrastAqua,
+                                           .accessibilityHighContrastDarkAqua]) {
+        case .darkAqua: NSColor(white: 0.17, alpha: 1)
+        case .accessibilityHighContrastDarkAqua: NSColor(white: 0.2, alpha: 1)
+        default: .controlBackgroundColor
+        }
+    }
+    #endif
 
     /// The page behind cards and grouped lists.
     static var pageBackground: Color {
