@@ -223,7 +223,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `BankStatement.balanceCents`, never `availableCashAmount`, which takes pending bookings off) →
   BOOKED transactions, 500 per page, `min-bookingDate`;
   `mapTransaction` / `remittanceLines`: exact cents, payee by direction, 37-char remittance
-  windows, SEPA reference lines dropped; a card: `allbalances?productType=CARD`, each card's
+  windows, SEPA reference lines dropped; a card: `allbalances?productType=CARD` (with each card's booked
+  `balance.balance`, the statement's `balanceCents`, negative what's spent), each card's
   suffix from `GET /api/banking/v1/cards/{cardId}` (`primaryAccountNumberSuffix`), then
   `…/cards/{cardId}/transactions` (both undocumented; one request of ≤ 500, no paging: 422),
   `mapCardTransaction`: day = `transaktionDate`, payee the merchant line, accountRef = cardId;
@@ -261,8 +262,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   from the bank's rows, not the account's sum, so leftover CSV duplicates don't skew it; the
   balance is the bank's from its first day on, and today's once the "Not from the bank" rows in
   its days are deleted. A comdirect card gives only its newest 500 rows: when
-  there are more, `BankStatement.from` says from which day they're complete (the oldest day's
-  rows dropped). Import through `importTransactions`
+  there are more, `BankStatement.from` says from which day they're complete (the oldest booking
+  day's rows dropped, and those bought before `from`, so the opening balance adds up). Import through `importTransactions`
   (shared with the CSV route, autoTransfers on); hashes
   `"bank|<provider>|<bank account id / cardId>|<reference>"`, rows without a reference by
   `importHashes`; a card's Visa-Kartenabrechnung pairs with the Girokonto's debit by

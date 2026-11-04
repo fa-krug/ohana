@@ -398,11 +398,14 @@ interface BankCard {
   /** The last 4 digits of its number; null when comdirect didn't say. */
   suffix: string | null;
   holder: string;
+  /** The card's booked balance (`balance.balance`: negative what's spent since the last bill;
+   *  not `availableCashAmount`, the limit left); null when comdirect didn't say. */
+  balanceCents: number | null;
 }
 
-/** The cards of comdirect's balances (allbalances, productType CARD): their ids and holders. The
- *  listing has no card number. */
-function cardsOf(body: unknown): { id: string; holder: string }[] {
+/** The cards of comdirect's balances (allbalances, productType CARD): their ids, holders and
+ *  balances. The listing has no card number. */
+function cardsOf(body: unknown): { id: string; holder: string; balanceCents: number | null }[] {
   const values = (body as { values?: unknown })?.values;
   if (!Array.isArray(values)) return [];
   const seen = new Set<string>();
@@ -412,7 +415,8 @@ function cardsOf(body: unknown): { id: string; holder: string }[] {
     const id = [balance.cardId, card.cardId, v?.productId].find((x) => typeof x === "string" && x);
     if (typeof id !== "string" || seen.has(id)) return [];
     seen.add(id);
-    return [{ id, holder: holder(card) }];
+    const booked = (balance.balance ?? {}) as Record<string, unknown>;
+    return [{ id, holder: holder(card), balanceCents: centsOf(booked.value) }];
   });
 }
 
@@ -450,6 +454,7 @@ async function cardStatement(api: Api, req: SyncRequest, token: string, suffix: 
       id: c.id,
       suffix: lastFour(detail?.primaryAccountNumberSuffix) ?? lastFour(detail?.cardDisplayId),
       holder: holder(detail) || c.holder,
+      balanceCents: c.balanceCents,
     });
     if (cards[cards.length - 1].suffix === suffix) break;
   }
@@ -457,7 +462,10 @@ async function cardStatement(api: Api, req: SyncRequest, token: string, suffix: 
   // One page only: comdirect answers 422 to paging-first on cards. paging-count 500 gives every
   // row since min-bookingDate (a card books far fewer than that between syncs); should there be
   // more (paging.matches), the newest 500 come: the rows count as complete only from the day
-  // after the oldest booking day among them (statement.from), the rest are left out.
+  // after the oldest booking day among them (statement.from), the rest are left out: those booked
+  // before it, and those bought before it (a row's day is the purchase's), so that every row of
+  // the account from that day on is the bank's and every earlier one isn't (a full sync's
+  // opening balance counts on it).
   const query = new URLSearchParams({
     transactionState: "BOOKED",
     "paging-count": String(PAGE),
@@ -484,8 +492,13 @@ async function cardStatement(api: Api, req: SyncRequest, token: string, suffix: 
     const oldest = got.reduce((m, r) => (r.booked < m ? r.booked : m), got[0].booked);
     if (addDays(oldest, 1) > from) from = cut = addDays(oldest, 1);
   }
-  const rows = got.flatMap((r) => (r.booked >= from ? [r.row] : []));
-  return { accountRef: card.id, rows, ...(cut ? { from: cut } : {}) };
+  const rows = got.flatMap((r) => (r.booked >= from && (!cut || r.row.day >= cut) ? [r.row] : []));
+  return {
+    accountRef: card.id,
+    rows,
+    ...(cut ? { from: cut } : {}),
+    ...(card.balanceCents !== null ? { balanceCents: card.balanceCents } : {}),
+  };
 }
 
 // ------------------------------------------------------------------ mapping
