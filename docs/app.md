@@ -122,7 +122,9 @@ review suggests a name ("date_Person_Title"), the date and tags (only ones you a
 the name of whose letter it is), and saves the letter as a **searchable PDF** into the folder you
 chose last. With the assistant on, editors also see the **events, tasks and deadlines** found in
 it, ticked and editable: *Done* adds the events to the family's calendar and the tasks and
-deadlines to Reminders. Receipts scanned in Finance can be kept as PDFs the same way.
+deadlines to Reminders. Receipts scanned in Finance can be kept as PDFs the same way. Once the
+family's knowledge folder is chosen on the device (Settings → Knowledge), scans are saved into
+that folder instead, with no folder to pick, and their text goes into the knowledge base.
 
 ## Recipes from the web
 

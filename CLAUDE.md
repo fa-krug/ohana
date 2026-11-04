@@ -547,7 +547,14 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   receipts) can be saved as a searchable PDF (invisible text layer, Title / Keywords) into the
   folder chosen last (a bookmark in `UserDefaults`, security-scoped on the Mac: entitlement
   `files.bookmarks.app-scope`), with an editable name and tags (Finder / Files tags, the
-  `_kMDItemUserTags` xattr). Letters (`Features/Letters/`): *Scan letter* in the family menu, the
+  `_kMDItemUserTags` xattr). With the family's knowledge folder linked on this device
+  (`FamilyContext.scanKnowledge` → `ScanKnowledge`, passed into every `ScanFiling`: letters from
+  every entry point and receipts) scans file into its root instead (`ScanFolder.knowledge`, no
+  picker, the section shows "Knowledge › <folder>") and are queued with their text per page
+  (`KnowledgeIndexer.enqueue`, no second OCR; a scan without text isn't; during a run it's listed
+  in that run's manifest and sent after it, a run never swaps its text for a re-read; a folder
+  changed while the sheet was open is told in the banner); the server's `GET
+  /knowledge/tags` (cached, at most 3 s) joins the existing tags. Letters (`Features/Letters/`): *Scan letter* in the family menu, the
   `ScanLetterIntent` App Shortcut (Spotlight, `LetterScanInbox`) and the assistant's paperclip,
   all through `FamilyContext.scanLetter()` / `ShellLetterScan` → `LetterReviewSheet`; photos and PDFs
   shared to Ohana or opened with it (`CFBundleDocumentTypes`, rank Alternate; `AppModel.open` with a
@@ -647,7 +654,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   server asks for; one run at a time. Triggers: `AppModel.indexKnowledge()` at launch, on becoming
   active, on reconnecting and every 15 min on the Mac (each family at most every 5 min),
   `FamilyContext.indexKnowledge(force:)` for *Read Now*, `enqueue(file:pages:)` for a scan with its
-  text. Settings → Knowledge (`Features/Knowledge/KnowledgeSettingsView.swift`, `.settings(.knowledge)`):
+  text (see Scanning). Settings → Knowledge (`Features/Knowledge/KnowledgeSettingsView.swift`, `.settings(.knowledge)`):
   the folder (`.fileImporter`, the conflict as an alert offering to use it anyway), the index
   (`GET /knowledge/status` through `api.cached`, with the indexer's progress, waiting and unreadable
   files, the last manifest's time and device), *Read Now*.

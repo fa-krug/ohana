@@ -30,7 +30,8 @@ final class KnowledgeIndexer {
         var finished: Date
         /// Files in the folder (in the manifest); 0: the folder looked empty and nothing was sent.
         var files: Int
-        /// Uploaded in this run.
+        /// Uploaded by this run's flush (scans queued meanwhile among them; what a flush already
+        /// under way when the run got there sent counts there, not here).
         var uploaded: Int = 0
         /// Left out for their size.
         var tooLarge: Int = 0
@@ -64,6 +65,8 @@ final class KnowledgeIndexer {
     var deviceName: String
     /// When iCloud may load files for a run (the tests set their own).
     @ObservationIgnored var downloads: () -> KnowledgeDownloads = { KnowledgeDownloads.current() }
+    /// Tests: what happens between a run's walk and its hashing (a scan saved meanwhile).
+    @ObservationIgnored var walked: () async -> Void = {}
 
     private(set) var phase: Phase = .idle
     private(set) var lastRun: Run?
@@ -79,6 +82,9 @@ final class KnowledgeIndexer {
     @ObservationIgnored private var runTask: Task<Void, Never>?
     @ObservationIgnored private var runID: UUID?
     @ObservationIgnored private var runAgain = false
+    /// The scans queued (`enqueue`) since the running run started its walk, by path: listed in its
+    /// manifest even when the walk missed them. nil while no run walks.
+    @ObservationIgnored private var scansDuringRun: [String: Hashed]?
     @ObservationIgnored private var lastStart: Date?
     /// The generation a flush is under way for.
     @ObservationIgnored private var flushingGeneration: Int?
@@ -158,6 +164,9 @@ final class KnowledgeIndexer {
             if runID == id {
                 runTask = nil
                 runID = nil
+                // A scan queued during a run that stopped before its flush (it waited for the run);
+                // not while a retry waits for the connection.
+                if !queue.isEmpty, retryWait == nil, flushingGeneration == nil { Task { await flushInFolder() } }
             }
         }
         runTask = task
@@ -183,7 +192,10 @@ final class KnowledgeIndexer {
         defer { if access { root.stopAccessingSecurityScopedResource() } }
 
         phase = .scanning
+        scansDuringRun = [:]
+        defer { scansDuringRun = nil }
         let listing = await Self.walk(root)
+        await walked()
         guard isCurrent(generation) else { return }
         if listing.truncated {
             phase = .failed(KnowledgeIndexError.tooManyFiles.localizedDescription)
@@ -212,12 +224,20 @@ final class KnowledgeIndexer {
             await KnowledgeICloud.evict(loaded)
             return
         }
-        cache.keep(only: Set(listing.files.map(\.path)))
+        // Scans saved since the walk began, which it may have missed: listed, or the server would
+        // count them missing once their upload is in.
+        var files = result.files
+        let listed = Set(files.map(\.local.path))
+        for scan in (scansDuringRun ?? [:]).values.sorted(by: { $0.local.path < $1.local.path })
+        where !listed.contains(scan.local.path) && FileManager.default.fileExists(atPath: scan.local.url.path) {
+            files.append(scan)
+        }
+        cache.keep(only: Set(files.map(\.local.path)))
         persistCache()
 
         let wanted: [String]
         do {
-            let body = KnowledgeManifestBody(folderId: folderID, files: result.files.map(\.entry),
+            let body = KnowledgeManifestBody(folderId: folderID, files: files.map(\.entry),
                                              device: KnowledgeDevice.normalized(deviceName))
             wanted = try await api.sendKnowledgeManifest(body)
         } catch {
@@ -234,10 +254,15 @@ final class KnowledgeIndexer {
         }
         let asked = Set(wanted.map(\.precomposedStringWithCanonicalMapping))
         unreadable = unreadable.filter { asked.contains($0.key) }
-        let byPath = Dictionary(result.files.map { ($0.local.path, $0) }, uniquingKeysWith: { first, _ in first })
+        let byPath = Dictionary(files.map { ($0.local.path, $0) }, uniquingKeysWith: { first, _ in first })
         var queued = Set<String>()
-        for match in Self.match(wanted, in: result.files.filter { $0.hash != nil }.map(\.local)) {
+        for match in Self.match(wanted, in: files.filter { $0.hash != nil }.map(\.local)) {
             guard let file = byPath[match.path], let info = file.info else { continue }
+            // A scan waiting with the text read already: kept, not read again.
+            if let waiting = queue.upload(for: info.path), waiting.textFile != nil, waiting.folderId == folderID,
+               waiting.file.hash == info.hash {
+                continue
+            }
             let upload = KnowledgeUpload(folderId: folderID, file: info, diskPath: match.diskPath,
                                          evict: file.evict ? true : nil)
             if let old = queue.add(upload) { removeText(old) }
@@ -248,7 +273,7 @@ final class KnowledgeIndexer {
         await KnowledgeICloud.evict(result.files.filter { $0.evict && !queued.contains($0.local.path) }.map(\.local.url))
         let uploaded = await flush()
         guard isCurrent(generation) else { return }
-        lastRun = Run(finished: Date(), files: result.files.count, uploaded: uploaded, tooLarge: listing.tooLarge,
+        lastRun = Run(finished: Date(), files: files.count, uploaded: uploaded, tooLarge: listing.tooLarge,
                       unhashable: result.unhashable, deferred: result.deferred)
         if case .failed = phase {} else { phase = .idle }
     }
@@ -435,11 +460,11 @@ final class KnowledgeIndexer {
         let tags = KnowledgeTags.cleaned(FinderTags.read(file))
         let local = KnowledgeLocalFile(path: path, url: file, size: hashed.size, mtime: hashed.mtime, tags: tags)
         let name = "\(UUID().uuidString).json"
-        let texts = textsFolder, limited = KnowledgeText.limited(pages)
-        try await Task.detached(priority: .utility) {
-            try FileManager.default.createDirectory(at: texts, withIntermediateDirectories: true)
-            try JSONEncoder().encode(limited).write(to: texts.appending(path: name), options: .atomic)
+        let texts = textsFolder, limited = KnowledgeText.limited(pages), signOuts = signOuts, gate = gate
+        let written = try await Task.detached(priority: .utility) {
+            try Self.writeText(limited, name: name, in: texts, signOuts: signOuts, gate: gate, generation: generation)
         }.value
+        guard written else { return }
         await ensureCache()
         await ensureQueue()
         guard isCurrent(generation) else {
@@ -448,13 +473,34 @@ final class KnowledgeIndexer {
         }
         cache.set(local, hash: hashed.hash)
         persistCache()
+        scansDuringRun?[path] = Hashed(local: local, hash: hashed.hash, evict: false)
         let info = KnowledgeFileInfo(path: path, size: hashed.size, mtime: hashed.mtime, hash: hashed.hash, tags: tags)
         if let old = queue.add(KnowledgeUpload(folderId: folderID, file: info, diskPath: diskPath, textFile: name)) {
             removeText(old)
         }
         persistQueue()
         await diskIdle()
-        Task { await flushInFolder() }
+        // A run under way sends it after its manifest (which lists it).
+        if runTask == nil { Task { await flushInFolder() } }
+    }
+
+    /// Writes a scan's text as `name` in `folder`, unless the account signed out or the folder
+    /// was chosen anew or removed since `generation` (checked under the gates' lock: a sign-out
+    /// waits, then removes the folder; it's never made again after). Whether it was written.
+    nonisolated static func writeText(_ pages: [String], name: String, in folder: URL,
+                                      signOutGate: KnowledgeDiskGate = .signOuts, signOuts: Int,
+                                      gate: KnowledgeDiskGate, generation: Int) throws -> Bool {
+        var result: Result<Bool, any Error> = .success(false)
+        signOutGate.run(at: signOuts) {
+            gate.run(at: generation) {
+                result = Result {
+                    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                    try JSONEncoder().encode(pages).write(to: folder.appending(path: name), options: .atomic)
+                    return true
+                }
+            }
+        }
+        return try result.get()
     }
 
     /// `file`'s path relative to `root` ("/"-joined), nil when it isn't inside.
@@ -493,6 +539,7 @@ final class KnowledgeIndexer {
         let generation = gate.current
         await ensureQueue()
         await ensureCache()
+        // A flush under way sends what's queued now too (it goes on until the queue is empty).
         guard isCurrent(generation), flushingGeneration != generation, !queue.isEmpty else { return 0 }
         guard case let .linked(root, folderID) = folder.state() else { return 0 }
         flushingGeneration = generation
@@ -501,67 +548,74 @@ final class KnowledgeIndexer {
         var sent = 0, done = 0
         var unreadableNow = unreadable
         var cacheChanged = false
-        while isCurrent(generation), let upload = queue.first {
-            phase = .uploading(done: done, of: done + queue.count)
-            guard upload.folderId == folderID else {
-                drop(upload)
-                continue
-            }
-            let path = upload.file.path
-            if upload.textFile == nil, cache.readFailed(path: path, hash: upload.file.hash) {
-                unreadableNow[path] = .failed
-                drop(upload)
-                done += 1
-                continue
-            }
-            let read = await text(of: upload, root: root, downloads: downloads)
-            guard isCurrent(generation) else { break }
-            let pages: [String]
-            switch read {
-            case let .pages(text):
-                pages = text
-            case let .unreadable(reason):
-                unreadableNow[path] = reason
-                if reason == .failed, upload.textFile == nil {
-                    cache.setReadFailed(path: path, hash: upload.file.hash)
-                    cacheChanged = true
+        /// Waits for the connection (a retry is scheduled).
+        var waits = false
+        // Again while uploads came in (a scan; another flush leaves them to this one) after the
+        // queue looked empty.
+        repeat {
+            while isCurrent(generation), let upload = queue.first {
+                phase = .uploading(done: done, of: done + queue.count)
+                guard upload.folderId == folderID else {
+                    drop(upload)
+                    continue
                 }
-                drop(upload)
-                done += 1
-                continue
-            case .later:
-                // Changed since it was hashed, not on the device now or not loaded: the next run.
-                drop(upload)
-                done += 1
-                continue
-            }
-            do {
-                try await api.uploadKnowledgeDocument(KnowledgeUploadBody(folderId: folderID, file: upload.file,
-                                                                          pages: pages))
-                guard isCurrent(generation) else { break }
-                unreadableNow[path] = nil
-                drop(upload)
-                sent += 1
-                done += 1
-                retryDelay = 2
-            } catch {
-                guard isCurrent(generation) else { break }
-                if KnowledgeUploadQueue.disposition(of: error) == .retry {
-                    phase = .failed(error.localizedDescription)
-                    scheduleRetry()
-                    break
+                let path = upload.file.path
+                if upload.textFile == nil, cache.readFailed(path: path, hash: upload.file.hash) {
+                    unreadableNow[path] = .failed
+                    drop(upload)
+                    done += 1
+                    continue
                 }
-                if Self.isFolderGone(error), await folderReplaced(folderID, generation: generation) { return sent }
-                KnowledgeFolder.log.error("Upload refused: \(error.localizedDescription, privacy: .public)")
-                drop(upload)
-                done += 1
+                let read = await text(of: upload, root: root, downloads: downloads)
+                guard isCurrent(generation) else { break }
+                let pages: [String]
+                switch read {
+                case let .pages(text):
+                    pages = text
+                case let .unreadable(reason):
+                    unreadableNow[path] = reason
+                    if reason == .failed, upload.textFile == nil {
+                        cache.setReadFailed(path: path, hash: upload.file.hash)
+                        cacheChanged = true
+                    }
+                    drop(upload)
+                    done += 1
+                    continue
+                case .later:
+                    // Changed since it was hashed, not on the device now or not loaded: the next run.
+                    drop(upload)
+                    done += 1
+                    continue
+                }
+                do {
+                    try await api.uploadKnowledgeDocument(KnowledgeUploadBody(folderId: folderID, file: upload.file,
+                                                                              pages: pages))
+                    guard isCurrent(generation) else { break }
+                    unreadableNow[path] = nil
+                    drop(upload)
+                    sent += 1
+                    done += 1
+                    retryDelay = 2
+                } catch {
+                    guard isCurrent(generation) else { break }
+                    if KnowledgeUploadQueue.disposition(of: error) == .retry {
+                        phase = .failed(error.localizedDescription)
+                        scheduleRetry()
+                        waits = true
+                        break
+                    }
+                    if Self.isFolderGone(error), await folderReplaced(folderID, generation: generation) { return sent }
+                    KnowledgeFolder.log.error("Upload refused: \(error.localizedDescription, privacy: .public)")
+                    drop(upload)
+                    done += 1
+                }
             }
-        }
-        guard isCurrent(generation) else { return sent }
-        unreadable = unreadableNow
-        if cacheChanged { persistCache() }
-        persistQueue()
-        await diskIdle()
+            guard isCurrent(generation) else { return sent }
+            unreadable = unreadableNow
+            if cacheChanged { persistCache() }
+            persistQueue()
+            await diskIdle()
+        } while !waits && isCurrent(generation) && !queue.isEmpty
         if queue.isEmpty, case .uploading = phase { phase = .idle }
         return sent
     }

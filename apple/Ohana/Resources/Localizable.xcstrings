@@ -1302,6 +1302,16 @@
         }
       }
     },
+    "A searchable PDF in the knowledge folder. Its text goes into the family’s knowledge base on your server.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein durchsuchbares PDF im Wissensordner. Sein Text kommt in die Wissensbasis der Familie auf eurem Server."
+          }
+        }
+      }
+    },
     "A subcategory has the kind of its top-level category.": {
       "localizations": {
         "de": {
@@ -8478,6 +8488,16 @@
         }
       }
     },
+    "Knowledge › %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wissen › %@"
+          }
+        }
+      }
+    },
     "Known-recipe ratio": {
       "localizations": {
         "de": {
@@ -14092,6 +14112,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "„%@“ ist unter „Ausprobieren“ gespeichert."
+          }
+        }
+      }
+    },
+    "Saved, but not added to the knowledge base: the knowledge folder changed.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gesichert, aber nicht zur Wissensbasis hinzugefügt: Der Wissensordner hat sich geändert."
           }
         }
       }

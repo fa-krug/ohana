@@ -523,6 +523,18 @@ final class FamilyContext {
         !api.client.isDemo && canEdit && serverInfo?.hasKnowledge == true
     }
 
+    /// Where the family's scans go on this device (`ScanFiling`): the knowledge folder while the
+    /// knowledge base is available and its folder is linked here; nil: the scan folder.
+    var scanKnowledge: ScanKnowledge? {
+        guard knowledgeAvailable else { return nil }
+        let location = KnowledgeLocation(server: api.client.baseURL, familyID: api.familyID)
+        guard knowledgeIndexer != nil || KnowledgeFolder(location: location).isLinked else { return nil }
+        let indexer = knowledge, tags = api.knowledgeTags()
+        return ScanKnowledge(state: { indexer.folder.state() },
+                             enqueue: { try await indexer.enqueue(file: $0, pages: $1) },
+                             tags: { await ScanKnowledge.serverTags(tags) })
+    }
+
     /// Reads the family's knowledge folder when one is linked on this device: `force` (*Read now*)
     /// at once, else unless it was read a few minutes ago.
     func indexKnowledge(force: Bool = false) {

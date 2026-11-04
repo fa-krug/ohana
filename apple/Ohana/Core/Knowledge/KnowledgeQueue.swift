@@ -52,6 +52,11 @@ nonisolated struct KnowledgeUploadQueue: Codable, Equatable, Sendable {
         }
     }
 
+    /// The upload waiting for `path`.
+    func upload(for path: String) -> KnowledgeUpload? {
+        byPath[path]?.upload
+    }
+
     /// The upload to send next.
     var first: KnowledgeUpload? {
         mutating get {

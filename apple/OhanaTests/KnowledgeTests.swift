@@ -530,6 +530,10 @@ nonisolated final class KnowledgeStubProtocol: URLProtocol {
         var folder = "null"
         /// What POST /knowledge/folder answers instead, when set.
         var created: String?
+        /// What GET /knowledge/tags answers (JSON).
+        var tags = #"{"tags": []}"#
+        /// PUT /knowledge/documents answers after this long.
+        var putDelay: Double = 0
     }
     nonisolated(unsafe) private static var state = State()
 
@@ -588,15 +592,24 @@ nonisolated final class KnowledgeStubProtocol: URLProtocol {
             status = method == "POST" ? 201 : 200
             let folder = method == "POST" ? state.created ?? state.folder : state.folder
             answer = Data(#"{"folder": \#(folder)}"#.utf8)
+        } else if path.hasSuffix("/knowledge/tags") {
+            answer = Data(state.tags.utf8)
         } else if path.hasSuffix("/knowledge/documents") {
             status = state.put
             answer = Data(status >= 400 ? #"{"error":"No"}"#.utf8 : #"{"id":"d1","status":"pending"}"#.utf8)
         }
         let response = HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil,
                                        headerFields: ["Content-Type": "application/json"])!
-        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-        client?.urlProtocol(self, didLoad: answer)
-        client?.urlProtocolDidFinishLoading(self)
+        let finish = { [answer] in
+            self.client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+            self.client?.urlProtocol(self, didLoad: answer)
+            self.client?.urlProtocolDidFinishLoading(self)
+        }
+        if path.hasSuffix("/knowledge/documents"), state.putDelay > 0 {
+            DispatchQueue.global().asyncAfter(deadline: .now() + state.putDelay, execute: finish)
+        } else {
+            finish()
+        }
     }
     override func stopLoading() {}
 }
@@ -875,5 +888,282 @@ struct KnowledgeIndexerTests {
         await #expect(throws: KnowledgeFolderError.notInFolder) {
             try await s.indexer.enqueue(file: try write("x", "x.pdf", in: elsewhere), pages: [])
         }
+    }
+
+    /// The scans' side as `FamilyContext.scanKnowledge` makes it, over this indexer.
+    private func scanKnowledge(_ s: Setup) -> ScanKnowledge {
+        let indexer = s.indexer
+        return ScanKnowledge(state: { indexer.folder.state() },
+                             enqueue: { try await indexer.enqueue(file: $0, pages: $1) },
+                             tags: { await ScanKnowledge.serverTags(indexer.api.knowledgeTags()) })
+    }
+
+    @Test func aScanIsSavedIntoTheKnowledgeFolderAndUploadedWithItsText() async throws {
+        let s = try setup()
+        defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
+        let filing = ScanFiling(kind: .letter, settings: LetterFilingTests.settings(), knowledge: scanKnowledge(s))
+        // The bookmark's URL: the same folder, perhaps spelled through /private.
+        #expect(filing.inKnowledge && filing.folder.url?.resolvingSymlinksInPath().path == s.root.resolvingSymlinksInPath().path)
+        #expect(!filing.needsFolder)
+        filing.savesPDF = true
+        filing.suggest(name: "2026-11-04 Brief", tags: ["Schule"])
+        let pages = [
+            ScanPage(image: LetterFilingTests.image(), lines: [
+                ScanLine(text: "Liebe Eltern,", box: CGRect(x: 0.1, y: 0.7, width: 0.4, height: 0.03)),
+                ScanLine(text: "Elternbrief", box: CGRect(x: 0.1, y: 0.85, width: 0.4, height: 0.03)),
+            ]),
+            ScanPage(image: LetterFilingTests.image(), lines: [
+                ScanLine(text: "Rückseite", box: CGRect(x: 0.1, y: 0.5, width: 0.3, height: 0.03)),
+            ]),
+        ]
+        #expect(try await filing.save(pages) == "2026-11-04_Brief.pdf")
+        // In the folder's root, tagged; queued with the scan's text (no second reading).
+        let file = s.root.appending(path: "2026-11-04_Brief.pdf")
+        #expect(FinderTags.read(file) == ["Schule"])
+        #expect(await until { KnowledgeStubProtocol.requests.contains("PUT /api/v1/families/f1/knowledge/documents") })
+        let put = try #require(KnowledgeStubProtocol.bodies("PUT").first)
+        #expect(put["path"] as? String == "2026-11-04_Brief.pdf" && put["tags"] as? [String] == ["Schule"])
+        #expect(put["pages"] as? [String] == ["Elternbrief\nLiebe Eltern,", "Rückseite"])
+        #expect(await until { s.indexer.waiting == 0 })
+    }
+
+    @Test func aScanSavedOfflineWaitsInTheQueue() async throws {
+        let s = try setup()
+        defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
+        KnowledgeStubProtocol.offline = true
+        let filing = ScanFiling(kind: .letter, settings: LetterFilingTests.settings(), knowledge: scanKnowledge(s))
+        filing.savesPDF = true
+        filing.suggest(name: "Brief")
+        let page = ScanPage(image: LetterFilingTests.image(), lines: [
+            ScanLine(text: "Hallo", box: CGRect(x: 0.1, y: 0.5, width: 0.3, height: 0.05)),
+        ])
+        // Saving doesn't wait for the server.
+        #expect(try await filing.save([page]) == "Brief.pdf")
+        #expect(FileManager.default.fileExists(atPath: s.root.appending(path: "Brief.pdf").path))
+        #expect(s.indexer.waiting == 1)
+    }
+
+    @Test func theServersTagsOrTheCopyOnTheDevice() async throws {
+        let s = try setup()
+        defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
+        let cache = ResponseCache(directory: s.data.appending(path: "responses", directoryHint: .isDirectory))
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [KnowledgeStubProtocol.self]
+        let api = FamilyAPI(client: APIClient(baseURL: URL(string: "https://kb.example")!, token: nil,
+                                              session: URLSession(configuration: config), cache: cache), familyID: "f1")
+        KnowledgeStubProtocol.set { $0.tags = #"{"tags": [{"tag": "Versicherung", "count": 3}, {"tag": "Arzt", "count": 1}]}"# }
+        #expect(await ScanKnowledge.serverTags(api.knowledgeTags()) == ["Versicherung", "Arzt"])
+        #expect(KnowledgeStubProtocol.requests == ["GET /api/v1/families/f1/knowledge/tags"])
+        ResponseCache.waitForWrites()
+        KnowledgeStubProtocol.offline = true
+        #expect(await ScanKnowledge.serverTags(api.knowledgeTags()) == ["Versicherung", "Arzt"])
+        cache.clear()
+        #expect(await ScanKnowledge.serverTags(api.knowledgeTags()).isEmpty)
+    }
+
+    private static let putPath = "PUT /api/v1/families/f1/knowledge/documents"
+
+    @Test func aRunKeepsAScansTextWhenTheServerAsksForIt() async throws {
+        let s = try setup()
+        defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
+        // Saved offline: it waits with its text.
+        KnowledgeStubProtocol.offline = true
+        let file = try write("%PDF not really", "Scan.pdf", in: s.root)
+        try await s.indexer.enqueue(file: file, pages: ["Gescannter Text"])
+        #expect(await until { s.indexer.waiting == 1 && !KnowledgeStubProtocol.requests.isEmpty })
+        KnowledgeStubProtocol.reset()
+        KnowledgeStubProtocol.set { $0.upload = ["Scan.pdf"] }
+        await s.indexer.run()
+        // Sent with the scan's text, not read from the file again.
+        let put = try #require(KnowledgeStubProtocol.bodies("PUT").first)
+        #expect(put["path"] as? String == "Scan.pdf" && put["pages"] as? [String] == ["Gescannter Text"])
+        #expect(s.indexer.unreadable.isEmpty && s.indexer.waiting == 0)
+    }
+
+    @Test func scansQueuedWhileAFlushRunsAreSentByIt() async throws {
+        let s = try setup()
+        defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
+        KnowledgeStubProtocol.set { $0.putDelay = 0.2 }
+        try await s.indexer.enqueue(file: try write("a", "A.pdf", in: s.root), pages: ["A"])
+        #expect(await until { KnowledgeStubProtocol.requests.contains(Self.putPath) })
+        // While A's upload is under way: its flush takes B and C too.
+        try await s.indexer.enqueue(file: try write("b", "B.pdf", in: s.root), pages: ["B"])
+        try await Task.sleep(for: .milliseconds(250))
+        try await s.indexer.enqueue(file: try write("c", "C.pdf", in: s.root), pages: ["C"])
+        #expect(await until { s.indexer.waiting == 0 && KnowledgeStubProtocol.bodies("PUT").count == 3 })
+        #expect(KnowledgeStubProtocol.bodies("PUT").compactMap { $0["path"] as? String } == ["A.pdf", "B.pdf", "C.pdf"])
+    }
+
+    @Test func aScanSavedDuringTheWalkIsInTheManifest() async throws {
+        let s = try setup()
+        defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
+        _ = try write("Vertrag", "Vertrag.txt", in: s.root)
+        let indexer = s.indexer, root = s.root
+        indexer.walked = {
+            indexer.walked = {}
+            let scan = try! write("%PDF scan", "Scan.pdf", in: root)
+            try? await indexer.enqueue(file: scan, pages: ["Brief"])
+        }
+        await indexer.run()
+        let files = try manifestFiles()
+        #expect(Set(files.keys) == ["Scan.pdf", "Vertrag.txt"])
+        let hash = try #require(files["Scan.pdf"]?["hash"] as? String)
+        // Its upload follows the manifest (the run's flush sends it).
+        #expect(KnowledgeStubProtocol.requests == [Self.manifestPath, Self.putPath])
+        #expect(KnowledgeStubProtocol.bodies("PUT").first?["pages"] as? [String] == ["Brief"])
+        #expect(await until { FileManager.default.fileExists(atPath: s.data.appending(path: "hashes.json").path) })
+        let cache = KnowledgeHashCache.load(s.data.appending(path: "hashes.json"))
+        #expect(cache.entries["Scan.pdf"]?.hash == hash)
+    }
+
+    @Test func aScansTextIsntWrittenAfterSigningOut() throws {
+        let data = try folder()
+        defer { try? FileManager.default.removeItem(at: data) }
+        let texts = data.appending(path: "family/texts", directoryHint: .isDirectory)
+        let signOuts = KnowledgeDiskGate(), gate = KnowledgeDiskGate()
+        #expect(try KnowledgeIndexer.writeText(["a"], name: "1.json", in: texts, signOutGate: signOuts,
+                                               signOuts: 0, gate: gate, generation: 0))
+        #expect(FileManager.default.fileExists(atPath: texts.appending(path: "1.json").path))
+        try FileManager.default.removeItem(at: data.appending(path: "family"))
+        // Signed out (or the folder chosen anew) meanwhile: the folder isn't made again.
+        signOuts.bump()
+        #expect(try !KnowledgeIndexer.writeText(["a"], name: "2.json", in: texts, signOutGate: signOuts,
+                                                signOuts: 0, gate: gate, generation: 0))
+        gate.bump()
+        #expect(try !KnowledgeIndexer.writeText(["a"], name: "3.json", in: texts, signOutGate: signOuts,
+                                                signOuts: 1, gate: gate, generation: 0))
+        #expect(!FileManager.default.fileExists(atPath: data.appending(path: "family").path))
+    }
+}
+
+/// Where a scan is filed: the knowledge folder while it's linked on this device, else the scan
+/// folder; the tags it's suggested.
+@MainActor
+struct KnowledgeScanFilingTests {
+    private func knowledge(_ state: KnowledgeFolder.State, tags: [String] = [],
+                           enqueued: (([String]) -> Void)? = nil, asked: (() -> Void)? = nil) -> ScanKnowledge {
+        ScanKnowledge(state: { state },
+                      enqueue: { _, pages in enqueued?(pages) },
+                      tags: { asked?(); return tags })
+    }
+
+    @Test func theKnowledgeFolderOnlyWhileItsLinked() throws {
+        let root = try folder(), scans = try folder()
+        defer { try? FileManager.default.removeItem(at: root); try? FileManager.default.removeItem(at: scans) }
+        let settings = LetterFilingTests.settings()
+        for state in [KnowledgeFolder.State.none, .missing, .replaced] {
+            let filing = ScanFiling(kind: .letter, settings: settings, knowledge: knowledge(state))
+            #expect(filing.folder == .none && !filing.inKnowledge)
+            #expect(filing.needsFolder)
+        }
+        #expect(ScanFiling(kind: .letter, settings: settings).folder == .none)
+
+        let linked = ScanFiling(kind: .receipt, settings: settings, knowledge: knowledge(.linked(url: root, folderID: "k1")))
+        #expect(linked.folder == .knowledge(root) && linked.inKnowledge)
+        #expect(linked.folder.url == root && linked.folderName == root.lastPathComponent)
+        linked.savesPDF = true
+        // No folder to choose.
+        #expect(!linked.needsFolder)
+
+        // A scan folder chosen before: used while the knowledge folder isn't linked.
+        try settings.rememberFolder(scans)
+        let fallback = ScanFiling(kind: .letter, settings: settings, knowledge: knowledge(.missing))
+        #expect(fallback.folder.url != nil && !fallback.inKnowledge)
+        #expect(ScanFiling(kind: .letter, settings: settings,
+                           knowledge: knowledge(.linked(url: root, folderID: "k1"))).folder == .knowledge(root))
+    }
+
+    @Test func savesIntoTheRootWithoutOverwritingAndQueuesTheText() async throws {
+        let root = try folder()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let existing = try write("old", "Brief.pdf", in: root)
+        // An iCloud file that isn't on the device takes its name too.
+        _ = try write("", ".Brief_2.pdf.icloud", in: root)
+        var queued: [[String]] = []
+        let filing = ScanFiling(kind: .letter, settings: LetterFilingTests.settings(),
+                                knowledge: knowledge(.linked(url: root, folderID: "k1"), enqueued: { pages in
+                                    // Saved before it's queued.
+                                    #expect(FileManager.default.fileExists(atPath: root.appending(path: "Brief_3.pdf").path))
+                                    queued.append(pages)
+                                }))
+        filing.savesPDF = true
+        filing.suggest(name: "Brief")
+        let page = ScanPage(image: LetterFilingTests.image(), lines: [
+            ScanLine(text: "Hallo", box: CGRect(x: 0.1, y: 0.5, width: 0.3, height: 0.05)),
+        ])
+        #expect(try await filing.save([page]) == "Brief_3.pdf")
+        #expect(try String(contentsOf: existing, encoding: .utf8) == "old")
+        #expect(queued == [["Hallo"]])
+
+        // A scan without any text isn't queued: the indexer reads the file when the server asks.
+        let blank = ScanFiling(kind: .letter, settings: LetterFilingTests.settings(),
+                               knowledge: knowledge(.linked(url: root, folderID: "k1"), enqueued: { queued.append($0) }))
+        blank.savesPDF = true
+        #expect(try await blank.save([ScanPage(image: LetterFilingTests.image(), lines: [])]) != nil)
+        #expect(queued.count == 1)
+    }
+
+    @Test func tagsOfTheKnowledgeBaseAreSuggestedToo() async throws {
+        let root = try folder()
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FinderTags.write(["Arzt"], to: try write("x", "Sub/a.pdf", in: root))
+        let settings = LetterFilingTests.settings()
+        settings.remember(tags: ["Schule"])
+        let filing = ScanFiling(kind: .letter, settings: settings,
+                                knowledge: knowledge(.linked(url: root, folderID: "k1"), tags: ["Versicherung", "arzt", "Schule"]))
+        #expect(await filing.existingTags() == ["Schule", "Arzt", "Versicherung"])
+
+        // In the scan folder the server isn't asked.
+        var asked = false
+        try settings.rememberFolder(root)
+        let elsewhere = ScanFiling(kind: .letter, settings: settings,
+                                   knowledge: knowledge(.none, tags: ["Versicherung"], asked: { asked = true }))
+        #expect(await elsewhere.existingTags() == ["Schule", "Arzt"])
+        #expect(!asked)
+    }
+
+    @Test func theFamilyFilesIntoTheKnowledgeFolderWhenItsLinkedHere() throws {
+        let root = try folder()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let api = FamilyAPI(client: APIClient(baseURL: URL(string: "https://scan-\(UUID().uuidString).example")!, token: nil),
+                            familyID: "f1")
+        func context(_ role: FamilyRole, modules: [String] = ["calendar", "knowledge"]) -> FamilyContext {
+            let context = FamilyContext(family: FamilySummary(id: "f1", name: "F", role: role, memberCount: 2), api: api)
+            context.serverInfo = ServerInfo(name: "Ohana", version: "1", apiVersion: 1, modules: modules)
+            return context
+        }
+        let link = KnowledgeFolder(location: KnowledgeLocation(server: api.client.baseURL, familyID: "f1"))
+        defer { link.unlink() }
+        #expect(context(.editor).scanKnowledge == nil)
+        try link.remember(root, folderID: "k1")
+        let linked = try #require(context(.editor).scanKnowledge?.folder)
+        #expect(linked.url?.resolvingSymlinksInPath().path == root.resolvingSymlinksInPath().path && linked == .knowledge(linked.url!))
+        #expect(context(.viewer).scanKnowledge == nil)
+        #expect(context(.editor, modules: ["calendar"]).scanKnowledge == nil)
+    }
+
+    @Test func aFolderChangedWhileTheSheetWasOpenIsTold() async throws {
+        let root = try folder()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let page = ScanPage(image: LetterFilingTests.image(), lines: [
+            ScanLine(text: "Hallo", box: CGRect(x: 0.1, y: 0.5, width: 0.3, height: 0.05)),
+        ])
+        for (error, told) in [(KnowledgeFolderError.missing, true), (.notInFolder, true), (.unreadable, false)] {
+            var reported: [any Error] = []
+            var knowledge = ScanKnowledge(state: { .linked(url: root, folderID: "k1") },
+                                          enqueue: { _, _ in throw error })
+            knowledge.report = { reported.append($0) }
+            await knowledge.queue(root.appending(path: "x.pdf"), pages: [page])
+            #expect(reported.compactMap { $0 as? ScanKnowledgeError } == (told ? [.folderChanged] : []))
+            #expect(reported.count == (told ? 1 : 0))
+        }
+    }
+
+    @Test func pageTextsInReadingOrder() {
+        let page = ScanPage(image: LetterFilingTests.image(), lines: [
+            ScanLine(text: "unten", box: CGRect(x: 0.1, y: 0.2, width: 0.3, height: 0.03)),
+            ScanLine(text: "oben", box: CGRect(x: 0.1, y: 0.8, width: 0.3, height: 0.03)),
+        ])
+        #expect(ScanKnowledge.texts([page, ScanPage(image: LetterFilingTests.image(), lines: [])]) == ["oben\nunten", ""])
     }
 }

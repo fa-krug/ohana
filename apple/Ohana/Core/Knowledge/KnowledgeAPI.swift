@@ -48,6 +48,16 @@ nonisolated struct KnowledgeStatusInfo: Codable, Equatable, Sendable {
     var chunks: Int
 }
 
+/// GET /knowledge/tags: the tags of the family's documents (every subfolder's), the most used first.
+nonisolated struct KnowledgeTagsResponse: Codable, Equatable, Sendable {
+    nonisolated struct Tag: Codable, Equatable, Sendable {
+        var tag: String
+        var count: Int
+    }
+
+    var tags: [Tag]
+}
+
 /// One file of a manifest, and what an upload says of its file.
 nonisolated struct KnowledgeFileInfo: Codable, Equatable, Sendable {
     var path: String
@@ -142,6 +152,11 @@ extension FamilyAPI {
     /// The folder and what's in the index, kept on the device (Settings → Knowledge).
     func knowledgeStatus() -> CachedGet<KnowledgeStatusInfo> {
         cached("/knowledge/status")
+    }
+
+    /// The tags of the family's documents, kept on the device (a scan's suggestions).
+    func knowledgeTags() -> CachedGet<KnowledgeTagsResponse> {
+        cached("/knowledge/tags")
     }
 
     /// Sends the manifest; the paths the server wants the text of.

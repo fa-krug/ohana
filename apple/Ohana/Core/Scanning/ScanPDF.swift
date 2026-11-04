@@ -7,7 +7,8 @@ import UniformTypeIdentifiers
 // Filing a scan (a letter, a receipt): a searchable PDF (the page images with the recognized text
 // invisible on top, like a scanner's OCR) under a cleaned-up name, in the folder the user picked
 // last (a bookmark, device-wide and shared by letters and receipts), with Finder / Files tags.
-// All on the device: nothing of it goes to the server.
+// All on the device: nothing of it goes to the server, unless the family's knowledge folder is
+// linked here: then that is the folder, and the scan's text goes into the knowledge base.
 
 /// What kind of paper: "Save as PDF" is remembered for each.
 nonisolated enum ScanKind: String, Sendable {
@@ -112,14 +113,19 @@ nonisolated enum FolderBookmark {
     }
 }
 
-/// The folder scans are saved in.
+/// The folder scans are saved in: the one the user picked, or the family's knowledge folder
+/// (its root) while it's linked on this device (`ScanKnowledge`).
 nonisolated enum ScanFolder: Equatable, Sendable {
     case none
     case missing
     case folder(URL)
+    case knowledge(URL)
 
     var url: URL? {
-        if case let .folder(url) = self { url } else { nil }
+        switch self {
+        case let .folder(url), let .knowledge(url): url
+        case .none, .missing: nil
+        }
     }
 }
 
@@ -153,8 +159,7 @@ nonisolated enum ScanFileName {
     }
 
     /// "Name.pdf" in `folder`, or "Name_2.pdf", "Name_3.pdf", … when that is taken.
-    static func unique(_ name: String, in folder: URL,
-                       exists: (URL) -> Bool = { FileManager.default.fileExists(atPath: $0.path) }) -> URL {
+    static func unique(_ name: String, in folder: URL, exists: (URL) -> Bool = taken) -> URL {
         let base = sanitized(name)
         var number = 1
         while true {
@@ -163,6 +168,13 @@ nonisolated enum ScanFileName {
             if !exists(file) { return file }
             number += 1
         }
+    }
+
+    /// A file is there, or an iCloud file of that name that isn't on the device (iOS keeps a
+    /// hidden ".Name.icloud" in its place).
+    static func taken(_ file: URL) -> Bool {
+        let placeholder = file.deletingLastPathComponent().appendingPathComponent(".\(file.lastPathComponent).icloud")
+        return FileManager.default.fileExists(atPath: file.path) || FileManager.default.fileExists(atPath: placeholder.path)
     }
 }
 

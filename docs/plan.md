@@ -577,6 +577,10 @@ Notes (deviations and details):
   uploaded or moved. `POST /knowledge/folder {replace: true}` (the device chose another folder)
   deletes the folder with its documents and makes a new one with a new id. A device name longer
   than 100 is cut, not refused.
+- **Step 3 built** (scans): only a folder `.linked` on the device takes scans (`.missing` / `.replaced`
+  keep the picker); a scan without text isn't queued; a name iCloud holds as `.Name.icloud` counts as taken.
+  A scan queued during a run joins that run's manifest and is sent after it; a flush under way
+  goes on until the queue is empty; the scan's text is written only while the sign-out gate holds.
 - Limits: 20 000 files per manifest, 2 000 pages and 2 MB of text per upload (413); paths NFC, at
   most 1 024 characters, no hidden or ".." parts. The document list's `q` uses LIKE (case ignored
   for ASCII only) for now.
