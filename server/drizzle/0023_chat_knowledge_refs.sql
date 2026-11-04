@@ -1,0 +1,1 @@
+ALTER TABLE `chats` ADD `knowledge_refs` text DEFAULT '[]' NOT NULL;

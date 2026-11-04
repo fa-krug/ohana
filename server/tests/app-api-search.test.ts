@@ -15,8 +15,11 @@ import {
   familyPeople,
   finCategories,
   finTransactions,
+  kbChunks,
+  kbDocuments,
   recipes,
 } from "@/lib/db/schema";
+import { ensureFolder } from "@/lib/knowledge/folders";
 import { handleFamilyApp } from "@/lib/families/app-routes";
 import { createTestDb } from "@/lib/test/db";
 import { NOW, makeFamily, makeUser } from "@/lib/test/factories";
@@ -161,6 +164,48 @@ describe("GET /search", () => {
     ]);
     process.env.DISABLED_MODULES = "chores";
     expect(pick((await s.get(s.editor.id, "q=lawn")).data.results, "chore")).toEqual([]);
+  });
+
+  it("finds knowledge documents by name, folder, tags and text for editors only", async () => {
+    const s = setup();
+    const folderId = ensureFolder(s.db, s.family.id, null, NOW).folder.id;
+    const doc = (id: string, path: string, extra: Record<string, unknown> = {}) =>
+      s.db.insert(kbDocuments)
+        .values({ id, familyId: s.family.id, folderId, path, name: path.split("/").at(-1)!, hash: id, status: "ready", indexedAt: NOW, mtime: Date.parse("2026-01-15T10:00:00Z"), createdAt: NOW, updatedAt: NOW, ...extra })
+        .run();
+    doc("k1", "Versicherungen/Hausrat Police.pdf", { tags: JSON.stringify(["Versicherung", "Haus"]), docDate: "2026-03-03" });
+    doc("k2", "Briefe/Schreiben.pdf");
+    doc("k3", "Hausrat alt.pdf", { status: "excluded" });
+    const chunk = (documentId: string, page: number, text: string, seq = 0) =>
+      s.db.insert(kbChunks).values({ documentId, familyId: s.family.id, seq, page, text }).run();
+    chunk("k2", 1, "Sehr geehrte Familie, hiermit bestätigen wir den Einschluss der Fahrräder.");
+    chunk("k2", 2, "Ihre Hausrat-Versicherung deckt auch Fahrräder bis 2000 Euro, Selbstbeteiligung 150 Euro.", 1);
+
+    const hausrat = (await s.get(s.editor.id, "q=hausrat&today=2026-11-02")).data;
+    expect(pick(hausrat.results, "knowledge")).toEqual([
+      { kind: "knowledge", id: "k1", title: "Hausrat Police.pdf", detail: "Versicherungen · Versicherung, Haus", day: "2026-03-03" },
+      {
+        kind: "knowledge",
+        id: "k2",
+        title: "Schreiben.pdf",
+        detail: "Briefe",
+        day: "2026-01-15",
+        page: 2,
+        snippet: expect.stringContaining("Hausrat-Versicherung deckt"),
+      },
+    ]);
+    expect(pick(hausrat.results, "knowledge")[1].snippet).not.toContain("**");
+    // Every word has to be there: in the text, accents ignored, one hit per document.
+    const bikes = (await s.get(s.editor.id, "q=fahrrader%20selbstbeteiligung")).data;
+    expect(pick(bikes.results, "knowledge")).toMatchObject([{ id: "k2", page: 2 }]);
+    expect(pick((await s.get(s.editor.id, "q=fahrrader%20zebra")).data.results, "knowledge")).toEqual([]);
+    // Tags count too.
+    expect(pick((await s.get(s.editor.id, "q=haus%20police")).data.results, "knowledge").map((r: any) => r.id)).toEqual(["k1"]);
+
+    // Viewers never get it, nor anyone with the module off.
+    expect(pick((await s.get(s.viewer.id, "q=hausrat")).data.results, "knowledge")).toEqual([]);
+    process.env.DISABLED_MODULES = "knowledge";
+    expect(pick((await s.get(s.editor.id, "q=hausrat")).data.results, "knowledge")).toEqual([]);
   });
 
   it("is for members only", async () => {

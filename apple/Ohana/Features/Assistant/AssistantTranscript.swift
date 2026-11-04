@@ -17,8 +17,8 @@ enum AssistantTranscript {
                 let lines = ["**\(you):** \(text)"] + attachments.map { "📎 \($0.name)" }
                 let block = lines.joined(separator: "\n")
                 out.append(out.isEmpty ? block : "---\n\n" + block)
-            case let .assistant(text):
-                out.append(text)
+            case let .assistant(text, sources):
+                out.append(AssistantSourceMarkers.transcript(text, sources: sources))
             case let .tool(tool):
                 let label = [AssistantToolLabels.label(tool), AssistantToolLabels.detail(tool)]
                     .filter { !$0.isEmpty }.joined(separator: " · ")

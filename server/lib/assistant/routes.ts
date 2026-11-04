@@ -29,6 +29,7 @@ import { handleChats } from "./chat-routes";
 import type { ChatEnv, RunnerEnv, Turn } from "./chats";
 import { DEFAULT_WINDOW } from "./context";
 import { retryFailedCards } from "@/lib/knowledge/documents";
+import { knowledgeForUser } from "@/lib/knowledge/sources";
 import { letterInput, readLetter } from "./letter";
 import { checkUrl, type NetOptions } from "./net";
 import { contextWindow, listModels, type Provider, streamChat } from "./provider";
@@ -300,7 +301,8 @@ function storesOf(env: AiEnv, familyId: string) {
 }
 
 /** A chat turn of the family (in the worker): its model, the instructions for the context, and
- *  the tools. Viewers (and families that switched changes off) get only the tools that read. */
+ *  the tools. Viewers (and families that switched changes off) get only the tools that read;
+ *  the knowledge base's tools only editors. */
 export async function prepareTurn(
   env: AiEnv,
   chat: ChatRow,
@@ -316,6 +318,8 @@ export async function prepareTurn(
   const search = searchOf(row, env);
   const stores = storesOf(env, family.id);
   const writes = row.allow_writes && role === "editor";
+  // The knowledge base is the editors' (viewers never get its tools), read-only.
+  const knowledge = knowledgeForUser(env.db, family.id, chat.user_id);
   const [types, categories, accounts, settings, window] = await Promise.all([
     stores.calendar.listTypes(family.id),
     stores.finance.listCategories(family.id),
@@ -336,6 +340,7 @@ export async function prepareTurn(
     search: !!search,
     reminders: !!context.reminders,
     appleCalendar: !!context.appleCalendar,
+    knowledge,
     mealTags: mealTagNames(env.db, family.id, context.lang),
     home: homeAddressOf(env.db, family.id),
     people: familyNames(env.db, family.id),
@@ -354,6 +359,7 @@ export async function prepareTurn(
       lookups: env.lookups,
       reminders: context.reminders,
       appleCalendar: context.appleCalendar,
+      knowledge,
     },
     modelNet: env.modelNet,
     writes,

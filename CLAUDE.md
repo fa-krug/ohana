@@ -188,7 +188,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `provider.ts`, items/messages saved as it goes, lease renewed, stop/delete noticed per
   tick). `prepareTurn` builds the instructions and tools; viewers and `allow_writes: false`
   get only the tools that read. Tools by module in `tools/` (`calendar.ts`, `events.ts`
-  (cal_events), `finance.ts`, `meals.ts`, `appointments.ts`, `general.ts`, `web.ts`, registry
+  (cal_events), `finance.ts`, `meals.ts`, `appointments.ts`, `knowledge.ts`, `general.ts`, `web.ts`, registry
   `index.ts`; `runTool` turns `HttpError` / `AuthError` / `ZodError` into the model's
   `{"error"}`); every change returns undo steps (requests on the family API the client
   replays; meals' and appointments' undo routes are `lib/meals/family-routes.ts`
@@ -225,7 +225,21 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   from the `ChatRunner`; `chats.seen_at`, set every 15 s by a follower, says someone looks).
   `net.ts` refuses private addresses (`AiEnv.modelNet` may allow them for the endpoint with
   `AI_ALLOW_PRIVATE_ENDPOINT`). `toolsFor` leaves out the tools of turned-off modules
-  (`toolEnabled`). Tests use
+  (`toolEnabled`). **Knowledge** (phase 12): `search_knowledge` / `read_knowledge` (read-only,
+  `needsKnowledge`: only with `ToolContext.knowledge`, i.e. `knowledgeForUser`: an editor, the
+  module on, a folder; never viewers) give every passage a `ref` "k:<chunkId>"; the system prompt
+  asks for `[[k:<chunkId>]]` after each statement from them; `requireKnowledge` re-checks the
+  user's role and the module at run time. The refs a tool run returns (`ToolResult.refs`, those
+  still in the result the model got) come with `tool_result` and are recorded in
+  `chats.knowledge_refs` (migration `0023`); an imported history adds none (its knowledge calls
+  stay, inert). The `Runner` checks each assistant item it saves (`sources.ts` `checkSources`,
+  `RunnerEnv.sources` → `chunkSources`): U+E000 / U+E001 (the app's placeholders) go, markers
+  (spaces inside allowed) are written `[[k:<id>]]` when recorded and the chunk is the family's,
+  else taken out; the item gets `sources` (`ref`, `chunkId`, `documentId`, `name`, `path`, `page`,
+  `quote` = the whole chunk, `excerpt` ≤ 300 chars of it: `excerptOf`, the 1–3 sentences sharing
+  most words with the statement before the marker, or a matching card fact's quote, else the
+  first sentence). Only the saved copy is checked (the streaming text keeps half-written
+  markers); the model's messages keep the raw text; imported chats' items lose their markers. Tests use
   `lib/test/assistant.ts` (fake fetch + `lib/test/mock-ai.ts`, a ticking `ChatRunner`);
   `npm run mock-ai` serves the mock for trying it out.
 - **Secrets (`lib/secrets.ts`):** `SecretBox` (port of family-planner's): AES-256-GCM,
@@ -363,7 +377,12 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `searchKnowledge(db, familyId, query, {limit, tags, folder})`: each word a quoted prefix term,
   all words, else any, bm25 order, chunks of ready and pending (a reindex keeps them findable)
   documents → `{chunkId, documentId, name, path, page, text, snippet}`. `cleanup.ts` deletes
-  documents gone for 30 days.
+  documents gone for 30 days. `sources.ts`: `knowledgeForUser` (who gets the assistant's
+  knowledge tools), `chunkSources` (the cited chunks with their card facts) and `excerptOf` (see
+  Assistant). The
+  family search (`searchFamily`, `knowledge: true` for editors) has the kind `knowledge`: documents
+  (not excluded) by name, folder, tags and their best FTS passage (one per document, `page`,
+  `snippet` without the `**` marks), every word required as for the other kinds.
 - **Connections between modules (phase 7):**
   - *Appointments → Calendar:* `cal_events` (`lib/db/schema/connections.ts`): events from
     `day` to `end_day` (wall-clock `start` on the first / `end` on the last "HH:MM", or null =
@@ -709,6 +728,14 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   (`KnowledgeQuoteMatch`: the words in order, whitespace, case, accents and punctuation ignored, else
   its first 8, 5, 3 words; on its page, then the pages beside it), anything else in Quick Look; no
   folder here (or missing, replaced) → an alert offering Settings → Knowledge.
+  Sources in the assistant (`Features/Assistant/AssistantSources.swift`): an answer item's `sources`
+  (`AssistantItem.assistant(text:sources:)`) turn its `[[k:<n>]]` markers into chips "[1]" (numbered
+  by the sources' order; `AssistantSourceMarkers`: placeholders through the Markdown, then links
+  `ohana-source://n`; markers without a source and one still streaming at the end hidden) with a
+  "Sources" list below; a tap shows `AssistantSourceSheet` (the quote with its `excerpt` marked and
+  scrolled to; *Open Original* at the page and *Show in Knowledge Base* mark the excerpt, else the
+  quote's first words, `AssistantSourceExcerpt`; a 404 is the document gone, or no access when
+  `/knowledge/status` is refused too, `AssistantSourceAvailability`). The search tab's `knowledge` hits open the document at their `page`.
   The cook view (`MealsCookView`) turns durations in a step's
   text into timer links (`StepDurations`, English and German); `CookTimers` (app-wide, kept in
   `UserDefaults`) schedules a time-sensitive local notification per timer (shown in the

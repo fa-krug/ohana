@@ -48,6 +48,9 @@ export interface ToolResult {
   appleCalendar?: AppleCalendarEdit;
   /** Events, tasks and deadlines to add (suggest_items), the same way: the user picks which. */
   suggestions?: SuggestionsEdit;
+  /** The knowledge base's chunk ids the result gives as refs ("k:<id>"): the only ones the
+   *  chat's answers may cite (recorded by the runner as the tool runs). */
+  refs?: number[];
 }
 
 export interface ToolContext {
@@ -75,6 +78,9 @@ export interface ToolContext {
   /** The user's device calendars (Apple Calendar) as the app sent them; undefined: no full
    *  calendar access on the device, and the Apple Calendar tools are off. */
   appleCalendar?: AppleCalendarSnapshot;
+  /** The chat's user may use the family's knowledge base (an editor, the module on, a folder
+   *  set up); else the knowledge tools are off. */
+  knowledge?: boolean;
   signal?: AbortSignal;
 }
 
@@ -92,6 +98,8 @@ export interface Tool {
   needsReminders?: boolean;
   /** Offered only when the app sent the user's device calendars (ToolContext.appleCalendar). */
   needsAppleCalendar?: boolean;
+  /** Offered only when the user may use the knowledge base (ToolContext.knowledge). */
+  needsKnowledge?: boolean;
   run(args: Record<string, unknown>, ctx: ToolContext): Promise<ToolResult>;
 }
 

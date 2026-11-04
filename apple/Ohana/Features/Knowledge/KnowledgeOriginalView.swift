@@ -32,6 +32,11 @@ final class KnowledgeOriginalOpener {
 
     /// Opens `document`'s original from `folder`, at `page` (from 1) with `quote` marked.
     func open(_ document: KnowledgeDocumentSummary, page: Int? = nil, quote: String? = nil, folder: KnowledgeFolder) {
+        open(path: document.path, name: document.name, page: page, quote: quote, folder: folder)
+    }
+
+    /// Opens the original at `path` in `folder` (an assistant's source: `name` its document's).
+    func open(path: String, name: String, page: Int? = nil, quote: String? = nil, folder: KnowledgeFolder) {
         cancel()
         loading = true
         let loader = KnowledgeOriginalLoader()
@@ -40,10 +45,10 @@ final class KnowledgeOriginalOpener {
         task = Task {
             defer { if !Task.isCancelled { loading = false } }
             do {
-                let file = try await loader.fetch(path: document.path, folder: folder, online: online)
+                let file = try await loader.fetch(path: path, folder: folder, online: online)
                 guard !Task.isCancelled else { return file.discard() }
                 if file.isPDF, let pdfDocument = PDFDocument(url: file.url) {
-                    pdf = ShownPDF(file: file, document: pdfDocument, name: document.name, page: page, quote: quote)
+                    pdf = ShownPDF(file: file, document: pdfDocument, name: name, page: page, quote: quote)
                 } else {
                     previewClosed()
                     previewFile = file

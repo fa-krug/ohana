@@ -162,6 +162,13 @@
       "when": 1793794314711,
       "tag": "0022_knowledge_cards",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1793797755051,
+      "tag": "0023_chat_knowledge_refs",
+      "breakpoints": true
     }
   ]
 }

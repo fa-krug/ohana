@@ -602,6 +602,22 @@ Notes (deviations and details):
 - Limits: 20 000 files per manifest, 2 000 pages and 2 MB of text per upload (413); paths NFC, at
   most 1 024 characters, no hidden or ".." parts. The document list's `q` uses LIKE (case ignored
   for ASCII only) for now.
+- **Step 5 built** (server part: the assistant and the search tab): `tools/knowledge.ts`
+  (`search_knowledge` ≤ 20 hits, default 8; `read_knowledge` whole when the text fits about 12 000
+  characters, else a page at a time, a very long page in `part`s, with `next`; facts with their
+  refs; another family's or an excluded document is "not found"). The tools need a folder besides
+  an editor and the module (no prompt about a knowledge base the family hasn't set up), and don't
+  depend on `allow_writes` (they only read) and re-check the role and module when they run.
+  Returned refs are recorded as the tools run (`chats.knowledge_refs`, only refs still in the
+  result the model got), never taken from stored messages, so an imported history (whose knowledge
+  calls stay, inert) can't vouch for a ref. The check removes an invalid marker with the spaces
+  before it, writes valid ones without inner spaces, strips U+E000 / U+E001, and drops every marker
+  while the user may no longer use the knowledge base (a viewer now, the module off). A source's
+  `quote` is the whole chunk and its `excerpt` (≤ 300 characters, a part of it) the 1–3 sentences
+  sharing the most words with the statement before the marker (folded, stop words left out,
+  words of 5+ letters also by their first five), a matching card fact's quote when it fits as well,
+  else the first sentence. The search kind `knowledge` comes last in the kinds' order;
+  its `day` is the card's date, else the file's modification day.
 
 ### Phase 7 notes (connections)
 

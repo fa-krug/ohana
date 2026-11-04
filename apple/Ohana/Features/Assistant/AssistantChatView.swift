@@ -435,8 +435,10 @@ struct AssistantChatView: View {
     /// tool results.
     @ViewBuilder private func itemMenu(items: [(offset: Int, item: AssistantItem)], index: Int) -> some View {
         let item = items[index].item
-        if case let .assistant(text) = item {
-            Button("Copy", systemImage: "doc.on.doc") { AssistantTranscript.copy(text) }
+        if case let .assistant(text, sources) = item {
+            Button("Copy", systemImage: "doc.on.doc") {
+                AssistantTranscript.copy(AssistantSourceMarkers.transcript(text, sources: sources))
+            }
         }
         if case let .user(text, _) = item, !text.isEmpty {
             Button("Copy", systemImage: "doc.on.doc") { AssistantTranscript.copy(text) }

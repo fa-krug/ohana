@@ -1,11 +1,12 @@
 // One search across the family's modules (the app's search tab, ⌘K): recipes, calendar events
 // and notes, transactions, appointment searches, chores, the people of the family and the
-// asking user's assistant chats. Every word of the query has to appear in an item (case and accents
+// asking user's assistant chats, and for editors the knowledge base's documents (by name, path,
+// tags and text). Every word of the query has to appear in an item (case and accents
 // ignored, so "lasagne" finds "Lasagne", "muller" "Müller"). Turned-off modules are left out.
 // A family's data is small enough to filter here rather than in SQL (SQLite's LIKE folds only
 // ASCII).
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import type { Db } from "@/lib/db";
 import { addDays } from "@/lib/calendar/dates";
 import { loadSeries, occurrencesOf, publicEvent, type Series } from "@/lib/calendar/events";
@@ -19,25 +20,29 @@ import {
   finCategories,
   finSettings,
   finTransactions,
+  kbDocuments,
   recipes,
   users,
 } from "@/lib/db/schema";
+import { parseJsonArray } from "@/lib/knowledge/documents";
+import { searchKnowledge, SEARCH_MAX_LIMIT as KNOWLEDGE_MAX_HITS } from "@/lib/knowledge/search";
 import { normalizeForSearch } from "@/lib/meals/domain/recipes/search";
 import { moduleEnabled } from "@/lib/server-info";
 
-export const SEARCH_KINDS = ["recipe", "event", "note", "transaction", "search", "chore", "person", "chat"] as const;
+export const SEARCH_KINDS = ["recipe", "event", "note", "transaction", "search", "chore", "person", "chat", "knowledge"] as const;
 export type SearchKind = (typeof SEARCH_KINDS)[number];
 
 export interface SearchHit {
   kind: SearchKind;
   /** The item's id: a recipe's, an event's, a transaction's, a search's, a chore's, a chat's,
-   *  a person's (an account's user id for a member); a note's is its day. */
+   *  a knowledge document's, a person's (an account's user id for a member); a note's is its
+   *  day. */
   id: string;
   title: string;
   /** More of the item, joined with " · " (location and person, category, the email…). */
   detail: string;
   /** "YYYY-MM-DD": the event's, note's or transaction's day, a chore's next (else its day),
-   *  the chat's last change. */
+   *  the chat's last change, a document's date (its card's, else the file's last change). */
   day: string | null;
   /** An event's start or a chore's time ("HH:MM"), null all day. */
   time?: string | null;
@@ -47,6 +52,10 @@ export interface SearchHit {
   account?: boolean;
   /** A note's icon (an SF Symbol name), when it has one. */
   icon?: string;
+  /** A knowledge document found by its text: the page of the best passage, and that passage's
+   *  best part (plain text, "…" where it is cut). */
+  page?: number;
+  snippet?: string;
 }
 
 export interface SearchResult {
@@ -63,13 +72,14 @@ export const SEARCH_MAX_QUERY = 100;
 export const SEARCH_DEFAULT_LIMIT = 8;
 export const SEARCH_MAX_LIMIT = 50;
 
-/** Searches family `familyId` for `query` as `userId` (whose chats are searched). */
+/** Searches family `familyId` for `query` as `userId` (whose chats are searched); `knowledge`:
+ *  the knowledge base too (editors only, the module on: the caller decides). */
 export function searchFamily(
   db: Db,
   familyId: string,
   userId: string,
   query: string,
-  { today, limit = SEARCH_DEFAULT_LIMIT }: { today: string; limit?: number },
+  { today, limit = SEARCH_DEFAULT_LIMIT, knowledge = false }: { today: string; limit?: number; knowledge?: boolean },
 ): SearchResult {
   const q = query.trim().slice(0, SEARCH_MAX_QUERY);
   const terms = normalizeForSearch(q).split(/\s+/).filter(Boolean);
@@ -98,6 +108,7 @@ export function searchFamily(
     chore: moduleEnabled("chores") ? ranked(choreHits(db, familyId, today)) : [],
     person: ranked(personHits(db, familyId)),
     chat: moduleEnabled("assistant") ? ranked(chatHits(db, familyId, userId)) : [],
+    knowledge: knowledge && moduleEnabled("knowledge") ? ranked(knowledgeHits(db, familyId, q)) : [],
   };
   const results: SearchHit[] = [];
   const more: Partial<Record<SearchKind, number>> = {};
@@ -311,4 +322,42 @@ function chatHits(db: Db, familyId: string, userId: string) {
       },
       text: [],
     }));
+}
+
+/** The knowledge base's documents (not the excluded), each with its best passage when its text
+ *  matches (FTS, one per document); `ranked` keeps those holding every word in their name, path,
+ *  tags or that passage. */
+function knowledgeHits(db: Db, familyId: string, query: string) {
+  const best = new Map<string, { page: number; text: string; snippet: string }>();
+  for (const h of searchKnowledge(db, familyId, query, { limit: KNOWLEDGE_MAX_HITS })) {
+    if (!best.has(h.documentId)) best.set(h.documentId, h);
+  }
+  return db
+    .select({
+      id: kbDocuments.id,
+      name: kbDocuments.name,
+      path: kbDocuments.path,
+      tags: kbDocuments.tags,
+      docDate: kbDocuments.docDate,
+      mtime: kbDocuments.mtime,
+    })
+    .from(kbDocuments)
+    .where(and(eq(kbDocuments.familyId, familyId), ne(kbDocuments.status, "excluded")))
+    .all()
+    .map((d) => {
+      const tags = parseJsonArray<string>(d.tags) ?? [];
+      const folder = d.path.includes("/") ? d.path.slice(0, d.path.lastIndexOf("/")) : "";
+      const hit = best.get(d.id);
+      return {
+        hit: {
+          kind: "knowledge" as const,
+          id: d.id,
+          title: d.name,
+          detail: joined(folder, tags.join(", ")),
+          day: d.docDate ?? (d.mtime > 0 ? new Date(d.mtime).toISOString().slice(0, 10) : null),
+          ...(hit ? { page: hit.page, snippet: hit.snippet.replace(/\*\*/g, "") } : {}),
+        },
+        text: [d.path, ...tags, hit?.text ?? ""],
+      };
+    });
 }

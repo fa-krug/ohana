@@ -43,6 +43,12 @@
 //   "appointment searches"                -> list_appointment_searches
 //   "book <resultId> of <search>"         -> book_appointment_slot
 //   "events"                              -> list_events for this month
+//   "knowledge <words>"                   -> search_knowledge; then cites the first hit
+//                                            ("<name> says: … [[k:<id>]].", with "invent" also
+//                                            a made-up [[k:999999]])
+//   "read document <id> [page N] [part M]" -> read_knowledge; then "Read <name>, page <page> of
+//                                            <pages>: <n> passages [[<first ref>]]."
+//   "cite k:<id>[, k:<id> …]"             -> answers "Said here [[k:<id>]]." per ref, no tool
 // Asked for recipes (the meals generator's prompt) it answers with that many recipes as JSON in
 // a Markdown block; POST /images/generations answers with a small PNG (b64_json).
 // Asked to import a web page's recipe (the import prompt), it answers with one recipe titled
@@ -438,6 +444,18 @@ async function respond(req: Request, body: any): Promise<Response> {
       ? { changes: "calendar", left: "calendars" }
       : { changes: "reminder", left: "Reminders" };
     const suggested = called?.function.name === "suggest_items";
+    if (called?.function.name === "search_knowledge") {
+      const hit = result.hits?.[0];
+      const invented = /\binvent\b/i.test(asked) ? " And this too [[k:999999]]." : "";
+      return reply(stream, hit ? `${hit.name} says: ${hit.text.slice(0, 40)} [[${hit.ref}]].${invented}` : "Nothing found in the documents.");
+    }
+    if (called?.function.name === "read_knowledge") {
+      const first = result.chunks?.[0]?.ref;
+      return reply(
+        stream,
+        `Read ${result.document?.name}, page ${result.page ?? "all"} of ${result.pages}: ${result.chunks?.length ?? 0} passages${first ? ` [[${first}]]` : ""}.`,
+      );
+    }
     const text = result.skipped
       ? "You skipped my question."
       : suggested && result.applied === true
@@ -495,6 +513,19 @@ async function respond(req: Request, body: any): Promise<Response> {
   const dates = text.match(/\d{4}-\d{2}-\d{2}/g) ?? [];
   const url = /https?:\/\/\S+/.exec(text)?.[0];
 
+  const knowledge = /^knowledge (.+)$/i.exec(text);
+  if (knowledge && tools.has("search_knowledge")) {
+    return reply(stream, "", { name: "search_knowledge", args: { query: knowledge[1].replace(/\binvent\b/i, "").trim() } });
+  }
+  const read = /^read document (\S+)(?: page (\d+))?(?: part (\d+))?$/i.exec(text);
+  if (read && tools.has("read_knowledge")) {
+    return reply(stream, "", {
+      name: "read_knowledge",
+      args: { documentId: read[1], ...(read[2] ? { page: Number(read[2]) } : {}), ...(read[3] ? { part: Number(read[3]) } : {}) },
+    });
+  }
+  const cite = /^cite (k:\d+(?:,\s*k:\d+)*)$/i.exec(text);
+  if (cite) return reply(stream, cite[1].split(",").map((r) => `Said here [[${r.trim()}]].`).join(" "));
   if (/vacation|urlaub/.test(lower) && dates.length && tools.has("change_entries")) {
     const type = /- ([a-z0-9-]+): “[^”]*” \(covers\)/.exec(system)?.[1] ?? "vacation";
     return reply(stream, "I'll add that.", {

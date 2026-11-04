@@ -1060,8 +1060,9 @@ paths:
       summary: Search across the modules
       description: >-
         Recipes, calendar events and notes, transactions, appointment searches, chores, the
-        people of the family and the caller's own assistant chats whose text holds every word of `q`
-        (case and accents ignored). Grouped by kind in the order of `SearchHit.kind`; within a
+        people of the family, the caller's own assistant chats and (editors only) the knowledge
+        base's documents (name, folder, tags, and their text by full-text search, one hit per
+        document) whose text holds every word of `q` (case and accents ignored). Grouped by kind in the order of `SearchHit.kind`; within a
         kind title matches first, then the ones nearest to `today`. Disabled modules are left
         out.
       x-ohana-role: viewer
@@ -6407,18 +6408,21 @@ components:
       type: object
       required: [kind, id, title, detail, day]
       properties:
-        kind: {type: string, enum: [recipe, event, note, transaction, search, chore, person, chat], description: "Clients skip kinds they don't know (more may come)."}
+        kind: {type: string, enum: [recipe, event, note, transaction, search, chore, person, chat, knowledge], description: "Clients skip kinds they don't know (more may come). `knowledge` (a document of the knowledge base) only for editors."}
         id:
           type: string
           description: >-
-            The item's id (a member's user id for a person with an account); a note's is its day.
+            The item's id (a member's user id for a person with an account, a knowledge
+            document's id); a note's is its day.
         title: {type: string}
         detail: {type: string, description: "More of the item, joined with \" · \" (may be empty)."}
-        day: {type: [string, "null"], format: date, description: "A note's or transaction's day; an event's next occurrence from today on (else its last; one hit per series); a chore's next due day (else its day); a chat's last change."}
+        day: {type: [string, "null"], format: date, description: "A note's or transaction's day; an event's next occurrence from today on (else its last; one hit per series); a chore's next due day (else its day); a chat's last change; a knowledge document's date (its card's, else the file's last change)."}
         time: {type: [string, "null"], description: "An event's start or a chore's time (HH:MM), null all day."}
         amountCents: {type: integer, description: "A transaction's amount; negative: money going out."}
         account: {type: boolean, description: "A person: a member with an account (else a person without one)."}
         icon: {$ref: "#/components/schemas/SymbolName", description: "A note's icon, when it has one (the title is its comment)."}
+        page: {type: integer, description: "A knowledge document found by its text: the page of its best passage (from 1)."}
+        snippet: {type: string, description: "A knowledge document found by its text: the best passage's best part, plain text with \"…\" where it is cut."}
 
     # ---------------------------------------------------------------- overview
     Dashboard:
@@ -7747,6 +7751,18 @@ components:
         method: {type: string, enum: [POST, PATCH, DELETE]}
         path: {type: string, example: /entries}
         body: {}
+    ChatSource:
+      type: object
+      required: [ref, chunkId, documentId, name, path, page, quote, excerpt]
+      properties:
+        ref: {type: string, example: "k:42", description: "The marker's ref (`[[k:42]]` in the text)."}
+        chunkId: {type: integer}
+        documentId: {type: string}
+        name: {type: string, description: "The document's file name."}
+        path: {type: string, description: "Its path in the knowledge folder."}
+        page: {type: integer, description: "The page the chunk is on, from 1."}
+        quote: {type: string, description: "The chunk's whole text (at most about 1 500 characters)."}
+        excerpt: {type: string, description: "The part of `quote` that backs the statement before the marker's first occurrence: 1–3 sentences sharing the most words with it (or a matching card fact's quote), at most 300 characters; else the first sentence."}
     ChatItem:
       description: What the chat shows, in order.
       oneOf:
@@ -7764,7 +7780,20 @@ components:
           required: [kind, text]
           properties:
             kind: {type: string, const: assistant}
-            text: {type: string, description: "Markdown; grows while streaming."}
+            text:
+              type: string
+              description: >-
+                Markdown; grows while streaming. A statement taken from the knowledge base ends with
+                a source marker `[[k:<chunkId>]]`. When the item is saved, valid markers are written
+                that way (spaces inside removed); markers that don't check out (no knowledge tool of
+                this server returned that ref in the chat, or the chunk is gone or another family's)
+                are removed, as are the characters U+E000 and U+E001.
+            sources:
+              type: array
+              description: >-
+                The knowledge base's chunks the text's markers cite, one per ref in order of first
+                appearance; left out without markers.
+              items: {$ref: "#/components/schemas/ChatSource"}
         - type: object
           title: tool
           required: [kind, id, name, args, status]

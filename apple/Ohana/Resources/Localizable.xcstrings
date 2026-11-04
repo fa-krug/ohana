@@ -13088,6 +13088,16 @@
         }
       }
     },
+    "Reading a document": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liest ein Dokument"
+          }
+        }
+      }
+    },
     "Reading a recipe": {
       "localizations": {
         "de": {
@@ -14658,6 +14668,16 @@
         }
       }
     },
+    "Searching the knowledge base": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Durchsucht die Wissensbasis"
+          }
+        }
+      }
+    },
     "Searching the web: %@": {
       "localizations": {
         "de": {
@@ -15338,6 +15358,16 @@
         }
       }
     },
+    "Show in Knowledge Base": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In der Wissensbasis zeigen"
+          }
+        }
+      }
+    },
     "Show in calendar": {
       "localizations": {
         "de": {
@@ -15434,6 +15464,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zeigt den Tag im Kalender"
+          }
+        }
+      }
+    },
+    "Shows the passage": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeigt die Textstelle"
           }
         }
       }
@@ -15836,6 +15876,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Quelle"
+          }
+        }
+      }
+    },
+    "Source %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quelle %lld"
+          }
+        }
+      }
+    },
+    "Sources": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quellen"
           }
         }
       }
@@ -17052,6 +17112,16 @@
         }
       }
     },
+    "The knowledge base isn’t available to you.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Wissensbasis steht dir nicht zur Verfügung."
+          }
+        }
+      }
+    },
     "The knowledge folder can’t be found any more. Choose it again.": {
       "localizations": {
         "de": {
@@ -17678,6 +17748,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nur auf diesem Gerät. Bei einer in iCloud geteilten Liste sehen alle die Artikel: Schalte es dann auf einem Gerät ein."
+          }
+        }
+      }
+    },
+    "This document is no longer in the knowledge base.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Dokument ist nicht mehr in der Wissensbasis."
           }
         }
       }

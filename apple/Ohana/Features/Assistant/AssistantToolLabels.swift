@@ -54,6 +54,8 @@ enum AssistantToolLabels {
         case "run_appointment_search": return String(localized: "Starting an appointment search")
         case "get_appointment_slot": return String(localized: "Reading a slot")
         case "book_appointment_slot": return String(localized: "Marking a slot as booked")
+        case "search_knowledge": return String(localized: "Searching the knowledge base")
+        case "read_knowledge": return String(localized: "Reading a document")
         default: return tool.name
         }
     }
@@ -80,6 +82,7 @@ enum AssistantToolLabels {
              "change_appointment_search", "run_appointment_search", "get_appointment_slot",
              "book_appointment_slot":
             "stethoscope"
+        case "search_knowledge", "read_knowledge": "books.vertical"
         default: "sparkles"
         }
     }
@@ -297,6 +300,15 @@ enum AssistantToolLabels {
             let name = named(a["name"]).isEmpty ? named(a["category"]) : named(a["name"])
             if !name.isEmpty { parts.append(quoted(name)) }
             if !named(a["parent"]).isEmpty { parts.append("→ \(quoted(named(a["parent"])))") }
+        case "search_knowledge":
+            if !str(a["query"]).isEmpty { parts.append(quoted(str(a["query"]))) }
+            if let tags = a["tags"]?.arrayValue { parts.append(list(tags.map { str($0) }.filter { !$0.isEmpty }, max: 3)) }
+            if !str(a["folder"]).isEmpty { parts.append(KnowledgePath.breadcrumb(str(a["folder"]))) }
+        case "read_knowledge":
+            if let page = a["page"]?.doubleValue, page >= 1 {
+                let n = Int(page)
+                parts.append(String(localized: "Page \(n)"))
+            }
         default:
             break
         }

@@ -141,6 +141,10 @@ page of the fact you tapped, with its passage marked. A device without the folde
 it. *Read Again* has the server read a document once more, *Leave Out* keeps it out of the
 knowledge base (*Show Left Out* lists those), and on the Mac *Show in Finder* finds the file.
 
+The assistant answers from the knowledge base too, and names its sources: a small number after a
+statement, and a list of the documents below the answer. Tap one to read the passage, open the
+original at its page or show the document; the search tab finds documents as well.
+
 ## Recipes from the web
 
 In the recipe list, *Import from Web* takes a page's address and saves the recipe on *Want to
