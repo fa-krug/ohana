@@ -75,6 +75,7 @@ struct ChoresAllView: View {
             #else
             .listStyle(.inset)
             #endif
+            .readableWidth()
             .refreshable { await store.refresh() }
         }
     }

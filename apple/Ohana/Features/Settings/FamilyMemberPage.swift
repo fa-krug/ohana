@@ -52,6 +52,7 @@ struct FamilyMemberPage: View {
             }
         }
         .formStyle(.grouped)
+        .readableWidth()
         .scrollContentBackground(.hidden)
         .ohanaBackground(ModuleTint.settings)
         .navigationTitle(member?.label ?? person?.name ?? "")

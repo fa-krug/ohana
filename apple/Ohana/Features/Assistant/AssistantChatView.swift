@@ -70,7 +70,9 @@ struct AssistantChatView: View {
     var body: some View {
         content
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .safeAreaInset(edge: .top, spacing: 0) { if headerInPanel { panelHeader } }
+            // A bar, not an inset: the chat scrolling under it fades out behind it (the scroll
+            // edge effect), instead of running through the title and buttons.
+            .safeAreaBar(edge: .top, spacing: 0) { if headerInPanel { panelHeader } }
             .navigationTitle(Text(verbatim: store.current?.title ?? String(localized: "Assistant")))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)

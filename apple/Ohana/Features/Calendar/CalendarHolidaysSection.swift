@@ -280,6 +280,7 @@ private struct CalendarHolidayRegionPicker: View {
                 }
             }
             .formStyle(.grouped)
+            .readableWidth()
             .searchable(text: $query)
             .navigationTitle("Region")
             #if os(iOS)
@@ -336,6 +337,7 @@ private struct CalendarHolidayRegionPage: View {
             }
         }
         .formStyle(.grouped)
+        .readableWidth()
         .navigationTitle(region.name)
         .task { await load() }
     }

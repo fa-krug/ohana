@@ -313,6 +313,7 @@ struct RecipeExportSheet: View {
                 }
             }
             .formStyle(.grouped)
+            .readableWidth()
             .navigationTitle("Share Recipe")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)

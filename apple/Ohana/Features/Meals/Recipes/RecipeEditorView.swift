@@ -118,6 +118,7 @@ private struct RecipeEditorForm: View {
             tagsSection
         }
         .formStyle(.grouped)
+        .readableWidth()
         .navigationTitle(model.isNew ? LocalizedStringKey("New Recipe") : LocalizedStringKey("Edit Recipe"))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)

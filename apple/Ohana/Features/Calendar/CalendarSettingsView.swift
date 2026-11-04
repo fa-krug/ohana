@@ -42,6 +42,7 @@ private struct CalendarSettingsContent: View {
                 AppleCalendarSyncSection(prompts: appleSync)
             }
             .formStyle(.grouped)
+            .readableWidth()
             .appleCalendarSyncPrompts(appleSync)
             .calendarHolidays(holidays)
         }
@@ -345,6 +346,7 @@ struct CalendarTypeEditor: View {
             }
         }
         .formStyle(.grouped)
+        .readableWidth()
         .navigationTitle(type.name)
         .navigationBarBackButtonHidden()
         .toolbar {

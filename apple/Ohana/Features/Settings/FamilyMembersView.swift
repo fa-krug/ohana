@@ -103,6 +103,7 @@ struct FamilyMembersView: View {
             }
         }
         .formStyle(.grouped)
+        .readableWidth()
         .scrollContentBackground(.hidden)
         .refreshable { await reload() }
     }

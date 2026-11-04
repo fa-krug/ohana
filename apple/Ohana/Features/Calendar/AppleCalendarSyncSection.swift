@@ -170,6 +170,7 @@ private struct AppleCalendarPicker: View {
                 }
             }
             .formStyle(.grouped)
+            .readableWidth()
             .navigationTitle("Apple Calendar")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)

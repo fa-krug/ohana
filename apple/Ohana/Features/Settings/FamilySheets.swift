@@ -32,6 +32,7 @@ struct FamilySheetForm<Content: View>: View {
                 }
             }
             .formStyle(.grouped)
+            .readableWidth()
             .navigationTitle(title)
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)

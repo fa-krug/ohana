@@ -86,6 +86,7 @@ struct AdminUsersView: View {
                 }
             }
             .formStyle(.grouped)
+            .readableWidth()
             .searchable(text: $query, prompt: Text("Search users"))
         }
         .task { await calls.load() }
@@ -233,6 +234,7 @@ struct AdminUserDetailView: View {
             }
         }
         .formStyle(.grouped)
+        .readableWidth()
         .refreshable { await calls.load() }
     }
 }

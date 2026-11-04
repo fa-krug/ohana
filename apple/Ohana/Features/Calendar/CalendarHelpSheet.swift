@@ -42,6 +42,7 @@ struct CalendarHelpSheet: View {
                 }
             }
             .formStyle(.grouped)
+            .readableWidth()
             .navigationTitle("How the calendar works")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)

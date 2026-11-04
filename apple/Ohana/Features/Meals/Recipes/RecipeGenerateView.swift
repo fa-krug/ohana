@@ -103,6 +103,7 @@ struct RecipeGenerateView: View {
                 }
             }
             .formStyle(.grouped)
+            .readableWidth()
             .navigationTitle("Generate recipes")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)

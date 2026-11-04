@@ -16,6 +16,7 @@ struct KnowledgeSettingsView: View {
                 ContentUnavailableView("Not available", systemImage: "books.vertical")
             }
         }
+        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
         .ohanaBackground(ModuleTint.knowledge)
         .navigationTitle("Knowledge")
     }
@@ -53,6 +54,7 @@ private struct KnowledgeSettingsForm: View {
             }
         }
         .formStyle(.grouped)
+        .readableWidth()
         .scrollContentBackground(.hidden)
         .refreshable { await loadStatus() }
         .task { await loadStatus() }

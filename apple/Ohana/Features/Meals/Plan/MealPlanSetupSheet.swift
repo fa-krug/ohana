@@ -93,6 +93,7 @@ struct MealPlanSetupSheet: View {
                 }
             }
             .formStyle(.grouped)
+            .readableWidth()
             .navigationTitle("Generate meal plan")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)

@@ -215,6 +215,7 @@ struct ChoresView: View {
             #else
             .listStyle(.inset)
             #endif
+            .readableWidth()
             .refreshable { await store.refresh() }
             .task(id: highlighted) {
                 guard let id = highlighted else { return }

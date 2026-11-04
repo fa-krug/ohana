@@ -285,6 +285,7 @@ struct LetterReviewSheet: View {
                 }
             }
             .formStyle(.grouped)
+            .readableWidth()
             .scanFolderPicker(review.filing)
             .sheet(item: $editing) { item in
                 LetterItemEditor(op: item.op, today: review.today, names: review.people) { op in

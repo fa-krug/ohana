@@ -107,6 +107,7 @@ struct FamilySearchView: View {
         #else
         .listStyle(.inset)
         #endif
+        .readableWidth()
     }
 }
 
