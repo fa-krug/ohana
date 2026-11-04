@@ -2,37 +2,54 @@ import CoreGraphics
 
 /// Where the days sit in the two grids, and which day a point hits (for taps and drags).
 enum CalendarGridLayout {
-    /// The year grid: 12 rows (months) × 31 columns (days), after a label column and a header.
+    /// The year grid: 12 rows (months) after a label column and a header. Plain, 31 columns,
+    /// the day of the month; with the weekdays aligned (`firstWeekday`, 1 = Sunday), 37 columns
+    /// of weekdays (5 weeks + 2): each month starts in the column of its 1st's weekday, so the
+    /// weekends line up as stripes. The columns before a month's 1st and after its last day are blank.
     struct Year: Equatable {
         var width: CGFloat
         var labelWidth: CGFloat = 40
         var headerHeight: CGFloat = 22
         var rowHeight: CGFloat = 30
+        /// The first day of the week the columns follow; nil: every month starts in column 0.
+        var firstWeekday: Int?
 
-        var cellWidth: CGFloat { max(1, (width - labelWidth) / 31) }
+        /// 31 days; aligned, up to 6 blanks before a 1st and 31 days.
+        static func columns(aligned: Bool) -> Int { aligned ? 37 : 31 }
+
+        var aligned: Bool { firstWeekday != nil }
+        var columns: Int { Self.columns(aligned: aligned) }
+        var cellWidth: CGFloat { max(1, (width - labelWidth) / CGFloat(columns)) }
         var height: CGFloat { headerHeight + rowHeight * 12 }
 
+        /// The column of a month's 1st.
+        func offset(year: Int, month: Int) -> Int {
+            firstWeekday.map { CalendarMath.leadingBlanks(year: year, month: month, firstWeekday: $0) } ?? 0
+        }
+
+        func column(of day: Day) -> Int { offset(year: day.year, month: day.month) + day.day - 1 }
+
         /// The day under the point; `clamp` (while dragging) gives the nearest day of the grid
-        /// for points outside of it or on a month's missing days.
+        /// for points outside of it, and of the row's month on its blank columns.
         func day(at p: CGPoint, year: Int, clamp: Bool = false) -> Day? {
             var col = Int(((p.x - labelWidth) / cellWidth).rounded(.down))
             var row = Int(((p.y - headerHeight) / rowHeight).rounded(.down))
             if clamp {
-                col = min(max(col, 0), 30)
+                col = min(max(col, 0), columns - 1)
                 row = min(max(row, 0), 11)
-            } else if !(0..<31).contains(col) || !(0..<12).contains(row) {
+            } else if !(0..<columns).contains(col) || !(0..<12).contains(row) {
                 return nil
             }
             let month = row + 1
             let last = CalendarMath.daysInMonth(year: year, month: month)
-            if col + 1 > last {
-                return clamp ? Day(year: year, month: month, day: last) : nil
-            }
-            return Day(year: year, month: month, day: col + 1)
+            let n = col - offset(year: year, month: month) + 1
+            if n < 1 { return clamp ? Day(year: year, month: month, day: 1) : nil }
+            if n > last { return clamp ? Day(year: year, month: month, day: last) : nil }
+            return Day(year: year, month: month, day: n)
         }
 
         func frame(of day: Day) -> CGRect {
-            CGRect(x: labelWidth + CGFloat(day.day - 1) * cellWidth,
+            CGRect(x: labelWidth + CGFloat(column(of: day)) * cellWidth,
                    y: headerHeight + CGFloat(day.month - 1) * rowHeight,
                    width: cellWidth, height: rowHeight)
         }

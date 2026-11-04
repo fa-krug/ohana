@@ -292,6 +292,8 @@ extension View {
 
 /// The year as the web shows it: 12 rows of months × 31 days, zoomable (how many days fit
 /// across: ⌘+ / ⌘− / pinch / the slider), scrolling sideways when zoomed in. The month names stay.
+/// With the weekdays aligned (a setting) the columns are weekdays instead: 37 of them, each month
+/// from its 1st's weekday, the header naming the weekdays and each day its number.
 struct CalendarYearGrid: View {
     let store: CalendarStore
     var reveal: CalendarReveal?
@@ -299,6 +301,7 @@ struct CalendarYearGrid: View {
     var onDoubleTap: (Day) -> Void = { _ in }
     @AppStorage("ohana.calendar.showWeekdays") private var alwaysWeekdays = false
     @AppStorage(CalendarZoom.key) private var zoom = CalendarZoom.initial
+    @AppStorage(CalendarWeekdayAlignment.key) private var alignWeekdays = false
     @Environment(\.calendarGridFocused) private var gridFocused
     @State private var width: CGFloat = 900
     @State private var position = ScrollPosition(edge: .leading)
@@ -317,29 +320,34 @@ struct CalendarYearGrid: View {
     /// The vertical scroll view's id of a month's row.
     static func rowID(_ month: Int) -> String { "calendar-year-month-\(month)" }
 
-    /// Cell width and row height for the available width: all 31 days fill it at zoom 31,
-    /// fewer days make the cells grow in both directions. Rows are at least `minRow` high (more
-    /// with larger text).
-    static func metrics(width: CGFloat, zoom: Int, labelWidth: CGFloat = 40,
+    /// Cell width and row height for the available width: all `columns` (31 days, 37 with the
+    /// weekdays aligned) fill it at zoom 31, fewer make the cells grow in both directions (zoom 7
+    /// shows 7 columns either way). Rows are at least `minRow` high (more with larger text).
+    static func metrics(width: CGFloat, zoom: Int, columns: Int = 31, labelWidth: CGFloat = 40,
                         minRow: CGFloat = 22) -> (cellWidth: CGFloat, rowHeight: CGFloat) {
-        let available = max(31, width - labelWidth)
-        let days = CGFloat(CalendarZoom.clamp(zoom))
-        let row = max(min(max(available / 31 * 0.95, 22), 40), minRow)
-        return (available / days, row * 31 / days)
+        let all = CGFloat(columns)
+        let available = max(all, width - labelWidth)
+        let span = CGFloat(CalendarZoom.max - CalendarZoom.min)
+        let across = CGFloat(CalendarZoom.min) + CGFloat(CalendarZoom.clamp(zoom) - CalendarZoom.min) * (all - CGFloat(CalendarZoom.min)) / span
+        let row = max(min(max(available / all * 0.95, 22), 40), minRow)
+        return (available / across, row * all / across)
     }
 
-    private var metrics: (cellWidth: CGFloat, rowHeight: CGFloat) {
-        Self.metrics(width: width, zoom: zoom, labelWidth: labelWidth, minRow: minRow)
+    /// The grid's layout at a zoom, plain or aligned (in the grid's coordinates: no label column).
+    private func yearLayout(zoom: Int, aligned: Bool) -> CalendarGridLayout.Year {
+        let columns = CalendarGridLayout.Year.columns(aligned: aligned)
+        let metrics = Self.metrics(width: width, zoom: zoom, columns: columns, labelWidth: labelWidth, minRow: minRow)
+        return CalendarGridLayout.Year(width: metrics.cellWidth * CGFloat(columns), labelWidth: 0,
+                                       headerHeight: headerHeight, rowHeight: metrics.rowHeight,
+                                       firstWeekday: aligned ? Calendar.current.firstWeekday : nil)
     }
 
     var body: some View {
-        let metrics = metrics
-        let layout = CalendarGridLayout.Year(width: metrics.cellWidth * 31, labelWidth: 0, headerHeight: headerHeight,
-                                             rowHeight: metrics.rowHeight)
+        let layout = yearLayout(zoom: zoom, aligned: alignWeekdays)
         HStack(alignment: .top, spacing: 0) {
             labels(layout)
             ScrollView(.horizontal) {
-                grid(layout, cellWidth: metrics.cellWidth)
+                grid(layout)
             }
             .scrollPosition($position)
             .scrollBounceBehavior(.basedOnSize)
@@ -358,7 +366,12 @@ struct CalendarYearGrid: View {
                 }
                 .onEnded { _ in pinchStart = nil }
         )
-        .onChange(of: zoom) { old, new in keepCenter(from: old, to: new) }
+        .onChange(of: zoom) { old, new in
+            keepCenter(from: yearLayout(zoom: old, aligned: alignWeekdays), to: yearLayout(zoom: new, aligned: alignWeekdays))
+        }
+        .onChange(of: alignWeekdays) { old, new in
+            keepCenter(from: yearLayout(zoom: zoom, aligned: old), to: yearLayout(zoom: zoom, aligned: new))
+        }
         .onChange(of: reveal) { _, reveal in
             if let reveal { scroll(to: reveal) }
         }
@@ -383,7 +396,8 @@ struct CalendarYearGrid: View {
         }
     }
 
-    private func grid(_ layout: CalendarGridLayout.Year, cellWidth: CGFloat) -> some View {
+    private func grid(_ layout: CalendarGridLayout.Year) -> some View {
+        let cellWidth = layout.cellWidth
         let year = store.year
         let today = Day.today
         let zoomed = CalendarZoom.clamp(zoom)
@@ -393,31 +407,20 @@ struct CalendarYearGrid: View {
         let hit: (CGPoint, Bool) -> Day? = { layout.day(at: $0, year: year, clamp: $1) }
         let last = store.canRepeat ? store.selection.max() : nil
         let context = store.cellContext(gridFocused: gridFocused)
+        var days = layout
+        days.headerHeight = 0
         return VStack(spacing: 0) {
-            HStack(spacing: 0) {
-                ForEach(1...31, id: \.self) { d in
-                    let isToday = year == today.year && d == today.day
-                    Text(verbatim: String(d))
-                        .font(.caption2.monospacedDigit().weight(isToday ? .bold : .regular))
-                        .foregroundStyle(isToday ? Color.accentColor : .secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.5)
-                        .frame(width: cellWidth)
-                }
-            }
-            .frame(height: layout.headerHeight)
-            .accessibilityHidden(true)
+            header(layout, today: today)
             CalendarYearDays(store: store, year: year,
                              months: (1...12).map { month in
                                  (1...CalendarMath.daysInMonth(year: year, month: month)).map {
                                      store.cell(Day(year: year, month: month, day: $0), context)
                                  }
                              },
-                             cellWidth: cellWidth, rowHeight: layout.rowHeight, showWeekday: showWeekday,
-                             iconSize: iconSize)
+                             layout: days, showWeekday: showWeekday, iconSize: iconSize)
                 .equatable()
         }
-        .frame(width: cellWidth * 31, height: layout.height, alignment: .topLeading)
+        .frame(width: layout.width, height: layout.height, alignment: .topLeading)
         .onDrop(of: [.ohanaCalendarEvent], delegate: CalendarEventDrop(store: store) { layout.day(at: $0, year: year) })
         #if os(macOS)
         .overlay { CalendarYearPointer(store: store, layout: layout, space: Self.space) }
@@ -430,37 +433,66 @@ struct CalendarYearGrid: View {
         .coordinateSpace(.named(Self.space))
     }
 
+    /// Above the days: their numbers (today's in the accent color), or with the weekdays aligned
+    /// the weekdays' letters, a week after another from the locale's first day.
+    private func header(_ layout: CalendarGridLayout.Year, today: Day) -> some View {
+        let letters = CalendarText.weekdayLetters
+        return HStack(spacing: 0) {
+            if layout.aligned {
+                ForEach(0..<layout.columns, id: \.self) { column in
+                    Text(verbatim: letters[column % 7])
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                        .frame(width: layout.cellWidth)
+                }
+            } else {
+                ForEach(1...31, id: \.self) { d in
+                    let isToday = store.year == today.year && d == today.day
+                    Text(verbatim: String(d))
+                        .font(.caption2.monospacedDigit().weight(isToday ? .bold : .regular))
+                        .foregroundStyle(isToday ? Color.accentColor : .secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                        .frame(width: layout.cellWidth)
+                }
+            }
+        }
+        .frame(height: layout.headerHeight)
+        .accessibilityHidden(true)
+    }
+
     private var viewport: CGFloat { max(0, width - labelWidth) }
 
-    /// After a zoom: the focused day (else the day in the middle) stays in the middle.
-    private func keepCenter(from old: Int, to new: Int) {
-        let oldCell = Self.metrics(width: width, zoom: old, labelWidth: labelWidth, minRow: minRow).cellWidth
-        let newCell = Self.metrics(width: width, zoom: new, labelWidth: labelWidth, minRow: minRow).cellWidth
+    /// After a zoom or a change of the columns: the focused day (else the point in the middle,
+    /// as a share of the grid) stays in the middle.
+    private func keepCenter(from old: CalendarGridLayout.Year, to new: CalendarGridLayout.Year) {
         let center: CGFloat
         if let focus = store.focus, focus.year == store.year {
-            center = (CGFloat(focus.day) - 0.5) * newCell
+            center = new.frame(of: focus).midX
         } else {
-            center = (offset + viewport / 2) / oldCell * newCell
+            center = (offset + viewport / 2) / old.width * new.width
         }
-        scrollTo(x: center - viewport / 2, cellWidth: newCell)
+        scrollTo(x: center - viewport / 2, in: new)
     }
 
     /// Scrolls sideways so the day shows: in the middle, or just enough to see it.
     private func scroll(to reveal: CalendarReveal) {
         guard reveal.day.year == store.year else { return }
-        let cell = metrics.cellWidth
-        let minX = CGFloat(reveal.day.day - 1) * cell
+        let layout = yearLayout(zoom: zoom, aligned: alignWeekdays)
+        let frame = layout.frame(of: reveal.day)
         if reveal.center {
-            scrollTo(x: minX + cell / 2 - viewport / 2, cellWidth: cell)
-        } else if minX < offset {
-            scrollTo(x: minX, cellWidth: cell)
-        } else if minX + cell > offset + viewport {
-            scrollTo(x: minX + cell - viewport, cellWidth: cell)
+            scrollTo(x: frame.midX - viewport / 2, in: layout)
+        } else if frame.minX < offset {
+            scrollTo(x: frame.minX, in: layout)
+        } else if frame.maxX > offset + viewport {
+            scrollTo(x: frame.maxX - viewport, in: layout)
         }
     }
 
-    private func scrollTo(x: CGFloat, cellWidth: CGFloat) {
-        let maxX = max(0, cellWidth * 31 - viewport)
+    private func scrollTo(x: CGFloat, in layout: CalendarGridLayout.Year) {
+        let maxX = max(0, layout.width - viewport)
         position.scrollTo(x: min(max(0, x), maxX))
     }
 }

@@ -4,8 +4,8 @@ import SwiftUI
 /// day entries, notes, timed events and birthdays. A narrow calendar (phones, or a window or
 /// split view too narrow for the year grid's weekday letters) scrolls through the year's months like the web's
 /// month view; a wide one shows the year grid (12 months × 31 days, zoomable) or one month in
-/// detail, with the selected days' details underneath. On every size the selection's actions
-/// and the type chips float in a glass bar at the bottom.
+/// detail, with the selected days' details underneath, or beside it when there is room. On every
+/// size the selection's actions and the type chips float in a glass bar at the bottom.
 struct CalendarView: View {
     @Environment(FamilyContext.self) private var family
     @State private var store: CalendarStore?
@@ -41,12 +41,13 @@ struct CalendarPlannerView: View {
     @State private var actions: CalendarActions
     @AppStorage("ohana.calendar.mode") private var mode: CalendarMode = .year
     @AppStorage(CalendarZoom.key) private var zoom = CalendarZoom.initial
+    @AppStorage(CalendarWeekdayAlignment.key) private var alignWeekdays = false
     @State private var month = Day.today.month
     @State private var reveal: CalendarReveal?
-    /// Narrower than the year grid needs (nil until measured). Only that, not the width: a
-    /// width in the state would draw the whole page again at every step of a resize (the
+    /// Which layout the calendar's width allows (nil until measured). Only that, not the width:
+    /// a width in the state would draw the whole page again at every step of a resize (the
     /// assistant panel sliding in), its toolbar and menus too.
-    @State private var narrow: Bool?
+    @State private var pageWidth: CalendarPageWidth?
     @State private var monthFrames = CalendarMonthFrames()
     @FocusState private var focused: Bool
     @ScaledMetric(relativeTo: .caption2) private var detailRowHeight: CGFloat = 104
@@ -68,7 +69,10 @@ struct CalendarPlannerView: View {
     }
 
     /// The list of months instead of the year grid: by the calendar's own width.
-    private var monthList: Bool { compact || narrow == true }
+    private var monthList: Bool { compact || pageWidth == .list }
+
+    /// The selected days' details in a column beside the grid instead of under it.
+    private var sideColumn: Bool { pageWidth == .side }
 
     private var reloadKey: [Int] { [family.revision(.calendar), family.revision(.events), family.revision(.family)] }
 
@@ -78,9 +82,9 @@ struct CalendarPlannerView: View {
             if monthList { listLayout } else { wideLayout }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onGeometryChange(for: Bool.self) {
-            CalendarLayoutRule.monthList(width: $0.size.width, compact: false)
-        } action: { narrow = $0 }
+        .onGeometryChange(for: CalendarPageWidth.self) {
+            CalendarLayoutRule.pageWidth($0.size.width)
+        } action: { pageWidth = $0 }
         .toolbar { toolbar }
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
@@ -157,10 +161,12 @@ struct CalendarPlannerView: View {
     }
 
     /// The floating bar with the toast above it, at the bottom of the calendar.
-    private func bottomBar(showDetails: Bool, showZoom: Bool) -> some View {
+    /// Given as a safe-area inset, so its real height (the toast's too) is what the scroll views
+    /// leave free at their end: their last rows scroll clear of it.
+    private func bottomBar(showDetails: Bool) -> some View {
         VStack(spacing: 0) {
             CalendarToast(store: store)
-            CalendarSelectionBar(store: store, actions: actions, showDetails: showDetails, showZoom: showZoom)
+            CalendarSelectionBar(store: store, actions: actions, showDetails: showDetails)
         }
     }
 
@@ -203,7 +209,7 @@ struct CalendarPlannerView: View {
                 .modifier(keyboard(enabled: !compact))
             }
             .refreshable { await store.load() }
-            .safeAreaInset(edge: .bottom) { bottomBar(showDetails: true, showZoom: false) }
+            .safeAreaInset(edge: .bottom) { bottomBar(showDetails: true) }
             .task(id: store.year) {
                 try? await Task.sleep(for: .milliseconds(80))
                 proxy.scrollTo(Self.monthID(startDay?.month ?? 1), anchor: .top)
@@ -245,43 +251,73 @@ struct CalendarPlannerView: View {
 
     // MARK: Year grid and month (iPad and Mac)
 
+    /// Wide enough (`sideColumn`), the details are a column of their own beside the grid, top
+    /// to top with it and scrolling on their own, the header above both; otherwise they follow
+    /// the grid, no wider than a page of text. The bar's inset reaches both scroll views.
     private var wideLayout: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
-                    HStack {
-                        if store.isViewer { readOnlyNote }
-                        Spacer(minLength: 0)
-                        CalendarCoveragePill(store: store, onJump: { reveal = CalendarReveal($0) })
+        let side = sideColumn
+        return VStack(alignment: .leading, spacing: 0) {
+            if side {
+                wideHeader
+                    .padding([.horizontal, .top])
+                    .padding(.bottom, 14)
+            }
+            HStack(alignment: .top, spacing: 0) {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 14) {
+                            if !side { wideHeader }
+                            VStack(alignment: .leading, spacing: 12) {
+                                if mode == .year {
+                                    CalendarYearGrid(store: store, reveal: reveal, onBegin: { focused = true },
+                                                     onDoubleTap: { _ in actions.editNote() })
+                                } else {
+                                    monthDetail
+                                }
+                                // The year's types: what the colors mean, a click highlights a type's days.
+                                CalendarLegend(store: store)
+                            }
+                            .contentCard(cornerRadius: 22, padding: 12)
+                            .modifier(keyboard(enabled: true))
+                            if !side {
+                                CalendarSelectionDetailsCard(store: store, actions: actions,
+                                                             maxWidth: CalendarLayoutRule.detailsMaxWidth)
+                            }
+                        }
+                        .padding(side ? [.horizontal, .bottom] : .all)
                     }
-                    Group {
+                    .refreshable { await store.load() }
+                    .task(id: store.year) {
+                        try? await Task.sleep(for: .milliseconds(80))
+                        if let day = startDay { reveal = CalendarReveal(day) }
+                    }
+                    .onChange(of: reveal) { _, reveal in
+                        guard let reveal, reveal.day.year == store.year else { return }
                         if mode == .year {
-                            CalendarYearGrid(store: store, reveal: reveal, onBegin: { focused = true },
-                                             onDoubleTap: { _ in actions.editNote() })
+                            withAnimation { proxy.scrollTo(CalendarYearGrid.rowID(reveal.day.month), anchor: reveal.center ? .center : nil) }
                         } else {
-                            monthDetail
+                            month = reveal.day.month
                         }
                     }
-                    .contentCard(cornerRadius: 22, padding: 12)
-                    .modifier(keyboard(enabled: true))
-                    CalendarSelectionDetailsCard(store: store, actions: actions)
                 }
-                .padding()
-            }
-            .refreshable { await store.load() }
-            .safeAreaInset(edge: .bottom) { bottomBar(showDetails: false, showZoom: mode == .year) }
-            .task(id: store.year) {
-                try? await Task.sleep(for: .milliseconds(80))
-                if let day = startDay { reveal = CalendarReveal(day) }
-            }
-            .onChange(of: reveal) { _, reveal in
-                guard let reveal, reveal.day.year == store.year else { return }
-                if mode == .year {
-                    withAnimation { proxy.scrollTo(CalendarYearGrid.rowID(reveal.day.month), anchor: reveal.center ? .center : nil) }
-                } else {
-                    month = reveal.day.month
+                if side {
+                    ScrollView {
+                        CalendarSelectionDetailsCard(store: store, actions: actions, placeholder: true)
+                            .padding([.trailing, .bottom])
+                    }
+                    .frame(width: CalendarLayoutRule.sideColumnWidth + 16)
                 }
             }
+        }
+        .safeAreaInset(edge: .bottom) { bottomBar(showDetails: false) }
+    }
+
+    /// The viewer's note and the coverage pill.
+    private var wideHeader: some View {
+        HStack {
+            if store.isViewer { readOnlyNote }
+            Spacer(minLength: 0)
+            CalendarCoveragePill(store: store, onJump: { reveal = CalendarReveal($0) })
         }
     }
 
@@ -342,6 +378,11 @@ struct CalendarPlannerView: View {
                 .pickerStyle(.segmented)
                 .labelStyle(.titleOnly)
                 .fixedSize()
+            }
+        }
+        if canZoom {
+            ToolbarItem {
+                CalendarZoomButtons()
             }
         }
         if !store.readOnly {
@@ -433,6 +474,9 @@ struct CalendarPlannerView: View {
                 .disabled(CalendarZoom.clamp(zoom) <= CalendarZoom.min)
             Button("Zoom out", systemImage: "minus.magnifyingglass") { zoom = CalendarZoom.step(zoom, -1) }
                 .disabled(CalendarZoom.clamp(zoom) >= CalendarZoom.max)
+            Toggle(isOn: $alignWeekdays) {
+                Label("Align weekdays", systemImage: "tablecells")
+            }
         }
         Divider()
         Button("Reload", systemImage: "arrow.clockwise") { Task { await store.load() } }
@@ -492,6 +536,8 @@ struct CalendarPlannerView: View {
             Button("Actual Size") { zoom = CalendarZoom.step(zoom, 0) }
                 .keyboardShortcut("0", modifiers: .command)
                 .disabled(!canZoom)
+            Toggle("Align Weekdays", isOn: $alignWeekdays)
+                .disabled(!canZoom)
             Divider()
             Button("Calendar Help") { actions.showHelp() }
         }
@@ -538,7 +584,10 @@ struct CalendarPlannerView: View {
         case .rightArrow: move(1)
         case .upArrow: move(-week)
         case .downArrow: move(week)
-        case .escape: if !store.cancelFill() { store.deselect() }
+        case .escape:
+            // The fill first, then the selection, then the legend's highlight.
+            if store.cancelFill() { break }
+            if !store.selection.isEmpty { store.deselect() } else { _ = store.clearHighlight() }
         case .delete, .deleteForward: store.clearSelectedDays()
         case .pageUp: store.setYear(store.year - 1)
         case .pageDown: store.setYear(store.year + 1)
@@ -639,5 +688,52 @@ struct CalendarKeyboard: ViewModifier {
     private func items(_ text: String?) -> [NSItemProvider] {
         guard let text else { return [] }
         return [NSItemProvider(object: text as NSString)]
+    }
+}
+
+/// What the calendar's own width allows: the list of months, the year grid with the details
+/// under it, or with them in a column beside it.
+nonisolated enum CalendarPageWidth: Equatable, Sendable {
+    case list, stacked, side
+}
+
+extension CalendarLayoutRule {
+    static func pageWidth(_ width: CGFloat) -> CalendarPageWidth {
+        if monthList(width: width, compact: false) { return .list }
+        return width >= sideColumnFrom ? .side : .stacked
+    }
+
+    /// The details column beside the grid.
+    static let sideColumnWidth: CGFloat = 340
+    /// From this width on the details go beside the grid: the grid keeps the width it needs for
+    /// its weekday letters (`monthListBelow`), the column and the gap come on top.
+    static let sideColumnFrom: CGFloat = monthListBelow + sideColumnWidth + 16
+    /// The details under the grid stay this narrow: their buttons stay near their text.
+    static let detailsMaxWidth: CGFloat = 720
+}
+
+/// The year grid's zoom in the toolbar: out (more days across) and in (fewer). Reads the zoom
+/// itself, so a step redraws only it.
+private struct CalendarZoomButtons: View {
+    @AppStorage(CalendarZoom.key) private var zoom = CalendarZoom.initial
+
+    var body: some View {
+        ControlGroup {
+            Button {
+                zoom = CalendarZoom.step(zoom, -1)
+            } label: {
+                Label("Zoom out", systemImage: "minus.magnifyingglass")
+            }
+            .disabled(CalendarZoom.clamp(zoom) >= CalendarZoom.max)
+            .help("Zoom out (⌘−)")
+            Button {
+                zoom = CalendarZoom.step(zoom, 1)
+            } label: {
+                Label("Zoom in", systemImage: "plus.magnifyingglass")
+            }
+            .disabled(CalendarZoom.clamp(zoom) <= CalendarZoom.min)
+            .help("Zoom in (⌘+)")
+        }
+        .accessibilityLabel(Text("Zoom"))
     }
 }

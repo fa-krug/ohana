@@ -16,6 +16,53 @@ extension Color {
     }
 }
 
+/// A type's color as the days draw it in a color scheme (in dark mode grays quieter,
+/// `CalendarMath.typeRGB`), and the ink that reads on it: black or white.
+struct CalendarTypeColor {
+    let fill: Color
+    let darkInk: Bool
+    var ink: Color { darkInk ? .black : .white }
+
+    init(_ hex: String, scheme: ColorScheme) {
+        if let (r, g, b) = CalendarMath.typeRGB(hex, dark: scheme == .dark) {
+            fill = Color(.sRGB, red: r, green: g, blue: b)
+            darkInk = CalendarMath.prefersDarkText(r: r, g: g, b: b)
+        } else {
+            fill = .gray
+            darkInk = true
+        }
+    }
+}
+
+/// What the days of the grids share in how they look (the year canvas and `CalendarDayCell`).
+enum CalendarDayLook {
+    /// An empty day's fill: weekends darker, so the weeks read as a rhythm at a glance.
+    static func base(weekend: Bool, scheme: ColorScheme) -> Color {
+        let dark = scheme == .dark
+        return .primary.opacity(weekend ? (dark ? 0.12 : 0.085) : 0.03)
+    }
+
+    /// Over a weekend filled with a type's color: a little darker, so weekends still read.
+    static let weekendShade = Color.black.opacity(0.08)
+    /// Days before today: the content faded (the selection, focus, today and drop marks aren't).
+    static let pastOpacity = 0.55
+    /// Days without the legend's highlighted types: their content faded further.
+    static let dimmedOpacity = 0.25
+
+    /// How strongly a day's content draws: the past days' fade times the highlight's.
+    static func contentOpacity(past: Bool, dimmed: Bool) -> Double {
+        (past ? pastOpacity : 1) * (dimmed ? dimmedOpacity : 1)
+    }
+    /// The "needs cover" stripes: thin and in the band's ink, so they don't shimmer.
+    static let stripeWidth: CGFloat = 1
+    static let stripeOpacity = 0.18
+    /// The events mark shows the count from two events on, in cells at least this wide.
+    static let countMinWidth: CGFloat = 24
+
+    /// The count in the events mark ("2", "9+").
+    static func eventCount(_ n: Int) -> String { n > 9 ? "9+" : String(n) }
+}
+
 /// The system pasteboard as plain text.
 enum CalendarPasteboard {
     static func copy(_ text: String) {
@@ -129,15 +176,17 @@ enum CalendarText {
 /// The colors of a day's entry types as bands one above the other (the web grid's fills).
 struct CalendarFills: View {
     let types: [CalendarEntryType]
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         VStack(spacing: 1) {
             ForEach(types) { type in
-                Color(calendarHex: type.color)
+                let color = CalendarTypeColor(type.color, scheme: scheme)
+                color.fill
                     .overlay {
                         if type.role == .needsCover {
-                            // "Needs cover" days are striped, like the web's.
-                            CalendarStripes().opacity(0.25)
+                            // "Needs cover" bands are striped, like the web's (only that type's band).
+                            CalendarStripes(ink: color.ink)
                         }
                     }
             }
@@ -148,9 +197,12 @@ struct CalendarFills: View {
 /// A shape rather than a `Canvas`: a year can have hundreds of striped days, and every canvas
 /// is a drawing of its own.
 struct CalendarStripes: View {
+    /// The band's ink (black on light colors, white on dark ones).
+    var ink: Color = .white
+
     var body: some View {
         Lines()
-            .stroke(.white, lineWidth: 1.5)
+            .stroke(ink.opacity(CalendarDayLook.stripeOpacity), lineWidth: CalendarDayLook.stripeWidth)
             .clipped()
             .allowsHitTesting(false)
     }
@@ -178,6 +230,7 @@ struct CalendarStripes: View {
 /// year without types offers to copy them from another year.
 struct CalendarTypeChips: View {
     @Environment(FamilyContext.self) private var family
+    @Environment(\.colorScheme) private var scheme
     @Bindable var store: CalendarStore
 
     var body: some View {
@@ -219,7 +272,7 @@ struct CalendarTypeChips: View {
     /// a button would also fire when a long press ends.
     private func chip(_ type: CalendarEntryType, index: Int, stats: CalendarTypeStats) -> some View {
         let active = store.selectionHas(type.id)
-        let color = Color(calendarHex: type.color)
+        let color = CalendarTypeColor(type.color, scheme: scheme).fill
         let member = store.member(of: type)
         return CalendarTypeBadge(type: type, member: member, size: 24, help: false)
             .padding(.horizontal, 8)
@@ -263,6 +316,123 @@ struct CalendarTypeChips: View {
     #else
     private static let tipsHover = false
     #endif
+}
+
+/// The year's types as a legend under the grid, wrapping: each its badge and name, by member (in
+/// the household's order, nobody's last). A click highlights the type (its days stand out, the
+/// others fade: `CalendarStore.highlight`), again ends it, another switches; ⌘- or ⇧-click (or the
+/// item's menu) adds it to the highlight. Clear (or Esc, which the calendar handles) ends it.
+/// It reads only the types, members and highlight, so hovering redraws nothing but an item.
+struct CalendarLegend: View {
+    let store: CalendarStore
+
+    var body: some View {
+        let types = Self.ordered(store.types, members: store.members)
+        if !types.isEmpty {
+            let highlight = store.activeHighlight
+            RecipeFlowLayout(spacing: 6) {
+                ForEach(types) { type in
+                    CalendarLegendItem(store: store, type: type, member: store.member(of: type),
+                                       on: highlight.contains(type.id), anyOn: !highlight.isEmpty)
+                }
+                if !highlight.isEmpty {
+                    Button {
+                        store.clearHighlight()
+                    } label: {
+                        Label("Clear", systemImage: "xmark.circle.fill")
+                            .font(.caption.weight(.medium))
+                            .padding(.horizontal, 8)
+                            .frame(minHeight: 26)
+                            .contentShape(.capsule)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                    .help("Show all days alike (Esc)")
+                    .accessibilityLabel(Text("Clear highlight"))
+                }
+            }
+            .animation(.snappy(duration: 0.2), value: highlight)
+            .onKeyPress(.escape) { store.clearHighlight() ? .handled : .ignored }
+        }
+    }
+
+    /// The types by member, in the order of `members` (the household's), each member's in the
+    /// types' order; nobody's (or a member who's gone) last.
+    static func ordered(_ types: [CalendarEntryType], members: [CalendarMember]) -> [CalendarEntryType] {
+        let rank = Dictionary(members.enumerated().map { ($1.id, $0) }, uniquingKeysWith: { a, _ in a })
+        return types.enumerated()
+            .sorted { a, b in
+                let ra = a.element.memberId.flatMap { rank[$0] } ?? Int.max
+                let rb = b.element.memberId.flatMap { rank[$0] } ?? Int.max
+                return (ra, a.offset) < (rb, b.offset)
+            }
+            .map(\.element)
+    }
+}
+
+/// One type of the legend: a toggle of its highlight. Its own view, so its hover state redraws it alone.
+private struct CalendarLegendItem: View {
+    let store: CalendarStore
+    let type: CalendarEntryType
+    let member: CalendarMember?
+    let on: Bool
+    /// Some type is highlighted: the others' items step back too.
+    let anyOn: Bool
+    @Environment(\.colorScheme) private var scheme
+    @State private var hovering = false
+
+    var body: some View {
+        let color = CalendarTypeColor(type.color, scheme: scheme).fill
+        let label = member.map { "\(type.name) (\($0.name))" } ?? type.name
+        Button {
+            let keys = CalendarModifiers.current
+            store.highlight(type.id, adding: keys.contains(.command) || keys.contains(.shift))
+        } label: {
+            HStack(spacing: 5) {
+                CalendarTypeBadge(type: type, member: member, size: 16, help: false)
+                Text(type.name)
+                    .font(.caption)
+                    .lineLimit(1)
+            }
+            .padding(.leading, 4)
+            .padding(.trailing, 8)
+            .frame(minHeight: 26)
+            .background(on ? color.opacity(0.28) : Color.primary.opacity(hovering ? 0.08 : 0), in: .capsule)
+            .overlay(Capsule().strokeBorder(on ? color : .clear, lineWidth: 1.5))
+            .opacity(anyOn && !on ? 0.55 : 1)
+            .contentShape(.capsule)
+        }
+        .buttonStyle(.plain)
+        #if os(iOS)
+        .hoverEffect()
+        #endif
+        .onHover { hovering = $0 }
+        .help(Self.help(label))
+        .contextMenu {
+            if anyOn && !on {
+                Button("Highlight Too", systemImage: "plus.circle") { store.highlight(type.id, adding: true) }
+            } else if on && store.activeHighlight.count > 1 {
+                Button("Stop Highlighting", systemImage: "minus.circle") { store.highlight(type.id, adding: true) }
+            }
+        }
+        .accessibilityLabel(Text(label))
+        .accessibilityHint(Text("Highlights its days"))
+        .accessibilityAddTraits(on ? .isSelected : [])
+        .accessibilityAction(named: Text(on ? "Stop Highlighting" : "Highlight Too")) {
+            store.highlight(type.id, adding: true)
+        }
+    }
+
+    /// The name and member, on the Mac with how to highlight several. (Not `#if` around the
+    /// string: the iOS build extracts the strings.)
+    private static func help(_ label: String) -> String {
+        #if os(macOS)
+        let mac = true
+        #else
+        let mac = false
+        #endif
+        return mac ? label + "\n" + String(localized: "⌘-click to highlight several types") : label
+    }
 }
 
 /// "No entry types for 2027 yet", with copying from the closest year.

@@ -19,6 +19,8 @@ struct CalendarCellContext {
     let focus: Day?
     /// The types every selected day has (the chips that show as on).
     let selectionTypes: Set<String>
+    /// The legend's highlighted types (`CalendarStore.activeHighlight`): days without any of them fade.
+    var highlight: Set<String> = []
 }
 
 /// One day of a grid: filled with its types' colors, with marks for its note, events and
@@ -52,6 +54,9 @@ struct CalendarDayCell: View, Equatable {
         /// The year's types, for VoiceOver's actions.
         var allTypes: [CalendarEntryType] = []
         var readOnly = true
+        /// The legend highlights types and the day has none of them: its content fades
+        /// (`CalendarDayLook.dimmedOpacity`, on top of the past days' fade; the outlines don't).
+        var dimmed = false
     }
 
     /// For the actions (VoiceOver's, run later); the body doesn't read it.
@@ -65,9 +70,13 @@ struct CalendarDayCell: View, Equatable {
 
     @Environment(CalendarActions.self) private var actions: CalendarActions?
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.colorScheme) private var scheme
     @ScaledMetric(relativeTo: .caption2) private var yearLetter: CGFloat = 8
     @ScaledMetric(relativeTo: .caption2) private var yearMark: CGFloat = 5
+    @ScaledMetric(relativeTo: .caption2) private var yearEvent: CGFloat = 7
+    @ScaledMetric(relativeTo: .caption2) private var yearCount: CGFloat = 7
     @ScaledMetric(relativeTo: .caption2) private var yearCake: CGFloat = 8
+    @ScaledMetric(relativeTo: .caption2) private var monthCount: CGFloat = 9
 
     static func == (a: Self, b: Self) -> Bool {
         a.store === b.store && a.day == b.day && a.info == b.info && a.style == b.style
@@ -87,7 +96,9 @@ struct CalendarDayCell: View, Equatable {
         let weekend = CalendarMath.isWeekend(day)
         let gap = info.gap
         let filled = !types.isEmpty && style != .detail
-        let ink: Color = filled ? (CalendarMath.prefersDarkText(on: types[0].color) ? .black : .white) : .primary
+        let ink: Color = filled ? CalendarTypeColor(types[0].color, scheme: scheme).ink : .primary
+        // Before today the content is faded; the selection, focus, today and drop marks aren't.
+        let past = day < Day.today
         let radius: CGFloat = style == .year ? 4 : (style == .month ? 9 : 8)
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
 
@@ -95,6 +106,7 @@ struct CalendarDayCell: View, Equatable {
             background(weekend: weekend)
             if !types.isEmpty {
                 CalendarFills(types: types).opacity(style == .detail ? 0.28 : 1)
+                if filled && weekend { CalendarDayLook.weekendShade }
             }
             content(types: types, note: note, events: events, holidays: holidays, birthdays: birthdays,
                     isToday: isToday, weekend: weekend, ink: ink, filled: filled)
@@ -105,6 +117,7 @@ struct CalendarDayCell: View, Equatable {
                 shape.strokeBorder(Color.red, style: StrokeStyle(lineWidth: 1.5, dash: [3, 2]))
             }
         }
+        .opacity(CalendarDayLook.contentOpacity(past: past, dimmed: info.dimmed))
         .overlay {
             if isToday { shape.strokeBorder(Color.accentColor, lineWidth: 2) }
         }
@@ -152,7 +165,7 @@ struct CalendarDayCell: View, Equatable {
         if style == .month {
             Color.cardBackground.opacity(weekend ? 0.4 : 1)
         } else {
-            Color.primary.opacity(weekend ? 0.07 : 0.025)
+            CalendarDayLook.base(weekend: weekend, scheme: scheme)
         }
     }
 
@@ -176,8 +189,12 @@ struct CalendarDayCell: View, Equatable {
                         .font(.system(size: iconSize, weight: .semibold))
                         .foregroundStyle(filled ? ink : Color.accentColor)
                 }
-                marks(note: note, events: events, birthdays: birthdays, dot: yearMark, cake: .system(size: yearCake),
-                      inset: 2, ink: ink, filled: filled)
+                GeometryReader { geo in
+                    marks(note: note, events: events, birthdays: birthdays, dot: yearMark, event: yearEvent,
+                          count: .system(size: yearCount, weight: .bold).monospacedDigit(),
+                          showsCount: geo.size.width >= CalendarDayLook.countMinWidth,
+                          cake: .system(size: yearCake), inset: 2, ink: ink, filled: filled)
+                }
             }
         case .month:
             monthContent(note: note, events: events, birthdays: birthdays, weekend: weekend, ink: ink, filled: filled)
@@ -193,13 +210,14 @@ struct CalendarDayCell: View, Equatable {
                     }
                 }
                 ForEach(types) { type in
+                    let color = CalendarTypeColor(type.color, scheme: scheme)
                     Text(type.name)
                         .font(.caption2.weight(.semibold))
                         .lineLimit(1)
                         .padding(.horizontal, 5)
                         .padding(.vertical, 1)
-                        .foregroundStyle(CalendarMath.prefersDarkText(on: type.color) ? Color.black : Color.white)
-                        .background(Color(calendarHex: type.color), in: .capsule)
+                        .foregroundStyle(color.ink)
+                        .background(color.fill, in: .capsule)
                 }
                 ForEach(holidays, id: \.self) { h in
                     Text(CalendarText.holiday(h)).font(.caption2).lineLimit(1)
@@ -268,8 +286,9 @@ struct CalendarDayCell: View, Equatable {
                 .padding(.leading, 7)
                 .padding(.trailing, 4)
             }
-            marks(note: note, events: events, birthdays: large ? [] : birthdays, dot: 8, cake: .caption,
-                  inset: 6, ink: ink, filled: filled)
+            marks(note: note, events: events, birthdays: large ? [] : birthdays, dot: 8, event: 9,
+                  count: .system(size: monthCount, weight: .bold).monospacedDigit(), showsCount: true,
+                  cake: .caption, inset: 6, ink: ink, filled: filled)
         }
     }
 
@@ -286,10 +305,12 @@ struct CalendarDayCell: View, Equatable {
             .accessibilityHidden(true)
     }
 
-    /// The marks in the corners, where the web has them: a comment (a triangle top right), events
-    /// (a dot bottom left), a birthday (a cake bottom right).
+    /// The marks in the corners, where the web has them: a comment (a triangle top right, `dot` + 4
+    /// wide), events (a dot bottom left; from two on their count in a capsule when `showsCount`), a
+    /// birthday (a cake bottom right).
     private func marks(note: CalendarNote?, events: [CalendarEvent], birthdays: [CalendarBirthday],
-                       dot: CGFloat, cake: Font, inset: CGFloat, ink: Color, filled: Bool) -> some View {
+                       dot: CGFloat, event: CGFloat, count: Font, showsCount: Bool, cake: Font, inset: CGFloat,
+                       ink: Color, filled: Bool) -> some View {
         ZStack {
             if let note, !note.comment.isEmpty {
                 Triangle()
@@ -298,12 +319,9 @@ struct CalendarDayCell: View, Equatable {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
             }
             if !events.isEmpty {
-                Circle()
-                    .fill(Color.accentColor)
-                    .overlay(Circle().strokeBorder(Color.cardBackground, lineWidth: 1.5))
-                    .frame(width: dot, height: dot)
-                    .padding(.leading, inset)
-                    .padding(.bottom, inset)
+                EventMark(count: events.count, size: event, font: count, showsCount: showsCount)
+                    .padding(.leading, inset - 1)
+                    .padding(.bottom, inset - 1)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
             }
             if !birthdays.isEmpty {
@@ -340,6 +358,39 @@ struct CalendarDayCell: View, Equatable {
         lines += events.map { "🕑 " + $0.line(on: day) }
         lines += birthdays.map(CalendarText.birthday)
         return lines.joined(separator: "\n")
+    }
+
+    /// The events' mark: the accent color with a hairline of the card's color around it (apart
+    /// from the bands), a dot, or from two events on (`showsCount`) their count in a capsule.
+    private struct EventMark: View {
+        let count: Int
+        let size: CGFloat
+        let font: Font
+        let showsCount: Bool
+
+        var body: some View {
+            Group {
+                if showsCount && count >= 2 {
+                    Text(verbatim: CalendarDayLook.eventCount(count))
+                        .font(font)
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .fixedSize()
+                        .padding(.horizontal, 2)
+                        .frame(minWidth: size + 1, minHeight: size + 1)
+                        .background(Color.accentColor, in: .capsule)
+                        .padding(1)
+                        .background(Color.cardBackground, in: .capsule)
+                } else {
+                    Circle()
+                        .fill(Color.accentColor)
+                        .frame(width: size, height: size)
+                        .padding(1)
+                        .background(Color.cardBackground, in: .circle)
+                }
+            }
+            .accessibilityHidden(true)
+        }
     }
 
     private nonisolated struct Triangle: Shape {

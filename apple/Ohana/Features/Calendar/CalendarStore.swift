@@ -81,6 +81,10 @@ final class CalendarStore {
     var multiSelect = false
     /// Touch: a long-press drag is selecting days; the day under the finger shows its outline.
     var dragging = false
+    /// The legend's highlight (`CalendarLegend`): the types whose days stand out while the other
+    /// days fade (`CalendarDayCell.Info.dimmed`). Not kept; ids the year's types don't have count
+    /// as none and go when the types are loaded.
+    private(set) var highlightedTypes: Set<String> = []
 
     private(set) var undoStack: [Step] = []
     private(set) var redoStack: [Step] = []
@@ -227,7 +231,34 @@ final class CalendarStore {
             if common?.isEmpty == true { break }
         }
         return CalendarCellContext(roles: CalendarMath.roles(types), today: .today,
-                                   focus: gridFocused || dragging ? focus : nil, selectionTypes: common ?? [])
+                                   focus: gridFocused || dragging ? focus : nil, selectionTypes: common ?? [],
+                                   highlight: activeHighlight)
+    }
+
+    /// The highlighted types the year has (a stale id, or none loaded yet, highlights nothing).
+    var activeHighlight: Set<String> {
+        guard !highlightedTypes.isEmpty else { return [] }
+        return highlightedTypes.intersection(types.map(\.id))
+    }
+
+    /// The legend's click on a type: it alone is highlighted, or nothing when it already was
+    /// (alone). `adding` (⌘-click, the legend's menu) adds it to the highlight or takes it out.
+    func highlight(_ id: String, adding: Bool = false) {
+        var next = activeHighlight
+        if adding {
+            if next.remove(id) == nil { next.insert(id) }
+        } else {
+            next = next == [id] ? [] : [id]
+        }
+        update(\.highlightedTypes, next)
+    }
+
+    /// Ends the highlight; false when there was none (Esc then does something else).
+    @discardableResult
+    func clearHighlight() -> Bool {
+        guard !highlightedTypes.isEmpty else { return false }
+        highlightedTypes = []
+        return true
     }
 
     /// A day's cell as values: the cells don't read the store themselves, so a change redraws
@@ -242,7 +273,8 @@ final class CalendarStore {
             focused: context.focus == day,
             isToday: day == context.today, gap: CalendarMath.isGap(day, entries[day], roles: context.roles),
             onTypes: selected ? context.selectionTypes : Set(dayTypes.map(\.id)),
-            allTypes: types, readOnly: readOnly
+            allTypes: types, readOnly: readOnly,
+            dimmed: !context.highlight.isEmpty && !dayTypes.contains { context.highlight.contains($0.id) }
         )
     }
 
@@ -277,6 +309,8 @@ final class CalendarStore {
             .enumerated()
             .sorted { ($0.element.position ?? $0.offset, $0.offset) < ($1.element.position ?? $1.offset, $1.offset) }
             .map(\.element))
+        // A highlighted type the year doesn't have (deleted, or another year's) goes.
+        update(\.highlightedTypes, activeHighlight)
         update(\.typeYears, state.typeYears)
         var entries = Self.byDay(state.entries), notes = Self.byDay(state.notes ?? [:])
         for batch in queue {

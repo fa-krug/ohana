@@ -2183,6 +2183,36 @@
         }
       }
     },
+    "Align Weekdays": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wochentage untereinander"
+          }
+        }
+      }
+    },
+    "Align weekdays": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wochentage untereinander"
+          }
+        }
+      }
+    },
+    "Align weekdays in the year view": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wochentage in der Jahresansicht untereinander"
+          }
+        }
+      }
+    },
     "All Chores": {
       "localizations": {
         "de": {
@@ -4061,6 +4091,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Filter zurücksetzen"
+          }
+        }
+      }
+    },
+    "Clear highlight": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hervorhebung aufheben"
           }
         }
       }
@@ -7791,6 +7831,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Videosprechstunden ausblenden"
+          }
+        }
+      }
+    },
+    "Highlight Too": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auch hervorheben"
+          }
+        }
+      }
+    },
+    "Highlights its days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hebt seine Tage hervor"
           }
         }
       }
@@ -15277,6 +15337,16 @@
         }
       }
     },
+    "Select days to see their entries.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle Tage aus, um ihre Einträge zu sehen."
+          }
+        }
+      }
+    },
     "Select some days first": {
       "localizations": {
         "de": {
@@ -15803,6 +15873,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Alle Konten zeigen"
+          }
+        }
+      }
+    },
+    "Show all days alike (Esc)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Tage gleich zeigen (Esc)"
           }
         }
       }
@@ -16667,6 +16747,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Stopp"
+          }
+        }
+      }
+    },
+    "Stop Highlighting": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht mehr hervorheben"
           }
         }
       }
@@ -20481,12 +20571,32 @@
         }
       }
     },
+    "Zoom in (⌘+)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vergrößern (⌘+)"
+          }
+        }
+      }
+    },
     "Zoom out": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Verkleinern"
+          }
+        }
+      }
+    },
+    "Zoom out (⌘−)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verkleinern (⌘−)"
           }
         }
       }
@@ -20517,16 +20627,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Die Jahresansicht vergrößern oder verkleinern (iPad)"
-          }
-        }
-      }
-    },
-    "Zoom: how many days fit in the calendar (⌘+ / ⌘− / ⌘0)": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zoom: wie viele Tage in den Kalender passen (⌘+ / ⌘− / ⌘0)"
           }
         }
       }
@@ -22161,6 +22261,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "⌘+ / ⌘− / ⌘0"
+          }
+        }
+      }
+    },
+    "⌘-click to highlight several types": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘-Klick hebt mehrere Arten hervor"
           }
         }
       }

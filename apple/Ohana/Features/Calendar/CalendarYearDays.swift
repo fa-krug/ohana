@@ -11,91 +11,144 @@ struct CalendarYearDays: View, Equatable {
     let year: Int
     /// The days of each month, January first, each month from the 1st.
     let months: [[CalendarDayCell.Info]]
-    let cellWidth: CGFloat
-    let rowHeight: CGFloat
+    /// Where the days sit: the grid's layout without its labels and header (the days' own
+    /// coordinates), plain or with the weekdays aligned.
+    let layout: CalendarGridLayout.Year
+    /// Plain: the weekday letter in each cell (with the weekdays aligned, the day's number instead).
     let showWeekday: Bool
     let iconSize: CGFloat
 
     @Environment(CalendarActions.self) private var actions: CalendarActions?
+    @Environment(\.colorScheme) private var scheme
+
+    static func == (a: Self, b: Self) -> Bool {
+        a.store === b.store && a.year == b.year && a.months == b.months && a.layout == b.layout
+            && a.showWeekday == b.showWeekday && a.iconSize == b.iconSize
+    }
+
+    private func day(_ month: Int, _ index: Int) -> Day { Day(year: year, month: month + 1, day: index + 1) }
+
+    /// The blank columns before a month's 1st (aligned weekdays), as space.
+    private func lead(_ month: Int) -> some View {
+        Color.clear
+            .frame(width: CGFloat(layout.offset(year: year, month: month + 1)) * layout.cellWidth,
+                   height: layout.rowHeight)
+            .accessibilityHidden(true)
+    }
+
+    var body: some View {
+        let cellWidth = layout.cellWidth
+        let rowHeight = layout.rowHeight
+        // Today read with the days (their `isToday` comes from the same redraw).
+        CalendarYearCanvas(year: year, months: months, layout: layout,
+                           showWeekday: showWeekday, iconSize: iconSize, scheme: scheme, today: .today)
+            .equatable()
+            .frame(width: cellWidth * CGFloat(layout.columns), height: rowHeight * 12, alignment: .topLeading)
+            .accessibilityElement(children: .contain)
+            .accessibilityChildren {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(months.indices, id: \.self) { month in
+                        HStack(spacing: 0) {
+                            lead(month)
+                            ForEach(months[month].indices, id: \.self) { index in
+                                let info = months[month][index]
+                                let day = day(month, index)
+                                Color.clear
+                                    .frame(width: cellWidth, height: rowHeight)
+                                    .accessibilityElement()
+                                    .accessibilityLabel(CalendarDayCell.accessibilityText(
+                                        day: day, types: info.types, note: info.note, events: info.events,
+                                        holidays: info.holidays, birthdays: info.birthdays, gap: info.gap))
+                                    .accessibilityAddTraits(info.selected ? [.isButton, .isSelected] : .isButton)
+                                    .modifier(CalendarDayAccessibilityActions(store: store, actions: actions, day: day,
+                                                                              info: info))
+                            }
+                        }
+                    }
+                }
+            }
+            #if os(iOS)
+            .overlay(alignment: .topLeading) {
+                // Touch has no pointer to follow: a menu per day (a long press).
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(months.indices, id: \.self) { month in
+                        HStack(spacing: 0) {
+                            lead(month)  // blank: no menu there
+                            ForEach(months[month].indices, id: \.self) { index in
+                                Color.clear
+                                    .frame(width: cellWidth, height: rowHeight)
+                                    .contentShape(.rect)
+                                    .modifier(CalendarCellMenu(store: store, day: day(month, index)))
+                            }
+                        }
+                    }
+                }
+            }
+            #endif
+    }
+}
+
+/// The drawing of `CalendarYearDays`: one canvas, drawn again when the days, the size, the color
+/// scheme (dark mode draws grays darker) or today (past days are faded) change.
+private struct CalendarYearCanvas: View, Equatable {
+    let year: Int
+    let months: [[CalendarDayCell.Info]]
+    let layout: CalendarGridLayout.Year
+    let showWeekday: Bool
+    let iconSize: CGFloat
+    let scheme: ColorScheme
+    let today: Day
+
+    private var cellWidth: CGFloat { layout.cellWidth }
+    private var rowHeight: CGFloat { layout.rowHeight }
+
     @ScaledMetric(relativeTo: .caption2) private var letterSize: CGFloat = 8
     @ScaledMetric(relativeTo: .caption2) private var markSize: CGFloat = 5
+    @ScaledMetric(relativeTo: .caption2) private var eventSize: CGFloat = 7
+    @ScaledMetric(relativeTo: .caption2) private var countSize: CGFloat = 7
     @ScaledMetric(relativeTo: .caption2) private var cakeSize: CGFloat = 8
 
     static func == (a: Self, b: Self) -> Bool {
-        a.store === b.store && a.year == b.year && a.months == b.months && a.cellWidth == b.cellWidth
-            && a.rowHeight == b.rowHeight && a.showWeekday == b.showWeekday && a.iconSize == b.iconSize
+        a.year == b.year && a.months == b.months && a.layout == b.layout
+            && a.showWeekday == b.showWeekday && a.iconSize == b.iconSize && a.scheme == b.scheme
+            && a.today == b.today
     }
 
     private func day(_ month: Int, _ index: Int) -> Day { Day(year: year, month: month + 1, day: index + 1) }
 
     var body: some View {
         Canvas { context, _ in
-            var cache = DrawCache(size: CGSize(width: cellWidth - 2, height: rowHeight - 2))
+            var cache = DrawCache(size: CGSize(width: cellWidth - 2, height: rowHeight - 2), scheme: scheme)
             for (month, infos) in months.enumerated() {
+                // The month's first column (aligned weekdays: its 1st's weekday; blanks stay empty).
+                let offset = layout.offset(year: year, month: month + 1)
                 for (index, info) in infos.enumerated() {
-                    let origin = CGPoint(x: CGFloat(index) * cellWidth + 1, y: CGFloat(month) * rowHeight + 1)
+                    let origin = CGPoint(x: CGFloat(offset + index) * cellWidth + 1, y: CGFloat(month) * rowHeight + 1)
                     draw(day(month, index), info, at: origin, context, cache: &cache)
                 }
             }
         }
-        .frame(width: cellWidth * 31, height: rowHeight * 12, alignment: .topLeading)
-        .accessibilityElement(children: .contain)
-        .accessibilityChildren {
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(months.indices, id: \.self) { month in
-                    HStack(spacing: 0) {
-                        ForEach(months[month].indices, id: \.self) { index in
-                            let info = months[month][index]
-                            let day = day(month, index)
-                            Color.clear
-                                .frame(width: cellWidth, height: rowHeight)
-                                .accessibilityElement()
-                                .accessibilityLabel(CalendarDayCell.accessibilityText(
-                                    day: day, types: info.types, note: info.note, events: info.events,
-                                    holidays: info.holidays, birthdays: info.birthdays, gap: info.gap))
-                                .accessibilityAddTraits(info.selected ? [.isButton, .isSelected] : .isButton)
-                                .modifier(CalendarDayAccessibilityActions(store: store, actions: actions, day: day,
-                                                                          info: info))
-                        }
-                    }
-                }
-            }
-        }
-        #if os(iOS)
-        .overlay(alignment: .topLeading) {
-            // Touch has no pointer to follow: a menu per day (a long press).
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(months.indices, id: \.self) { month in
-                    HStack(spacing: 0) {
-                        ForEach(months[month].indices, id: \.self) { index in
-                            Color.clear
-                                .frame(width: cellWidth, height: rowHeight)
-                                .contentShape(.rect)
-                                .modifier(CalendarCellMenu(store: store, day: day(month, index)))
-                        }
-                    }
-                }
-            }
-        }
-        #endif
     }
 
     // MARK: Drawing (as `CalendarDayCell` lays out `.year`)
 
     /// What every day of a drawing shares, made once: the cell's rounded shapes (all days have
-    /// the same size), the types' colors and the weekday letters.
+    /// the same size), the types' colors, the weekday letters and the events' counts.
     private struct DrawCache {
         let size: CGSize
+        let scheme: ColorScheme
         let shape: Path
         let border: Path
         let today: Path
         let focus: Path
         let focusInner: Path
-        private var colors: [String: (fill: Color, dark: Bool)] = [:]
+        private var colors: [String: CalendarTypeColor] = [:]
         private var letters: [String: GraphicsContext.ResolvedText] = [:]
+        private var counts: [Int: (text: GraphicsContext.ResolvedText, size: CGSize)] = [:]
 
-        init(size: CGSize) {
+        init(size: CGSize, scheme: ColorScheme) {
             self.size = size
+            self.scheme = scheme
             func rounded(_ inset: CGFloat) -> Path {
                 RoundedRectangle(cornerRadius: max(0, 4 - inset), style: .continuous)
                     .path(in: CGRect(origin: .zero, size: size).insetBy(dx: inset, dy: inset))
@@ -107,10 +160,10 @@ struct CalendarYearDays: View, Equatable {
             focusInner = rounded(3.5)
         }
 
-        /// A type's color, and whether text on it is dark.
-        mutating func color(_ hex: String) -> (fill: Color, dark: Bool) {
+        /// A type's color as drawn in the scheme, and its ink.
+        mutating func color(_ hex: String) -> CalendarTypeColor {
             if let color = colors[hex] { return color }
-            let color = (fill: Color(calendarHex: hex), dark: CalendarMath.prefersDarkText(on: hex))
+            let color = CalendarTypeColor(hex, scheme: scheme)
             colors[hex] = color
             return color
         }
@@ -122,6 +175,18 @@ struct CalendarYearDays: View, Equatable {
             letters[key] = text
             return text
         }
+
+        /// The events' count for their mark, white, and its size.
+        mutating func count(_ n: Int, size: CGFloat, in context: GraphicsContext) -> (text: GraphicsContext.ResolvedText, size: CGSize) {
+            let key = min(n, 10)  // one size per drawing
+            if let count = counts[key] { return count }
+            let text = context.resolve(Text(verbatim: CalendarDayLook.eventCount(n))
+                .font(.system(size: size, weight: .bold).monospacedDigit())
+                .foregroundStyle(.white))
+            let count = (text: text, size: text.measure(in: CGSize(width: 100, height: 100)))
+            counts[key] = count
+            return count
+        }
     }
 
     private func draw(_ day: Day, _ info: CalendarDayCell.Info, at origin: CGPoint, _ context: GraphicsContext,
@@ -130,28 +195,38 @@ struct CalendarYearDays: View, Equatable {
         let types = info.types
         let filled = !types.isEmpty
         let weekend = CalendarMath.isWeekend(day)
-        let ink: Color = filled ? (cache.color(types[0].color).dark ? .black : .white) : .primary
+        let ink: Color = filled ? cache.color(types[0].color).ink : .primary
         let shape = cache.shape.offsetBy(dx: origin.x, dy: origin.y)
 
+        // The day's content; before today and outside the legend's highlight faded (drawn into the
+        // same context at a lower opacity: no layer per day). The marks of the selection, focus,
+        // today and drops stay as they are.
         var cell = context
+        cell.opacity = CalendarDayLook.contentOpacity(past: day < today, dimmed: info.dimmed)
+        let faded = cell
         cell.clip(to: shape)
-        cell.fill(shape, with: .color(.primary.opacity(weekend ? 0.07 : 0.025)))
+        cell.fill(shape, with: .color(CalendarDayLook.base(weekend: weekend, scheme: cache.scheme)))
         if filled {
-            // Stacked bands with a point between them, "needs cover" ones striped.
+            // Stacked bands with a point between them, "needs cover" ones striped in their ink.
             let count = CGFloat(types.count)
             let band = (rect.height - (count - 1)) / count
             for (i, type) in types.enumerated() {
                 let r = CGRect(x: rect.minX, y: rect.minY + CGFloat(i) * (band + 1), width: rect.width, height: band)
-                cell.fill(Path(r), with: .color(cache.color(type.color).fill))
+                let color = cache.color(type.color)
+                cell.fill(Path(r), with: .color(color.fill))
                 if type.role == .needsCover {
                     var stripes = cell
                     stripes.clip(to: Path(r))
-                    stripes.stroke(CalendarStripes.path(in: r), with: .color(.white.opacity(0.25)), lineWidth: 1.5)
+                    stripes.stroke(CalendarStripes.path(in: r), with: .color(color.ink.opacity(CalendarDayLook.stripeOpacity)),
+                                   lineWidth: CalendarDayLook.stripeWidth)
                 }
             }
+            if weekend { cell.fill(Path(rect), with: .color(CalendarDayLook.weekendShade)) }
         }
-        if showWeekday {
-            let letter = CalendarText.weekdayLetters[(CalendarMath.weekday(day) - (Calendar.current.firstWeekday - 1) + 7) % 7]
+        if layout.aligned || showWeekday {
+            // Aligned, the header has the weekdays: the cell says which day of the month it is.
+            let letter = layout.aligned ? String(day.day)
+                : CalendarText.weekdayLetters[(CalendarMath.weekday(day) - (Calendar.current.firstWeekday - 1) + 7) % 7]
             cell.draw(cache.letter(letter, ink: ink, size: letterSize, in: context),
                       at: CGPoint(x: rect.minX + 2, y: rect.minY + 2), anchor: .topLeading)
         }
@@ -161,11 +236,11 @@ struct CalendarYearDays: View, Equatable {
                         .foregroundStyle(filled ? ink : Color.accentColor),
                       at: CGPoint(x: rect.midX, y: rect.midY))
         }
-        drawMarks(info, in: rect, ink: ink, filled: filled, cell)
+        drawMarks(info, in: rect, ink: ink, filled: filled, cell, cache: &cache)
 
         if info.gap {
-            context.stroke(cache.border.offsetBy(dx: origin.x, dy: origin.y), with: .color(.red),
-                           style: StrokeStyle(lineWidth: 1.5, dash: [3, 2]))
+            faded.stroke(cache.border.offsetBy(dx: origin.x, dy: origin.y), with: .color(.red),
+                         style: StrokeStyle(lineWidth: 1.5, dash: [3, 2]))
         }
         if info.isToday {
             context.stroke(cache.today.offsetBy(dx: origin.x, dy: origin.y), with: .color(.accentColor), lineWidth: 2)
@@ -191,13 +266,16 @@ struct CalendarYearDays: View, Equatable {
         }
     }
 
-    /// A comment (a triangle top right), events (a dot bottom left), a birthday (a cake bottom right).
+    /// A comment (a triangle top right), events (a dot bottom left; from two on their count in a
+    /// capsule where the cell is wide enough), a birthday (a cake bottom right).
     private func drawMarks(_ info: CalendarDayCell.Info, in rect: CGRect, ink: Color, filled: Bool,
-                           _ context: GraphicsContext) {
-        let dot = markSize
+                           _ context: GraphicsContext, cache: inout DrawCache) {
         let inset: CGFloat = 2
+        // The events' mark grows a little with the zoom (up to 1.5 ×), so it stays easy to see.
+        let zoom = min(1.5, max(1, min(cellWidth, rowHeight) / 30))
+        let eventSize = eventSize * zoom
         if let note = info.note, !note.comment.isEmpty {
-            let side = dot + 4
+            let side = markSize + 4
             var triangle = Path()
             triangle.move(to: CGPoint(x: rect.maxX - side, y: rect.minY))
             triangle.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
@@ -206,10 +284,23 @@ struct CalendarYearDays: View, Equatable {
             context.fill(triangle, with: .color(filled ? ink.opacity(0.85) : .accentColor))
         }
         if !info.events.isEmpty {
-            let circle = CGRect(x: rect.minX + inset, y: rect.maxY - inset - dot, width: dot, height: dot)
-            context.fill(Path(ellipseIn: circle), with: .color(.accentColor))
-            context.stroke(Path(ellipseIn: circle.insetBy(dx: 0.75, dy: 0.75)), with: .color(.cardBackground),
-                           lineWidth: 1.5)
+            // The accent color with a hairline of the card's color around it, apart from the bands.
+            let n = info.events.count
+            if n >= 2, cellWidth >= CalendarDayLook.countMinWidth {
+                let count = cache.count(n, size: countSize * zoom, in: context)
+                let height = max(eventSize + 1, count.size.height)
+                let mark = CGRect(x: rect.minX + inset, y: rect.maxY - inset - height,
+                                  width: max(height, count.size.width + 4), height: height)
+                let radius = height / 2
+                context.fill(Path(roundedRect: mark.insetBy(dx: -1, dy: -1), cornerRadius: radius + 1),
+                             with: .color(.cardBackground))
+                context.fill(Path(roundedRect: mark, cornerRadius: radius), with: .color(.accentColor))
+                context.draw(count.text, at: CGPoint(x: mark.midX, y: mark.midY))
+            } else {
+                let dot = CGRect(x: rect.minX + inset, y: rect.maxY - inset - eventSize, width: eventSize, height: eventSize)
+                context.fill(Path(ellipseIn: dot.insetBy(dx: -1, dy: -1)), with: .color(.cardBackground))
+                context.fill(Path(ellipseIn: dot), with: .color(.accentColor))
+            }
         }
         if !info.birthdays.isEmpty {
             context.draw(Text(verbatim: "🎂").font(.system(size: cakeSize)),

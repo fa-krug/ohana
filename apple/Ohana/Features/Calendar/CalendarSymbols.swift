@@ -113,18 +113,21 @@ struct CalendarTypeBadge: View {
     }
 }
 
-/// A type's symbol alone: white (or black on a light color) in a circle of its color.
+/// A type's symbol alone: white (or black on a light color) in a circle of its color, as the days
+/// draw it (`CalendarTypeColor`: a gray darker in dark mode).
 struct CalendarTypeIcon: View {
     let color: String
     let icon: String
     let size: CGFloat
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
+        let look = CalendarTypeColor(color, scheme: scheme)
         Image(systemName: CalendarSymbol.drawable(icon, fallback: "tag") ?? "tag")
             .font(.system(size: size * 0.5, weight: .semibold))
-            .foregroundStyle(CalendarMath.prefersDarkText(on: color) ? Color.black : Color.white)
+            .foregroundStyle(look.ink)
             .frame(width: size, height: size)
-            .background(Color(calendarHex: color).gradient, in: .circle)
+            .background(look.fill.gradient, in: .circle)
             .accessibilityHidden(true)
     }
 }

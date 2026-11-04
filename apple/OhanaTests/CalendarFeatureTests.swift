@@ -113,10 +113,6 @@ struct CalendarZoomTests {
         #expect(CalendarZoom.pinched(from: 16, magnification: 0.5) == 31)
         #expect(CalendarZoom.pinched(from: 10, magnification: 10) == 7)
         #expect(CalendarZoom.pinched(from: 10, magnification: 0) == 10)
-        // Right = zoomed in.
-        #expect(CalendarZoom.sliderValue(31) == 7)
-        #expect(CalendarZoom.sliderValue(7) == 31)
-        #expect(CalendarZoom.zoom(sliderValue: 20) == 18)
     }
 
     @Test func growsTheCellsWhenZoomedIn() {
@@ -126,6 +122,12 @@ struct CalendarZoomTests {
         let week = CalendarYearGrid.metrics(width: 40 + 31 * 30, zoom: 7)
         #expect(abs(week.cellWidth - 31 * 30 / 7) < 0.001)
         #expect(abs(week.rowHeight - 28.5 * 31 / 7) < 0.001)
+        // With the weekdays aligned all 37 columns fit at zoom 31, a week at zoom 7.
+        let aligned = CalendarYearGrid.metrics(width: 40 + 37 * 25, zoom: 31, columns: 37)
+        #expect(aligned.cellWidth == 25)
+        let alignedWeek = CalendarYearGrid.metrics(width: 40 + 37 * 25, zoom: 7, columns: 37)
+        #expect(abs(alignedWeek.cellWidth - 37 * 25 / 7) < 0.001)
+        #expect(abs(alignedWeek.rowHeight / aligned.rowHeight - 37.0 / 7) < 0.001)
     }
 
     @Test func picksTheListOfMonthsByWidth() {
@@ -278,6 +280,104 @@ struct CalendarCellTests {
         #expect(!changed)
         s.select(d("2026-03-03"))
         #expect(changed)
+    }
+}
+
+struct CalendarHighlightTests {
+    private func state(types: [CalendarEntryType]? = nil) -> CalendarState {
+        let family = CalendarFamilyInfo(id: "f1", name: "Family", access: "editor", readOnly: false, updatedAt: nil)
+        return CalendarState(
+            family: family,
+            types: types ?? [
+                CalendarEntryType(id: "kita", year: 2026, name: "Kita", memberId: "u2", color: "#f59e0b", role: .needsCover),
+                CalendarEntryType(id: "vac", year: 2026, name: "Vacation", memberId: "u1", color: "#3b82f6", role: .covers),
+            ],
+            typeYears: [2026],
+            entries: ["2026-03-02": ["kita"], "2026-03-03": ["kita", "vac"]],
+            notes: nil, events: nil, birthdays: nil
+        )
+    }
+
+    private func dimmed(_ s: CalendarStore) -> [Bool] {
+        let context = s.cellContext(gridFocused: false)
+        return ["2026-03-02", "2026-03-03", "2026-03-04"].map { s.cell(d($0), context).dimmed }
+    }
+
+    @Test func dimsTheDaysWithoutTheHighlightedTypes() {
+        let s = editableStore()
+        s.apply(state())
+        // Nothing highlighted: no day fades.
+        #expect(dimmed(s) == [false, false, false])
+        // Vacation: the day with it stands out, the Kita day and the empty one fade.
+        s.highlight("vac")
+        #expect(s.highlightedTypes == ["vac"])
+        #expect(dimmed(s) == [true, false, true])
+        // Another switches, the same again ends it.
+        s.highlight("kita")
+        #expect(s.highlightedTypes == ["kita"])
+        #expect(dimmed(s) == [false, false, true])
+        s.highlight("kita")
+        #expect(s.highlightedTypes.isEmpty)
+        #expect(dimmed(s) == [false, false, false])
+    }
+
+    @Test func addsTypesToTheHighlight() {
+        let s = editableStore()
+        s.apply(state())
+        s.highlight("vac")
+        s.highlight("kita", adding: true)
+        #expect(s.highlightedTypes == ["vac", "kita"])
+        #expect(dimmed(s) == [false, false, true])
+        // Added again, it goes; a plain click on one of several keeps it alone.
+        s.highlight("kita", adding: true)
+        #expect(s.highlightedTypes == ["vac"])
+        s.highlight("kita", adding: true)
+        s.highlight("vac")
+        #expect(s.highlightedTypes == ["vac"])
+        #expect(s.clearHighlight())
+        #expect(!s.clearHighlight())
+        #expect(dimmed(s) == [false, false, false])
+    }
+
+    @Test func dropsTypesTheYearDoesntHave() {
+        let s = editableStore()
+        s.apply(state())
+        s.highlight("vac")
+        // The year's types loaded again without Vacation (deleted, or another year's): nothing
+        // is highlighted, so nothing fades.
+        s.apply(state(types: [CalendarEntryType(id: "kita", year: 2026, name: "Kita", color: "#f59e0b", role: .needsCover)]))
+        #expect(s.highlightedTypes.isEmpty)
+        #expect(dimmed(s) == [false, false, false])
+        // A year whose types aren't loaded (only other years' in the answer) has none to highlight.
+        s.apply(state())
+        s.highlight("kita")
+        s.apply(state(types: [CalendarEntryType(id: "kita", year: 2027, name: "Kita", color: "#f59e0b", role: .needsCover)]))
+        #expect(s.activeHighlight.isEmpty && s.highlightedTypes.isEmpty)
+        #expect(dimmed(s) == [false, false, false])
+        // The same type id in the new year's types stays highlighted.
+        s.apply(state())
+        s.highlight("kita")
+        s.apply(state())
+        #expect(s.highlightedTypes == ["kita"])
+    }
+
+    @Test func ordersTheLegendByMember() {
+        let types = [
+            CalendarEntryType(id: "a", name: "A", color: "#888888", role: .covers),
+            CalendarEntryType(id: "b", name: "B", memberId: "u2", color: "#f59e0b", role: .covers),
+            CalendarEntryType(id: "c", name: "C", memberId: "u1", color: "#3b82f6", role: .covers),
+            CalendarEntryType(id: "d", name: "D", memberId: "gone", color: "#3b82f6", role: .covers),
+            CalendarEntryType(id: "e", name: "E", memberId: "u2", color: "#3b82f6", role: .covers),
+        ]
+        let members = [CalendarMember(id: "u1", name: "Anna", color: "blue"),
+                       CalendarMember(id: "u2", name: "Ben", color: "red")]
+        #expect(CalendarLegend.ordered(types, members: members).map(\.id) == ["c", "b", "e", "a", "d"])
+    }
+
+    @Test func fadesThePastAndTheDimmedTogether() {
+        #expect(CalendarDayLook.contentOpacity(past: false, dimmed: false) == 1)
+        #expect(CalendarDayLook.contentOpacity(past: true, dimmed: true)
+                == CalendarDayLook.pastOpacity * CalendarDayLook.dimmedOpacity)
     }
 }
 

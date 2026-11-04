@@ -150,6 +150,50 @@ struct CalendarMathTests {
         #expect(MemberColor(key: "magenta") == nil && MemberColor(key: nil) == nil)
         #expect(MemberColor.color("magenta") == .gray)
     }
+
+    /// The server's neutral color and its shades (`typeShade`), darkest first.
+    private static let grays = ["#47474b", "#545458", "#606065", "#6d6d72", "#7e7e84", "#8e8e93",
+                                "#a0a0a4", "#ababae", "#b5b5b8", "#c5c5c7", "#d4d4d6", "#e0e0e1"]
+
+    @Test func tellsGraysFromColors() {
+        #expect(Self.grays.allSatisfy(CalendarMath.isNeutral))
+        #expect(CalendarMath.isNeutral("#c8c8c8"))
+        #expect(MemberColor.allCases.allSatisfy { !CalendarMath.isNeutral($0.hex) })
+        #expect(!CalendarMath.isNeutral("#8a5a3c")) // brown: muted, but no gray
+        #expect(!CalendarMath.isNeutral("nope"))
+    }
+
+    @Test func drawsGraysQuieterInDarkMode() {
+        func lightness(_ hex: String) -> Double {
+            let c = CalendarMath.typeRGB(hex, dark: true)!
+            return (max(c.r, c.g, c.b) + min(c.r, c.g, c.b)) / 2
+        }
+        let dark = Self.grays.map(lightness)
+        // In the muted range, in the same order, still apart.
+        #expect(dark.allSatisfy { CalendarMath.darkGrays.contains($0) })
+        #expect(zip(dark, dark.dropFirst()).allSatisfy { $1 - $0 > 0.005 })
+        #expect(lightness("#c8c8c8") < 0.5 && lightness("#000000") >= 0.28 && lightness("#ffffff") <= 0.5)
+        // White ink on every one of them; light mode keeps the color and its dark ink.
+        #expect(Self.grays.allSatisfy { !CalendarMath.prefersDarkText(onType: $0, dark: true) })
+        #expect(CalendarMath.prefersDarkText(onType: "#c8c8c8", dark: false))
+        #expect(CalendarMath.typeRGB("#c8c8c8", dark: false)! == CalendarMath.rgb("#c8c8c8")!)
+        // The tint stays (the neutral color is a little blue).
+        let base = CalendarMath.typeRGB("#8e8e93", dark: true)!
+        #expect(base.b > base.r)
+        // Member colors are never changed.
+        for color in MemberColor.allCases {
+            #expect(CalendarMath.typeRGB(color.hex, dark: true)! == CalendarMath.rgb(color.hex)!)
+            #expect(CalendarMath.prefersDarkText(onType: color.hex, dark: true) == CalendarMath.prefersDarkText(on: color.hex))
+        }
+        #expect(CalendarMath.typeRGB("nope", dark: true) == nil)
+        #expect(CalendarMath.prefersDarkText(onType: "nope", dark: true))
+    }
+
+    @Test func countsEventsInTheirMark() {
+        #expect(CalendarDayLook.eventCount(2) == "2")
+        #expect(CalendarDayLook.eventCount(9) == "9")
+        #expect(CalendarDayLook.eventCount(12) == "9+")
+    }
 }
 
 struct CalendarGridLayoutTests {
@@ -163,6 +207,55 @@ struct CalendarGridLayoutTests {
         #expect(layout.day(at: CGPoint(x: 10, y: 10), year: 2026) == nil)
         #expect(layout.day(at: CGPoint(x: -50, y: 1000), year: 2026, clamp: true) == d("2026-12-01"))
         #expect(layout.frame(of: d("2026-03-02")) == CGRect(x: 60, y: 82, width: 20, height: 30))
+    }
+
+    @Test func startsEachMonthInItsFirstsWeekdayColumn() {
+        // 2026: the 1sts fall on Thu, Sun, Sun, Wed, Fri, Mon, Wed, Sat, Tue, Thu, Sun, Tue.
+        let monday = CalendarGridLayout.Year(width: 37, labelWidth: 0, firstWeekday: 2)
+        #expect((1...12).map { monday.offset(year: 2026, month: $0) } == [3, 6, 6, 2, 4, 0, 2, 5, 1, 3, 6, 1])
+        let sunday = CalendarGridLayout.Year(width: 37, labelWidth: 0, firstWeekday: 1)
+        #expect((1...12).map { sunday.offset(year: 2026, month: $0) } == [4, 0, 0, 3, 5, 1, 3, 6, 2, 4, 0, 2])
+        let plain = CalendarGridLayout.Year(width: 31, labelWidth: 0)
+        #expect((1...12).allSatisfy { plain.offset(year: 2026, month: $0) == 0 })
+        #expect(plain.columns == 31 && monday.columns == 37)
+        // Weekdays line up: every column holds one weekday all year.
+        for (layout, first) in [(monday, 2), (sunday, 1)] {
+            for day in CalendarMath.range(d("2026-01-01"), d("2026-12-31")) {
+                #expect(layout.column(of: day) % 7 == (CalendarMath.weekday(day) - (first - 1) + 7) % 7)
+            }
+        }
+    }
+
+    @Test func hitsDaysWithTheWeekdaysAligned() {
+        let layout = CalendarGridLayout.Year(width: 40 + 37 * 20, labelWidth: 40, headerHeight: 22, rowHeight: 30,
+                                             firstWeekday: 2)
+        #expect(layout.cellWidth == 20)
+        // January 2026 starts on Thursday, column 3: the columns before are blank.
+        #expect(layout.day(at: CGPoint(x: 45, y: 25), year: 2026) == nil)
+        #expect(layout.day(at: CGPoint(x: 45, y: 25), year: 2026, clamp: true) == d("2026-01-01"))
+        #expect(layout.day(at: CGPoint(x: 40 + 3 * 20 + 5, y: 25), year: 2026) == d("2026-01-01"))
+        // March 2026 starts on Sunday (column 6), so its 31st is in the last column.
+        #expect(layout.day(at: CGPoint(x: 40 + 36 * 20 + 5, y: 22 + 60 + 5), year: 2026) == d("2026-03-31"))
+        // February's days end in column 33; after them blanks, clamped to the 28th while dragging.
+        #expect(layout.day(at: CGPoint(x: 40 + 34 * 20 + 5, y: 22 + 30 + 5), year: 2026) == nil)
+        #expect(layout.day(at: CGPoint(x: 40 + 34 * 20 + 5, y: 22 + 30 + 5), year: 2026, clamp: true) == d("2026-02-28"))
+        #expect(layout.day(at: CGPoint(x: 2000, y: 25), year: 2026) == nil)
+        #expect(layout.day(at: CGPoint(x: 2000, y: 25), year: 2026, clamp: true) == d("2026-01-31"))
+        #expect(layout.day(at: CGPoint(x: -50, y: 1000), year: 2026, clamp: true) == d("2026-12-01"))
+        #expect(layout.frame(of: d("2026-06-01")) == CGRect(x: 40, y: 22 + 5 * 30, width: 20, height: 30))
+        #expect(layout.frame(of: d("2026-01-01")) == CGRect(x: 100, y: 22, width: 20, height: 30))
+    }
+
+    @Test func findsEveryDayAtItsFrame() {
+        for first in [nil, 1, 2] {
+            let layout = CalendarGridLayout.Year(width: 40 + 37 * 20, labelWidth: 40, headerHeight: 22, rowHeight: 30,
+                                                 firstWeekday: first)
+            for day in CalendarMath.range(d("2028-01-01"), d("2028-12-31")) {
+                let frame = layout.frame(of: day)
+                #expect(layout.day(at: CGPoint(x: frame.midX, y: frame.midY), year: 2028) == day)
+                #expect(frame.maxX <= layout.width + 0.001)
+            }
+        }
     }
 
     @Test func hitsDaysInAMonth() {

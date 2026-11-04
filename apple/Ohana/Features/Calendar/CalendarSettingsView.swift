@@ -30,6 +30,7 @@ private struct CalendarSettingsContent: View {
     @State private var appleSync = AppleCalendarSyncPrompts()
     @State private var holidays = CalendarHolidaysModel()
     @AppStorage("ohana.calendar.showWeekdays") private var alwaysWeekdays = false
+    @AppStorage(CalendarWeekdayAlignment.key) private var alignWeekdays = false
 
     var body: some View {
         LoadStateView(state: loadState, retry: { await store.load() }) { _ in
@@ -241,8 +242,12 @@ private struct CalendarSettingsContent: View {
             Toggle("Skip weekends", isOn: $store.skipWeekends)
             #if os(macOS)
             Toggle("Always show weekdays", isOn: $alwaysWeekdays)
+                .disabled(alignWeekdays)  // aligned, the header names them
+            Toggle("Align weekdays", isOn: $alignWeekdays)
             #else
             Toggle("Always show weekdays in the year view", isOn: $alwaysWeekdays)
+                .disabled(alignWeekdays)
+            Toggle("Align weekdays in the year view", isOn: $alignWeekdays)
             #endif
         } header: {
             Text("Calendar view")

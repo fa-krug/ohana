@@ -365,6 +365,43 @@ enum CalendarMath {
     /// Whether dark text reads better than white on the color (core.ts `contrastText`).
     static func prefersDarkText(on hex: String) -> Bool {
         guard let (r, g, b) = rgb(hex) else { return true }
-        return (r * 255 * 299 + g * 255 * 587 + b * 255 * 114) / 1000 > 150
+        return prefersDarkText(r: r, g: g, b: b)
+    }
+
+    /// The same for components 0…1.
+    static func prefersDarkText(r: Double, g: Double, b: Double) -> Bool {
+        (r * 255 * 299 + g * 255 * 587 + b * 255 * 114) / 1000 > 150
+    }
+
+    /// A gray: the color of the types that belong to nobody (the server's neutral "#8e8e93") and
+    /// its shades, which differ from it in lightness only.
+    static func isNeutral(_ hex: String) -> Bool {
+        guard let (r, g, b) = rgb(hex) else { return false }
+        return max(r, g, b) - min(r, g, b) < 0.06
+    }
+
+    /// The lightness of the server's gray shades (its `typeShade` keeps them within 0.15…0.88)…
+    static let grayShades: ClosedRange<Double> = 0.15...0.88
+    /// …and where dark mode draws them: muted, all with white ink.
+    static let darkGrays: ClosedRange<Double> = 0.28...0.50
+
+    /// The color a type's hex is drawn in: as it is, except a gray in dark mode, whose glaring
+    /// light shades move into a muted dark range, in the same order (lighter stays lighter), so
+    /// differently shaded grays stay apart. Nil for a hex that isn't one.
+    static func typeRGB(_ hex: String, dark: Bool) -> (r: Double, g: Double, b: Double)? {
+        guard let c = rgb(hex) else { return nil }
+        guard dark, isNeutral(hex) else { return c }
+        let l = (max(c.r, c.g, c.b) + min(c.r, c.g, c.b)) / 2
+        let from = grayShades, to = darkGrays
+        let t = (min(max(l, from.lowerBound), from.upperBound) - from.lowerBound) / (from.upperBound - from.lowerBound)
+        let shift = to.lowerBound + t * (to.upperBound - to.lowerBound) - l
+        func moved(_ v: Double) -> Double { min(max(v + shift, 0), 1) }
+        return (moved(c.r), moved(c.g), moved(c.b))
+    }
+
+    /// Whether dark text reads on a type's color as it is drawn (`typeRGB`).
+    static func prefersDarkText(onType hex: String, dark: Bool) -> Bool {
+        guard let (r, g, b) = typeRGB(hex, dark: dark) else { return true }
+        return prefersDarkText(r: r, g: g, b: b)
     }
 }

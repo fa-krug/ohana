@@ -628,7 +628,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   note ops is kept on disk (`CalendarStore.queueFile`, shown on top of what's loaded)),
   `Shell/` (sidebar-adaptable `TabView`; on iPhone five tabs, overview, calendar, finance, meals and
   search: more would go under iOS's "More" with a second navigation bar, so appointments, chores, the knowledge
-  base and settings open as sheets from the family sidebar there, `Module.phonePages`; family switcher: on iPad and Mac
+  base and settings open as sheets from the family sidebar there, `Module.phonePages`; settings at the iPad sidebar's foot, on the Mac the sidebar's last row (a `.hidden` tab draws nothing when picked); family switcher: on iPad and Mac
   a system `Menu` (`FamilyMenu`) at the top of the sidebar, where the tab view has no sidebar (iPhone,
   a narrow iPad window) a family page behind the tabs as in Mail (`FamilySidebar.swift`:
   `FamilySidebarHost` slides the tabs away, `AppModel.showsFamilySidebar`; the toolbar's family
@@ -642,7 +642,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   with `family.takeRoute(for:)`; server paths `/f/{id}/…` and `ohana://f/{id}/…` map onto routes;
   the search tab (`Module.search`, `Tab(role: .search)`, ⌘K → `family.startSearch()`,
   `Features/Search/`) opens its hits the same way, a transaction as `.financeTransaction`),
-  `DesignSystem/` (solid content cards — Liquid Glass only on bars and floating controls —, error banner, `CancelButton`/`discardGuard`; the module sets `newItem`/`moduleMenu` focused values for File ▸ New and its menu), `Features/<Module>/` (plus `Account/`, `Admin/`).
+  `DesignSystem/` (solid content cards — Liquid Glass only on bars and floating controls —, error banner, `CancelButton`/`discardGuard`; the module sets `newItem`/`moduleMenu` focused values for File ▸ New and its menu; the Mac draws those menus in the menu bar, where views have no `AppModel` / `FamilyContext` in their environment: pass values in, never `@Environment` them there), `Features/<Module>/` (plus `Account/`, `Admin/`).
   On iPhone a page's toolbar stays small (the main action, perhaps a filter, one More menu in
   sections, the ✨): what doesn't fit iOS moves into an overflow menu of its own, with the page's
   More as a submenu, so a full page leaves something out instead (Finance has no search field
@@ -762,6 +762,13 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   Repeat, "this event only / future events"), `CalendarEventRequests` (pure request builders; moving a
   whole series shifts its BYDAY), `CalendarEventText` (how a multi-day event reads on each day);
   `CalendarStore` snapshots the series (`GET /events/{id}`) before a change for undo.
+  The wide calendar (iPad, Mac): from `CalendarLayoutRule.sideColumnFrom` the selected days' details
+  are a column beside the grid, below it narrower (capped at `detailsMaxWidth`); zoom is in the
+  toolbar. The year grid can align weekdays (`CalendarWeekdayAlignment`, 37 columns: every
+  consumer finds days through `CalendarGridLayout.Year`); under it `CalendarLegend` lists the year's
+  types, a click highlights one (`CalendarStore.highlightedTypes`, other days `Info.dimmed`, Esc
+  clears). Days before today are faded, nobody's gray types drawn darker in dark mode
+  (`CalendarTypeColor`, `CalendarDayLook`).
   Apple Calendar sync (`Features/Calendar/AppleCalendarSync*.swift`, Settings → Calendar), per device
   and family through EventKit: `AppleSyncPlanner` (pure, tested) plans, `AppleCalendarSync` runs it
   (at launch, foreground, every 15 min, `EKEventStoreChanged`, `FamilyContext.didChange(.events/

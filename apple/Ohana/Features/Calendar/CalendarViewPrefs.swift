@@ -27,10 +27,12 @@ enum CalendarZoom {
         guard magnification > 0 else { return clamp(start) }
         return clamp(Int((CGFloat(start) / magnification).rounded()))
     }
+}
 
-    /// The slider runs from zoomed out (left) to zoomed in (right).
-    static func sliderValue(_ zoom: Int) -> Double { Double(min + max - clamp(zoom)) }
-    static func zoom(sliderValue: Double) -> Int { clamp(min + max - Int(sliderValue.rounded())) }
+/// The year grid with its weekdays in columns (`CalendarGridLayout.Year.firstWeekday`), kept
+/// per device; off: the days of the month in columns.
+enum CalendarWeekdayAlignment {
+    static let key = "ohana.calendar.alignWeekdays"
 }
 
 /// Which layout the calendar uses.

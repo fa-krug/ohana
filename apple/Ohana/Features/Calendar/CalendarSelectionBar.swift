@@ -73,15 +73,15 @@ struct CalendarSelectionActions: View {
 }
 
 /// The glass bar floating at the bottom of the calendar, on every size, so the selection's
-/// actions are always next to the days: the selection (or how to select), its actions, the
-/// type chips that apply a type, and (year grid) the zoom. `showDetails` (the list of months:
-/// phones, narrow windows): the details open in a sheet from the selection's title, as there is
-/// no room for them under the grid, and the actions are a row of icons.
+/// actions are always next to the days: the selection (or how to select), its actions and the
+/// type chips that apply a type. `showDetails` (the list of months: phones, narrow windows): the
+/// details open in a sheet from the selection's title, as there is no room for them under the
+/// grid, and the actions are a row of icons. Otherwise the details are on the page, so the
+/// header only names the selection.
 struct CalendarSelectionBar: View {
     let store: CalendarStore
     let actions: CalendarActions
     var showDetails = true
-    var showZoom = false
     /// The "how to select" hint shows until the first few selections (like the web); the help
     /// button next to it stays.
     @AppStorage("ohana.calendar.selections") private var selections = 0
@@ -95,7 +95,6 @@ struct CalendarSelectionBar: View {
             HStack(alignment: .center, spacing: 8) {
                 status(days)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                if showZoom { CalendarZoomSlider() }
                 if days.isEmpty && store.fill == nil {
                     Button {
                         actions.showHelp()
@@ -180,14 +179,16 @@ struct CalendarSelectionBar: View {
                     actions.showDetails()
                 } label: {
                     // The chevron right behind the date; the whole width stays the button.
-                    selection(days, chevron: true)
+                    selection(days)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .contentShape(.rect)
                 }
                 .buttonStyle(.plain)
                 .accessibilityHint(Text("Show the selected days’ details"))
             } else {
-                selection(days)
+                Text(CalendarText.selectionSummary(days))
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
             }
         } else if store.readOnly {
             Text("View only").font(.caption).foregroundStyle(.secondary)
@@ -199,17 +200,16 @@ struct CalendarSelectionBar: View {
         }
     }
 
-    /// The day (or first and last), and under it the count or, one day, what is on it.
-    private func selection(_ days: [Day], chevron: Bool = false) -> some View {
+    /// The day (or first and last) with the details' chevron, and under it the count or, one
+    /// day, what is on it.
+    private func selection(_ days: [Day]) -> some View {
         VStack(alignment: .leading, spacing: 1) {
             HStack(spacing: 5) {
                 Text(CalendarText.selectionTitle(days))
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
-                if chevron {
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.bold))
-                }
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
             }
             if let line = days.count == 1 ? dayLine(days[0]) : Text(CalendarText.selectionCount(days)) {
                 line.font(.caption).foregroundStyle(.secondary).lineLimit(1)
@@ -235,43 +235,50 @@ struct CalendarSelectionBar: View {
     }
 }
 
-/// iPad and Mac: the selected days' details under the grid (their actions are in the bar).
+/// iPad and Mac: the selected days' details under the grid or beside it (their actions are in
+/// the bar). `placeholder` (the column beside the grid): with nothing selected a quiet hint holds
+/// its place. `maxWidth`: under the grid, no wider than a page of text.
 struct CalendarSelectionDetailsCard: View {
     let store: CalendarStore
     let actions: CalendarActions
+    var placeholder = false
+    var maxWidth: CGFloat = .infinity
 
     var body: some View {
         if !store.selection.isEmpty {
             CalendarSelectionDetails(store: store, actions: actions)
                 .contentCard(cornerRadius: 22, padding: 14)
+                .frame(maxWidth: maxWidth, alignment: .leading)
+        } else if placeholder {
+            VStack(spacing: 8) {
+                Image(systemName: "calendar")
+                    .font(.title2)
+                    .accessibilityHidden(true)
+                Text(store.readOnly ? LocalizedStringKey("Select days to see their entries.")
+                                    : LocalizedStringKey("Select days to see and change them."))
+                    .font(.subheadline)
+                    .multilineTextAlignment(.center)
+            }
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 28)
+            .contentCard(cornerRadius: 22, padding: 14)
         }
     }
 }
 
-/// The year grid's zoom: to the right zooms in (fewer days across), like the web's slider.
-struct CalendarZoomSlider: View {
-    @AppStorage(CalendarZoom.key) private var zoom = CalendarZoom.initial
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "magnifyingglass")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .accessibilityHidden(true)
-            Slider(value: Binding(get: { CalendarZoom.sliderValue(zoom) },
-                                  set: { zoom = CalendarZoom.zoom(sliderValue: $0) }),
-                   in: Double(CalendarZoom.min)...Double(CalendarZoom.max), step: 1) {
-                Text("Zoom")
-            }
-            .labelsHidden()
-            .frame(width: 110)
-            .accessibilityValue(CalendarText.days(CalendarZoom.clamp(zoom)))
-            Text(CalendarText.days(CalendarZoom.clamp(zoom)))
-                .font(.caption.monospacedDigit())
-                .foregroundStyle(.secondary)
-                .fixedSize()
-                .accessibilityHidden(true)
+extension CalendarText {
+    /// The bar's header when the details are on the page: "Wednesday, 4 November"; a run of days
+    /// "3 days · 4 – 6 Nov"; days with gaps "5 days selected".
+    static func selectionSummary(_ days: [Day]) -> String {
+        guard let first = days.first, let last = days.last else { return "" }
+        if days.count == 1 { return selectionTitle(days) }
+        guard zip(days, days.dropFirst()).allSatisfy({ $0.adding(days: 1) == $1 }) else {
+            return selectionAnnouncement(days.count)
         }
-        .help("Zoom: how many days fit in the calendar (⌘+ / ⌘− / ⌘0)")
+        let style: Date.IntervalFormatStyle = first.year == last.year
+            ? .interval.day().month(.abbreviated)
+            : .interval.day().month(.abbreviated).year()
+        return "\(Self.days(days.count)) · \((first.date..<last.date).formatted(style))"
     }
 }
