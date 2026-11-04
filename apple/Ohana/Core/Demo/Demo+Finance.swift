@@ -79,7 +79,7 @@ private struct DemoFinance {
         FinanceAccountsAt(at: at, accounts: accounts(at: at))
     }
 
-    /// GET /finance/transactions?from&to&account&category&q&kind&limit&offset (findTransactions).
+    /// GET /finance/transactions?from&to&account&category&q&kind&source&limit&offset (findTransactions).
     func list(_ query: [String: String]) -> FinanceTransactionList {
         var rows = inRange(query["from"], query["to"])
         if let account = query["account"], !account.isEmpty {
@@ -98,6 +98,10 @@ private struct DemoFinance {
                 $0.payee.lowercased().contains(q) || $0.description.lowercased().contains(q)
                     || $0.note.lowercased().contains(q)
             }
+        }
+        if let source = query["source"], !source.isEmpty {
+            let wanted = Set(source.split(separator: ",").map { String($0) })
+            rows = rows.filter { wanted.contains($0.source ?? ($0.imported ? "csv" : "manual")) }
         }
         switch query["kind"] {
         case "transfer": rows = rows.filter { group(of: $0) != nil }

@@ -169,6 +169,7 @@ export const TX_COLUMNS = [
   "transferId",
   "splitOf",
   "note",
+  "source",
 ];
 
 export class NeedsConfirmation extends Error {}

@@ -47,6 +47,14 @@ export interface AccountBank {
   lastSyncAt: string | null;
 }
 
+/** Where a transaction came from: typed, scanned or the assistant's (manual), a CSV file, or a
+ *  bank sync (also one a full sync adopted). */
+export const TX_SOURCES = ["manual", "csv", "bank"] as const;
+export type TxSource = (typeof TX_SOURCES)[number];
+
+export const txSource = (v: unknown): TxSource | null =>
+  (TX_SOURCES as readonly unknown[]).includes(v) ? (v as TxSource) : null;
+
 export interface TransactionRow {
   family_id: string;
   id: string; // uuid
@@ -58,6 +66,8 @@ export interface TransactionRow {
   note: string;
   /** Set for imported rows, so the same statement isn't imported twice. */
   import_hash: string | null;
+  /** Where it came from (see TX_SOURCES). */
+  source: TxSource;
   account_id: string | null;
   /** Transactions sharing one are the legs of a transfer between the family's accounts. */
   transfer_id: string | null;
@@ -182,6 +192,7 @@ function txRow(t: typeof finTransactions.$inferSelect): TransactionRow {
     category_id: t.categoryId,
     note: t.note,
     import_hash: t.importHash,
+    source: txSource(t.source) ?? "manual",
     account_id: t.accountId,
     transfer_id: t.transferId,
     split_of: t.splitOf,
@@ -226,6 +237,7 @@ function txValues(t: TransactionRow) {
     categoryId: t.category_id,
     note: t.note,
     importHash: t.import_hash,
+    source: t.source,
     accountId: t.account_id,
     transferId: t.transfer_id,
     splitOf: t.split_of,

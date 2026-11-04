@@ -223,6 +223,12 @@ struct FinanceBankSync: Codable, Hashable, Identifiable {
         var splits: Int
         /// The added transactions.
         var ids: [String]
+        /// A full sync's: the account's transactions that now stand for a bank row (same day and
+        /// amount; kept as they were).
+        var adopted: Int?
+        /// A full sync's: the account's transactions of the days fetched the bank doesn't list
+        /// (left as they are; perhaps a CSV file's duplicates).
+        var unmatched: Int?
     }
 
     var id: String
@@ -235,6 +241,8 @@ struct FinanceBankSync: Codable, Hashable, Identifiable {
     var error: String?
     var createdAt: String?
     var updatedAt: String?
+    /// Imports the bank's whole history (nil: an older server's, never one).
+    var full: Bool?
 
     var stage: Step? { step.flatMap(Step.init) }
     /// Waiting, running or waiting for the TAN: it's polled.
@@ -264,10 +272,42 @@ struct FinanceTransaction: Codable, Hashable, Identifiable {
     var split: FinanceSplitInfo?
     var note: String
     var imported: Bool
+    /// Where it came from: "manual", "csv" or "bank" (nil from an older server).
+    var source: String?
 
     var day: Day? { Day(date) }
+    /// Where it came from; an older server only says whether it was imported.
+    var origin: FinanceSource? {
+        source.flatMap(FinanceSource.init(rawValue:)) ?? (imported ? .imported : nil)
+    }
     /// The payee, else the description, else a dash.
     var title: String { !payee.isEmpty ? payee : (!description.isEmpty ? description : "—") }
+}
+
+/// Where a transaction came from (its `source`).
+enum FinanceSource: String, Hashable {
+    case manual, csv, bank
+    /// An older server's imported row: a CSV file or a bank sync.
+    case imported
+
+    /// The mark in the lists; none for a typed one.
+    var icon: String? {
+        switch self {
+        case .manual: nil
+        case .csv: "doc.text"
+        case .bank: "building.columns"
+        case .imported: "square.and.arrow.down"
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .manual: String(localized: "Entered in Ohana")
+        case .csv: String(localized: "Imported from a CSV file")
+        case .bank: String(localized: "Synced with the bank")
+        case .imported: String(localized: "Imported from a bank statement")
+        }
+    }
 }
 
 /// An amount per month from lowCents to highCents (the same twice for a single value).

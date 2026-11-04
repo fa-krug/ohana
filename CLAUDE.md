@@ -195,7 +195,10 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `presets.ts` the default categories `createFamily` adds (creator's language). Tables
   `fin_settings` (currency, CSV mappings and benchmark as JSON text), `fin_categories` (tree
   via `parent_id`), `fin_accounts`, `fin_transactions` (`transfer_id`, `split_of`,
-  `import_hash` unique per family). References inside a family are composite FKs without an
+  `import_hash` unique per family, `source` manual | csv | bank: where it came from, in the DTO,
+  the export file and the `source` filter of `findTransactions` (list route, the assistant's
+  `list_transactions` / `analyze_transactions`); migration 0026 guessed it for older rows: hashed
+  ones added to a linked account after linking bank, other hashed ones csv). References inside a family are composite FKs without an
   action (SQLite can't null one column of a composite key): the store moves or clears them
   before deleting (category → parent, parts of a deleted booking become normal). Within a
   day transactions list newest created first, then in insertion order (rowid); one request's
@@ -238,8 +241,17 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   transactions from its latest day on, of an empty one 2 years back (saving another IBAN / card /
   provider clears both; links synced before it existed got `synced_through` as their floor); on
   days up to `synced_from` a bank row with the day and amount of one of the account's other
-  transactions (not a split's part) counts as that one, one to one, its own (same hash) first
-  (`sameDayMatches`: a CSV file's last day isn't doubled). Import through `importTransactions`
+  transactions (not a split's part) counts as that one, one to one, its own (same hash) first,
+  else the one with its payee (`matchExisting`: a CSV file's last day isn't doubled). A **full
+  sync** (`POST …/bank/sync {full: true}`, `fin_bank_syncs.full`; the user's explicit "import all
+  transactions" after a CSV import) asks for `FULL_SYNC_DAYS` (10 years) back and matches the same
+  way on every day fetched, but *adopts*: the matched transaction takes the bank row's import hash
+  (its text, category, note, transfer and split stay), only unmatched rows are added, the
+  account's other transactions from the bank's first row on are counted (`result.adopted` / `unmatched`) and left
+  alone; adopted rows become `source` bank, so the account's manual / csv rows in the bank's
+  days are the ones to look at; `synced_from` becomes its first day. A comdirect card gives only its newest 500 rows: when
+  there are more, `BankStatement.from` says from which day they're complete (the oldest day's
+  rows dropped). Import through `importTransactions`
   (shared with the CSV route, autoTransfers on); hashes
   `"bank|<provider>|<bank account id / cardId>|<reference>"`, rows without a reference by
   `importHashes`; a card's Visa-Kartenabrechnung pairs with the Girokonto's debit by
@@ -248,7 +260,9 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   fields; one field "IBAN or card number"), `FinanceIntake` (pure: Import CSV, Sync of the shown
   account, or a menu of both; the CSV sheet leaves linked accounts out), `FinanceBankSyncSheet`
   (starts the sync, polls it every second: push / photoTAN / SMS TAN, then the CSV import's sort
-  into categories).
+  into categories; `full`: the account editor's *Import All Transactions*, after a confirmation,
+  shows the adopted / added / unmatched counts; the rows show their `source` as an icon,
+  `FinanceSource`, and the list's Origin filter, `FinanceFilter.Source`, has "Not from the bank").
 - **Assistant (`lib/assistant/`):** family-planner's `ai/*`. Tables
   `ai_settings` (keys sealed with `getSecretBox()`), `chats` (status, lease `run_token` /
   `run_until`, `stop`, JSON `context` / `activity` / `notes` / `usage` / `queue`, `rev`),
@@ -849,6 +863,11 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
 
 ## Conventions
 
+- **Always consider the assistant** for every new feature and every schema change: can it read
+  the new data and act on it (its tools in `lib/assistant/tools/`, their filters and result
+  columns, the system prompt in `chat.ts`), do its changes return undo steps, and are viewers
+  and `allow_writes: false` still limited to the reading tools? A feature the user can't ask the
+  assistant about is unfinished.
 - Tests use an in-memory database with all migrations (`lib/test/db.ts`), factories in
   `lib/test/factories.ts` (appointments: `lib/test/appointments.ts`), fixtures in
   `tests/fixtures/`, and a software passkey (`lib/test/authenticator.ts`) so WebAuthn flows

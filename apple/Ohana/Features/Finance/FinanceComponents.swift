@@ -381,6 +381,11 @@ struct FinanceFilterBar: View {
                 } label: {
                     chip("arrow.up.arrow.down", store.filter.kind.title, active: store.filter.kind != .all)
                 }
+                Menu {
+                    FinanceSourceFilterPicker(store: store).pickerStyle(.inline)
+                } label: {
+                    chip("tray.and.arrow.down", store.filter.source.title, active: store.filter.source != .all)
+                }
                 if store.filter.isActive {
                     Button {
                         Task { await store.clearFilters() }
@@ -423,6 +428,7 @@ struct FinanceFilterMenu: View {
                 Text(FinanceFilterTitles.category(store))
             }
             FinanceKindFilterPicker(store: store).pickerStyle(.menu)
+            FinanceSourceFilterPicker(store: store).pickerStyle(.menu)
             if store.filter.isActive {
                 Divider()
                 Button("Clear filters", systemImage: "xmark") { Task { await store.clearFilters() } }
@@ -477,6 +483,20 @@ struct FinanceKindFilterPicker: View {
             ForEach(FinanceFilter.Kind.allCases) { Text($0.title).tag($0) }
         } label: {
             Label("Kind", systemImage: "arrow.up.arrow.down")
+        }
+    }
+}
+
+/// Where they came from: the bank, CSV files, typed, or not from the bank (after a full bank
+/// import: what the bank doesn't list).
+struct FinanceSourceFilterPicker: View {
+    @Bindable var store: FinanceStore
+
+    var body: some View {
+        Picker(selection: Binding(get: { store.filter.source }, set: { source in Task { await store.setFilter { $0.source = source } } })) {
+            ForEach(FinanceFilter.Source.allCases) { Text($0.title).tag($0) }
+        } label: {
+            Label("Origin", systemImage: "tray.and.arrow.down")
         }
     }
 }
