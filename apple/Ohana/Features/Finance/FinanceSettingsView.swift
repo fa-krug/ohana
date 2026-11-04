@@ -355,7 +355,7 @@ private struct FinanceDoneButton: View {
     }
 }
 
-/// An account's name, icon, color and opening balance.
+/// An account's name, icon, color, opening balance and bank connection.
 struct FinanceAccountEditor: View {
     @Bindable var store: FinanceStore
     let account: FinanceAccount?
@@ -364,11 +364,26 @@ struct FinanceAccountEditor: View {
     @State private var icon = ""
     @State private var color = Color.blue
     @State private var opening = ""
+    /// nil: no bank connection.
+    @State private var provider: FinanceBankProvider?
+    /// Typed credentials by field key; blank keeps what an existing link has stored.
+    @State private var credentials: [String: String] = [:]
+    @State private var iban = ""
     @State private var original: FinanceEditorSnapshot?
     @State private var busy = false
+    /// Made by a save whose bank link then failed: saving again links it, without another account.
+    @State private var created: FinanceAccount?
 
     private var snapshot: FinanceEditorSnapshot {
-        FinanceEditorSnapshot(name: name, icon: icon, color: FinanceColor.hex(color), rest: [opening])
+        FinanceEditorSnapshot(name: name, icon: icon, color: FinanceColor.hex(color),
+                              rest: [opening, provider?.rawValue, iban]
+                                  + (provider?.fields ?? []).map { credentials[$0.key] ?? "" })
+    }
+
+    /// The link the account has now.
+    private var link: FinanceBankLink? { (account ?? created)?.bank }
+    private var bankIncomplete: Bool {
+        provider.map { !$0.isComplete(credentials: credentials, replacing: link) } ?? false
     }
 
     private var hasChanges: Bool { store.canEdit && original != nil && snapshot != original }
@@ -409,6 +424,7 @@ struct FinanceAccountEditor: View {
                         Text("Enter an amount, e.g. \(FinanceMoney.input(1250))").foregroundStyle(.red)
                     }
                 }
+                if store.canEdit || link != nil { bankSection }
             }
             .formStyle(.grouped)
             .navigationTitle(account == nil ? String(localized: "New account") : String(localized: "Account"))
@@ -417,7 +433,9 @@ struct FinanceAccountEditor: View {
             #endif
             .toolbar {
                 FinanceEditorToolbar(canEdit: store.canEdit, hasChanges: hasChanges,
-                                     canSave: !busy && !nameMissing && openingCents != nil) { Task { await save() } }
+                                     canSave: !busy && !nameMissing && openingCents != nil && !bankIncomplete) {
+                    Task { await save() }
+                }
             }
         }
         .errorBanner()
@@ -430,18 +448,68 @@ struct FinanceAccountEditor: View {
             icon = account?.icon ?? ""
             color = FinanceColor.color(account?.color ?? FinanceColor.next(used: store.accounts.map(\.color)))
             opening = account.map { FinanceMoney.signedInput($0.openingCents) } ?? ""
+            provider = account?.bank.flatMap { FinanceBankProvider(rawValue: $0.provider) }
+            iban = account?.bank?.iban ?? ""
             original = snapshot
+        }
+    }
+
+    /// None or a provider; for one, its credentials (an existing link's stay blank: the server
+    /// never sends them back) and which account at the bank. Viewers see only which bank.
+    @ViewBuilder
+    private var bankSection: some View {
+        Section {
+            if store.canEdit {
+                Picker("Bank", selection: $provider) {
+                    Text("None").tag(FinanceBankProvider?.none)
+                    ForEach(FinanceBankProvider.allCases) { Text(verbatim: $0.title).tag(Optional($0)) }
+                }
+                if let provider {
+                    let stored = link?.provider == provider.rawValue
+                    ForEach(provider.fields) { field in
+                        let text = Binding { credentials[field.key] ?? "" } set: { credentials[field.key] = $0 }
+                        let prompt = stored ? Text("Unchanged") : nil
+                        if field.secure {
+                            SecureField(field.title, text: text, prompt: prompt)
+                        } else {
+                            TextField(field.title, text: text, prompt: prompt)
+                                .autocorrectionDisabled()
+                                #if os(iOS)
+                                .textInputAutocapitalization(.never)
+                                #endif
+                        }
+                    }
+                    TextField("IBAN (optional)", text: $iban)
+                        .autocorrectionDisabled()
+                        #if os(iOS)
+                        .textInputAutocapitalization(.characters)
+                        #endif
+                }
+            } else if let link {
+                LabeledContent("Bank", value: link.providerName)
+            }
+            if let link, provider?.rawValue == link.provider || !store.canEdit {
+                LabeledContent("Last synced") {
+                    Text(link.lastSync?.formatted(.relative(presentation: .named)) ?? String(localized: "Never"))
+                }
+            }
+        } header: {
+            Text("Bank connection")
+        } footer: {
+            if let provider, store.canEdit {
+                Text(provider.help)
+            }
         }
     }
 
     private func save() async {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, let cents = openingCents else { return }
+        guard !trimmed.isEmpty, let cents = openingCents, !bankIncomplete else { return }
         let hex = FinanceColor.hex(color)
         let iconText = String(icon.trimmingCharacters(in: .whitespaces).prefix(8))
         busy = true
         defer { busy = false }
-        if let account {
+        if let account = account ?? created {
             var patch: [String: JSONValue] = [:]
             if trimmed != account.name { patch["name"] = .string(trimmed) }
             if iconText != account.icon { patch["icon"] = .string(iconText) }
@@ -452,9 +520,25 @@ struct FinanceAccountEditor: View {
                 guard await store.updateAccount(account.id, patch) else { return }
             }
         } else {
-            guard await store.addAccount(name: trimmed, color: hex, icon: iconText, openingCents: cents) != nil else { return }
+            guard let added = await store.addAccount(name: trimmed, color: hex, icon: iconText, openingCents: cents) else { return }
+            created = added
         }
+        guard let saved = account ?? created, await saveBank(saved) else { return }
         dismiss()
+    }
+
+    /// Links, changes or removes the bank connection when the editor changed it.
+    private func saveBank(_ account: FinanceAccount) async -> Bool {
+        guard let provider else {
+            return account.bank == nil ? true : await store.unlinkBank(account.id)
+        }
+        let typed = provider.fields.contains { !(credentials[$0.key] ?? "").trimmingCharacters(in: .whitespaces).isEmpty }
+        let unchanged = account.bank?.provider == provider.rawValue
+            && FinanceBankProvider.iban(iban) == account.bank?.iban.flatMap(FinanceBankProvider.iban) && !typed
+        if unchanged { return true }
+        guard await store.linkBank(account.id, provider.linkBody(credentials: credentials, iban: iban)) else { return false }
+        credentials = [:]
+        return true
     }
 }
 

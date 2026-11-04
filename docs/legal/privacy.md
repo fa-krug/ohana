@@ -10,7 +10,7 @@ when you use the **Ohana app** for iPhone, iPad and Mac. In short: this website 
 you, and the app sends your data only to the Ohana server you connect it to. If you turn on
 notifications in the app, they pass through our push relay encrypted, so we can't read them.
 
-*Last updated: 2 November 2026*
+*Last updated: 4 November 2026*
 
 ## Who is responsible
 
@@ -96,6 +96,12 @@ What a server sends to other services depends on what its families set up, for e
   (only a country and a region, like "DE-BY"),
 - the **notification services** a family sets up (Pushover, Pushbullet, Telegram, an email
   provider, ntfy) with the text of the notifications.
+- **comdirect**, if a family links a finance account with its bank: the server keeps the bank
+  login (the API client ID and secret, the Zugangsnummer and the PIN) encrypted and uses it only
+  when someone starts a sync, to log in at comdirect on their behalf and fetch that account's
+  booked transactions, which it stores as the family's transactions. The TAN you type in the app
+  goes to comdirect through the server and isn't kept. Nothing else is sent to comdirect, and the
+  login is never sent back to the app; removing the bank connection deletes it.
 
 Ask your server's operator about their privacy policy.
 

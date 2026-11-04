@@ -18,8 +18,9 @@ Only the newest image (`ghcr.io/fa-krug/ohana:latest`) gets security fixes: keep
 - **Sign-in** with passkeys (WebAuthn) or passwords hashed with argon2id; failed password
   attempts are rate limited.
 - **Tokens** (sessions, API tokens, setup links) are stored only as SHA-256 hashes.
-- **Secrets at rest** (AI and search keys, notification tokens, SMTP passwords) are encrypted
-  with AES-256-GCM and never sent back to the app.
+- **Secrets at rest** (AI and search keys, notification tokens, SMTP passwords, the bank logins
+  of synced finance accounts) are encrypted with AES-256-GCM and never sent back to the app.
+  The backups hold them encrypted too: keep `AUTH_SECRET` / `ENCRYPTION_KEY` apart from them.
 - **Families are separate:** every request is checked against the family's membership, and a
   family you're not in answers `404`. Server administrators manage accounts, not families' data.
 - **Outbound requests** from the assistant refuse private network addresses (unless you allow

@@ -48,6 +48,8 @@ Ready to try it? Go to the [quick start](/quickstart).
 - Transactions, accounts and a **category tree**, transfers between accounts and **split
   bookings**.
 - **CSV import** of bank statements with saved formats per bank, duplicates recognized.
+- **Bank sync** of an account with **comdirect**: the server fetches the booked transactions,
+  you confirm the login with a TAN ([how](/app#syncing-an-account-with-its-bank)).
 - **Scan a receipt** in the app: amount, date and shop are read on the device, the category
   filled in; keep the scan as a PDF if you like.
 - Monthly overviews, comparisons and a benchmark.

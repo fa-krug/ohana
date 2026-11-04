@@ -148,6 +148,13 @@
       "when": 1793780560405,
       "tag": "0020_holidays",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1793786140015,
+      "tag": "0021_bank_sync",
+      "breakpoints": true
     }
   ]
 }

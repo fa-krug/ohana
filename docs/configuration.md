@@ -63,10 +63,16 @@ Only `APP_URL` and `AUTH_SECRET` are required. Developers running from source us
 | Variable | Default | |
 | --- | --- | --- |
 | `AI_ALLOW_PRIVATE_ENDPOINT` | off | `1` lets the families' AI endpoint be on a private network (Ollama, LM Studio). Web pages the assistant reads stay limited to public addresses. |
-| `ASSISTANT_TICK_MS` | `1000` | How often the worker looks for chats waiting for an answer. |
+| `ASSISTANT_TICK_MS` | `1000` | How often the worker looks for chats waiting for an answer (and for recipe imports and bank syncs). |
 | `ASSISTANT_MAX_CONCURRENT` | `4` | Answers written at once. |
 | `ASSISTANT_NOTIFY_AFTER_SECONDS` | `30` | The "assistant finished" notification is only sent for answers that took longer. |
 | `IMPORT_MAX_CONCURRENT` | `2` | Recipe imports shared from Safari run in the worker; this many at once. |
+
+## Finance
+
+| Variable | Default | |
+| --- | --- | --- |
+| `BANK_SYNC_MAX_CONCURRENT` | `4` | Bank syncs (comdirect) the worker runs at once; it looks for new ones every `ASSISTANT_TICK_MS`. |
 
 ## Appointment searches
 
@@ -95,5 +101,6 @@ These are read by `docker-compose.yml` itself, not by Ohana:
 Some things aren't server settings but are set by each family's editors in the app: the AI
 endpoint, model and keys (*Settings → Assistant*), notification channels and which events they
 get (*Settings → Household → Notifications*), the home address (distances to practices), the
-currency and the CSV formats of the finances. Keys and tokens are stored encrypted and never
-sent back to the app.
+currency and the CSV formats of the finances, and the bank connections of finance accounts
+(comdirect's API credentials, login and PIN). Keys, tokens and bank logins are stored encrypted
+and never sent back to the app.

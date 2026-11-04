@@ -99,6 +99,44 @@ you. New chores ask for whom, when (a part of the day, or a time), how they repe
 the notification. Changes show at once and are sent in the background, offline too. A chore's
 notification opens its day.
 
+## Syncing an account with its bank
+
+Instead of importing CSV files, a finance account can fetch its transactions from the bank
+itself. For now the bank is **comdirect** (its free REST API for private customers); others can
+be added later. Editors link an account in its settings; everyone in the family sees when it
+last synced.
+
+**1. Turn on comdirect's API access.** Log in to the [comdirect online
+banking](https://www.comdirect.de), open **Verwaltung → Entwicklerzugang** and activate the
+access to the REST API. You get a **client ID** (it starts with `User_`) and a **client
+secret**: treat the secret like a password. Use **photoTAN push** as your TAN method if you can
+(approving the login in the comdirect app is all a sync then asks of you); a photoTAN graphic or
+an SMS TAN work too.
+
+**2. Link the account.** In the account's settings, choose *comdirect* and enter the client ID,
+the client secret, your **Zugangsnummer** and your **PIN**. If you have more than one account at
+comdirect, add the **IBAN** of the one this account stands for; without one, Ohana takes your
+only Girokonto. The server keeps these details encrypted and never sends them back to the app:
+to change them, enter the new ones, empty fields keep what's stored.
+
+**3. Sync.** Tap *Sync* on the account. Your server logs in at comdirect, which asks for a TAN:
+approve the login in the comdirect app, or scan the photoTAN graphic the app shows and type the
+TAN (an SMS TAN the same way). The server then fetches the **booked** transactions and adds the
+new ones, with payee and purpose; transfers to and from the family's other accounts are linked
+on the way, as after a CSV import. Pending transactions come once they're booked.
+
+- The first sync of an empty account goes two years back. An account that already has
+  transactions (from CSV files, say) only gets the ones after its latest, so nothing comes
+  twice. Later syncs look two weeks back from the last booking they brought, for late bookings;
+  what is there already is recognized.
+- A sync within about 20 minutes of the last one usually needs no new TAN.
+- comdirect **locks the online banking** after five TAN requests without a confirmed TAN in
+  between, or three wrong TANs. So Ohana never asks twice by itself: a wrong TAN ends the sync,
+  and after three requests in a row that weren't confirmed it won't start another one until you
+  have logged in once on comdirect's website with a TAN (or saved the bank connection again).
+  A refused PIN, too, stops the syncs until the connection is saved again.
+- A linked account takes no CSV files. Unlinking keeps its transactions.
+
 ## Search
 
 The search tab (🔍, at the end of the iPhone's tab bar and at the top of the sidebar; ⌘K on the
