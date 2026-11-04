@@ -11,6 +11,7 @@ import type { Ctx } from "@/lib/api/family-api";
 import { cleanName, HttpError, json, objectOf, readBody, slug } from "@/lib/api/http";
 import { addDays, diffDays, isValidDate } from "@/lib/calendar/dates";
 import type { Lang } from "@/lib/i18n/config";
+import { bankRoute } from "./bank/routes";
 import { categoryTree, PATH_SEPARATOR } from "./category-tree";
 import {
   type AccountRow,
@@ -350,6 +351,7 @@ export function publicAccount(a: AccountRow, totals: Map<string, number>) {
     openingCents: a.opening_cents,
     position: a.position,
     balanceCents: a.opening_cents + (totals.get(a.id) ?? 0),
+    bank: a.bank ?? null,
   };
 }
 
@@ -630,6 +632,11 @@ async function sha256(s: string): Promise<string> {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
   return [...new Uint8Array(buf)].slice(0, 16).map((b) => b.toString(16).padStart(2, "0"))
     .join("");
+}
+
+/** The import hash of a key that names a booking on its own (a bank sync's reference). */
+export function importHashOf(key: string): Promise<string> {
+  return sha256(key);
 }
 
 /**
@@ -1118,6 +1125,7 @@ export function handleFinance(ctx: Ctx): Promise<Response> | null {
   if (sub === undefined && method === "DELETE") return clearRoute(ctx);
   if (sub === "settings" && id === undefined && method === "PATCH") return updateSettings(ctx);
   if (sub === "categories") return categoriesRoute(ctx, id);
+  if (sub === "accounts" && id !== undefined && ctx.rest[3] === "bank") return bankRoute(ctx, id);
   if (sub === "accounts") return accountsRoute(ctx, id);
   if (sub === "transactions" && id === undefined) {
     if (method === "GET") return listRoute(ctx);
@@ -1641,9 +1649,8 @@ async function autoTransfersRoute({ finance: store, req, load }: Ctx): Promise<R
 
 /** POST /finance/import {"rows": [{date, amountCents, payee, description, categoryId}],
  *  "accountId", "autoTransfers": true, "dryRun": true}: adds the rows that aren't imported
- *  yet, all to the account if given. With autoTransfers, fresh rows that make up a split
- *  booking get combined (see matchSplits), and fresh rows that look like one leg of a transfer
- *  (see matchTransfers) get linked to the other leg; `splits` and `transfers` count them. */
+ *  yet, all to the account if given (see importTransactions). An account that syncs with its
+ *  bank takes no CSV files (409). */
 async function importRoute({ finance: store, req, load }: Ctx): Promise<Response> {
   const { family } = await load("edit");
   const body = await readBody(req);
@@ -1654,6 +1661,9 @@ async function importRoute({ finance: store, req, load }: Ctx): Promise<Response
     store.listAccounts(family.id),
   ]);
   const accountId = resolveAccount(accounts, body.accountId);
+  if (accountId && accounts.find((a) => a.id === accountId)?.bank) {
+    throw new HttpError(409, "This account syncs with its bank");
+  }
   const now = new Date().toISOString();
   const rows = body.rows.map((raw: unknown): TransactionRow => {
     const o = objectOf(raw, "Each row");
@@ -1674,17 +1684,49 @@ async function importRoute({ finance: store, req, load }: Ctx): Promise<Response
     };
   });
   const hashes = await importHashes(rows, accountId);
-  const existingHashes = await store.existingImportHashes(family.id, hashes);
+  return json(await importTransactions(store, family.id, rows, hashes, {
+    autoTransfers: body.autoTransfers === true,
+    dryRun: body.dryRun === true,
+  }));
+}
+
+/** What an import did: `duplicates` are the indexes of the rows that were there already. */
+export interface ImportOutcome {
+  added: number;
+  duplicates: number[];
+  ids: string[];
+  transfers: number;
+  splits: number;
+}
+
+/**
+ * Adds the rows whose import hash (`hashes[i]`, one per row) no transaction has yet: the CSV
+ * import and the bank sync. A hash twice among the rows counts the second as a duplicate. With
+ * autoTransfers, fresh rows that make up a split booking get combined (see matchSplits), and
+ * fresh rows that look like one leg of a transfer (see matchTransfers) get linked to the other
+ * leg; `splits` and `transfers` count them. A dry run adds nothing and only counts.
+ */
+export async function importTransactions(
+  store: Store,
+  familyId: string,
+  rows: TransactionRow[],
+  hashes: string[],
+  { autoTransfers = false, dryRun = false }: { autoTransfers?: boolean; dryRun?: boolean } = {},
+): Promise<ImportOutcome> {
+  const existingHashes = await store.existingImportHashes(familyId, hashes);
   const duplicates: number[] = [];
   const fresh: TransactionRow[] = [];
+  const taken = new Set<string>();
   rows.forEach((row: TransactionRow, i: number) => {
-    if (existingHashes.has(hashes[i])) duplicates.push(i);
-    else fresh.push({ ...row, import_hash: hashes[i] });
+    if (existingHashes.has(hashes[i]) || taken.has(hashes[i])) duplicates.push(i);
+    else {
+      taken.add(hashes[i]);
+      fresh.push({ ...row, import_hash: hashes[i] });
+    }
   });
-  const dryRun = body.dryRun === true;
   if (!dryRun) await store.upsertTransactions(fresh);
   let transfers = 0, splits = 0;
-  if (body.autoTransfers === true && fresh.length) {
+  if (autoTransfers && fresh.length) {
     // Splits and transfers among the transactions around the fresh rows, with a fresh one. A
     // dry run adds the fresh rows in memory.
     const days = fresh.map((t) => t.day).sort();
@@ -1694,8 +1736,8 @@ async function importRoute({ finance: store, req, load }: Ctx): Promise<Response
     if (dryRun) {
       const touches = (ts: TransactionRow[]) => ts.some((t) => ids.has(t.id));
       const [candidates, around] = await Promise.all([
-        splitCandidates(store, family.id, from, to),
-        unlinked(store, family.id, from, to),
+        splitCandidates(store, familyId, from, to),
+        unlinked(store, familyId, from, to),
       ]);
       splits = matchSplits([...fresh, ...candidates.rows], candidates.booked)
         .filter((m) => touches([m.booking, ...m.parts])).length;
@@ -1704,16 +1746,16 @@ async function importRoute({ finance: store, req, load }: Ctx): Promise<Response
         MAX_OPS,
       );
     } else {
-      ({ linked: transfers, splits } = await autoCombine(store, family.id, from, to, ids));
+      ({ linked: transfers, splits } = await autoCombine(store, familyId, from, to, ids));
     }
   }
-  return json({
+  return {
     added: dryRun ? 0 : fresh.length,
     duplicates,
     ids: dryRun ? [] : fresh.map((t) => t.id),
     transfers,
     splits,
-  });
+  };
 }
 
 /** Income and expenses per month and per category in the range (net counting: a transfer

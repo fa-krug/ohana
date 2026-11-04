@@ -52,7 +52,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `lib/maintenance/backup.ts` and `lib/notifications/daily.ts`; the loop itself ticks every
   `ASSISTANT_TICK_MS` (1000) for the assistant's `ChatRunner`, the meals' `ImportRunner` and the
   calendar's `HolidayRunner`;
-  turned-off modules' runners don't run). `docker-entrypoint.sh setup-link <email>` prints a setup link. Long-running jobs
+  turned-off modules' runners don't run; the same tick runs finance's `BankSyncRunner`). `docker-entrypoint.sh setup-link <email>` prints a setup link. Long-running jobs
   (appointment searches, assistant turns, notifications) belong in the worker, never in a
   request.
 - **HTTP (`http/`):** `app.ts` `createApp({ db })` (tests: `app.request(…)`, see
@@ -202,6 +202,37 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   the app only (`apple/…/Finance/ReceiptScanner.swift`: VisionKit's document camera, Vision
   text recognition, `ReceiptParser`; optionally also a PDF, see Scanning); it saves a plain
   transaction, then sorts it with `…/ai/categorize` (`ids`).
+  **Bank sync** (`lib/finance/bank/`): an account can be linked to a bank (`fin_bank_links`,
+  PK family + account, composite FK to `fin_accounts` ON DELETE CASCADE: deleting / clearing /
+  importing a family file drops it; never exported): `provider`, `credentials` (sealed JSON, never
+  in a DTO or log), `iban`, `session` (sealed refresh token, ~20 min: no new TAN), `synced_through`,
+  `last_sync_at`, the lockout guards `unconfirmed_tans` / `login_refused`. Providers implement
+  `types.ts` `BankProvider` (`fetchStatement` with `SyncHooks`), registry `providers.ts`; the only
+  one is `comdirect.ts` (its REST API: password grant → session → validate asking for
+  P_TAN_PUSH → push polled / photoTAN or SMS TAN typed → PATCH → `cd_secondary` → v2 balances
+  (by IBAN, else the only Girokonto) → BOOKED transactions, 500 per page, `min-bookingDate`;
+  `mapTransaction` / `remittanceLines`: exact cents, payee by direction, 37-char remittance
+  windows, SEPA reference lines dropped; injected fetch, a timeout per request). Routes
+  `routes.ts` (from `handleFinance`): `PUT/DELETE /finance/accounts/{id}/bank` (blank secrets
+  keep the stored ones; saving resets the guards), `POST/GET/DELETE …/bank/sync`, `POST
+  …/bank/sync/tan`; the account DTO's `bank` ({provider, iban, lastSyncAt}, from
+  `listAccounts`' join); a linked account refuses `POST /finance/import` (409). Syncs are
+  `fin_bank_syncs` rows (`queue.ts`: waiting → running → tan → done | failed, `step`, `tan`
+  challenge, `tan_input` sealed until used, `result`; finished ones pruned after a day by
+  `cleanup`), run by the worker's `runner.ts` `BankSyncRunner` (CAS claim + run token + a lease
+  renewed every tick; cancelled / deleted rows abort it). **Lockout safety** (comdirect locks
+  after 5 unconfirmed TAN challenges or 3 wrong TANs): validate and the TAN PATCH are never
+  retried, a lost lease or a stopping worker marks the sync failed ("Interrupted"), never re-run;
+  each challenge is counted before it is asked for, a confirmed TAN resets it, no sync starts at
+  3 or after a refused login until the link is saved again. Which days: later syncs from
+  `synced_through` − 14 days, the first of an account with transactions after its latest one, of
+  an empty one 2 years back. Import through `importTransactions` (shared with the CSV route,
+  autoTransfers on); hashes `"bank|<provider>|<bank account id>|<reference>"`, rows without a
+  reference by `importHashes`. Tests: the fake comdirect `lib/test/comdirect.ts`. App:
+  `FinanceAccountEditor`'s Bank connection section (`FinanceBankProvider`: the providers and their
+  fields), `FinanceIntake` (pure: Import CSV, Sync of the shown account, or a menu of both; the CSV
+  sheet leaves linked accounts out), `FinanceBankSyncSheet` (starts the sync, polls it every second:
+  push / photoTAN / SMS TAN, then the CSV import's sort into categories).
 - **Assistant (`lib/assistant/`):** family-planner's `ai/*`. Tables
   `ai_settings` (keys sealed with `getSecretBox()`), `chats` (status, lease `run_token` /
   `run_until`, `stop`, JSON `context` / `activity` / `notes` / `usage` / `queue`, `rev`),

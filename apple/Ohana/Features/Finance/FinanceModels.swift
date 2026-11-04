@@ -43,8 +43,153 @@ struct FinanceAccount: Codable, Hashable, Identifiable {
     var openingCents: Int
     var position: Int
     var balanceCents: Int
+    /// Its connection to the bank, when it syncs instead of importing CSV files (absent from
+    /// older servers and the demo).
+    var bank: FinanceBankLink? = nil
 
     var label: String { icon.isEmpty ? name : "\(icon) \(name)" }
+}
+
+/// An account's bank connection (publicAccount `bank`); the credentials stay on the server.
+struct FinanceBankLink: Codable, Hashable {
+    var provider: String
+    /// Which account at the bank; nil: the only one there.
+    var iban: String?
+    var lastSyncAt: String?
+
+    /// The provider's name, else its id (one this app doesn't know yet).
+    var providerName: String { FinanceBankProvider(rawValue: provider)?.title ?? provider }
+    var lastSync: Date? { lastSyncAt.flatMap(Date.server) }
+}
+
+/// The banks an account can sync with, and the credentials each needs (PUT …/bank).
+enum FinanceBankProvider: String, CaseIterable, Hashable, Identifiable {
+    case comdirect
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .comdirect: "comdirect"
+        }
+    }
+
+    /// One credential of the link: its key in the body, what the editor calls it, whether it's
+    /// typed hidden.
+    struct Field: Hashable, Identifiable {
+        var key: String
+        var title: String
+        var secure = false
+
+        var id: String { key }
+    }
+
+    /// All required for a new link; a blank one keeps the stored value on an existing link.
+    var fields: [Field] {
+        switch self {
+        case .comdirect:
+            [Field(key: "clientId", title: String(localized: "Client ID")),
+             Field(key: "clientSecret", title: String(localized: "Client secret"), secure: true),
+             Field(key: "username", title: String(localized: "Login number")),
+             Field(key: "pin", title: String(localized: "PIN"), secure: true)]
+        }
+    }
+
+    /// Where the credentials come from.
+    var help: String {
+        switch self {
+        case .comdirect:
+            String(localized: "The client ID and secret appear once you turn on API access in comdirect’s online banking. Each sync is confirmed in the comdirect app or with a TAN.")
+        }
+    }
+
+    /// The body of PUT /finance/accounts/{id}/bank: blank credentials left out (an existing
+    /// link keeps them), the IBAN without spaces (nil when blank).
+    func linkBody(credentials: [String: String], iban: String) -> JSONValue {
+        var body: [String: JSONValue] = ["provider": .string(rawValue), "iban": FinanceJSON.string(Self.iban(iban))]
+        for field in fields {
+            let value = (credentials[field.key] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            if !value.isEmpty { body[field.key] = .string(value) }
+        }
+        return .object(body)
+    }
+
+    /// Whether a link can be saved: a new one (or another provider's) needs every credential.
+    func isComplete(credentials: [String: String], replacing link: FinanceBankLink?) -> Bool {
+        if link?.provider == rawValue { return true }
+        return fields.allSatisfy { !(credentials[$0.key] ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    }
+
+    /// "DE12 3456 …" as the bank knows it: no spaces, capitals; nil when blank.
+    static func iban(_ text: String) -> String? {
+        let iban = text.filter { !$0.isWhitespace }.uppercased()
+        return iban.isEmpty ? nil : iban
+    }
+}
+
+/// A bank sync (GET /finance/accounts/{id}/bank/sync): the server's worker logs in, waits for
+/// the TAN, loads and imports the transactions; the app polls it while it runs.
+struct FinanceBankSync: Codable, Hashable, Identifiable {
+    enum Status: String, Codable, Hashable {
+        case waiting, running, tan, done, failed
+    }
+
+    /// What a running sync does (`step`).
+    enum Step: String, Hashable {
+        case login, tan, fetch
+        case importing = "import"
+    }
+
+    /// How the bank wants the login confirmed.
+    struct Challenge: Codable, Hashable {
+        enum Kind: String, Codable, Hashable {
+            /// Approve it in the bank's app; nothing to type.
+            case push
+            /// Scan the graphic with the bank's app, then type the TAN.
+            case photo
+            /// Type the TAN sent by text message.
+            case sms
+            /// A kind this app doesn't know yet (a newer server): type the TAN.
+            case other
+
+            init(from decoder: Decoder) throws {
+                self = Kind(rawValue: try decoder.singleValueContainer().decode(String.self)) ?? .other
+            }
+        }
+
+        var type: Kind
+        /// The photoTAN graphic, a base64 PNG.
+        var image: String?
+        /// E.g. the masked phone number.
+        var hint: String?
+
+        var imageData: Data? { image.flatMap { Data(base64Encoded: $0) } }
+        var needsTan: Bool { type != .push }
+    }
+
+    struct Result: Codable, Hashable {
+        var added: Int
+        var duplicates: Int
+        var transfers: Int
+        var splits: Int
+        /// The added transactions.
+        var ids: [String]
+    }
+
+    var id: String
+    var accountId: String
+    var status: Status
+    /// Kept as text: a step this app doesn't know shows as working.
+    var step: String?
+    var tan: Challenge?
+    var result: Result?
+    var error: String?
+    var createdAt: String?
+    var updatedAt: String?
+
+    var stage: Step? { step.flatMap(Step.init) }
+    /// Waiting, running or waiting for the TAN: it's polled.
+    var isRunning: Bool { status != .done && status != .failed }
 }
 
 /// A booking that has parts: how many, and what it still counts itself.

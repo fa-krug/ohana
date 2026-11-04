@@ -2693,6 +2693,163 @@ paths:
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
         "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/families/{familyId}/finance/accounts/{accountId}/bank:
+    parameters:
+      - $ref: "#/components/parameters/FamilyId"
+      - $ref: "#/components/parameters/AccountId"
+    put:
+      tags: [Finance]
+      operationId: linkBank
+      summary: Link an account to its bank (or change the link)
+      description: >-
+        The account then syncs with the bank (`…/bank/sync`) and refuses the CSV import. A new
+        link (or one to another provider) needs every credential; on an existing link a blank or
+        missing one keeps the stored value. The credentials are stored encrypted and never come
+        back. Saving resets the lockout guards (see the sync); a changed login forgets the bank
+        session, another IBAN starts the sync history afresh.
+      x-ohana-role: editor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [provider]
+              properties:
+                provider: {type: string, enum: [comdirect]}
+                clientId: {type: string, maxLength: 500, description: "comdirect API client id (online banking → Verwaltung → Entwicklerzugang)."}
+                clientSecret: {type: string, maxLength: 500}
+                username: {type: string, maxLength: 500, description: "comdirect Zugangsnummer."}
+                pin: {type: string, maxLength: 500, description: "Online banking PIN."}
+                iban:
+                  type: [string, "null"]
+                  description: >-
+                    Which account at the bank (spaces and case don't matter); null or missing on a
+                    new link: the only Girokonto there. Missing on an existing link keeps it.
+      responses:
+        "200":
+          description: The account.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Account"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    delete:
+      tags: [Finance]
+      operationId: unlinkBank
+      summary: Unlink an account from its bank
+      description: Its transactions stay; a sync that hasn't ended is cancelled.
+      x-ohana-role: editor
+      responses:
+        "200":
+          description: The account (`bank` null).
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Account"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/families/{familyId}/finance/accounts/{accountId}/bank/sync:
+    parameters:
+      - $ref: "#/components/parameters/FamilyId"
+      - $ref: "#/components/parameters/AccountId"
+    post:
+      tags: [Finance]
+      operationId: startBankSync
+      summary: Start a sync with the bank (the worker runs it; poll GET)
+      description: >-
+        The worker logs in at the bank, asks for a TAN (status `tan`: approve it in the bank's app,
+        or send a typed one to `…/sync/tan`), fetches the booked transactions and adds the new
+        ones to the account (duplicates skipped, transfers linked; `result`). The first sync of an
+        empty account goes two years back, of one with transactions only after its latest; later
+        ones from 14 days before the last booking imported. A sync within about 20 minutes of the
+        last may need no TAN. 409 without a link, and (lockout guards: comdirect locks the online
+        banking after 5 TAN challenges without a confirmed TAN, or 3 wrong TANs) after the bank
+        refused the login, or after 3 TAN challenges in a row without a confirmed TAN, until the
+        link is saved again (PUT …/bank).
+      x-ohana-role: editor
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "200":
+          description: The sync that hasn't ended yet.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/BankSync"}
+        "202":
+          description: The new sync (waiting).
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/BankSync"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+    get:
+      tags: [Finance]
+      operationId: getBankSync
+      summary: The account's latest sync (any status)
+      description: Poll it about once a second while it is waiting, running or waiting for a TAN; finished ones are kept a day.
+      x-ohana-role: viewer
+      responses:
+        "200":
+          description: The sync.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/BankSync"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    delete:
+      tags: [Finance]
+      operationId: cancelBankSync
+      summary: Cancel the sync that hasn't ended
+      description: It ends as failed with the error "Cancelled" (the worker stops within about a second); without one, the latest sync as it is.
+      x-ohana-role: editor
+      responses:
+        "200":
+          description: The sync.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/BankSync"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/families/{familyId}/finance/accounts/{accountId}/bank/sync/tan:
+    parameters:
+      - $ref: "#/components/parameters/FamilyId"
+      - $ref: "#/components/parameters/AccountId"
+    post:
+      tags: [Finance]
+      operationId: sendBankTan
+      summary: Send the TAN the sync waits for (photoTAN, SMS TAN)
+      description: >-
+        Only while the sync's status is `tan` with a typed challenge (`photo`, `sms`), once (409
+        otherwise). The TAN is sent to the bank once: a wrong one fails the sync.
+      x-ohana-role: editor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tan]
+              properties:
+                tan: {type: string, description: "Letters and digits; spaces are ignored."}
+      responses:
+        "200":
+          description: The sync.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/BankSync"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
   /api/v1/families/{familyId}/finance/transactions:
     parameters:
       - $ref: "#/components/parameters/FamilyId"
@@ -2855,7 +3012,7 @@ paths:
         Adds the rows that weren't imported before (by a hash of the row and account), all to
         `accountId` if given (max. 5000 rows). `autoTransfers` combines fresh rows into split
         bookings and links them to the other leg of a transfer. `dryRun` only counts.
-        Parse CSV files on the client.
+        Parse CSV files on the client. An account linked to its bank takes no CSV rows (409).
       x-ohana-role: editor
       parameters:
         - $ref: "#/components/parameters/FamilyId"
@@ -2906,6 +3063,7 @@ paths:
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
         "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
   /api/v1/families/{familyId}/finance/summary:
     get:
       tags: [Finance]
@@ -4884,6 +5042,12 @@ components:
         change something must come from the server's own origin.
 
   parameters:
+    AccountId:
+      name: accountId
+      in: path
+      required: true
+      description: A finance account's id or (case-insensitive) name.
+      schema: {type: string}
     FamilyId:
       name: familyId
       in: path
@@ -6452,7 +6616,7 @@ components:
     Account:
       type: object
       description: A finance account with its balance.
-      required: [id, name, color, icon, openingCents, position, balanceCents]
+      required: [id, name, color, icon, openingCents, position, balanceCents, bank]
       properties:
         id: {type: string}
         name: {type: string}
@@ -6461,6 +6625,54 @@ components:
         openingCents: {type: integer}
         position: {type: integer}
         balanceCents: {type: integer, description: "Opening balance plus the transactions (up to `at`)."}
+        bank:
+          type: [object, "null"]
+          description: The bank the account syncs with (`…/bank`); null when it isn't linked. Never the credentials.
+          required: [provider, iban, lastSyncAt]
+          properties:
+            provider: {type: string, description: "comdirect (the only one for now)."}
+            iban: {type: [string, "null"], description: "Which account at the bank; null: the only Girokonto there."}
+            lastSyncAt: {type: [string, "null"], format: date-time, description: "The last successful sync."}
+    BankSync:
+      type: object
+      description: A sync of a linked account with its bank. `done` and `failed` are final.
+      required: [id, accountId, status, step, tan, result, error, createdAt, updatedAt]
+      properties:
+        id: {type: string, format: uuid}
+        accountId: {type: string}
+        status: {type: string, enum: [waiting, running, tan, done, failed]}
+        step:
+          type: [string, "null"]
+          enum: [login, tan, fetch, import, null]
+          description: What a running one does.
+        tan:
+          type: [object, "null"]
+          description: >-
+            Set while status is `tan`. push: approve the login in the bank's app (nothing to type;
+            the worker notices); photo: scan the photoTAN graphic (`image`, base64 PNG) with the
+            bank's app and send the TAN; sms: send the TAN that came by SMS (`hint`: the masked
+            phone number).
+          required: [type, image, hint]
+          properties:
+            type: {type: string, enum: [push, photo, sms]}
+            image: {type: [string, "null"], contentEncoding: base64}
+            hint: {type: [string, "null"]}
+        result:
+          type: [object, "null"]
+          description: Set when done.
+          required: [added, duplicates, transfers, splits, ids]
+          properties:
+            added: {type: integer}
+            duplicates: {type: integer, description: "Bookings that were there already."}
+            transfers: {type: integer, description: "Fresh rows linked to the other leg of a transfer."}
+            splits: {type: integer}
+            ids:
+              type: array
+              description: The added transactions.
+              items: {type: string, format: uuid}
+        error: {type: [string, "null"], description: "Set when failed: what went wrong (English), e.g. a wrong PIN, a TAN not confirmed in time, \"Cancelled\", \"Interrupted\"."}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
     Transaction:
       type: object
       required: [id, date, amountCents, payee, description, categoryId, accountId, transferId, splitOf, split, note, imported]

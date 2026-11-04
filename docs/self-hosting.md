@@ -202,6 +202,13 @@ deleted. The region follows the family's home address unless a family picks one.
 Set `HOLIDAYS_URL=` (empty) to turn the import off (the app then hides the setting), or point it
 at your own OpenHolidays instance.
 
+## Bank sync
+
+A finance account can sync with **comdirect** (*Settings → Finance*, see
+[the app](/app#syncing-an-account-with-its-bank)). The worker then talks to `api.comdirect.de`
+over HTTPS, only when someone starts a sync, with the family's bank login (stored encrypted, see
+[Security](/security)); turning finance off (`DISABLED_MODULES=finance`) turns it off too.
+
 ## Backups
 
 The worker writes a consistent copy of the database every night (after `BACKUP_HOUR`, default

@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { check, foreignKey, index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
-import { families } from "../schema";
+import { families, users } from "../schema";
 
 // ---- finance (family-planner's family_settings, finance_categories, finance_accounts and
 // transactions). Money is integer cents, negative for money going out; days are YYYY-MM-DD.
@@ -110,5 +110,78 @@ export const finTransactions = sqliteTable(
     finTransactionsAccountIdx: index("fin_transactions_account_idx").on(t.familyId, t.accountId),
     finTransactionsCategoryIdx: index("fin_transactions_category_idx").on(t.familyId, t.categoryId),
     amount: check("fin_transactions_amount", sql`abs(${t.amountCents}) <= 100000000000000`),
+  }),
+);
+
+// ---- bank sync: an account linked to a bank interface (lib/finance/bank/). Secrets are sealed
+// with getSecretBox(); they never go into a DTO, a log or the family's export file.
+
+/** The bank an account syncs with. Goes with its account (deleting it, clearing the finances or
+ *  importing a family file drops the link). */
+export const finBankLinks = sqliteTable(
+  "fin_bank_links",
+  {
+    familyId: text("family_id").notNull(),
+    accountId: text("account_id").notNull(),
+    /** A provider of lib/finance/bank/providers.ts, e.g. "comdirect". */
+    provider: text("provider").notNull(),
+    /** Sealed JSON of the provider's login (comdirect: clientId, clientSecret, username, pin). */
+    credentials: text("credentials").notNull(),
+    /** Which account at the bank (no spaces, upper case); null: the only one there. */
+    iban: text("iban"),
+    /** Sealed JSON of the provider's session (comdirect: a refresh token and when it expires),
+     *  so a sync soon after the last needs no new TAN; null: none. */
+    session: text("session"),
+    /** The last booking day imported (later syncs start a while before it). */
+    syncedThrough: text("synced_through"),
+    lastSyncAt: integer("last_sync_at", { mode: "timestamp_ms" }),
+    /** TAN challenges in a row that ended without a confirmed TAN (the bank locks the online
+     *  banking after a few): no sync starts at BANK_MAX_UNCONFIRMED. */
+    unconfirmedTans: integer("unconfirmed_tans").notNull().default(0),
+    /** The bank refused the login (PIN, API credentials) last time: no sync starts until the
+     *  link is saved again (a few wrong PINs lock the online banking too). */
+    loginRefused: integer("login_refused", { mode: "boolean" }).notNull().default(false),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.familyId, t.accountId] }),
+    account: foreignKey({
+      columns: [t.familyId, t.accountId],
+      foreignColumns: [finAccounts.familyId, finAccounts.id],
+    }).onDelete("cascade"),
+  }),
+);
+
+/** A sync of a linked account, run by the worker (BankSyncRunner); finished ones are kept a day. */
+export const finBankSyncs = sqliteTable(
+  "fin_bank_syncs",
+  {
+    id: text("id").primaryKey(), // uuid
+    familyId: text("family_id").notNull(),
+    accountId: text("account_id").notNull(),
+    /** Who started it; null once the account is gone. */
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+    status: text("status").notNull().default("waiting"), // waiting | running | tan | done | failed
+    step: text("step"), // login | tan | fetch | import, while it runs
+    /** JSON {type: push | photo | sms, image, hint} while status is tan. */
+    tan: text("tan"),
+    /** The TAN the user typed (sealed) until the worker sent it. */
+    tanInput: text("tan_input"),
+    /** JSON {added, duplicates, transfers, splits, ids} once done. */
+    result: text("result"),
+    error: text("error"),
+    runToken: text("run_token"),
+    lockedUntil: integer("locked_until", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => ({
+    account: foreignKey({
+      columns: [t.familyId, t.accountId],
+      foreignColumns: [finAccounts.familyId, finAccounts.id],
+    }).onDelete("cascade"),
+    finBankSyncsStatusIdx: index("fin_bank_syncs_status_idx").on(t.status, t.lockedUntil),
+    finBankSyncsAccountIdx: index("fin_bank_syncs_account_idx").on(t.familyId, t.accountId, t.createdAt),
   }),
 );

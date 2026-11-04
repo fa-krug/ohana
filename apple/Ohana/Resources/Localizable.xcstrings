@@ -2884,6 +2884,26 @@
         }
       }
     },
+    "Bank": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bank"
+          }
+        }
+      }
+    },
+    "Bank connection": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bankanbindung"
+          }
+        }
+      }
+    },
     "Basketball": {
       "localizations": {
         "de": {
@@ -3634,6 +3654,16 @@
         }
       }
     },
+    "Checking the confirmation…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bestätigung wird geprüft …"
+          }
+        }
+      }
+    },
     "Child": {
       "localizations": {
         "de": {
@@ -3890,6 +3920,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tage anklicken oder darüber ziehen, um sie auszuwählen. Umschalt-Klick erweitert, ⌘-Klick fügt Tage hinzu."
+          }
+        }
+      }
+    },
+    "Client ID": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Client-ID"
+          }
+        }
+      }
+    },
+    "Client secret": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Client-Secret"
           }
         }
       }
@@ -4154,6 +4204,16 @@
         }
       }
     },
+    "Confirm the login in the %@ app": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bestätige die Anmeldung in der %@-App"
+          }
+        }
+      }
+    },
     "Conflict": {
       "localizations": {
         "de": {
@@ -4250,6 +4310,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dein Ohana verbinden …"
+          }
+        }
+      }
+    },
+    "Connecting to %@…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbindung zu %@ wird aufgebaut …"
           }
         }
       }
@@ -6114,6 +6184,26 @@
         }
       }
     },
+    "Enter the TAN from the text message.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib die TAN aus der SMS ein."
+          }
+        }
+      }
+    },
+    "Enter the TAN sent to %@.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib die TAN ein, die an %@ geschickt wurde."
+          }
+        }
+      }
+    },
     "Entry types": {
       "localizations": {
         "de": {
@@ -7594,6 +7684,16 @@
         }
       }
     },
+    "IBAN (optional)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IBAN (optional)"
+          }
+        }
+      }
+    },
     "Icon": {
       "localizations": {
         "de": {
@@ -7754,6 +7854,16 @@
         }
       }
     },
+    "Import a bank statement or sync an account": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einen Kontoauszug importieren oder ein Konto abgleichen"
+          }
+        }
+      }
+    },
     "Import bank statement": {
       "localizations": {
         "de": {
@@ -7902,6 +8012,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rezept wird importiert …"
+          }
+        }
+      }
+    },
+    "Importing…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird importiert …"
           }
         }
       }
@@ -8378,6 +8498,16 @@
         }
       }
     },
+    "Last synced": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zuletzt abgeglichen"
+          }
+        }
+      }
+    },
     "Last year": {
       "localizations": {
         "de": {
@@ -8608,12 +8738,32 @@
         }
       }
     },
+    "Load the new transactions of %@ from the bank (⇧⌘I)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die neuen Buchungen von %@ bei der Bank abholen (⇧⌘I)"
+          }
+        }
+      }
+    },
     "Loading the demo…": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Die Demo wird geladen …"
+          }
+        }
+      }
+    },
+    "Loading transactions…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buchungen werden geladen …"
           }
         }
       }
@@ -8634,6 +8784,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ort"
+          }
+        }
+      }
+    },
+    "Login number": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zugangsnummer"
           }
         }
       }
@@ -11560,6 +11720,16 @@
         }
       }
     },
+    "PIN": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PIN"
+          }
+        }
+      }
+    },
     "PUSH_FALLBACK": {
       "localizations": {
         "de": {
@@ -13946,6 +14116,16 @@
         }
       }
     },
+    "Scan the graphic with the %@ app and enter the TAN it shows.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scanne die Grafik mit der %@-App und gib die angezeigte TAN ein."
+          }
+        }
+      }
+    },
     "Scanned Letter": {
       "localizations": {
         "de": {
@@ -15930,6 +16110,16 @@
         }
       }
     },
+    "Sync %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ abgleichen"
+          }
+        }
+      }
+    },
     "Sync Now": {
       "localizations": {
         "de": {
@@ -15970,12 +16160,32 @@
         }
       }
     },
+    "Syncing…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird abgeglichen …"
+          }
+        }
+      }
+    },
     "System": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "System"
+          }
+        }
+      }
+    },
+    "TAN": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TAN"
           }
         }
       }
@@ -16326,6 +16536,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Die gewählte Liste gibt es nicht mehr. Wähle eine andere."
+          }
+        }
+      }
+    },
+    "The client ID and secret appear once you turn on API access in comdirect’s online banking. Each sync is confirmed in the comdirect app or with a TAN.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Client-ID und Client-Secret bekommst du, wenn du im Online-Banking der comdirect den API-Zugang freischaltest. Jeder Abgleich wird in der comdirect-App oder mit einer TAN bestätigt."
           }
         }
       }
@@ -16836,6 +17056,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Die Einkaufsliste in Erinnerungen"
+          }
+        }
+      }
+    },
+    "The sync failed.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Abgleich ist fehlgeschlagen."
           }
         }
       }
@@ -17716,6 +17946,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ohne Kategorie"
+          }
+        }
+      }
+    },
+    "Unchanged": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unverändert"
           }
         }
       }
@@ -20416,6 +20656,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "pausiert"
+          }
+        }
+      }
+    },
+    "photoTAN graphic": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "photoTAN-Grafik"
           }
         }
       }
