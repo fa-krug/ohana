@@ -3,13 +3,20 @@
 // import), the lockout guards and the mapping of comdirect's rows. comdirect is the fake of
 // lib/test/comdirect.ts; nothing touches the network.
 
+import Database from "better-sqlite3";
 import { and, eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { createFamilyApi } from "@/lib/api/family-api";
 import { createToken } from "@/lib/auth/tokens";
 import { handleFamily } from "@/lib/calendar/family-routes";
 import { handleCalendar } from "@/lib/calendar/vacation";
 import { addDays } from "@/lib/calendar/dates";
+import * as schema from "@/lib/db/schema";
 import { finBankLinks, finBankSyncs, finTransactions } from "@/lib/db/schema";
 import { centsOf, mapTransaction, remittanceLines } from "@/lib/finance/bank/comdirect";
 import { BankSyncRunner } from "@/lib/finance/bank/runner";
@@ -587,6 +594,31 @@ describe("syncing with comdirect", () => {
     expect(account.balanceCents).toBe(250000 - 10010 - 500 - 320 - 4999 - 4999 - 2345);
   });
 
+  it("keeps a link synced before the floor existed off the CSV's days (the migration's floor)", async () => {
+    const { db, call, f, bank, sync, transactions } = await linked();
+    const csv = [
+      { date: "2026-10-01", amountCents: 250000, payee: "ACME GMBH", description: "GEHALT" },
+      { date: "2026-10-05", amountCents: -10010, payee: "ERIKA MUSTERMANN", description: "MIETE" },
+      { date: "2026-10-10", amountCents: -500, payee: "COMDIRECT", description: "ENTGELT" },
+    ];
+    await call("POST", `${f}/transactions`, { ops: csv.map((t) => ({ ...t, accountId: "giro" })) });
+    // Synced through the 15th before: drizzle/0023 set its floor to that day.
+    await call("POST", `${f}/transactions`, {
+      ops: [{ date: "2026-10-15", amountCents: -4999, payee: "Stadtwerke Musterstadt GmbH", accountId: "giro" }],
+    });
+    db.update(finBankLinks).set({ syncedThrough: "2026-10-15", syncedFrom: "2026-10-15" }).run();
+    const done = await sync();
+    expect(bank.state.minBookingDates).toEqual(["2026-10-15"]);
+    expect(done.result).toMatchObject({ added: 1, duplicates: 1 });
+    expect(transactions().map((t) => [t.day, t.amountCents])).toEqual([
+      ["2026-10-20", -2345],
+      ["2026-10-15", -4999],
+      ["2026-10-10", -500],
+      ["2026-10-05", -10010],
+      ["2026-10-01", 250000],
+    ]);
+  });
+
   it("forgets the floor with the sync history when the link gets another IBAN", async () => {
     const { call, f, sync, link } = await linked();
     await call("POST", `${f}/transactions`, {
@@ -663,5 +695,39 @@ describe("a sync's account", () => {
     expect((await call("POST", `/families/${otherFamily.id}/finance/accounts/giro/bank/sync`, {})).status).toBe(404);
     expect((await call("POST", `${f}/accounts/nope/bank/sync`, {})).status).toBe(404);
     expect(db.select().from(finBankSyncs).where(and(eq(finBankSyncs.familyId, family.id))).all()).toHaveLength(0);
+  });
+});
+
+describe("the migration of the sync floor (drizzle/0023)", () => {
+  it("gives links synced before their last booking day as the floor", () => {
+    const dir = mkdtempSync(join(tmpdir(), "ohana-migrations-"));
+    try {
+      const src = resolve(__dirname, "../drizzle");
+      cpSync(src, dir, { recursive: true });
+      const journalPath = join(dir, "meta/_journal.json");
+      const journal = JSON.parse(readFileSync(journalPath, "utf8")) as { entries: { tag: string }[] };
+      const idx = journal.entries.findIndex((e) => e.tag === "0023_bank_synced_from");
+      expect(idx).toBeGreaterThan(0);
+      writeFileSync(journalPath, JSON.stringify({ ...journal, entries: journal.entries.slice(0, idx) }));
+
+      const sqlite = new Database(":memory:");
+      sqlite.pragma("foreign_keys = ON");
+      const db = drizzle(sqlite, { schema });
+      migrate(db, { migrationsFolder: dir });
+      const run = (q: string) => sqlite.prepare(q).run();
+      run("insert into families (id, name, created_at, updated_at) values ('f1', 'A', 0, 0)");
+      run("insert into fin_accounts (family_id, id, name, color) values ('f1', 'giro', 'Giro', '#3b82f6'), ('f1', 'new', 'New', '#3b82f6')");
+      run(`insert into fin_bank_links (family_id, account_id, provider, credentials, synced_through, created_at, updated_at)
+           values ('f1', 'giro', 'comdirect', 'v1:x', '2026-10-20', 0, 0), ('f1', 'new', 'comdirect', 'v1:x', null, 0, 0)`);
+      migrate(db, { migrationsFolder: src });
+
+      const links = db.select().from(finBankLinks).all().sort((a, b) => a.accountId.localeCompare(b.accountId));
+      expect(links.map((l) => [l.accountId, l.syncedThrough, l.syncedFrom])).toEqual([
+        ["giro", "2026-10-20", "2026-10-20"],
+        ["new", null, null],
+      ]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

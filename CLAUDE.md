@@ -230,7 +230,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   3 or after a refused login until the link is saved again. Which days: later syncs from
   `synced_through` − 14 days but never before `synced_from`, the first of an account with
   transactions from its latest day on, of an empty one 2 years back (saving another IBAN /
-  provider clears both); on days up to `synced_from` a bank row with the day and amount of one of
+  provider clears both; links synced before it existed got `synced_through` as their floor); on days up to `synced_from` a bank row with the day and amount of one of
   the account's other transactions (not a split's part) counts as that one, one to one, its own
   (same hash) first (`sameDayMatches`: a CSV file's last day isn't doubled). Import through `importTransactions` (shared with the CSV route,
   autoTransfers on); hashes `"bank|<provider>|<bank account id>|<reference>"`, rows without a
