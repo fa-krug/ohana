@@ -92,6 +92,7 @@ struct FamilyHomeAddressView: View {
             }
         }
         .formStyle(.grouped)
+        .readableWidth()
         .scrollContentBackground(.hidden)
         .confirmationDialog("Remove the home address?", isPresented: $confirmClear, titleVisibility: .visible) {
             Button("Remove", role: .destructive) {

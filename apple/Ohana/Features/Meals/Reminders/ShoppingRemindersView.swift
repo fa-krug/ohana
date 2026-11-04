@@ -36,6 +36,7 @@ struct ShoppingRemindersView: View {
             }
         }
         .formStyle(.grouped)
+        .readableWidth()
         .navigationTitle("Shopping List")
         .task(id: store.revision) {
             store.refreshAccess()

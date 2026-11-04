@@ -66,6 +66,7 @@ struct FamilyNotificationsView: View {
             }
         }
         .formStyle(.grouped)
+        .readableWidth()
         .scrollContentBackground(.hidden)
         .refreshable { await model.load(family.api) }
     }

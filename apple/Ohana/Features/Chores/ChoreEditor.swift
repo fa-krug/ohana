@@ -195,6 +195,7 @@ struct ChoreEditor: View {
                 }
             }
             .formStyle(.grouped)
+            .readableWidth()
             .navigationTitle(title)
             .navigationDestination(isPresented: $customRepeat) {
                 CalendarRepeatRuleEditor(draft: $draft)

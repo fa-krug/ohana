@@ -54,6 +54,7 @@ private struct KnowledgeSettingsForm: View {
             }
         }
         .formStyle(.grouped)
+        .readableWidth()
         .scrollContentBackground(.hidden)
         .refreshable { await loadStatus() }
         .task { await loadStatus() }

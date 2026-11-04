@@ -117,6 +117,7 @@ struct InviteJoinSheet: View {
                 }
             }
             .formStyle(.grouped)
+            .readableWidth()
             .navigationTitle("Join a family")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)

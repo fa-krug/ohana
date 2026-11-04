@@ -99,6 +99,7 @@ struct FinanceImportSheet: View {
                 }
             }
             .formStyle(.grouped)
+            .readableWidth()
             .navigationTitle("Import bank statement")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)

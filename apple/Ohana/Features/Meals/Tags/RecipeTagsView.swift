@@ -99,6 +99,7 @@ struct RecipeTagsView: View {
         #if os(macOS)
         .listStyle(.inset)
         #endif
+        .readableWidth()
     }
 
     @ViewBuilder private func row(_ tag: RecipeTag) -> some View {
@@ -174,6 +175,7 @@ private struct RecipeTagSheet: View {
                 }
             }
             .formStyle(.grouped)
+            .readableWidth()
             .navigationTitle(tag == nil ? LocalizedStringKey("Add Tag") : LocalizedStringKey("Edit Tag"))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)

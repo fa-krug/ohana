@@ -54,6 +54,7 @@ struct FamilyDataView: View {
             }
         }
         .formStyle(.grouped)
+        .readableWidth()
         .ohanaBackground(ModuleTint.settings)
         .navigationTitle("Data")
         .fileExporter(isPresented: $showExporter, document: exportDocument, contentType: .json,

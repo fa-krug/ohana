@@ -642,7 +642,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   with `family.takeRoute(for:)`; server paths `/f/{id}/…` and `ohana://f/{id}/…` map onto routes;
   the search tab (`Module.search`, `Tab(role: .search)`, ⌘K → `family.startSearch()`,
   `Features/Search/`) opens its hits the same way, a transaction as `.financeTransaction`),
-  `DesignSystem/` (solid content cards — Liquid Glass only on bars and floating controls —, error banner, `CancelButton`/`discardGuard`; the module sets `newItem`/`moduleMenu` focused values for File ▸ New and its menu), `Features/<Module>/` (plus `Account/`, `Admin/`).
+  `DesignSystem/` (solid content cards — Liquid Glass only on bars and floating controls —, `.readableWidth()` on every page's list or grouped form (a 760 pt column on wide windows; scroll pages cap their stack with `.frame(maxWidth:)` instead), error banner, `CancelButton`/`discardGuard`; the module sets `newItem`/`moduleMenu` focused values for File ▸ New and its menu), `Features/<Module>/` (plus `Account/`, `Admin/`).
   On iPhone a page's toolbar stays small (the main action, perhaps a filter, one More menu in
   sections, the ✨): what doesn't fit iOS moves into an overflow menu of its own, with the page's
   More as a submenu, so a full page leaves something out instead (Finance has no search field

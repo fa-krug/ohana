@@ -71,6 +71,7 @@ struct FinanceBankSyncSheet: View {
         NavigationStack {
             Form { content }
                 .formStyle(.grouped)
+                .readableWidth()
                 .navigationTitle(full ? String(localized: "Import All Transactions") : account.label)
                 #if os(iOS)
                 .navigationBarTitleDisplayMode(.inline)

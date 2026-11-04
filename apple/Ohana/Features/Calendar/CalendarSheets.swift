@@ -115,6 +115,7 @@ struct CalendarNoteSheet: View {
                 }
             }
             .formStyle(.grouped)
+            .readableWidth()
             .navigationTitle("Icon & note")
             .navigationSubtitleCompat(days.count == 1 ? CalendarText.longDay(days[0])
                                       : "\(CalendarText.days(days.count)): \(CalendarText.span(days))")

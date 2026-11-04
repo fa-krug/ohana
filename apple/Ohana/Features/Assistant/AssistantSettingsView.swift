@@ -68,6 +68,7 @@ private struct AssistantSettingsViewerView: View {
             }
         }
         .formStyle(.grouped)
+        .readableWidth()
         .task { settings = try? await family.api.get("/ai/settings", as: AssistantSettings.self) }
     }
 }
@@ -134,6 +135,7 @@ private struct AssistantSettingsForm: View {
             permissionsSection
         }
         .formStyle(.grouped)
+        .readableWidth()
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
                 Button {

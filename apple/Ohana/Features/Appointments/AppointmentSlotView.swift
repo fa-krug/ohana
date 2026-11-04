@@ -375,6 +375,7 @@ struct AppointmentBookSheet: View {
                 }
             }
             .formStyle(.grouped)
+            .readableWidth()
             .navigationTitle(afterVisit ? Text("Did you book it?") : Text("Booked this appointment?"))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
