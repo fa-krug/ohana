@@ -91,6 +91,22 @@ struct OverviewTests {
         #expect(OverviewFormat.range(day, day.adding(days: 2)).contains("–"))
     }
 
+    @Test func groupsUpcomingByDay() {
+        let today = Day(year: 2026, month: 11, day: 3)
+        func entry(_ from: Day, _ name: String) -> OverviewUpcomingItem {
+            .entry(date: from, to: from.adding(days: 3), name: name, color: "#000000", icon: "star", member: nil)
+        }
+        let items = [entry(today.adding(days: -2), "Trip"), entry(today, "Work"),
+                     entry(today.adding(days: 1), "Hort"), entry(today.adding(days: 1), "School"),
+                     entry(today.adding(days: 4), "Swim")]
+        let days = OverviewUpcomingItem.byDay(items, today: today)
+        // The run that started earlier is today's.
+        #expect(days.map(\.day) == [today, today.adding(days: 1), today.adding(days: 4)])
+        #expect(days.map(\.items.count) == [2, 2, 1])
+        #expect(OverviewFormat.dayHeading(today, today: today) == String(localized: "Today"))
+        #expect(OverviewFormat.dayHeading(today.adding(days: 1), today: today) == String(localized: "Tomorrow"))
+    }
+
     @Test func readsHexColors() {
         #expect(Color(overviewHex: "#ff0000") == Color(red: 1, green: 0, blue: 0))
         #expect(Color(overviewHex: "0f0") == Color(red: 0, green: 1, blue: 0))

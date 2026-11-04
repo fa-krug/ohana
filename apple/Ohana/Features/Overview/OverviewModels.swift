@@ -143,6 +143,29 @@ enum OverviewUpcomingItem: Codable, Hashable, Identifiable {
         case let .entry(date, _, _, _, _, _), let .event(date, _): date
         }
     }
+
+    /// The items under their days, in the server's order; a run that started before `today`
+    /// (still going) is today's.
+    static func byDay(_ items: [OverviewUpcomingItem], today: Day) -> [OverviewUpcomingDay] {
+        var days: [OverviewUpcomingDay] = []
+        for item in items {
+            let day = max(item.date, today)
+            if days.last?.day == day {
+                days[days.count - 1].items.append(item)
+            } else {
+                days.append(OverviewUpcomingDay(day: day, items: [item]))
+            }
+        }
+        return days
+    }
+}
+
+/// A day of "coming up" and what's on it.
+struct OverviewUpcomingDay: Hashable, Identifiable {
+    let day: Day
+    var items: [OverviewUpcomingItem]
+
+    var id: Day { day }
 }
 
 /// server/lib/meals/queries/meal-plan.ts `MealsSummary`.
@@ -226,6 +249,13 @@ enum OverviewFormat {
     /// "3 Nov" or "3 Nov – 7 Nov" for a run of days.
     static func range(_ from: Day, _ to: Day) -> String {
         from == to ? from.formatted() : "\(from.formatted()) – \(to.formatted())"
+    }
+
+    /// "Today", "Tomorrow" or "Wed, 4 Nov": a day's heading in "coming up".
+    static func dayHeading(_ day: Day, today: Day) -> String {
+        if day == today { return String(localized: "Today") }
+        if day == today.adding(days: 1) { return String(localized: "Tomorrow") }
+        return day.formatted(.dateTime.weekday(.wide).day().month(.wide))
     }
 
 }

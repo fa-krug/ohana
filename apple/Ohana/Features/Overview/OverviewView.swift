@@ -405,7 +405,11 @@ private struct OverviewBirthdaysCard: View {
     }
 }
 
+/// What's coming up, under its days: a time (or a type's badge) in a column, then the title on
+/// one line; a run or an event that spans days says until when.
 private struct OverviewUpcomingCard: View {
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @ScaledMetric(relativeTo: .callout) private var leadWidth: CGFloat = 44
     let items: [OverviewUpcomingItem]
     let today: Day
 
@@ -415,41 +419,83 @@ private struct OverviewUpcomingCard: View {
                 Text("Nothing planned for the next weeks.")
                     .foregroundStyle(.secondary)
             } else {
-                VStack(alignment: .leading, spacing: 4) {
-                    ForEach(items) { item in
-                        OverviewRow(route: OverviewLinks.route(for: item)) { row(item) }
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(OverviewUpcomingItem.byDay(items, today: today)) { group in
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text(OverviewFormat.dayHeading(group.day, today: today))
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                                .accessibilityAddTraits(.isHeader)
+                                .padding(.bottom, 2)
+                            ForEach(group.items) { item in
+                                OverviewRow(route: OverviewLinks.route(for: item)) { row(item, on: group.day) }
+                            }
+                        }
                     }
                 }
             }
         }
     }
 
+    private var lineLimit: Int? { typeSize.isAccessibilitySize ? nil : 1 }
+
     @ViewBuilder
-    private func row(_ item: OverviewUpcomingItem) -> some View {
+    private func row(_ item: OverviewUpcomingItem, on day: Day) -> some View {
         switch item {
-        case let .entry(date, to, name, color, icon, member):
-            OverviewLine {
+        case let .entry(_, to, name, color, icon, member):
+            line {
                 CalendarTypeBadge(name: name, color: color, icon: icon, member: member, size: 18)
+            } title: {
                 // The badge reads the name (with the member's).
-                Text(name).lineLimit(2).accessibilityHidden(true)
+                Text(name).lineLimit(lineLimit).accessibilityHidden(true)
             } trailing: {
-                Text(OverviewFormat.range(date, to))
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
+                until(to, after: day)
             }
-        case let .event(date, event):
-            OverviewLine {
-                Image(systemName: event.searchId != nil ? "stethoscope" : (event.rrule != nil ? "repeat" : "clock"))
-                    .font(.caption)
-                    .foregroundStyle(ModuleTint.calendar)
-                    .frame(width: 12)
-                    .accessibilityHidden(true)
-                Text(event.label).lineLimit(2)
+        case let .event(_, event):
+            line {
+                if let start = event.start {
+                    Text(start)
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
+            } title: {
+                Text(event.title).lineLimit(lineLimit)
+                if !event.person.isEmpty {
+                    Text(verbatim: "· \(event.person)")
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .layoutPriority(1)
+                }
             } trailing: {
-                Text(event.start.map { "\(date.formatted()), \($0)" } ?? date.formatted())
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
+                until(event.endDate ?? event.date, after: day)
+                if event.searchId != nil {
+                    Image(systemName: "stethoscope")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .accessibilityLabel(Text("Appointment"))
+                }
             }
+        }
+    }
+
+    private func line(@ViewBuilder lead: () -> some View, @ViewBuilder title: () -> some View,
+                      @ViewBuilder trailing: () -> some View) -> some View {
+        HStack(spacing: 10) {
+            lead().frame(minWidth: leadWidth, alignment: .leading)
+            HStack(spacing: 4) { title() }
+            Spacer(minLength: 4)
+            trailing()
+        }
+    }
+
+    @ViewBuilder
+    private func until(_ last: Day, after day: Day) -> some View {
+        if last > day {
+            Text("until \(last.formatted(.dateTime.day().month(.abbreviated)))")
+                .font(.caption)
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
         }
     }
 }
