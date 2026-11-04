@@ -185,6 +185,7 @@ export class BankSyncRunner {
       const statement = await provider.fetchStatement({
         credentials,
         iban: link.iban,
+        card: link.card,
         session: openSession(link),
         from,
         signal,

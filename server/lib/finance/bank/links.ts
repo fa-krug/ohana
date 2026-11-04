@@ -1,6 +1,7 @@
 // An account's link to its bank (fin_bank_links): the provider, the login (sealed), which
-// account at the bank, the session a next sync may reuse, how far it is synced and the lockout
-// guard's count. Secrets never leave this file opened, apart from to the runner.
+// account at the bank (an IBAN) or which credit card (its number's last 4 digits), the session
+// a next sync may reuse, how far it is synced and the lockout guard's count. Secrets never leave
+// this file opened, apart from to the runner.
 
 import { and, eq } from "drizzle-orm";
 import { HttpError } from "@/lib/api/http";
@@ -26,6 +27,7 @@ export const LOGIN_REFUSED_MESSAGE =
   "again (a few wrong PINs lock the online banking).";
 
 const MAX_SECRET = 500;
+const MAX_CARD = 100;
 const IBAN_RE = /^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/;
 
 export function getLink(db: Db, familyId: string, accountId: string): LinkRow | undefined {
@@ -45,11 +47,25 @@ function cleanIban(v: unknown): string | null {
   return iban;
 }
 
+/** A card's last 4 digits from any text holding its number or the number's end ("4871 78XX
+ *  XXXX 0175", "0175"): the masked digits in between don't matter, only the end is kept. */
+function cleanCard(v: unknown): string | null {
+  if (v === undefined || v === null) return null;
+  if (typeof v !== "string") throw new HttpError(400, "card must be a string");
+  if (!v.trim()) return null;
+  if (v.length > MAX_CARD) throw new HttpError(400, "card is too long");
+  const digits = v.replace(/\D/g, "");
+  if (digits.length < 4) throw new HttpError(400, "card needs the card number's last 4 digits");
+  return digits.slice(-4);
+}
+
 /**
- * PUT …/accounts/{id}/bank {provider, <the provider's credential fields>, iban}: links the
- * account or changes its link. A new link (or one to another provider) needs every credential;
- * on an existing one a blank or missing one keeps the stored value. Saving resets the lockout
- * guard; a changed login forgets the session, another IBAN starts the sync history afresh.
+ * PUT …/accounts/{id}/bank {provider, <the provider's credential fields>, iban | card}: links
+ * the account or changes its link. A new link (or one to another provider) needs every
+ * credential; on an existing one a blank or missing one keeps the stored value. The link is to
+ * an account (iban, or none: the only one there) or a credit card (card), never both: a new one
+ * replaces the other, a missing one keeps the stored. Saving resets the lockout guard; a changed
+ * login forgets the session, another IBAN or card starts the sync history afresh.
  */
 export function saveLink(db: Db, familyId: string, accountId: string, body: Record<string, unknown>, now: Date): void {
   if (typeof body.provider !== "string") throw new HttpError(400, "provider is required");
@@ -76,11 +92,15 @@ export function saveLink(db: Db, familyId: string, accountId: string, body: Reco
       throw new HttpError(400, `${field} is required`);
     }
   }
-  const iban = body.iban === undefined && current ? current.iban : cleanIban(body.iban);
+  const givenIban = body.iban === undefined ? undefined : cleanIban(body.iban);
+  const givenCard = body.card === undefined ? undefined : cleanCard(body.card);
+  if (givenIban && givenCard) throw new HttpError(400, "Give either an IBAN or a card number");
+  const iban = givenIban !== undefined ? givenIban : givenCard ? null : (current?.iban ?? null);
+  const card = givenCard !== undefined ? givenCard : givenIban ? null : (current?.card ?? null);
   const sealed = box.seal(JSON.stringify(credentials));
   if (!current) {
     db.insert(finBankLinks)
-      .values({ familyId, accountId, provider: provider.id, credentials: sealed, iban, createdAt: now, updatedAt: now })
+      .values({ familyId, accountId, provider: provider.id, credentials: sealed, iban, card, createdAt: now, updatedAt: now })
       .run();
     return;
   }
@@ -89,10 +109,11 @@ export function saveLink(db: Db, familyId: string, accountId: string, body: Reco
       provider: provider.id,
       credentials: sealed,
       iban,
+      card,
       unconfirmedTans: 0,
       loginRefused: false,
       ...(changed ? { session: null } : {}),
-      ...(iban !== current.iban || !same ? { syncedThrough: null, syncedFrom: null } : {}),
+      ...(iban !== current.iban || card !== current.card || !same ? { syncedThrough: null, syncedFrom: null } : {}),
       updatedAt: now,
     })
     .where(and(eq(finBankLinks.familyId, familyId), eq(finBankLinks.accountId, accountId)))

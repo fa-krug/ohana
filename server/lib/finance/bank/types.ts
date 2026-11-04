@@ -17,7 +17,7 @@ export interface TanChallenge {
 
 /** A booked transaction as the bank lists it. */
 export interface BankRow {
-  day: string; // YYYY-MM-DD, the booking day
+  day: string; // YYYY-MM-DD, the booking day (a card's: the day of the purchase)
   amountCents: number; // negative: money going out
   payee: string;
   description: string;
@@ -26,7 +26,7 @@ export interface BankRow {
 }
 
 export interface BankStatement {
-  /** The bank's id of the account the rows are from (part of their import hashes). */
+  /** The bank's id of the account (or card) the rows are from (part of their import hashes). */
   accountRef: string;
   rows: BankRow[];
 }
@@ -74,6 +74,8 @@ export interface SyncRequest {
   credentials: Record<string, string>;
   /** Which account at the bank (normalized IBAN); null: the only one there. */
   iban: string | null;
+  /** Or which credit card: the last 4 digits of its number (then iban is null). */
+  card: string | null;
   /** What saveSession kept last time, or null. */
   session: unknown;
   /** The first booking day wanted. */
@@ -90,6 +92,6 @@ export interface BankProvider {
   id: string;
   /** The credential fields PUT …/bank takes, all required for a new link. */
   credentialFields: readonly string[];
-  /** Logs in and returns the booked transactions of the linked account from `from` on. */
+  /** Logs in and returns the booked transactions of the linked account (or card) from `from` on. */
   fetchStatement(req: SyncRequest): Promise<BankStatement>;
 }

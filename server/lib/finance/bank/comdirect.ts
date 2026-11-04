@@ -2,6 +2,9 @@
 // credentials (client id / secret from the online banking) and the Zugangsnummer + PIN, a TAN
 // for the session (push in the comdirect app, or a photoTAN / SMS TAN the user types), then the
 // account's booked transactions (setting it up: docs/app.md, "Syncing an account with its bank").
+// A credit card is linked by its number's last 4 digits instead of an IBAN: its rows come from
+// the card endpoints (/api/banking/v1/cards/…), which comdirect doesn't document but its own
+// site uses; the purchase day is the row's day.
 //
 // comdirect LOCKS the online banking after 5 TAN challenges without a confirmed TAN, or 3 wrong
 // TANs. So: requests run one after the other, the TAN request (validate) and the TAN itself
@@ -328,6 +331,24 @@ export function pickAccount(accounts: BankAccount[], iban: string | null): BankA
 
 async function statement(api: Api, req: SyncRequest, token: string): Promise<BankStatement> {
   req.hooks.step("fetch");
+  return req.card ? cardStatement(api, req, token, req.card) : accountStatement(api, req, token);
+}
+
+/** A banking GET's body; Expired on a 401, else BankError `what` (status) when it fails. */
+async function read(api: Api, token: string, path: string, what: string): Promise<unknown> {
+  const res = await api.call("GET", path, { token, retry: true });
+  if (res.status === 401) {
+    await res.body?.cancel();
+    throw new Expired();
+  }
+  if (!res.ok) {
+    await res.body?.cancel();
+    throw new BankError(`${what} (${res.status})`);
+  }
+  return api.json(res);
+}
+
+async function accountStatement(api: Api, req: SyncRequest, token: string): Promise<BankStatement> {
   const res = await api.call("GET", "/api/banking/clients/user/v2/accounts/balances", { token, retry: true });
   if (res.status === 401) {
     await res.body?.cancel();
@@ -365,6 +386,91 @@ async function statement(api: Api, req: SyncRequest, token: string): Promise<Ban
     if (values.length < PAGE || first >= matches) break;
   }
   return { accountRef: account.id, rows };
+}
+
+interface BankCard {
+  id: string;
+  /** The last 4 digits of its number; null when comdirect didn't say. */
+  suffix: string | null;
+  holder: string;
+}
+
+/** The cards of comdirect's balances (allbalances, productType CARD): their ids and holders. The
+ *  listing has no card number. */
+function cardsOf(body: unknown): { id: string; holder: string }[] {
+  const values = (body as { values?: unknown })?.values;
+  if (!Array.isArray(values)) return [];
+  const seen = new Set<string>();
+  return values.flatMap((v) => {
+    const balance = (v?.balance ?? {}) as Record<string, unknown>;
+    const card = (balance.card ?? {}) as Record<string, unknown>;
+    const id = [balance.cardId, card.cardId, v?.productId].find((x) => typeof x === "string" && x);
+    if (typeof id !== "string" || seen.has(id)) return [];
+    seen.add(id);
+    return [{ id, holder: holder(card) }];
+  });
+}
+
+const lastFour = (v: unknown): string | null => {
+  const digits = typeof v === "string" ? v.replace(/\D/g, "") : "";
+  return digits.length >= 4 ? digits.slice(-4) : null;
+};
+
+/** The linked card: the one whose number ends in `suffix`. */
+export function pickCard(cards: BankCard[], suffix: string): BankCard {
+  const found = cards.find((c) => c.suffix === suffix);
+  if (found) return found;
+  const list = cards.map((c) => `…${c.suffix ?? "?"}${c.holder ? ` (${c.holder})` : ""}`).join(", ");
+  throw new BankError(
+    cards.length
+      ? `comdirect has no card ending in ${suffix}. Its cards: ${list}`
+      : `comdirect has no card ending in ${suffix}`,
+  );
+}
+
+async function cardStatement(api: Api, req: SyncRequest, token: string, suffix: string): Promise<BankStatement> {
+  const listed = cardsOf(
+    await read(api, token, "/api/reports/participants/user/v1/allbalances?productType=CARD", "comdirect didn't list the cards"),
+  );
+  // Only a card's own page names its number's end: one request per card, until it's found.
+  const cards: BankCard[] = [];
+  for (const c of listed) {
+    const detail = (await read(
+      api,
+      token,
+      `/api/banking/v1/cards/${encodeURIComponent(c.id)}`,
+      "comdirect didn't show a card",
+    )) as Record<string, unknown> | null;
+    cards.push({
+      id: c.id,
+      suffix: lastFour(detail?.primaryAccountNumberSuffix) ?? lastFour(detail?.cardDisplayId),
+      holder: holder(detail) || c.holder,
+    });
+    if (cards[cards.length - 1].suffix === suffix) break;
+  }
+  const card = pickCard(cards, suffix);
+  // One page only: comdirect answers 422 to paging-first on cards. paging-count 500 gives every
+  // row since min-bookingDate (a card books far fewer than that between syncs); should there be
+  // more (paging.matches), the newest 500 come and the rest are left out.
+  const query = new URLSearchParams({
+    transactionState: "BOOKED",
+    "paging-count": String(PAGE),
+    "min-bookingDate": req.from,
+  });
+  const body = (await read(
+    api,
+    token,
+    `/api/banking/v1/cards/${encodeURIComponent(card.id)}/transactions?${query}`,
+    "comdirect didn't list the card's transactions",
+  )) as { values?: unknown } | null;
+  const rows: BankRow[] = [];
+  for (const v of Array.isArray(body?.values) ? body.values : []) {
+    const row = mapCardTransaction(v);
+    // Filtered by the booking day (as comdirect does), not the purchase day the row has.
+    const booked = (v as { bookingDate?: unknown })?.bookingDate;
+    if (row && (typeof booked === "string" && isValidDate(booked) ? booked : row.day) >= req.from) rows.push(row);
+  }
+  return { accountRef: card.id, rows };
 }
 
 // ------------------------------------------------------------------ mapping
@@ -472,6 +578,60 @@ export function mapTransaction(raw: unknown): BankRow | null {
   if (!payee) payee = typeText;
   let description = lines.join(" ");
   if (!description && typeText !== payee) description = typeText;
+  const reference = typeof t.reference === "string" && t.reference.trim() ? t.reference.trim() : null;
+  return {
+    day,
+    amountCents,
+    payee: clip(payee, MAX_PAYEE),
+    description: clip(description, MAX_DESCRIPTION),
+    reference,
+  };
+}
+
+/** How comdirect's card rows name a plain purchase: no description then. */
+const CARD_PURCHASE = "Kartenumsatz";
+
+function signed(cents: number, direction: unknown): number {
+  if (direction === "OUT") return -Math.abs(cents);
+  if (direction === "IN") return Math.abs(cents);
+  return cents;
+}
+
+/** A card row's lines: an array of lines (as comdirect sends them), or one text. */
+function cardLines(info: unknown): string[] {
+  if (Array.isArray(info)) return info.flatMap((l) => (typeof l === "string" && squash(l) ? [squash(l)] : []));
+  return remittanceLines(info);
+}
+
+/**
+ * A booked row of a credit card as a row; null for one without a day or amount, or not booked
+ * yet. Its day is the purchase's (transaktionDate, sic), a day or so before the booking; the
+ * amount the euros (a foreign one's original amount goes into the description), signed by its
+ * direction; the merchant is the first line. The monthly bill ("Visa-Kartenabrechnung", paid
+ * from the Girokonto: money in) and refunds ("Gutschrift") name what they are.
+ */
+export function mapCardTransaction(raw: unknown): BankRow | null {
+  const t = raw as Record<string, unknown> | null;
+  if (!t || typeof t !== "object") return null;
+  if (t.bookingStatus !== undefined && t.bookingStatus !== "BOOKED") return null;
+  const day = [t.transaktionDate, t.transactionDate, t.bookingDate].find(
+    (d): d is string => typeof d === "string" && isValidDate(d),
+  );
+  if (!day) return null;
+  const value = (t.transactionValue ?? null) as { value?: unknown; unit?: unknown } | null;
+  const euros = centsOf((t.transactionValueInEUR as { value?: unknown } | null)?.value) ?? centsOf(value?.value);
+  if (euros === null) return null;
+  const amountCents = signed(euros, t.transactionDirection);
+  const category = typeof t.categoryDisplayName === "string" ? squash(t.categoryDisplayName) : "";
+  const lines = cardLines(t.remittanceInfo);
+  const payee = lines.shift() ?? category;
+  let description = lines.join(" ");
+  if (!description && category && category !== CARD_PURCHASE && category !== payee) description = category;
+  const unit = typeof value?.unit === "string" ? value.unit.trim().toUpperCase() : "";
+  const amount = typeof value?.value === "string" || typeof value?.value === "number" ? String(value.value).trim() : "";
+  if (unit && unit !== "EUR" && amount) {
+    description = [description, `${amount.replace(/^[+-]/, "")} ${unit}`].filter(Boolean).join(" ");
+  }
   const reference = typeof t.reference === "string" && t.reference.trim() ? t.reference.trim() : null;
   return {
     day,

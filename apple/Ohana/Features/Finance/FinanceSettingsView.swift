@@ -368,7 +368,8 @@ struct FinanceAccountEditor: View {
     @State private var provider: FinanceBankProvider?
     /// Typed credentials by field key; blank keeps what an existing link has stored.
     @State private var credentials: [String: String] = [:]
-    @State private var iban = ""
+    /// Which account at the bank: an IBAN or a card number (`FinanceBankTarget`).
+    @State private var target = ""
     @State private var original: FinanceEditorSnapshot?
     @State private var busy = false
     /// Made by a save whose bank link then failed: saving again links it, without another account.
@@ -376,14 +377,16 @@ struct FinanceAccountEditor: View {
 
     private var snapshot: FinanceEditorSnapshot {
         FinanceEditorSnapshot(name: name, icon: icon, color: FinanceColor.hex(color),
-                              rest: [opening, provider?.rawValue, iban]
+                              rest: [opening, provider?.rawValue, target]
                                   + (provider?.fields ?? []).map { credentials[$0.key] ?? "" })
     }
 
     /// The link the account has now.
     private var link: FinanceBankLink? { (account ?? created)?.bank }
+    /// nil while the IBAN / card field is neither.
+    private var parsedTarget: FinanceBankTarget? { FinanceBankTarget(parsing: target) }
     private var bankIncomplete: Bool {
-        provider.map { !$0.isComplete(credentials: credentials, replacing: link) } ?? false
+        provider.map { !$0.isComplete(credentials: credentials, replacing: link) || parsedTarget == nil } ?? false
     }
 
     private var hasChanges: Bool { store.canEdit && original != nil && snapshot != original }
@@ -449,7 +452,7 @@ struct FinanceAccountEditor: View {
             color = FinanceColor.color(account?.color ?? FinanceColor.next(used: store.accounts.map(\.color)))
             opening = account.map { FinanceMoney.signedInput($0.openingCents) } ?? ""
             provider = account?.bank.flatMap { FinanceBankProvider(rawValue: $0.provider) }
-            iban = account?.bank?.iban ?? ""
+            target = FinanceBankTarget(account?.bank).text
             original = snapshot
         }
     }
@@ -479,7 +482,7 @@ struct FinanceAccountEditor: View {
                                 #endif
                         }
                     }
-                    TextField("IBAN (optional)", text: $iban)
+                    TextField("IBAN or card number (optional)", text: $target)
                         .autocorrectionDisabled()
                         #if os(iOS)
                         .textInputAutocapitalization(.characters)
@@ -497,7 +500,12 @@ struct FinanceAccountEditor: View {
             Text("Bank connection")
         } footer: {
             if let provider, store.canEdit {
-                Text(provider.help)
+                VStack(alignment: .leading, spacing: 4) {
+                    if parsedTarget == nil {
+                        Text("Enter an IBAN, or a card number or its last 4 digits.").foregroundStyle(.red)
+                    }
+                    Text(provider.help)
+                }
             }
         }
     }
@@ -533,10 +541,10 @@ struct FinanceAccountEditor: View {
             return account.bank == nil ? true : await store.unlinkBank(account.id)
         }
         let typed = provider.fields.contains { !(credentials[$0.key] ?? "").trimmingCharacters(in: .whitespaces).isEmpty }
-        let unchanged = account.bank?.provider == provider.rawValue
-            && FinanceBankProvider.iban(iban) == account.bank?.iban.flatMap(FinanceBankProvider.iban) && !typed
+        guard let parsed = parsedTarget else { return false }
+        let unchanged = account.bank?.provider == provider.rawValue && parsed == FinanceBankTarget(account.bank) && !typed
         if unchanged { return true }
-        guard await store.linkBank(account.id, provider.linkBody(credentials: credentials, iban: iban)) else { return false }
+        guard await store.linkBank(account.id, provider.linkBody(credentials: credentials, target: parsed)) else { return false }
         credentials = [:]
         return true
     }

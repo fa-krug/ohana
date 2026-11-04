@@ -129,6 +129,9 @@ export const finBankLinks = sqliteTable(
     credentials: text("credentials").notNull(),
     /** Which account at the bank (no spaces, upper case); null: the only one there. */
     iban: text("iban"),
+    /** Or a credit card at the bank: the last 4 digits of its number; null: an account. Never
+     *  both this and iban. */
+    card: text("card"),
     /** Sealed JSON of the provider's session (comdirect: a refresh token and when it expires),
      *  so a sync soon after the last needs no new TAN; null: none. */
     session: text("session"),

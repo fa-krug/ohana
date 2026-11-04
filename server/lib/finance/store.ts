@@ -42,6 +42,8 @@ export interface AccountRow {
 export interface AccountBank {
   provider: string;
   iban: string | null;
+  /** A credit card's last 4 digits (then iban is null). */
+  card: string | null;
   lastSyncAt: string | null;
 }
 
@@ -399,6 +401,7 @@ export class DrizzleFinanceStore implements FinanceStore {
         account: finAccounts,
         provider: finBankLinks.provider,
         iban: finBankLinks.iban,
+        card: finBankLinks.card,
         lastSyncAt: finBankLinks.lastSyncAt,
       })
       .from(finAccounts)
@@ -412,7 +415,7 @@ export class DrizzleFinanceStore implements FinanceStore {
       .map((r) => ({
         ...accountRow(r.account),
         bank: r.provider
-          ? { provider: r.provider, iban: r.iban, lastSyncAt: r.lastSyncAt?.toISOString() ?? null }
+          ? { provider: r.provider, iban: r.iban, card: r.card, lastSyncAt: r.lastSyncAt?.toISOString() ?? null }
           : null,
       }));
   }

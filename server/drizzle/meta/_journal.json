@@ -169,6 +169,13 @@
       "when": 1793793988742,
       "tag": "0023_bank_synced_from",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1793794395322,
+      "tag": "0024_bank_card",
+      "breakpoints": true
     }
   ]
 }
