@@ -209,7 +209,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   PK family + account, composite FK to `fin_accounts` ON DELETE CASCADE: deleting / clearing /
   importing a family file drops it; never exported): `provider`, `credentials` (sealed JSON, never
   in a DTO or log), `iban`, `session` (sealed refresh token, ~20 min: no new TAN), `synced_through`,
-  `last_sync_at`, the lockout guards `unconfirmed_tans` / `login_refused`. Providers implement
+  `last_sync_at`, `synced_from` (the first sync's first day: a floor), the lockout guards `unconfirmed_tans` / `login_refused`. Providers implement
   `types.ts` `BankProvider` (`fetchStatement` with `SyncHooks`), registry `providers.ts`; the only
   one is `comdirect.ts` (its REST API: password grant → session → validate asking for
   P_TAN_PUSH → push polled / photoTAN or SMS TAN typed → PATCH → `cd_secondary` → v2 balances
@@ -228,8 +228,11 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   retried, a lost lease or a stopping worker marks the sync failed ("Interrupted"), never re-run;
   each challenge is counted before it is asked for, a confirmed TAN resets it, no sync starts at
   3 or after a refused login until the link is saved again. Which days: later syncs from
-  `synced_through` − 14 days, the first of an account with transactions after its latest one, of
-  an empty one 2 years back. Import through `importTransactions` (shared with the CSV route,
+  `synced_through` − 14 days but never before `synced_from`, the first of an account with
+  transactions from its latest day on, of an empty one 2 years back (saving another IBAN /
+  provider clears both; links synced before it existed got `synced_through` as their floor); on days up to `synced_from` a bank row with the day and amount of one of
+  the account's other transactions (not a split's part) counts as that one, one to one, its own
+  (same hash) first (`sameDayMatches`: a CSV file's last day isn't doubled). Import through `importTransactions` (shared with the CSV route,
   autoTransfers on); hashes `"bank|<provider>|<bank account id>|<reference>"`, rows without a
   reference by `importHashes`. Tests: the fake comdirect `lib/test/comdirect.ts`. App:
   `FinanceAccountEditor`'s Bank connection section (`FinanceBankProvider`: the providers and their
