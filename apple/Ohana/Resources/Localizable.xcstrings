@@ -3005,6 +3005,16 @@
         }
       }
     },
+    "Balance differs": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kontostand weicht ab"
+          }
+        }
+      }
+    },
     "Balances on %@": {
       "localizations": {
         "de": {
@@ -3051,6 +3061,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bankanbindung"
+          }
+        }
+      }
+    },
+    "Bank: %@ · Ohana: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bank: %1$@ · Ohana: %2$@"
           }
         }
       }
@@ -11851,6 +11871,16 @@
         }
       }
     },
+    "Once they’re deleted, the balance matches the bank’s.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sobald sie gelöscht sind, stimmt der Kontostand mit dem der Bank überein."
+          }
+        }
+      }
+    },
     "One column (+/−)": {
       "localizations": {
         "de": {
@@ -12207,6 +12237,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Anfangsstand (%@)"
+          }
+        }
+      }
+    },
+    "Opening balance set to %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anfangsstand auf %@ gesetzt"
           }
         }
       }
@@ -14653,6 +14693,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "1 Rezept speichern"
+          }
+        }
+      }
+    },
+    "Save and Import All Transactions…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speichern und alle Buchungen importieren …"
           }
         }
       }
@@ -19387,6 +19437,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Warnung"
+          }
+        }
+      }
+    },
+    "Was %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorher %@"
           }
         }
       }

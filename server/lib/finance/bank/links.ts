@@ -113,7 +113,7 @@ export function saveLink(db: Db, familyId: string, accountId: string, body: Reco
       unconfirmedTans: 0,
       loginRefused: false,
       ...(changed ? { session: null } : {}),
-      ...(iban !== current.iban || card !== current.card || !same ? { syncedThrough: null, syncedFrom: null } : {}),
+      ...(iban !== current.iban || card !== current.card || !same ? { syncedThrough: null, syncedFrom: null, bankBalanceCents: null, bankBalanceAt: null } : {}),
       updatedAt: now,
     })
     .where(and(eq(finBankLinks.familyId, familyId), eq(finBankLinks.accountId, accountId)))

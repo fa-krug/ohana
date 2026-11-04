@@ -3159,7 +3159,12 @@ paths:
         import hash and keeps its text, category, note, transfer and split, so later syncs know it
         (`adopted`). Only the other rows are added. The account's transactions from the bank's
         first booking on that the bank doesn't list stay as they are (`unmatched`; perhaps a CSV
-        file's duplicates). Later
+        file's duplicates). When the bank gives the account's booked balance (comdirect's accounts,
+        not its cards), the account's opening balance is set so that its balance is the bank's
+        from the bank's first booking day on (`openingCents`): the bank's balance minus its rows,
+        minus the account's transactions before that day (not a split's parts). It then matches
+        the bank today once the `unmatched` ones are deleted. A normal sync never changes the
+        opening balance. Later
         syncs never reach back before its first day. While another sync runs, that one is
         answered (200) as it is.
       x-ohana-role: editor
@@ -7191,12 +7196,14 @@ components:
         bank:
           type: [object, "null"]
           description: The bank the account syncs with (`…/bank`); null when it isn't linked. Never the credentials.
-          required: [provider, iban, card, lastSyncAt]
+          required: [provider, iban, card, lastSyncAt, balanceCents, balanceAt]
           properties:
             provider: {type: string, description: "comdirect (the only one for now)."}
             iban: {type: [string, "null"], description: "Which account at the bank; null (and no `card`): the only Girokonto there."}
             card: {type: [string, "null"], pattern: "^[0-9]{4}$", description: "The last 4 digits of the linked credit card; null: a bank account."}
             lastSyncAt: {type: [string, "null"], format: date-time, description: "The last successful sync."}
+            balanceCents: {type: [integer, "null"], description: "The account's booked balance at the bank (without pending bookings) as of the last sync that brought one; null: none yet (or a card)."}
+            balanceAt: {type: [string, "null"], format: date-time, description: "When the bank told `balanceCents`."}
     BankSync:
       type: object
       description: A sync of a linked account with its bank. `done` and `failed` are final.
@@ -7237,6 +7244,13 @@ components:
               items: {type: string, format: uuid}
             adopted: {type: integer, description: "A full sync's: the account's transactions that took a bank row's import hash."}
             unmatched: {type: integer, description: "A full sync's: the account's transactions from the bank's first booking on that the bank doesn't list (left as they are)."}
+            openingCents:
+              type: object
+              description: A full sync with the bank's balance (and rows) only, the account's opening balance it set.
+              required: [from, to]
+              properties:
+                from: {type: integer, description: "The opening balance before."}
+                to: {type: integer, description: "The opening balance now."}
         error: {type: [string, "null"], description: "Set when failed: what went wrong (English), e.g. a wrong PIN, a TAN not confirmed in time, \"Cancelled\", \"Interrupted\"."}
         createdAt: {type: string, format: date-time}
         updatedAt: {type: string, format: date-time}

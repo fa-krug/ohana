@@ -10,6 +10,10 @@ export interface FakeAccount {
   iban: string;
   type: string; // CA, DAS, …
   text: string;
+  /** Its booked balance (Kontostand), a decimal string; default "100.00". */
+  balance?: string;
+  /** What's available (booked minus pending); default the balance. */
+  available?: string;
 }
 
 export interface FakeCard {
@@ -236,7 +240,10 @@ export function fakeComdirect(overrides: Partial<FakeComdirectOptions> = {}) {
             bic: "COBADEHD001",
             accountType: { key: a.type, text: a.text },
           },
-          balance: { value: "100.00", unit: "EUR" },
+          balance: { value: a.balance ?? "100.00", unit: "EUR" },
+          balanceEUR: { value: a.balance ?? "100.00", unit: "EUR" },
+          availableCashAmount: { value: a.available ?? a.balance ?? "100.00", unit: "EUR" },
+          availableCashAmountEUR: { value: a.available ?? a.balance ?? "100.00", unit: "EUR" },
         })),
       });
     }

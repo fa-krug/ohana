@@ -292,6 +292,9 @@ interface BankAccount {
   iban: string | null;
   type: string;
   typeText: string;
+  /** The booked balance (Kontostand: `balance`, not `availableCashAmount`, which also takes the
+   *  pending bookings off); null when comdirect didn't say. */
+  balanceCents: number | null;
 }
 
 function accountsOf(body: unknown): BankAccount[] {
@@ -302,11 +305,13 @@ function accountsOf(body: unknown): BankAccount[] {
     const id = v?.accountId ?? account.accountId;
     if (typeof id !== "string" || !id) return [];
     const type = (account.accountType ?? {}) as Record<string, unknown>;
+    const balance = (v?.balance ?? {}) as Record<string, unknown>;
     return [{
       id,
       iban: typeof account.iban === "string" && account.iban ? normalizeIban(account.iban) : null,
       type: typeof type.key === "string" ? type.key : "",
       typeText: typeof type.text === "string" ? type.text : "",
+      balanceCents: centsOf(balance.value),
     }];
   });
 }
@@ -385,7 +390,7 @@ async function accountStatement(api: Api, req: SyncRequest, token: string): Prom
     const matches = typeof body?.paging?.matches === "number" ? body.paging.matches : 0;
     if (values.length < PAGE || first >= matches) break;
   }
-  return { accountRef: account.id, rows };
+  return { accountRef: account.id, rows, ...(account.balanceCents !== null ? { balanceCents: account.balanceCents } : {}) };
 }
 
 interface BankCard {

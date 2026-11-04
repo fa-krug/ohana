@@ -45,6 +45,9 @@ export interface AccountBank {
   /** A credit card's last 4 digits (then iban is null). */
   card: string | null;
   lastSyncAt: string | null;
+  /** The booked balance the bank told last (cents) and when; null: none yet. */
+  balanceCents: number | null;
+  balanceAt: string | null;
 }
 
 /** Where a transaction came from: typed, scanned or the assistant's (manual), a CSV file, or a
@@ -415,6 +418,8 @@ export class DrizzleFinanceStore implements FinanceStore {
         iban: finBankLinks.iban,
         card: finBankLinks.card,
         lastSyncAt: finBankLinks.lastSyncAt,
+        balanceCents: finBankLinks.bankBalanceCents,
+        balanceAt: finBankLinks.bankBalanceAt,
       })
       .from(finAccounts)
       .leftJoin(
@@ -427,7 +432,14 @@ export class DrizzleFinanceStore implements FinanceStore {
       .map((r) => ({
         ...accountRow(r.account),
         bank: r.provider
-          ? { provider: r.provider, iban: r.iban, card: r.card, lastSyncAt: r.lastSyncAt?.toISOString() ?? null }
+          ? {
+              provider: r.provider,
+              iban: r.iban,
+              card: r.card,
+              lastSyncAt: r.lastSyncAt?.toISOString() ?? null,
+              balanceCents: r.balanceCents ?? null,
+              balanceAt: r.balanceAt?.toISOString() ?? null,
+            }
           : null,
       }));
   }
