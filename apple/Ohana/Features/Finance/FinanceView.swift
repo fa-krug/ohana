@@ -118,6 +118,9 @@ struct FinanceScreen: View {
             .task(id: family.revision(.finance)) { await store.revisionChanged(family.revision(.finance)) }
             .refreshable { await store.reloadAll() }
             .toolbar { toolbar }
+            // On iPhone the assistant is the More menu's last section: with its own button the
+            // toolbar didn't fit and iOS put More and it into a menu of their own.
+            .assistantInMenu(compact)
             .sheet(item: $editing) { target in
                 FinanceTransactionEditor(store: store, target: target)
             }
@@ -442,7 +445,7 @@ struct FinanceScreen: View {
     }
 
     /// Everything the toolbar has no button for, in one list: selecting, adding, tidying up,
-    /// the settings.
+    /// the settings, on iPhone the assistant.
     private var moreMenu: some View {
         Menu {
             if store.canEdit {
@@ -461,6 +464,7 @@ struct FinanceScreen: View {
             Section {
                 Button("Finance settings", systemImage: "gearshape") { family.open(.settings(.finance)) }
             }
+            if compact { AssistantMenuSection() }
         } label: {
             Label("More", systemImage: "ellipsis")
         }
