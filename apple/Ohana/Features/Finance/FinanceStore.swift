@@ -796,6 +796,66 @@ final class FinanceStore {
         await saveSettings(["csvMappings": .array(rest)])
     }
 
+    // MARK: Bank connection
+
+    /// The accounts that sync with their bank, and the ones a CSV file can go to.
+    var linkedAccounts: [FinanceAccount] { accounts.filter { $0.bank != nil } }
+    var csvAccounts: [FinanceAccount] { accounts.filter { $0.bank == nil } }
+
+    /// Links the account to its bank, or changes the link (PUT …/bank); false when it failed.
+    @discardableResult
+    func linkBank(_ accountId: String, _ body: JSONValue) async -> Bool {
+        let saved: FinanceAccount? = await withOverview {
+            try await api.send(.put, "/finance/accounts/\(accountId)/bank", body: body)
+        }
+        return saved != nil
+    }
+
+    /// Removes the account's link; its transactions stay.
+    @discardableResult
+    func unlinkBank(_ accountId: String) async -> Bool {
+        let saved: FinanceAccount? = await withOverview {
+            try await api.send(.delete, "/finance/accounts/\(accountId)/bank")
+        }
+        return saved != nil
+    }
+
+    private static func syncPath(_ accountId: String) -> String { "/finance/accounts/\(accountId)/bank/sync" }
+
+    /// Starts a sync (or answers the one under way).
+    func startSync(_ accountId: String) async throws -> FinanceBankSync {
+        try await api.send(.post, Self.syncPath(accountId), body: JSONValue.object([:]))
+    }
+
+    /// The account's latest sync.
+    func syncStatus(_ accountId: String) async throws -> FinanceBankSync {
+        try await api.get(Self.syncPath(accountId))
+    }
+
+    /// Answers the bank's challenge with a typed TAN.
+    func sendTan(_ accountId: String, _ tan: String) async throws -> FinanceBankSync {
+        try await api.send(.post, Self.syncPath(accountId) + "/tan", body: JSONValue.object(["tan": .string(tan)]))
+    }
+
+    /// Stops a sync that hasn't finished; best effort (the sheet closes either way).
+    func cancelSync(_ accountId: String) async {
+        let _: FinanceBankSync? = try? await api.send(.delete, Self.syncPath(accountId))
+    }
+
+    /// After a finished sync, as after a CSV import: everything reloads, the toast offers to
+    /// take the new transactions out again.
+    func synced(_ result: FinanceBankSync.Result) async {
+        await changed()
+        if !result.ids.isEmpty {
+            var message = FinanceText.inflected("Imported ^[\(result.added) transaction](inflect: true)")
+            if result.duplicates > 0 { message += " " + String(localized: "(\(result.duplicates) already there)") }
+            if result.transfers > 0 || result.splits > 0 {
+                message += " · " + Self.combinedText(transfers: result.transfers, splits: result.splits)
+            }
+            show(message, undo: [FinanceOp.delete(result.ids)])
+        }
+    }
+
     // MARK: Auto-categorize
 
     private var language: String { Locale.current.language.languageCode?.identifier == "de" ? "de" : "en" }

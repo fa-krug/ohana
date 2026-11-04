@@ -34,6 +34,12 @@ CREATE TABLE `kb_documents` (
 	`run_token` text,
 	`run_until` integer,
 	`attempts` integer DEFAULT 0 NOT NULL,
+	`card_status` text DEFAULT 'pending' NOT NULL,
+	`card_run_token` text,
+	`card_run_until` integer,
+	`card_attempts` integer DEFAULT 0 NOT NULL,
+	`card_retries` integer DEFAULT 0 NOT NULL,
+	`card_error` text,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL,
 	FOREIGN KEY (`family_id`) REFERENCES `families`(`id`) ON UPDATE no action ON DELETE cascade,
@@ -45,16 +51,20 @@ CREATE TABLE `kb_documents` (
 CREATE UNIQUE INDEX `kb_documents_path_uniq` ON `kb_documents` (`folder_id`,`path`);--> statement-breakpoint
 CREATE INDEX `kb_documents_status_idx` ON `kb_documents` (`family_id`,`status`);--> statement-breakpoint
 CREATE INDEX `kb_documents_queue_idx` ON `kb_documents` (`status`,`run_until`);--> statement-breakpoint
+CREATE INDEX `kb_documents_card_queue_idx` ON `kb_documents` (`card_status`,`status`,`card_run_until`);--> statement-breakpoint
 CREATE TABLE `kb_folders` (
 	`id` text PRIMARY KEY NOT NULL,
 	`family_id` text NOT NULL,
 	`created_by_id` text,
 	`created_at` integer NOT NULL,
+	`last_manifest_at` integer,
+	`last_manifest_device` text,
 	FOREIGN KEY (`family_id`) REFERENCES `families`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`created_by_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE set null
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `kb_folders_family_uniq` ON `kb_folders` (`family_id`);--> statement-breakpoint
+ALTER TABLE `chats` ADD `knowledge_refs` text DEFAULT '[]' NOT NULL;--> statement-breakpoint
 -- Hand-written: full-text search over the chunks (FTS5, external content: the text lives in
 -- kb_chunks only), case and diacritics ignored ("kundigung" finds "Kündigung"), kept in step
 -- by the triggers below.

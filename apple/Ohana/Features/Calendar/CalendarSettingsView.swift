@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// Settings → Calendar (the web's calendar tab): the entry types of a year (name, member, role,
-/// away, order; add, delete, copy from another year), the view settings of this device and this
-/// device's sync with Apple Calendar.
+/// away, order; add, delete, copy from another year), the view settings of this device, the
+/// imported public and school holidays and this device's sync with Apple Calendar.
 struct CalendarSettingsView: View {
     @Environment(FamilyContext.self) private var family
     @State private var store: CalendarStore?
@@ -28,6 +28,7 @@ private struct CalendarSettingsContent: View {
     @State private var editing: CalendarEntryType?
     @State private var deleting: CalendarEntryType?
     @State private var appleSync = AppleCalendarSyncPrompts()
+    @State private var holidays = CalendarHolidaysModel()
     @AppStorage("ohana.calendar.showWeekdays") private var alwaysWeekdays = false
 
     var body: some View {
@@ -36,10 +37,12 @@ private struct CalendarSettingsContent: View {
                 typesSection
                 rolesSection
                 viewSection
+                CalendarHolidaysSection(model: holidays)
                 AppleCalendarSyncSection(prompts: appleSync)
             }
             .formStyle(.grouped)
             .appleCalendarSyncPrompts(appleSync)
+            .calendarHolidays(holidays)
         }
         .ohanaBackground(ModuleTint.calendar)
         .task(id: [family.revision(.calendar), family.revision(.family)]) { await store.load(quiet: store.isLoaded) }
@@ -250,7 +253,8 @@ private struct CalendarSettingsContent: View {
 
 }
 
-/// Edits one type: name, member (whose color it takes), role, icon, away; deletes it. A page pushed
+/// Edits one type: name, member (whose color it takes; a nobody's type a color of its own), role,
+/// icon, away; deletes it. A page pushed
 /// from the list of types, with Cancel and Done instead of the back button.
 struct CalendarTypeEditor: View {
     let store: CalendarStore
@@ -258,6 +262,8 @@ struct CalendarTypeEditor: View {
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
     @State private var memberId: String?
+    /// A nobody's type's own color (a `MemberColor` key); nil: gray.
+    @State private var colorKey: String?
     @State private var role = CalendarRole.none
     /// The icon picked on this page; until one is, the type keeps its own (or its role's default,
     /// following the role chosen here).
@@ -285,16 +291,31 @@ struct CalendarTypeEditor: View {
             Section {
                 memberRow(nil)
                 ForEach(store.members) { memberRow($0) }
-                LabeledContent("Color") {
-                    RoundedRectangle(cornerRadius: 5)
-                        .fill(previewColor)
-                        .frame(width: 22, height: 22)
-                        .accessibilityHidden(true)
+                if memberId != nil {
+                    LabeledContent("Color") {
+                        RoundedRectangle(cornerRadius: 5)
+                            .fill(previewColor)
+                            .frame(width: 22, height: 22)
+                            .accessibilityHidden(true)
+                    }
                 }
             } header: {
                 Text("Member")
             } footer: {
-                Text("The type takes the member’s color: their first type of the year has it, further ones a shade of it.")
+                if memberId != nil {
+                    Text("The type takes the member’s color: their first type of the year has it, further ones a shade of it.")
+                }
+            }
+            if memberId == nil {
+                Section {
+                    FamilyColorChoice(selection: colorKey, used: [:]) { color in
+                        colorKey = colorKey == color.rawValue ? nil : color.rawValue
+                    }
+                } header: {
+                    Text("Color")
+                } footer: {
+                    Text("Without a color the type is gray. Tap the chosen one again to remove it.")
+                }
             }
             Section {
                 Picker("Role", selection: $role) {
@@ -351,6 +372,7 @@ struct CalendarTypeEditor: View {
             loaded = true
             name = type.name
             memberId = type.memberId
+            colorKey = type.colorKey
             role = type.role
             away = type.isAway
         }
@@ -384,14 +406,18 @@ struct CalendarTypeEditor: View {
         .accessibilityAddTraits(memberId == member?.id ? .isSelected : [])
     }
 
-    /// The type's color as it stands; for another member theirs, until the server works out the
-    /// shade.
+    /// The type's color as it stands; for another member theirs (a nobody's type the color chosen
+    /// here), until the server works out the shade.
     private var previewColor: Color { Color(calendarHex: previewHex) }
 
     private var previewHex: String {
-        if memberId == type.memberId { return type.color }
-        return MemberColor(key: store.member(memberId)?.color)?.hex ?? "#8b8d98"
+        if memberId == type.memberId && (memberId != nil || colorKey == type.colorKey) { return type.color }
+        if memberId == nil { return MemberColor(key: colorKey)?.hex ?? "#8e8e93" }
+        return MemberColor(key: store.member(memberId)?.color)?.hex ?? "#8e8e93"
     }
+
+    /// The own color to save: only a nobody's type keeps one.
+    private var keptColorKey: String? { memberId == nil ? colorKey : nil }
 
     /// The icon the type would have without one picked here: its own, or the chosen role's
     /// default while it shows its role's.
@@ -408,7 +434,7 @@ struct CalendarTypeEditor: View {
 
     private var hasChanges: Bool {
         loaded && (name.trimmingCharacters(in: .whitespaces) != type.name || memberId != type.memberId
-            || role != type.role || icon != keptIcon || away != type.isAway)
+            || keptColorKey != type.colorKey || role != type.role || icon != keptIcon || away != type.isAway)
     }
 
     private func save() {
@@ -416,6 +442,7 @@ struct CalendarTypeEditor: View {
         let trimmed = name.trimmingCharacters(in: .whitespaces)
         if trimmed != type.name { patch.name = trimmed }
         if memberId != type.memberId { patch.memberId = .some(memberId) }
+        if keptColorKey != type.colorKey && memberId == nil { patch.colorKey = .some(keptColorKey) }
         if role != type.role { patch.role = role }
         if let pickedIcon, pickedIcon != keptIcon { patch.icon = .some(pickedIcon) }
         if away != type.isAway { patch.away = away }

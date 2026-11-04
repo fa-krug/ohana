@@ -6,7 +6,7 @@
 
 import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lte, sql } from "drizzle-orm";
 import type { Db } from "@/lib/db";
-import { finAccounts, finCategories, finSettings, finTransactions } from "@/lib/db/schema";
+import { finAccounts, finBankLinks, finCategories, finSettings, finTransactions } from "@/lib/db/schema";
 import { categoryTree } from "./category-tree";
 
 export type CategoryKind = "income" | "expense" | "both";
@@ -34,6 +34,17 @@ export interface AccountRow {
   icon: string; // an emoji, or ""
   opening_cents: number; // the balance before the first transaction
   position: number;
+  /** The bank it syncs with (read only: set by lib/finance/bank/links.ts); listAccounts fills it. */
+  bank?: AccountBank | null;
+}
+
+/** What an account's DTO tells of its bank link (never a secret). */
+export interface AccountBank {
+  provider: string;
+  iban: string | null;
+  /** A credit card's last 4 digits (then iban is null). */
+  card: string | null;
+  lastSyncAt: string | null;
 }
 
 export interface TransactionRow {
@@ -386,12 +397,27 @@ export class DrizzleFinanceStore implements FinanceStore {
 
   async listAccounts(familyId: string) {
     return this.db
-      .select()
+      .select({
+        account: finAccounts,
+        provider: finBankLinks.provider,
+        iban: finBankLinks.iban,
+        card: finBankLinks.card,
+        lastSyncAt: finBankLinks.lastSyncAt,
+      })
       .from(finAccounts)
+      .leftJoin(
+        finBankLinks,
+        and(eq(finBankLinks.familyId, finAccounts.familyId), eq(finBankLinks.accountId, finAccounts.id)),
+      )
       .where(eq(finAccounts.familyId, familyId))
       .orderBy(asc(finAccounts.position), asc(finAccounts.id))
       .all()
-      .map(accountRow);
+      .map((r) => ({
+        ...accountRow(r.account),
+        bank: r.provider
+          ? { provider: r.provider, iban: r.iban, card: r.card, lastSyncAt: r.lastSyncAt?.toISOString() ?? null }
+          : null,
+      }));
   }
 
   async upsertAccounts(rows: AccountRow[]) {

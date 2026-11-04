@@ -65,6 +65,9 @@ enum CalendarText {
         String(localized: "🎂 \(b.name) turns \(b.age)")
     }
 
+    /// A holiday on a day: its name (its type's color already marks the day).
+    static func holiday(_ h: CalendarHoliday) -> String { h.name }
+
     /// A string with a plural: English inflects `^[\(n) day](inflect: true)`, the German
     /// translation has one/other variants. (`String(localized:)` leaves the markup as it is.)
     static func plural(_ value: String.LocalizationValue) -> String {

@@ -502,35 +502,33 @@ struct FinanceCategoryFilterItems: View {
     }
 }
 
-/// The toast at the bottom: what a change did, with its undo.
+/// The toast at the bottom: what a change did, with its undo. It goes by itself (`show`), or
+/// with a swipe down; as the calendar's, quiet: the message in full, Undo as a plain button.
 struct FinanceToastView: View {
     @Bindable var store: FinanceStore
     let toast: FinanceToast
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 16) {
             Text(toast.message)
                 .font(.callout)
-                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
             if toast.undo != nil {
                 // ⌘Z is Edit → Undo, which undoes the same change (the store registers it).
                 Button("Undo") { Task { await store.undoToast() } }
-                    .buttonStyle(.glassProminent)
+                    .font(.callout.weight(.semibold))
+                    .buttonStyle(.borderless)
                     .tint(ModuleTint.finance)
             }
-            Button {
-                store.dismissToast()
-            } label: {
-                Image(systemName: "xmark")
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Dismiss")
         }
-        .padding(.leading, 16)
-        .padding(.trailing, 2)
-        .padding(.vertical, 2)
-        .glassEffect(.regular, in: .capsule)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 12)
+        .frame(minHeight: 44)
+        // Round ends on one line; on two a rounded rectangle, not a swollen capsule.
+        .glassEffect(.regular, in: .rect(cornerRadius: 22, style: .continuous))
+        .gesture(DragGesture(minimumDistance: 12).onEnded { drag in
+            if drag.translation.height > 12 { store.dismissToast() }
+        })
+        .accessibilityAction(named: Text("Dismiss")) { store.dismissToast() }
     }
 }

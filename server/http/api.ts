@@ -27,6 +27,8 @@ import { handleEvents } from "@/lib/calendar/events";
 import { handleFamily } from "@/lib/calendar/family-routes";
 import { handleDigest } from "@/lib/digest/routes";
 import { handleCalendar } from "@/lib/calendar/vacation";
+import { handleHolidays } from "@/lib/calendar/holidays/routes";
+import { defaultHolidaysEnv } from "@/lib/calendar/holidays/sync";
 import { requireFamilyApi } from "@/lib/families/api";
 import { createFamilyForUser, handleFamilyApp } from "@/lib/families/app-routes";
 import { handleInvitesApp } from "@/lib/families/invite-routes";
@@ -201,6 +203,7 @@ export function apiRoutes(db: Db): Hono {
       handleFamilyApp,
       handleFamily,
       handleCalendar,
+      handleHolidays(defaultHolidaysEnv()),
       handleEvents,
       handleDigest,
       handleFinance,

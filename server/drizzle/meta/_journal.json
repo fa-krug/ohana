@@ -145,29 +145,43 @@
     {
       "idx": 20,
       "version": "6",
-      "when": 1793780354857,
-      "tag": "0020_knowledge",
+      "when": 1793780560405,
+      "tag": "0020_holidays",
       "breakpoints": true
     },
     {
       "idx": 21,
       "version": "6",
-      "when": 1793786078231,
-      "tag": "0021_knowledge_status",
+      "when": 1793786140015,
+      "tag": "0021_bank_sync",
       "breakpoints": true
     },
     {
       "idx": 22,
       "version": "6",
-      "when": 1793794314711,
-      "tag": "0022_knowledge_cards",
+      "when": 1793792797741,
+      "tag": "0022_type_colors",
       "breakpoints": true
     },
     {
       "idx": 23,
       "version": "6",
-      "when": 1793797755051,
-      "tag": "0023_chat_knowledge_refs",
+      "when": 1793793988742,
+      "tag": "0023_bank_synced_from",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1793794395322,
+      "tag": "0024_bank_card",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1793808885282,
+      "tag": "0025_knowledge",
       "breakpoints": true
     }
   ]

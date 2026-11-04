@@ -178,7 +178,7 @@ extension View {
 
 // MARK: Details
 
-/// The selected days with their entries, notes, events and birthdays, and their actions.
+/// The selected days with their entries, holidays, notes, events and birthdays, and their actions.
 struct CalendarSelectionDetails: View {
     @Environment(FamilyContext.self) private var family
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -213,11 +213,13 @@ struct CalendarSelectionDetails: View {
 
     private func hasContent(_ day: Day) -> Bool {
         store.entries[day] != nil || store.notes[day] != nil || store.events[day] != nil || store.birthdays[day] != nil
+            || store.holidays[day] != nil
     }
 
     private func dayCard(_ day: Day) -> some View {
         let types = store.types(on: day)
         let events = store.events[day] ?? []
+        let holidays = store.holidays[day] ?? []
         let birthdays = store.birthdays[day] ?? []
         let note = store.notes[day]
         return VStack(alignment: .leading, spacing: 8) {
@@ -244,6 +246,9 @@ struct CalendarSelectionDetails: View {
             }
             if !types.isEmpty {
                 CalendarDayTypes(types: types, store: store)
+            }
+            ForEach(holidays, id: \.self) { h in
+                Text(CalendarText.holiday(h))
             }
             if let note {
                 Button {

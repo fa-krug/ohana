@@ -237,6 +237,7 @@ describe("calendar API", () => {
       name: "Day care closed",
       memberId: s.owner.id,
       color: typeShade(memberColorHex("blue"), 3),
+      colorKey: null,
       role: "needs_cover",
       icon: "exclamationmark.triangle",
       position: 3,

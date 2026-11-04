@@ -2294,6 +2294,16 @@
         }
       }
     },
+    "All of %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (gesamt)"
+          }
+        }
+      }
+    },
     "All split bookings and likely transfers of this period, without review": {
       "localizations": {
         "de": {
@@ -3022,6 +3032,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pflaster"
+          }
+        }
+      }
+    },
+    "Bank": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bank"
+          }
+        }
+      }
+    },
+    "Bank connection": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bankanbindung"
           }
         }
       }
@@ -3806,6 +3836,16 @@
         }
       }
     },
+    "Checking the confirmation…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bestätigung wird geprüft …"
+          }
+        }
+      }
+    },
     "Child": {
       "localizations": {
         "de": {
@@ -4086,6 +4126,26 @@
         }
       }
     },
+    "Client ID": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Client-ID"
+          }
+        }
+      }
+    },
+    "Client secret": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Client-Secret"
+          }
+        }
+      }
+    },
     "Clock": {
       "localizations": {
         "de": {
@@ -4346,6 +4406,16 @@
         }
       }
     },
+    "Confirm the login in the %@ app": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bestätige die Anmeldung in der %@-App"
+          }
+        }
+      }
+    },
     "Conflict": {
       "localizations": {
         "de": {
@@ -4442,6 +4512,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dein Ohana verbinden …"
+          }
+        }
+      }
+    },
+    "Connecting to %@…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbindung zu %@ wird aufgebaut …"
           }
         }
       }
@@ -4702,6 +4782,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zählt Kalendertage"
+          }
+        }
+      }
+    },
+    "Country": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Land"
           }
         }
       }
@@ -6296,12 +6386,42 @@
         }
       }
     },
+    "Enter an IBAN, or a card number or its last 4 digits.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib eine IBAN ein, oder eine Kartennummer bzw. ihre letzten 4 Ziffern."
+          }
+        }
+      }
+    },
     "Enter an amount, e.g. %@": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Gib einen Betrag ein, z. B. %@"
+          }
+        }
+      }
+    },
+    "Enter the TAN from the text message.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib die TAN aus der SMS ein."
+          }
+        }
+      }
+    },
+    "Enter the TAN sent to %@.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib die TAN ein, die an %@ geschickt wurde."
           }
         }
       }
@@ -7306,6 +7426,16 @@
         }
       }
     },
+    "From home address": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus der Heimatadresse"
+          }
+        }
+      }
+    },
     "From the ingredient list": {
       "localizations": {
         "de": {
@@ -7636,6 +7766,16 @@
         }
       }
     },
+    "Holidays": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Feiertage & Ferien"
+          }
+        }
+      }
+    },
     "Home": {
       "localizations": {
         "de": {
@@ -7772,6 +7912,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ich habe diesen Brief gescannt. Schlag mir die Termine, Aufgaben und Fristen darin vor, damit ich sie hinzufügen kann."
+          }
+        }
+      }
+    },
+    "IBAN or card number (optional)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IBAN oder Kartennummer (optional)"
           }
         }
       }
@@ -7936,6 +8086,16 @@
         }
       }
     },
+    "Import a bank statement or sync an account": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einen Kontoauszug importieren oder ein Konto abgleichen"
+          }
+        }
+      }
+    },
     "Import bank statement": {
       "localizations": {
         "de": {
@@ -8084,6 +8244,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rezept wird importiert …"
+          }
+        }
+      }
+    },
+    "Importing…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird importiert …"
           }
         }
       }
@@ -8650,6 +8820,16 @@
         }
       }
     },
+    "Last synced": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zuletzt abgeglichen"
+          }
+        }
+      }
+    },
     "Last year": {
       "localizations": {
         "de": {
@@ -8920,6 +9100,16 @@
         }
       }
     },
+    "Load the new transactions of %@ from the bank (⇧⌘I)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die neuen Buchungen von %@ bei der Bank abholen (⇧⌘I)"
+          }
+        }
+      }
+    },
     "Loading the demo…": {
       "localizations": {
         "de": {
@@ -8950,6 +9140,16 @@
         }
       }
     },
+    "Loading transactions…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buchungen werden geladen …"
+          }
+        }
+      }
+    },
     "Loading your families…": {
       "localizations": {
         "de": {
@@ -8966,6 +9166,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ort"
+          }
+        }
+      }
+    },
+    "Login number": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zugangsnummer"
           }
         }
       }
@@ -10400,6 +10610,16 @@
         }
       }
     },
+    "No home address yet: set one under Household → Home address, or pick a region.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Heimatadresse: Lege unter Haushalt → Heimatadresse eine fest oder wähle eine Region."
+          }
+        }
+      }
+    },
     "No icon": {
       "localizations": {
         "de": {
@@ -11382,6 +11602,16 @@
         }
       }
     },
+    "Ohana knows no holidays for this region.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für diese Region kennt Ohana keine Feiertage."
+          }
+        }
+      }
+    },
     "Ohana may not use the microphone or speech recognition. You can allow it in the Settings app.": {
       "localizations": {
         "de": {
@@ -12008,6 +12238,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "PDF"
+          }
+        }
+      }
+    },
+    "PIN": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PIN"
           }
         }
       }
@@ -12908,6 +13148,16 @@
         }
       }
     },
+    "Public holidays": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Feiertage"
+          }
+        }
+      }
+    },
     "Purple": {
       "localizations": {
         "de": {
@@ -13414,6 +13664,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Auffrischen"
+          }
+        }
+      }
+    },
+    "Region": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Region"
           }
         }
       }
@@ -14448,6 +14708,16 @@
         }
       }
     },
+    "Scan the graphic with the %@ app and enter the TAN it shows.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scanne die Grafik mit der %@-App und gib die angezeigte TAN ein."
+          }
+        }
+      }
+    },
     "Scanned Letter": {
       "localizations": {
         "de": {
@@ -14494,6 +14764,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Schule"
+          }
+        }
+      }
+    },
+    "School holidays": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schulferien"
           }
         }
       }
@@ -16532,6 +16812,16 @@
         }
       }
     },
+    "Sync %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ abgleichen"
+          }
+        }
+      }
+    },
     "Sync Now": {
       "localizations": {
         "de": {
@@ -16572,12 +16862,32 @@
         }
       }
     },
+    "Syncing…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird abgeglichen …"
+          }
+        }
+      }
+    },
     "System": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "System"
+          }
+        }
+      }
+    },
+    "TAN": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TAN"
           }
         }
       }
@@ -16932,12 +17242,32 @@
         }
       }
     },
+    "The client ID and secret appear once you turn on API access in comdirect’s online banking. Each sync is confirmed in the comdirect app or with a TAN.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Client-ID und Client-Secret bekommst du, wenn du im Online-Banking der comdirect den API-Zugang freischaltest. Jeder Abgleich wird in der comdirect-App oder mit einer TAN bestätigt."
+          }
+        }
+      }
+    },
     "The cron expression is too long (max. 100).": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Der Cron-Ausdruck ist zu lang (max. 100)."
+          }
+        }
+      }
+    },
+    "The days go into the types “Holiday” and “School holidays”.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Tage kommen in die Typen „Feiertag“ und „Schulferien“."
           }
         }
       }
@@ -17088,6 +17418,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Der Ordner scheint leer zu sein."
+          }
+        }
+      }
+    },
+    "The holidays couldn’t be loaded.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Feiertage konnten nicht geladen werden."
           }
         }
       }
@@ -17508,6 +17848,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Die Einkaufsliste in Erinnerungen"
+          }
+        }
+      }
+    },
+    "The sync failed.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Abgleich ist fehlgeschlagen."
           }
         }
       }
@@ -18452,6 +18802,16 @@
         }
       }
     },
+    "Unchanged": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unverändert"
+          }
+        }
+      }
+    },
     "Undo": {
       "localizations": {
         "de": {
@@ -19388,6 +19748,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Innerhalb von (Tagen) muss zwischen 1 und 365 liegen."
+          }
+        }
+      }
+    },
+    "Without a color the type is gray. Tap the chosen one again to remove it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohne Farbe ist die Art grau. Ein erneuter Tipp auf die gewählte entfernt sie."
           }
         }
       }
@@ -21188,6 +21558,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "pausiert"
+          }
+        }
+      }
+    },
+    "photoTAN graphic": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "photoTAN-Grafik"
           }
         }
       }

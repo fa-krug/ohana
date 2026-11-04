@@ -45,6 +45,8 @@ struct FinanceScreen: View {
     /// The bank statement the import sheet shows (picked or dropped).
     @State private var importing: FinanceImportFile?
     @State private var choosingFile = false
+    /// The linked account the sync sheet syncs.
+    @State private var syncing: FinanceAccount?
     /// What the file picker is for: a receipt (a photo or PDF), else a bank statement.
     @State private var choosingReceipt = false
     @State private var scanningReceipt = false
@@ -116,10 +118,14 @@ struct FinanceScreen: View {
             .task(id: family.revision(.finance)) { await store.revisionChanged(family.revision(.finance)) }
             .refreshable { await store.reloadAll() }
             .toolbar { toolbar }
+            // On iPhone the assistant is the More menu's last section: with its own button the
+            // toolbar didn't fit and iOS put More and it into a menu of their own.
+            .assistantInMenu(compact)
             .sheet(item: $editing) { target in
                 FinanceTransactionEditor(store: store, target: target)
             }
             .sheet(item: $importing) { file in FinanceImportSheet(store: store, file: file) }
+            .sheet(item: $syncing) { account in FinanceBankSyncSheet(store: store, account: account) }
             .sheet(isPresented: $findingTransfers) { FinanceTransferSheet(store: store) }
             // One file picker for both (two on one view don't both work).
             .fileImporter(isPresented: $choosingFile,
@@ -335,14 +341,7 @@ struct FinanceScreen: View {
                 }
                 .help("Add a transaction from a receipt")
                 .disabled(readingReceipt)
-                if !compact {
-                    Button {
-                        chooseFile(receipt: false)
-                    } label: {
-                        Label("Import CSV", systemImage: "square.and.arrow.down")
-                    }
-                    .help("Import a bank statement (⇧⌘I)")
-                }
+                if !compact { intakeButton }
             }
             ToolbarSpacer(.fixed, placement: .primaryAction)
         }
@@ -401,8 +400,53 @@ struct FinanceScreen: View {
     }
     #endif
 
+    /// Bringing transactions in (iPad, Mac): Import CSV; for a linked account shown, its sync
+    /// instead; with linked accounts elsewhere, a menu of both.
+    @ViewBuilder
+    private var intakeButton: some View {
+        switch store.intake {
+        case .importCSV:
+            Button {
+                chooseFile(receipt: false)
+            } label: {
+                Label("Import CSV", systemImage: "square.and.arrow.down")
+            }
+            .help("Import a bank statement (⇧⌘I)")
+        case let .sync(account):
+            Button {
+                syncing = account
+            } label: {
+                Label("Sync", systemImage: "arrow.triangle.2.circlepath")
+            }
+            .help("Load the new transactions of \(account.name) from the bank (⇧⌘I)")
+        case .choice:
+            Menu {
+                intakeItems
+            } label: {
+                Label("Import", systemImage: "square.and.arrow.down")
+            }
+            .help("Import a bank statement or sync an account")
+        }
+    }
+
+    /// The same as menu items (the iPhone's More menu, the Import menu).
+    @ViewBuilder
+    private var intakeItems: some View {
+        switch store.intake {
+        case .importCSV:
+            Button("Import CSV", systemImage: "square.and.arrow.down") { chooseFile(receipt: false) }
+        case let .sync(account):
+            Button("Sync", systemImage: "arrow.triangle.2.circlepath") { syncing = account }
+        case let .choice(linked):
+            Button("Import CSV…", systemImage: "square.and.arrow.down") { chooseFile(receipt: false) }
+            ForEach(linked) { account in
+                Button("Sync \(account.name)", systemImage: "arrow.triangle.2.circlepath") { syncing = account }
+            }
+        }
+    }
+
     /// Everything the toolbar has no button for, in one list: selecting, adding, tidying up,
-    /// the settings.
+    /// the settings, on iPhone the assistant.
     private var moreMenu: some View {
         Menu {
             if store.canEdit {
@@ -414,15 +458,14 @@ struct FinanceScreen: View {
                 }
                 #endif
                 if compact {
-                    Section {
-                        Button("Import CSV", systemImage: "square.and.arrow.down") { chooseFile(receipt: false) }
-                    }
+                    Section { intakeItems }
                 }
                 Section { editActions }
             }
             Section {
                 Button("Finance settings", systemImage: "gearshape") { family.open(.settings(.finance)) }
             }
+            if compact { AssistantMenuSection() }
         } label: {
             Label("More", systemImage: "ellipsis")
         }
@@ -472,8 +515,20 @@ struct FinanceScreen: View {
         Button("Today") { Task { await store.goToToday() } }
         if store.canEdit {
             Divider()
-            Button("Import CSV…") { chooseFile(receipt: false) }
-                .keyboardShortcut("i", modifiers: [.command, .shift])
+            switch store.intake {
+            case .importCSV:
+                Button("Import CSV…") { chooseFile(receipt: false) }
+                    .keyboardShortcut("i", modifiers: [.command, .shift])
+            case let .sync(account):
+                Button("Sync \(account.name)") { syncing = account }
+                    .keyboardShortcut("i", modifiers: [.command, .shift])
+            case let .choice(linked):
+                Button("Import CSV…") { chooseFile(receipt: false) }
+                    .keyboardShortcut("i", modifiers: [.command, .shift])
+                ForEach(linked) { account in
+                    Button("Sync \(account.name)") { syncing = account }
+                }
+            }
             Button("Scan Receipt…") { scanReceipt() }
                 .disabled(readingReceipt)
             Button("Find Transfers…") { findingTransfers = true }

@@ -91,9 +91,18 @@ What a server sends to other services depends on what its families set up, for e
   searched),
 - **Photon** by komoot to find addresses (the address typed) and, for the *Week ahead*'s travel
   checks, where the next two weeks' events are (their locations, unless the server turned that
-  off),
+  off), and, when a family imports holidays, the region its home is in (the home address's
+  coordinates),
+- **OpenHolidays** (`openholidaysapi.org`) for the public and school holidays a family imports
+  (only a country and a region, like "DE-BY"),
 - the **notification services** a family sets up (Pushover, Pushbullet, Telegram, an email
   provider, ntfy) with the text of the notifications.
+- **comdirect**, if a family links a finance account with its bank: the server keeps the bank
+  login (the API client ID and secret, the Zugangsnummer and the PIN) encrypted and uses it only
+  when someone starts a sync, to log in at comdirect on their behalf and fetch that account's
+  booked transactions, which it stores as the family's transactions. The TAN you type in the app
+  goes to comdirect through the server and isn't kept. Nothing else is sent to comdirect, and the
+  login is never sent back to the app; removing the bank connection deletes it.
 
 Ask your server's operator about their privacy policy.
 

@@ -52,15 +52,18 @@ enum CalendarRole: String, Codable, CaseIterable, Hashable, Identifiable {
 }
 
 /// An entry type of one year (vacation.ts `publicType`). It belongs to a member, whose color it
-/// takes (the server works it out: their first type of the year has it, further ones shades of it).
+/// takes (the server works it out: their first type of the year has it, further ones shades of it);
+/// a nobody's type may have a color of its own (`colorKey`), else it is gray.
 struct CalendarEntryType: Codable, Hashable, Identifiable {
     var id: String
     var year: Int?
     var name: String
     /// The member (account or person) it belongs to; nil: nobody (gray).
     var memberId: String?
-    /// "#rrggbb", derived from the member's color; read-only.
+    /// "#rrggbb", derived from the member's color (or `colorKey`); read-only.
     var color: String
+    /// A nobody's type's own color, a `MemberColor` key; nil: gray (always for a member's type).
+    var colorKey: String?
     var role: CalendarRole
     /// Its SF Symbol: its own, or its role's default (`CalendarRole.defaultIcon`); always sent,
     /// older servers and files without it get the role's.
@@ -71,13 +74,14 @@ struct CalendarEntryType: Codable, Hashable, Identifiable {
 
     var isAway: Bool { away ?? false }
 
-    init(id: String, year: Int? = nil, name: String, memberId: String? = nil, color: String, role: CalendarRole,
-         icon: String? = nil, position: Int? = nil, away: Bool? = nil) {
+    init(id: String, year: Int? = nil, name: String, memberId: String? = nil, color: String, colorKey: String? = nil,
+         role: CalendarRole, icon: String? = nil, position: Int? = nil, away: Bool? = nil) {
         self.id = id
         self.year = year
         self.name = name
         self.memberId = memberId
         self.color = color
+        self.colorKey = colorKey
         self.role = role
         self.icon = icon ?? role.defaultIcon
         self.position = position
@@ -91,6 +95,7 @@ struct CalendarEntryType: Codable, Hashable, Identifiable {
         name = try c.decode(String.self, forKey: .name)
         memberId = try c.decodeIfPresent(String.self, forKey: .memberId)
         color = try c.decode(String.self, forKey: .color)
+        colorKey = try c.decodeIfPresent(String.self, forKey: .colorKey)
         role = try c.decode(CalendarRole.self, forKey: .role)
         let icon = try c.decodeIfPresent(String.self, forKey: .icon) ?? ""
         self.icon = icon.isEmpty ? role.defaultIcon : icon
@@ -138,6 +143,15 @@ struct CalendarMember: Codable, Hashable, Identifiable {
 struct CalendarBirthday: Codable, Hashable {
     let name: String
     let age: Int
+}
+
+/// A public holiday or a day of school holidays of the family's region (`GET /holidays`), by
+/// name: its day also has an entry of the type it was imported into (`holiday`,
+/// `school-holidays`), which colors it.
+struct CalendarHoliday: Codable, Hashable {
+    let name: String
+    /// "public" or "school" (kept as sent: a newer server may add kinds).
+    let kind: String
 }
 
 /// An event on the calendar (events.ts `PublicEvent`): a booked appointment, one added by hand or
@@ -406,6 +420,8 @@ struct CalendarState: Codable {
     let birthdays: [String: [CalendarBirthday]]?
     /// The family's members, for the types' `memberId`s.
     var members: [CalendarMember]?
+    /// The imported holidays' names by day; nil from a server without them.
+    var holidays: [String: [CalendarHoliday]]?
 }
 
 // MARK: Requests
@@ -433,21 +449,24 @@ struct CalendarOpsBody<Op: Encodable>: Encodable {
 
 /// POST /types and PATCH /types/{id}: only the fields that are set are sent. `memberId` is sent as
 /// null for `.some(nil)` (nobody); left out, POST gives the type to the caller and PATCH keeps it.
-/// `icon` likewise: null for `.some(nil)` (back to the role's default), left out kept.
+/// `icon` likewise: null for `.some(nil)` (back to the role's default), left out kept; and
+/// `colorKey` (a nobody's type's own color): null for `.some(nil)` (gray).
 struct CalendarTypePatch: Encodable {
     var name: String?
     var memberId: String??
+    var colorKey: String??
     var role: CalendarRole?
     var icon: String??
     var away: Bool?
     var position: Int?
 
-    private enum CodingKeys: String, CodingKey { case name, memberId, role, icon, away, position }
+    private enum CodingKeys: String, CodingKey { case name, memberId, colorKey, role, icon, away, position }
 
     func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encodeIfPresent(name, forKey: .name)
         if let memberId { try c.encode(memberId, forKey: .memberId) }
+        if let colorKey { try c.encode(colorKey, forKey: .colorKey) }
         try c.encodeIfPresent(role, forKey: .role)
         if let icon { try c.encode(icon, forKey: .icon) }
         try c.encodeIfPresent(away, forKey: .away)
@@ -455,7 +474,7 @@ struct CalendarTypePatch: Encodable {
     }
 
     var isEmpty: Bool {
-        name == nil && memberId == nil && role == nil && icon == nil && away == nil && position == nil
+        name == nil && memberId == nil && colorKey == nil && role == nil && icon == nil && away == nil && position == nil
     }
 }
 

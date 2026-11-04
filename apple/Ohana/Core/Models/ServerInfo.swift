@@ -13,6 +13,9 @@ struct ServerInfo: Codable, Equatable {
     var modules: [String]
     /// Push to the app (through the relay); nil when the server has it off or is older.
     var push: Push?
+    /// The server imports public and school holidays into the calendar (`GET /holidays`); false
+    /// when it has that off or is older.
+    var holidays: Bool
 
     struct Push: Codable, Equatable {
         /// The relay the app registers with (`PUSH_RELAY_URL` on the server).
@@ -31,12 +34,13 @@ struct ServerInfo: Codable, Equatable {
                                    modules: ([Module.calendar] + optionalModules.filter { $0 != .chores && $0 != .knowledge })
                                        .map(\.rawValue))
 
-    init(name: String, version: String, apiVersion: Int, modules: [String], push: Push? = nil) {
+    init(name: String, version: String, apiVersion: Int, modules: [String], push: Push? = nil, holidays: Bool = false) {
         self.name = name
         self.version = version
         self.apiVersion = apiVersion
         self.modules = modules
         self.push = push
+        self.holidays = holidays
     }
 
     /// Lenient: a missing field takes its default (no API version: too old; no module list:
@@ -48,10 +52,11 @@ struct ServerInfo: Codable, Equatable {
         apiVersion = try c.decodeIfPresent(Int.self, forKey: .apiVersion) ?? 0
         modules = try c.decodeIfPresent([String].self, forKey: .modules) ?? Self.legacy.modules
         push = try? c.decodeIfPresent(Push.self, forKey: .push)
+        holidays = (try? c.decodeIfPresent(Bool.self, forKey: .holidays)) ?? false
     }
 
     private enum CodingKeys: String, CodingKey {
-        case name, version, apiVersion, modules, push
+        case name, version, apiVersion, modules, push, holidays
     }
 
     /// The app can talk to this server.

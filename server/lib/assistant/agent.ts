@@ -4,6 +4,7 @@
 
 import type { FamilyRow, TypeRow } from "@/lib/calendar/store";
 import { typeIcon } from "@/lib/calendar/icons";
+import { MEMBER_COLORS } from "@/lib/families/colors";
 
 export interface AgentDocInput {
   /** Public API base, e.g. https://ohana.example/api/v1 */
@@ -149,10 +150,11 @@ ${json(noteOp)} – \`set\` replaces a day's note (icon: an SF Symbol name such 
 
 - Add: \`POST ${s}/types?year=${year}\` ${
     json({ name: "Day care closed", memberId: null, role: "needs_cover" })
-  } (\`memberId\`: whose it is, a member's id or null; left out: yours. Its color is the member's.
+  } (\`memberId\`: whose it is, a member's id or null; left out: yours. Its color is the member's;
+  a nobody's type may have its own, \`colorKey\`: ${MEMBER_COLORS.map((c) => c.key).join(", ")} or null (gray).
   \`icon\`: an SF Symbol name, e.g. \`airplane\`; null or left out: the role's)
 - Change: \`PATCH ${s}/types/{type}?year=${year}\` with any of \`name\`, \`memberId\`,
-  \`role\`, \`icon\` (null: back to the role's), \`position\`
+  \`colorKey\`, \`role\`, \`icon\` (null: back to the role's), \`position\`
 - Delete (also deletes its entries in that year): \`DELETE ${s}/types/{type}?year=${year}\`
 - Copy a year's types into another year: \`POST ${s}/types/copy\` ${
     json({ from: year, to: year + 1 })

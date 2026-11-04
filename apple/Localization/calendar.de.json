@@ -164,6 +164,7 @@
   "What do the roles do?": "Was bewirken die Rollen?",
   "Who it is for": "Für wen",
   "With any role: the whole family is away from home, the meal plan leaves these days out.": "Bei jeder Rolle: Die ganze Familie ist nicht zu Hause, der Essensplan lässt diese Tage aus.",
+  "Without a color the type is gray. Tap the chosen one again to remove it.": "Ohne Farbe ist die Art grau. Ein erneuter Tipp auf die gewählte entfernt sie.",
   "Year": "Jahr",
   "You are a viewer in this family: you can look at the calendar but not change it.": "Du kannst in dieser Familie nur ansehen: Den Kalender siehst du, ändern kannst du ihn nicht.",
   "e.g. Christmas": "z. B. Weihnachten",
@@ -518,5 +519,16 @@
   "Rain": "Regen",
   "Umbrella": "Regenschirm",
   "Holiday home": "Ferienhaus",
-  "Suggested": "Vorschläge"
+  "Suggested": "Vorschläge",
+  "All of %@": "%@ (gesamt)",
+  "Country": "Land",
+  "From home address": "Aus der Heimatadresse",
+  "Holidays": "Feiertage & Ferien",
+  "No home address yet: set one under Household → Home address, or pick a region.": "Noch keine Heimatadresse: Lege unter Haushalt → Heimatadresse eine fest oder wähle eine Region.",
+  "Ohana knows no holidays for this region.": "Für diese Region kennt Ohana keine Feiertage.",
+  "Public holidays": "Feiertage",
+  "Region": "Region",
+  "School holidays": "Schulferien",
+  "The days go into the types “Holiday” and “School holidays”.": "Die Tage kommen in die Typen „Feiertag“ und „Schulferien“.",
+  "The holidays couldn’t be loaded.": "Die Feiertage konnten nicht geladen werden."
 }

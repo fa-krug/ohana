@@ -268,7 +268,8 @@ struct FinanceImportSheet: View {
                     Task { await check() } // duplicates are per account
                 }) {
                     Text("Without account").tag(String?.none)
-                    ForEach(store.accounts) { Text($0.label).tag(Optional($0.id)) }
+                    // An account that syncs with its bank takes no files.
+                    ForEach(store.csvAccounts) { Text($0.label).tag(Optional($0.id)) }
                 }
                 .disabled(busy)
                 Toggle("Combine transfers and split bookings automatically", isOn: Binding { auto } set: { on in
@@ -354,8 +355,8 @@ struct FinanceImportSheet: View {
             let saved = FinanceImportStep.savedMapping(for: guess, in: store.overview?.mappings ?? [])
             data = file.data
             fileName = file.name
-            // Its account as last time, else the one the list shows.
-            let known = { (id: String?) in id.flatMap { store.account($0)?.id } }
+            // Its account as last time, else the one the list shows (not one that syncs).
+            let known = { (id: String?) in id.flatMap { store.account($0) }.flatMap { $0.bank == nil ? $0.id : nil } }
             accountId = known(saved?.accountId) ?? known(store.filter.account)
             auto = saved?.autoTransfers ?? true
             usedSaved = saved != nil

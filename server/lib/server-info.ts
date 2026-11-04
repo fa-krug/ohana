@@ -6,6 +6,7 @@
 
 import pkg from "../package.json";
 import { pushRelayUrl } from "./push/config";
+import { holidaysUrl } from "./calendar/holidays/openholidays";
 
 /** Raised when a change to the API would break an older app: the app refuses older servers. */
 export const API_VERSION = 1;
@@ -43,6 +44,8 @@ export interface ServerInfo {
   modules: ModuleName[];
   /** Push to the app (phase 9): the relay the app registers with; null when it's off. */
   push: { relay: string } | null;
+  /** Public and school holidays can be imported (HOLIDAYS_URL isn't empty). */
+  holidays: boolean;
 }
 
 export function serverInfo(env: Record<string, string | undefined> = process.env): ServerInfo {
@@ -53,6 +56,7 @@ export function serverInfo(env: Record<string, string | undefined> = process.env
     apiVersion: API_VERSION,
     modules: enabledModules(env),
     push: relay ? { relay } : null,
+    holidays: holidaysUrl(env) !== null,
   };
 }
 

@@ -217,12 +217,13 @@ struct CalendarSelectionBar: View {
         }
     }
 
-    /// One day: its note (the icon in the theme color), events and birthdays in a line (touch
-    /// screens have no tooltips).
+    /// One day: its note (the icon in the theme color), holidays, events and birthdays in a line
+    /// (touch screens have no tooltips).
     private func dayLine(_ day: Day) -> Text? {
         var parts: [String] = []
         let note = store.notes[day]
         if let note, !note.comment.isEmpty { parts.append(note.comment) }
+        parts += (store.holidays[day] ?? []).map(CalendarText.holiday)
         parts += (store.events[day] ?? []).map { "🕑 " + $0.line(on: day) }
         parts += (store.birthdays[day] ?? []).map(CalendarText.birthday)
         let text = parts.joined(separator: " · ")

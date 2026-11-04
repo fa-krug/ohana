@@ -4,7 +4,7 @@
 import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
 import type { Db } from "@/lib/db";
 import { calEntries, calEntryTypes, calNotes, families, familyMembers, familyPeople } from "@/lib/db/schema";
-import { memberColorHex, NEUTRAL_COLOR, typeShade } from "@/lib/families/colors";
+import { isMemberColor, memberColorHex, NEUTRAL_COLOR, typeShade } from "@/lib/families/colors";
 import { type FinanceContents, replaceFinance } from "@/lib/finance/store";
 
 export type Role = "none" | "needs_cover" | "covers" | "day_off";
@@ -31,8 +31,10 @@ export interface TypeRow {
   name: string;
   /** Whose type it is: an account's or a person's id in the family, or null (nobody). */
   member_id: string | null;
-  /** Derived, never stored: the member's color, a shade of it from their second type of the
-   *  year on (by position), a gray for nobody's. */
+  /** A nobody's type's own color (a palette key), or null (gray); always null for a member's. */
+  color_key?: string | null;
+  /** Derived, never stored: the member's color (a nobody's type: its `color_key`'s, else gray),
+   *  a shade of it from their second type of the year on (by position). */
   color: string;
   role: Role;
   /** The stored icon (an SF Symbol name), or null: the role's (`icons.ts` `typeIcon`). */
@@ -43,7 +45,7 @@ export interface TypeRow {
   away?: boolean;
 }
 
-/** A type to write: its color comes from the member, so a given one is ignored. */
+/** A type to write: its color comes from the member (or `color_key`), so a given one is ignored. */
 export type TypeInput = Omit<TypeRow, "color"> & { color?: string };
 
 export interface EntryRow {
@@ -107,8 +109,8 @@ export function familyRow(f: FamilyRecord): FamilyRow {
   };
 }
 
-/** The types with their colors: each member's (and nobody's) types of a year shaded in order
- *  of position, then id (the order of `rows`). */
+/** The types with their colors: each member's types of a year (and nobody's of each color)
+ *  shaded in order of position, then id (the order of `rows`). */
 function withColors(
   rows: (typeof calEntryTypes.$inferSelect)[],
   colors: Map<string, string>,
@@ -118,16 +120,18 @@ function withColors(
     // Someone no longer in the family (left without the cleanup) counts as nobody.
     const id = t.memberUserId ?? t.memberPersonId;
     const member_id = id && colors.has(id) ? id : null;
-    const key = `${t.year}|${member_id ?? ""}`;
+    const color_key = !member_id && isMemberColor(t.colorKey) ? t.colorKey : null;
+    const key = `${t.year}|${member_id ?? `color:${color_key ?? ""}`}`;
     const index = seen.get(key) ?? 0;
     seen.set(key, index + 1);
-    const base = member_id ? memberColorHex(colors.get(member_id)) : NEUTRAL_COLOR;
+    const base = member_id ? memberColorHex(colors.get(member_id)) : color_key ? memberColorHex(color_key) : NEUTRAL_COLOR;
     return {
       family_id: t.familyId,
       year: t.year,
       id: t.id,
       name: t.name,
       member_id,
+      color_key,
       color: typeShade(base, index),
       role: isRole(t.role) ? t.role : "none",
       icon: t.icon ?? null,
@@ -158,12 +162,13 @@ function memberColors(db: Pick<Db, "select">, familyId: string): Map<string, { c
 }
 
 /** The member columns of a type: an account's or a person's id of the family; anything else
- *  is nobody (the routes refuse it before). */
-function memberColumns(members: Map<string, { account: boolean }>, memberId: string | null) {
+ *  is nobody (the routes refuse it before). Its own color only stays on a nobody's type. */
+function memberColumns(members: Map<string, { account: boolean }>, memberId: string | null, colorKey?: string | null) {
   const m = memberId ? members.get(memberId) : undefined;
   return {
     memberUserId: m?.account ? memberId : null,
     memberPersonId: m && !m.account ? memberId : null,
+    colorKey: !m && isMemberColor(colorKey) ? colorKey : null,
   };
 }
 
@@ -210,7 +215,7 @@ export class DrizzleCalendarStore implements CalendarStore {
         if (!members.has(t.family_id)) members.set(t.family_id, memberColors(tx, t.family_id));
         const set = {
           name: t.name,
-          ...memberColumns(members.get(t.family_id)!, t.member_id),
+          ...memberColumns(members.get(t.family_id)!, t.member_id, t.color_key),
           role: t.role,
           icon: t.icon ?? null,
           position: t.position,
@@ -335,7 +340,7 @@ export class DrizzleCalendarStore implements CalendarStore {
               year: t.year,
               id: t.id,
               name: t.name,
-              ...memberColumns(members, t.member_id),
+              ...memberColumns(members, t.member_id, t.color_key),
               role: t.role,
               icon: t.icon ?? null,
               position: t.position,

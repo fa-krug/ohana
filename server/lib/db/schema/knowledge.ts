@@ -5,7 +5,7 @@ import { families, familyPeople, users } from "../schema";
 // A derived index of the family's paperwork folder (an iCloud Drive folder the app reads): the
 // server never holds a file, only its path, metadata, text by page, chunks and a card. Reading
 // the folder again rebuilds all of it. `kb_chunks_fts` (FTS5, external content over
-// `kb_chunks`, kept in step by triggers) is hand-written SQL in the migration 0020_knowledge.
+// `kb_chunks`, kept in step by triggers) is hand-written SQL in the migration 0025_knowledge.
 
 /** The family's knowledge folder (one per family for now): the id the app writes into the
  *  folder's marker file so a second device recognises it. `lastManifestAt` / `lastManifestDevice`:

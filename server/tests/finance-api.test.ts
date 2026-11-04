@@ -501,8 +501,8 @@ describe("finance accounts and transfers", () => {
     const { call, s, f, add } = await accountsFamily();
     const overview = (await call("GET", f)).data;
     expect(overview.accounts).toEqual([
-      { id: "checking", name: "Checking", color: "#3b82f6", icon: "", openingCents: 1000, position: 0, balanceCents: 1000 },
-      { id: "savings", name: "Savings", color: "#22c55e", icon: "", openingCents: 0, position: 1, balanceCents: 0 },
+      { id: "checking", name: "Checking", color: "#3b82f6", icon: "", openingCents: 1000, position: 0, balanceCents: 1000, bank: null },
+      { id: "savings", name: "Savings", color: "#22c55e", icon: "", openingCents: 0, position: 1, balanceCents: 0, bank: null },
     ]);
     await add(
       { date: "2026-03-01", amountCents: -300, accountId: "checking" },

@@ -51,7 +51,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   every `WORKER_TICK_SECONDS` (60) `lib/maintenance/cleanup.ts`, the nightly
   `lib/maintenance/backup.ts` and `lib/notifications/daily.ts`; the loop itself ticks every
   `ASSISTANT_TICK_MS` (1000) for the assistant's `ChatRunner`, the meals' `ImportRunner` and the
-  knowledge base's `KnowledgeRunner` and `KnowledgeCardRunner`; turned-off modules' runners don't run). `docker-entrypoint.sh setup-link <email>` prints a setup link. Long-running jobs
+  calendar's `HolidayRunner` and the knowledge base's `KnowledgeRunner` and `KnowledgeCardRunner`;
+  turned-off modules' runners don't run; the same tick runs finance's `BankSyncRunner`). `docker-entrypoint.sh setup-link <email>` prints a setup link. Long-running jobs
   (appointment searches, assistant turns, notifications) belong in the worker, never in a
   request.
 - **HTTP (`http/`):** `app.ts` `createApp({ db })` (tests: `app.request(…)`, see
@@ -141,10 +142,13 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   family+year+id), `cal_entries` (with the day's `year`, composite FK to its type: deleting a
   type cascades to its days; never `INSERT OR REPLACE` a type), `cal_notes`. A type belongs to
   a member (`member_user_id` / `member_person_id`, API `memberId`; POST without one: the
-  caller; removing the member clears it) and has no color of its own: `listTypes` derives
-  `color` from the member's (`typeShade`: their first type of the year by position the color
-  itself, each further one another shade; nobody's: gray); GET `/families/{id}` lists
-  `members` with their colors. Export files name a type's member (matched by name on import).
+  caller; removing the member clears it) and takes the member's color: `listTypes` derives
+  `color` from it (`typeShade`: their first type of the year by position the color itself, each
+  further one another shade); a nobody's type (e.g. the holiday types) may have a palette color
+  of its own (`color_key`, API `colorKey`, shaded per color the same way; none: gray; giving the
+  type to a member clears it; the type editor shows the palette for "Nobody"); GET
+  `/families/{id}` lists `members` with their colors. Export files name a type's member (matched
+  by name on import) and keep `colorKey`.
   Icons are SF Symbol names the app draws (`icons.ts`): a type's `icon` (null: its role's,
   `ROLE_ICONS`; the API always answers one) and a note's `icon` ("" or a symbol; an import's
   emoji moves into the comment).
@@ -152,6 +156,33 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   language. Export / import of the family file: `GET /export`, `POST /import` (checks in
   `lib/calendar/export-file.ts`; family-planner's Clone isn't ported); the overview shows
   `lib/calendar/summary.ts`.
+- **Holidays (`lib/calendar/holidays/`):** public and / or school holidays of the family's region
+  imported as day entries. `openholidays.ts` (OpenHolidays client, `HOLIDAYS_URL`, default
+  openholidaysapi.org, empty = off, `GET /api/v1/server` `holidays`; `parseHolidays` keeps only
+  FullDay `Public` / `School` ones; `appliesTo`: nationwide, or a subdivision S with region
+  `=== S` or starting with `S-`), `region.ts` (Photon reverse look-up of the home coordinates →
+  country + state matched by folded name against the subdivisions, then city / county /
+  district against their children, no match: the country, unknown country: unsupported;
+  `regionNames`), `settings.ts` (`holiday_settings`: kinds, `region`, `region_auto` /
+  `region_from`, `region_names`, `synced_region` / `import_from`, `requested_at`, `status`; the
+  DTO; `holidaysByDay` for GET `/families/{id}` `holidays`, from `holiday_cache` only),
+  `sync.ts` (worker: `HolidayRunner.tick` picks families with `requested_at` due in the fast
+  loop, one round at a time; `requestDailyHolidaySyncs` in the 60 s tick; `syncFamily`: Jan 1
+  this year – Dec 31 next, into the year's type `holiday` / `school-holidays` (made when missing:
+  last year's copied, else the preset; never changed), `holiday_days` records what it wrote (a
+  deleted day stays deleted, a day the source drops from today on goes; a day the user already
+  had in the type isn't recorded, so it stays theirs); `pruneHolidays`: a kind
+  off or another region removes recorded days from today on, a new region imports from today
+  (`import_from`); failures: status `failed`, retried after `RETRY_MS`; `holiday_cache` per
+  country / kind / year, refetched after 7 days, an old copy used when it fails), `routes.ts`
+  (`GET/PUT /holidays`, `GET /holidays/regions[?country=]`; PUT detects the region inline with a
+  5 s limit and prunes at once). The family file import clears `holiday_days` and asks for a
+  sync (`entriesReplaced`); `setHomeAddress` asks for one (`homeChanged`). Tests inject
+  `HolidaysEnv` (`source`, `reverse`); fixtures in `tests/fixtures/holidays/`. App:
+  `Features/Calendar/CalendarHolidaysSection.swift` (Settings → Calendar → Holidays: the two
+  toggles, the region picker sheet, reloads the calendar while `status` is `pending`; hidden in
+  the demo and without the server's `holidays`); the names show on days wherever birthdays do
+  (`CalendarStore.holidays`, `CalendarText.holiday`).
 - **Finance (`lib/finance/`):** family-planner's finances. `store.ts`
   is the finance part of its `Store` over Drizzle (`DrizzleFinanceStore`, snake_case rows,
   promise API; `replaceFinance` runs inside the calendar store's `replaceContents`, so an
@@ -174,6 +205,50 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   the app only (`apple/…/Finance/ReceiptScanner.swift`: VisionKit's document camera, Vision
   text recognition, `ReceiptParser`; optionally also a PDF, see Scanning); it saves a plain
   transaction, then sorts it with `…/ai/categorize` (`ids`).
+  **Bank sync** (`lib/finance/bank/`): an account can be linked to a bank (`fin_bank_links`,
+  PK family + account, composite FK to `fin_accounts` ON DELETE CASCADE: deleting / clearing /
+  importing a family file drops it; never exported): `provider`, `credentials` (sealed JSON, never
+  in a DTO or log), `iban` or `card` (a credit card's last 4 digits), `session` (sealed refresh
+  token, ~20 min: no new TAN), `synced_through`, `last_sync_at`, `synced_from` (the first sync's
+  first day: a floor), the lockout guards `unconfirmed_tans` / `login_refused`. Providers implement
+  `types.ts` `BankProvider` (`fetchStatement` with `SyncHooks`), registry `providers.ts`; the only
+  one is `comdirect.ts` (its REST API: password grant → session → validate asking for
+  P_TAN_PUSH → push polled / photoTAN or SMS TAN typed → PATCH → `cd_secondary` → v2 balances
+  (by IBAN, else the only Girokonto) → BOOKED transactions, 500 per page, `min-bookingDate`;
+  `mapTransaction` / `remittanceLines`: exact cents, payee by direction, 37-char remittance
+  windows, SEPA reference lines dropped; a card: `allbalances?productType=CARD`, each card's
+  suffix from `GET /api/banking/v1/cards/{cardId}` (`primaryAccountNumberSuffix`), then
+  `…/cards/{cardId}/transactions` (both undocumented; one request of ≤ 500, no paging: 422),
+  `mapCardTransaction`: day = `transaktionDate`, payee the merchant line, accountRef = cardId;
+  injected fetch, a timeout per request). Routes
+  `routes.ts` (from `handleFinance`): `PUT/DELETE /finance/accounts/{id}/bank` (blank secrets
+  keep the stored ones; saving resets the guards; `iban` or `card` (last 4 digits kept, 400 for
+  both / fewer digits; a changed one restarts the history)), `POST/GET/DELETE …/bank/sync`,
+  `POST …/bank/sync/tan`; the account DTO's `bank` ({provider, iban, card, lastSyncAt}, from
+  `listAccounts`' join); a linked account refuses `POST /finance/import` (409). Syncs are
+  `fin_bank_syncs` rows (`queue.ts`: waiting → running → tan → done | failed, `step`, `tan`
+  challenge, `tan_input` sealed until used, `result`; finished ones pruned after a day by
+  `cleanup`), run by the worker's `runner.ts` `BankSyncRunner` (CAS claim + run token + a lease
+  renewed every tick; cancelled / deleted rows abort it). **Lockout safety** (comdirect locks
+  after 5 unconfirmed TAN challenges or 3 wrong TANs): validate and the TAN PATCH are never
+  retried, a lost lease or a stopping worker marks the sync failed ("Interrupted"), never re-run;
+  each challenge is counted before it is asked for, a confirmed TAN resets it, no sync starts at
+  3 or after a refused login until the link is saved again. Which days: later syncs from
+  `synced_through` − 14 days but never before `synced_from`, the first of an account with
+  transactions from its latest day on, of an empty one 2 years back (saving another IBAN / card /
+  provider clears both; links synced before it existed got `synced_through` as their floor); on
+  days up to `synced_from` a bank row with the day and amount of one of the account's other
+  transactions (not a split's part) counts as that one, one to one, its own (same hash) first
+  (`sameDayMatches`: a CSV file's last day isn't doubled). Import through `importTransactions`
+  (shared with the CSV route, autoTransfers on); hashes
+  `"bank|<provider>|<bank account id / cardId>|<reference>"`, rows without a reference by
+  `importHashes`; a card's Visa-Kartenabrechnung pairs with the Girokonto's debit by
+  autoTransfers. Tests: the fake comdirect `lib/test/comdirect.ts` (accounts and cards). App:
+  `FinanceAccountEditor`'s Bank connection section (`FinanceBankProvider`: the providers and their
+  fields; one field "IBAN or card number"), `FinanceIntake` (pure: Import CSV, Sync of the shown
+  account, or a menu of both; the CSV sheet leaves linked accounts out), `FinanceBankSyncSheet`
+  (starts the sync, polls it every second: push / photoTAN / SMS TAN, then the CSV import's sort
+  into categories).
 - **Assistant (`lib/assistant/`):** family-planner's `ai/*`. Tables
   `ai_settings` (keys sealed with `getSecretBox()`), `chats` (status, lease `run_token` /
   `run_until`, `stop`, JSON `context` / `activity` / `notes` / `usage` / `queue`, `rev`),
@@ -295,7 +370,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
 - **Schema files:** `lib/db/schema.ts` holds accounts + families and re-exports one file per
   module from `lib/db/schema/` (`notifications.ts`, `appointments.ts`, `finance.ts`,
   `meals.ts`, `connections.ts`, `chores.ts`, `digest.ts`, `knowledge.ts`,
-  `assistant.ts`).
+  `assistant.ts`, `holidays.ts`).
 - **Chores (`lib/chores/`):** table `chores` (`lib/db/schema/chores.ts`): title, note, assigned to
   one account (`assignee_user_id`) or person (`assignee_person_id`) of the family or nobody, `day`
   (the due day / a series' first), `time` ("HH:MM" or null), `part` (morning | day | evening; a
@@ -327,7 +402,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `missing_since`, the worker's leases `run_token` / `run_until` / `attempts` and `card_run_token`
   / `card_run_until` / `card_attempts` / `card_retries`), `kb_chunks` (integer id = FTS rowid and the source ref `k:<id>`, `seq`, `page`,
   `text`) with `kb_chunks_fts` (FTS5, external content, `unicode61 remove_diacritics 2`, kept in
-  step by triggers: hand-written SQL at the end of `drizzle/0020_knowledge.sql`). `routes.ts`
+  step by triggers: hand-written SQL at the end of `drizzle/0025_knowledge.sql`). `routes.ts`
   `handleKnowledge`, **editors only: viewers get 404 on every path** (as an unknown one): `GET/POST
   /knowledge/folder` (created on first use; `{replace: true}`: a new id, the old folder's documents
   deleted; `last_manifest_at` / `_device`: the last non-empty manifest, the device name cut to 100),
@@ -543,7 +618,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `DesignSystem/` (solid content cards — Liquid Glass only on bars and floating controls —, error banner, `CancelButton`/`discardGuard`; the module sets `newItem`/`moduleMenu` focused values for File ▸ New and its menu), `Features/<Module>/` (plus `Account/`, `Admin/`).
   On iPhone a page's toolbar stays small (the main action, perhaps a filter, one More menu in
   sections, the ✨): what doesn't fit iOS moves into an overflow menu of its own, with the page's
-  More as a submenu; segmented pickers go under the navigation bar there (`safeAreaBar`, as in
+  More as a submenu, so a full page puts the ✨ into its More as the last section instead
+  (`AssistantMenuSection` + `.assistantInMenu()`, which hides the button; Finance); segmented pickers go under the navigation bar there (`safeAreaBar`, as in
   Meals and Finance), not in it (they can't shrink).
   Drag and drop (iPad, Mac) carries the payloads of `Core/Support/DragItems.swift` (own UTTypes,
   declared in `project.yml`, each naming its family): a recipe or a planned meal onto a day of the

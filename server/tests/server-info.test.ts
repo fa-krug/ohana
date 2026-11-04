@@ -33,6 +33,7 @@ describe("server info", () => {
       apiVersion: API_VERSION,
       modules: ["calendar", "finance", "appointments", "chores", "assistant", "knowledge"],
       push: { relay: "https://ohana-push.fa-krug.de" },
+      holidays: true,
     });
   });
 

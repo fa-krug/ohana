@@ -1,0 +1,377 @@
+[
+ {
+  "id": "a59f841b-5270-44c7-8db4-84475b3609f4",
+  "startDate": "2025-12-17",
+  "endDate": "2026-01-02",
+  "type": "School",
+  "name": [
+   {
+    "language": "DE",
+    "text": "Weihnachtsferien"
+   },
+   {
+    "language": "EN",
+    "text": "Christmas Holidays"
+   }
+  ],
+  "regionalScope": "Regional",
+  "temporalScope": "FullDay",
+  "nationwide": false,
+  "subdivisions": [
+   {
+    "code": "DE-HH",
+    "shortName": "HH"
+   }
+  ]
+ },
+ {
+  "id": "fae75443-4eb3-4720-9ba2-3dcca3553820",
+  "startDate": "2025-12-22",
+  "endDate": "2026-01-05",
+  "type": "School",
+  "name": [
+   {
+    "language": "DE",
+    "text": "Weihnachtsferien"
+   },
+   {
+    "language": "EN",
+    "text": "Christmas Holidays"
+   }
+  ],
+  "regionalScope": "Regional",
+  "temporalScope": "FullDay",
+  "nationwide": false,
+  "subdivisions": [
+   {
+    "code": "DE-BY",
+    "shortName": "BY"
+   }
+  ]
+ },
+ {
+  "id": "d727d016-6332-4deb-9b9f-22eeef93012c",
+  "startDate": "2026-01-30",
+  "endDate": "2026-01-30",
+  "type": "School",
+  "name": [
+   {
+    "language": "DE",
+    "text": "Halbjahrespause"
+   },
+   {
+    "language": "EN",
+    "text": "Mid-Year Break"
+   }
+  ],
+  "regionalScope": "Regional",
+  "temporalScope": "FullDay",
+  "nationwide": false,
+  "subdivisions": [
+   {
+    "code": "DE-HH",
+    "shortName": "HH"
+   }
+  ]
+ },
+ {
+  "id": "0cde7e09-1d34-43b3-95df-69cc27471f62",
+  "startDate": "2026-02-16",
+  "endDate": "2026-02-20",
+  "type": "School",
+  "name": [
+   {
+    "language": "DE",
+    "text": "Frühjahrsferien"
+   },
+   {
+    "language": "EN",
+    "text": "Spring Holidays"
+   }
+  ],
+  "regionalScope": "Regional",
+  "temporalScope": "FullDay",
+  "nationwide": false,
+  "subdivisions": [
+   {
+    "code": "DE-BY",
+    "shortName": "BY"
+   }
+  ]
+ },
+ {
+  "id": "ff13281f-c725-4e2d-8a9f-49a7b6c71929",
+  "startDate": "2026-03-02",
+  "endDate": "2026-03-13",
+  "type": "School",
+  "name": [
+   {
+    "language": "DE",
+    "text": "Frühjahrsferien"
+   },
+   {
+    "language": "EN",
+    "text": "Spring Holidays"
+   }
+  ],
+  "regionalScope": "Regional",
+  "temporalScope": "FullDay",
+  "nationwide": false,
+  "subdivisions": [
+   {
+    "code": "DE-HH",
+    "shortName": "HH"
+   }
+  ]
+ },
+ {
+  "id": "4000e69a-d391-412c-b0df-72dc3b72f12d",
+  "startDate": "2026-03-30",
+  "endDate": "2026-04-10",
+  "type": "School",
+  "name": [
+   {
+    "language": "DE",
+    "text": "Osterferien"
+   },
+   {
+    "language": "EN",
+    "text": "Easter Holidays"
+   }
+  ],
+  "regionalScope": "Regional",
+  "temporalScope": "FullDay",
+  "nationwide": false,
+  "subdivisions": [
+   {
+    "code": "DE-BY",
+    "shortName": "BY"
+   }
+  ]
+ },
+ {
+  "id": "c66cd8e1-3006-4faa-acfd-2ea530c4f509",
+  "startDate": "2026-05-11",
+  "endDate": "2026-05-15",
+  "type": "School",
+  "name": [
+   {
+    "language": "DE",
+    "text": "Pfingstferien"
+   },
+   {
+    "language": "EN",
+    "text": "Pentecost Holidays"
+   }
+  ],
+  "regionalScope": "Regional",
+  "temporalScope": "FullDay",
+  "nationwide": false,
+  "subdivisions": [
+   {
+    "code": "DE-HH",
+    "shortName": "HH"
+   }
+  ]
+ },
+ {
+  "id": "1e06a1e6-bf8a-414c-aa04-8da95b84fb02",
+  "startDate": "2026-05-26",
+  "endDate": "2026-06-05",
+  "type": "School",
+  "name": [
+   {
+    "language": "DE",
+    "text": "Pfingstferien"
+   },
+   {
+    "language": "EN",
+    "text": "Pentecost Holidays"
+   }
+  ],
+  "regionalScope": "Regional",
+  "temporalScope": "FullDay",
+  "nationwide": false,
+  "subdivisions": [
+   {
+    "code": "DE-BY",
+    "shortName": "BY"
+   }
+  ]
+ },
+ {
+  "id": "41e8dc5c-a277-4ede-8c5c-22d83b5a07fd",
+  "startDate": "2026-07-09",
+  "endDate": "2026-08-19",
+  "type": "School",
+  "name": [
+   {
+    "language": "DE",
+    "text": "Sommerferien"
+   },
+   {
+    "language": "EN",
+    "text": "Summer Holidays"
+   }
+  ],
+  "regionalScope": "Regional",
+  "temporalScope": "FullDay",
+  "nationwide": false,
+  "subdivisions": [
+   {
+    "code": "DE-HH",
+    "shortName": "HH"
+   }
+  ]
+ },
+ {
+  "id": "7451c518-92c2-4d26-9381-6d5745865a54",
+  "startDate": "2026-08-03",
+  "endDate": "2026-09-14",
+  "type": "School",
+  "name": [
+   {
+    "language": "DE",
+    "text": "Sommerferien"
+   },
+   {
+    "language": "EN",
+    "text": "Summer Holidays"
+   }
+  ],
+  "regionalScope": "Regional",
+  "temporalScope": "FullDay",
+  "nationwide": false,
+  "subdivisions": [
+   {
+    "code": "DE-BY",
+    "shortName": "BY"
+   }
+  ]
+ },
+ {
+  "id": "e5d6d426-f4bf-4141-8cf0-9ceb75e0b8ac",
+  "startDate": "2026-10-19",
+  "endDate": "2026-10-30",
+  "type": "School",
+  "name": [
+   {
+    "language": "DE",
+    "text": "Herbstferien"
+   },
+   {
+    "language": "EN",
+    "text": "Autumn Holidays"
+   }
+  ],
+  "regionalScope": "Regional",
+  "temporalScope": "FullDay",
+  "nationwide": false,
+  "subdivisions": [
+   {
+    "code": "DE-HH",
+    "shortName": "HH"
+   }
+  ]
+ },
+ {
+  "id": "b5045dcf-6618-41e7-b649-c3d6d135a611",
+  "startDate": "2026-11-02",
+  "endDate": "2026-11-06",
+  "type": "School",
+  "name": [
+   {
+    "language": "DE",
+    "text": "Herbstferien"
+   },
+   {
+    "language": "EN",
+    "text": "Autumn Holidays"
+   }
+  ],
+  "regionalScope": "Regional",
+  "temporalScope": "FullDay",
+  "nationwide": false,
+  "subdivisions": [
+   {
+    "code": "DE-BY",
+    "shortName": "BY"
+   }
+  ]
+ },
+ {
+  "id": "76149977-58f0-455c-b74a-89937a90c200",
+  "startDate": "2026-11-18",
+  "endDate": "2026-11-18",
+  "type": "School",
+  "name": [
+   {
+    "language": "DE",
+    "text": "Buß- und Bettag"
+   },
+   {
+    "language": "EN",
+    "text": "Repentance Day"
+   }
+  ],
+  "regionalScope": "Regional",
+  "temporalScope": "FullDay",
+  "nationwide": false,
+  "subdivisions": [
+   {
+    "code": "DE-BY",
+    "shortName": "BY"
+   }
+  ]
+ },
+ {
+  "id": "435fe17e-e781-4107-9ea8-9b6e7c99b5ab",
+  "startDate": "2026-12-21",
+  "endDate": "2027-01-01",
+  "type": "School",
+  "name": [
+   {
+    "language": "DE",
+    "text": "Weihnachtsferien"
+   },
+   {
+    "language": "EN",
+    "text": "Christmas Holidays"
+   }
+  ],
+  "regionalScope": "Regional",
+  "temporalScope": "FullDay",
+  "nationwide": false,
+  "subdivisions": [
+   {
+    "code": "DE-HH",
+    "shortName": "HH"
+   }
+  ]
+ },
+ {
+  "id": "c38a3f7c-04e7-4acf-ae55-1063a077bf9b",
+  "startDate": "2026-12-24",
+  "endDate": "2027-01-08",
+  "type": "School",
+  "name": [
+   {
+    "language": "DE",
+    "text": "Weihnachtsferien"
+   },
+   {
+    "language": "EN",
+    "text": "Christmas Holidays"
+   }
+  ],
+  "regionalScope": "Regional",
+  "temporalScope": "FullDay",
+  "nationwide": false,
+  "subdivisions": [
+   {
+    "code": "DE-BY",
+    "shortName": "BY"
+   }
+  ]
+ }
+]

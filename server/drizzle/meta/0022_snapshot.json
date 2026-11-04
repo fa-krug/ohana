@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "c996691e-e5dc-462c-964b-ed9977176e62",
-  "prevId": "3d3112b1-b0fc-4a5e-b11d-f4a72e9b97b3",
+  "id": "e80c837c-e50b-4456-90d5-bfab2ca86416",
+  "prevId": "827e10ee-bd02-4e89-a4c7-59c4ba3ffe1c",
   "tables": {
     "auth_tokens": {
       "name": "auth_tokens",
@@ -242,6 +242,13 @@
         },
         "member_person_id": {
           "name": "member_person_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "color_key": {
+          "name": "color_key",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -3328,6 +3335,282 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
+    "fin_bank_links": {
+      "name": "fin_bank_links",
+      "columns": {
+        "family_id": {
+          "name": "family_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "credentials": {
+          "name": "credentials",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "iban": {
+          "name": "iban",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "session": {
+          "name": "session",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "synced_through": {
+          "name": "synced_through",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "last_sync_at": {
+          "name": "last_sync_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "unconfirmed_tans": {
+          "name": "unconfirmed_tans",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "login_refused": {
+          "name": "login_refused",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "fin_bank_links_family_id_account_id_fin_accounts_family_id_id_fk": {
+          "name": "fin_bank_links_family_id_account_id_fin_accounts_family_id_id_fk",
+          "tableFrom": "fin_bank_links",
+          "tableTo": "fin_accounts",
+          "columnsFrom": [
+            "family_id",
+            "account_id"
+          ],
+          "columnsTo": [
+            "family_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "fin_bank_links_family_id_account_id_pk": {
+          "columns": [
+            "family_id",
+            "account_id"
+          ],
+          "name": "fin_bank_links_family_id_account_id_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "fin_bank_syncs": {
+      "name": "fin_bank_syncs",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "family_id": {
+          "name": "family_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'waiting'"
+        },
+        "step": {
+          "name": "step",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "tan": {
+          "name": "tan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "tan_input": {
+          "name": "tan_input",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "result": {
+          "name": "result",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "error": {
+          "name": "error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "run_token": {
+          "name": "run_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "locked_until": {
+          "name": "locked_until",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "fin_bank_syncs_status_idx": {
+          "name": "fin_bank_syncs_status_idx",
+          "columns": [
+            "status",
+            "locked_until"
+          ],
+          "isUnique": false
+        },
+        "fin_bank_syncs_account_idx": {
+          "name": "fin_bank_syncs_account_idx",
+          "columns": [
+            "family_id",
+            "account_id",
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "fin_bank_syncs_user_id_users_id_fk": {
+          "name": "fin_bank_syncs_user_id_users_id_fk",
+          "tableFrom": "fin_bank_syncs",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "fin_bank_syncs_family_id_account_id_fin_accounts_family_id_id_fk": {
+          "name": "fin_bank_syncs_family_id_account_id_fin_accounts_family_id_id_fk",
+          "tableFrom": "fin_bank_syncs",
+          "tableTo": "fin_accounts",
+          "columnsFrom": [
+            "family_id",
+            "account_id"
+          ],
+          "columnsTo": [
+            "family_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "fin_categories": {
       "name": "fin_categories",
       "columns": {
@@ -4970,23 +5253,63 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "kb_chunks": {
-      "name": "kb_chunks",
+    "holiday_cache": {
+      "name": "holiday_cache",
       "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "document_id": {
-          "name": "document_id",
+        "country": {
+          "name": "country",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "year": {
+          "name": "year",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "data": {
+          "name": "data",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "fetched_at": {
+          "name": "fetched_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "holiday_cache_country_kind_year_pk": {
+          "columns": [
+            "country",
+            "kind",
+            "year"
+          ],
+          "name": "holiday_cache_country_kind_year_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "holiday_days": {
+      "name": "holiday_days",
+      "columns": {
         "family_id": {
           "name": "family_id",
           "type": "text",
@@ -4994,55 +5317,26 @@
           "notNull": true,
           "autoincrement": false
         },
-        "seq": {
-          "name": "seq",
-          "type": "integer",
+        "kind": {
+          "name": "kind",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "page": {
-          "name": "page",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "text": {
-          "name": "text",
+        "day": {
+          "name": "day",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         }
       },
-      "indexes": {
-        "kb_chunks_document_idx": {
-          "name": "kb_chunks_document_idx",
-          "columns": [
-            "document_id",
-            "seq"
-          ],
-          "isUnique": false
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
-        "kb_chunks_document_id_kb_documents_id_fk": {
-          "name": "kb_chunks_document_id_kb_documents_id_fk",
-          "tableFrom": "kb_chunks",
-          "tableTo": "kb_documents",
-          "columnsFrom": [
-            "document_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "kb_chunks_family_id_families_id_fk": {
-          "name": "kb_chunks_family_id_families_id_fk",
-          "tableFrom": "kb_chunks",
+        "holiday_days_family_id_families_id_fk": {
+          "name": "holiday_days_family_id_families_id_fk",
+          "tableFrom": "holiday_days",
           "tableTo": "families",
           "columnsFrom": [
             "family_id"
@@ -5054,280 +5348,123 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {},
+      "compositePrimaryKeys": {
+        "holiday_days_family_id_kind_day_pk": {
+          "columns": [
+            "family_id",
+            "kind",
+            "day"
+          ],
+          "name": "holiday_days_family_id_kind_day_pk"
+        }
+      },
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "kb_documents": {
-      "name": "kb_documents",
+    "holiday_settings": {
+      "name": "holiday_settings",
       "columns": {
-        "id": {
-          "name": "id",
+        "family_id": {
+          "name": "family_id",
           "type": "text",
           "primaryKey": true,
           "notNull": true,
           "autoincrement": false
         },
-        "family_id": {
-          "name": "family_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "folder_id": {
-          "name": "folder_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "path": {
-          "name": "path",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "tags": {
-          "name": "tags",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'[]'"
-        },
-        "size": {
-          "name": "size",
+        "public_holidays": {
+          "name": "public_holidays",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": 0
+          "default": false
         },
-        "mtime": {
-          "name": "mtime",
+        "school_holidays": {
+          "name": "school_holidays",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": 0
+          "default": false
         },
-        "hash": {
-          "name": "hash",
+        "region": {
+          "name": "region",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
         },
-        "pages": {
-          "name": "pages",
+        "region_auto": {
+          "name": "region_auto",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": 0
+          "default": true
         },
-        "text": {
-          "name": "text",
+        "region_from": {
+          "name": "region_from",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'[]'"
+          "notNull": false,
+          "autoincrement": false
+        },
+        "region_names": {
+          "name": "region_names",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "synced_region": {
+          "name": "synced_region",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "import_from": {
+          "name": "import_from",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "requested_at": {
+          "name": "requested_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "synced_at": {
+          "name": "synced_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         },
         "status": {
           "name": "status",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'pending'"
-        },
-        "error": {
-          "name": "error",
-          "type": "text",
-          "primaryKey": false,
           "notNull": false,
-          "autoincrement": false
-        },
-        "summary": {
-          "name": "summary",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "facts": {
-          "name": "facts",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "doc_date": {
-          "name": "doc_date",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "person_user_id": {
-          "name": "person_user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "person_person_id": {
-          "name": "person_person_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "indexed_at": {
-          "name": "indexed_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "missing_since": {
-          "name": "missing_since",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "run_token": {
-          "name": "run_token",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "run_until": {
-          "name": "run_until",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "attempts": {
-          "name": "attempts",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "card_status": {
-          "name": "card_status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'pending'"
-        },
-        "card_run_token": {
-          "name": "card_run_token",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "card_run_until": {
-          "name": "card_run_until",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "card_attempts": {
-          "name": "card_attempts",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "card_retries": {
-          "name": "card_retries",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "card_error": {
-          "name": "card_error",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
           "autoincrement": false
         }
       },
       "indexes": {
-        "kb_documents_path_uniq": {
-          "name": "kb_documents_path_uniq",
+        "holiday_settings_requested_idx": {
+          "name": "holiday_settings_requested_idx",
           "columns": [
-            "folder_id",
-            "path"
-          ],
-          "isUnique": true
-        },
-        "kb_documents_status_idx": {
-          "name": "kb_documents_status_idx",
-          "columns": [
-            "family_id",
-            "status"
-          ],
-          "isUnique": false
-        },
-        "kb_documents_queue_idx": {
-          "name": "kb_documents_queue_idx",
-          "columns": [
-            "status",
-            "run_until"
-          ],
-          "isUnique": false
-        },
-        "kb_documents_card_queue_idx": {
-          "name": "kb_documents_card_queue_idx",
-          "columns": [
-            "card_status",
-            "status",
-            "card_run_until"
+            "requested_at"
           ],
           "isUnique": false
         }
       },
       "foreignKeys": {
-        "kb_documents_family_id_families_id_fk": {
-          "name": "kb_documents_family_id_families_id_fk",
-          "tableFrom": "kb_documents",
+        "holiday_settings_family_id_families_id_fk": {
+          "name": "holiday_settings_family_id_families_id_fk",
+          "tableFrom": "holiday_settings",
           "tableTo": "families",
           "columnsFrom": [
             "family_id"
@@ -5336,132 +5473,6 @@
             "id"
           ],
           "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "kb_documents_folder_id_kb_folders_id_fk": {
-          "name": "kb_documents_folder_id_kb_folders_id_fk",
-          "tableFrom": "kb_documents",
-          "tableTo": "kb_folders",
-          "columnsFrom": [
-            "folder_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "kb_documents_person_user_id_users_id_fk": {
-          "name": "kb_documents_person_user_id_users_id_fk",
-          "tableFrom": "kb_documents",
-          "tableTo": "users",
-          "columnsFrom": [
-            "person_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "kb_documents_person_person_id_family_people_id_fk": {
-          "name": "kb_documents_person_person_id_family_people_id_fk",
-          "tableFrom": "kb_documents",
-          "tableTo": "family_people",
-          "columnsFrom": [
-            "person_person_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "kb_folders": {
-      "name": "kb_folders",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "family_id": {
-          "name": "family_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "created_by_id": {
-          "name": "created_by_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "last_manifest_at": {
-          "name": "last_manifest_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "last_manifest_device": {
-          "name": "last_manifest_device",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "kb_folders_family_uniq": {
-          "name": "kb_folders_family_uniq",
-          "columns": [
-            "family_id"
-          ],
-          "isUnique": true
-        }
-      },
-      "foreignKeys": {
-        "kb_folders_family_id_families_id_fk": {
-          "name": "kb_folders_family_id_families_id_fk",
-          "tableFrom": "kb_folders",
-          "tableTo": "families",
-          "columnsFrom": [
-            "family_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "kb_folders_created_by_id_users_id_fk": {
-          "name": "kb_folders_created_by_id_users_id_fk",
-          "tableFrom": "kb_folders",
-          "tableTo": "users",
-          "columnsFrom": [
-            "created_by_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },

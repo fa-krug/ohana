@@ -548,7 +548,7 @@ on the Mac (`NSFilePresenter`), more formats (mail, spreadsheets), exclusion rul
 
 Notes (deviations and details):
 
-- **Step 1 built** (server): migration `0020_knowledge` (tables, FTS5 + triggers), the routes,
+- **Step 1 built** (server): migration `0025_knowledge` (all of phase 12: tables, FTS5 + triggers, `chats.knowledge_refs`), the routes,
   `KnowledgeRunner`, cleanup. Viewers get 404 on every knowledge path, the same answer as an
   unknown path (not 403).
 - **An empty manifest changes nothing.** A stale bookmark or a folder the device can't read
@@ -581,9 +581,8 @@ Notes (deviations and details):
   keep the picker); a scan without text isn't queued; a name iCloud holds as `.Name.icloud` counts as taken.
   A scan queued during a run joins that run's manifest and is sent after it; a flush under way
   goes on until the queue is empty; the scan's text is written only while the sign-out gate holds.
-- **Step 4 built** (server part: cards): migration `0022_knowledge_cards` (`card_status` pending |
-  ready | failed | none, the card's own lease, attempts and error; ready documents without chunks
-  backfilled to none), `card.ts` + the worker's `KnowledgeCardRunner` (`KNOWLEDGE_CARD_CONCURRENT`,
+- **Step 4 built** (server part: cards): the card columns (`card_status` pending |
+  ready | failed | none, the card's own lease, attempts and error), `card.ts` + the worker's `KnowledgeCardRunner` (`KNOWLEDGE_CARD_CONCURRENT`,
   default 1). The card is a runner of its own, not the tail of the chunking run: documents of
   families without AI wait (pending) and are made once it is set up, without touching the index.
   New chunks always empty the card (the facts point at chunk ids). A quote counts when it is in a
