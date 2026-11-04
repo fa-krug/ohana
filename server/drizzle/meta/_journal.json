@@ -183,6 +183,13 @@
       "when": 1793808885282,
       "tag": "0025_knowledge",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1793809939814,
+      "tag": "0026_bank_full_sync",
+      "breakpoints": true
     }
   ]
 }

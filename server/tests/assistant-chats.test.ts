@@ -183,9 +183,11 @@ describe("assistant chats", () => {
     expect(summary.content).toMatch(/^\[What happened earlier[\s\S]*Looked \d+ times/);
     expect(next.role).toBe("assistant");
     expect(net.aiBody.messages.at(-1)).toEqual({ role: "user", content: "how often?" });
-    // Everything after the summary is there, nothing went missing in between.
-    const from = marks.at(-1)!.message.from as number;
-    const after = stored.slice(from).filter((r) => r.message.role !== "summary");
+    // Everything after the latest summary (the new message may have condensed again) is there,
+    // nothing went missing in between.
+    const now = await t.store.listChatMessages(id);
+    const from = now.filter((r) => r.message.role === "summary").at(-1)!.message.from as number;
+    const after = now.slice(from, stored.length).filter((r) => r.message.role !== "summary");
     // The instructions, the summary, the messages after it, and the new one.
     expect(net.aiBody.messages).toHaveLength(2 + after.length + 1);
   });

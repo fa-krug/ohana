@@ -24,6 +24,7 @@ import {
   type FinanceSettingsRow,
   type FinanceStore as Store,
   type TransactionRow,
+  txSource,
 } from "./store";
 
 export const MAX_CATEGORIES = 250;
@@ -381,6 +382,7 @@ export function publicTransaction(t: TransactionRow, links?: Links) {
     split: parts ? { parts: parts.length, remainderCents: remainderOf(t, parts) } : null,
     note: t.note,
     imported: !!t.import_hash,
+    source: t.source,
   };
 }
 
@@ -571,6 +573,8 @@ export function parseFinanceImport(raw: unknown, familyId: string): FinanceConte
       category_id: category as string | null,
       note: text(t.note, "note", 500),
       import_hash: hash,
+      // Files from before it: an imported row is taken for a CSV file's.
+      source: txSource(t.source) ?? (hash ? "csv" : "manual"),
       account_id: account as string | null,
       transfer_id: cleanUuid(t.transferId),
       split_of: splitOf,
@@ -1330,6 +1334,13 @@ export async function findTransactions(store: Store, familyId: string, query: UR
     const ids = categoryTree(categories).subtree(resolveCategory(categories, category)!);
     rows = rows.filter((t) => t.category_id && ids.has(t.category_id));
   }
+  const source = query.get("source");
+  if (source) {
+    // One, or several separated by commas (manual,csv: what no bank sync brought).
+    const wanted = source.split(",").map((s) => s.trim());
+    if (wanted.some((s) => !txSource(s))) throw new HttpError(400, "source must be manual, csv or bank");
+    rows = rows.filter((t) => wanted.includes(t.source));
+  }
   const q = query.get("q")?.trim().toLowerCase();
   if (q) {
     rows = rows.filter((t) =>
@@ -1348,7 +1359,7 @@ export async function findTransactions(store: Store, familyId: string, query: UR
 }
 
 /** GET /finance/transactions?from&to&account=<id|none>&category=<id|none>&q
- *  &kind=income|expense|transfer&limit&offset */
+ *  &kind=income|expense|transfer&source=manual|csv|bank[,…]&limit&offset */
 async function listRoute({ finance: store, url, load }: Ctx): Promise<Response> {
   const { family } = await load("view");
   const { rows, links, incomeCents, expenseCents } = await findTransactions(
@@ -1414,6 +1425,8 @@ function parseTxOp(
         category_id: resolveCategory(categories, o.categoryId),
         note: text(o.note, "note", 500),
         import_hash: null,
+        // Undo puts a deleted row back as it was (restoreOp); anything else is typed.
+        source: txSource(o.source) ?? "manual",
         account_id: resolveAccount(accounts, o.accountId),
         transfer_id: cleanUuid(o.transferId),
         split_of: cleanUuid(o.splitOf, "splitOf"),
@@ -1465,6 +1478,7 @@ function restoreOp(t: TransactionRow) {
     transferId: t.transfer_id,
     splitOf: t.split_of,
     note: t.note,
+    source: t.source,
   };
 }
 
@@ -1537,7 +1551,9 @@ export async function applyTransactionOps(store: Store, familyId: string, rawOps
     if (op.action === "add") {
       const [before] = await store.getTransactions(familyId, [op.row.id]);
       await checkSplit(store, familyId, op.row);
-      await store.upsertTransactions([{ ...op.row, import_hash: before?.import_hash ?? null }]);
+      await store.upsertTransactions([
+        { ...op.row, import_hash: before?.import_hash ?? null, source: before?.source ?? op.row.source },
+      ]);
       inverse.unshift(before ? restoreOp(before) : { action: "delete", ids: [op.row.id] });
       added.push(op.row.id);
       changed++;
@@ -1677,6 +1693,7 @@ async function importRoute({ finance: store, req, load }: Ctx): Promise<Response
       category_id: resolveCategory(categories, o.categoryId),
       note: "",
       import_hash: null,
+      source: "csv",
       account_id: accountId,
       transfer_id: null,
       split_of: null,

@@ -54,7 +54,11 @@ export async function bankRoute(ctx: Ctx, ref: string): Promise<Response> {
       const user = ctx.requireUser();
       const { family } = await ctx.load("edit");
       const account = await accountOf(ctx, family.id, ref);
-      const { sync, created } = startSync(ctx.db, family.id, account.id, user.id, ctx.now);
+      // {full: true}: the bank's whole history (an empty body: a normal sync).
+      const raw = (await readBody(ctx.req)).full;
+      if (raw !== undefined && raw !== null && typeof raw !== "boolean") throw new HttpError(400, "full must be true or false");
+      const full = raw === true;
+      const { sync, created } = startSync(ctx.db, family.id, account.id, user.id, ctx.now, full);
       return json(syncDto(sync), created ? 202 : 200);
     }
     if (method === "DELETE") {

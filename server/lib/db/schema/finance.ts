@@ -81,6 +81,9 @@ export const finTransactions = sqliteTable(
     note: text("note").notNull().default(""),
     /** Set for imported rows, so the same statement isn't imported twice. */
     importHash: text("import_hash"),
+    /** Where it came from: manual (typed, scanned, the assistant), csv (a CSV file) or bank (a
+     *  bank sync; also a row a full sync adopted). */
+    source: text("source").notNull().default("manual"),
     accountId: text("account_id"),
     transferId: text("transfer_id"),
     splitOf: text("split_of"),
@@ -174,7 +177,10 @@ export const finBankSyncs = sqliteTable(
     tan: text("tan"),
     /** The TAN the user typed (sealed) until the worker sent it. */
     tanInput: text("tan_input"),
-    /** JSON {added, duplicates, transfers, splits, ids} once done. */
+    /** Imports the bank's whole history (POST …/bank/sync {full: true}): from as far back as the
+     *  bank allows, adopting the account's matching transactions (runner.ts). */
+    full: integer("full", { mode: "boolean" }).notNull().default(false),
+    /** JSON {added, duplicates, transfers, splits, ids[, adopted, unmatched]} once done. */
     result: text("result"),
     error: text("error"),
     runToken: text("run_token"),

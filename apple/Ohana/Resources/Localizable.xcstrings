@@ -2534,6 +2534,16 @@
         }
       }
     },
+    "Any origin": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jede Herkunft"
+          }
+        }
+      }
+    },
     "Appearance": {
       "localizations": {
         "de": {
@@ -6426,6 +6436,16 @@
         }
       }
     },
+    "Entered in Ohana": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Ohana eingegeben"
+          }
+        }
+      }
+    },
     "Entry types": {
       "localizations": {
         "de": {
@@ -7426,6 +7446,16 @@
         }
       }
     },
+    "From CSV files": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus CSV-Dateien"
+          }
+        }
+      }
+    },
     "From home address": {
       "localizations": {
         "de": {
@@ -8046,6 +8076,36 @@
         }
       }
     },
+    "Import All": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle importieren"
+          }
+        }
+      }
+    },
+    "Import All Transactions": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Buchungen importieren"
+          }
+        }
+      }
+    },
+    "Import All Transactions…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Buchungen importieren …"
+          }
+        }
+      }
+    },
     "Import CSV": {
       "localizations": {
         "de": {
@@ -8092,6 +8152,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Einen Kontoauszug importieren oder ein Konto abgleichen"
+          }
+        }
+      }
+    },
+    "Import all transactions?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Buchungen importieren?"
           }
         }
       }
@@ -8184,6 +8254,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Schon importiert"
+          }
+        }
+      }
+    },
+    "Imported from a CSV file": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus einer CSV-Datei importiert"
           }
         }
       }
@@ -11110,6 +11190,16 @@
         }
       }
     },
+    "Not from the bank": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht von der Bank"
+          }
+        }
+      }
+    },
     "Not run yet: results appear after the first run.": {
       "localizations": {
         "de": {
@@ -11608,6 +11698,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Für diese Region kennt Ohana keine Feiertage."
+          }
+        }
+      }
+    },
+    "Ohana loads every booking the bank still has. Transactions already here with the same day and amount are kept and linked to the bank instead of being added again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohana lädt alle Buchungen, die die Bank noch hat. Buchungen, die mit demselben Tag und Betrag schon hier sind, bleiben erhalten und werden mit der Bank verknüpft, statt noch einmal hinzugefügt zu werden."
           }
         }
       }
@@ -12178,6 +12278,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Organisiere deine Rezepte mit Tags."
+          }
+        }
+      }
+    },
+    "Origin": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Herkunft"
           }
         }
       }
@@ -16852,6 +16962,16 @@
         }
       }
     },
+    "Synced with the bank": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit der Bank synchronisiert"
+          }
+        }
+      }
+    },
     "Syncing with %@…": {
       "localizations": {
         "de": {
@@ -17998,6 +18118,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sie laufen über Ohanas Benachrichtigungsdienst, der sie nicht lesen kann: Das kann nur dieses Gerät. Was gesendet wird, legst du unter Haushalt → Benachrichtigungen fest."
+          }
+        }
+      }
+    },
+    "They were left as they are. They may be duplicates from a CSV import: filter the account’s list by “Not from the bank” to see them.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sie bleiben, wie sie sind. Vielleicht sind es Doppelte aus einem CSV-Import: Filtere die Liste des Kontos nach „Nicht von der Bank“, um sie zu sehen."
           }
         }
       }
@@ -20612,6 +20742,28 @@
         }
       }
     },
+    "^[%lld transaction](inflect: true) already there – kept and linked to the bank": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Buchung schon da – behalten und mit der Bank verknüpft"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Buchungen schon da – behalten und mit der Bank verknüpft"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "^[%lld transaction](inflect: true) deleted": {
       "localizations": {
         "de": {
@@ -20627,6 +20779,28 @@
                 "stringUnit": {
                   "state": "translated",
                   "value": "%lld Buchungen gelöscht"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "^[%lld transaction](inflect: true) the bank doesn’t list": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Buchung, die die Bank nicht aufführt"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Buchungen, die die Bank nicht aufführt"
                 }
               }
             }
