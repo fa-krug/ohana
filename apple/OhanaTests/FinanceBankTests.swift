@@ -21,7 +21,9 @@ struct FinanceBankTests {
          {"id":"giro","name":"Giro","color":"#3b82f6","icon":"","openingCents":0,"position":0,"balanceCents":100,
           "bank":{"provider":"comdirect","iban":"DE12500105170648489890","lastSyncAt":"2026-11-04T10:00:00.000Z"}},
          {"id":"other","name":"Other","color":"#3b82f6","icon":"","openingCents":0,"position":3,"balanceCents":0,
-          "bank":{"provider":"newbank","iban":null,"lastSyncAt":null}}]
+          "bank":{"provider":"newbank","iban":null,"lastSyncAt":null}},
+         {"id":"visa","name":"Visa","color":"#3b82f6","icon":"","openingCents":0,"position":4,"balanceCents":0,
+          "bank":{"provider":"comdirect","iban":null,"card":"0175","lastSyncAt":null}}]
         """)
         #expect(accounts[0].bank == nil)
         #expect(accounts[1].bank == nil)
@@ -32,6 +34,9 @@ struct FinanceBankTests {
         // A provider this app doesn't know shows as its id.
         #expect(accounts[3].bank?.providerName == "newbank")
         #expect(accounts[3].bank?.lastSync == nil)
+        // Older servers send no card.
+        #expect(link.card == nil)
+        #expect(accounts[4].bank?.card == "0175")
     }
 
     @Test func decodesASyncWaitingForAPhotoTan() throws {
@@ -90,10 +95,45 @@ struct FinanceBankTests {
         let provider = FinanceBankProvider.comdirect
         #expect(provider.fields.map(\.key) == ["clientId", "clientSecret", "username", "pin"])
         let body = provider.linkBody(credentials: ["clientId": " User_1 ", "clientSecret": "", "username": "1234567", "pin": "  "],
-                                     iban: "de12 5001 0517 0648 4898 90")
+                                     target: .iban("DE12500105170648489890"))
         #expect(body == .object(["provider": .string("comdirect"), "clientId": .string("User_1"),
-                                 "username": .string("1234567"), "iban": .string("DE12500105170648489890")]))
-        #expect(provider.linkBody(credentials: [:], iban: " ")["iban"] == .null)
+                                 "username": .string("1234567"), "iban": .string("DE12500105170648489890"),
+                                 "card": .null]))
+        // Both keys always go along, the one not used null (a missing one keeps the stored value).
+        #expect(provider.linkBody(credentials: [:], target: .card("0175"))
+            == .object(["provider": .string("comdirect"), "iban": .null, "card": .string("0175")]))
+        #expect(provider.linkBody(credentials: [:], target: .any)
+            == .object(["provider": .string("comdirect"), "iban": .null, "card": .null]))
+    }
+
+    @Test func readsAnIbanOrACardNumber() {
+        #expect(FinanceBankTarget(parsing: "") == .any)
+        #expect(FinanceBankTarget(parsing: "  ") == .any)
+        #expect(FinanceBankTarget(parsing: "de12 5001 0517 0648 4898 90") == .iban("DE12500105170648489890"))
+        #expect(FinanceBankTarget(parsing: "4871 7812 3456 0175") == .card("0175"))
+        #expect(FinanceBankTarget(parsing: "0175") == .card("0175"))
+        // Masked numbers, as the bank shows them.
+        #expect(FinanceBankTarget(parsing: "4871 78XX XXXX 0175") == .card("0175"))
+        #expect(FinanceBankTarget(parsing: "XXXX XXXX XXXX 0175") == .card("0175"))
+        #expect(FinanceBankTarget(parsing: "•••• 0175") == .card("0175"))
+        // Neither.
+        #expect(FinanceBankTarget(parsing: "175") == nil)
+        #expect(FinanceBankTarget(parsing: "Visa") == nil)
+    }
+
+    @Test func showsTheLinkedTargetSoItReadsBackUnchanged() {
+        func link(iban: String?, card: String?) -> FinanceBankLink {
+            FinanceBankLink(provider: "comdirect", iban: iban, card: card, lastSyncAt: nil)
+        }
+        let card = FinanceBankTarget(link(iban: nil, card: "0175"))
+        #expect(card == .card("0175"))
+        #expect(card.text == "•••• 0175")
+        #expect(FinanceBankTarget(parsing: card.text) == card)
+        let iban = FinanceBankTarget(link(iban: "DE12500105170648489890", card: nil))
+        #expect(iban.text == "DE12500105170648489890")
+        #expect(FinanceBankTarget(parsing: iban.text) == iban)
+        #expect(FinanceBankTarget(link(iban: nil, card: nil)) == .any)
+        #expect(FinanceBankTarget(nil).text == "")
     }
 
     @Test func aNewLinkNeedsEveryCredential() {

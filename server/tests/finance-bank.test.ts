@@ -18,11 +18,20 @@ import { handleCalendar } from "@/lib/calendar/vacation";
 import { addDays } from "@/lib/calendar/dates";
 import * as schema from "@/lib/db/schema";
 import { finBankLinks, finBankSyncs, finTransactions } from "@/lib/db/schema";
-import { centsOf, mapTransaction, remittanceLines } from "@/lib/finance/bank/comdirect";
+import { centsOf, mapCardTransaction, mapTransaction, remittanceLines } from "@/lib/finance/bank/comdirect";
 import { BankSyncRunner } from "@/lib/finance/bank/runner";
 import { pruneSyncs } from "@/lib/finance/bank/queue";
 import { handleFinance } from "@/lib/finance/finance";
-import { FAKE_PHOTO_TAN, type FakeComdirect, GIRO, SAVINGS, fakeComdirect, remittance } from "@/lib/test/comdirect";
+import {
+  FAKE_PHOTO_TAN,
+  type FakeComdirect,
+  GIRO,
+  SAVINGS,
+  VISA,
+  VISA_2,
+  fakeComdirect,
+  remittance,
+} from "@/lib/test/comdirect";
 import { createTestDb } from "@/lib/test/db";
 import { NOW, makeFamily, makeUser } from "@/lib/test/factories";
 
@@ -116,6 +125,70 @@ const savingsTransactions = () => [
   },
 ];
 
+/** A credit card's rows as comdirect's card endpoint lists them, newest first. */
+const cardTransactions = () => [
+  {
+    // The monthly bill, paid from the Girokonto.
+    reference: "188000000004",
+    bookingStatus: "BOOKED",
+    bookingDate: "2026-11-01",
+    transactionValueInEUR: { value: "61.98", unit: "EUR" },
+    transactionValue: { value: "61.98", unit: "EUR" },
+    transaktionDate: "2026-10-31",
+    newTransaction: true,
+    remittanceInfo: ["Visa-Kartenabrechnung"],
+    categoryDisplayName: "Visa-Kartenabrechnung",
+    transactionDirection: "IN",
+    exchangeRate: 1,
+  },
+  {
+    reference: "188000000003",
+    bookingStatus: "BOOKED",
+    bookingDate: "2026-10-28",
+    transactionValueInEUR: { value: "-11.52", unit: "EUR" },
+    transactionValue: { value: "-12.34", unit: "USD" },
+    transaktionDate: "2026-10-27",
+    remittanceInfo: ["UBER   *TRIP HELP.UBER.COM"],
+    categoryDisplayName: "Kartenumsatz",
+    transactionDirection: "OUT",
+    exchangeRate: 1.0712,
+  },
+  {
+    reference: "188000000002",
+    bookingStatus: "BOOKED",
+    bookingDate: "2026-10-20",
+    transactionValueInEUR: { value: "-4.99", unit: "EUR" },
+    transactionValue: { value: "-4.99", unit: "EUR" },
+    transaktionDate: "2026-10-19",
+    remittanceInfo: ["PAYPAL LEBARA LEBARA GER"],
+    categoryDisplayName: "Kartenumsatz",
+    transactionDirection: "OUT",
+    exchangeRate: 1,
+  },
+  {
+    reference: "188000000001",
+    bookingStatus: "BOOKED",
+    bookingDate: "2026-10-12",
+    transactionValueInEUR: { value: "15.00", unit: "EUR" },
+    transactionValue: { value: "15.00", unit: "EUR" },
+    transaktionDate: "2026-10-11",
+    remittanceInfo: ["AMAZON EU S.A R.L."],
+    categoryDisplayName: "Gutschrift",
+    transactionDirection: "IN",
+    exchangeRate: 1,
+  },
+  // Not booked yet: skipped.
+  {
+    reference: "188000000005",
+    bookingStatus: "NOTBOOKED",
+    bookingDate: "2026-11-01",
+    transactionValueInEUR: { value: "-9.99", unit: "EUR" },
+    transaktionDate: "2026-11-01",
+    remittanceInfo: ["NETFLIX.COM"],
+    transactionDirection: "OUT",
+  },
+];
+
 let runners: BankSyncRunner[] = [];
 afterEach(async () => {
   await Promise.all(runners.map((r) => r.stop(2000)));
@@ -126,6 +199,8 @@ function setup(options: Parameters<typeof fakeComdirect>[0] = {}) {
   const db = createTestDb();
   const bank: FakeComdirect = fakeComdirect({
     transactions: { [GIRO.accountId]: giroTransactions(), [SAVINGS.accountId]: savingsTransactions() },
+    cards: [VISA_2, VISA],
+    cardTransactions: { [VISA.cardId]: cardTransactions() },
     ...options,
   });
   const runner = new BankSyncRunner(db, {
@@ -216,7 +291,7 @@ describe("linking an account to its bank", () => {
       openingCents: 0,
       position: 0,
       balanceCents: 0,
-      bank: { provider: "comdirect", iban: "DE89370400440532013000", lastSyncAt: null },
+      bank: { provider: "comdirect", iban: "DE89370400440532013000", card: null, lastSyncAt: null },
     });
     // Sealed in the database, never in an answer.
     const stored = link()!;
@@ -225,7 +300,7 @@ describe("linking an account to its bank", () => {
       expect(stored.credentials).not.toContain(secret);
     }
     const overview = await view("GET", f);
-    expect(overview.data.accounts[0].bank).toEqual({ provider: "comdirect", iban: "DE89370400440532013000", lastSyncAt: null });
+    expect(overview.data.accounts[0].bank).toEqual({ provider: "comdirect", iban: "DE89370400440532013000", card: null, lastSyncAt: null });
     expect((await call("GET", `${f}/accounts`)).data.accounts[0].bank.provider).toBe("comdirect");
     const everything = JSON.stringify([overview.data, (await call("GET", `/families/${link()!.familyId}/export`)).data]);
     for (const secret of Object.values(CREDENTIALS)) expect(everything).not.toContain(secret);
@@ -649,6 +724,120 @@ describe("syncing with comdirect", () => {
   });
 });
 
+describe("a credit card", () => {
+  /** With an account "Visa" linked to the comdirect card ending in `card`. */
+  async function cardLinked(card = "4871 78XX XXXX 0175", options: Parameters<typeof fakeComdirect>[0] = {}) {
+    const t = await linked(options);
+    expect((await t.call("POST", `${t.f}/accounts`, { name: "Visa", color: "#ef4444" })).status).toBe(201);
+    const res = await t.call("PUT", `${t.f}/accounts/visa/bank`, { provider: "comdirect", ...CREDENTIALS, card });
+    expect(res.status, JSON.stringify(res.data)).toBe(200);
+    return t;
+  }
+
+  it("links by the card number's last 4 digits, instead of an IBAN", async () => {
+    const { call, f, db } = setup();
+    await call("POST", `${f}/accounts`, { name: "Visa", color: "#ef4444" });
+    const put = (body: Record<string, unknown>) => call("PUT", `${f}/accounts/visa/bank`, { provider: "comdirect", ...body });
+    const linkOf = () => db.select().from(finBankLinks).where(eq(finBankLinks.accountId, "visa")).get()!;
+
+    const both = await put({ ...CREDENTIALS, iban: GIRO.iban, card: "0175" });
+    expect(both).toEqual({ status: 400, data: { error: "Give either an IBAN or a card number" } });
+    for (const card of ["12", "XXXX", "0 17 X"]) {
+      const short = await put({ ...CREDENTIALS, card });
+      expect(short).toEqual({ status: 400, data: { error: "card needs the card number's last 4 digits" } });
+    }
+    expect((await put({ ...CREDENTIALS, card: 175 })).status).toBe(400);
+
+    const res = await put({ ...CREDENTIALS, card: "4871 78XX XXXX 0175" });
+    expect(res.status).toBe(200);
+    expect(res.data.bank).toEqual({ provider: "comdirect", iban: null, card: "0175", lastSyncAt: null });
+    expect(linkOf().card).toBe("0175");
+    expect((await call("GET", f)).data.accounts[0].bank.card).toBe("0175");
+
+    // Saving without a card keeps it.
+    db.update(finBankLinks).set({ syncedThrough: "2026-10-01" }).run();
+    expect((await put({ pin: "" })).data.bank).toMatchObject({ iban: null, card: "0175" });
+    expect(linkOf().syncedThrough).toBe("2026-10-01");
+    // Another card starts afresh.
+    expect((await put({ card: "0183" })).data.bank).toMatchObject({ iban: null, card: "0183" });
+    expect(linkOf().syncedThrough).toBeNull();
+    // An IBAN replaces the card, and a card the IBAN (empty ones are none).
+    db.update(finBankLinks).set({ syncedThrough: "2026-10-01" }).run();
+    expect((await put({ iban: GIRO.iban })).data.bank).toMatchObject({ iban: GIRO.iban, card: null });
+    expect(linkOf().syncedThrough).toBeNull();
+    expect((await put({ card: "0175" })).data.bank).toMatchObject({ iban: null, card: "0175" });
+    expect((await put({ iban: "", card: "0183" })).data.bank).toMatchObject({ iban: null, card: "0183" });
+    expect((await put({ iban: GIRO.iban, card: "" })).data.bank).toMatchObject({ iban: GIRO.iban, card: null });
+    expect((await put({ iban: GIRO.iban, card: null })).data.bank).toMatchObject({ iban: GIRO.iban, card: null });
+  });
+
+  it("syncs the card's booked rows, by the day of the purchase, and nothing twice", async () => {
+    const { db, bank, sync, transactions } = await cardLinked();
+    const done = await sync("visa");
+    expect(done.status, JSON.stringify(done)).toBe("done");
+    expect(done.result).toMatchObject({ added: 4, duplicates: 0 });
+    expect(bank.state.problems).toEqual([]);
+    expect(bank.state.calls.filter((c) => c.includes("/cards") || c.includes("allbalances"))).toEqual([
+      "GET /api/reports/participants/user/v1/allbalances",
+      "GET /api/banking/v1/cards/CARD-2",
+      "GET /api/banking/v1/cards/CARD-1",
+      "GET /api/banking/v1/cards/CARD-1/transactions",
+    ]);
+    expect(bank.state.calls.some((c) => c.includes("/accounts"))).toBe(false);
+    expect(transactions().map((t) => [t.day, t.amountCents, t.payee, t.description, t.accountId])).toEqual([
+      ["2026-10-31", 6198, "Visa-Kartenabrechnung", "", "visa"],
+      ["2026-10-27", -1152, "UBER *TRIP HELP.UBER.COM", "12.34 USD", "visa"],
+      ["2026-10-19", -499, "PAYPAL LEBARA LEBARA GER", "", "visa"],
+      ["2026-10-11", 1500, "AMAZON EU S.A R.L.", "Gutschrift", "visa"],
+    ]);
+    const visaLink = db.select().from(finBankLinks).where(eq(finBankLinks.accountId, "visa")).get()!;
+    expect(visaLink.syncedThrough).toBe("2026-10-31");
+    const visa = () => transactions().filter((t) => t.accountId === "visa");
+    expect(visa()).toHaveLength(4);
+
+    const again = await sync("visa");
+    expect(again.result).toEqual({ added: 0, duplicates: 3, transfers: 0, splits: 0, ids: [] });
+    // 14 days before the last purchase, filtered by the booking day.
+    expect(bank.state.minBookingDates[1]).toBe("2026-10-17");
+    expect(visa()).toHaveLength(4);
+    expect(bank.state.problems).toEqual([]);
+  });
+
+  it("says which cards there are when none ends in the digits given", async () => {
+    const { sync, transactions } = await cardLinked("1234");
+    const failed = await sync("visa");
+    expect(failed.status).toBe("failed");
+    expect(failed.error).toBe(
+      "comdirect has no card ending in 1234. Its cards: …0183 (Erika Mustermann), …0175 (Max Mustermann)",
+    );
+    expect(transactions()).toHaveLength(0);
+
+    const none = await cardLinked("0175", { cards: [] });
+    expect((await none.sync("visa")).error).toBe("comdirect has no card ending in 0175");
+  });
+
+  it("pairs the card's bill with the Girokonto's payment as a transfer", async () => {
+    const giro = giroTransactions();
+    giro.unshift({
+      reference: "5012345678901234/9",
+      bookingStatus: "BOOKED",
+      bookingDate: "2026-11-01",
+      amount: { value: "-61.98", unit: "EUR" },
+      remitter: { holderName: "comdirect Visa" },
+      remittanceInfo: remittance("Visa-Kartenabrechnung"),
+      transactionType: { key: "DIRECT_DEBIT", text: "Direct Debit" },
+    });
+    const { sync, transactions } = await cardLinked("0175", { transactions: { [GIRO.accountId]: giro } });
+    expect((await sync("giro")).result).toMatchObject({ added: 6, transfers: 0 });
+    const done = await sync("visa");
+    expect(done.result).toMatchObject({ added: 4, transfers: 1 });
+    const bill = transactions().find((t) => t.accountId === "visa" && t.amountCents === 6198)!;
+    const paid = transactions().find((t) => t.accountId === "giro" && t.amountCents === -6198)!;
+    expect(bill.transferId).toBeTruthy();
+    expect(paid.transferId).toBe(bill.transferId);
+  });
+});
+
 describe("comdirect's rows", () => {
   it("reads amounts exactly", () => {
     expect(centsOf("-12.34")).toBe(-1234);
@@ -683,6 +872,68 @@ describe("comdirect's rows", () => {
     expect(mapTransaction({ ...base, amount: { value: "-1.00" }, debtor: { holderName: "Someone" } })!.payee).toBe("Someone");
     expect(mapTransaction({ ...base, bookingStatus: "NOTBOOKED", amount: { value: "-1.00" } })).toBeNull();
     const long = mapTransaction({ ...base, amount: { value: "-1.00" }, creditor: { holderName: "x".repeat(300) }, remittanceInfo: "y".repeat(800) })!;
+    expect([long.payee.length, long.description.length]).toEqual([200, 500]);
+  });
+});
+
+describe("comdirect's card rows", () => {
+  const base = {
+    reference: "r",
+    bookingStatus: "BOOKED",
+    bookingDate: "2026-11-01",
+    transaktionDate: "2026-10-31",
+    transactionValueInEUR: { value: "-4.99", unit: "EUR" },
+    transactionValue: { value: "-4.99", unit: "EUR" },
+    remittanceInfo: ["PAYPAL  LEBARA", " LEBARA GER "],
+    categoryDisplayName: "Kartenumsatz",
+    transactionDirection: "OUT",
+  };
+
+  it("maps a purchase", () => {
+    expect(mapCardTransaction(base)).toEqual({
+      day: "2026-10-31",
+      amountCents: -499,
+      payee: "PAYPAL LEBARA",
+      description: "LEBARA GER",
+      reference: "r",
+    });
+  });
+
+  it("takes the booking day without a purchase day, and skips rows without a day or amount", () => {
+    expect(mapCardTransaction({ ...base, transaktionDate: "2026-10-32" })!.day).toBe("2026-11-01");
+    expect(mapCardTransaction({ ...base, transaktionDate: undefined })!.day).toBe("2026-11-01");
+    expect(mapCardTransaction({ ...base, transaktionDate: null, bookingDate: null })).toBeNull();
+    expect(mapCardTransaction({ ...base, transactionValueInEUR: null, transactionValue: null })).toBeNull();
+    expect(mapCardTransaction({ ...base, bookingStatus: "NOTBOOKED" })).toBeNull();
+    expect(mapCardTransaction(null)).toBeNull();
+  });
+
+  it("signs the amount by its direction, in euros", () => {
+    expect(mapCardTransaction({ ...base, transactionValueInEUR: { value: "4.99" } })!.amountCents).toBe(-499);
+    expect(mapCardTransaction({ ...base, transactionDirection: "IN", transactionValueInEUR: { value: "-4.99" } })!.amountCents).toBe(499);
+    expect(mapCardTransaction({ ...base, transactionDirection: undefined, transactionValueInEUR: { value: "-4.99" } })!.amountCents).toBe(-499);
+    expect(mapCardTransaction({ ...base, transactionValueInEUR: undefined, transactionValue: { value: "-7.50", unit: "EUR" } })!.amountCents).toBe(-750);
+    const foreign = mapCardTransaction({
+      ...base,
+      remittanceInfo: ["UBER *TRIP"],
+      transactionValueInEUR: { value: "-11.52", unit: "EUR" },
+      transactionValue: { value: "-12.34", unit: "USD" },
+    })!;
+    expect([foreign.amountCents, foreign.payee, foreign.description]).toEqual([-1152, "UBER *TRIP", "12.34 USD"]);
+    const both = mapCardTransaction({ ...base, transactionValue: { value: "-12.34", unit: "usd" } })!;
+    expect(both.description).toBe("LEBARA GER 12.34 USD");
+  });
+
+  it("names the bill and refunds by their category, never twice", () => {
+    const bill = { ...base, remittanceInfo: ["Visa-Kartenabrechnung"], categoryDisplayName: "Visa-Kartenabrechnung", transactionDirection: "IN" };
+    expect(mapCardTransaction(bill)).toMatchObject({ payee: "Visa-Kartenabrechnung", description: "", amountCents: 499 });
+    expect(mapCardTransaction({ ...bill, remittanceInfo: [] })).toMatchObject({ payee: "Visa-Kartenabrechnung", description: "" });
+    expect(mapCardTransaction({ ...base, remittanceInfo: ["AMAZON EU"], categoryDisplayName: "Gutschrift" })).toMatchObject({
+      payee: "AMAZON EU",
+      description: "Gutschrift",
+    });
+    expect(mapCardTransaction({ ...base, remittanceInfo: ["SHOP"] })!.description).toBe("");
+    const long = mapCardTransaction({ ...base, remittanceInfo: ["x".repeat(300), "y".repeat(800)] })!;
     expect([long.payee.length, long.description.length]).toEqual([200, 500]);
   });
 });

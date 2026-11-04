@@ -208,17 +208,23 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   **Bank sync** (`lib/finance/bank/`): an account can be linked to a bank (`fin_bank_links`,
   PK family + account, composite FK to `fin_accounts` ON DELETE CASCADE: deleting / clearing /
   importing a family file drops it; never exported): `provider`, `credentials` (sealed JSON, never
-  in a DTO or log), `iban`, `session` (sealed refresh token, ~20 min: no new TAN), `synced_through`,
-  `last_sync_at`, `synced_from` (the first sync's first day: a floor), the lockout guards `unconfirmed_tans` / `login_refused`. Providers implement
+  in a DTO or log), `iban` or `card` (a credit card's last 4 digits), `session` (sealed refresh
+  token, ~20 min: no new TAN), `synced_through`, `last_sync_at`, `synced_from` (the first sync's
+  first day: a floor), the lockout guards `unconfirmed_tans` / `login_refused`. Providers implement
   `types.ts` `BankProvider` (`fetchStatement` with `SyncHooks`), registry `providers.ts`; the only
   one is `comdirect.ts` (its REST API: password grant → session → validate asking for
   P_TAN_PUSH → push polled / photoTAN or SMS TAN typed → PATCH → `cd_secondary` → v2 balances
   (by IBAN, else the only Girokonto) → BOOKED transactions, 500 per page, `min-bookingDate`;
   `mapTransaction` / `remittanceLines`: exact cents, payee by direction, 37-char remittance
-  windows, SEPA reference lines dropped; injected fetch, a timeout per request). Routes
+  windows, SEPA reference lines dropped; a card: `allbalances?productType=CARD`, each card's
+  suffix from `GET /api/banking/v1/cards/{cardId}` (`primaryAccountNumberSuffix`), then
+  `…/cards/{cardId}/transactions` (both undocumented; one request of ≤ 500, no paging: 422),
+  `mapCardTransaction`: day = `transaktionDate`, payee the merchant line, accountRef = cardId;
+  injected fetch, a timeout per request). Routes
   `routes.ts` (from `handleFinance`): `PUT/DELETE /finance/accounts/{id}/bank` (blank secrets
-  keep the stored ones; saving resets the guards), `POST/GET/DELETE …/bank/sync`, `POST
-  …/bank/sync/tan`; the account DTO's `bank` ({provider, iban, lastSyncAt}, from
+  keep the stored ones; saving resets the guards; `iban` or `card` (last 4 digits kept, 400 for
+  both / fewer digits; a changed one restarts the history)), `POST/GET/DELETE …/bank/sync`,
+  `POST …/bank/sync/tan`; the account DTO's `bank` ({provider, iban, card, lastSyncAt}, from
   `listAccounts`' join); a linked account refuses `POST /finance/import` (409). Syncs are
   `fin_bank_syncs` rows (`queue.ts`: waiting → running → tan → done | failed, `step`, `tan`
   challenge, `tan_input` sealed until used, `result`; finished ones pruned after a day by
@@ -229,16 +235,20 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   each challenge is counted before it is asked for, a confirmed TAN resets it, no sync starts at
   3 or after a refused login until the link is saved again. Which days: later syncs from
   `synced_through` − 14 days but never before `synced_from`, the first of an account with
-  transactions from its latest day on, of an empty one 2 years back (saving another IBAN /
-  provider clears both; links synced before it existed got `synced_through` as their floor); on days up to `synced_from` a bank row with the day and amount of one of
-  the account's other transactions (not a split's part) counts as that one, one to one, its own
-  (same hash) first (`sameDayMatches`: a CSV file's last day isn't doubled). Import through `importTransactions` (shared with the CSV route,
-  autoTransfers on); hashes `"bank|<provider>|<bank account id>|<reference>"`, rows without a
-  reference by `importHashes`. Tests: the fake comdirect `lib/test/comdirect.ts`. App:
+  transactions from its latest day on, of an empty one 2 years back (saving another IBAN / card /
+  provider clears both; links synced before it existed got `synced_through` as their floor); on
+  days up to `synced_from` a bank row with the day and amount of one of the account's other
+  transactions (not a split's part) counts as that one, one to one, its own (same hash) first
+  (`sameDayMatches`: a CSV file's last day isn't doubled). Import through `importTransactions`
+  (shared with the CSV route, autoTransfers on); hashes
+  `"bank|<provider>|<bank account id / cardId>|<reference>"`, rows without a reference by
+  `importHashes`; a card's Visa-Kartenabrechnung pairs with the Girokonto's debit by
+  autoTransfers. Tests: the fake comdirect `lib/test/comdirect.ts` (accounts and cards). App:
   `FinanceAccountEditor`'s Bank connection section (`FinanceBankProvider`: the providers and their
-  fields), `FinanceIntake` (pure: Import CSV, Sync of the shown account, or a menu of both; the CSV
-  sheet leaves linked accounts out), `FinanceBankSyncSheet` (starts the sync, polls it every second:
-  push / photoTAN / SMS TAN, then the CSV import's sort into categories).
+  fields; one field "IBAN or card number"), `FinanceIntake` (pure: Import CSV, Sync of the shown
+  account, or a menu of both; the CSV sheet leaves linked accounts out), `FinanceBankSyncSheet`
+  (starts the sync, polls it every second: push / photoTAN / SMS TAN, then the CSV import's sort
+  into categories).
 - **Assistant (`lib/assistant/`):** family-planner's `ai/*`. Tables
   `ai_settings` (keys sealed with `getSecretBox()`), `chats` (status, lease `run_token` /
   `run_until`, `stop`, JSON `context` / `activity` / `notes` / `usage` / `queue`, `rev`),

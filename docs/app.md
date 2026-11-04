@@ -119,6 +119,14 @@ comdirect, add the **IBAN** of the one this account stands for; without one, Oha
 only Girokonto. The server keeps these details encrypted and never sends them back to the app:
 to change them, enter the new ones, empty fields keep what's stored.
 
+A comdirect **Visa credit card** can be an account of its own: link it the same way, with the
+same login, and type its **card number** in the field *IBAN or card number*. The last four digits
+are enough, and a masked number as on your statement (`4871 78XX XXXX 0175`) works too; Ohana
+keeps only those four digits. Its transactions are dated by the day of the purchase, with the shop
+as payee. If the Girokonto is linked as well, the monthly card bill (*Visa-Kartenabrechnung*)
+pairs up as a transfer between the two. A **debit card** (Visa-Debitkarte) needs nothing of its
+own: its payments are on the Girokonto already.
+
 **3. Sync.** Tap *Sync* on the account. Your server logs in at comdirect, which asks for a TAN:
 approve the login in the comdirect app, or scan the photoTAN graphic the app shows and type the
 TAN (an SMS TAN the same way). The server then fetches the **booked** transactions and adds the

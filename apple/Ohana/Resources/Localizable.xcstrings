@@ -6173,6 +6173,16 @@
         }
       }
     },
+    "Enter an IBAN, or a card number or its last 4 digits.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib eine IBAN ein, oder eine Kartennummer bzw. ihre letzten 4 Ziffern."
+          }
+        }
+      }
+    },
     "Enter an amount, e.g. %@": {
       "localizations": {
         "de": {
@@ -7683,12 +7693,12 @@
         }
       }
     },
-    "IBAN (optional)": {
+    "IBAN or card number (optional)": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "IBAN (optional)"
+            "value": "IBAN oder Kartennummer (optional)"
           }
         }
       }

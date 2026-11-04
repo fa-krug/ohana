@@ -53,8 +53,10 @@ struct FinanceAccount: Codable, Hashable, Identifiable {
 /// An account's bank connection (publicAccount `bank`); the credentials stay on the server.
 struct FinanceBankLink: Codable, Hashable {
     var provider: String
-    /// Which account at the bank; nil: the only one there.
+    /// Which account at the bank (or `card`); nil: the only one there.
     var iban: String?
+    /// A credit card instead: the last 4 digits of its number (absent from older servers).
+    var card: String? = nil
     var lastSyncAt: String?
 
     /// The provider's name, else its id (one this app doesn't know yet).
@@ -104,9 +106,14 @@ enum FinanceBankProvider: String, CaseIterable, Hashable, Identifiable {
     }
 
     /// The body of PUT /finance/accounts/{id}/bank: blank credentials left out (an existing
-    /// link keeps them), the IBAN without spaces (nil when blank).
-    func linkBody(credentials: [String: String], iban: String) -> JSONValue {
-        var body: [String: JSONValue] = ["provider": .string(rawValue), "iban": FinanceJSON.string(Self.iban(iban))]
+    /// link keeps them), `iban` and `card` always both there, the one not used null.
+    func linkBody(credentials: [String: String], target: FinanceBankTarget) -> JSONValue {
+        var body: [String: JSONValue] = ["provider": .string(rawValue), "iban": .null, "card": .null]
+        switch target {
+        case .any: break
+        case .iban(let iban): body["iban"] = .string(iban)
+        case .card(let digits): body["card"] = .string(digits)
+        }
         for field in fields {
             let value = (credentials[field.key] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
             if !value.isEmpty { body[field.key] = .string(value) }
@@ -119,11 +126,53 @@ enum FinanceBankProvider: String, CaseIterable, Hashable, Identifiable {
         if link?.provider == rawValue { return true }
         return fields.allSatisfy { !(credentials[$0.key] ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     }
+}
 
-    /// "DE12 3456 …" as the bank knows it: no spaces, capitals; nil when blank.
-    static func iban(_ text: String) -> String? {
-        let iban = text.filter { !$0.isWhitespace }.uppercased()
-        return iban.isEmpty ? nil : iban
+/// Which account at the bank a link syncs, from the editor's one text field: an IBAN, or a
+/// credit card by the last 4 digits of its number.
+enum FinanceBankTarget: Hashable {
+    /// Blank: the only account there.
+    case any
+    /// No spaces, capitals.
+    case iban(String)
+    /// The card number's last 4 digits.
+    case card(String)
+
+    /// Spaces dropped; two letters (not a masked "XXXX …") start an IBAN, else at least 4 digits
+    /// are a card number or its end ("4871 78XX XXXX 0175", "•••• 0175"); nil: neither.
+    init?(parsing text: String) {
+        let compact = text.filter { !$0.isWhitespace }
+        let start = Array(compact.prefix(3))
+        func letter(_ c: Character) -> Bool { c.isASCII && c.isLetter }
+        if compact.isEmpty {
+            self = .any
+        } else if start.count >= 2, letter(start[0]), letter(start[1]), start.count == 2 || !letter(start[2]) {
+            self = .iban(compact.uppercased())
+        } else {
+            let digits = compact.filter { ("0"..."9").contains($0) }
+            guard digits.count >= 4 else { return nil }
+            self = .card(String(digits.suffix(4)))
+        }
+    }
+
+    /// What a link syncs now.
+    init(_ link: FinanceBankLink?) {
+        if let card = link?.card, !card.isEmpty {
+            self = .card(card)
+        } else if let iban = link?.iban?.filter({ !$0.isWhitespace }).uppercased(), !iban.isEmpty {
+            self = .iban(iban)
+        } else {
+            self = .any
+        }
+    }
+
+    /// The editor's text for it, which parses back to the same target.
+    var text: String {
+        switch self {
+        case .any: ""
+        case .iban(let iban): iban
+        case .card(let digits): "•••• \(digits)"
+        }
     }
 }
 

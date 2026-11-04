@@ -2714,7 +2714,9 @@ paths:
         link (or one to another provider) needs every credential; on an existing link a blank or
         missing one keeps the stored value. The credentials are stored encrypted and never come
         back. Saving resets the lockout guards (see the sync); a changed login forgets the bank
-        session, another IBAN starts the sync history afresh.
+        session, another IBAN or card starts the sync history afresh. `iban` picks a bank account,
+        `card` a credit card; give at most one (400 "Give either an IBAN or a card number"), setting
+        one clears the other.
       x-ohana-role: editor
       requestBody:
         required: true
@@ -2733,7 +2735,16 @@ paths:
                   type: [string, "null"]
                   description: >-
                     Which account at the bank (spaces and case don't matter); null or missing on a
-                    new link: the only Girokonto there. Missing on an existing link keeps it.
+                    new link (and no `card`): the only Girokonto there. Missing on an existing link
+                    keeps it.
+                card:
+                  type: [string, "null"]
+                  maxLength: 100
+                  description: >-
+                    A comdirect credit card instead of a bank account: its number, or just its last 4
+                    digits (a masked number like "4871 78XX XXXX 0175" works). Only the last 4 digits
+                    are stored; fewer than 4 digits: 400 "card needs the card number's last 4 digits".
+                    Missing on an existing link keeps it.
       responses:
         "200":
           description: The account.
@@ -6644,10 +6655,11 @@ components:
         bank:
           type: [object, "null"]
           description: The bank the account syncs with (`…/bank`); null when it isn't linked. Never the credentials.
-          required: [provider, iban, lastSyncAt]
+          required: [provider, iban, card, lastSyncAt]
           properties:
             provider: {type: string, description: "comdirect (the only one for now)."}
-            iban: {type: [string, "null"], description: "Which account at the bank; null: the only Girokonto there."}
+            iban: {type: [string, "null"], description: "Which account at the bank; null (and no `card`): the only Girokonto there."}
+            card: {type: [string, "null"], pattern: "^[0-9]{4}$", description: "The last 4 digits of the linked credit card; null: a bank account."}
             lastSyncAt: {type: [string, "null"], format: date-time, description: "The last successful sync."}
     BankSync:
       type: object

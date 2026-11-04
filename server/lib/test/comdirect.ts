@@ -1,5 +1,6 @@
 // A fake comdirect REST API for tests (no network): a fetch that keeps state like the real one
-// (tokens, the session, the TAN challenge, accounts and transactions with paging) and checks
+// (tokens, the session, the TAN challenge, accounts and transactions with paging, credit cards
+// and their transactions without paging, as comdirect's undocumented card endpoints) and checks
 // what the client sends (headers, the challenge id, the TAN). See lib/finance/bank/comdirect.ts.
 
 export const FAKE_PHOTO_TAN = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
@@ -9,6 +10,13 @@ export interface FakeAccount {
   iban: string;
   type: string; // CA, DAS, …
   text: string;
+}
+
+export interface FakeCard {
+  cardId: string;
+  /** The last 4 digits of its number. */
+  suffix: string;
+  holder: string;
 }
 
 export interface FakeComdirectOptions {
@@ -29,9 +37,14 @@ export interface FakeComdirectOptions {
   accounts: FakeAccount[];
   /** Raw AccountTransaction objects per accountId, newest first. */
   transactions: Record<string, unknown[]>;
+  cards: FakeCard[];
+  /** Raw card transaction objects per cardId, newest first. */
+  cardTransactions: Record<string, unknown[]>;
 }
 
 export const GIRO: FakeAccount = { accountId: "ACC-GIRO", iban: "DE89370400440532013000", type: "CA", text: "Girokonto" };
+export const VISA: FakeCard = { cardId: "CARD-1", suffix: "0175", holder: "Max Mustermann" };
+export const VISA_2: FakeCard = { cardId: "CARD-2", suffix: "0183", holder: "Erika Mustermann" };
 export const SAVINGS: FakeAccount = { accountId: "ACC-TG", iban: "DE02120300000000202051", type: "DAS", text: "Tagesgeld PLUS" };
 
 export interface FakeComdirectState {
@@ -45,7 +58,7 @@ export interface FakeComdirectState {
   refreshes: number;
   /** The TANs the PATCHes carried (null: none). */
   tans: (string | null)[];
-  /** min-bookingDate of each transactions request. */
+  /** min-bookingDate of each transactions request (of accounts and cards). */
   minBookingDates: string[];
 }
 
@@ -67,6 +80,8 @@ export function fakeComdirect(overrides: Partial<FakeComdirectOptions> = {}) {
     pushWithoutLink: false,
     accounts: [GIRO],
     transactions: {},
+    cards: [],
+    cardTransactions: {},
     ...overrides,
   };
   const state: FakeComdirectState = {
@@ -224,6 +239,55 @@ export function fakeComdirect(overrides: Partial<FakeComdirectOptions> = {}) {
           balance: { value: "100.00", unit: "EUR" },
         })),
       });
+    }
+    if (method === "GET" && path === "/api/reports/participants/user/v1/allbalances") {
+      if (url.searchParams.get("productType") !== "CARD") state.problems.push("allbalances: not CARD");
+      // As comdirect: no card number in the listing.
+      return json({
+        values: opts.cards.map((c) => ({
+          productId: c.cardId,
+          productType: "CARD",
+          targetClientId: "CLIENT-1",
+          clientConnectionType: "OWNER",
+          balance: {
+            cardId: c.cardId,
+            card: { cardId: c.cardId, cardType: { key: "VISA_CREDIT" }, status: "ACTIVE", holderName: c.holder, cardLimit: { value: "1000", unit: "EUR" } },
+            balance: { value: "-12.34", unit: "EUR" },
+            availableCashAmount: { value: "987.66", unit: "EUR" },
+          },
+        })),
+      });
+    }
+    const card = /^\/api\/banking\/v1\/cards\/([^/]+)(\/transactions)?$/.exec(path);
+    if (method === "GET" && card) {
+      const c = opts.cards.find((c) => c.cardId === decodeURIComponent(card[1]));
+      if (!c) return empty(404);
+      if (!card[2]) {
+        return json({
+          cardId: c.cardId,
+          cardType: { key: "VISA_CREDIT" },
+          participantId: "P-1",
+          cardValidity: "2029-12-31",
+          status: "ACTIVE",
+          cardDisplayId: `4871 78XX XXXX ${c.suffix}`,
+          primaryAccountNumberSuffix: c.suffix,
+          holderName: c.holder,
+          cardLimit: { value: "1000", unit: "EUR" },
+        });
+      }
+      const q = url.searchParams;
+      if (q.get("transactionState") !== "BOOKED") state.problems.push("card transactions: not BOOKED");
+      // comdirect refuses paging on cards.
+      if (q.has("paging-first")) return json({ code: "request.query.invalid" }, 422);
+      const count = Number(q.get("paging-count") ?? 20);
+      if (count > 500) return json({ code: "request.query.invalid" }, 422);
+      const min = q.get("min-bookingDate");
+      state.minBookingDates.push(min ?? "");
+      const all = (opts.cardTransactions[c.cardId] ?? []).filter((t) => {
+        const day = (t as { bookingDate?: unknown }).bookingDate;
+        return !min || typeof day !== "string" || day >= min;
+      });
+      return json({ paging: { index: 0, matches: all.length }, values: all.slice(0, count) });
     }
     const m = /^\/api\/banking\/v1\/accounts\/([^/]+)\/transactions$/.exec(path);
     if (method === "GET" && m) {
