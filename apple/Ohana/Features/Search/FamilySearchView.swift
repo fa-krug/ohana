@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// The search tab (⌘K): one search across the modules — recipes, calendar events and notes,
-/// transactions, appointment searches, people and the user's assistant chats. A hit opens where
+/// transactions, appointment searches, people, knowledge documents (editors) and the user's
+/// assistant chats. A hit opens where
 /// it lives with `family.open(_:)`. Inside the shell's navigation stack; on iPhone the field
 /// sits in the tab bar.
 struct FamilySearchView: View {
@@ -127,6 +128,12 @@ private struct SearchHitRow: View {
                         .foregroundStyle(Color.accentColor)
                         .frame(width: 24)
                         .accessibilityHidden(true)
+                } else if kind == .knowledge {
+                    // A document: its file's kind.
+                    Image(systemName: hit.fileKind.systemImage)
+                        .foregroundStyle(kind.module.tint)
+                        .frame(width: 24)
+                        .accessibilityHidden(true)
                 } else {
                     Image(systemName: kind.systemImage)
                         .foregroundStyle(kind.module.tint)
@@ -137,10 +144,16 @@ private struct SearchHitRow: View {
                     Text(title)
                         .lineLimit(1)
                     if !hit.detail.isEmpty {
-                        Text(hit.detail)
+                        Text(kind == .knowledge ? KnowledgePath.breadcrumb(hit.detail) : hit.detail)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
+                    }
+                    if let snippet = hit.snippet?.trimmingCharacters(in: .whitespacesAndNewlines), !snippet.isEmpty {
+                        Text(snippet)
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                            .lineLimit(2)
                     }
                 }
                 Spacer(minLength: 8)
@@ -172,6 +185,11 @@ private struct SearchHitRow: View {
             }
             if kind == .event, hit.day != nil {
                 Text(hit.time ?? String(localized: "All day"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            if kind == .knowledge, let page = hit.page, page >= 1 {
+                Text("Page \(page)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

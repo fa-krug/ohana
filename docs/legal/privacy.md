@@ -84,7 +84,8 @@ What a server sends to other services depends on what its families set up, for e
 
 - the **AI provider** a family chooses for the assistant (the chat, the family members' names
   and ages, the data the assistant reads to answer and, if you let the app use Reminders, your
-  open reminders; see *Permissions*),
+  open reminders; see *Permissions*; and the text of the documents in your family's knowledge
+  folder; see *Your knowledge folder*),
 - a **web search provider** (Tavily or Brave) for the assistant's searches,
 - **Doctolib** and **jameda** for appointment searches (the specialities, practices and places
   searched),
@@ -224,6 +225,24 @@ for any request to the assistant. A page shared from Safari is imported in the b
 server keeps the request (address, text, your language) until the recipe is saved and then
 deletes it, sends you a notification, and keeps a failed import for at most 7 days so you can try
 it again or remove it.
+
+### Your knowledge folder
+
+If you choose a folder in *Settings → Knowledge* (usually an iCloud Drive folder you share with
+your family), the app reads the files in it on your device (Apple's PDF and text recognition)
+and sends your server, for each file, its **text**, its name and place in the folder, its size,
+date, Finder tags and a checksum (SHA-256), so the family's editors can search it; **the files
+themselves are never sent**. Each time it reads the folder it also sends your device's name (as
+set in the system's settings, e.g. "Anna's iPhone"); your server keeps the name of the device that
+read the folder last and shows it to the family's editors in *Settings → Knowledge*. The app writes a small file `.ohana-knowledge.json` into the folder
+(your server's address and the family's and folder's ids), so another device recognises it. Your
+server keeps the text until the file is gone from the folder (then for at most 30 days more) or
+the family is deleted. If the family set up the assistant, the server may send a document's text
+to the AI provider your family set up, to summarise it and to answer questions about it. On the
+device the app keeps the folder you chose, the checksums of the files it read and the texts
+waiting to be sent; choosing *Remove from This Device* or signing out deletes them. The folder
+itself syncs through iCloud as any of your files
+([Apple's privacy policy](https://www.apple.com/legal/privacy/)).
 
 ### Demo mode
 

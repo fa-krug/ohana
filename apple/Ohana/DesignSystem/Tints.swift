@@ -16,5 +16,6 @@ enum ModuleTint {
     static let appointments = Color.pink
     static let chores = Color.indigo
     static let assistant = Color.purple
+    static let knowledge = Color.brown
     static let settings = Color.gray
 }

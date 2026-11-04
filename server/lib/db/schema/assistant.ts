@@ -57,6 +57,9 @@ export const chats = sqliteTable(
     usage: text("usage"),
     /** JSON array: messages written while a turn ran, to go next in order. */
     queue: text("queue").notNull().default("[]"),
+    /** JSON array: the knowledge base's chunk ids this server's knowledge tools returned in the
+     *  chat, the only ones its answers may cite (lib/assistant/sources.ts). */
+    knowledgeRefs: text("knowledge_refs").notNull().default("[]"),
     /** Counts the changes of the items. */
     rev: integer("rev").notNull().default(0),
     /** When someone last followed the chat (the app's open stream), for the "assistant turn

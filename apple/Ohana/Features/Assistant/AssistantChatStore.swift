@@ -894,8 +894,8 @@ final class AssistantChatStore {
             if !areas.isEmpty { onChange(areas) }
         case let .delta(seq, text):
             guard isOpen, var c = current, c.items.indices.contains(seq),
-                  case let .assistant(before) = c.items[seq] else { break }
-            c.items[seq] = .assistant(text: before + text)
+                  case let .assistant(before, sources) = c.items[seq] else { break }
+            c.items[seq] = .assistant(text: before + text, sources: sources)
             current = c
             activity = .init(activity: .init(kind: "writing"), at: .now)
         case let .end(deleted):

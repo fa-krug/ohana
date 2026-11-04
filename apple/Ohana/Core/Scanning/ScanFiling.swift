@@ -3,11 +3,14 @@ import UniformTypeIdentifiers
 
 /// "Save as PDF" for a scan, as the user sets it in `ScanFilingSection`: on or off (remembered per
 /// kind), the name and tags (suggested, then the user's once edited) and the folder (remembered
-/// for all scans). `save(_:)` writes the PDF.
+/// for all scans; the family's knowledge folder instead while it's linked on this device:
+/// `knowledge`). `save(_:)` writes the PDF.
 @Observable
 final class ScanFiling {
     let kind: ScanKind
     let settings: ScanFilingSettings
+    /// The family's knowledge folder (`FamilyContext.scanKnowledge`); nil: the scan folder.
+    @ObservationIgnored let knowledge: ScanKnowledge?
 
     var savesPDF: Bool {
         didSet { settings.setSavesPDF(savesPDF, for: kind) }
@@ -26,11 +29,12 @@ final class ScanFiling {
     /// What waits for a folder to be chosen (saving).
     private var afterFolder: (() -> Void)?
 
-    init(kind: ScanKind, settings: ScanFilingSettings = ScanFilingSettings()) {
+    init(kind: ScanKind, settings: ScanFilingSettings = ScanFilingSettings(), knowledge: ScanKnowledge? = nil) {
         self.kind = kind
         self.settings = settings
+        self.knowledge = knowledge
         savesPDF = settings.savesPDF(kind)
-        folder = settings.folder()
+        folder = knowledge?.folder ?? settings.folder()
     }
 
     /// Fills in what the user hasn't edited yet.
@@ -58,12 +62,19 @@ final class ScanFiling {
     }
 
     /// The tags a scan may be suggested: those saved with a scan on this device, then those on the
-    /// files in the folder (Finder / Files tags).
+    /// files in the folder (Finder / Files tags), then, in the knowledge folder, those of the
+    /// family's documents on the server (its subfolders' too, other devices' files too).
     func existingTags() async -> [String] {
         let saved = settings.knownTags
-        guard let folder = folder.url else { return saved }
-        let inFolder = await Task.detached(priority: .userInitiated) { FolderTags.read(folder) }.value
-        return ScanTags.cleaned(saved + inFolder, limit: .max)
+        guard let folderURL = folder.url else { return saved }
+        async let server = knowledgeTags()
+        let inFolder = await Task.detached(priority: .userInitiated) { FolderTags.read(folderURL) }.value
+        return ScanTags.cleaned(saved + inFolder + (await server), limit: .max)
+    }
+
+    private func knowledgeTags() async -> [String] {
+        guard case .knowledge = folder, let knowledge else { return [] }
+        return await knowledge.tags()
     }
 
     /// The tags used before that this scan hasn't got.
@@ -76,6 +87,11 @@ final class ScanFiling {
 
     var folderName: String? {
         folder.url.map { FileManager.default.displayName(atPath: $0.path) }
+    }
+
+    /// The scans go into the knowledge folder: no folder to choose.
+    var inKnowledge: Bool {
+        if case .knowledge = folder { true } else { false }
     }
 
     /// Saving needs a folder first.
@@ -103,7 +119,8 @@ final class ScanFiling {
     // MARK: Saving
 
     /// Saves `pages` as a PDF when "Save as PDF" is on; returns its file name (nil when off or
-    /// saved before).
+    /// saved before). In the knowledge folder the file is queued for the index with the pages'
+    /// text (`ScanKnowledge.enqueue`: on the device, the upload follows by itself).
     @discardableResult
     func save(_ pages: [ScanPage]) async throws -> String? {
         guard savesPDF, savedFile == nil else { return nil }
@@ -122,6 +139,7 @@ final class ScanFiling {
             }.value
             settings.remember(tags: tags)
             savedFile = file.lastPathComponent
+            if case .knowledge = folder, let knowledge { await knowledge.queue(file, pages: pages) }
             return file.lastPathComponent
         } catch ScanFilingError.folderMissing {
             folder = .missing
@@ -144,6 +162,69 @@ final class ScanFiling {
                 ErrorBanner.shared.show(error)
             }
         }
+    }
+}
+
+/// The family's knowledge folder as scans see it (`FamilyContext.scanKnowledge`): while it's linked
+/// on this device, scans are saved in its root (no folder picker) and queued for the index with
+/// the text read already (no second OCR); the family's tags there are suggested too.
+struct ScanKnowledge {
+    /// The folder as this device knows it now (`KnowledgeFolder.state`).
+    var state: () -> KnowledgeFolder.State
+    /// Queues a saved scan with its text, a string per page (`KnowledgeIndexer.enqueue`).
+    var enqueue: (_ file: URL, _ pages: [String]) async throws -> Void
+    /// The tags of the family's documents on the server, best effort (`serverTags`).
+    var tags: () async -> [String] = { [] }
+    /// Tells the user what went wrong (the tests keep it).
+    var report: (any Error) -> Void = { ErrorBanner.shared.show($0) }
+
+    /// Where scans go: the knowledge folder's root while it's linked here; nil when it isn't
+    /// (none chosen on this device, missing, replaced by another device's): the scan folder.
+    var folder: ScanFolder? {
+        if case let .linked(url, _) = state() { .knowledge(url) } else { nil }
+    }
+
+    /// Queues `file` with the text of `pages`; a scan without any text isn't (the indexer reads
+    /// the file itself when the server asks for it). A failure only costs that: the PDF is saved.
+    /// The folder removed, replaced or chosen anew while the sheet was open is told (the file
+    /// isn't in the knowledge base then); anything else is logged (the next run reads the file).
+    func queue(_ file: URL, pages: [ScanPage]) async {
+        let texts = Self.texts(pages)
+        guard texts.contains(where: { !$0.isEmpty }) else { return }
+        do {
+            try await enqueue(file, texts)
+        } catch KnowledgeFolderError.missing, KnowledgeFolderError.notInFolder {
+            report(ScanKnowledgeError.folderChanged)
+        } catch {
+            KnowledgeFolder.log.error("Scan not queued: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    /// Each page's text in reading order, as the letter's (`AssistantLetter.text`) and the PDF's
+    /// text layer hold it.
+    static func texts(_ pages: [ScanPage]) -> [String] {
+        pages.map { ReceiptParser.lines($0.lines.map(\.piece)).joined(separator: "\n") }
+    }
+
+    /// `GET /knowledge/tags`, the most used first; the copy on the device when the server can't be
+    /// reached or doesn't answer within `wait` (the sheet's suggestions wait for the tags).
+    static func serverTags(_ request: CachedGet<KnowledgeTagsResponse>, wait: Duration = .seconds(3)) async -> [String] {
+        let fetch = Task { try? await request.fetch() }
+        let deadline = Task {
+            try? await Task.sleep(for: wait)
+            fetch.cancel()
+        }
+        let fetched = await fetch.value
+        deadline.cancel()
+        return (fetched ?? request.saved()?.value)?.tags.map(\.tag) ?? []
+    }
+}
+
+nonisolated enum ScanKnowledgeError: LocalizedError, Equatable {
+    case folderChanged
+
+    var errorDescription: String? {
+        String(localized: "Saved, but not added to the knowledge base: the knowledge folder changed.")
     }
 }
 
@@ -211,7 +292,11 @@ struct ScanFilingSection: View {
             Toggle("Save as PDF", isOn: $filing.savesPDF)
         } footer: {
             if filing.savesPDF {
-                Text("A searchable PDF in the folder you choose. It stays with you: it never goes to the server.")
+                if filing.inKnowledge {
+                    Text("A searchable PDF in the knowledge folder. Its text goes into the family’s knowledge base on your server.")
+                } else {
+                    Text("A searchable PDF in the folder you choose. It stays with you: it never goes to the server.")
+                }
             }
         }
         if filing.savesPDF {
@@ -299,6 +384,9 @@ struct ScanFilingSection: View {
     private var folderSection: some View {
         Section("Folder") {
             switch filing.folder {
+            case .knowledge:
+                Label("Knowledge › \(filing.folderName ?? "")", systemImage: "books.vertical")
+                    .lineLimit(1)
             case .folder:
                 Label(filing.folderName ?? "", systemImage: "folder")
                     .lineLimit(1)
@@ -309,7 +397,9 @@ struct ScanFilingSection: View {
                 Label("No folder chosen yet", systemImage: "folder")
                     .foregroundStyle(.secondary)
             }
-            Button("Choose Folder…") { filing.chooseFolder() }
+            if !filing.inKnowledge {
+                Button("Choose Folder…") { filing.chooseFolder() }
+            }
         }
     }
 }

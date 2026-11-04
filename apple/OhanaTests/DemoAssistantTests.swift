@@ -73,7 +73,7 @@ struct DemoAssistantTests {
         func text(_ id: String) throws -> String {
             try decode("/ai/chats/\(id)", as: AssistantChatState.self).items.map {
                 switch $0 {
-                case let .user(text, _), let .assistant(text): text
+                case let .user(text, _), let .assistant(text, _): text
                 default: ""
                 }
             }.joined(separator: "\n")

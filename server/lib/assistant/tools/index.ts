@@ -13,6 +13,7 @@ import { financeTools } from "./finance";
 import { appointmentTools } from "./appointments";
 import { eventTools } from "./events";
 import { generalTools } from "./general";
+import { knowledgeTools } from "./knowledge";
 import { mealTools } from "./meals";
 import { reminderTools } from "./reminders";
 import { scheduleTools } from "./schedule";
@@ -38,6 +39,7 @@ export const TOOLS: Record<string, Tool> = {
   ...mealTools,
   ...appointmentTools,
   ...choreTools,
+  ...knowledgeTools,
   ...generalTools,
   ...reminderTools,
   ...appleCalendarTools,
@@ -51,6 +53,7 @@ const TOOL_MODULE: Record<string, ModuleName> = Object.fromEntries([
   ...Object.keys(mealTools).map((n) => [n, "meals"]),
   ...Object.keys(appointmentTools).map((n) => [n, "appointments"]),
   ...Object.keys(choreTools).map((n) => [n, "chores"]),
+  ...Object.keys(knowledgeTools).map((n) => [n, "knowledge"]),
 ]);
 
 /** Whether a tool's module is on (DISABLED_MODULES). */
@@ -61,12 +64,14 @@ export function toolEnabled(name: string): boolean {
 
 /** The tools for a chat: without writes if they're off, without search if it isn't set up,
  *  without the Reminders (Apple Calendar) tools unless the app sent the user's Reminders (device
- *  calendars), and without those of modules the server turned off. */
+ *  calendars), without the knowledge tools unless the user may use the knowledge base (editors),
+ *  and without those of modules the server turned off. */
 export function toolsFor(opts: {
   writes: boolean;
   search: boolean;
   reminders?: boolean;
   appleCalendar?: boolean;
+  knowledge?: boolean;
 }): ToolSpec[] {
   return Object.values(TOOLS)
     .filter(
@@ -75,6 +80,7 @@ export function toolsFor(opts: {
         (opts.search || !t.needsSearch) &&
         (opts.reminders || !t.needsReminders) &&
         (opts.appleCalendar || !t.needsAppleCalendar) &&
+        (opts.knowledge || !t.needsKnowledge) &&
         toolEnabled(t.spec.name),
     )
     .map((t) => ({ type: "function", function: t.spec }));

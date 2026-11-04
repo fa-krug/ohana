@@ -192,6 +192,7 @@ empty Ohana database. It has a **dry run** that only reports what it would do.
 | 9  | Push to the app ✅ | Notifications straight to the app from any self-hosted server, through a push relay run by fa-krug that holds the APNs key and sees only ciphertext (see Phase 9) |
 | 10 | Shopping in Reminders ✅ | The shopping list moves to Apple Reminders: the server computes what the meal plan needs, the app writes it into a list the user picks; the assistant reads and edits reminders, each edit confirmed (see Phase 10) |
 | 11 | Week ahead ✅ | A weekly digest per member that checks the next two weeks for clashes and plans that don't work out (overlaps, no time to get from one place to the next, packed days, a lot of driving, events while the family is away, children needing two drivers at once); a *Week ahead* page in the app (see Phase 11) |
+| 12 | Knowledge base | The parents' documents in a shared iCloud Drive folder become searchable knowledge: the app reads the files, the server keeps only their text, a card per document and a reference to the file; the assistant answers from it with sources that open the original at the right page; scans are filed straight into that folder (see Phase 12) |
 
 ### Phase 8: headless, open source, self-hosted
 
@@ -453,6 +454,169 @@ Notes (deviations and details):
   person only for `birthday_away`; keys over 200 characters become `kind:#<sha256 prefix>`.
 - `weeklyDigests` runs next to the daily notifications in the worker tick (not behind
   `NOTIFY_HOUR`); `lastSent` is written before sending, so a failed send isn't retried that day.
+
+### Phase 12: the knowledge base
+
+The family's paperwork (contracts, insurance policies, letters, medical reports, manuals) lives
+in an iCloud Drive folder: synced to every device, backed up by iCloud, filed by hand or by
+Ohana's scanner. Ohana reads that folder and turns it into knowledge the parents can browse and
+the assistant can answer from. The files never leave iCloud; the server holds a derived index it
+can rebuild from the folder at any time. Every answer names its source, and a tap opens the
+original at the page the quote is on: without that there is no trust.
+
+| Topic | Decision |
+| ----- | -------- |
+| Where the files are | **One iCloud Drive folder per family**, shared between the parents' Apple IDs (an iCloud shared folder), chosen once per device in Settings → Knowledge (a security-scoped bookmark, as the scan folder today). Not Ohana's own iCloud container: a second Apple ID must be able to open the originals. A marker file `.ohana-knowledge.json` (`{server, familyId, folderId}`) in the folder lets a second device recognise it as the same folder, not a new one. |
+| What the server keeps | Per file: the path relative to the folder (NFC), size, modification date, SHA-256, Finder tags, the text by page, chunks, and a card (below). **Never the file.** Losing the server loses nothing: reading the folder again rebuilds it. |
+| Who reads the folder | **The app, on every device that has the folder** (no designated indexer). It sends a manifest first; the server answers which files it needs, so two devices never upload the same file twice. Text is read on the device (PDFKit, Vision OCR, `NSAttributedString`); the server never fetches anything. |
+| Who sees it | **Editors only** (the parents). Viewers and people without an account don't: the routes answer them 404, the app hides the module, the search tab leaves out its hits, the assistant gives viewers none of its tools. Nothing from it reaches channels, the week ahead or widgets. (Later, if needed: a per-member flag instead of the role.) |
+| Structure | **Flat, with tags.** Scans land in the folder's root, named and tagged as today. An existing tree of subfolders is read as it is; its path is a filter of its own next to the tags (not turned into tags). |
+| Scanning | With a knowledge folder set, **the scan folder is the knowledge folder**: no folder picker in the scan sheets any more. The saved PDF goes into the upload queue at once with the text the scan already read (no second OCR); the folder's next manifest finds its hash and skips it. Without a knowledge folder (module off, a viewer, the demo) scans keep today's picker. |
+| Search | **SQLite FTS5** over the chunks (in `better-sqlite3`, no extra service, nothing sent anywhere to search). The assistant searches several times with different words when needed. Embeddings later, as a hybrid, if FTS falls short. |
+| Cards | Per document, made by the worker with the family's model when the assistant is set up: a summary, facts, a date, whose it is (`familyNames`). Each fact carries a **verbatim quote**; a fact whose quote isn't in the document's text is dropped. Without AI the knowledge base still works (text, search, sources), only without cards. |
+| Sources | The assistant cites chunks as `[[k:<chunkId>]]`. When an answer is saved, the server keeps only refs that a knowledge tool returned in that chat and drops the others; the item carries `sources` (`chunkId`, `documentId`, name, path, page, quote). The app shows them as chips; a tap shows the quote, then **Open original**. |
+| Module | `knowledge` in `DISABLED_MODULES`; `moduleOfFamilyPath` maps `/knowledge`. Only additions to the API, no `API_VERSION` raise. |
+
+**The server** (`lib/knowledge/`, tables in `lib/db/schema/knowledge.ts`):
+
+- `kb_folders` (id, family, created_by, created_at; one per family for now), `kb_documents`
+  (folder, `path`, `name`, `tags` JSON, `size`, `mtime`, `hash`, `pages`, `status` pending |
+  ready | failed | missing | excluded, `error`, `summary`, `facts` JSON, `doc_date`,
+  `person_user_id` / `person_person_id`, `indexed_at`, `missing_since`; unique folder + path),
+  `kb_chunks` (document, `seq`, `page`, `text`) with an external-content FTS5 table
+  `kb_chunks_fts` (unicode61, diacritics removed) kept in step by triggers (hand-written SQL in
+  the migration).
+- Routes (`handleKnowledge`, editors): `GET/POST /knowledge/folder` (the family's folder, created
+  on first use); `POST /knowledge/manifest {folderId, files: [{path, size, mtime, hash, tags}]}`
+  → `{upload: [path]}` (same hash at a new path: the document moves, tags are updated in place,
+  paths no longer listed become `missing` and are deleted after 30 days); `PUT
+  /knowledge/documents {folderId, path, hash, size, mtime, tags, pages: [text]}` → 202
+  (idempotent by folder + path + hash; text capped, e.g. 2 MB); `GET /knowledge/documents?q=&tag=&folder=&cursor=`,
+  `GET /knowledge/documents/{id}` (card, chunks), `POST …/{id}/reindex`, `POST …/{id}/exclude`
+  (stays out of the index although the file is there), `GET /knowledge/tags`.
+- The worker's `KnowledgeRunner` (like the `ImportRunner`: claim by CAS + run token, a few at a
+  time): chunks (about 1 000 characters at paragraph boundaries, never across pages), fills FTS,
+  then the card if the AI is set up. A failure marks the document `failed` with the reason; the
+  app shows it.
+- Assistant (`tools/knowledge.ts`, editors only, off with the module): `search_knowledge {query,
+  tags?, folder?, limit?}` → hits `{ref: "k:<id>", document, path, page, text}`;
+  `read_knowledge {documentId, page?}` → the document's card and text (a page at a time for long
+  ones). The system prompt asks for a `[[k:…]]` after every statement taken from them; the
+  check of the refs runs where the chat's assistant items are saved.
+- `searchFamily` gets the kind `knowledge` (documents by name, tags and text; editors only).
+
+**The app** (`Features/Knowledge/`, `Core/Knowledge/`):
+
+- Settings → Knowledge: choose the folder (reads or writes the marker; a marker of another family
+  or server asks first), what's in the index (documents, waiting, failed, formats it can't read
+  on this device), *Read now*.
+- `KnowledgeIndexer`: at launch, on becoming active, after a scan and every 15 min on the Mac;
+  walks the folder (hidden files and packages skipped, size limit), hashes only what changed
+  since last time (a cache path + size + mtime → hash in Application Support
+  `Ohana/Knowledge/`, removed on sign out / pairing), sends the manifest, then reads and uploads
+  what the server asks for. iCloud files that aren't on the device are read through
+  `NSFileCoordinator`, which loads them. Uploads wait in a queue on disk (as the chores' queue;
+  a background `URLSession` on iOS), retried with backoff.
+- Reading text: PDF per page with PDFKit, Vision OCR for pages without a text layer; images
+  (JPEG, PNG, HEIC) with Vision; txt, md, rtf, html; docx and Pages where `NSAttributedString`
+  reads them (the Mac). A format one device can't read is left to another.
+- The knowledge base page: the documents (newest first, filters by tag, folder and person, a
+  search field), each a card (summary, facts with their quotes, tags, path, status) and its text
+  by page; **Open original**: the folder's bookmark + path, a PDF at the quote's page (PDFKit
+  view in the app), else QuickLook; *Show in Finder* on the Mac. A device without the folder
+  says so and offers to choose it. Routes `/f/{id}/knowledge[/{documentId}[?page=]]`.
+- The assistant's source chips (`AssistantSources`): name and page, a sheet with the quote
+  highlighted and *Open original*; a source whose document has gone says so.
+- Scanning: `ScanFiling` takes the knowledge folder when there is one (`ScanFolder` from
+  `KnowledgeFolder`), and hands the saved file to the indexer's queue with the scan's text.
+- Demo: a few sample documents, read-only, *Open original* off.
+- Privacy policy (`docs/legal/`): the app reads a folder the user picks; its text goes to the
+  family's own server, and for the cards to the family's AI provider.
+
+Steps:
+
+1. Server: schema + FTS migration, folder / manifest / upload / list routes, the worker's
+   chunking, tests (manifest diff, moves, missing, editors only, FTS with umlauts).
+2. App: Settings → Knowledge (folder, marker), `KnowledgeIndexer` with the queue, text reading.
+3. Scans file into the knowledge folder and go into the queue.
+4. Cards in the worker (quotes checked), the knowledge base page with *Open original*.
+5. Assistant: `search_knowledge`, `read_knowledge`, the source check, the chips; the search tab.
+6. Docs: `openapi.yaml`, the website's guide, privacy policy, CLAUDE.md.
+
+Later, if wanted: embeddings (hybrid search), a per-member access flag, watching the folder live
+on the Mac (`NSFilePresenter`), more formats (mail, spreadsheets), exclusion rules.
+
+Notes (deviations and details):
+
+- **Step 1 built** (server): migration `0025_knowledge` (all of phase 12: tables, FTS5 + triggers, `chats.knowledge_refs`), the routes,
+  `KnowledgeRunner`, cleanup. Viewers get 404 on every knowledge path, the same answer as an
+  unknown path (not 403).
+- **An empty manifest changes nothing.** A stale bookmark or a folder the device can't read
+  (iCloud signed out, the share left) lists no files; that mustn't mark the whole index missing.
+  A folder emptied for real keeps its documents until a file appears in it again.
+- **The status is worked out, not remembered:** ready ⇔ `indexed_at` set, failed ⇔ `error`, else
+  pending. A missing document listed (or uploaded with the same hash) again gets its status back
+  from that; chunks and card stay while it is missing.
+- **Excluded files that disappear** stay `excluded` with `missing_since`; they come back excluded,
+  or are deleted after 30 days like missing ones (the cleanup skips them while the module is off).
+- **Lease and attempts:** the runner claims with a run token and `attempts`; a lost run runs once
+  more, then fails ("Indexing was interrupted"). New text, reindex, exclude and missing clear the
+  lease, so an old run writes nothing; whatever makes a document pending again resets `attempts`.
+  Read-then-write transactions are immediate (WAL with the worker writing).
+- **Chunks:** about 1 000 characters (at most 1 500; one under 500 takes the next piece while
+  both fit), cut at paragraphs, then lines, sentences, words; never across pages.
+- **Empty text:** the app doesn't upload what it can't read (the server keeps asking for it). A
+  document stored with no text is ready without chunks; a later upload with text replaces it even
+  with the same hash, while the same hash with stored text stays a no-op. New text deletes the old
+  chunks and card at once.
+- **A reindex keeps the document searchable:** the search takes chunks of ready and pending
+  documents (a pending one has chunks only while a reindex waits).
+- **Files without a hash, another folder:** a manifest entry may have `hash: null` (a file the
+  device sees but couldn't hash, e.g. an iCloud file it couldn't download): a known path counts as
+  present (back from missing, tags updated, nothing else), an unknown one is ignored; neither is
+  uploaded or moved. `POST /knowledge/folder {replace: true}` (the device chose another folder)
+  deletes the folder with its documents and makes a new one with a new id. A device name longer
+  than 100 is cut, not refused.
+- **Step 3 built** (scans): only a folder `.linked` on the device takes scans (`.missing` / `.replaced`
+  keep the picker); a scan without text isn't queued; a name iCloud holds as `.Name.icloud` counts as taken.
+  A scan queued during a run joins that run's manifest and is sent after it; a flush under way
+  goes on until the queue is empty; the scan's text is written only while the sign-out gate holds.
+- **Step 4 built** (server part: cards): the card columns (`card_status` pending |
+  ready | failed | none, the card's own lease, attempts and error), `card.ts` + the worker's `KnowledgeCardRunner` (`KNOWLEDGE_CARD_CONCURRENT`,
+  default 1). The card is a runner of its own, not the tail of the chunking run: documents of
+  families without AI wait (pending) and are made once it is set up, without touching the index.
+  New chunks always empty the card (the facts point at chunk ids). A quote counts when it is in a
+  chunk or runs across two consecutive ones, compared after NFC with whitespace, case and
+  typographic quotation marks / dashes ignored; the stored quote is the document's wording. The
+  person is set from the model's answer (no UI to set it by hand yet). The model sees at most the
+  first 30 000 characters, between `<document>` delimiters (escaped inside), told it is data and
+  that instructions in it don't count. A quote needs 3 words and 15 characters, matches at word
+  boundaries only, and a quote under a quarter of its statement that is also under 25 characters
+  is a scrap: dropped. Temporary failures (429, 5xx, timeouts, network) don't fail a card: it waits
+  5 min, 30 min, 2 h (`card_retries`), the 5th fails it; saving the AI settings gives failed cards
+  another go. One card per family at a time, the family waiting longest first. API: `cardStatus` /
+  `cardError` on every document, `facts` `[{text, quote, chunkId, page}]`, `GET /knowledge/status`
+  `cards`, `GET /knowledge/documents?person=`, `POST /knowledge/documents/{id}/card` (202, 409
+  unless ready with text).
+- Limits: 20 000 files per manifest, 2 000 pages and 2 MB of text per upload (413); paths NFC, at
+  most 1 024 characters, no hidden or ".." parts. The document list's `q` uses LIKE (case ignored
+  for ASCII only) for now.
+- **Step 5 built** (server part: the assistant and the search tab): `tools/knowledge.ts`
+  (`search_knowledge` ≤ 20 hits, default 8; `read_knowledge` whole when the text fits about 12 000
+  characters, else a page at a time, a very long page in `part`s, with `next`; facts with their
+  refs; another family's or an excluded document is "not found"). The tools need a folder besides
+  an editor and the module (no prompt about a knowledge base the family hasn't set up), and don't
+  depend on `allow_writes` (they only read) and re-check the role and module when they run.
+  Returned refs are recorded as the tools run (`chats.knowledge_refs`, only refs still in the
+  result the model got), never taken from stored messages, so an imported history (whose knowledge
+  calls stay, inert) can't vouch for a ref. The check removes an invalid marker with the spaces
+  before it, writes valid ones without inner spaces, strips U+E000 / U+E001, and drops every marker
+  while the user may no longer use the knowledge base (a viewer now, the module off). A source's
+  `quote` is the whole chunk and its `excerpt` (≤ 300 characters, a part of it) the 1–3 sentences
+  sharing the most words with the statement before the marker (folded, stop words left out,
+  words of 5+ letters also by their first five), a matching card fact's quote when it fits as well,
+  else the first sentence. The search kind `knowledge` comes last in the kinds' order;
+  its `day` is the card's date, else the file's modification day.
 
 ### Phase 7 notes (connections)
 

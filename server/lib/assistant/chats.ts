@@ -19,6 +19,8 @@ import { type StoredMessage, type SummaryMark, viewOf } from "./context";
 import type { ChatMessage, Provider, ToolCall } from "./provider";
 import type { AssistantStore, ChatRow } from "./store";
 import type { NetOptions } from "./net";
+import type { CitedChunk } from "@/lib/knowledge/sources";
+import { checkSources, citedIds, type Source } from "./sources";
 import type { AppleCalendarOp, ReminderOp, SuggestionOp, ToolContext } from "./tools";
 
 /** What a turn needs from the family's AI settings. */
@@ -56,7 +58,9 @@ export interface ChatEnv {
 /** What the chat shows, in order (the app renders these). */
 export type Item =
   | { kind: "user"; text: string; attachments?: Attachment[] }
-  | { kind: "assistant"; text: string }
+  /** `sources`: the knowledge base's chunks its `[[k:<chunkId>]]` markers cite (checked when
+   *  saved, see sources.ts), in order of first appearance; none without markers. */
+  | { kind: "assistant"; text: string; sources?: Source[] }
   | {
       kind: "tool";
       id: string;
@@ -141,6 +145,7 @@ export interface Queued {
   context: ChatContext;
 }
 type ToolItem = Item & { kind: "tool" };
+type AssistantItem = Item & { kind: "assistant" };
 export type QuestionItem = Item & { kind: "question" };
 export type RemindersItem = Item & { kind: "reminders" };
 export type CalendarItem = Item & { kind: "calendar" };
@@ -320,6 +325,9 @@ export interface RunnerEnv extends ChatEnv {
   turnEnded?: (chat: ChatRow, info: { startedAt: number; outcome: "answered" | "failed" | "stopped" }) => Promise<void>;
   /** The chat's family; null if it is gone. */
   family: (id: string) => Promise<FamilyRow | null>;
+  /** The knowledge base's chunks among `ids` the chat's answers may cite (the family's, while
+   *  its user may use the knowledge base); without it every source marker is taken out. */
+  sources?: (chat: ChatRow, ids: number[]) => Map<number, CitedChunk> | Promise<Map<number, CitedChunk>>;
 }
 
 /** Runs a chat's turn in the worker: the tool loop (runChat), with what it does saved as items
@@ -345,6 +353,9 @@ export class Runner {
   private store: AssistantStore;
   private startedAt = Date.now();
   private failedTurn = false;
+  /** The chunk ids the chat's knowledge tools returned (`knowledge_refs`): the only ones its
+   *  answers may cite. */
+  private refs = new Set<number>();
 
   constructor(
     private env: RunnerEnv,
@@ -389,10 +400,41 @@ export class Runner {
     clearTimeout(this.timer);
     this.timer = undefined;
     if (!this.dirty.size) return;
-    const rows = [...this.dirty].map((seq) => ({ seq, item: this.items[seq] as unknown as Record<string, unknown> }));
+    const rows = [...this.dirty].map((seq) => ({ seq, item: this.items[seq] }));
     this.dirty.clear();
+    const allowed = new Set(this.refs);
     this.write(async () => {
-      if ((await this.store.putChatItems(this.id, rows)) === null) throw new Error("Chat gone");
+      const saved = await this.checked(rows, allowed);
+      if ((await this.store.putChatItems(this.id, saved)) === null) throw new Error("Chat gone");
+    });
+  }
+
+  /** Records the chunk ids a knowledge tool just returned (the chat's `knowledge_refs`). */
+  private knowledgeReturned(ids: number[]) {
+    const before = this.refs.size;
+    for (const id of ids) if (Number.isSafeInteger(id)) this.refs.add(id);
+    if (this.refs.size === before) return;
+    const knowledge_refs = [...this.refs];
+    this.write(async () => {
+      const row = await this.store.updateChat(this.id, { knowledge_refs }, this.token);
+      if (!row) return this.abort.abort("lost");
+      this.chat = row;
+    });
+  }
+
+  /** The items as they are saved: answers with only the source markers that check out, and
+   *  their sources (sources.ts). The turn's own copy stays as written, so text that is still
+   *  coming (a marker half written) goes on where it was. */
+  private async checked(rows: { seq: number; item: Item }[], allowed: Set<number>) {
+    const answers = rows.filter((r) => r.item?.kind === "assistant");
+    const ids = [...new Set(answers.flatMap((r) => citedIds((r.item as AssistantItem).text)))].filter((id) => allowed.has(id));
+    const known = ids.length && this.env.sources ? await this.env.sources(this.chat, ids) : new Map<number, CitedChunk>();
+    return rows.map(({ seq, item }) => {
+      if (item?.kind !== "assistant") return { seq, item: item as unknown as Record<string, unknown> };
+      const { sources: _old, ...rest } = item;
+      const { text, sources } = checkSources(item.text, allowed, known);
+      const out: AssistantItem = { ...rest, text, ...(sources.length ? { sources } : {}) };
+      return { seq, item: out as unknown as Record<string, unknown> };
     });
   }
 
@@ -445,6 +487,7 @@ export class Runner {
     this.chat = chat;
     for (const r of itemRows) this.items[r.seq] = r.item as unknown as Item;
     this.messages = messageRows.map((r) => r.message as unknown as StoredMessage);
+    this.refs = new Set(chat.knowledge_refs ?? []);
     this.activity = chat.activity as Activity | null;
     this.usage = chat.usage as Usage | null;
     // A turn taken over from a worker that died counts as a failed try.
@@ -564,6 +607,7 @@ export class Runner {
           break;
         case "tool_result": {
           this.step.results.set(data.id, JSON.stringify({ ok: data.ok, summary: data.summary }));
+          if (Array.isArray(data.refs) && data.refs.length) this.knowledgeReturned(data.refs);
           const seq = tools.get(data.id);
           if (seq !== undefined) {
             const it = this.items[seq] as ToolItem;

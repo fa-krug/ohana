@@ -3,9 +3,10 @@
 // `docker-entrypoint.sh worker`. Today: cleanup, the nightly backup and the appointment
 // searches (every APPT_TICK_SECONDS), the daily notifications (coverage), chores that are due, the week ahead
 // (geocoding event locations daily, the weekly digest), the assistant's chat turns, the
-// recipe imports the share extension handed over, the holiday imports and the bank syncs of
-// linked finance accounts (all looked for every ASSISTANT_TICK_MS, a cheap indexed query;
-// holidays are asked for once a day too).
+// recipe imports the share extension handed over, the holiday imports, the bank syncs of
+// linked finance accounts and the knowledge base's documents waiting to be chunked or for their
+// card (all looked for every ASSISTANT_TICK_MS, a cheap indexed query; holidays are asked for
+// once a day too).
 import { setTimeout as sleep } from "node:timers/promises";
 import { db, sqlite } from "../lib/db/client";
 import { backupDatabase, hasBackupFor } from "../lib/maintenance/backup";
@@ -15,6 +16,8 @@ import { ChatRunner } from "../lib/assistant/runner";
 import { ImportRunner } from "../lib/meals/ai/import-queue";
 import { defaultHolidaysEnv, HolidayRunner, requestDailyHolidaySyncs } from "../lib/calendar/holidays/sync";
 import { BankSyncRunner } from "../lib/finance/bank/runner";
+import { KnowledgeRunner } from "../lib/knowledge/runner";
+import { KnowledgeCardRunner } from "../lib/knowledge/card-runner";
 import { defaultAiEnv } from "../lib/assistant/routes";
 import { migrationsApplied } from "../lib/maintenance/migrations";
 import { dailyNotifications } from "../lib/notifications/daily";
@@ -84,13 +87,19 @@ async function main(): Promise<void> {
   const searches = new SearchRunner(db);
   if (runSearches) searches.start(new Date());
   // Assistant turns: claimed through the database, run without awaiting.
-  const chats = new ChatRunner(defaultAiEnv(db));
+  const aiEnv = defaultAiEnv(db);
+  const chats = new ChatRunner(aiEnv);
   // Recipe imports in the background (meals + assistant), started like the turns.
   const runImports = moduleEnabled("meals") && moduleEnabled("assistant");
   const imports = new ImportRunner(db);
   // Bank syncs (finance): started like the turns, never run twice.
   const runBankSyncs = moduleEnabled("finance");
   const bankSyncs = new BankSyncRunner(db);
+  // The knowledge base's uploaded documents, chunked for the search (phase 12).
+  const runKnowledge = moduleEnabled("knowledge");
+  const knowledge = new KnowledgeRunner(db);
+  // Their cards, with the family's AI (only where it is set up; off with the assistant).
+  const cards = new KnowledgeCardRunner(aiEnv);
   let lastTick = 0;
   let lastSearches = 0;
   while (!stopping) {
@@ -99,6 +108,8 @@ async function main(): Promise<void> {
     if (runImports) imports.tick(now);
     holidays.runner.tick(now);
     if (runBankSyncs) bankSyncs.tick(now);
+    if (runKnowledge) knowledge.tick(now);
+    if (runKnowledge && runChats) cards.tick(now);
     if (runSearches && now.getTime() - lastSearches >= APPT_TICK_MS) {
       lastSearches = now.getTime();
       searches.tick(now);
@@ -115,6 +126,7 @@ async function main(): Promise<void> {
   }
   await Promise.all([
     searches.stop(5000), chats.stop(5000), imports.stop(5000), holidays.runner.stop(5000), bankSyncs.stop(5000),
+    knowledge.stop(5000), cards.stop(5000),
   ]);
   sqlite.close();
 }

@@ -61,12 +61,13 @@ final class LetterReview: Identifiable {
     /// Done is adding the ticked items.
     private(set) var adding = false
 
+    /// `knowledge`: the family's knowledge folder, where the PDF goes while it's linked here.
     init(images: [CGImage], needsCrop: Bool = false, finder: (any LetterItemFinding)? = nil,
-         settings: ScanFilingSettings = ScanFilingSettings(), today: Day = .today) {
+         settings: ScanFilingSettings = ScanFilingSettings(), knowledge: ScanKnowledge? = nil, today: Day = .today) {
         self.images = images
         self.needsCrop = needsCrop
         self.finder = finder
-        filing = ScanFiling(kind: .letter, settings: settings)
+        filing = ScanFiling(kind: .letter, settings: settings, knowledge: knowledge)
         known = settings.knownTags
         self.today = today
         pages = images.map { ScanPage(image: $0, lines: []) }

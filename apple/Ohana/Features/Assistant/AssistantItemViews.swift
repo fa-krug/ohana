@@ -21,8 +21,8 @@ struct AssistantItemView: View, Equatable {
         switch item {
         case let .user(text, attachments):
             AssistantUserBubble(text: text, attachments: attachments)
-        case let .assistant(text):
-            AssistantMarkdownView(text: text)
+        case let .assistant(text, sources):
+            AssistantAnswerView(text: text, sources: sources, open: open)
                 .padding(.horizontal, 4)
         case let .tool(tool):
             AssistantToolRow(tool: tool, route: AssistantToolLinks.route(tool, familyID: family.family.id), open: open)

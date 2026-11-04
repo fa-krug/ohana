@@ -19,7 +19,7 @@ struct FamilySearchResult: Decodable, Hashable {
 
 struct FamilySearchHit: Decodable, Hashable, Identifiable {
     enum Kind: String, CaseIterable {
-        case recipe, event, note, transaction, search, chore, person, chat
+        case recipe, event, note, transaction, search, chore, person, chat, knowledge
 
         var title: LocalizedStringKey {
             switch self {
@@ -30,6 +30,7 @@ struct FamilySearchHit: Decodable, Hashable, Identifiable {
             case .search: "Appointment searches"
             case .chore: "Chores"
             case .person: "People"
+            case .knowledge: "Knowledge"
             case .chat: "Chats"
             }
         }
@@ -43,6 +44,7 @@ struct FamilySearchHit: Decodable, Hashable, Identifiable {
             case .search: "stethoscope"
             case .chore: "checklist.checked"
             case .person: "person"
+            case .knowledge: "books.vertical"
             case .chat: "bubble.left.and.text.bubble.right"
             }
         }
@@ -56,6 +58,7 @@ struct FamilySearchHit: Decodable, Hashable, Identifiable {
             case .search: .appointments
             case .chore: .chores
             case .person: .settings
+            case .knowledge: .knowledge
             case .chat: .assistant
             }
         }
@@ -76,12 +79,19 @@ struct FamilySearchHit: Decodable, Hashable, Identifiable {
     let account: Bool?
     /// A note's icon (an SF Symbol's name), when it has one.
     let icon: String?
+    /// A knowledge document found by its text: the page (from 1) of the best passage, and that
+    /// passage's best part. (Its `detail` is its folder and tags, its `day` its date.)
+    let page: Int?
+    let snippet: String?
 
     var id: String { "\(kindName)/\(itemID)" }
 
     enum CodingKeys: String, CodingKey {
-        case kindName = "kind", itemID = "id", title, detail, day, time, amountCents, account, icon
+        case kindName = "kind", itemID = "id", title, detail, day, time, amountCents, account, icon, page, snippet
     }
+
+    /// A knowledge document's file kind, for its icon (by its name).
+    var fileKind: KnowledgeFileKind { KnowledgeFileKind(path: title) }
 
     /// Where the hit opens (`FamilyContext.open`).
     var route: AppRoute? {
@@ -92,6 +102,7 @@ struct FamilySearchHit: Decodable, Hashable, Identifiable {
         case .search: .appointmentSearch(id: itemID)
         case .chore: .chore(id: itemID)
         case .person: .settings(.members)
+        case .knowledge: .knowledgeDocument(id: itemID, page: page.flatMap { $0 >= 1 ? $0 : nil })
         case .chat: .assistantChat(id: itemID)
         case nil: nil
         }

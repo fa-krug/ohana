@@ -61,6 +61,16 @@ function endpoint(p: Provider, path: string) {
   return p.baseUrl.replace(/\/+$/, "") + path;
 }
 
+/** The endpoint answered with an error status (`upstreamStatus`); a 502 to our callers. */
+export class UpstreamError extends HttpError {
+  constructor(
+    public readonly upstreamStatus: number,
+    message: string,
+  ) {
+    super(502, message);
+  }
+}
+
 async function failure(res: Response, what: string): Promise<HttpError> {
   return errorOf(res.status, await readLimited(res, 4000).catch(() => ""), what);
 }
@@ -73,7 +83,7 @@ function errorOf(status: number, text: string, what: string): HttpError {
   } catch {
     // not JSON
   }
-  return new HttpError(502, `${what}: ${status} ${String(message).slice(0, 300)}`.trim());
+  return new UpstreamError(status, `${what}: ${status} ${String(message).slice(0, 300)}`.trim());
 }
 
 /** The ids of the models the endpoint offers, sorted. */
