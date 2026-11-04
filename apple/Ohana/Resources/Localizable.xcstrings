@@ -14657,6 +14657,16 @@
         }
       }
     },
+    "Save and Import All Transactions…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speichern und alle Buchungen importieren …"
+          }
+        }
+      }
+    },
     "Save as PDF": {
       "localizations": {
         "de": {

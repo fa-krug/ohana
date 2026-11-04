@@ -352,6 +352,7 @@
   "TAN": "TAN",
   "Import All Transactions": "Alle Buchungen importieren",
   "Import All Transactions…": "Alle Buchungen importieren …",
+  "Save and Import All Transactions…": "Speichern und alle Buchungen importieren …",
   "Import All": "Alle importieren",
   "Load every transaction %@ still has": "Alle Buchungen laden, die %@ noch hat",
   "Transactions already here with the same day and amount are kept and linked to the bank.": "Buchungen, die mit demselben Tag und Betrag schon hier sind, bleiben erhalten und werden mit der Bank verknüpft.",

@@ -383,8 +383,10 @@ struct FinanceAccountEditor: View {
                                   + (provider?.fields ?? []).map { credentials[$0.key] ?? "" })
     }
 
+    /// The account as saved: the store's copy, which a save here updates.
+    private var saved: FinanceAccount? { (account ?? created).map { store.account($0.id) ?? $0 } }
     /// The link the account has now.
-    private var link: FinanceBankLink? { (account ?? created)?.bank }
+    private var link: FinanceBankLink? { saved?.bank }
     /// nil while the IBAN / card field is neither.
     private var parsedTarget: FinanceBankTarget? { FinanceBankTarget(parsing: target) }
     private var bankIncomplete: Bool {
@@ -392,6 +394,7 @@ struct FinanceAccountEditor: View {
     }
 
     private var hasChanges: Bool { store.canEdit && original != nil && snapshot != original }
+    private var canSave: Bool { !busy && !nameMissing && openingCents != nil && !bankIncomplete }
     private var nameMissing: Bool { name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     /// The opening balance in cents (empty is 0); nil while it isn't a number.
     private var openingCents: Int? {
@@ -437,9 +440,8 @@ struct FinanceAccountEditor: View {
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
-                FinanceEditorToolbar(canEdit: store.canEdit, hasChanges: hasChanges,
-                                     canSave: !busy && !nameMissing && openingCents != nil && !bankIncomplete) {
-                    Task { await save() }
+                FinanceEditorToolbar(canEdit: store.canEdit, hasChanges: hasChanges, canSave: canSave) {
+                    Task { if await persist() != nil { dismiss() } }
                 }
             }
         }
@@ -505,11 +507,16 @@ struct FinanceAccountEditor: View {
                 LabeledContent("Last synced") {
                     Text(link.lastSync?.formatted(.relative(presentation: .named)) ?? String(localized: "Never"))
                 }
-                // The link as saved: not while the editor holds changes to it.
-                if store.canEdit {
-                    Button("Import All Transactions…", systemImage: "clock.arrow.circlepath") { importingAll = account ?? created }
-                        .disabled(hasChanges || busy)
+            }
+            // Imports with the link as saved: the editor's changes (new credentials, another
+            // account at the bank) are saved first.
+            if store.canEdit, provider != nil {
+                Button(hasChanges ? String(localized: "Save and Import All Transactions…")
+                                  : String(localized: "Import All Transactions…"),
+                       systemImage: "clock.arrow.circlepath") {
+                    Task { await importAll() }
                 }
+                .disabled(!canSave)
             }
         } header: {
             Text("Bank connection")
@@ -525,14 +532,22 @@ struct FinanceAccountEditor: View {
         }
     }
 
-    private func save() async {
+    /// Saves what changed (nothing when nothing did), then asks before importing the bank's history.
+    private func importAll() async {
+        guard let linked = hasChanges ? await persist() : saved, linked.bank != nil else { return }
+        importingAll = linked
+    }
+
+    /// Saves the account and its bank link; the account as saved, nil when a save failed.
+    private func persist() async -> FinanceAccount? {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, let cents = openingCents, !bankIncomplete else { return }
+        guard !trimmed.isEmpty, let cents = openingCents, !bankIncomplete else { return nil }
         let hex = FinanceColor.hex(color)
         let iconText = String(icon.trimmingCharacters(in: .whitespaces).prefix(8))
         busy = true
         defer { busy = false }
-        if let account = account ?? created {
+        // Compared with the store's copy: the editor stays open after a save for Import All.
+        if let account = saved {
             var patch: [String: JSONValue] = [:]
             if trimmed != account.name { patch["name"] = .string(trimmed) }
             if iconText != account.icon { patch["icon"] = .string(iconText) }
@@ -540,14 +555,15 @@ struct FinanceAccountEditor: View {
             if cents != account.openingCents { patch["openingCents"] = FinanceJSON.int(cents) }
             // A failed save keeps the sheet open; its banner says why.
             if !patch.isEmpty {
-                guard await store.updateAccount(account.id, patch) else { return }
+                guard await store.updateAccount(account.id, patch) else { return nil }
             }
         } else {
-            guard let added = await store.addAccount(name: trimmed, color: hex, icon: iconText, openingCents: cents) else { return }
+            guard let added = await store.addAccount(name: trimmed, color: hex, icon: iconText, openingCents: cents) else { return nil }
             created = added
         }
-        guard let saved = account ?? created, await saveBank(saved) else { return }
-        dismiss()
+        guard let account = saved, await saveBank(account) else { return nil }
+        original = snapshot
+        return saved
     }
 
     /// Links, changes or removes the bank connection when the editor changed it.
