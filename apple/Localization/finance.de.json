@@ -372,5 +372,10 @@
   "Not from the bank": "Nicht von der Bank",
   "From CSV files": "Aus CSV-Dateien",
   "Origin": "Herkunft",
-  "Any origin": "Jede Herkunft"
+  "Any origin": "Jede Herkunft",
+  "Opening balance set to %@": "Anfangsstand auf %@ gesetzt",
+  "Was %@": "Vorher %@",
+  "Once they’re deleted, the balance matches the bank’s.": "Sobald sie gelöscht sind, stimmt der Kontostand mit dem der Bank überein.",
+  "Balance differs": "Kontostand weicht ab",
+  "Bank: %@ · Ohana: %@": "Bank: %1$@ · Ohana: %2$@"
 }

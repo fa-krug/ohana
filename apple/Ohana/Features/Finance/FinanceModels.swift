@@ -58,6 +58,10 @@ struct FinanceBankLink: Codable, Hashable {
     /// A credit card instead: the last 4 digits of its number (absent from older servers).
     var card: String? = nil
     var lastSyncAt: String?
+    /// The account's booked balance at the bank as of the last sync that brought one (absent
+    /// from older servers; nil for a card).
+    var balanceCents: Int? = nil
+    var balanceAt: String? = nil
 
     /// The provider's name, else its id (one this app doesn't know yet).
     var providerName: String { FinanceBankProvider(rawValue: provider)?.title ?? provider }
@@ -229,6 +233,14 @@ struct FinanceBankSync: Codable, Hashable, Identifiable {
         /// A full sync's: the account's transactions of the days fetched the bank doesn't list
         /// (left as they are; perhaps a CSV file's duplicates).
         var unmatched: Int?
+        /// A full sync with the bank's balance: the opening balance it set, so that the account's
+        /// balance is the bank's from the bank's first booking day on.
+        var openingCents: Change?
+
+        struct Change: Codable, Hashable {
+            var from: Int
+            var to: Int
+        }
     }
 
     var id: String

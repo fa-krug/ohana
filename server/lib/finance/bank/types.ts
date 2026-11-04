@@ -32,6 +32,9 @@ export interface BankStatement {
   /** Set when the bank gave fewer rows than asked for: the first booking day the rows are
    *  complete from (later than the request's `from`). */
   from?: string;
+  /** The account's booked balance now (comdirect: Kontostand, without the pending bookings),
+   *  when the bank gives one: a full sync sets the account's opening balance from it. */
+  balanceCents?: number;
 }
 
 /** A failure the user can act on; its message (English) becomes the sync's error. */

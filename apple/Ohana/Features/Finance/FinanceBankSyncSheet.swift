@@ -260,6 +260,17 @@ struct FinanceBankSyncSheet: View {
                       systemImage: "link.circle")
                     .foregroundStyle(.secondary)
             }
+            if let opening = result.openingCents {
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Opening balance set to \(store.money(opening.to))")
+                        Text("Was \(store.money(opening.from))").font(.caption)
+                    }
+                } icon: {
+                    Image(systemName: "banknote")
+                }
+                .foregroundStyle(.secondary)
+            }
             if result.duplicates > 0 {
                 Label("\(result.duplicates) already imported – skipped", systemImage: "arrow.uturn.left.circle")
                     .foregroundStyle(.secondary)
@@ -274,7 +285,12 @@ struct FinanceBankSyncSheet: View {
                 Label(FinanceText.inflected("^[\(unmatched) transaction](inflect: true) the bank doesn’t list"),
                       systemImage: "questionmark.circle")
             } footer: {
-                Text("They were left as they are. They may be duplicates from a CSV import: filter the account’s list by “Not from the bank” to see them.")
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("They were left as they are. They may be duplicates from a CSV import: filter the account’s list by “Not from the bank” to see them.")
+                    if result.openingCents != nil {
+                        Text("Once they’re deleted, the balance matches the bank’s.")
+                    }
+                }
             }
         }
         // As after a CSV import; sorting goes through the assistant's routes: not without it.
