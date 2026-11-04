@@ -16,6 +16,7 @@ struct KnowledgeSettingsView: View {
                 ContentUnavailableView("Not available", systemImage: "books.vertical")
             }
         }
+        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
         .ohanaBackground(ModuleTint.knowledge)
         .navigationTitle("Knowledge")
     }
