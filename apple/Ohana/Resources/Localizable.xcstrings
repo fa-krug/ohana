@@ -1,7 +1,6 @@
 {
   "sourceLanguage": "en",
   "strings": {
-    "%@ %@": {},
     "%@ (%@) becomes the booking, the others its parts": {
       "localizations": {
         "de": {
@@ -8166,16 +8165,6 @@
         }
       }
     },
-    "Import all transactions?": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alle Buchungen importieren?"
-          }
-        }
-      }
-    },
     "Import bank statement": {
       "localizations": {
         "de": {
@@ -9176,6 +9165,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hört zu…"
+          }
+        }
+      }
+    },
+    "Load every transaction %@ still has": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Buchungen laden, die %@ noch hat"
           }
         }
       }
@@ -11732,16 +11731,6 @@
         }
       }
     },
-    "Ohana loads every booking the bank still has. Transactions already here with the same day and amount are kept and linked to the bank instead of being added again.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ohana lädt alle Buchungen, die die Bank noch hat. Buchungen, die mit demselben Tag und Betrag schon hier sind, bleiben erhalten und werden mit der Bank verknüpft, statt noch einmal hinzugefügt zu werden."
-          }
-        }
-      }
-    },
     "Ohana may not use the microphone or speech recognition. You can allow it in the Settings app.": {
       "localizations": {
         "de": {
@@ -11978,6 +11967,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nur die ersten %lld Tage werden angezeigt."
+          }
+        }
+      }
+    },
+    "Only the ones missing are added.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur die fehlenden kommen dazu."
           }
         }
       }
@@ -18788,6 +18787,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Buchungen"
+          }
+        }
+      }
+    },
+    "Transactions already here with the same day and amount are kept and linked to the bank.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buchungen, die mit demselben Tag und Betrag schon hier sind, bleiben erhalten und werden mit der Bank verknüpft."
           }
         }
       }

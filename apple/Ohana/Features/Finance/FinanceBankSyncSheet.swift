@@ -38,7 +38,8 @@ extension FinanceBankSync {
 /// second, and shows what the bank asks for (approve the login in its app, or type a photoTAN /
 /// SMS TAN). When done it reports the new transactions and, as after a CSV import, can sort
 /// them into categories. Cancel stops the sync on the server too. `full` imports the bank's whole
-/// history: the account's transactions it already has are taken over, not added again.
+/// history: the account's transactions it already has are taken over, not added again; it first
+/// says so and starts only with Import All.
 struct FinanceBankSyncSheet: View {
     @Bindable var store: FinanceStore
     let account: FinanceAccount
@@ -57,9 +58,13 @@ struct FinanceBankSyncSheet: View {
     @State private var tan = ""
     @State private var sending = false
     @State private var categorize = true
+    /// A full import waits for Import All.
+    @State private var confirmed = false
+
+    private var started: Bool { !full || confirmed }
 
     private var bank: String { account.bank?.providerName ?? "" }
-    private var running: Bool { problem == nil && (sync?.isRunning ?? true) }
+    private var running: Bool { started && problem == nil && (sync?.isRunning ?? true) }
     private var canSort: Bool { family.isEnabled(.assistant) && !store.categories.isEmpty }
 
     var body: some View {
@@ -71,7 +76,10 @@ struct FinanceBankSyncSheet: View {
                 .navigationBarTitleDisplayMode(.inline)
                 #endif
                 .toolbar { toolbar }
-                .task(id: attempt) { await run() }
+                .task(id: attempt) {
+                    guard started else { return }
+                    await run()
+                }
         }
         .errorBanner()
         // Swiping it away would leave the sync waiting on the server: Cancel stops it.
@@ -82,7 +90,18 @@ struct FinanceBankSyncSheet: View {
 
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
-        if running {
+        if !started {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") { dismiss() }
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Import All") {
+                    confirmed = true
+                    attempt += 1
+                }
+                .keyboardShortcut(.defaultAction)
+            }
+        } else if running {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Cancel") {
                     Task {
@@ -102,7 +121,9 @@ struct FinanceBankSyncSheet: View {
 
     @ViewBuilder
     private var content: some View {
-        if let problem {
+        if !started {
+            intro
+        } else if let problem {
             failed(problem)
         } else if let sync, sync.status == .failed {
             failed(sync.error ?? String(localized: "The sync failed."))
@@ -120,6 +141,29 @@ struct FinanceBankSyncSheet: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 24)
             }
+        }
+    }
+
+    /// What a full import does, before it starts.
+    @ViewBuilder
+    private var intro: some View {
+        Section {
+            VStack(spacing: 14) {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.system(size: 48))
+                    .foregroundStyle(ModuleTint.finance)
+                    .accessibilityHidden(true)
+                Text("Load every transaction \(bank) still has")
+                    .font(.headline)
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 20)
+        }
+        Section {
+            Label("Transactions already here with the same day and amount are kept and linked to the bank.",
+                  systemImage: "link")
+            Label("Only the ones missing are added.", systemImage: "plus.circle")
         }
     }
 

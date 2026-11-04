@@ -375,7 +375,6 @@ struct FinanceAccountEditor: View {
     /// Made by a save whose bank link then failed: saving again links it, without another account.
     @State private var created: FinanceAccount?
     /// Asks before importing the bank's whole history, then shows that sync.
-    @State private var confirmingFullImport = false
     @State private var importingAll: FinanceAccount?
 
     private var snapshot: FinanceEditorSnapshot {
@@ -448,11 +447,6 @@ struct FinanceAccountEditor: View {
         .discardGuard(hasChanges: hasChanges)
         .presentationDetents([.medium, .large])
         .financeSheetFrame(minWidth: 400, minHeight: 360)
-        .confirmationDialog("Import all transactions?", isPresented: $confirmingFullImport, titleVisibility: .visible) {
-            Button("Import All") { importingAll = account ?? created }
-        } message: {
-            Text("Ohana loads every booking the bank still has. Transactions already here with the same day and amount are kept and linked to the bank instead of being added again.")
-        }
         .sheet(item: $importingAll) { account in FinanceBankSyncSheet(store: store, account: account, full: true) }
         .onAppear {
             guard original == nil else { return }
@@ -481,14 +475,21 @@ struct FinanceAccountEditor: View {
                     ForEach(provider.fields) { field in
                         let text = Binding { credentials[field.key] ?? "" } set: { credentials[field.key] = $0 }
                         let prompt = stored ? Text("Unchanged") : nil
-                        if field.secure {
-                            SecureField(field.title, text: text, prompt: prompt)
-                        } else {
-                            TextField(field.title, text: text, prompt: prompt)
-                                .autocorrectionDisabled()
-                                #if os(iOS)
-                                .textInputAutocapitalization(.never)
-                                #endif
+                        // Labeled: on iOS a prompt takes the title's place, and every field read "Unchanged".
+                        LabeledContent(field.title) {
+                            Group {
+                                if field.secure {
+                                    SecureField(field.title, text: text, prompt: prompt)
+                                } else {
+                                    TextField(field.title, text: text, prompt: prompt)
+                                        .autocorrectionDisabled()
+                                        #if os(iOS)
+                                        .textInputAutocapitalization(.never)
+                                        #endif
+                                }
+                            }
+                            .labelsHidden()
+                            .multilineTextAlignment(.trailing)
                         }
                     }
                     TextField("IBAN or card number (optional)", text: $target)
@@ -506,7 +507,7 @@ struct FinanceAccountEditor: View {
                 }
                 // The link as saved: not while the editor holds changes to it.
                 if store.canEdit {
-                    Button("Import All Transactions…", systemImage: "clock.arrow.circlepath") { confirmingFullImport = true }
+                    Button("Import All Transactions…", systemImage: "clock.arrow.circlepath") { importingAll = account ?? created }
                         .disabled(hasChanges || busy)
                 }
             }

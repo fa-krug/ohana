@@ -352,9 +352,10 @@
   "TAN": "TAN",
   "Import All Transactions": "Alle Buchungen importieren",
   "Import All Transactions…": "Alle Buchungen importieren …",
-  "Import all transactions?": "Alle Buchungen importieren?",
   "Import All": "Alle importieren",
-  "Ohana loads every booking the bank still has. Transactions already here with the same day and amount are kept and linked to the bank instead of being added again.": "Ohana lädt alle Buchungen, die die Bank noch hat. Buchungen, die mit demselben Tag und Betrag schon hier sind, bleiben erhalten und werden mit der Bank verknüpft, statt noch einmal hinzugefügt zu werden.",
+  "Load every transaction %@ still has": "Alle Buchungen laden, die %@ noch hat",
+  "Transactions already here with the same day and amount are kept and linked to the bank.": "Buchungen, die mit demselben Tag und Betrag schon hier sind, bleiben erhalten und werden mit der Bank verknüpft.",
+  "Only the ones missing are added.": "Nur die fehlenden kommen dazu.",
   "^[%lld transaction](inflect: true) already there – kept and linked to the bank": {
     "one": "%lld Buchung schon da – behalten und mit der Bank verknüpft",
     "other": "%lld Buchungen schon da – behalten und mit der Bank verknüpft"
