@@ -145,6 +145,11 @@ on the way, as after a CSV import. Pending transactions come once they're booked
   account's transactions the bank doesn't list: those stay untouched, but they may be
   duplicates from a CSV file worth a look. comdirect gives a credit card's newest 500 bookings
   only.
+- Every transaction shows where it came from: a bank icon for the bank's, a document icon for a
+  CSV file's, none for one entered in Ohana. The list's *Origin* filter shows one kind; *Not
+  from the bank* after a full import are the ones the bank doesn't list. You can also ask the
+  assistant, e.g. "list the giro account's transactions that aren't from the bank" and then
+  "delete them" (it asks before deleting; the change can be undone).
 - A sync within about 20 minutes of the last one usually needs no new TAN.
 - comdirect **locks the online banking** after five TAN requests without a confirmed TAN in
   between, or three wrong TANs. So Ohana never asks twice by itself: a wrong TAN ends the sync,

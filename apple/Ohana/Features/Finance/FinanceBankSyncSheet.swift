@@ -230,7 +230,7 @@ struct FinanceBankSyncSheet: View {
                 Label(FinanceText.inflected("^[\(unmatched) transaction](inflect: true) the bank doesn’t list"),
                       systemImage: "questionmark.circle")
             } footer: {
-                Text("They were left as they are. They may be duplicates from a CSV import: check them in the account’s list.")
+                Text("They were left as they are. They may be duplicates from a CSV import: filter the account’s list by “Not from the bank” to see them.")
             }
         }
         // As after a CSV import; sorting goes through the assistant's routes: not without it.

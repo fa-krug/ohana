@@ -2534,6 +2534,16 @@
         }
       }
     },
+    "Any origin": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jede Herkunft"
+          }
+        }
+      }
+    },
     "Appearance": {
       "localizations": {
         "de": {
@@ -6426,6 +6436,16 @@
         }
       }
     },
+    "Entered in Ohana": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Ohana eingegeben"
+          }
+        }
+      }
+    },
     "Entry types": {
       "localizations": {
         "de": {
@@ -7426,6 +7446,16 @@
         }
       }
     },
+    "From CSV files": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus CSV-Dateien"
+          }
+        }
+      }
+    },
     "From home address": {
       "localizations": {
         "de": {
@@ -8224,6 +8254,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Schon importiert"
+          }
+        }
+      }
+    },
+    "Imported from a CSV file": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus einer CSV-Datei importiert"
           }
         }
       }
@@ -11150,6 +11190,16 @@
         }
       }
     },
+    "Not from the bank": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht von der Bank"
+          }
+        }
+      }
+    },
     "Not run yet: results appear after the first run.": {
       "localizations": {
         "de": {
@@ -12228,6 +12278,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Organisiere deine Rezepte mit Tags."
+          }
+        }
+      }
+    },
+    "Origin": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Herkunft"
           }
         }
       }
@@ -16902,6 +16962,16 @@
         }
       }
     },
+    "Synced with the bank": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit der Bank synchronisiert"
+          }
+        }
+      }
+    },
     "Syncing with %@…": {
       "localizations": {
         "de": {
@@ -18052,12 +18122,12 @@
         }
       }
     },
-    "They were left as they are. They may be duplicates from a CSV import: check them in the account’s list.": {
+    "They were left as they are. They may be duplicates from a CSV import: filter the account’s list by “Not from the bank” to see them.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sie bleiben, wie sie sind. Vielleicht sind es Doppelte aus einem CSV-Import: Sieh sie dir in der Liste des Kontos an."
+            "value": "Sie bleiben, wie sie sind. Vielleicht sind es Doppelte aus einem CSV-Import: Filtere die Liste des Kontos nach „Nicht von der Bank“, um sie zu sehen."
           }
         }
       }

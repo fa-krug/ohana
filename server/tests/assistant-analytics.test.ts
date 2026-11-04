@@ -324,3 +324,30 @@ it("counts calendar days per type, month or weekday", async () => {
   const long = await tool("analyze_calendar", { from: "2000-01-01", to: "2026-12-31" });
   assertMatch(long.result.error, /ten years/);
 });
+
+it("lists the transactions by where they came from, and deletes them once confirmed", async () => {
+  const { call, tool, f } = await family();
+  await call("POST", `${f}/finance/accounts`, { name: "Checking", color: "#3b82f6" });
+  await call("POST", `${f}/finance/import`, {
+    accountId: "checking",
+    rows: [{ date: "2026-01-05", amountCents: -1200, payee: "From a CSV file" }],
+  });
+  await call("POST", `${f}/finance/transactions`, {
+    ops: [{ date: "2026-01-06", amountCents: -300, payee: "Typed", accountId: "checking" }],
+  });
+
+  const csv = await tool("list_transactions", { source: "csv" });
+  assert(csv.ok, JSON.stringify(csv.result));
+  const at = (col: string) => csv.result.columns.indexOf(col);
+  assertEquals(csv.result.rows.map((r: any[]) => [r[at("payee")], r[at("source")]]), [["From a CSV file", "csv"]]);
+  const both = await tool("list_transactions", { source: "manual,csv" });
+  assertEquals(both.result.total, 2);
+  assertEquals((await tool("list_transactions", { source: "sync" })).ok, false);
+
+  const ids = csv.result.rows.map((r: any[]) => r[at("id")]);
+  const asked = await tool("change_transactions", { ops: [{ action: "delete", ids }] });
+  assertEquals(asked.ok, false);
+  const deleted = await tool("change_transactions", { ops: [{ action: "delete", ids }], confirmed: true });
+  assert(deleted.ok, JSON.stringify(deleted.result));
+  assertEquals((await tool("list_transactions", {})).result.total, 1);
+});

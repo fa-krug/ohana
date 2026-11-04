@@ -3275,6 +3275,13 @@ paths:
         - name: kind
           in: query
           schema: {type: string, enum: [income, expense, transfer]}
+        - name: source
+          in: query
+          description: >-
+            Where they came from (`manual`, `csv`, `bank`), several comma-separated. After a full
+            bank import, `manual,csv` of a linked account in the bank's days are the ones the bank
+            doesn't list.
+          schema: {type: string, example: "manual,csv"}
         - name: limit
           in: query
           schema: {type: integer, minimum: 1, maximum: 1000, default: 200}
@@ -7255,6 +7262,13 @@ components:
             remainderCents: {type: integer}
         note: {type: string}
         imported: {type: boolean}
+        source:
+          type: string
+          enum: [manual, csv, bank]
+          description: >-
+            Where it came from: typed, scanned or the assistant's (manual), a CSV file, or a bank
+            sync (also a row a full bank import took over). An `add` op may name it only to put
+            a deleted row back (undo); else it is manual.
     TransactionOp:
       type: object
       description: |

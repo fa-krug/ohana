@@ -259,8 +259,8 @@ struct FinanceTransactionRow: View {
                     if !t.note.isEmpty {
                         Image(systemName: "note.text").accessibilityLabel("Note")
                     }
-                    if t.imported {
-                        Image(systemName: "square.and.arrow.down").accessibilityLabel("Imported from a bank statement")
+                    if let origin = t.origin, let icon = origin.icon {
+                        Image(systemName: icon).accessibilityLabel(origin.title)
                     }
                 }
                 .font(.caption2)
@@ -433,10 +433,10 @@ struct FinanceTransactionTable: View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 6) {
                 Text(t.title).lineLimit(1)
-                if t.imported {
-                    Image(systemName: "square.and.arrow.down").foregroundStyle(.secondary)
-                        .help("Imported from a bank statement")
-                        .accessibilityLabel("Imported from a bank statement")
+                if let origin = t.origin, let icon = origin.icon {
+                    Image(systemName: icon).foregroundStyle(.secondary)
+                        .help(origin.title)
+                        .accessibilityLabel(origin.title)
                 }
             }
             if let (icon, text) = info.detail(t, store: store) {

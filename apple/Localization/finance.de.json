@@ -363,5 +363,12 @@
     "one": "%lld Buchung, die die Bank nicht aufführt",
     "other": "%lld Buchungen, die die Bank nicht aufführt"
   },
-  "They were left as they are. They may be duplicates from a CSV import: check them in the account’s list.": "Sie bleiben, wie sie sind. Vielleicht sind es Doppelte aus einem CSV-Import: Sieh sie dir in der Liste des Kontos an."
+  "They were left as they are. They may be duplicates from a CSV import: filter the account’s list by “Not from the bank” to see them.": "Sie bleiben, wie sie sind. Vielleicht sind es Doppelte aus einem CSV-Import: Filtere die Liste des Kontos nach „Nicht von der Bank“, um sie zu sehen.",
+  "Entered in Ohana": "In Ohana eingegeben",
+  "Imported from a CSV file": "Aus einer CSV-Datei importiert",
+  "Synced with the bank": "Mit der Bank synchronisiert",
+  "Not from the bank": "Nicht von der Bank",
+  "From CSV files": "Aus CSV-Dateien",
+  "Origin": "Herkunft",
+  "Any origin": "Jede Herkunft"
 }

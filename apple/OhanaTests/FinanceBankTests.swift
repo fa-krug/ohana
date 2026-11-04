@@ -79,7 +79,34 @@ struct FinanceBankTests {
         #expect(full.full == true)
         #expect(full.result?.adopted == 4)
         #expect(full.result?.unmatched == 1)
+    }
 
+    @Test func tellsWhereATransactionCameFrom() throws {
+        func transaction(_ extra: String) throws -> FinanceTransaction {
+            try decode(FinanceTransaction.self, """
+            {"id":"t","date":"2026-10-01","amountCents":-100,"payee":"P","description":"","categoryId":null,
+             "accountId":null,"transferId":null,"splitOf":null,"split":null,"note":""\(extra)}
+            """)
+        }
+        #expect(try transaction(#","imported":true,"source":"bank""#).origin == .bank)
+        #expect(try transaction(#","imported":true,"source":"csv""#).origin == .csv)
+        #expect(try transaction(#","imported":false,"source":"manual""#).origin?.icon == nil)
+        // An older server only says whether it was imported.
+        #expect(try transaction(#","imported":true"#).origin == .imported)
+        #expect(try transaction(#","imported":false"#).origin == nil)
+        #expect(try transaction(#","imported":false,"source":"later""#).origin == nil)
+    }
+
+    @Test func filtersTheListByOrigin() {
+        var filter = FinanceFilter()
+        func source() -> String? { FinanceStore.listQuery(.current(), filter, limit: 50)["source"] ?? nil }
+        #expect(source() == nil)
+        filter.source = .notBank
+        #expect(source() == "manual,csv")
+        #expect(filter.activeCount == 1)
+    }
+
+    @Test func decodesAFailedSync() throws {
         let failed = try decode(FinanceBankSync.self, """
         {"id":"7d1c","accountId":"giro","status":"failed","step":"login","tan":null,"result":null,
          "error":"Cancelled","createdAt":"x","updatedAt":"x"}

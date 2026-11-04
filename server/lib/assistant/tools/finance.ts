@@ -94,6 +94,7 @@ const ANALYSIS_PROPERTIES = {
   account: { type: "string" },
   category: { type: "string" },
   kind: { type: "string", enum: ["income", "expense", "transfer"] },
+  source: { type: "string", description: "manual, csv or bank; several comma-separated" },
   q: { type: "string" },
   groupBy: {
     type: "array",
@@ -121,7 +122,7 @@ async function analysis(
   max = MAX_TOOL_RESULT,
 ) {
   const query = new URLSearchParams();
-  for (const k of ["from", "to", "account", "category", "kind", "q"]) {
+  for (const k of ["from", "to", "account", "category", "kind", "source", "q"]) {
     if (typeof args[k] === "string" && args[k]) query.set(k, args[k] as string);
   }
   const asked = choices(args.groupBy, TX_DIMENSIONS, "groupBy", 2);
@@ -165,7 +166,7 @@ export const financeTools: Record<string, Tool> = {
     spec: {
       name: "list_transactions",
       description:
-        'Lists transactions (newest first) with totals, as rows of `columns`: as many as fit, long descriptions shortened. If `nextOffset` is set there are more: call again with that offset. For totals per month or category use finance_summary instead. Amounts are integer cents, negative = money out. Legs of a transfer between the family\'s accounts share a transferId; totals count a transfer once by its net (500 moved between two accounts counts 0). A part of a split booking (e.g. an order line of an Amazon "Splitbuchung") has the booking\'s id as splitOf; totals count the parts and only what is left of the booking. Filters: from/to (YYYY-MM-DD), account (id, name or "none"), category (id, name, path like "Food > Groceries", or "none"; includes its subcategories), kind (income | expense | transfer: legs of transfers), q (text in payee, description, note).',
+        'Lists transactions (newest first) with totals, as rows of `columns`: as many as fit, long descriptions shortened. If `nextOffset` is set there are more: call again with that offset. For totals per month or category use finance_summary instead. Amounts are integer cents, negative = money out. Legs of a transfer between the family\'s accounts share a transferId; totals count a transfer once by its net (500 moved between two accounts counts 0). A part of a split booking (e.g. an order line of an Amazon "Splitbuchung") has the booking\'s id as splitOf; totals count the parts and only what is left of the booking. Filters: from/to (YYYY-MM-DD), account (id, name or "none"), category (id, name, path like "Food > Groceries", or "none"; includes its subcategories), kind (income | expense | transfer: legs of transfers), source (manual | csv | bank, comma-separated; after a full bank import "manual,csv" of that account are what the bank doesn\'t list), q (text in payee, description, note).',
       parameters: {
         type: "object",
         properties: {
@@ -174,6 +175,7 @@ export const financeTools: Record<string, Tool> = {
           account: { type: "string" },
           category: { type: "string" },
           kind: { type: "string", enum: ["income", "expense", "transfer"] },
+          source: { type: "string", description: "manual, csv or bank; several comma-separated" },
           q: { type: "string" },
           offset: { type: "integer", description: "Rows to skip, from nextOffset" },
           limit: { type: "integer", description: "Rows at most; leave out to get as many as fit" },
@@ -182,7 +184,7 @@ export const financeTools: Record<string, Tool> = {
     },
     async run(args, { finance: store, familyId }) {
       const query = new URLSearchParams();
-      for (const k of ["from", "to", "account", "category", "kind", "q"]) {
+      for (const k of ["from", "to", "account", "category", "kind", "source", "q"]) {
         if (typeof args[k] === "string" && args[k]) query.set(k, args[k] as string);
       }
       const { rows, links, incomeCents, expenseCents } = await findTransactions(
@@ -212,6 +214,7 @@ export const financeTools: Record<string, Tool> = {
           p.transferId,
           p.splitOf,
           p.note,
+          p.source,
         ];
         size += JSON.stringify(row).length + 1;
         if (size > MAX_TOOL_RESULT && out.length) break;

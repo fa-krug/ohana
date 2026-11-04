@@ -17,16 +17,33 @@ struct FinanceFilter: Hashable {
         }
     }
 
+    /// Where they came from (the server's `source`).
+    enum Source: String, CaseIterable, Hashable, Identifiable {
+        case all = "", bank, notBank = "manual,csv", csv, manual
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .all: String(localized: "Any origin")
+            case .bank: String(localized: "Synced with the bank")
+            case .notBank: String(localized: "Not from the bank")
+            case .csv: String(localized: "From CSV files")
+            case .manual: String(localized: "Entered in Ohana")
+            }
+        }
+    }
+
     var q = ""
     /// "" = all, "none" = uncategorized, else a category id (with its subcategories).
     var category = ""
     /// "" = all, "none" = without an account, else an account id.
     var account = ""
     var kind = Kind.all
+    var source = Source.all
 
     var isActive: Bool { activeCount > 0 }
-    /// How many of account, category and kind narrow the list (the filter menu's badge).
-    var activeCount: Int { [!category.isEmpty, !account.isEmpty, kind != .all].filter { $0 }.count }
+    /// How many of account, category, kind and source narrow the list (the filter menu's badge).
+    var activeCount: Int { [!category.isEmpty, !account.isEmpty, kind != .all, source != .all].filter { $0 }.count }
 }
 
 /// The accounts' balances (by id) at the end of the day `at`.
@@ -486,6 +503,7 @@ final class FinanceStore {
         if !filter.category.isEmpty { query["category"] = filter.category }
         if !filter.account.isEmpty { query["account"] = filter.account }
         if filter.kind != .all { query["kind"] = filter.kind.rawValue }
+        if filter.source != .all { query["source"] = filter.source.rawValue }
         return query
     }
 
@@ -555,7 +573,7 @@ final class FinanceStore {
     }
 
     func clearFilters() async {
-        await setFilter { $0.category = ""; $0.account = ""; $0.kind = .all }
+        await setFilter { $0.category = ""; $0.account = ""; $0.kind = .all; $0.source = .all }
     }
 
     func setFilter(_ change: (inout FinanceFilter) -> Void) async {

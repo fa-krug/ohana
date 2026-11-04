@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "4cec04f5-4a7b-49ea-a37f-e9b4373417d3",
+  "id": "4552a66b-9b72-4327-89ec-dc4f0ccf33cd",
   "prevId": "007c6aad-24a5-470a-8ef0-0fc2d89128f7",
   "tables": {
     "auth_tokens": {
@@ -3879,6 +3879,14 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'manual'"
         },
         "account_id": {
           "name": "account_id",

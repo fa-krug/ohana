@@ -81,6 +81,9 @@ export const finTransactions = sqliteTable(
     note: text("note").notNull().default(""),
     /** Set for imported rows, so the same statement isn't imported twice. */
     importHash: text("import_hash"),
+    /** Where it came from: manual (typed, scanned, the assistant), csv (a CSV file) or bank (a
+     *  bank sync; also a row a full sync adopted). */
+    source: text("source").notNull().default("manual"),
     accountId: text("account_id"),
     transferId: text("transfer_id"),
     splitOf: text("split_of"),

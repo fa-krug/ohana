@@ -301,8 +301,8 @@ export class BankSyncRunner {
    *  sync's first day: the account's latest day then) the account may hold the same bookings
    *  from elsewhere: a bank row with the amount of one of that day's other transactions counts
    *  as that one (one to one; see `matchExisting`). A full sync does that on every day fetched
-   *  and the transaction takes the bank row's import hash (adopted: its category, note, links
-   *  and text stay), so later syncs know it; the account's transactions from the bank's first
+   *  and the transaction takes the bank row's import hash and source (adopted: its category,
+   *  note, links and text stay), so later syncs know it; the account's transactions from the bank's first
    *  row on that the bank doesn't list are counted (unmatched) and left alone. */
   private async import(link: LinkRow, statement: BankStatement, requested: string, full: boolean): Promise<SyncResult> {
     const store = new DrizzleFinanceStore(this.db);
@@ -320,6 +320,7 @@ export class BankSyncRunner {
       category_id: null,
       note: "",
       import_hash: null,
+      source: "bank",
       account_id: link.accountId,
       transfer_id: null,
       split_of: null,
@@ -353,7 +354,7 @@ export class BankSyncRunner {
       this.db.transaction((tx) => {
         for (const [i, id] of matched) {
           tx.update(finTransactions)
-            .set({ importHash: hashes[i] })
+            .set({ importHash: hashes[i], source: "bank" })
             .where(and(eq(finTransactions.familyId, link.familyId), eq(finTransactions.id, id)))
             .run();
         }
