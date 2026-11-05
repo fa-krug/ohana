@@ -25,10 +25,26 @@ struct AssistantSavedCopy: Equatable {
     var updating: Bool
 }
 
-/// What a running turn does, and since when this device knows it.
+/// What a running turn does, and since when this device knows it. While the model writes,
+/// `at` is moved on at most every `AssistantChatStore.activityRefresh` (not with every piece of
+/// text shown), so what reads it is drawn again about once a second, not with each piece; the
+/// time of the last piece is `AssistantChatStore.lastTextAt`.
 struct AssistantActivityState: Equatable {
     var activity: AssistantActivity
     var at: Date
+}
+
+/// What a turn in the open chat does, for what shows it outside the chat (the Ask Ohana bar, the
+/// ✨ toggle): assigned only when it changes, so they aren't drawn again with each piece of text.
+struct AssistantTurn: Equatable {
+    /// A turn runs (or a message is on its way).
+    var running = false
+    /// What it does right now ("Thinking…", a tool's label); empty while none runs.
+    var status = ""
+    /// The chat's title (empty for a new chat).
+    var title = ""
+
+    static let idle = AssistantTurn()
 }
 
 /// The AI chats of one family (web: components/assistant/chat-store.ts). They live on the
@@ -43,11 +59,11 @@ final class AssistantChatStore {
     private(set) var settings: AssistantSettings?
     private(set) var settingsError: String?
     /// The user's chats, the latest first.
-    private(set) var chats: [AssistantChatSummary] = []
+    private(set) var chats: [AssistantChatSummary] = [] { didSet { updateTurn() } }
     private(set) var chatsLoaded = false
-    private(set) var currentID: String?
+    private(set) var currentID: String? { didSet { updateTurn() } }
     /// The open chat, once loaded (or a new one being started).
-    private(set) var current: AssistantChat?
+    private(set) var current: AssistantChat? { didSet { updateTurn() } }
     /// Grows each time another chat is shown (opened, or a new one started); not when a new chat
     /// gets its id from the server. The chat view starts its window, its animations and its
     /// cross-fade from it.
@@ -58,9 +74,16 @@ final class AssistantChatStore {
     /// answers: its changes can't be undone and its question not answered meanwhile.
     private(set) var savedCopy: AssistantSavedCopy?
     /// Set while a turn runs.
-    private(set) var activity: AssistantActivityState?
+    private(set) var activity: AssistantActivityState? { didSet { updateTurn() } }
+    /// When the stream last wrote a piece of text into the open chat (not observed: it changes
+    /// with every piece; `activity.at` moves on more slowly).
+    @ObservationIgnored private(set) var lastTextAt: Date?
     /// A message is on its way to the server.
-    private(set) var sending = false
+    private(set) var sending = false { didSet { updateTurn() } }
+    /// What the turn in the open chat does, as far as this device follows it (`AssistantTurn`).
+    private(set) var turn = AssistantTurn.idle
+    /// `turn.running` alone, for what shows only that (the ✨ toggle): not drawn again with each step.
+    private(set) var turnRunning = false
     /// Which suggestions the user ticked, per suggestions item (until they're answered; kept here
     /// so a card rebuilt while scrolling keeps them).
     private(set) var suggestionPicks: [String: Set<Int>] = [:]
@@ -81,18 +104,23 @@ final class AssistantChatStore {
 
     /// Changes and tool calls this device has seen, so it reloads the data only for new ones.
     @ObservationIgnored private var seen = Set<String>()
-    @ObservationIgnored private var following: Task<Void, Never>?
+    @ObservationIgnored private var following: Task<Void, Never>? { didSet { updateTurn() } }
     @ObservationIgnored private var followID = 0
     /// Text the stream wrote that isn't shown yet: pieces arrive many times a second, and each
     /// shown one draws the chat again, so they're shown together, at most every `deltaInterval`.
     @ObservationIgnored private var pendingDeltas: [(chat: String, seq: Int, text: String)] = []
     @ObservationIgnored private var deltaFlush: Task<Void, Never>?
-    static let deltaInterval: Duration = .milliseconds(50)
+    static let deltaInterval: Duration = .milliseconds(80)
+    /// While the model writes, `activity` (its `at`) is assigned again at most this often.
+    static let activityRefresh: TimeInterval = 1
     /// How many views show the store (the panel and the page may both); the last one to go
     /// stops following.
     @ObservationIgnored private var viewers = 0
     /// The latest chat was opened once (the panel opens on it rather than on an empty chat).
     @ObservationIgnored private var restoredLatest = false
+    /// The chat `restoreLatest` opened, and `picks` then: while the user hasn't picked another,
+    /// it gives way to a new chat once it has gone quiet.
+    @ObservationIgnored private var restored: (id: String, picks: Int)?
     /// Grows with every chat the user opens or starts.
     @ObservationIgnored private var picks = 0
 
@@ -105,6 +133,9 @@ final class AssistantChatStore {
     /// demo, no knowledge base, a viewer); every request carries its id while it's linked here
     /// (without it, the notes tool is off). The chat view sets it; tests replace it.
     @ObservationIgnored var knowledgeNotes: () -> AssistantKnowledgeNotes? = { nil }
+    /// Reads a chat's answers ahead, off the main thread, before it's shown
+    /// (`AssistantMarkdownCache.prewarm`); tests replace it.
+    @ObservationIgnored var prewarm: ([AssistantItem]) async -> Void = { await AssistantMarkdownCache.prewarm($0) }
     /// The knowledge folder the last request named: notes are only written into that one.
     @ObservationIgnored private var sentKnowledgeFolder: String?
 
@@ -162,13 +193,17 @@ final class AssistantChatStore {
         api.cached("/ai/chats")
     }
 
-    /// Before the assistant first shows: its settings, the chats and the latest chat, so the
+    /// Before the assistant first shows: its settings, the chats and, only when the assistant
+    /// will open on it (`restoreLatest`), the latest chat with its answers' Markdown read, so the
     /// panel has them drawn before it slides in (a running turn isn't followed: no one looks yet).
+    /// Most of the time it opens on a new chat: then there's nothing heavy to prepare.
     func preload() async {
         // The settings beside the chats and the latest chat: neither waits for the other.
         async let settingsLoaded: Void = loadSettingsIfNeeded()
-        if !chatsLoaded { await loadChats() }
+        // Decided on the list's copy on the device; the server's list after it (the welcome's
+        // recent chats).
         await restoreLatest(follow: false)
+        if !chatsLoaded { await loadChats() }
         await settingsLoaded
     }
 
@@ -261,6 +296,11 @@ final class AssistantChatStore {
         // while); meanwhile another chat may have been picked, which then loads itself.
         let copy = await chatState(id).savedOffMain()
         guard picks == pick, currentID == id else { return }
+        // Its answers' Markdown read off the main thread before it's drawn.
+        if let copy {
+            await prewarm(copy.value.items)
+            guard picks == pick, currentID == id else { return }
+        }
         if current == nil, let copy {
             for item in copy.value.items { markSeen(item) }
             var chat = Self.chat(id, copy.value)
@@ -292,6 +332,9 @@ final class AssistantChatStore {
         savedCopy?.updating = true
         do {
             let s = try await chatState(id).fetch()
+            guard currentID == id, current == shown else { return }
+            // Read off the main thread before it's drawn (what the copy had is read already).
+            await prewarm(s.items)
             guard currentID == id, current == shown else { return }
             for item in s.items { markSeen(item) }
             // The same as shown (nothing new since): the chat isn't drawn again.
@@ -884,31 +927,89 @@ final class AssistantChatStore {
         if viewers == 0 { unfollow() }
     }
 
-    /// The first time the assistant shows in a session, it opens on the latest chat if that was
-    /// active in the last `within` (or still runs), so the conversation goes on where it was.
-    func restoreLatest(within: TimeInterval = 12 * 3600, now: Date = .now, follow: Bool = true) async {
-        guard !restoredLatest else { return }
+    /// How recently the latest chat must have been active for the assistant to open on it.
+    static let reopenWithin: TimeInterval = 15 * 60
+
+    /// Each time the assistant shows. The first time in a session it opens on the latest chat if
+    /// that still runs or was active in the last `within` (the conversation goes on where it
+    /// was), else on a new chat with the recent chats on its welcome: a long chat isn't laid out
+    /// only to be left. Later, a chat opened that way which the user hasn't left meanwhile gives
+    /// way to a new chat once it has gone quiet.
+    func restoreLatest(within: TimeInterval = reopenWithin, now: Date = .now, follow: Bool = true) async {
+        guard !restoredLatest else {
+            if let restored, restored.id == currentID, restored.picks == picks, !busy,
+               let chat = chats.first(where: { $0.id == restored.id }), !Self.isRecent(chat, within: within, now: now) {
+                self.restored = nil
+                newChat()
+            }
+            return
+        }
         restoredLatest = true
         let before = picks
         // The list on the device first: the latest chat opens without waiting for the server,
         // which is only asked when the copy has none to open.
         await loadSavedChats()
         if let latest = latest(within: within, now: now, picks: before) {
-            await open(latest, follow: follow)
+            await reopen(latest, follow: follow)
             return
         }
         guard !chatsLoaded else { return }
         await loadChats()
-        if let latest = latest(within: within, now: now, picks: before) { await open(latest, follow: follow) }
+        if let latest = latest(within: within, now: now, picks: before) { await reopen(latest, follow: follow) }
     }
 
-    /// The latest chat, if it was active in the last `within` (or still runs) and the user
-    /// hasn't picked a chat or asked for a new one meanwhile.
+    private func reopen(_ id: String, follow: Bool) async {
+        await open(id, follow: follow)
+        if currentID == id { restored = (id, picks) }
+    }
+
+    /// The latest chat, if it is recent (`isRecent`) and the user hasn't picked a chat or asked
+    /// for a new one meanwhile.
     private func latest(within: TimeInterval, now: Date, picks before: Int) -> String? {
         guard picks == before, current == nil, currentID == nil, let latest = chats.first,
-              latest.isRunning || (latest.updatedDate.map { now.timeIntervalSince($0) < within } ?? false)
+              Self.isRecent(latest, within: within, now: now)
         else { return nil }
         return latest.id
+    }
+
+    /// The chat still runs or was active in the last `within`.
+    static func isRecent(_ chat: AssistantChatSummary, within: TimeInterval, now: Date) -> Bool {
+        chat.isRunning || (chat.updatedDate.map { now.timeIntervalSince($0) < within } ?? false)
+    }
+
+    // MARK: Turn
+
+    /// Works out `turn` (and `turnRunning`) again after what it rests on changed; assigned only
+    /// when different, so the bar and the toggle aren't drawn again with each piece of text.
+    private func updateTurn() {
+        let running = turnIsRunning
+        let next = running ? AssistantTurn(running: true, status: turnStatus(), title: current?.title ?? "") : .idle
+        if turn != next { turn = next }
+        if turnRunning != running { turnRunning = running }
+    }
+
+    /// A turn runs in the open chat as far as this device follows it: the chat's copy may say
+    /// "running" from before (a copy on the device, a stream that broke off), which isn't trusted.
+    private var turnIsRunning: Bool {
+        if sending { return true }
+        guard following != nil, let id = currentID else { return false }
+        return chats.first { $0.id == id }?.isRunning == true
+    }
+
+    /// As the chat's activity line says it, shorter.
+    private func turnStatus() -> String {
+        switch activity?.activity.kind {
+        case "writing":
+            return String(localized: "Writing…")
+        case "tool":
+            // The last tool call that runs: from the end, where it is.
+            for item in (current?.items ?? []).reversed() {
+                if case let .tool(t) = item, t.status == "running" { return AssistantToolLabels.label(t) + "…" }
+            }
+            return String(localized: "Thinking…")
+        default:
+            return String(localized: "Thinking…")
+        }
     }
 
     /// Starts a new chat unless the open one is still empty (no duplicates of empty chats).
@@ -1077,7 +1178,11 @@ final class AssistantChatStore {
         }
         guard changed else { return }
         current = c
-        activity = .init(activity: .init(kind: "writing"), at: .now)
+        let now = Date.now
+        lastTextAt = now
+        // Not with every piece: what reads the activity would be drawn again with each.
+        if let a = activity, a.activity.kind == "writing", now.timeIntervalSince(a.at) < Self.activityRefresh { return }
+        activity = .init(activity: .init(kind: "writing"), at: now)
     }
 
     /// What a chat's stream says (exposed for tests).

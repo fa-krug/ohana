@@ -4,7 +4,7 @@ import SwiftUI
 /// "Show earlier messages" (every answer's Markdown is laid out on opening otherwise). The window
 /// starts at an item's position in the chat, not at a count from its end: new items join it, and
 /// nothing slips out at the top while the user reads an answer that streams.
-enum AssistantItemWindow {
+nonisolated enum AssistantItemWindow {
     static let page = 40
 
     /// Where the window of a chat opened with these (visible) item positions starts: at the
@@ -33,16 +33,16 @@ struct AssistantExample: Hashable {
     let text: String
 }
 
-/// A new chat: the sparkles, a greeting and the page's examples as cards that come up one after
-/// the other. A tap puts an example into the composer, to read (and change) before it's sent: the
-/// assistant may change things.
+/// A new chat: the sparkles, a greeting, the page's examples as cards and the latest chats. Still:
+/// nothing on it moves (the chat fades it in as a whole). A tap puts an example into the composer,
+/// to read (and change) before it's sent: the assistant may change things; a recent chat opens.
 struct AssistantWelcome: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let store: AssistantChatStore
     let examples: [AssistantExample]
-    /// On screen (the panel is kept while closed): the cards come up each time it opens.
-    var visible = true
     let pick: (String) -> Void
-    @State private var appeared = false
+
+    /// How many of the latest chats it offers.
+    static let recentCount = 3
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -50,7 +50,6 @@ struct AssistantWelcome: View {
                 Image(systemName: "sparkles")
                     .font(.system(size: 40, weight: .medium))
                     .foregroundStyle(ModuleTint.assistant.gradient)
-                    .symbolEffect(.breathe, isActive: !reduceMotion && visible)
                     .accessibilityHidden(true)
                 Text("How can I help?")
                     .font(.title2.weight(.semibold))
@@ -60,7 +59,7 @@ struct AssistantWelcome: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(.bottom, 6)
-            ForEach(Array(examples.enumerated()), id: \.element) { index, example in
+            ForEach(examples, id: \.self) { example in
                 Button {
                     pick(example.text)
                 } label: {
@@ -84,26 +83,83 @@ struct AssistantWelcome: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityHint(Text("Puts it in the message field"))
-                .opacity(appeared ? 1 : 0)
-                .offset(y: appeared || reduceMotion ? 0 : 12)
-                .animation(appeared && !reduceMotion ? .smooth(duration: 0.4).delay(0.12 + 0.06 * Double(index)) : nil,
-                           value: appeared)
             }
+            AssistantRecentChats(store: store, count: Self.recentCount)
         }
         .padding(.top, 8)
-        .onChange(of: visible, initial: true) {
-            // Hidden at once, so the cards come up again the next time it opens.
-            appeared = visible
+    }
+}
+
+/// The latest chats under a new chat's examples (the open one left out): a tap opens one. Nothing
+/// while there are none.
+private struct AssistantRecentChats: View {
+    let store: AssistantChatStore
+    let count: Int
+
+    var body: some View {
+        let recent = Array(store.chats.lazy.filter { $0.id != store.currentID }.prefix(count))
+        if !recent.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Recent")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 4)
+                    .padding(.bottom, 4)
+                    .accessibilityAddTraits(.isHeader)
+                ForEach(recent) { chat in
+                    Button {
+                        Task { await store.open(chat.id) }
+                    } label: {
+                        AssistantRecentChatRow(chat: chat)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.top, 14)
         }
     }
 }
 
-/// While a chat is read from the device (or asked from the server): a few grey bubbles in its
-/// place, which pulse gently. They show only after a moment, so a quick load simply cross-fades.
+/// A recent chat: its title and when it was last active; a turn running in it as a still dot.
+private struct AssistantRecentChatRow: View {
+    let chat: AssistantChatSummary
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "bubble.left")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .frame(width: 24)
+                .accessibilityHidden(true)
+            Text(verbatim: chat.title)
+                .lineLimit(1)
+            if chat.isRunning {
+                Circle()
+                    .fill(ModuleTint.assistant)
+                    .frame(width: 6, height: 6)
+                    .accessibilityLabel(Text("Thinking…"))
+            }
+            Spacer(minLength: 8)
+            if let date = chat.updatedDate {
+                Text(date, format: .relative(presentation: .named, unitsStyle: .abbreviated))
+                    .font(.footnote)
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+            }
+        }
+        .font(.subheadline)
+        .padding(.horizontal, 4)
+        .padding(.vertical, 8)
+        .contentShape(.rect)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+    }
+}
+
+/// While a chat is read from the device (or asked from the server): a few faint bubbles in its
+/// place, still. They show only after a moment, so a quick load simply cross-fades.
 struct AssistantChatSkeleton: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var shown = false
-    @State private var dimmed = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -114,14 +170,12 @@ struct AssistantChatSkeleton: View {
             answer("Here is a plan for the week, with the shopping list.")
         }
         .redacted(reason: .placeholder)
-        .opacity(shown ? (dimmed ? 0.45 : 1) : 0)
+        .opacity(shown ? 0.6 : 0)
         .allowsHitTesting(false)
         .task {
             try? await Task.sleep(for: .milliseconds(150))
             guard !Task.isCancelled else { return }
             withAnimation(.easeIn(duration: 0.2)) { shown = true }
-            guard !reduceMotion else { return }
-            withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) { dimmed = true }
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("Loading the chat"))

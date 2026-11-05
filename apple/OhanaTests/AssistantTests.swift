@@ -251,6 +251,8 @@ struct AssistantStoreTests {
         #expect(store.current?.items[1] == .assistant(text: "Hello"))
         #expect(store.activity?.activity.kind == "writing")
         #expect(signalled.isEmpty)
+        // Not followed by this device: the bar and the toggle stay still.
+        #expect(store.turn == .idle)
 
         let change = AssistantItem.change(AssistantChange(
             id: "chg", change: "recipes", summary: "Saved Lasagne",
@@ -272,6 +274,26 @@ struct AssistantStoreTests {
         #expect(store.current?.status == "idle")
         #expect(store.activity == nil)
         #expect(!store.busy)
+    }
+
+    @Test func writingMovesTheActivityOnOnlyNowAndThen() {
+        let store = store()
+        store.show(AssistantChat(id: "c1", title: "Hi", status: "running", items: [.user(text: "Hi", attachments: [])],
+                                 rev: 1, usage: nil, page: "overview", queued: []))
+        store.apply("c1", .items(rev: 2, items: [(1, .assistant(text: ""))]))
+        store.apply("c1", .delta(seq: 1, text: "Hel"))
+        let first = store.activity
+        #expect(first?.activity.kind == "writing")
+        store.apply("c1", .delta(seq: 1, text: "lo"))
+        // The same activity (nothing that reads it is drawn again); the last piece's time apart.
+        #expect(store.activity == first)
+        #expect(store.current?.items[1] == .assistant(text: "Hello"))
+        #expect((store.lastTextAt ?? .distantPast) >= (first?.at ?? .distantFuture))
+        // Another kind takes over at once.
+        store.apply("c1", .chat(AssistantChatSummary(id: "c1", title: "Hi", status: "running", activity: .init(kind: "tool"),
+                                                     usage: nil, page: "overview", queued: nil,
+                                                     updatedAt: "2026-10-30T08:00:00.000Z")))
+        #expect(store.activity?.activity.kind == "tool")
     }
 
     @Test func aNewChatTakesItsIDFromTheFirstEvent() {
@@ -347,6 +369,26 @@ struct AssistantRenderingTests {
             AssistantSourceMarkers.prepare(text, sources: [])))
         #expect(AssistantMarkdownCache.inline("**b** [x](https://x.example)") ==
             AssistantMarkdownBlock.inline("**b** [x](https://x.example)"))
+    }
+
+    @Test func prewarmReadsTheChatsLastAnswersAhead() async {
+        let unique = UUID().uuidString
+        let text = "## Plan \(unique)\n\nSee [[k:4]] **this**.\n\n- a \(unique)\n- b\n\n| Day | Amount |\n| --- | ---: |\n| Mon \(unique) |"
+        let sources = [AssistantSource(ref: "k:4", documentId: "d", name: "Doc.pdf")]
+        let early = "An early answer \(unique)"
+        let items: [AssistantItem] = [.assistant(text: early)]
+            + Array(repeating: .user(text: "Hi", attachments: []), count: AssistantItemWindow.page - 1)
+            + [.assistant(text: ""), .unknown(kind: "x"), .assistant(text: text, sources: sources)]
+        // Only the last answer: the early one lies before the window the chat draws when it opens
+        // (40 visible items), and blank answers and unknown kinds aren't drawn.
+        #expect(await AssistantMarkdownCache.prewarm(items) == [text])
+        #expect(early != text)
+        // As the view asks for them: the blocks, and each inline part (the row's missing cell too).
+        let blocks = AssistantMarkdownCache.blocks(text, sources: sources)
+        #expect(blocks == AssistantMarkdownBlock.parse(AssistantSourceMarkers.prepare(text, sources: sources)))
+        #expect(AssistantMarkdownCache.inlineParts(blocks[0]) == ["Plan \(unique)"])
+        #expect(AssistantMarkdownCache.inlineParts(blocks[2]) == ["a \(unique)", "b"])
+        #expect(AssistantMarkdownCache.inlineParts(blocks[3]) == ["Day", "Amount", "Mon \(unique)", ""])
     }
 
     @Test func dropsLinksThatArentWeb() {

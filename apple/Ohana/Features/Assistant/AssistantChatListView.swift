@@ -171,7 +171,10 @@ struct AssistantChatRow: View {
             }
             Spacer(minLength: 0)
             if chat.isRunning {
-                ProgressView().controlSize(.small)
+                // Still, not a spinner: the list needn't move while a turn runs.
+                Circle()
+                    .fill(ModuleTint.assistant)
+                    .frame(width: 7, height: 7)
                     .accessibilityLabel(Text("Thinking…"))
             }
         }

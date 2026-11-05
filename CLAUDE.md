@@ -759,7 +759,15 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   once: the conversation doesn't wait for the settings (only the composer does), a chat being opened
   shows `AssistantChatSkeleton`, a long one draws its last 40 items (`AssistantItemWindow`, "Show
   earlier messages"); new items animate in by count (never per streamed piece), not those a chat
-  opens with, and another chat cross-fades (`AssistantChatStore.session`). Recipes are in Spotlight (`RecipeSpotlight.swift`: every family's,
+  opens with, and another chat cross-fades (`AssistantChatStore.session`). It opens on a new chat
+  (still welcome: examples and the 3 latest chats under "Recent") unless the latest chat runs or was
+  active in the last 15 minutes (`restoreLatest`, `reopenWithin`; a chat reopened that way gives way
+  to a new one once quiet, unless the user picked one); `preload()` (the shell, at start) decides on
+  the list's device copy and loads only that chat. A chat's answers are parsed off the main thread
+  before it's shown (`AssistantMarkdownCache.prewarm`: its last 40 visible items, in `open` and
+  `fetch`). Few moving parts: the ✨ toggle shows a still dot while a turn runs, the Ask Ohana bar
+  reads only `store.turn` (assigned when it changes), streamed text shows every 80 ms and `activity`
+  is re-assigned while writing at most once a second (`lastTextAt` has the last piece). Recipes are in Spotlight (`RecipeSpotlight.swift`: every family's,
   after loading the account and after recipe changes; emptied in the demo / with Meals off; a result
   opens `ohana://f/{id}/meals/recipes/{id}`). The recipe list's *Import from Web* sheet
   (`RecipeImportView`, editors, with the meals AI) posts a URL to `…/meals/recipes/import`, then

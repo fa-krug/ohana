@@ -48,8 +48,10 @@ struct DemoAssistantTests {
         #expect(dates.count == chats.count)
         #expect(dates == dates.sorted(by: >))
         #expect(dates.allSatisfy { $0 < .now })
-        // The panel opens on the latest chat when it was active in the last 12 hours.
+        // Today, but longer ago than the assistant reopens a chat: the demo opens on a new chat,
+        // with these as its recent chats.
         #expect(dates[0] > Date.now.addingTimeInterval(-12 * 3600))
+        #expect(dates[0] < Date.now.addingTimeInterval(-AssistantChatStore.reopenWithin))
     }
 
     @Test(arguments: ["chat-dinner", "chat-pediatrician", "chat-groceries"])
@@ -99,7 +101,8 @@ struct DemoAssistantTests {
         #expect(store.ready)
         #expect(store.settingsError == nil)
 
-        await store.restoreLatest()
+        // The latest was active 45 minutes ago: within the hour asked for here.
+        await store.restoreLatest(within: 3600)
         #expect(store.chats.map(\.id) == chatIDs)
         #expect(store.current?.id == "chat-dinner")
         #expect(store.current?.isRunning == false)
@@ -111,6 +114,53 @@ struct DemoAssistantTests {
         #expect(!store.isFollowing)
         #expect(store.current?.id == "chat-dinner")
         #expect(store.current?.items.contains { if case .error = $0 { true } else { false } } == false)
+    }
+
+    @Test func opensOnANewChatWhenTheLatestIsQuiet() async {
+        let store = store()
+        await store.preload()
+        // Nothing opened (nothing heavy prepared), the list there for the welcome's recent chats.
+        #expect(store.ready)
+        #expect(store.currentID == nil)
+        #expect(store.current == nil)
+        #expect(store.chatsLoaded)
+        #expect(store.chats.map(\.id) == chatIDs)
+        // Showing it later doesn't open one either.
+        await store.restoreLatest()
+        #expect(store.currentID == nil)
+    }
+
+    @Test func aReopenedChatGivesWayOnceQuiet() async {
+        let store = store()
+        await store.restoreLatest(within: 3600)
+        #expect(store.currentID == "chat-dinner")
+        // Shown again while it's still recent: it stays.
+        await store.restoreLatest(within: 3600, now: .now.addingTimeInterval(60))
+        #expect(store.currentID == "chat-dinner")
+        // Shown again after it went quiet: a new chat.
+        await store.restoreLatest(within: 3600, now: .now.addingTimeInterval(3600))
+        #expect(store.currentID == nil)
+        #expect(store.current == nil)
+
+        // A chat the user opened stays open, however old.
+        await store.open("chat-groceries")
+        await store.restoreLatest(within: 3600, now: .now.addingTimeInterval(7 * 86400))
+        #expect(store.currentID == "chat-groceries")
+    }
+
+    @Test func openingAChatReadsItsAnswersAheadBeforeShowingIt() async throws {
+        let store = store()
+        var read: [[AssistantItem]] = []
+        var shownWhenRead: [Bool] = []
+        store.prewarm = { items in
+            read.append(items)
+            shownWhenRead.append(store.current != nil)
+        }
+        await store.open("chat-dinner")
+        // The server's answer, read before it was shown.
+        #expect(read.count == 1)
+        #expect(shownWhenRead == [false])
+        #expect(read.first == store.current?.items)
     }
 
     @Test func countsEachChatShownOnce() async {
@@ -134,11 +184,17 @@ struct DemoAssistantTests {
         let store = store()
         await store.open("chat-pediatrician")
         let before = store.current?.items.count ?? 0
+        #expect(store.turn == .idle)
         try await store.send("Can you move it to Friday?")
+        // On its way: the bar and the toggle say so.
+        #expect(store.turnRunning)
+        #expect(store.turn.running && store.turn.status == String(localized: "Thinking…"))
         await eventually { !store.busy && !store.isFollowing }
         #expect(!store.busy)
         #expect(!store.isFollowing)
         #expect(store.activity == nil)
+        #expect(store.turn == .idle)
+        #expect(!store.turnRunning)
         let items = store.current?.items ?? []
         #expect(items.count == before + 2)
         #expect(items.dropLast().last == .user(text: "Can you move it to Friday?", attachments: []))

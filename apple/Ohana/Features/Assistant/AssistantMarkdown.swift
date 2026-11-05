@@ -2,8 +2,9 @@ import SwiftUI
 
 /// A block of an answer in Markdown (web: components/assistant/markdown.tsx): paragraphs,
 /// headings, lists, tables and code; the inline parts (bold, italics, code, links) go through
-/// `AttributedString(markdown:)`.
-enum AssistantMarkdownBlock: Equatable {
+/// `AttributedString(markdown:)`. Pure, so answers can be read off the main thread
+/// (`AssistantMarkdownCache.prewarm`).
+nonisolated enum AssistantMarkdownBlock: Equatable, Sendable {
     case paragraph(String)
     case heading(String)
     case list(ordered: Bool, items: [String])
@@ -19,9 +20,10 @@ enum AssistantMarkdownBlock: Equatable {
         }
     }
 
-    private static let listItem = /^\s*([-*•+]|\d+[.)])\s+/
-    private static let headingLine = /^(#{1,6})\s+(.*)$/
-    private static let tableRule = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/
+    // Not `Sendable` (its output type could be anything), but matching is safe from any thread.
+    private nonisolated(unsafe) static let listItem = /^\s*([-*•+]|\d+[.)])\s+/
+    private nonisolated(unsafe) static let headingLine = /^(#{1,6})\s+(.*)$/
+    private nonisolated(unsafe) static let tableRule = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/
 
     /// A table row's cells (`\|` is a literal pipe).
     static func cells(_ line: String) -> [String] {
@@ -140,9 +142,10 @@ enum AssistantMarkdownBlock: Equatable {
 /// Answers already read, so none is read twice: an answer's blocks by its text and sources, each
 /// inline part (paragraph, list item, cell) by its text. A streaming answer's finished paragraphs
 /// aren't read again with each new piece of text, nor an answer drawn again (a chat opened again,
-/// the panel built again). Bounded by the length of the texts kept.
-enum AssistantMarkdownCache {
-    private final class Box<Value> {
+/// the panel built again). Bounded by the length of the texts kept. Usable from any thread
+/// (`NSCache` is thread-safe): a chat's answers are read ahead off the main thread (`prewarm`).
+nonisolated enum AssistantMarkdownCache {
+    private final class Box<Value: Sendable>: Sendable {
         let value: Value
         init(_ value: Value) { self.value = value }
     }
@@ -153,12 +156,16 @@ enum AssistantMarkdownCache {
         return cache
     }
 
-    private static let blockCache = cache([AssistantMarkdownBlock].self)
-    private static let inlineCache = cache(AttributedString.self)
+    private nonisolated(unsafe) static let blockCache = cache([AssistantMarkdownBlock].self)
+    private nonisolated(unsafe) static let inlineCache = cache(AttributedString.self)
+
+    private static func blockKey(_ text: String, sources: [AssistantSource]) -> NSString {
+        (sources.map(\.ref).joined(separator: " ") + "\u{0}" + text) as NSString
+    }
 
     /// `AssistantMarkdownBlock.parse` of the text prepared for its sources.
     static func blocks(_ text: String, sources: [AssistantSource]) -> [AssistantMarkdownBlock] {
-        let key = (sources.map(\.ref).joined(separator: " ") + "\u{0}" + text) as NSString
+        let key = blockKey(text, sources: sources)
         if let hit = blockCache.object(forKey: key) { return hit.value }
         let blocks = AssistantMarkdownBlock.parse(AssistantSourceMarkers.prepare(text, sources: sources))
         blockCache.setObject(Box(blocks), forKey: key, cost: key.length)
@@ -172,6 +179,36 @@ enum AssistantMarkdownCache {
         let inline = AssistantMarkdownBlock.inline(text)
         inlineCache.setObject(Box(inline), forKey: key, cost: key.length)
         return inline
+    }
+
+    /// Reads a chat's answers off the main thread, as `AssistantMarkdownView` asks for them (the
+    /// blocks, then each paragraph's, heading's, list item's and cell's inline text), so drawing
+    /// the chat finds them read. Only the answers the chat draws when it opens: those among its
+    /// last `AssistantItemWindow.page` visible items. Returns the answers' texts it read (tests:
+    /// the cache itself may let go of entries at any time).
+    @concurrent @discardableResult
+    static func prewarm(_ items: [AssistantItem]) async -> [String] {
+        var read: [String] = []
+        for item in items.filter(\.isVisible).suffix(AssistantItemWindow.page) {
+            guard case let .assistant(text, sources) = item else { continue }
+            if Task.isCancelled { break }
+            for block in blocks(text, sources: sources) {
+                for part in inlineParts(block) { _ = inline(part) }
+            }
+            read.append(text)
+        }
+        return read
+    }
+
+    /// The inline texts `AssistantMarkdownView` draws for a block (a row's missing cells as "").
+    static func inlineParts(_ block: AssistantMarkdownBlock) -> [String] {
+        switch block {
+        case let .paragraph(text), let .heading(text): [text]
+        case let .list(_, items): items
+        case .code: []
+        case let .table(header, _, rows):
+            header + rows.flatMap { row in header.indices.map { row.indices.contains($0) ? row[$0] : "" } }
+        }
     }
 }
 
@@ -187,7 +224,10 @@ struct AssistantMarkdownView: View {
                 blockView(block)
             }
         }
+        // On the Mac only: on iOS the answer's menu offers "Select Text" instead.
+        #if os(macOS)
         .textSelection(.enabled)
+        #endif
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -216,6 +256,8 @@ struct AssistantMarkdownView: View {
                     .font(.system(.caption, design: .monospaced))
                     .padding(10)
             }
+            // Moves sideways only when the code is wider than the column: the chat never wiggles.
+            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
             .background(.quaternary.opacity(0.5), in: .rect(cornerRadius: 10))
         case let .table(header, alignments, rows):
             ScrollView(.horizontal, showsIndicators: false) {
@@ -238,6 +280,7 @@ struct AssistantMarkdownView: View {
                 .font(.caption)
                 .padding(.vertical, 4)
             }
+            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
         }
     }
 }

@@ -12,8 +12,9 @@ struct AssistantAccessory: View {
 
     var body: some View {
         // Read here, not in the shell: what reads the store is drawn again as the turn goes on.
+        // Only its summary (`turn`), which changes with a step, not with each piece of text.
         let store = AssistantChatStore.shared(for: context.api)
-        let turn = AssistantTurn(store)
+        let turn = store.turn
         let inline = placement == .inline
         Button {
             context.ask()
@@ -57,66 +58,36 @@ struct AssistantAccessory: View {
 }
 
 /// The assistant toggle in the toolbars (iPad, Mac, and the iPhone's page sheets): selected and in
-/// the assistant's color while the panel is open, the sparkles breathing while a turn runs in the
-/// family's chat. It reads only the chats' list, which changes with each step of a turn (not with
-/// each piece of text written), so the pages around it aren't drawn again.
+/// the assistant's color while the panel is open, a still dot on the sparkles while a turn runs in
+/// the family's chat (no symbol effect: on the Mac each frame of one would lay out the window). It
+/// reads only `turnRunning`, so the pages around it aren't drawn again as the turn goes on.
 struct AssistantToolbarToggle: View {
     @Binding var isOpen: Bool
     @Environment(FamilyContext.self) private var family
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let store = AssistantChatStore.shared(for: family.api)
+        let running = store.turnRunning
         Toggle(isOn: $isOpen) {
-            Label("Assistant", systemImage: "sparkles")
+            Label {
+                Text("Assistant")
+            } icon: {
+                Image(systemName: "sparkles")
+                    .overlay(alignment: .topTrailing) {
+                        if running {
+                            Circle()
+                                .fill(ModuleTint.assistant)
+                                .frame(width: 6, height: 6)
+                                .offset(x: 3, y: -2)
+                        }
+                    }
+            }
         }
         .toggleStyle(.button)
         .tint(isOpen ? ModuleTint.assistant : nil)
-        .symbolEffect(.breathe, options: .repeating, isActive: AssistantTurn.running(store) && !reduceMotion)
+        .accessibilityValue(running ? Text("Thinking…") : Text(verbatim: ""))
         .help("Assistant (⌘J)")
         .followsAssistantTurn(store)
-    }
-}
-
-/// What a turn in the family's open chat does, for what shows it outside the chat (the Ask Ohana
-/// bar, the ✨ toggle).
-struct AssistantTurn: Equatable {
-    /// A turn runs (or a message is on its way).
-    var running: Bool
-    /// What it does right now ("Thinking…", a tool's label); empty while none runs.
-    var status: String
-    /// The chat's title (empty for a new chat).
-    var title: String
-
-    init(_ store: AssistantChatStore) {
-        running = Self.running(store)
-        status = running ? Self.status(store) : ""
-        title = running ? store.current?.title ?? "" : ""
-    }
-
-    /// A turn runs in the open chat as far as this device follows it: the chat's copy may say
-    /// "running" from before (a copy on the device, a stream that broke off), which isn't trusted.
-    /// From the chats' list, not the open chat: that changes with every piece of text written.
-    static func running(_ store: AssistantChatStore) -> Bool {
-        if store.sending { return true }
-        guard store.isFollowing, let id = store.currentID else { return false }
-        return store.chats.first { $0.id == id }?.isRunning == true
-    }
-
-    /// As the chat says it (`AssistantActivityView`), shorter.
-    private static func status(_ store: AssistantChatStore) -> String {
-        switch store.activity?.activity.kind {
-        case "writing":
-            return String(localized: "Writing…")
-        case "tool":
-            let running = (store.current?.items ?? []).compactMap { item -> AssistantToolCall? in
-                if case let .tool(t) = item, t.status == "running" { t } else { nil }
-            }
-            guard let last = running.last else { return String(localized: "Thinking…") }
-            return AssistantToolLabels.label(last) + "…"
-        default:
-            return String(localized: "Thinking…")
-        }
     }
 }
 

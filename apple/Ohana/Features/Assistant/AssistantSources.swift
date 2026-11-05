@@ -158,7 +158,7 @@ nonisolated enum AssistantSourceMarkers {
     }
 }
 
-extension AssistantSourceMarkers {
+nonisolated extension AssistantSourceMarkers {
     /// `text` (read from the Markdown) with each placeholder as a chip: "[n]", small and raised,
     /// linking to `ohana-source://n`.
     /// A placeholder without its pair, or with more than a number in it, is dropped (its characters

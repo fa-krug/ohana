@@ -486,7 +486,7 @@ struct AssistantChatView: View {
         let animates = !reduceMotion && settledSession == store.session
         return VStack(alignment: .leading, spacing: 12) {
             if store.current?.items.isEmpty ?? true {
-                AssistantWelcome(examples: AssistantPages.examples(store.current?.page ?? here), visible: visible) { example in
+                AssistantWelcome(store: store, examples: AssistantPages.examples(store.current?.page ?? here)) { example in
                     text = example
                     composerFocused = true
                 }
