@@ -2,8 +2,9 @@ import SwiftUI
 
 /// The knowledge base: the family's documents (the files of its knowledge folder the server has
 /// read), newest first, as a list in a readable column (`columnWidth`): each row with its date,
-/// whose it is, the start of its summary and its tags; narrowed by folder, person and tag (menus in
-/// a bar under the navigation bar, as wide as the list), the left-out ones on request. (Searching them is
+/// whose it is, the start of its summary and its tags; narrowed by folder and person (menus in a
+/// bar under the navigation bar, as wide as the list) and tag (a list beside it on a wide page,
+/// `tagColumnFrom`, else a menu in the bar), the left-out ones on request. (Searching them is
 /// the search page's: its `knowledge` hits.) A row opens the document
 /// (`KnowledgeDocumentView`). Editors only, not the demo (`FamilyContext.knowledgeAvailable`);
 /// inside the shell's navigation stack (a sheet from the family page on iPhone).
@@ -100,15 +101,25 @@ private struct KnowledgeList: View {
         var active: Bool
     }
 
+    /// The page is wide enough for the tags in a column beside the list (`tagColumnFrom`).
+    @State private var wide = false
+
+    /// The filters show once there is something to narrow (or a filter to take back).
+    private var showsFilters: Bool {
+        state.value != nil && (!documents.isEmpty || query.isFiltered)
+    }
+
+    private var hasTags: Bool { !tags.isEmpty || query.tag != nil }
+
+    /// On a wide page the tags are a list beside the documents, else a menu chip in the bar.
+    private var showsTagColumn: Bool { wide && showsFilters && hasTags }
+
     var body: some View {
-        LoadStateView(state: state, retry: { await refresh(full: true) }) { _ in
-            content
+        HStack(spacing: 0) {
+            listColumn
+            if showsTagColumn { tagColumn }
         }
-        .safeAreaBar(edge: .top) {
-            if state.value != nil, !documents.isEmpty || query.isFiltered {
-                filterBar
-            }
-        }
+        .onGeometryChange(for: Bool.self) { $0.size.width >= Self.tagColumnFrom } action: { wide = $0 }
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -257,6 +268,16 @@ private struct KnowledgeList: View {
 
     // MARK: Content
 
+    /// The documents with the folder / person (/ tag) chips above them.
+    private var listColumn: some View {
+        LoadStateView(state: state, retry: { await refresh(full: true) }) { _ in
+            content
+        }
+        .safeAreaBar(edge: .top) {
+            if showsFilters { filterBar }
+        }
+    }
+
     @ViewBuilder
     private var content: some View {
         if documents.isEmpty {
@@ -315,13 +336,18 @@ private struct KnowledgeList: View {
 
     /// The list's column (and its filter bar's) on a wide window.
     static let columnWidth: CGFloat = 680
+    /// The tags' column beside the list.
+    static let tagColumnWidth: CGFloat = 220
+    /// From this page width on the tags are a column beside the list: the list keeps its column
+    /// and a margin on each side.
+    static let tagColumnFrom: CGFloat = columnWidth + tagColumnWidth + 48
 
     private var filterBar: some View {
         ScrollView(.horizontal) {
             HStack(spacing: 8) {
                 folderMenu
                 if !members.isEmpty { personMenu }
-                if !tags.isEmpty || query.tag != nil { tagMenu }
+                if hasTags, !showsTagColumn { tagMenu }
             }
             .padding(.horizontal)
             .padding(.vertical, 8)
@@ -396,6 +422,65 @@ private struct KnowledgeList: View {
         .menuStyle(.button)
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
+    }
+
+    /// The tags as a list of filters beside the documents (wide pages): All Tags, then each tag
+    /// with its number of documents; a tap picks one, a tap on the picked one takes it back.
+    private var tagColumn: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Tags")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 4)
+                tagRow(nil, title: Text("All Tags"), count: nil)
+                ForEach(tags, id: \.tag) { tag in
+                    tagRow(tag.tag, title: Text(verbatim: tag.tag), count: tag.count)
+                }
+                // A tag picked earlier that's no longer listed: still there to take back.
+                if let current = query.tag, !tags.contains(where: { $0.tag == current }) {
+                    tagRow(current, title: Text(verbatim: current), count: nil)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+        }
+        .frame(width: Self.tagColumnWidth)
+        .frame(maxHeight: .infinity, alignment: .top)
+    }
+
+    private func tagRow(_ tag: String?, title: Text, count: Int?) -> some View {
+        let selected = query.tag == tag
+        return Button {
+            query.tag = selected ? nil : tag
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: selected && tag != nil ? "tag.fill" : "tag")
+                    .frame(width: 18)
+                title.lineLimit(1)
+                Spacer(minLength: 4)
+                if let count {
+                    Text(count, format: .number)
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .font(.subheadline)
+            .foregroundStyle(selected ? ModuleTint.knowledge : .primary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background {
+                if selected {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(ModuleTint.knowledge.opacity(0.18))
+                }
+            }
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     private func filterChip(_ title: Text, systemImage: String, selected: Bool) -> some View {
