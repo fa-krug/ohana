@@ -489,7 +489,7 @@ async function respond(req: Request, body: any): Promise<Response> {
       ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
         result.results.map((r: any) => `${r.expression} = ${r.value ?? r.error}`).join("; ")
       : result.groups
-      ? `${result.groupCount} groups, ${result.total.expenseCents / 100} spent.`
+      ? `${result.groupCount} groups, ${result.total.expense} spent.`
       : result.results
       ? `I found ${result.results.length} results, e.g. ${result.results[0]?.title ?? "nothing"}.`
       : result.ok === true && result.title
@@ -502,8 +502,8 @@ async function respond(req: Request, body: any): Promise<Response> {
       ? "Done."
       : result.title !== undefined
       ? `The page is called “${result.title}”.`
-      : result.incomeCents !== undefined
-      ? `Income ${result.incomeCents / 100}, expenses ${result.expenseCents / 100}.`
+      : result.income !== undefined && typeof result.income === "number"
+      ? `Income ${result.income}, expenses ${result.expense}.`
       : `Here is what I found: ${JSON.stringify(result).slice(0, 200)}`;
     return reply(stream, text);
   }

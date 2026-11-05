@@ -532,16 +532,17 @@ describe("a turn of the assistant", () => {
 
     const first = await set({
       label: "Destatis 2024",
-      expense: { lowCents: 300000, highCents: 450000 },
-      categories: [{ category: "Groceries", lowCents: 60000, highCents: 80000 }],
+      expense: { low: 3000, high: 4500 },
+      categories: [{ category: "Groceries", low: 600, high: 800.5 }],
     });
+    expect((first.result as any).benchmark.expense).toEqual({ low: 3000, high: 4500 });
     expect(first.ok, JSON.stringify(first.result)).toBe(true);
     expect([first.change!.kind, first.change!.summary]).toEqual(["benchmark", "Set the statistic average"]);
     expect(await benchmark()).toEqual({
       label: "Destatis 2024",
       income: null,
       expense: { lowCents: 300000, highCents: 450000 },
-      categories: [{ categoryId: "groceries", lowCents: 60000, highCents: 80000 }],
+      categories: [{ categoryId: "groceries", lowCents: 60000, highCents: 80050 }],
     });
 
     const second = await set({ income: { lowCents: 500000, highCents: 500000 } });
@@ -557,9 +558,9 @@ describe("a turn of the assistant", () => {
     await undo(first.change!.undo);
     expect(await benchmark()).toBeNull();
 
-    expect((await set({ categories: [{ category: "Nope", lowCents: 1 }] })).ok).toBe(false);
-    expect((await set({ expense: { lowCents: -5 } })).ok).toBe(false);
-    expect((await set({ expense: { lowCents: 9, highCents: 3 } })).ok).toBe(false);
+    expect((await set({ categories: [{ category: "Nope", low: 1 }] })).ok).toBe(false);
+    expect((await set({ expense: { low: -5 } })).ok).toBe(false);
+    expect((await set({ expense: { low: 9, high: 3 } })).ok).toBe(false);
   });
 
   it("passes on attached images, the newest 8 of a chat", async () => {

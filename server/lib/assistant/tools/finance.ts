@@ -24,10 +24,12 @@ import {
 import type { AccountRow, CategoryRow, FinanceStore as Store } from "@/lib/finance/store";
 import { analyzeTransactions, TX_DIMENSIONS, TX_SORTS, TX_STATS } from "../analytics";
 import {
+  centsOf,
   choices,
   CONFIRM_TRANSACTIONS,
   DEFAULT_GROUPS,
   fitting,
+  inCurrency,
   MAX_GROUPS,
   MAX_LABEL,
   MAX_QUERIES,
@@ -83,7 +85,7 @@ function categoryTotals(rows: CategoryTotals[], categories: CategoryRow[]) {
 
 const RANGE_SCHEMA = {
   type: "object",
-  properties: { lowCents: { type: "integer" }, highCents: { type: "integer" } },
+  properties: { low: { type: "number" }, high: { type: "number" } },
 };
 
 
@@ -148,12 +150,13 @@ async function analysis(
     to: query.get("to") ?? undefined,
   });
   const limit = Math.min(MAX_GROUPS, Math.max(1, Number(args.limit) || DEFAULT_GROUPS));
-  const head = { groupBy, total: res.total, perGroup: res.perGroup, groupCount: 0 };
-  const groups = fitting(head, res.groups.slice(0, limit), max);
+  const total = inCurrency(res.total), perGroup = inCurrency(res.perGroup);
+  const head = { groupBy, total, perGroup, groupCount: 0 };
+  const groups = fitting(head, inCurrency(res.groups.slice(0, limit)), max);
   return {
     groupBy,
-    total: res.total,
-    ...(res.perGroup ? { perGroup: res.perGroup } : {}),
+    total,
+    ...(perGroup ? { perGroup } : {}),
     groupCount: res.groups.length,
     groups,
     ...(groups.length < res.groups.length ? { more: res.groups.length - groups.length } : {}),
@@ -166,7 +169,7 @@ export const financeTools: Record<string, Tool> = {
     spec: {
       name: "list_transactions",
       description:
-        'Lists transactions (newest first) with totals, as rows of `columns`: as many as fit, long descriptions shortened. If `nextOffset` is set there are more: call again with that offset. For totals per month or category use finance_summary instead. Amounts are integer cents, negative = money out. Legs of a transfer between the family\'s accounts share a transferId; totals count a transfer once by its net (500 moved between two accounts counts 0). A part of a split booking (e.g. an order line of an Amazon "Splitbuchung") has the booking\'s id as splitOf; totals count the parts and only what is left of the booking. Filters: from/to (YYYY-MM-DD), account (id, name or "none"), category (id, name, path like "Food > Groceries", or "none"; includes its subcategories), kind (income | expense | transfer: legs of transfers), source (manual | csv | bank, comma-separated; after a full bank import "manual,csv" of that account are what the bank doesn\'t list), q (text in payee, description, note).',
+        'Lists transactions (newest first) with totals, as rows of `columns`: as many as fit, long descriptions shortened. If `nextOffset` is set there are more: call again with that offset. For totals per month or category use finance_summary instead. Amounts are in the currency (-45.99), negative = money out. Legs of a transfer between the family\'s accounts share a transferId; totals count a transfer once by its net (500 moved between two accounts counts 0). A part of a split booking (e.g. an order line of an Amazon "Splitbuchung") has the booking\'s id as splitOf; totals count the parts and only what is left of the booking. Filters: from/to (YYYY-MM-DD), account (id, name or "none"), category (id, name, path like "Food > Groceries", or "none"; includes its subcategories), kind (income | expense | transfer: legs of transfers), source (manual | csv | bank, comma-separated; after a full bank import "manual,csv" of that account are what the bank doesn\'t list), q (text in payee, description, note).',
       parameters: {
         type: "object",
         properties: {
@@ -194,7 +197,12 @@ export const financeTools: Record<string, Tool> = {
       );
       const offset = Math.max(0, Math.floor(Number(args.offset)) || 0);
       const limit = Math.min(MAX_TX_ROWS, Math.max(1, Number(args.limit) || MAX_TX_ROWS));
-      const head = { total: rows.length, incomeCents, expenseCents, columns: TX_COLUMNS };
+      const head = {
+        total: rows.length,
+        income: incomeCents / 100,
+        expense: expenseCents / 100,
+        columns: TX_COLUMNS,
+      };
       // Rows until the result is about to be cut off (room left for offset and nextOffset).
       let size = JSON.stringify(head).length + 60;
       const out: unknown[][] = [];
@@ -206,7 +214,7 @@ export const financeTools: Record<string, Tool> = {
         const row = [
           p.id,
           p.date,
-          p.amountCents,
+          p.amountCents / 100,
           p.payee,
           description,
           p.categoryId,
@@ -237,7 +245,7 @@ export const financeTools: Record<string, Tool> = {
     spec: {
       name: "finance_summary",
       description:
-        "Income and expenses (integer cents) per month and per category between two days (a transfer between the family's accounts counts once by its net), plus the currency, the categories and the accounts with their current balances (balanceCents) and their balances at the end of `to` (balanceAtToCents); a linked account's bank.balanceCents is its booked balance at the bank as of the last sync (bank.balanceAt). Categories nest: per category its own transactions, and for one with subcategories also withSubcategories (it and all below it).",
+        "Income and expenses (in the currency, e.g. 45.99) per month and per category between two days (a transfer between the family's accounts counts once by its net), plus the currency, the categories and the accounts with their current balances (balance) and their balances at the end of `to` (balanceAtTo); a linked account's bank.balance is its booked balance at the bank as of the last sync (bank.balanceAt). Categories nest: per category its own transactions, and for one with subcategories also withSubcategories (it and all below it).",
       parameters: {
         type: "object",
         properties: { from: { type: "string" }, to: { type: "string" } },
@@ -257,12 +265,12 @@ export const financeTools: Record<string, Tool> = {
         balanceAtToCents: a.openingCents + (atTo.get(a.id) ?? 0),
       }));
       return {
-        result: {
+        result: inCurrency({
           ...summary,
           categories: categoryTotals(summary.categories, categories),
           categoryNames: categories.map(publicCategory),
           accounts: withAtTo,
-        },
+        }),
         summary: `${from} – ${to}`,
       };
     },
@@ -272,7 +280,7 @@ export const financeTools: Record<string, Tool> = {
     spec: {
       name: "analyze_transactions",
       description:
-        'Totals and statistics of transactions per group, computed exactly (use it instead of adding up list_transactions): up to 2 of groupBy: month, quarter, year, week (ISO), weekday, day, category, account, payee (similar spellings together), kind (income / expense). Each group has count, incomeCents, expenseCents, netCents, and the asked stats of its single amounts (avg, median, min, max, stddev; in cents, negative = out). With one groupBy, perGroup has the average and median group (e.g. the average month; empty months count as 0). Counted like all totals: a transfer between the family\'s accounts once by its net, a split booking by its parts. Categories nest ("Food > Groceries"): by default a transaction counts for its own category; with categoryLevel (1 = top level, 2 = second level …) for its category\'s ancestor at that level, or its own category if that isn\'t as deep; nested groups have categoryPath. Same filters as list_transactions (from, to, account, category with its subcategories, kind, q). Time groups come in order, others largest first; sortBy: key, total (income + expenses), count, income, expense, net; order: asc or desc. One call usually covers a whole question: groupBy category, account or kind gives every category, account or kind at once (with year or month as the second dimension, per period). To compare different periods or filters, don\'t call once each: give `queries`, up to 10 analyses with their own filters and options (and a label, given back) in one call; what is set outside queries applies to all of them, e.g. {"groupBy": ["category"], "categoryLevel": 1, "kind": "expense", "queries": [{"label": "2025", "from": "2025-01-01", "to": "2025-10-25"}, {"label": "2026", "from": "2026-01-01", "to": "2026-10-25"}]}. The result then has results: one per query, in order.',
+        'Totals and statistics of transactions per group, computed exactly (use it instead of adding up list_transactions): up to 2 of groupBy: month, quarter, year, week (ISO), weekday, day, category, account, payee (similar spellings together), kind (income / expense). Each group has count, income, expense, net, and the asked stats of its single amounts (avg, median, min, max, stddev); amounts in the currency (45.99), negative = out. With one groupBy, perGroup has the average and median group (e.g. the average month; empty months count as 0). Counted like all totals: a transfer between the family\'s accounts once by its net, a split booking by its parts. Categories nest ("Food > Groceries"): by default a transaction counts for its own category; with categoryLevel (1 = top level, 2 = second level …) for its category\'s ancestor at that level, or its own category if that isn\'t as deep; nested groups have categoryPath. Same filters as list_transactions (from, to, account, category with its subcategories, kind, q). Time groups come in order, others largest first; sortBy: key, total (income + expenses), count, income, expense, net; order: asc or desc. One call usually covers a whole question: groupBy category, account or kind gives every category, account or kind at once (with year or month as the second dimension, per period). To compare different periods or filters, don\'t call once each: give `queries`, up to 10 analyses with their own filters and options (and a label, given back) in one call; what is set outside queries applies to all of them, e.g. {"groupBy": ["category"], "categoryLevel": 1, "kind": "expense", "queries": [{"label": "2025", "from": "2025-01-01", "to": "2025-10-25"}, {"label": "2026", "from": "2026-01-01", "to": "2026-10-25"}]}. The result then has results: one per query, in order.',
       parameters: {
         type: "object",
         properties: {
@@ -422,7 +430,7 @@ export const financeTools: Record<string, Tool> = {
     spec: {
       name: "set_statistic_average",
       description:
-        "Sets the statistic average that the finance overview compares the family's months with, e.g. a statistics office's figures on household income and spending for a household like this one (search the web for current figures and name the source and year in label). Every amount is a range per month in integer cents, not negative: {lowCents, highCents}, e.g. the typical span between lower and upper households, or the same twice for a single average. income, expense, and categories: [{category (id, name or path), lowCents, highCents}] for the family's categories (top-level ones show in the overview; one without its own range sums up those of its subcategories). Leave out what isn't known. It replaces the whole average; clear: true removes it (the overview then doesn't show it).",
+        "Sets the statistic average that the finance overview compares the family's months with, e.g. a statistics office's figures on household income and spending for a household like this one (search the web for current figures and name the source and year in label). Every amount is a range per month in the currency (e.g. 3500.50), not negative: {low, high}, e.g. the typical span between lower and upper households, or the same twice for a single average. income, expense, and categories: [{category (id, name or path), low, high}] for the family's categories (top-level ones show in the overview; one without its own range sums up those of its subcategories). Leave out what isn't known. It replaces the whole average; clear: true removes it (the overview then doesn't show it).",
       parameters: {
         type: "object",
         properties: {
@@ -446,12 +454,16 @@ export const financeTools: Record<string, Tool> = {
         store.getFinanceSettings(familyId),
         store.listCategories(familyId),
       ]);
+      const range = (v: unknown) =>
+        v && typeof v === "object" && !Array.isArray(v)
+          ? centsOf(v as Record<string, unknown>, { low: "lowCents", high: "highCents" })
+          : v;
       const benchmark = args.clear === true ? null : cleanBenchmark(
         {
           label: args.label,
-          income: args.income,
-          expense: args.expense,
-          categories: args.categories,
+          income: range(args.income),
+          expense: range(args.expense),
+          categories: Array.isArray(args.categories) ? args.categories.map(range) : args.categories,
         },
         categories,
       );
@@ -463,7 +475,7 @@ export const financeTools: Record<string, Tool> = {
         benchmark,
       });
       return {
-        result: { benchmark },
+        result: inCurrency({ benchmark }),
         summary: benchmark ? "Set" : "Removed",
         change: {
           kind: "benchmark",
@@ -483,7 +495,7 @@ export const financeTools: Record<string, Tool> = {
     spec: {
       name: "change_transactions",
       description:
-        'Adds, changes, deletes, links, unlinks, splits or unsplits transactions. Ops: {"action": "add", "date", "amountCents" (integer, negative = money out), "payee", "description", "categoryId" (id or name), "accountId" (id or name), "note"}, {"action": "update", "id", ...fields}, {"action": "delete", "ids": [...]}, {"action": "link", "ids": [at least 2]}: the transactions become the legs of one transfer between the family\'s accounts (e.g. 500 out of checking and 500 into savings), counted once by their net, {"action": "unlink", "ids": [...]}: dissolves the transfers these transactions belong to, {"action": "split", "id": "<booking>", "ids": [parts]}: the transactions become parts of the booking (e.g. the order lines the bank lists next to an Amazon "Splitbuchung"); totals count the parts with their categories and only what is left of the booking, {"action": "unsplit", "ids": [...]}: parts become normal transactions again (for a booking: all of its parts).',
+        'Adds, changes, deletes, links, unlinks, splits or unsplits transactions. Ops: {"action": "add", "date", "amount" (in the currency, e.g. -45.99 for 45,99 € out; negative = money out), "payee", "description", "categoryId" (id or name), "accountId" (id or name), "note"}, {"action": "update", "id", ...fields}, {"action": "delete", "ids": [...]}, {"action": "link", "ids": [at least 2]}: the transactions become the legs of one transfer between the family\'s accounts (e.g. 500 out of checking and 500 into savings), counted once by their net, {"action": "unlink", "ids": [...]}: dissolves the transfers these transactions belong to, {"action": "split", "id": "<booking>", "ids": [parts]}: the transactions become parts of the booking (e.g. the order lines the bank lists next to an Amazon "Splitbuchung"); totals count the parts with their categories and only what is left of the booking, {"action": "unsplit", "ids": [...]}: parts become normal transactions again (for a booking: all of its parts).',
       parameters: opsSchema({
         type: "object",
         properties: {
@@ -494,7 +506,7 @@ export const financeTools: Record<string, Tool> = {
           id: { type: "string" },
           ids: { type: "array", items: { type: "string" } },
           date: { type: "string" },
-          amountCents: { type: "integer" },
+          amount: { type: "number", description: "In the currency, e.g. -45.99" },
           payee: { type: "string" },
           description: { type: "string" },
           categoryId: { type: ["string", "null"] },
@@ -510,7 +522,7 @@ export const financeTools: Record<string, Tool> = {
     },
     async run(args, { finance: store, familyId, lang }) {
       if (!Array.isArray(args.ops)) throw new HttpError(400, "ops must be an array");
-      const ops = args.ops.map((o) => objectOf(o, "Each op"));
+      const ops = args.ops.map((o) => centsOf(objectOf(o, "Each op"), { amount: "amountCents" }));
       const deletes = ops.filter((o) => o.action === "delete")
         .reduce((n, o) => n + (Array.isArray(o.ids) ? o.ids.length : 1), 0);
       if (deletes) needConfirm(args, `This deletes ${deletes} transactions.`);

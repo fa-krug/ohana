@@ -31,6 +31,7 @@ import {
   type AppleCalendarSnapshot,
   cleanAppleCalendar,
   cleanReminders,
+  inCurrency,
   MAX_TOOL_RESULT,
   type NotesEdit,
   type Question,
@@ -255,7 +256,7 @@ export function systemPrompt(input: {
   const b = input.benchmark;
   const benchmark = b
     ? `${b.label ? `“${b.label}”: ` : ""}${
-      JSON.stringify({ income: b.income, expense: b.expense, categories: b.categories })
+      JSON.stringify(inCurrency({ income: b.income, expense: b.expense, categories: b.categories }))
     }`
     : "not set";
   return `You are the assistant inside Ohana, the family app of the family “${family.name}”.
@@ -280,8 +281,8 @@ Entry types in ${year}:
 ${typeList}
 
 ## Finances
-A transactions log in ${input.currency}. Amounts in tools are integer cents, negative for money
-going out (-4599 = −45.99). Categories: ${cats}. Accounts: ${accounts}.
+A transactions log in ${input.currency}. Amounts in tools are in ${input.currency} with decimals,
+negative for money going out (-45.99 = 45.99 out; 3 = 3.00, never 300). Categories: ${cats}. Accounts: ${accounts}.
 Categories nest to any depth (“Food > Groceries”): a transaction can be on any level, and a
 category's totals and filters include its subcategories.
 The overview compares the chosen month, year or all time (per month) with others, and shows

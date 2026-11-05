@@ -191,18 +191,18 @@ it("analyzes transactions per month, category and payee, counted like the totals
   assert(months.ok, JSON.stringify(months.result));
   assertEquals(months.result.groupBy, ["month"]);
   assertEquals(
-    months.result.groups.map((g: any) => [g.month, g.count, g.incomeCents, g.expenseCents]),
-    [["2026-01", 3, 300000, 12000], ["2026-02", 0, 0, 0], ["2026-03", 1, 0, 3000]],
+    months.result.groups.map((g: any) => [g.month, g.count, g.income, g.expense]),
+    [["2026-01", 3, 3000, 120], ["2026-02", 0, 0, 0], ["2026-03", 1, 0, 30]],
   );
   assertEquals(months.result.total, {
     count: 4,
-    incomeCents: 300000,
-    expenseCents: 15000,
-    netCents: 285000,
+    income: 3000,
+    expense: 150,
+    net: 2850,
   });
   // The average month, empty February included.
-  assertEquals(months.result.perGroup.avgExpenseCents, 5000);
-  assertEquals(months.result.perGroup.medianExpenseCents, 3000);
+  assertEquals(months.result.perGroup.avgExpense, 50);
+  assertEquals(months.result.perGroup.medianExpense, 30);
 
   const cats = await tool("analyze_transactions", {
     groupBy: ["category"],
@@ -213,21 +213,21 @@ it("analyzes transactions per month, category and payee, counted like the totals
     category: "groceries",
     categoryName: "Groceries",
     count: 3,
-    incomeCents: 0,
-    expenseCents: 15000,
-    netCents: -15000,
-    avgCents: -5000,
-    medianCents: -5000,
-    minCents: -7000,
-    maxCents: -3000,
-    stddevCents: 2000,
+    income: 0,
+    expense: 150,
+    net: -150,
+    avg: -50,
+    median: -50,
+    min: -70,
+    max: -30,
+    stddev: 20,
   }]);
 
   // Spellings of one payee go together; largest first.
   const payees = await tool("analyze_transactions", { groupBy: ["payee"], kind: "expense" });
   assertEquals(
-    payees.result.groups.map((g: any) => [g.payee.toLowerCase().slice(0, 10), g.expenseCents]),
-    [["rewe markt", 12000], ["lidl", 3000]],
+    payees.result.groups.map((g: any) => [g.payee.toLowerCase().slice(0, 10), g.expense]),
+    [["rewe markt", 120], ["lidl", 30]],
   );
 
   // Two dimensions, sorted by count, and a limit.
@@ -265,9 +265,9 @@ it("analyzes transactions per month, category and payee, counted like the totals
   const [jan, mar, broken] = batch.result.results;
   assertEquals(jan.label, "January");
   assertEquals(jan.groupBy, ["category"]);
-  assertEquals(jan.groups.map((g: any) => [g.category, g.expenseCents]), [["groceries", 12000]]);
+  assertEquals(jan.groups.map((g: any) => [g.category, g.expense]), [["groceries", 120]]);
   assertEquals(mar.label, "March");
-  assertEquals(mar.groups.map((g: any) => [g.payee, g.expenseCents]), [["Lidl", 3000]]);
+  assertEquals(mar.groups.map((g: any) => [g.payee, g.expense]), [["Lidl", 30]]);
   assertMatch(broken.error, /groupBy can only hold/);
   assert(!("label" in broken));
 
@@ -323,6 +323,46 @@ it("counts calendar days per type, month or weekday", async () => {
   assertMatch((await tool("analyze_calendar", { ...year, types: ["nope"] })).result.error, /nope/);
   const long = await tool("analyze_calendar", { from: "2000-01-01", to: "2026-12-31" });
   assertMatch(long.result.error, /ten years/);
+});
+
+it("gives and takes amounts in the currency, not in cents", async () => {
+  const { call, tool, f } = await family();
+  await call("POST", `${f}/finance/accounts`, { name: "Checking", color: "#3b82f6" });
+  await call("POST", `${f}/finance/transactions`, {
+    ops: [{ date: "2026-01-06", amountCents: -300, payee: "Bakery", accountId: "checking" }],
+  });
+
+  const list = await tool("list_transactions", {});
+  const at = (col: string) => list.result.columns.indexOf(col);
+  assert(!list.result.columns.includes("amountCents"));
+  assertEquals(list.result.rows.map((r: any[]) => r[at("amount")]), [-3]);
+  assertEquals([list.result.income, list.result.expense], [0, 3]);
+  assert(!JSON.stringify(list.result).includes("Cents"));
+
+  const summary = await tool("finance_summary", { from: "2026-01-01", to: "2026-01-31" });
+  assert(!JSON.stringify(summary.result).includes("Cents"), JSON.stringify(summary.result));
+  assertEquals(summary.result.expense, 3);
+  assertEquals(summary.result.accounts[0].balance, -3);
+
+  const added = await tool("change_transactions", {
+    ops: [
+      { action: "add", date: "2026-01-07", amount: -45.99, payee: "Market", accountId: "checking" },
+      { action: "add", date: "2026-01-08", amount: "12,50", payee: "Refund", accountId: "checking" },
+    ],
+  });
+  assert(added.ok, JSON.stringify(added.result));
+  const id = list.result.rows[0][at("id")];
+  assert((await tool("change_transactions", { ops: [{ action: "update", id, amount: -3.2 }] })).ok);
+  const { transactions } = await call("GET", `${f}/finance/transactions`);
+  assertEquals(
+    transactions.map((t: any) => [t.payee, t.amountCents]).sort(),
+    [["Bakery", -320], ["Market", -4599], ["Refund", 1250]],
+  );
+  const odd = await tool("change_transactions", {
+    ops: [{ action: "add", date: "2026-01-09", amount: -1.234, payee: "Odd" }],
+  });
+  assertEquals(odd.ok, false);
+  assertMatch(odd.result.error, /more than 2 decimals/);
 });
 
 it("lists the transactions by where they came from, and deletes them once confirmed", async () => {

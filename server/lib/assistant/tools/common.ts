@@ -170,7 +170,7 @@ export const MAX_OPTION = 150;
 export const TX_COLUMNS = [
   "id",
   "date",
-  "amountCents",
+  "amount",
   "payee",
   "description",
   "categoryId",
@@ -228,6 +228,55 @@ export function fitting<T>(head: unknown, items: T[], max = MAX_TOOL_RESULT): T[
     size += JSON.stringify(item).length + 1;
     if (size > max && out.length) break;
     out.push(item);
+  }
+  return out;
+}
+
+/** Money as the model reads it: every number under a key ending in "Cents" becomes the amount
+ *  in the currency under the key without it ({amountCents: -300} → {amount: -3}), at any depth.
+ *  Models read integer cents as whole units and answered 300,00 € for 3,00 €. */
+export function inCurrency<T>(value: T): T {
+  if (Array.isArray(value)) return value.map(inCurrency) as T;
+  if (!value || typeof value !== "object") return value;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(value)) {
+    if (k.endsWith("Cents") && k.length > 5 && typeof v === "number") {
+      out[k.slice(0, -5)] = v / 100;
+    } else {
+      out[k] = inCurrency(v);
+    }
+  }
+  return out as T;
+}
+
+/** An amount the model gives in the currency (a number like -45.99, or such a string, also
+ *  with a decimal comma) as integer cents; anything else is left for the API's own check. */
+export function toCents(v: unknown, field: string): unknown {
+  const n = typeof v === "string" && /^\s*[-+]?\d+([.,]\d+)?\s*$/.test(v)
+    ? Number(v.replace(",", "."))
+    : v;
+  if (typeof n !== "number" || !Number.isFinite(n)) {
+    throw new HttpError(400, `${field} must be a number in the currency, e.g. -45.99`);
+  }
+  const cents = Math.round(n * 100);
+  if (Math.abs(n * 100 - cents) > 1e-6) {
+    throw new HttpError(400, `${field} has more than 2 decimals`);
+  }
+  return cents;
+}
+
+/** `obj` with its amounts in the currency (`keys`: name in the currency → name in cents) as
+ *  cents, for the API. An amount already given in cents is kept. */
+export function centsOf(
+  obj: Record<string, unknown>,
+  keys: Record<string, string>,
+): Record<string, unknown> {
+  const out = { ...obj };
+  for (const [k, cents] of Object.entries(keys)) {
+    if (!(k in out)) continue;
+    const v = out[k];
+    delete out[k];
+    if (v !== null && v !== undefined && out[cents] === undefined) out[cents] = toCents(v, k);
   }
   return out;
 }
