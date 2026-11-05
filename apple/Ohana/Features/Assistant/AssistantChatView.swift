@@ -49,8 +49,9 @@ struct AssistantChatView: View {
     @State private var dictation = AssistantDictation()
     @FocusState private var composerFocused: Bool
     @State private var scroll = ScrollPosition(edge: .bottom)
-    /// The end of the chat is in view; else "Jump to latest" floats over it. Nothing scrolls along
-    /// with an answer: sending scrolls the message to the top, the answer grows below it.
+    /// The end of the chat is in view; else "Jump to latest" floats over it. Sending scrolls the
+    /// message to the top, the answer grows below it; past the bottom the chat follows it while the
+    /// end is in view.
     @State private var atEnd = true
     @State private var scrollPhase: ScrollPhase = .idle
     /// How tall the last turn is at least (the visible height of the chat, `AssistantTurnLayout`).
@@ -59,6 +60,8 @@ struct AssistantChatView: View {
     @State private var pinning = false
     /// The user sent a message: it scrolls to the top once it is in the chat.
     @State private var sentPending = false
+    /// The sent message is on its way to the top (animated): the chat growing doesn't jump meanwhile.
+    @State private var turnScrolling = false
     /// A scroll to the end waits for the update to be through (`scrollToEndSoon`).
     @State private var endQueued = false
     /// iOS: the message whose text the "Select Text" sheet shows.
@@ -475,7 +478,12 @@ struct AssistantChatView: View {
                 // To the end, not to the message by its id (not laid out yet at this point): the
                 // last turn is as tall as the chat's visible part, so the message then stands at
                 // the top (`AssistantTurnLayout`).
+                turnScrolling = true
                 withAnimation(reduceMotion ? nil : .smooth(duration: 0.35)) { scroll.scrollTo(edge: .bottom) }
+                Task {
+                    try? await Task.sleep(for: .milliseconds(450))
+                    turnScrolling = false
+                }
             }
             if new.start != old.start { sentPending = false }
         }
@@ -490,8 +498,8 @@ struct AssistantChatView: View {
     }
 
     /// The scroll view moved or changed size: is the end in view, how tall is the last turn, and
-    /// (the keyboard came up, the window changed) back to the end it showed. The answer growing
-    /// never scrolls the chat.
+    /// (the keyboard came up, the window changed, the answer grew past the bottom) back to the end
+    /// it showed. An answer within the last turn's room doesn't move the chat.
     private func scrolled(from old: AssistantScrollFollow.Metrics, to new: AssistantScrollFollow.Metrics) {
         let height = AssistantScrollFollow.turnHeight(visible: new.visibleHeight)
         // The first measurement gives the last turn its room: still at the end it opened at.
@@ -499,7 +507,8 @@ struct AssistantChatView: View {
         if height != turnHeight { turnHeight = height }
         if new.isAtBottom != atEnd { atEnd = new.isAtBottom }
         let pin = AssistantScrollFollow.pin(pending: pinning, from: old, to: new,
-                                            scrolling: AssistantScrollFollow.userScrolls(scrollPhase))
+                                            scrolling: AssistantScrollFollow.userScrolls(scrollPhase),
+                                            follows: !sentPending && !turnScrolling)
         if pin.pending != pinning { pinning = pin.pending }
         if pin.scroll || measured { scrollToEndSoon() }
     }
@@ -1166,10 +1175,11 @@ enum AssistantReturnKey {
     }
 }
 
-/// How the chat scrolls. Never along with an answer: sending scrolls the message to the top of
-/// the chat, and its answer grows into the room below it (the last turn is at least as tall as
-/// the visible part); past the bottom, "Jump to latest" shows. Only a change of the visible
-/// height (the keyboard, the window, the first measurement) keeps the end in view that was.
+/// How the chat scrolls. Sending scrolls the message to the top of the chat, and its answer grows
+/// into the room below it (the last turn is at least as tall as the visible part) without moving
+/// the chat; once it grows past the bottom, the chat follows it while the end was in view (scrolled
+/// up, "Jump to latest" shows instead). A change of the visible height (the keyboard, the window,
+/// the first measurement) keeps the end in view that was.
 enum AssistantScrollFollow {
     /// Closer than this to the end counts as at the end.
     static let threshold: CGFloat = 48
@@ -1196,14 +1206,17 @@ enum AssistantScrollFollow {
 
     /// After the scroll view changed: whether to scroll to the end now, and whether to go on doing
     /// so until it is there. The visible height changed while the end was in view (or was first
-    /// measured): back to the end. The content growing alone never scrolls; the user scrolling
-    /// ends it.
-    static func pin(pending: Bool, from old: Metrics, to new: Metrics, scrolling: Bool) -> (scroll: Bool, pending: Bool) {
+    /// measured): back to the end. The content grew past the end that was in view (an answer
+    /// longer than its room), with `follows`: to the new end. The user scrolling ends both.
+    static func pin(pending: Bool, from old: Metrics, to new: Metrics, scrolling: Bool,
+                    follows: Bool = true) -> (scroll: Bool, pending: Bool) {
         if scrolling { return (false, false) }
         let resized = abs(new.visibleHeight - old.visibleHeight) > 0.5
         let pending = pending || resized && (old.isAtBottom || old.visibleHeight <= 0)
-        guard pending, new.distanceFromBottom > 0.5 else { return (false, false) }
-        return (true, true)
+        if pending, new.distanceFromBottom > 0.5 { return (true, true) }
+        let grew = !resized && new.maxOffset > old.maxOffset + 0.5
+        if follows, grew, old.isAtBottom, new.distanceFromBottom > 0.5 { return (true, false) }
+        return (false, false)
     }
 
     /// Whether the last turn's start (the user's last message) scrolls to the top: a later one in

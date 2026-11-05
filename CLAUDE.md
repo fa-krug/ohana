@@ -760,11 +760,12 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   shows `AssistantChatSkeleton`, a long one draws its last 40 items (`AssistantItemWindow`, "Show
   earlier messages"); new items animate in by count (never per streamed piece; opacity and a small
   offset, nothing scales), not those a chat opens with, and another chat cross-fades
-  (`AssistantChatStore.session`). Nothing scrolls along with an answer: the last turn (from the
+  (`AssistantChatStore.session`). The chat stays still while an answer fits: the last turn (from the
   user's last message on) is at least the chat's visible height (`AssistantTurnLayout`,
   `AssistantChatTurns.swift`), so sending scrolls to the end, which puts the message at the top, and
-  the answer grows into the room below; past the bottom "Jump to latest" shows; only a change of the
-  visible height (keyboard, window) keeps the end in view (`AssistantScrollFollow`). Tool calls one
+  the answer grows into the room below; growing past the bottom, the chat follows it while the end
+  was in view (scrolled up: "Jump to latest"), and a change of the visible height (keyboard, window)
+  keeps the end in view (`AssistantScrollFollow`). Tool calls one
   after the other are one row (`AssistantItemGroups`, `AssistantToolGroupRow`: the running one with a
   spinner, then "Used 3 tools", a tap unfolds them); the activity line has one pulsing symbol and no
   timer. On iOS messages aren't selectable in place (costly to lay out): their menu's *Select Text*

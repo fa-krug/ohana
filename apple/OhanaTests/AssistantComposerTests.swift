@@ -80,13 +80,22 @@ struct AssistantComposerTests {
     typealias Metrics = AssistantScrollFollow.Metrics
     typealias Follow = AssistantScrollFollow
 
-    @Test func neverScrollsAlongWithAnAnswer() {
+    @Test func followsAnAnswerPastTheBottom() {
         let atEnd = Metrics(offset: 500, maxOffset: 500, visibleHeight: 600)
         #expect(atEnd.isAtBottom)
-        // The answer grew past the bottom: nothing scrolls, "Jump to latest" shows.
+        // The answer grew past the bottom with the end in view: to the new end.
         let grown = Metrics(offset: 500, maxOffset: 620, visibleHeight: 600)
         #expect(!grown.isAtBottom)
-        #expect(Follow.pin(pending: false, from: atEnd, to: grown, scrolling: false) == (false, false))
+        #expect(Follow.pin(pending: false, from: atEnd, to: grown, scrolling: false) == (true, false))
+        // Not while the sent message scrolls to the top, nor while the user scrolls.
+        #expect(Follow.pin(pending: false, from: atEnd, to: grown, scrolling: false, follows: false) == (false, false))
+        #expect(Follow.pin(pending: false, from: atEnd, to: grown, scrolling: true) == (false, false))
+        // Read further up: the chat stays, "Jump to latest" shows.
+        let up = Metrics(offset: 200, maxOffset: 500, visibleHeight: 600)
+        #expect(Follow.pin(pending: false, from: up, to: Metrics(offset: 200, maxOffset: 620, visibleHeight: 600),
+                           scrolling: false) == (false, false))
+        // Within the last turn's room the end doesn't move: nothing scrolls.
+        #expect(Follow.pin(pending: false, from: atEnd, to: atEnd, scrolling: false) == (false, false))
         // Back near the end (within the threshold): at the end again.
         #expect(Metrics(offset: 590, maxOffset: 620, visibleHeight: 600).isAtBottom)
         // A chat shorter than the view is always at its end.
@@ -101,11 +110,11 @@ struct AssistantComposerTests {
         // Still on the way (the keyboard slides in): on.
         let sliding = Metrics(offset: 650, maxOffset: 800, visibleHeight: 300)
         #expect(Follow.pin(pending: true, from: keyboard, to: sliding, scrolling: false) == (true, true))
-        // There: done, and the answer growing afterwards scrolls nothing.
+        // There: done; the answer growing afterwards is followed (no longer pending).
         let there = Metrics(offset: 800, maxOffset: 800, visibleHeight: 300)
         #expect(Follow.pin(pending: true, from: sliding, to: there, scrolling: false) == (false, false))
         #expect(Follow.pin(pending: false, from: there, to: Metrics(offset: 800, maxOffset: 900, visibleHeight: 300),
-                           scrolling: false) == (false, false))
+                           scrolling: false) == (true, false))
         // Read further up: the keyboard leaves the chat where it is.
         let up = Metrics(offset: 100, maxOffset: 500, visibleHeight: 600)
         #expect(Follow.pin(pending: false, from: up, to: Metrics(offset: 100, maxOffset: 800, visibleHeight: 300),
