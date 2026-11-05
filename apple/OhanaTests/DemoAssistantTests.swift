@@ -113,6 +113,23 @@ struct DemoAssistantTests {
         #expect(store.current?.items.contains { if case .error = $0 { true } else { false } } == false)
     }
 
+    @Test func countsEachChatShownOnce() async {
+        let store = store()
+        let start = store.session
+        await store.open("chat-dinner")
+        #expect(store.session == start + 1)
+        #expect(store.openError == nil)
+        // The open one again: the same chat, no cross-fade.
+        await store.open("chat-dinner")
+        #expect(store.session == start + 1)
+        store.newChat()
+        #expect(store.session == start + 2)
+        // A chat that's gone: an empty chat, not an error that stays.
+        await store.open("chat-gone")
+        #expect(store.currentID == nil)
+        #expect(store.openError == nil)
+    }
+
     @Test func sendingShowsTheDemosNoteInTheChat() async throws {
         let store = store()
         await store.open("chat-pediatrician")

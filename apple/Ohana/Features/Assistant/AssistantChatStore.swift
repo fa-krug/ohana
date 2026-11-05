@@ -48,6 +48,12 @@ final class AssistantChatStore {
     private(set) var currentID: String?
     /// The open chat, once loaded (or a new one being started).
     private(set) var current: AssistantChat?
+    /// Grows each time another chat is shown (opened, or a new one started); not when a new chat
+    /// gets its id from the server. The chat view starts its window, its animations and its
+    /// cross-fade from it.
+    private(set) var session = 0
+    /// The chat `currentID` names couldn't be loaded, and there is no copy on the device to show.
+    private(set) var openError: String?
     /// Set while `current` is the copy on the device, until the server or the chat's stream
     /// answers: its changes can't be undone and its question not answered meanwhile.
     private(set) var savedCopy: AssistantSavedCopy?
@@ -172,11 +178,7 @@ final class AssistantChatStore {
 
     func loadChats() async {
         let get = Self.chatsRequest(api)
-        // Only into an empty list: the server's chats are never replaced by the copy.
-        if !chatsLoaded, chats.isEmpty {
-            let copy = await get.savedOffMain()
-            if !chatsLoaded, chats.isEmpty, let copy { chats = copy.value.chats }
-        }
+        await loadSavedChats()
         do {
             let fetched = try await get.fetch().chats
             if chats != fetched { chats = fetched }
@@ -184,6 +186,14 @@ final class AssistantChatStore {
         } catch {
             // Offline or not allowed: the list stays as it is.
         }
+    }
+
+    /// The list's copy on the device, read and decoded off the main thread. Only into an empty
+    /// list: the server's chats are never replaced by the copy.
+    private func loadSavedChats() async {
+        guard !chatsLoaded, chats.isEmpty else { return }
+        let copy = await Self.chatsRequest(api).savedOffMain()
+        if !chatsLoaded, chats.isEmpty, let copy { chats = copy.value.chats }
     }
 
     /// Back in the app (another device may have chatted meanwhile): the list and the open chat
@@ -200,7 +210,11 @@ final class AssistantChatStore {
     /// back).
     func retrySaved() async {
         async let listed: Void = loadChats()
-        if let id = currentID, savedCopy?.updating == false { await fetch(id, follow: true) }
+        if let id = currentID, savedCopy?.updating == false {
+            await fetch(id, follow: true)
+        } else if let id = currentID, openError != nil {
+            await open(id)
+        }
         await listed
     }
 
@@ -211,6 +225,8 @@ final class AssistantChatStore {
         currentID = chat.id.isEmpty ? nil : chat.id
         current = chat
         savedCopy = nil
+        openError = nil
+        session += 1
     }
 
     func newChat() {
@@ -219,7 +235,9 @@ final class AssistantChatStore {
         currentID = nil
         current = nil
         savedCopy = nil
+        openError = nil
         activity = nil
+        session += 1
     }
 
     /// Opens a chat (a running turn goes on either way); `follow`: its running turn too.
@@ -232,9 +250,12 @@ final class AssistantChatStore {
         picks += 1
         let pick = picks
         unfollow()
+        // Asked again for the chat that couldn't load: the same one, still (no new session).
+        if id != currentID || openError == nil { session += 1 }
         currentID = id
         current = nil
         savedCopy = nil
+        openError = nil
         activity = nil
         // The copy on the device, read and decoded off the main thread (a long chat's items take a
         // while); meanwhile another chat may have been picked, which then loads itself.
@@ -294,6 +315,11 @@ final class AssistantChatStore {
             if savedCopy != nil {
                 current = nil
                 savedCopy = nil
+            }
+            // Nothing to show: the chat says so (and tries again), not a placeholder for good.
+            if currentID == id, current == nil {
+                openError = error.localizedDescription
+                if APIError.isUnreachable(error) { return }
             }
             ErrorBanner.shared.show(error)
         }
@@ -864,12 +890,25 @@ final class AssistantChatStore {
         guard !restoredLatest else { return }
         restoredLatest = true
         let before = picks
-        if !chatsLoaded { await loadChats() }
-        // Meanwhile the user picked a chat or asked for a new one.
+        // The list on the device first: the latest chat opens without waiting for the server,
+        // which is only asked when the copy has none to open.
+        await loadSavedChats()
+        if let latest = latest(within: within, now: now, picks: before) {
+            await open(latest, follow: follow)
+            return
+        }
+        guard !chatsLoaded else { return }
+        await loadChats()
+        if let latest = latest(within: within, now: now, picks: before) { await open(latest, follow: follow) }
+    }
+
+    /// The latest chat, if it was active in the last `within` (or still runs) and the user
+    /// hasn't picked a chat or asked for a new one meanwhile.
+    private func latest(within: TimeInterval, now: Date, picks before: Int) -> String? {
         guard picks == before, current == nil, currentID == nil, let latest = chats.first,
               latest.isRunning || (latest.updatedDate.map { now.timeIntervalSince($0) < within } ?? false)
-        else { return }
-        await open(latest.id, follow: follow)
+        else { return nil }
+        return latest.id
     }
 
     /// Starts a new chat unless the open one is still empty (no duplicates of empty chats).

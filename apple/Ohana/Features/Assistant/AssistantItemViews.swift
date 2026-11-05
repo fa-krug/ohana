@@ -983,8 +983,11 @@ struct AssistantQueuedRow: View {
     }
 }
 
-/// What the assistant is doing right now, under the chat while it answers.
+/// What the assistant is doing right now, under the chat while it answers: sparkles that light up
+/// in turn and the status with a light moving across it (both still under Reduce Motion). The
+/// timeline ticks once a second, for the seconds and the status; the animations run on their own.
 struct AssistantActivityLine: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let store: AssistantChatStore
 
     /// After this long without a new piece of text, the model is busy with its next step.
@@ -995,10 +998,17 @@ struct AssistantActivityLine: View {
             let a = store.activity
             let since = a?.at ?? context.date
             let secs = Int(context.date.timeIntervalSince(since))
+            let status = text(a, now: context.date)
             HStack(spacing: 8) {
-                ProgressView().controlSize(.small)
-                Text(verbatim: text(a, now: context.date))
+                Image(systemName: "sparkles")
+                    .foregroundStyle(ModuleTint.assistant)
+                    .symbolEffect(.pulse.byLayer, options: .repeating, isActive: !reduceMotion)
+                    .accessibilityHidden(true)
+                Text(verbatim: status)
                     .lineLimit(1)
+                    .contentTransition(.opacity)
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: status)
+                    .modifier(AssistantShimmer(active: !reduceMotion))
                 if secs >= 5 {
                     Text(verbatim: "\(secs) s").monospacedDigit().foregroundStyle(.tertiary)
                 }

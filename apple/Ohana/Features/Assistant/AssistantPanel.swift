@@ -65,27 +65,28 @@ enum AssistantPages {
         }
     }
 
-    /// Examples for a new chat, fitting the page it starts on.
-    static func examples(_ page: String) -> [String] {
-        let gaps = String(localized: "Which days this year still need cover, and who could take them?")
-        let planWithout = String(localized: "Plan next week’s meals without fish.")
+    /// Examples for a new chat, fitting the page it starts on, each with an icon for its card.
+    static func examples(_ page: String) -> [AssistantExample] {
+        let gaps = AssistantExample(icon: "calendar.badge.exclamationmark",
+                                    text: String(localized: "Which days this year still need cover, and who could take them?"))
+        let planWithout = AssistantExample(icon: "fork.knife", text: String(localized: "Plan next week’s meals without fish."))
         switch page {
         case "calendar":
-            return [gaps, String(localized: "Look up next year’s public holidays here and add them to the calendar.")]
+            return [gaps, .init(icon: "flag", text: String(localized: "Look up next year’s public holidays here and add them to the calendar."))]
         case "finance":
-            return [String(localized: "How much did we spend on groceries this year, per month?"),
-                    String(localized: "Sort our uncategorized transactions into categories.")]
+            return [.init(icon: "chart.bar", text: String(localized: "How much did we spend on groceries this year, per month?")),
+                    .init(icon: "tray.full", text: String(localized: "Sort our uncategorized transactions into categories."))]
         case "meals":
-            return [planWithout, String(localized: "What do we need to buy for this week’s meals?")]
+            return [planWithout, .init(icon: "cart", text: String(localized: "What do we need to buy for this week’s meals?"))]
         case "appointments":
-            return [String(localized: "Find a dermatologist appointment before June."),
-                    String(localized: "Which searches found something, and what is the earliest slot?")]
+            return [.init(icon: "stethoscope", text: String(localized: "Find a dermatologist appointment before June.")),
+                    .init(icon: "magnifyingglass", text: String(localized: "Which searches found something, and what is the earliest slot?"))]
         case "chores":
-            return [String(localized: "Which chores are overdue, and whose are they?"),
-                    String(localized: "Share this week’s chores fairly between the children.")]
+            return [.init(icon: "checklist", text: String(localized: "Which chores are overdue, and whose are they?")),
+                    .init(icon: "person.2", text: String(localized: "Share this week’s chores fairly between the children."))]
         case "settings":
-            return [String(localized: "Set up this year’s entry types: day care closed, each parent’s vacation and public holidays."),
-                    String(localized: "Suggest categories for our finances and add them.")]
+            return [.init(icon: "list.bullet.rectangle", text: String(localized: "Set up this year’s entry types: day care closed, each parent’s vacation and public holidays.")),
+                    .init(icon: "folder.badge.plus", text: String(localized: "Suggest categories for our finances and add them."))]
         default:
             return [gaps, planWithout]
         }
