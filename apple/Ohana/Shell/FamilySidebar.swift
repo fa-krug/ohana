@@ -90,10 +90,9 @@ private struct LeadingEdgeSwipe: UIGestureRecognizerRepresentable {
 }
 
 /// The family page: the families to switch to with Add Family (new or join) below them (in the
-/// demo: connecting a server), the pages that aren't tabs on this layout (on iPhone the
-/// appointments, the chores and the knowledge base, `Module.phonePages`; on a narrow iPad, whose
-/// tab bar has no settings and leaves the rest to the sidebar it lacks, every page, the one on
-/// screen highlighted), scanning a letter and the settings last. It also shows the invite links
+/// demo: connecting a server), every page in the sidebar's order, the tab on screen highlighted
+/// (on iPhone the tabs switch, the others, `Module.phonePages`, open as sheets), scanning a letter
+/// and the settings last. It also shows the invite links
 /// the app was opened with (`InviteInbox`).
 private struct FamilySidebar: View {
     let current: Module
@@ -195,13 +194,10 @@ private struct FamilySidebar: View {
         }
     }
 
-    /// The pages that aren't tabs here, the server has on: on iPhone `Module.phonePages` (the
-    /// settings have their own row below); elsewhere (a narrow iPad) the overview, the modules
-    /// and the search, in the sidebar's order.
+    /// The pages the server has on, in the sidebar's order: the overview, the modules and the
+    /// search (the settings have their own row below).
     private var pages: [Module] {
-        let phonePages = Module.phonePages
-        let all: [Module] = phonePages.isEmpty ? [.overview] + Module.modules + [.search] : phonePages
-        return all.filter { $0 != .settings && app.isEnabled($0) }
+        ([.overview] + Module.modules + [.search]).filter { app.isEnabled($0) }
     }
 
     private func choose(_ id: String) {

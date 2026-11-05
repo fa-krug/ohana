@@ -653,8 +653,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `FamilySidebarHost` slides the tabs away, `AppModel.showsFamilySidebar`; the toolbar's family
   button or a swipe from the leading edge, which a UIKit edge pan only takes while a module root is
   on screen, `moduleRootsOnScreen`, so it stays "back" on pushed pages; families with one *Add Family*
-  menu (new / join), on iPhone only the pages that aren't tabs (`Module.phonePages`; a compact iPad
-  lists every page) with the one on screen highlighted, scanning a letter, the settings), assistant `.inspector` ⌘J (a `.sheet` on
+  menu (new / join), every page (on iPhone the tabs switch, `Module.phonePages` open as sheets)
+  with the tab on screen highlighted, scanning a letter, the settings), assistant `.inspector` ⌘J (a `.sheet` on
   iPhone: an inspector there breaks the tabs' navigation bars), toggled by the ✨ toggle at the top
   right of every page (`AssistantToolbarToggle`: tinted while open, breathing while a turn runs):
   module roots get it from `shellToolbar()`, a page pushed onto a module's stack adds
