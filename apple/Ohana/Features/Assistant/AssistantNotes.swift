@@ -272,38 +272,6 @@ struct AssistantNoteOpLine: Equatable {
     }
 }
 
-/// What the dialog before writing notes says: which notes are written and how, and its button
-/// ("Create" when every op makes a new note, else "Save Changes").
-struct AssistantNotesConfirmation: Equatable {
-    var title: String
-    var message: String
-    var button: String
-
-    static func make(_ ops: [AssistantNoteOp]) -> Self {
-        let creates = ops.allSatisfy { $0.op == "create" }
-        let title: String
-        if ops.count == 1, let op = ops.first {
-            title = op.op == "create" ? String(localized: "Create “\(op.title)”?") : String(localized: "Change “\(op.title)”?")
-        } else {
-            let n = ops.count
-            title = String(localized: "Write \(n) notes to the knowledge folder?")
-        }
-        let lines = ops.compactMap { op -> String? in
-            let place = op.folder.isEmpty ? String(localized: "Knowledge") : KnowledgePath.breadcrumb(op.folder)
-            switch (op.op, op.change) {
-            case ("create", _): return String(localized: "“\(op.title)” is created in \(place).")
-            case ("update", "content"): return String(localized: "The whole text of “\(op.title)” is replaced.")
-            case ("update", "append"): return String(localized: "Text is added at the end of “\(op.title)”.")
-            case ("update", "replace"): return String(localized: "Parts of the text of “\(op.title)” are replaced.")
-            case ("update", "tags"): return String(localized: "The tags of “\(op.title)” change.")
-            default: return nil
-            }
-        }
-        return Self(title: title, message: lines.joined(separator: "\n"),
-                    button: creates ? String(localized: "Create") : String(localized: "Save Changes"))
-    }
-}
-
 extension AssistantNotesEdit {
     /// How it ended, in a few words; nil while it waits.
     var outcome: String? {

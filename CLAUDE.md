@@ -697,8 +697,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   (`edit_apple_calendar`, `Features/Assistant/AssistantAppleCalendar.swift`) applies through
   `Core/Calendar/DeviceCalendarStore.swift` (EventKit behind a protocol; read-only access check,
   the assistant never asks for it); every chat request carries `appleCalendar` next to `reminders`.
-  Its Notes card (`edit_knowledge_notes`, `Features/Assistant/AssistantNotes.swift`) asks in a
-  confirmation dialog, then writes into the linked knowledge folder (`FamilyContext.assistantNotes`):
+  Its Notes card (`edit_knowledge_notes`, `Features/Assistant/AssistantNotes.swift`) writes on
+  Apply, without a second dialog, into the linked knowledge folder (`FamilyContext.assistantNotes`):
   coordinated atomic UTF-8 writes, a create never overwrites, an update only while the file's
   SHA-256 is `baseHash` (its Finder tags kept unless new ones are given), each written note queued
   with its text (`KnowledgeIndexer.enqueue`), tags-only changes by a forced folder read.

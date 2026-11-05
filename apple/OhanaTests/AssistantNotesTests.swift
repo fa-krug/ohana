@@ -119,38 +119,6 @@ struct AssistantNotesTests {
         #expect(AssistantNoteOpLine.Preview.replacements([.init(find: "a\nb\nc", with: "b")]).isLong)
     }
 
-    @Test func asksBeforeWriting() {
-        let create = AssistantNoteOp(op: "create", path: "Notes/Car.md", content: "x")
-        let one = AssistantNotesConfirmation.make([create])
-        #expect(one.title == "Create “Car.md”?")
-        #expect(one.message == "“Car.md” is created in Notes.")
-        #expect(one.button == "Create")
-
-        let rewrite = AssistantNoteOp(op: "update", path: "Home.md", baseHash: "h", change: "content", content: "y")
-        let changed = AssistantNotesConfirmation.make([rewrite])
-        #expect(changed.title == "Change “Home.md”?")
-        #expect(changed.message == "The whole text of “Home.md” is replaced.")
-        #expect(changed.button == "Save Changes")
-
-        let ops = [
-            create,
-            AssistantNoteOp(op: "update", path: "A.md", baseHash: "h", change: "append", content: "y", added: "y"),
-            AssistantNoteOp(op: "update", path: "B.md", baseHash: "h", change: "replace", content: "y"),
-            AssistantNoteOp(op: "update", path: "C.md", baseHash: "h", change: "tags", content: "y", tags: ["T"]),
-        ]
-        let several = AssistantNotesConfirmation.make(ops)
-        #expect(several.title == "Write 4 notes to the knowledge folder?")
-        #expect(several.message == """
-        “Car.md” is created in Notes.
-        Text is added at the end of “A.md”.
-        Parts of the text of “B.md” are replaced.
-        The tags of “C.md” change.
-        """)
-        #expect(several.button == "Save Changes")
-        #expect(AssistantNotesConfirmation.make([create, AssistantNoteOp(op: "create", path: "D.md", content: "z")]).button
-            == "Create")
-    }
-
     // MARK: Writing
 
     /// A folder of its own under the temporary directory, as the linked knowledge folder.
