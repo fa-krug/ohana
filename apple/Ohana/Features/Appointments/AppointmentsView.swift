@@ -6,7 +6,6 @@ import SwiftUI
 struct AppointmentsView: View {
     @Environment(FamilyContext.self) private var family
     @State private var state: LoadState<AppointmentsOverview> = .idle
-    @State private var query = ""
     @State private var creating = false
     @State private var editing: AppointmentSearch?
     @State private var deleting: AppointmentSearch?
@@ -23,7 +22,6 @@ struct AppointmentsView: View {
         }
         .ohanaBackground(ModuleTint.appointments)
         .navigationTitle("Appointments")
-        .pageSearchable(text: $query, prompt: Text("Search searches"))
         .toolbar {
             if family.canEdit {
                 ToolbarItem(placement: .primaryAction) {
@@ -85,16 +83,7 @@ struct AppointmentsView: View {
         api.cached("/appointments")
     }
 
-    private func filtered(_ searches: [AppointmentSearch]) -> [AppointmentSearch] {
-        let q = query.trimmingCharacters(in: .whitespaces)
-        guard !q.isEmpty else { return searches }
-        return searches.filter {
-            $0.name.localizedCaseInsensitiveContains(q) || AppointmentLogic.criteriaSummary($0).localizedCaseInsensitiveContains(q)
-        }
-    }
-
     @ViewBuilder private func content(_ overview: AppointmentsOverview) -> some View {
-        let searches = filtered(overview.searches)
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 Text("Watches Doctolib and jameda and tells you when an appointment frees up.")
@@ -108,11 +97,9 @@ struct AppointmentsView: View {
 
                 if overview.searches.isEmpty {
                     emptyState
-                } else if searches.isEmpty {
-                    ContentUnavailableView.search(text: query)
                 } else {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 340), spacing: 16, alignment: .top)], spacing: 16) {
-                        ForEach(searches) { search in
+                        ForEach(overview.searches) { search in
                             AppointmentSearchCard(search: search, canEdit: canEdit, reload: load)
                                 .contextMenu { menu(for: search) }
                         }

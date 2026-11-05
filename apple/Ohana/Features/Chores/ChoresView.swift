@@ -50,7 +50,8 @@ struct ChoresView: View {
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .safeAreaBar(edge: .top) {
-            if store.page != nil { dayBar.padding(.horizontal).padding(.vertical, 8) }
+            // As wide as the list below (`readableWidth`), not the window.
+            if store.page != nil { dayBar.frame(maxWidth: 760).padding(.horizontal).padding(.vertical, 8) }
         }
         .toolbar { toolbar }
         .focusedSceneValue(\.newItem, canEdit ? NewItemAction(title: "New Chore") { editing = .new } : nil)
