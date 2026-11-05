@@ -35,6 +35,9 @@
 //   "schedule <title> at <start> [in <calendar>]" -> edit_apple_calendar: add it (start
 //                                            "YYYY-MM-DD[THH:MM]", default calendar "Family")
 //   "cancel event <id>"                   -> edit_apple_calendar: delete it (span "future")
+//   "note <path>: <text>"                 -> edit_knowledge_notes: create the note <path>
+//   "append to <ref>: <text>"             -> edit_knowledge_notes: append <text> to the note
+//                                            (<ref>: a path when it has a ".", else a documentId)
 //   "letter" / "elternbrief" (also in an attached file) -> suggest_items from "Elternbrief": an
 //                                            event in 7 days 15:00–17:00 at the school, and with
 //                                            the user's Reminders (edit_reminders offered) a
@@ -442,6 +445,8 @@ async function respond(req: Request, body: any): Promise<Response> {
     const called = messages.flatMap((m) => m.tool_calls ?? []).find((c) => c.id === last.tool_call_id);
     const device = called?.function.name === "edit_apple_calendar"
       ? { changes: "calendar", left: "calendars" }
+      : called?.function.name === "edit_knowledge_notes"
+      ? { changes: "note", left: "notes" }
       : { changes: "reminder", left: "Reminders" };
     const suggested = called?.function.name === "suggest_items";
     if (called?.function.name === "search_knowledge") {
@@ -593,6 +598,15 @@ async function respond(req: Request, body: any): Promise<Response> {
   const cancel = /^cancel event (\S+)$/i.exec(text);
   if (cancel && tools.has("edit_apple_calendar")) {
     return reply(stream, "", { name: "edit_apple_calendar", args: { ops: [{ op: "delete", id: cancel[1], span: "future" }] } });
+  }
+  const note = /^note (\S+): (.+)$/is.exec(text);
+  if (note && tools.has("edit_knowledge_notes")) {
+    return reply(stream, "", { name: "edit_knowledge_notes", args: { ops: [{ op: "create", path: note[1], content: note[2] }] } });
+  }
+  const append = /^append to (\S+): (.+)$/is.exec(text);
+  if (append && tools.has("edit_knowledge_notes")) {
+    const ref = append[1].includes(".") ? { path: append[1] } : { documentId: append[1] };
+    return reply(stream, "", { name: "edit_knowledge_notes", args: { ops: [{ op: "update", ...ref, append: append[2] }] } });
   }
   if (/\bletter\b|elternbrief/.test(lower) && tools.has("suggest_items")) {
     const day = (n: number) => {

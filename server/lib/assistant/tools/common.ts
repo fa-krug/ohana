@@ -1,7 +1,7 @@
 // What every tool file shares: the shapes of a tool, its result and its context, the phrases
 // of the change summaries, and the checks and limits the tools have in common (ported from
 // family-planner's ai/tools.ts, which is split by module here: calendar.ts, finance.ts,
-// general.ts, web.ts, reminders.ts, suggestions.ts; a module adds its own file and registers it
+// general.ts, web.ts, reminders.ts, suggestions.ts, notes.ts; a module adds its own file and registers it
 // in index.ts).
 
 import { HttpError } from "@/lib/api/http";
@@ -13,6 +13,7 @@ import type { NetOptions } from "../net";
 import type { ToolSpec } from "../provider";
 import type { SearchProvider } from "../store";
 import type { AppleCalendarEdit, AppleCalendarSnapshot } from "./apple-calendar";
+import type { NotesEdit } from "./notes";
 import type { RemindersEdit, RemindersSnapshot } from "./reminders";
 import type { SuggestionsEdit } from "./suggestions";
 
@@ -48,6 +49,9 @@ export interface ToolResult {
   appleCalendar?: AppleCalendarEdit;
   /** Events, tasks and deadlines to add (suggest_items), the same way: the user picks which. */
   suggestions?: SuggestionsEdit;
+  /** A change of the family's notes in the knowledge folder (edit_knowledge_notes), the same
+   *  way: the app writes the files. */
+  notes?: NotesEdit;
   /** The knowledge base's chunk ids the result gives as refs ("k:<id>"): the only ones the
    *  chat's answers may cite (recorded by the runner as the tool runs). */
   refs?: number[];
@@ -81,6 +85,9 @@ export interface ToolContext {
   /** The chat's user may use the family's knowledge base (an editor, the module on, a folder
    *  set up); else the knowledge tools are off. */
   knowledge?: boolean;
+  /** The family's knowledge folder, when the app has it linked on this device (and the user may
+   *  use the knowledge base): notes can be written into it; else edit_knowledge_notes is off. */
+  knowledgeFolder?: string;
   signal?: AbortSignal;
 }
 
@@ -100,6 +107,8 @@ export interface Tool {
   needsAppleCalendar?: boolean;
   /** Offered only when the user may use the knowledge base (ToolContext.knowledge). */
   needsKnowledge?: boolean;
+  /** Offered only when the app has the family's knowledge folder linked (ToolContext.knowledgeFolder). */
+  needsKnowledgeNotes?: boolean;
   run(args: Record<string, unknown>, ctx: ToolContext): Promise<ToolResult>;
 }
 

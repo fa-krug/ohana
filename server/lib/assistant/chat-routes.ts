@@ -15,6 +15,7 @@
 //   POST   {chat}/reminders  the user applied (with the results) or declined the waiting
 //                          Reminders edit; streams like events
 //   POST   {chat}/calendar the same for the waiting edit of their device calendars
+//   POST   {chat}/notes    the same for the waiting edit of the family's notes
 //   POST   {chat}/suggestions  the same for the waiting suggestions (which the user added)
 //   POST   {chat}/stop     stops the running turn
 //   POST   {chat}/undone   a change of the chat was undone (the model hears it next time)
@@ -57,9 +58,10 @@ import {
   withMessage,
 } from "./chats";
 import type { StoredMessage } from "./context";
+import { MAX_PATH_LENGTH } from "@/lib/knowledge/input";
 import { withoutMarkers } from "./sources";
 import type { ChatMessage, ContentPart } from "./provider";
-import type { AppleCalendarOp, ReminderOp, SuggestionOp } from "./tools";
+import type { AppleCalendarOp, NoteOp, ReminderOp, SuggestionOp } from "./tools";
 import type { AssistantStore, ChatRow } from "./store";
 
 /** How often followers look for news (the worker saves streaming text every 0.5 s). */
@@ -118,6 +120,8 @@ export function handleChats(
       return r.edit(id, "reminders");
     case "POST :id/calendar":
       return r.edit(id, "calendar");
+    case "POST :id/notes":
+      return r.edit(id, "notes");
     case "POST :id/suggestions":
       return r.edit(id, "suggestions");
     case "POST :id/stop":
@@ -400,11 +404,11 @@ class ChatRoutes {
   }
 
   /** POST /ai/chats/{id}/reminders {id, applied, results?, reminders?, page, year, lang, today}
-   *  (and POST …/calendar with `appleCalendar`, POST …/suggestions): the user applied the
-   *  waiting edit of their Reminders (calendars; the suggestions they picked) in the app
-   *  (results: one per op, in order: {ok: true, id?}, {ok: false, error} or {ok: false,
-   *  declined: true}) or declined it (applied: false); the turn goes on with that as the tool's
-   *  result. The context's snapshot is the fresh one after the change. */
+   *  (and POST …/calendar with `appleCalendar`, POST …/notes, POST …/suggestions): the user
+   *  applied the waiting edit of their Reminders (calendars; notes; the suggestions they
+   *  picked) in the app (results: one per op, in order: {ok: true, id?}, {ok: false, error} or
+   *  {ok: false, declined: true}) or declined it (applied: false); the turn goes on with that as
+   *  the tool's result. The context's snapshot is the fresh one after the change. */
   async edit(id: string, kind: EditKind) {
     const store = this.store;
     const body = await readBody(this.ctx.req);
@@ -424,7 +428,7 @@ class ChatRoutes {
         messages.map((r) => r.message as unknown as StoredMessage),
       );
       if (!edit || edit.id !== body.id) throw new HttpError(409, "This change doesn't wait any more");
-      const ops: (ReminderOp | AppleCalendarOp | SuggestionOp)[] = edit.ops;
+      const ops: (ReminderOp | AppleCalendarOp | NoteOp | SuggestionOp)[] = edit.ops;
       let answer: EditAnswer;
       let result: unknown;
       if (body.applied) {
@@ -616,7 +620,8 @@ const str = (v: unknown, max = MAX_TEXT) => (typeof v === "string" ? v.slice(0, 
 /** What the app reports for one op of an edit; a missing one failed. */
 function cleanResult(raw: unknown): EditResult {
   const o = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
-  if (o.ok === true) return typeof o.id === "string" && o.id ? { ok: true, id: o.id.slice(0, 200) } : { ok: true };
+  // An id may be a note's path (MAX_PATH_LENGTH).
+  if (o.ok === true) return typeof o.id === "string" && o.id ? { ok: true, id: o.id.slice(0, MAX_PATH_LENGTH) } : { ok: true };
   if (o.declined === true) return { ok: false, declined: true };
   return { ok: false, error: str(o.error, 500) || (raw === undefined ? "No result" : "Failed") };
 }
@@ -671,6 +676,7 @@ function cleanItems(raw: unknown): Item[] {
         ];
       case "reminders":
       case "calendar":
+      case "notes":
       case "suggestions": {
         const ops = Array.isArray(o.ops) && JSON.stringify(o.ops).length < 100_000 ? o.ops.slice(0, 50) : [];
         const source = o.kind === "suggestions" && typeof o.source === "string" ? str(o.source, 200).trim() : "";

@@ -541,6 +541,18 @@ final class FamilyContext {
                              tags: { await ScanKnowledge.serverTags(tags) })
     }
 
+    /// The knowledge folder for the notes the assistant writes (`AssistantChatStore.knowledgeNotes`):
+    /// while the knowledge base is available; nil otherwise (its notes tool is off then).
+    var assistantNotes: AssistantKnowledgeNotes? {
+        guard knowledgeAvailable else { return nil }
+        let location = KnowledgeLocation(server: api.client.baseURL, familyID: api.familyID)
+        guard knowledgeIndexer != nil || KnowledgeFolder(location: location).isLinked else { return nil }
+        let indexer = knowledge
+        return AssistantKnowledgeNotes(state: { indexer.folder.state() },
+                                       enqueue: { try await indexer.enqueue(file: $0, pages: $1) },
+                                       reindex: { [weak self] in self?.indexKnowledge(force: true) })
+    }
+
     /// Reads the family's knowledge folder when one is linked on this device: `force` (*Read now*)
     /// at once, else unless it was read a few minutes ago.
     func indexKnowledge(force: Bool = false) {

@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// One item of the chat: a message, a tool call, a change with undo, a question, a Reminders or
-/// calendar edit to apply, suggestions to add, a note.
+/// One item of the chat: a message, a tool call, a change with undo, a question, a Reminders,
+/// calendar or notes edit to apply, suggestions to add, a note.
 /// Equal for the same item (`.equatable()`): the closure would otherwise draw every item again
 /// whenever the chat does (a keystroke, another module beside the panel).
 struct AssistantItemView: View, Equatable {
@@ -38,6 +38,8 @@ struct AssistantItemView: View, Equatable {
             AssistantCalendarCard(edit: edit, store: store)
         case let .suggestions(edit):
             AssistantSuggestionsCard(edit: edit, store: store)
+        case let .notes(edit):
+            AssistantNotesCard(edit: edit, store: store)
         case .compacted:
             HStack(spacing: 8) {
                 VStack { Divider() }
@@ -544,6 +546,149 @@ struct AssistantCalendarCard: View {
     private func apply() {
         // Applied right away (the answer then goes out like a message).
         refused = store.applyCalendar(edit.id) == .noAccess
+    }
+}
+
+/// Notes for the family's knowledge folder the assistant suggests, like the Reminders card: each
+/// note (made or changed, where, its tags) with what it writes (a new note's or a rewritten text
+/// a few lines long until expanded, the text added, what is replaced), and **Apply** / **Don't
+/// apply** while it waits. Apply asks first, saying what will be written. Once answered, each note
+/// shows how it went and the card how it ended.
+struct AssistantNotesCard: View {
+    let edit: AssistantNotesEdit
+    let store: AssistantChatStore
+    @State private var posting = false
+    @State private var confirming = false
+    /// The ops whose text shows whole.
+    @State private var expanded: Set<Int> = []
+
+    private var isOpen: Bool { store.openNotesEdit()?.edit.id == edit.id }
+
+    var body: some View {
+        let open = isOpen
+        let active = open && !store.busy && !posting
+        let declined = edit.answer?.applied == false || edit.skipped
+        VStack(alignment: .leading, spacing: 8) {
+            Label {
+                Text(verbatim: edit.summary).font(.callout.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
+            } icon: {
+                Image(systemName: "note.text").foregroundStyle(ModuleTint.assistant)
+            }
+            if open {
+                Text("Nothing is written to the knowledge folder until you apply it.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(Array(edit.ops.enumerated()), id: \.offset) { index, op in
+                    let line = AssistantNoteOpLine.make(op)
+                    VStack(alignment: .leading, spacing: 4) {
+                        AssistantEditOpRow(icon: line.icon, text: line.text, detail: line.detail, destructive: false,
+                                           result: edit.answer?.results.flatMap { index < $0.count ? $0[index] : nil },
+                                           declined: declined)
+                        if let preview = line.preview {
+                            AssistantNotePreview(preview: preview, expanded: expanded.contains(index)) {
+                                if expanded.remove(index) == nil { expanded.insert(index) }
+                            }
+                            .padding(.leading, 26)
+                            .opacity(declined ? 0.6 : 1)
+                        }
+                    }
+                }
+            }
+            .padding(.vertical, 2)
+            if open || posting {
+                let confirmation = AssistantNotesConfirmation.make(edit.ops)
+                HStack(spacing: 8) {
+                    Spacer(minLength: 0)
+                    Button("Don’t Apply") {
+                        store.declineNotes(edit.id)
+                    }
+                    .buttonStyle(.bordered)
+                    Button {
+                        confirming = true
+                    } label: {
+                        if posting {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Text("Apply")
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(ModuleTint.assistant)
+                    .accessibilityLabel(Text("Apply: \(edit.summary)"))
+                    .confirmationDialog(confirmation.title, isPresented: $confirming, titleVisibility: .visible) {
+                        Button(confirmation.button, action: apply)
+                        Button("Cancel", role: .cancel) {}
+                    } message: {
+                        Text(verbatim: confirmation.message)
+                    }
+                }
+                .disabled(!active)
+            }
+            if let outcome = edit.outcome {
+                AssistantEditOutcome(text: outcome, answer: edit.answer)
+            }
+        }
+        .contentCard(cornerRadius: 18, padding: 12)
+    }
+
+    private func apply() {
+        posting = true
+        Task {
+            defer { posting = false }
+            _ = await store.applyNotes(edit.id)
+        }
+    }
+}
+
+/// What an op of a notes edit writes: the text (a few lines until expanded), the text added (in
+/// green), or each replacement (the old text struck through in red, the new one in green).
+struct AssistantNotePreview: View {
+    let preview: AssistantNoteOpLine.Preview
+    let expanded: Bool
+    let toggle: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            switch preview {
+            case let .text(text):
+                Text(verbatim: text)
+                    .lineLimit(expanded ? nil : AssistantNoteOpLine.Preview.collapsedLines)
+            case let .added(text):
+                Text(verbatim: text)
+                    .foregroundStyle(.green)
+                    .lineLimit(expanded ? nil : AssistantNoteOpLine.Preview.collapsedLines)
+                    .accessibilityLabel(Text("Added: \(text)"))
+            case let .replacements(list):
+                ForEach(Array(list.enumerated()), id: \.offset) { _, replacement in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: replacement.find)
+                            .strikethrough()
+                            .foregroundStyle(.red)
+                            .accessibilityLabel(Text("Replaced: \(replacement.find)"))
+                        if !replacement.with.isEmpty {
+                            Text(verbatim: replacement.with)
+                                .foregroundStyle(.green)
+                                .accessibilityLabel(Text("With: \(replacement.with)"))
+                        }
+                    }
+                    .lineLimit(expanded ? nil : 2)
+                }
+            }
+            if preview.isLong {
+                Button(expanded ? "Show Less" : "Show More", action: toggle)
+                    .buttonStyle(.plain)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(ModuleTint.assistant)
+            }
+        }
+        .font(.caption)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.secondary.opacity(0.08), in: .rect(cornerRadius: 8))
     }
 }
 
