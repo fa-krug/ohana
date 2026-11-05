@@ -56,6 +56,7 @@ enum AssistantToolLabels {
         case "book_appointment_slot": return String(localized: "Marking a slot as booked")
         case "search_knowledge": return String(localized: "Searching the knowledge base")
         case "read_knowledge": return String(localized: "Reading a document")
+        case "edit_knowledge_notes": return String(localized: "Suggesting notes for the knowledge folder")
         default: return tool.name
         }
     }
@@ -83,6 +84,7 @@ enum AssistantToolLabels {
              "book_appointment_slot":
             "stethoscope"
         case "search_knowledge", "read_knowledge": "books.vertical"
+        case "edit_knowledge_notes": "note.text"
         default: "sparkles"
         }
     }
@@ -304,6 +306,13 @@ enum AssistantToolLabels {
             if !str(a["query"]).isEmpty { parts.append(quoted(str(a["query"]))) }
             if let tags = a["tags"]?.arrayValue { parts.append(list(tags.map { str($0) }.filter { !$0.isEmpty }, max: 3)) }
             if !str(a["folder"]).isEmpty { parts.append(KnowledgePath.breadcrumb(str(a["folder"]))) }
+        case "edit_knowledge_notes":
+            let names = ops.map { KnowledgePath.parts(str($0["path"])).last ?? "" }.filter { !$0.isEmpty }
+            if !ops.isEmpty {
+                let n = ops.count
+                parts.append(String(AttributedString(localized: "^[\(n) change](inflect: true)").characters))
+            }
+            parts.append(list(names, max: 3))
         case "read_knowledge":
             if let page = a["page"]?.doubleValue, page >= 1 {
                 let n = Int(page)

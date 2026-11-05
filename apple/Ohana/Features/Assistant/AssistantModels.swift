@@ -362,9 +362,93 @@ struct AssistantCalendarOp: Decodable, Equatable {
     var near: Day? { eventStart.flatMap { Day($0) } }
 }
 
+/// A change of notes in the family's knowledge folder the assistant suggests (`kind: "notes"`,
+/// server lib/assistant/tools/notes.ts): like a Reminders edit, nothing is written until the user
+/// applies it on a device that has the folder, which answers with one result per op.
+struct AssistantNotesEdit: Equatable {
+    var id: String
+    /// What it does, e.g. "Create “Car.md” in Notes".
+    var summary: String
+    var ops: [AssistantNoteOp]
+    /// Applied (with each op's result) or declined.
+    var answer: Answer?
+    /// The user wrote a new message instead.
+    var skipped: Bool
+
+    typealias Answer = AssistantRemindersEdit.Answer
+}
+
+/// One note of a notes edit, as the server resolved it (paths relative to the knowledge folder,
+/// NFC, "/"-separated). create: `path`, `title`, `content`, `tags`?; update: `documentId`, `path`,
+/// `title`, `baseHash` (the SHA-256 of the file the server read), `change` (content | append |
+/// replace | tags), `content` (the whole new text; for "tags" the current one, not written),
+/// `added`? (append), `replacements`? (replace), `tags`? (replace the file's tags). Decoded
+/// leniently: an op this app doesn't know keeps its `op` (and fails when applied).
+nonisolated struct AssistantNoteOp: Decodable, Equatable, Sendable {
+    /// create | update
+    var op: String
+    var documentId: String?
+    var path: String
+    /// The file's name, e.g. "Car.md".
+    var title: String
+    var baseHash: String?
+    /// content | append | replace | tags (update)
+    var change: String?
+    var content: String
+    var added: String?
+    var replacements: [Replacement]
+    var tags: [String]?
+
+    struct Replacement: Codable, Equatable, Hashable, Sendable {
+        var find: String
+        var with: String
+    }
+
+    init(op: String, documentId: String? = nil, path: String, title: String? = nil, baseHash: String? = nil,
+         change: String? = nil, content: String = "", added: String? = nil, replacements: [Replacement] = [],
+         tags: [String]? = nil) {
+        self.op = op
+        self.documentId = documentId
+        self.path = path
+        self.title = title ?? KnowledgePath.parts(path).last ?? path
+        self.baseHash = baseHash
+        self.change = change
+        self.content = content
+        self.added = added
+        self.replacements = replacements
+        self.tags = tags
+    }
+
+    private enum Keys: String, CodingKey {
+        case op, documentId, path, title, baseHash, change, content, added, replacements, tags
+    }
+
+    init(from decoder: any Decoder) throws {
+        guard let c = try? decoder.container(keyedBy: Keys.self) else {
+            self.init(op: "", path: "")
+            return
+        }
+        func opt(_ key: Keys) -> String? { try? c.decodeIfPresent(String.self, forKey: key) }
+        let title = opt(.title)
+        self.init(
+            op: opt(.op) ?? "", documentId: opt(.documentId), path: opt(.path) ?? "",
+            title: title?.isEmpty == false ? title : nil, baseHash: opt(.baseHash), change: opt(.change),
+            content: opt(.content) ?? "", added: opt(.added),
+            replacements: (try? c.decodeIfPresent([Replacement].self, forKey: .replacements)) ?? [],
+            tags: try? c.decodeIfPresent([String].self, forKey: .tags)
+        )
+    }
+
+    /// The folder the note is in ("" at the top of the knowledge folder).
+    var folder: String { KnowledgePath.parts(path).dropLast().joined(separator: "/") }
+
+    /// It changes only the file's tags (its text stays as it is).
+    var tagsOnly: Bool { op == "update" && change == "tags" }
+}
+
 /// What the chat shows: messages, tool activity, changes (with undo), questions, changes of the
-/// user's Reminders and calendars to apply, suggestions to add. Decoded by `kind`; a kind this app doesn't know yet becomes
-/// `.unknown` (and isn't shown).
+/// user's Reminders, calendars and knowledge notes to apply, suggestions to add. Decoded by
+/// `kind`; a kind this app doesn't know yet becomes `.unknown` (and isn't shown).
 enum AssistantItem: Decodable, Equatable {
     case user(text: String, attachments: [AssistantAttachmentRef])
     /// An answer; `sources`: the knowledge passages its `[[k:<n>]]` markers cite (`AssistantSource`).
@@ -379,6 +463,8 @@ enum AssistantItem: Decodable, Equatable {
     /// Events, tasks and deadlines the assistant found (suggest_items, e.g. in a scanned letter)
     /// that wait for the user to pick which to add.
     case suggestions(AssistantSuggestions)
+    /// Notes in the knowledge folder (edit_knowledge_notes) that wait for the user to write them here.
+    case notes(AssistantNotesEdit)
     /// From here on, the model gets the earlier part of the chat as a summary.
     case compacted
     case error(text: String)
@@ -446,6 +532,12 @@ enum AssistantItem: Decodable, Equatable {
             self = .suggestions(AssistantSuggestions(
                 id: str(.id), summary: str(.summary), source: source?.isEmpty == false ? source : nil, ops: ops ?? [],
                 answer: answer, skipped: flag(.skipped)
+            ))
+        case "notes":
+            let ops = try? c.decodeIfPresent([AssistantNoteOp].self, forKey: .ops)
+            let answer = try? c.decodeIfPresent(AssistantNotesEdit.Answer.self, forKey: .answer)
+            self = .notes(AssistantNotesEdit(
+                id: str(.id), summary: str(.summary), ops: ops ?? [], answer: answer, skipped: flag(.skipped)
             ))
         case "compacted":
             self = .compacted
@@ -549,8 +641,8 @@ struct AssistantSSEParser {
 // MARK: Requests
 
 /// A message for the assistant: the text, files as text, images as data URLs; and where the
-/// user is (the page, the year, their language and day) and, with access, their Reminders and
-/// the device's calendars.
+/// user is (the page, the year, their language and day) and, with access, their Reminders, the
+/// device's calendars and the family's knowledge folder linked here.
 struct AssistantChatInput: Encodable {
     var text: String?
     var attachments: [AssistantOutgoingAttachment]?
@@ -562,6 +654,9 @@ struct AssistantChatInput: Encodable {
     var reminders: AssistantRemindersContext?
     /// Without it, the Apple Calendar tools are off for the turn.
     var appleCalendar: AssistantCalendarContext?
+    /// The id of the family's knowledge folder linked on this device; without it, the assistant
+    /// can't write notes into it.
+    var knowledgeFolder: String?
 }
 
 /// POST /ai/chats/{id}/answer
@@ -575,11 +670,12 @@ struct AssistantAnswerInput: Encodable {
     var today: String
     var reminders: AssistantRemindersContext?
     var appleCalendar: AssistantCalendarContext?
+    var knowledgeFolder: String?
 }
 
-/// POST /ai/chats/{id}/reminders (and /suggestions): the waiting Reminders edit (or
-/// suggestions) `id` applied (with one result per op, in order) or declined; `reminders` is the
-/// snapshot after applying.
+/// POST /ai/chats/{id}/reminders (and /suggestions, /notes): the waiting Reminders edit (or
+/// suggestions, or notes) `id` applied (with one result per op, in order) or declined;
+/// `reminders` is the snapshot after applying.
 struct AssistantRemindersAnswerInput: Encodable {
     var id: String
     var applied: Bool
@@ -590,6 +686,7 @@ struct AssistantRemindersAnswerInput: Encodable {
     var today: String
     var reminders: AssistantRemindersContext?
     var appleCalendar: AssistantCalendarContext?
+    var knowledgeFolder: String?
 }
 
 /// POST /ai/chats/{id}/calendar: the waiting calendar edit `id` applied (with one result per op,
@@ -604,6 +701,7 @@ struct AssistantCalendarAnswerInput: Encodable {
     var today: String
     var reminders: AssistantRemindersContext?
     var appleCalendar: AssistantCalendarContext?
+    var knowledgeFolder: String?
 }
 
 nonisolated struct AssistantOutgoingAttachment: Encodable, Equatable {

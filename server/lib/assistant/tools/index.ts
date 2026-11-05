@@ -15,6 +15,7 @@ import { eventTools } from "./events";
 import { generalTools } from "./general";
 import { knowledgeTools } from "./knowledge";
 import { mealTools } from "./meals";
+import { noteTools } from "./notes";
 import { reminderTools } from "./reminders";
 import { scheduleTools } from "./schedule";
 import { suggestionTools } from "./suggestions";
@@ -28,6 +29,7 @@ export {
   type AppleCalendarSnapshot,
   cleanAppleCalendar,
 } from "./apple-calendar";
+export { type NoteOp, type NotesEdit } from "./notes";
 export { cleanReminders, type ReminderOp, type RemindersEdit, type RemindersSnapshot } from "./reminders";
 export { type SuggestionOp, type SuggestionsEdit } from "./suggestions";
 
@@ -40,6 +42,7 @@ export const TOOLS: Record<string, Tool> = {
   ...appointmentTools,
   ...choreTools,
   ...knowledgeTools,
+  ...noteTools,
   ...generalTools,
   ...reminderTools,
   ...appleCalendarTools,
@@ -54,6 +57,7 @@ const TOOL_MODULE: Record<string, ModuleName> = Object.fromEntries([
   ...Object.keys(appointmentTools).map((n) => [n, "appointments"]),
   ...Object.keys(choreTools).map((n) => [n, "chores"]),
   ...Object.keys(knowledgeTools).map((n) => [n, "knowledge"]),
+  ...Object.keys(noteTools).map((n) => [n, "knowledge"]),
 ]);
 
 /** Whether a tool's module is on (DISABLED_MODULES). */
@@ -65,13 +69,15 @@ export function toolEnabled(name: string): boolean {
 /** The tools for a chat: without writes if they're off, without search if it isn't set up,
  *  without the Reminders (Apple Calendar) tools unless the app sent the user's Reminders (device
  *  calendars), without the knowledge tools unless the user may use the knowledge base (editors),
- *  and without those of modules the server turned off. */
+ *  without the notes tool unless the app has the family's knowledge folder linked, and without
+ *  those of modules the server turned off. */
 export function toolsFor(opts: {
   writes: boolean;
   search: boolean;
   reminders?: boolean;
   appleCalendar?: boolean;
   knowledge?: boolean;
+  knowledgeNotes?: boolean;
 }): ToolSpec[] {
   return Object.values(TOOLS)
     .filter(
@@ -81,6 +87,7 @@ export function toolsFor(opts: {
         (opts.reminders || !t.needsReminders) &&
         (opts.appleCalendar || !t.needsAppleCalendar) &&
         (opts.knowledge || !t.needsKnowledge) &&
+        (opts.knowledgeNotes || !t.needsKnowledgeNotes) &&
         toolEnabled(t.spec.name),
     )
     .map((t) => ({ type: "function", function: t.spec }));

@@ -1253,6 +1253,16 @@
         }
       }
     },
+    "A file with this name already exists.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Datei mit diesem Namen gibt es schon."
+          }
+        }
+      }
+    },
     "A key ending in %@ is saved. Type a new one to replace it.": {
       "localizations": {
         "de": {
@@ -2009,6 +2019,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "„%@“ steht jetzt im Kalender: %@."
+          }
+        }
+      }
+    },
+    "Added: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hinzugefügt: %@"
           }
         }
       }
@@ -3725,6 +3745,16 @@
         }
       }
     },
+    "Change “%@”?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ ändern?"
+          }
+        }
+      }
+    },
     "Change…": {
       "localizations": {
         "de": {
@@ -4981,6 +5011,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Token erstellen …"
+          }
+        }
+      }
+    },
+    "Create “%@” in %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ in %@ anlegen"
+          }
+        }
+      }
+    },
+    "Create “%@”?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ anlegen?"
           }
         }
       }
@@ -11459,6 +11509,16 @@
         }
       }
     },
+    "Nothing is written to the knowledge folder until you apply it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In den Wissensordner wird nichts geschrieben, bis du es anwendest."
+          }
+        }
+      }
+    },
     "Nothing new: ^[%lld transaction](inflect: true) already there": {
       "localizations": {
         "de": {
@@ -12603,6 +12663,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Teile und aufgeteilte Buchungen können nicht zu einer Umbuchung gehören"
+          }
+        }
+      }
+    },
+    "Parts of the text of “%@” are replaced.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teile des Texts von „%@“ werden ersetzt."
           }
         }
       }
@@ -14377,6 +14447,16 @@
         }
       }
     },
+    "Replaced: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ersetzt: %@"
+          }
+        }
+      }
+    },
     "Replaces the calendar (all years) and the finances of this family with those of an exported file; the name, the members and the links stay. Can’t be undone – export first to keep a copy.": {
       "localizations": {
         "de": {
@@ -14753,6 +14833,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "1 Rezept speichern"
+          }
+        }
+      }
+    },
+    "Save Changes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Änderungen sichern"
           }
         }
       }
@@ -15847,6 +15937,26 @@
         }
       }
     },
+    "Show Less": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weniger anzeigen"
+          }
+        }
+      }
+    },
+    "Show More": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mehr anzeigen"
+          }
+        }
+      }
+    },
     "Show again": {
       "localizations": {
         "de": {
@@ -16931,6 +17041,16 @@
         }
       }
     },
+    "Suggesting notes for the knowledge folder": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schlägt Notizen für den Wissensordner vor"
+          }
+        }
+      }
+    },
     "Suggesting what to add": {
       "localizations": {
         "de": {
@@ -17191,6 +17311,16 @@
         }
       }
     },
+    "Tags: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tags: %@"
+          }
+        }
+      }
+    },
     "Take back this message": {
       "localizations": {
         "de": {
@@ -17347,6 +17477,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Text"
+          }
+        }
+      }
+    },
+    "Text is added at the end of “%@”.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Am Ende von „%@“ wird Text ergänzt."
           }
         }
       }
@@ -17761,6 +17901,16 @@
         }
       }
     },
+    "The knowledge folder isn’t linked on this device any more.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Wissensordner ist auf diesem Gerät nicht mehr verknüpft."
+          }
+        }
+      }
+    },
     "The language of notifications and of what Ohana names for you, like a new family’s calendar types.": {
       "localizations": {
         "de": {
@@ -17907,6 +18057,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Beim nächsten Import der Dateien dieser Bank wird wieder nach der Zuordnung der Spalten gefragt."
+          }
+        }
+      }
+    },
+    "The note was changed since the assistant read it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Notiz wurde geändert, seit der Assistent sie gelesen hat."
           }
         }
       }
@@ -18141,6 +18301,16 @@
         }
       }
     },
+    "The tags of “%@” change.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Tags von „%@“ ändern sich."
+          }
+        }
+      }
+    },
     "The time isn’t valid.": {
       "localizations": {
         "de": {
@@ -18167,6 +18337,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Die ganze Familie als JSON-Datei: der Kalender aller Jahre (Eintragsarten, Einträge, Notizen) und die Finanzen (Konten, Kategorien, Buchungen, Einstellungen). Auch Betrachter können exportieren."
+          }
+        }
+      }
+    },
+    "The whole text of “%@” is replaced.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der ganze Text von „%@“ wird ersetzt."
           }
         }
       }
@@ -18487,6 +18667,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Das ist kein Familien-Export (eine .json-Datei aus Einstellungen → Daten → Exportieren)."
+          }
+        }
+      }
+    },
+    "This isn’t a valid path in the knowledge folder.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das ist kein gültiger Pfad im Wissensordner."
           }
         }
       }
@@ -20051,6 +20241,16 @@
         }
       }
     },
+    "With: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Durch: %@"
+          }
+        }
+      }
+    },
     "Within (days)": {
       "localizations": {
         "de": {
@@ -20117,6 +20317,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Einen Blick wert: %@"
+          }
+        }
+      }
+    },
+    "Write %lld notes to the knowledge folder?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Notizen in den Wissensordner schreiben?"
           }
         }
       }
@@ -21995,12 +22205,32 @@
         }
       }
     },
+    "remove the tags": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tags entfernen"
+          }
+        }
+      }
+    },
     "rename to “%@”": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "umbenennen in „%@“"
+          }
+        }
+      }
+    },
+    "replaces the whole text": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ersetzt den ganzen Text"
           }
         }
       }
@@ -22201,6 +22431,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "„%@“ wird mit seinen Nachrichten gelöscht. Was der Assistent geändert hat, bleibt, wie es ist."
+          }
+        }
+      }
+    },
+    "“%@” is created in %@.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ wird in %@ angelegt."
           }
         }
       }

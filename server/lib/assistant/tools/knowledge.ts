@@ -19,7 +19,7 @@ const refOf = (chunkId: number) => `k:${chunkId}`;
 
 /** The turn may use the knowledge base, and its user still may (an editor, the module on): a
  *  turn runs long enough for a role to change. */
-function requireKnowledge(ctx: ToolContext) {
+export function requireKnowledge(ctx: ToolContext) {
   if (!ctx.knowledge || !ctx.userId || !knowledgeForUser(ctx.db, ctx.familyId, ctx.userId)) {
     throw new HttpError(403, "The knowledge base isn't available in this chat");
   }

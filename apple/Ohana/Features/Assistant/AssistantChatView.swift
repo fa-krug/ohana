@@ -166,10 +166,12 @@ struct AssistantChatView: View {
         #endif
     }
 
-    /// The store tells this family's screens what changed.
+    /// The store tells this family's screens what changed, and writes notes into its knowledge
+    /// folder.
     private func connect() {
         let family = family
         store.onChange = { areas in family.didChange(areas) }
+        store.knowledgeNotes = { [weak family] in family?.assistantNotes }
     }
 
     private func focusComposer() {

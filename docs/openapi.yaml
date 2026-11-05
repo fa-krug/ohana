@@ -5331,6 +5331,45 @@ paths:
         "401": {$ref: "#/components/responses/Unauthorized"}
         "404": {$ref: "#/components/responses/NotFound"}
         "409": {$ref: "#/components/responses/Conflict"}
+  /api/v1/families/{familyId}/ai/chats/{chatId}/notes:
+    post:
+      tags: [Assistant]
+      operationId: answerNotesEdit
+      summary: Report whether the user applied the assistant's edit of the family's notes (streams the rest of the turn)
+      description: >-
+        Like `POST …/reminders`, for a `notes` item: `id` is its id. With `applied: true` the
+        client has written the notes into the family's knowledge folder on the device and sends
+        `results`, one per op in order (`{ok: true, id: "<path>"}` or `{ok: false, error}`);
+        `applied: false` means the user said no. The turn goes on with this as the tool's
+        result. 409 when that edit doesn't wait any more.
+      x-ohana-role: viewer
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+        - $ref: "#/components/parameters/ChatId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/ChatContextInput"
+                - type: object
+                  required: [id, applied]
+                  properties:
+                    id: {type: string}
+                    applied: {type: boolean}
+                    results:
+                      type: array
+                      description: >-
+                        Required when `applied` is true: one per op, in order (a missing one
+                        counts as failed, extra ones are ignored).
+                      items: {$ref: "#/components/schemas/RemindersResult"}
+      responses:
+        "200": {$ref: "#/components/responses/ChatStream"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
   /api/v1/families/{familyId}/ai/chats/{chatId}/suggestions:
     post:
       tags: [Assistant]
@@ -8324,6 +8363,38 @@ components:
                     applied: {type: boolean, const: false}
             skipped: {type: boolean}
         - type: object
+          title: notes
+          description: >-
+            Changes to the family's notes (Markdown or text files in its knowledge folder) the
+            assistant wants to make (`edit_knowledge_notes`). The turn waits for the user, as for
+            `reminders`: the app shows the ops with Apply / Don't apply, writes the files into the
+            folder linked on the device and answers with `POST …/notes`. A new message instead
+            marks it `skipped`.
+          required: [kind, id, summary, ops]
+          properties:
+            kind: {type: string, const: notes}
+            id: {type: string}
+            summary: {type: string, example: "Create 2 notes, change 1 note"}
+            ops:
+              type: array
+              maxItems: 10
+              items: {$ref: "#/components/schemas/NoteOp"}
+            answer:
+              oneOf:
+                - type: object
+                  required: [applied, results]
+                  properties:
+                    applied: {type: boolean, const: true}
+                    results:
+                      type: array
+                      description: One per op, in order.
+                      items: {$ref: "#/components/schemas/RemindersResult"}
+                - type: object
+                  required: [applied]
+                  properties:
+                    applied: {type: boolean, const: false}
+            skipped: {type: boolean}
+        - type: object
           title: suggestions
           description: >-
             Events, tasks and deadlines the assistant suggests adding (`suggest_items`), e.g.
@@ -8392,6 +8463,13 @@ components:
         today: {type: string, format: date, description: "The user's day."}
         reminders: {$ref: "#/components/schemas/RemindersContext"}
         appleCalendar: {$ref: "#/components/schemas/AppleCalendarContext"}
+        knowledgeFolder:
+          type: string
+          maxLength: 100
+          description: >-
+            The id of the family's knowledge folder when it is linked on this device (sent only by
+            editors, never in the demo). The assistant's `edit_knowledge_notes` is offered only
+            when it is the family's current folder (and changes are on).
     AppleCalendarContext:
       type: object
       description: >-
@@ -8602,10 +8680,55 @@ components:
             itemTitle: {type: string}
             list: {type: string, description: "The reminder's list."}
             listTitle: {type: string}
+    NoteOp:
+      description: >-
+        One change to the family's notes as the assistant asked for it, resolved by the server:
+        `path` is relative to the knowledge folder ("/"-separated), `title` its last part. An
+        update carries the whole new text in `content` and the document's stored `baseHash`
+        (SHA-256 of the file the server read): the app writes it only while the file still has
+        that hash.
+      oneOf:
+        - type: object
+          title: create
+          required: [op, path, title, content]
+          properties:
+            op: {type: string, const: create}
+            path: {type: string, description: "Ends in `.md`; nothing is at it in the index.", example: Notes/Car.md}
+            title: {type: string, example: Car.md}
+            content: {type: string, maxLength: 50000}
+            tags: {type: array, items: {type: string}, description: "Finder tags to set."}
+        - type: object
+          title: update
+          required: [op, documentId, path, title, baseHash, change, content]
+          properties:
+            op: {type: string, const: update}
+            documentId: {type: string}
+            path: {type: string}
+            title: {type: string}
+            baseHash: {type: string, description: "SHA-256 (hex) of the file the change is based on."}
+            change:
+              type: string
+              enum: [content, append, replace, tags]
+              description: >-
+                What was asked for (several updates of one note in one call are merged: one kind,
+                else `content`). `tags`: only the tags change, `content` is the current text and
+                isn't written.
+            content: {type: string, maxLength: 50000, description: "The note's whole new text."}
+            added: {type: string, description: "`append`: the text added at the end."}
+            replacements:
+              type: array
+              description: "`replace`: the passages replaced, in order."
+              items:
+                type: object
+                required: [find, with]
+                properties:
+                  find: {type: string}
+                  with: {type: string}
+            tags: {type: array, items: {type: string}, description: "Replaces the file's Finder tags."}
     RemindersResult:
       description: >-
-        How one op went on the device (`id`: the new reminder's or event's id after an add;
-        `declined`: a suggestion the user didn't pick).
+        How one op went on the device (`id`: the new reminder's or event's id after an add, a
+        note's path; `declined`: a suggestion the user didn't pick).
       oneOf:
         - type: object
           required: [ok]

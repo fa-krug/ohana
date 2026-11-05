@@ -87,6 +87,12 @@ final class AssistantChatStore {
     @ObservationIgnored var remindersContext: () async -> AssistantRemindersContext?
     /// The same for the device's calendars (nil: the Apple Calendar tools are off); tests replace it.
     @ObservationIgnored var calendarContext: () async -> AssistantCalendarContext?
+    /// The family's knowledge folder on this device, for the notes the assistant writes (nil: the
+    /// demo, no knowledge base, a viewer); every request carries its id while it's linked here
+    /// (without it, the notes tool is off). The chat view sets it; tests replace it.
+    @ObservationIgnored var knowledgeNotes: () -> AssistantKnowledgeNotes? = { nil }
+    /// The knowledge folder the last request named: notes are only written into that one.
+    @ObservationIgnored private var sentKnowledgeFolder: String?
 
     init(api: FamilyAPI) {
         self.api = api
@@ -308,13 +314,21 @@ final class AssistantChatStore {
         return preferred?.hasPrefix("de") == true ? "de" : "en"
     }
 
+    /// The id of the knowledge folder linked here, for a request (remembered as the one named).
+    private func knowledgeFolder() -> String? {
+        let id = knowledgeNotes()?.folderID
+        sentKnowledgeFolder = id
+        return id
+    }
+
     private func input(text: String, attachments: [AssistantOutgoingAttachment]) async -> AssistantChatInput {
         let reminders = await remindersContext()
         let calendar = await calendarContext()
         let here = context()
         return AssistantChatInput(
             text: text, attachments: attachments, page: current?.page ?? here.page, year: here.year,
-            lang: language, today: AssistantDates.day(), reminders: reminders, appleCalendar: calendar
+            lang: language, today: AssistantDates.day(), reminders: reminders, appleCalendar: calendar,
+            knowledgeFolder: knowledgeFolder()
         )
     }
 
@@ -343,8 +357,8 @@ final class AssistantChatStore {
             )
         }
         guard var c = current else { return }
-        // A new message instead of an answer: the question (or Reminders or calendar edit, or the
-        // suggestions) stays unanswered.
+        // A new message instead of an answer: the question (or Reminders, calendar or notes edit,
+        // or the suggestions) stays unanswered.
         if let open = openWaiting() {
             switch c.items[open] {
             case var .question(q):
@@ -359,6 +373,9 @@ final class AssistantChatStore {
             case var .suggestions(edit):
                 edit.skipped = true
                 c.items[open] = .suggestions(edit)
+            case var .notes(edit):
+                edit.skipped = true
+                c.items[open] = .notes(edit)
             default:
                 break
             }
@@ -409,13 +426,13 @@ final class AssistantChatStore {
         }
     }
 
-    /// The position of the open chat's question, Reminders or calendar edit or suggestions that
-    /// wait for the user (the last of them, as on the server: one waits at a time).
+    /// The position of the open chat's question, Reminders, calendar or notes edit or suggestions
+    /// that wait for the user (the last of them, as on the server: one waits at a time).
     private func openWaiting() -> Int? {
         guard let items = current?.items, !busy, savedCopy == nil,
               let index = items.lastIndex(where: {
                   switch $0 {
-                  case .question, .reminders, .calendar, .suggestions: true
+                  case .question, .reminders, .calendar, .suggestions, .notes: true
                   default: false
                   }
               }),
@@ -426,6 +443,7 @@ final class AssistantChatStore {
         case let .reminders(edit) where edit.answer == nil && !edit.skipped: return index
         case let .calendar(edit) where edit.answer == nil && !edit.skipped: return index
         case let .suggestions(edit) where edit.answer == nil && !edit.skipped: return index
+        case let .notes(edit) where edit.answer == nil && !edit.skipped: return index
         default: return nil
         }
     }
@@ -454,6 +472,12 @@ final class AssistantChatStore {
         return (index, edit)
     }
 
+    /// The open chat's notes edit that waits for the user to apply or decline it.
+    func openNotesEdit() -> (index: Int, edit: AssistantNotesEdit)? {
+        guard let index = openWaiting(), case let .notes(edit) = current?.items[index] else { return nil }
+        return (index, edit)
+    }
+
     /// Answers the open question of the current chat, and the assistant goes on.
     func answer(selected: [String], text: String) {
         let own = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -472,7 +496,7 @@ final class AssistantChatStore {
             let body = AssistantAnswerInput(
                 id: q.id, selected: selected, text: own.isEmpty ? nil : own, page: c.page ?? here.page,
                 year: here.year, lang: language, today: AssistantDates.day(), reminders: reminders,
-                appleCalendar: calendar
+                appleCalendar: calendar, knowledgeFolder: knowledgeFolder()
             )
             post(c.id, "answer", body: body)
         }
@@ -531,8 +555,9 @@ final class AssistantChatStore {
             let reminders = await remindersContext()
             let calendar = await calendarContext()
             post(chatID, "reminders", body: Self.remindersAnswer(
-                id: open.edit.id, answer: answer, page: page, year: here.year,
-                lang: language, today: AssistantDates.day(), reminders: reminders, appleCalendar: calendar
+                id: open.edit.id, answer: answer, page: page, year: here.year, lang: language,
+                today: AssistantDates.day(), reminders: reminders, appleCalendar: calendar,
+                knowledgeFolder: knowledgeFolder()
             ))
         }
     }
@@ -540,10 +565,12 @@ final class AssistantChatStore {
     /// The body of POST /ai/chats/{id}/reminders.
     static func remindersAnswer(id: String, answer: AssistantRemindersEdit.Answer, page: String, year: Int,
                                 lang: String, today: String, reminders: AssistantRemindersContext?,
-                                appleCalendar: AssistantCalendarContext? = nil) -> AssistantRemindersAnswerInput {
+                                appleCalendar: AssistantCalendarContext? = nil,
+                                knowledgeFolder: String? = nil) -> AssistantRemindersAnswerInput {
         AssistantRemindersAnswerInput(
             id: id, applied: answer.applied, results: answer.applied ? answer.results ?? [] : nil, page: page,
-            year: year, lang: lang, today: today, reminders: reminders, appleCalendar: appleCalendar
+            year: year, lang: lang, today: today, reminders: reminders, appleCalendar: appleCalendar,
+            knowledgeFolder: knowledgeFolder
         )
     }
 
@@ -580,8 +607,9 @@ final class AssistantChatStore {
             let reminders = await remindersContext()
             let calendar = await calendarContext()
             post(chatID, "calendar", body: Self.calendarAnswer(
-                id: open.edit.id, answer: answer, page: page, year: here.year,
-                lang: language, today: AssistantDates.day(), reminders: reminders, appleCalendar: calendar
+                id: open.edit.id, answer: answer, page: page, year: here.year, lang: language,
+                today: AssistantDates.day(), reminders: reminders, appleCalendar: calendar,
+                knowledgeFolder: knowledgeFolder()
             ))
         }
     }
@@ -589,11 +617,61 @@ final class AssistantChatStore {
     /// The body of POST /ai/chats/{id}/calendar.
     static func calendarAnswer(id: String, answer: AssistantCalendarEdit.Answer, page: String, year: Int,
                                lang: String, today: String, reminders: AssistantRemindersContext?,
-                               appleCalendar: AssistantCalendarContext?) -> AssistantCalendarAnswerInput {
+                               appleCalendar: AssistantCalendarContext?,
+                               knowledgeFolder: String? = nil) -> AssistantCalendarAnswerInput {
         AssistantCalendarAnswerInput(
             id: id, applied: answer.applied, results: answer.applied ? answer.results ?? [] : nil, page: page,
-            year: year, lang: lang, today: today, reminders: reminders, appleCalendar: appleCalendar
+            year: year, lang: lang, today: today, reminders: reminders, appleCalendar: appleCalendar,
+            knowledgeFolder: knowledgeFolder
         )
+    }
+
+    // MARK: Notes
+
+    /// Writes the notes of the open notes edit `id` into the family's knowledge folder on this
+    /// device, then answers with each op's result. Without the folder (or another one than the
+    /// requests named) every op fails, and the assistant hears so.
+    func applyNotes(_ id: String) async -> RemindersApplyStart {
+        guard let open = openNotesEdit(), open.edit.id == id, let chatID = current?.id, !chatID.isEmpty else {
+            return .notWaiting
+        }
+        sending = true
+        let results = await AssistantNotesApply.perform(open.edit.ops, notes: knowledgeNotes(),
+                                                        folderID: sentKnowledgeFolder)
+        if results.contains(where: \.ok) { onChange([.knowledge]) }
+        // Writing took a while: the item may have moved (a reload), so it's looked up again.
+        let index = current?.id == chatID
+            ? current?.items.firstIndex { if case let .notes(e) = $0 { e.id == id } else { false } }
+            : nil
+        answerNotes((index ?? open.index, open.edit), chatID: chatID, answer: .init(applied: true, results: results))
+        return .answered
+    }
+
+    /// Declines the open notes edit `id`: nothing is written, and the assistant hears so.
+    func declineNotes(_ id: String) {
+        guard let open = openNotesEdit(), open.edit.id == id, let chatID = current?.id, !chatID.isEmpty else { return }
+        sending = true
+        answerNotes(open, chatID: chatID, answer: .init(applied: false, results: nil))
+    }
+
+    private func answerNotes(_ open: (index: Int, edit: AssistantNotesEdit), chatID: String,
+                             answer: AssistantNotesEdit.Answer) {
+        if current?.id == chatID, let items = current?.items, open.index < items.count, case .notes = items[open.index] {
+            var answered = open.edit
+            answered.answer = answer
+            current?.items[open.index] = .notes(answered)
+        }
+        let here = context()
+        let page = current?.page ?? here.page
+        Task {
+            let reminders = await remindersContext()
+            let calendar = await calendarContext()
+            post(chatID, "notes", body: Self.remindersAnswer(
+                id: open.edit.id, answer: answer, page: page, year: here.year, lang: language,
+                today: AssistantDates.day(), reminders: reminders, appleCalendar: calendar,
+                knowledgeFolder: knowledgeFolder()
+            ))
+        }
     }
 
     // MARK: Suggestions
@@ -672,8 +750,9 @@ final class AssistantChatStore {
             let reminders = await remindersContext()
             let calendar = await calendarContext()
             post(chatID, "suggestions", body: Self.remindersAnswer(
-                id: open.edit.id, answer: answer, page: page, year: here.year,
-                lang: language, today: AssistantDates.day(), reminders: reminders, appleCalendar: calendar
+                id: open.edit.id, answer: answer, page: page, year: here.year, lang: language,
+                today: AssistantDates.day(), reminders: reminders, appleCalendar: calendar,
+                knowledgeFolder: knowledgeFolder()
             ))
         }
     }
