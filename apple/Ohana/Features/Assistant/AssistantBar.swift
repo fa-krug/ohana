@@ -1,13 +1,11 @@
 import SwiftUI
 
-/// The iPhone's "Ask Ohana" bar above the tabs (the shell's `tabViewBottomAccessory`): the
-/// assistant one tap away on every tab, so the pages there need no ✨ of their own. One button,
-/// opening the assistant's sheet ready to type; while a turn runs in the family's chat it says
-/// what the assistant does (and the chat's title), the sparkles moving. Where the tab bar has
-/// shrunk while scrolling, it sits beside it (`.inline`): the sparkles and a short text.
-struct AssistantAccessory: View {
+/// The iPhone's "Ask Ohana" bar at the bottom of every page (`assistantBar`): the assistant one
+/// tap away, so the pages there need no ✨ of their own. One button, opening the assistant's sheet
+/// ready to type; while a turn runs in the family's chat it says what the assistant does (and the
+/// chat's title), the sparkles moving.
+struct AssistantBar: View {
     let context: FamilyContext
-    @Environment(\.tabViewBottomAccessoryPlacement) private var placement
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -15,7 +13,6 @@ struct AssistantAccessory: View {
         // Only its summary (`turn`), which changes with a step, not with each piece of text.
         let store = AssistantChatStore.shared(for: context.api)
         let turn = store.turn
-        let inline = placement == .inline
         Button {
             context.ask()
         } label: {
@@ -29,22 +26,22 @@ struct AssistantAccessory: View {
                     Text(verbatim: turn.status)
                         .fontWeight(.medium)
                         .contentTransition(.opacity)
-                    if !inline, !turn.title.isEmpty {
+                    if !turn.title.isEmpty {
                         Text(verbatim: turn.title)
                             .foregroundStyle(.secondary)
                             .contentTransition(.opacity)
                     }
                 } else {
-                    Text(inline ? "Ask Ohana" : "Ask Ohana…")
+                    Text("Ask Ohana")
                         .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
             }
             .font(.subheadline)
             .lineLimit(1)
-            .padding(.horizontal, inline ? 12 : 16)
+            .padding(.horizontal, 18)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .contentShape(.rect)
+            .contentShape(.capsule)
         }
         .buttonStyle(.plain)
         .animation(reduceMotion ? nil : .snappy, value: turn)
@@ -56,6 +53,36 @@ struct AssistantAccessory: View {
         .followsAssistantTurn(store)
     }
 }
+
+#if os(iOS)
+/// The Ask Ohana bar under a page, the screen's full width (less the margins), glass over what
+/// scrolls beneath it; gone while the keyboard is up (it would ride on it).
+private struct AssistantBarHost: ViewModifier {
+    let context: FamilyContext
+    let enabled: Bool
+    @State private var keyboardUp = false
+
+    func body(content: Content) -> some View {
+        content
+            .safeAreaBar(edge: .bottom) {
+                if enabled, !keyboardUp {
+                    AssistantBar(context: context)
+                        .frame(height: 50)
+                        .glassEffect(.regular.interactive(), in: .capsule)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 4)
+                        .transition(.opacity)
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+                keyboardUp = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+                keyboardUp = false
+            }
+    }
+}
+#endif
 
 /// The assistant toggle in the toolbars (iPad, Mac, and the iPhone's page sheets): selected and in
 /// the assistant's color while the panel is open, a still dot on the sparkles while a turn runs in
@@ -109,36 +136,14 @@ extension View {
         modifier(FollowsAssistantTurn(store: store))
     }
 
-    /// The Ask Ohana bar above the iPhone's tabs while `enabled` (the server has the assistant);
-    /// elsewhere nothing (iPad and Mac have the ✨ in every toolbar).
+    /// The Ask Ohana bar under the page while `enabled` (the server has the assistant): the
+    /// iPhone's (iPad and Mac have the ✨ in every toolbar).
     @ViewBuilder
-    func assistantAccessory(_ context: FamilyContext, enabled: Bool) -> some View {
+    func assistantBar(_ context: FamilyContext, enabled: Bool) -> some View {
         #if os(iOS)
-        if AssistantAccessoryHost.shows {
-            if #available(iOS 26.1, *) {
-                // Turned on or off without rebuilding the tab view.
-                tabViewBottomAccessory(isEnabled: enabled) { AssistantAccessory(context: context) }
-            } else if enabled {
-                tabViewBottomAccessory { AssistantAccessory(context: context) }
-            } else {
-                self
-            }
-        } else {
-            self
-        }
+        modifier(AssistantBarHost(context: context, enabled: enabled))
         #else
         self
-        #endif
-    }
-}
-
-enum AssistantAccessoryHost {
-    /// The device shows the Ask Ohana bar (an iPhone), so the tabs' pages leave out the ✨.
-    static var shows: Bool {
-        #if os(iOS)
-        UIDevice.current.userInterfaceIdiom == .phone
-        #else
-        false
         #endif
     }
 }

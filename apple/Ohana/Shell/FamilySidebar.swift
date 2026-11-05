@@ -1,14 +1,15 @@
 #if os(iOS)
 import SwiftUI
 
-/// The family page where the tab view has no sidebar (iPhone, a narrow iPad window), like Mail's
-/// mailboxes: a page of its own behind the tabs. The family button, or a swipe from the leading
-/// edge on a module's root, slides the tabs away to show it, following the finger; picking a row
-/// or swiping back slides them in again (`AppModel.showsFamilySidebar`).
+/// The family page on iPhone and where the tab view has no sidebar (a narrow iPad window), like
+/// Mail's mailboxes: a page of its own behind the page on screen (the tabs on iPad). The back
+/// button (iPhone) or the family button, or a swipe from the leading edge on a module's root,
+/// slides the page away to show it, following the finger; picking a row or swiping back slides
+/// it in again (`AppModel.showsFamilySidebar`).
 struct FamilySidebarHost: ViewModifier {
     /// Where the tab view has no sidebar of its own.
     let active: Bool
-    /// The tab on screen.
+    /// The page on screen.
     let current: Module
     @Environment(AppModel.self) private var app
     @State private var width: CGFloat = 400
@@ -47,7 +48,7 @@ struct FamilySidebarHost: ViewModifier {
         }
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = max($0, 1) }
         .onAppear {
-            // Another family was picked: its tabs slide in.
+            // Another family was picked: its page slides in.
             guard app.showsFamilySidebar else { return }
             withAnimation(.snappy(duration: 0.35).delay(0.05)) { app.showsFamilySidebar = false }
         }
@@ -90,9 +91,8 @@ private struct LeadingEdgeSwipe: UIGestureRecognizerRepresentable {
 }
 
 /// The family page: the families to switch to with Add Family (new or join) below them (in the
-/// demo: connecting a server), every page in the sidebar's order, the tab on screen highlighted
-/// (on iPhone the tabs switch, the others, `Module.phonePages`, open as sheets), scanning a letter
-/// and the settings last. It also shows the invite links
+/// demo: connecting a server), every page in the sidebar's order, the one on screen highlighted
+/// (on iPhone the assistant opens as a sheet), scanning a letter and the settings last. It also shows the invite links
 /// the app was opened with (`InviteInbox`).
 private struct FamilySidebar: View {
     let current: Module
@@ -140,7 +140,10 @@ private struct FamilySidebar: View {
                 if !pages.isEmpty {
                     Section {
                         ForEach(pages) { page in
-                            row(page.title, systemImage: page.systemImage, tint: page.tint) { page.open() }
+                            row(page.title, systemImage: page.systemImage, tint: page.tint) {
+                                // The search ready to type.
+                                if page == .search { family.startSearch() } else { page.open() }
+                            }
                                 .listRowBackground(page == current ? Color.ohana.opacity(0.15) : nil)
                                 .accessibilityAddTraits(page == current ? .isSelected : [])
                         }
@@ -183,8 +186,9 @@ private struct FamilySidebar: View {
     private func row(_ title: LocalizedStringKey, systemImage: String, tint: Color = .ohana,
                      action: @escaping () -> Void) -> some View {
         Button {
-            close()
+            // The page first, so the one sliding in is the new one.
             action()
+            close()
         } label: {
             Label {
                 Text(title)
@@ -202,7 +206,7 @@ private struct FamilySidebar: View {
 
     private func choose(_ id: String) {
         guard id != app.selectedFamilyID else { return close() }
-        // The shell is built anew for that family; its host slides the tabs in.
+        // The shell is built anew for that family; its host slides the page in.
         app.selectedFamilyID = id
     }
 

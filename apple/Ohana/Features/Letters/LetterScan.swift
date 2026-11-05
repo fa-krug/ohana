@@ -155,11 +155,10 @@ private struct LetterScanFlow: ViewModifier {
 
 /// The shell's letter scan (`FamilyContext.scanLetter()`, the family menu, "Scan Letter" from
 /// Spotlight, Siri or Shortcuts): the flow, with what the server finds in the letter to add. On
-/// iPhone the assistant's sheet or a page's sheet closes first: one presentation at a time.
+/// iPhone the assistant's sheet closes first: one presentation at a time.
 struct ShellLetterScan: ViewModifier {
     let context: FamilyContext
     @Binding var assistantSheet: Bool
-    @Binding var phonePage: Module?
     @State private var scanning = false
     @State private var shared: SharedLetter?
 
@@ -195,19 +194,10 @@ struct ShellLetterScan: ViewModifier {
             }
     }
 
-    /// Closes what would cover the scanner on iPhone (a page's sheet, the assistant's); whether
-    /// anything did.
+    /// Closes what would cover the scanner on iPhone (the assistant's sheet); whether it did.
     private func uncover() -> Bool {
-        var covered = phonePage != nil
-        #if os(iOS)
-        covered = covered || assistantSheet && UIDevice.current.userInterfaceIdiom == .phone
-        #endif
-        if covered {
-            phonePage = nil
-            #if os(iOS)
-            if UIDevice.current.userInterfaceIdiom == .phone { assistantSheet = false }
-            #endif
-        }
-        return covered
+        guard Module.onPhone, assistantSheet else { return false }
+        assistantSheet = false
+        return true
     }
 }

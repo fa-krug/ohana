@@ -645,28 +645,27 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   server's `ResponseCache` folder (`RemoteImageStore`). Offline
   writes, server wins (a refusal drops the change and reloads): the calendar's queue of entry /
   note ops is kept on disk (`CalendarStore.queueFile`, shown on top of what's loaded)),
-  `Shell/` (sidebar-adaptable `TabView`; on iPhone five tabs, overview, calendar, finance, meals and
-  search: more would go under iOS's "More" with a second navigation bar, so appointments, chores, the knowledge
-  base and settings open as sheets from the family sidebar there, `Module.phonePages`; settings pinned at the sidebar's foot (`tabViewSidebarBottomBar`; on the Mac, which can't leave a tab out of the sidebar alone and draws nothing for a `.hidden` tab, the tab is hidden only while another page is on screen); family switcher: on iPad and Mac
-  a system `Menu` (`FamilyMenu`) at the top of the sidebar, where the tab view has no sidebar (iPhone,
-  a narrow iPad window) a family page behind the tabs as in Mail (`FamilySidebar.swift`:
-  `FamilySidebarHost` slides the tabs away, `AppModel.showsFamilySidebar`; the toolbar's family
-  button or a swipe from the leading edge, which a UIKit edge pan only takes while a module root is
+  `Shell/` (sidebar-adaptable `TabView` on iPad and Mac; on iPhone no tabs (`Module.onPhone`): one
+  page at a time in its own navigation stack, the last one opened (`@AppStorage("phoneModule")`, so
+  also after the app was closed), every other page picked on the family page behind it; settings pinned at the sidebar's foot (`tabViewSidebarBottomBar`; on the Mac, which can't leave a tab out of the sidebar alone and draws nothing for a `.hidden` tab, the tab is hidden only while another page is on screen); family switcher: on iPad and Mac
+  a system `Menu` (`FamilyMenu`) at the top of the sidebar, on iPhone and where the tab view has no
+  sidebar (a narrow iPad window) a family page behind the page / the tabs as in Mail (`FamilySidebar.swift`:
+  `FamilySidebarHost` slides them away, `AppModel.showsFamilySidebar`; the toolbar's back button
+  (iPhone) / family button or a swipe from the leading edge, which a UIKit edge pan only takes while a module root is
   on screen, `moduleRootsOnScreen`, so it stays "back" on pushed pages; families with one *Add Family*
-  menu (new / join), every page (on iPhone the tabs switch, `Module.phonePages` open as sheets)
-  with the tab on screen highlighted, scanning a letter, the settings), assistant `.inspector` ⌘J (a `.sheet` on
-  iPhone: an inspector there breaks the tabs' navigation bars), toggled by the ✨ toggle at the top
+  menu (new / join), every page with the one on screen highlighted (the assistant's row opens its
+  sheet on iPhone, Search's ready to type), scanning a letter, the settings), assistant `.inspector` ⌘J (a `.sheet` on
+  iPhone, `Module.notPages`: an inspector there breaks the page's navigation bar), toggled by the ✨ toggle at the top
   right of every page (`AssistantToolbarToggle`: tinted while open, breathing while a turn runs):
   module roots get it from `shellToolbar()`, a page pushed onto a module's stack adds
-  `.assistantButton()`; on iPhone the tabs' pages have none: the *Ask Ohana* bar above the tabs
-  (`tabViewBottomAccessory`, `Features/Assistant/AssistantAccessory.swift`, one button → `family.ask()`;
-  while a turn runs its status and the chat's title, compact beside a shrunk tab bar) takes its
-  place, and only `Module.phonePages`' sheets, which cover it, show the ✨ and the assistant over
-  themselves; the bar and the ✨ count as viewers of the chat (`addViewer`), so a turn is followed
+  `.assistantButton()`; on iPhone the pages have none: the *Ask Ohana* bar at the bottom, the
+  screen's full width (`.assistantBar`, a glass capsule in a `safeAreaBar`, hidden while the keyboard
+  is up; `Features/Assistant/AssistantBar.swift`, one button → `family.ask()`; while a turn runs its
+  status and the chat's title) takes its place; the bar and the ✨ count as viewers of the chat (`addViewer`), so a turn is followed
   to its end after the panel closes; and its own
   page, `AppRoute`: `family.open(.recipe(id:))` etc. switches to the module, whose root takes it
   with `family.takeRoute(for:)`; server paths `/f/{id}/…` and `ohana://f/{id}/…` map onto routes;
-  the search tab (`Module.search`, `Tab(role: .search)`, ⌘K → `family.startSearch()`,
+  the search tab (`Module.search`, `Tab(role: .search)`; on iPhone a page like the others, ⌘K → `family.startSearch()`,
   `Features/Search/`) opens its hits the same way, a transaction as `.financeTransaction`; on the
   Mac it's no sidebar row but a field at the right end of every page's toolbar, `ShellSearchField`
   (added with the ✨ by `.assistantButton()`, `family.searchQuery`; typing shows the search page,
@@ -675,7 +674,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   system's `.searchable` field always goes last)),
   `DesignSystem/` (solid content cards — Liquid Glass only on bars and floating controls —, `.readableWidth()` on every page's list or grouped form (a 760 pt column on wide windows; scroll pages cap their stack with `.frame(maxWidth:)` instead), error banner, `CancelButton`/`discardGuard`; the module sets `newItem`/`moduleMenu` focused values for File ▸ New and its menu; the Mac draws those menus in the menu bar, where views have no `AppModel` / `FamilyContext` in their environment: pass values in, never `@Environment` them there), `Features/<Module>/` (plus `Account/`, `Admin/`).
   On iPhone a page's toolbar stays small (the main action, perhaps a filter, one More menu in
-  sections; the assistant is the bar above the tabs): what doesn't fit iOS moves into an overflow menu of its own, with the page's
+  sections; the assistant is the bar at the bottom): what doesn't fit iOS moves into an overflow menu of its own, with the page's
   More as a submenu, so a full page leaves something out instead (Finance has no search field
   there, only a search button); segmented pickers go under the navigation bar there (`safeAreaBar`, as in
   Meals and Finance), not in it (they can't shrink).

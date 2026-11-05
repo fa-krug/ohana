@@ -1,13 +1,11 @@
 import SwiftUI
 
 /// The frame around a family (the web app's components/shell/app-shell.tsx): the modules as a
-/// sidebar in sections (iPad, Mac) or a floating Liquid Glass tab bar (iPhone), the family
-/// switcher, the search across the modules (its own tab, ⌘K), and the assistant as an inspector
-/// on the right (a sheet on iPhone, opened from the Ask Ohana bar above the tabs), ⌘J. The
-/// iPhone's tab bar holds five tabs: with more, iOS
-/// puts the rest under "More", which pushes a tab's own navigation stack under a second bar. So
-/// there the appointments, the chores, the knowledge base and the settings (`Module.phonePages`) open as sheets from
-/// the family page (`FamilySidebarHost`) instead.
+/// sidebar in sections (iPad, Mac; a tab bar on a narrow iPad), the family switcher, the search
+/// across the modules (its own tab, ⌘K), and the assistant as an inspector on the right, ⌘J. On
+/// iPhone there are no tabs: one page at a time, the last one opened (also after the app was
+/// closed), with the family page behind it listing every page (`FamilySidebarHost`), and the
+/// assistant as a sheet from the Ask Ohana bar at the bottom (`AssistantBar`).
 struct AppShell: View {
     @Environment(AppModel.self) private var app
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -16,17 +14,18 @@ struct AppShell: View {
     /// directly, the iPhone's tab bar jumps back to the old tab for a moment at every switch.
     @State private var module: Module?
     @SceneStorage("module") private var storedModule: Module = .overview
+    /// iPhone: the page on screen, kept across launches (a scene's storage goes when the app is
+    /// swiped away).
+    @AppStorage("phoneModule") private var phoneModule: Module = .overview
 
-    /// The tab on screen; the overview while the server has its module off (and on iPhone for a
-    /// page that isn't a tab there).
+    /// The tab on screen; the overview while the server has its module off (and on iPhone for the
+    /// assistant, which isn't a page there).
     private var selection: Binding<Module> {
         Binding {
-            let current = module ?? storedModule
-            return app.isEnabled(current) && !Module.notTabs.contains(current) ? current : .overview
+            let current = module ?? (Module.onPhone ? phoneModule : storedModule)
+            return app.isEnabled(current) && !Module.notPages.contains(current) ? current : .overview
         } set: { show($0) }
     }
-    /// On iPhone: the appointments, the chores, the knowledge base or the settings, as a sheet over the tabs.
-    @State private var phonePage: Module?
     /// The assistant panel: each window opens it as the last one left it (on iPhone, where it
     /// is a sheet, closed).
     @State private var showAssistant = AppShell.assistantWasOpen
@@ -45,58 +44,20 @@ struct AppShell: View {
         if let family = app.selectedFamily, let context = app.context(for: family) {
             // The modules the server has on (GET /api/v1/server).
             let assistantOn = context.isEnabled(.assistant)
-            TabView(selection: selection) {
-                tab(.overview, assistantOn: assistantOn)
-                TabSection("Modules") {
-                    ForEach(Module.modules.filter { context.isEnabled($0) && !Module.notTabs.contains($0) }) {
-                        tab($0, assistantOn: assistantOn)
-                    }
-                    #if os(macOS)
-                    // Out of the list (see `tab`) but while on screen: then the list's last row.
-                    tab(.settings, assistantOn: assistantOn)
-                    #endif
+            pages(context, assistantOn: assistantOn)
+                .onChange(of: module) {
+                    guard let module else { return }
+                    storedModule = module
+                    if Module.onPhone { phoneModule = module }
                 }
-                #if os(iOS)
-                if !Module.notTabs.contains(.settings) {
-                    tab(.settings, assistantOn: assistantOn)
-                }
-                #endif
-                // The iPhone's tab bar shows it apart, at its end; the sidebar at its top. The Mac
-                // has the toolbar's field instead (`ShellSearchField`).
-                Tab(value: Module.search, role: .search) {
-                    page(.search, assistantOn: assistantOn)
-                }
-                #if os(macOS)
-                .hidden()
-                #endif
-            }
-            .tabViewStyle(.sidebarAdaptable)
-            .tabViewSidebarHeader { FamilySwitcher() }
-            .tabViewSidebarBottomBar {
-                SidebarSettingsButton(selected: selection.wrappedValue == .settings) { module = .settings }
-            }
-            .sheet(item: $phonePage) { page in
-                PhonePageSheet(page: page, assistant: assistantOn ? $showAssistant : nil)
-            }
-            .onChange(of: module) { if let module { storedModule = module } }
+            .modifier(AssistantPresentation(isPresented: $showAssistant, enabled: assistantOn))
             #if os(iOS)
-            .tabBarMinimizeBehavior(.onScrollDown)
-            #endif
-            // iPhone: the assistant one tap away, above the tabs.
-            .assistantAccessory(context, enabled: assistantOn)
-            // A page's sheet shows the assistant over itself (one presentation at a time).
-            .modifier(AssistantPresentation(isPresented: $showAssistant, enabled: assistantOn,
-                                            covered: phonePage != nil))
-            .onChange(of: phonePage) {
-                // Closed with its assistant still open: that goes too, not over the tabs.
-                if phonePage == nil, AssistantAccessoryHost.shows { showAssistant = false }
-            }
-            #if os(iOS)
-            // Where the tab view has no sidebar: the family page behind the tabs.
-            .modifier(FamilySidebarHost(active: sizeClass == .compact, current: selection.wrappedValue))
+            // Where the tab view has no sidebar, and on iPhone: the family page behind the page.
+            .modifier(FamilySidebarHost(active: Module.onPhone || sizeClass == .compact,
+                                        current: selection.wrappedValue))
             #endif
             // The letter scanner over everything (the family menu, Spotlight / Siri / Shortcuts).
-            .modifier(ShellLetterScan(context: context, assistantSheet: $showAssistant, phonePage: $phonePage))
+            .modifier(ShellLetterScan(context: context, assistantSheet: $showAssistant))
             // The panel's settings and chats before it first opens, so it doesn't wait for them.
             .task(id: assistantOn) {
                 if assistantOn { await AssistantChatStore.shared(for: context.api).preload() }
@@ -129,8 +90,8 @@ struct AppShell: View {
             .onChange(of: context.pendingRoute, initial: true) {
                 guard let route = context.pendingRoute else { return }
                 #if os(iOS)
-                // The iPhone has no assistant tab: its page opens as the panel.
-                if route.module == .assistant, sizeClass == .compact {
+                // The iPhone has no assistant page: it opens as the panel.
+                if route.module == .assistant, Module.onPhone || sizeClass == .compact {
                     if case let .assistantChat(id?) = context.takeRoute(for: .assistant) {
                         let store = AssistantChatStore.shared(for: context.api)
                         Task { await store.open(id) }
@@ -168,30 +129,57 @@ struct AppShell: View {
         }
     }
 
-    /// Switches to `target`'s tab, or on iPhone opens what isn't a tab there as a sheet (a page
-    /// once the assistant's sheet, which a link may come from, has gone: only one shows).
+    /// Switches to `target`'s tab, on iPhone its page (the family page sliding away), or there
+    /// opens the assistant's sheet.
     private func show(_ target: Module) {
-        guard Module.notTabs.contains(target) else {
-            module = target
-            // A tab (a link in the assistant over a page's sheet): the sheet would cover it.
-            if phonePage != nil {
-                showAssistant = false
-                phonePage = nil
-            }
-            return
-        }
-        if target == .assistant {
+        if Module.notPages.contains(target) {
             showAssistant = true
             return
         }
-        guard showAssistant else {
-            phonePage = target
-            return
+        module = target
+        if Module.onPhone, app.showsFamilySidebar {
+            withAnimation(.snappy(duration: 0.3)) { app.showsFamilySidebar = false }
         }
-        showAssistant = false
-        Task {
-            try? await Task.sleep(for: .milliseconds(450))
-            phonePage = target
+    }
+
+    /// The pages: on iPhone the one on screen, with the Ask Ohana bar below it; elsewhere the tab
+    /// view (a sidebar, or a tab bar on a narrow iPad).
+    @ViewBuilder
+    private func pages(_ context: FamilyContext, assistantOn: Bool) -> some View {
+        if Module.onPhone {
+            page(selection.wrappedValue, assistantOn: assistantOn)
+                // Another page: its own navigation stack, not the last one's.
+                .id(selection.wrappedValue)
+                .assistantBar(context, enabled: assistantOn)
+        } else {
+            TabView(selection: selection) {
+                tab(.overview, assistantOn: assistantOn)
+                TabSection("Modules") {
+                    ForEach(Module.modules.filter { context.isEnabled($0) }) {
+                        tab($0, assistantOn: assistantOn)
+                    }
+                    #if os(macOS)
+                    // Out of the list (see `tab`) but while on screen: then the list's last row.
+                    tab(.settings, assistantOn: assistantOn)
+                    #endif
+                }
+                #if os(iOS)
+                tab(.settings, assistantOn: assistantOn)
+                #endif
+                // The sidebar shows it at its top. The Mac has the toolbar's field instead
+                // (`ShellSearchField`).
+                Tab(value: Module.search, role: .search) {
+                    page(.search, assistantOn: assistantOn)
+                }
+                #if os(macOS)
+                .hidden()
+                #endif
+            }
+            .tabViewStyle(.sidebarAdaptable)
+            .tabViewSidebarHeader { FamilySwitcher() }
+            .tabViewSidebarBottomBar {
+                SidebarSettingsButton(selected: selection.wrappedValue == .settings) { module = .settings }
+            }
         }
     }
 
@@ -201,7 +189,7 @@ struct AppShell: View {
             page(item, assistantOn: assistantOn)
         }
         // The assistant (a sheet from the toolbar) and the settings (the family picker) live in
-        // the sidebar; a compact tab bar (iPad) keeps the modules. On iPhone they aren't tabs.
+        // the sidebar; a compact tab bar (iPad) keeps the modules.
         .defaultVisibility(item == .assistant || item == .settings ? .hidden : .automatic, for: .tabBar)
         // The settings stand at the sidebar's foot instead (`SidebarSettingsButton`).
         #if os(iOS)
@@ -226,38 +214,10 @@ struct AppShell: View {
                 .demoBanner()
         }
         // Not on the assistant's own page (iPad, Mac), nor without the assistant, nor on iPhone:
-        // the Ask Ohana bar is there instead (`AssistantAccessory`).
-        .environment(\.shellAssistant, item == .assistant || !assistantOn || AssistantAccessoryHost.shows
+        // the Ask Ohana bar is there instead (`AssistantBar`).
+        .environment(\.shellAssistant, item == .assistant || !assistantOn || Module.onPhone
                      ? nil : $showAssistant)
         .environment(\.shellModule, selection)
-    }
-}
-
-/// On iPhone, a page that isn't a tab (`Module.phonePages`): its root in a sheet of its own, with
-/// a close button where the tabs' pages have the family button. It covers the Ask Ohana bar, so
-/// its pages have the ✨, and the assistant opens over it (`assistant`: the shell's toggle; nil
-/// without the assistant).
-private struct PhonePageSheet: View {
-    let page: Module
-    let assistant: Binding<Bool>?
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            page.root
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Close", systemImage: "xmark") { dismiss() }
-                    }
-                }
-                .assistantButton()
-                .demoBanner()
-        }
-        .environment(\.shellAssistant, assistant)
-        .errorBanner()
-        .sheet(isPresented: assistant ?? .constant(false)) {
-            AssistantPanel().errorBannerWhenCompact()
-        }
     }
 }
 
@@ -313,24 +273,17 @@ extension EnvironmentValues {
 }
 
 /// The assistant beside the modules: an inspector (iPad, Mac), a sheet on iPhone. Not an
-/// inspector there too: around the tab view, even closed, it puts the tabs' navigation bars
-/// under the status bar.
+/// inspector there too: around the page, even closed, it puts its navigation bar under the
+/// status bar.
 private struct AssistantPresentation: ViewModifier {
     @Binding var isPresented: Bool
     /// The server has the assistant on; off, the panel never shows (the views stay as they are,
     /// so turning it on or off doesn't rebuild the shell).
     var enabled = true
-    /// On iPhone a page's sheet is up: it shows the assistant's sheet over itself.
-    var covered = false
 
     /// What the sheet or inspector shows: never while the assistant is off.
     private var shown: Binding<Bool> {
         Binding { enabled && isPresented } set: { isPresented = $0 }
-    }
-
-    /// The iPhone's sheet: not while a page's sheet shows it.
-    private var sheetShown: Binding<Bool> {
-        Binding { enabled && isPresented && !covered } set: { isPresented = $0 }
     }
 
     func body(content: Content) -> some View {
@@ -344,7 +297,7 @@ private struct AssistantPresentation: ViewModifier {
     private func presentation(_ content: Content) -> some View {
         #if os(iOS)
         if UIDevice.current.userInterfaceIdiom == .phone {
-            content.sheet(isPresented: sheetShown) {
+            content.sheet(isPresented: shown) {
                 AssistantPanel().errorBannerWhenCompact()
             }
         } else {
@@ -366,8 +319,9 @@ private struct AssistantPresentation: ViewModifier {
     }
 }
 
-/// The toolbar every module page gets from the shell: the family sidebar's button (on iPhone,
-/// where the tab view has no sidebar) and the assistant toggle (not on iPhone's tabs).
+/// The toolbar every module page gets from the shell: the way to the family page (iPhone: back
+/// to it; a narrow iPad, where the tab view has no sidebar: its sidebar button) and the assistant
+/// toggle (not on iPhone).
 struct ShellToolbar: ViewModifier {
     @Environment(AppModel.self) private var app
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -376,7 +330,15 @@ struct ShellToolbar: ViewModifier {
         content
             .toolbar {
                 #if os(iOS)
-                if sizeClass == .compact {
+                if Module.onPhone {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            withAnimation(.snappy(duration: 0.3)) { app.showsFamilySidebar = true }
+                        } label: {
+                            Label { Text(verbatim: "Ohana") } icon: { Image(systemName: "chevron.backward") }
+                        }
+                    }
+                } else if sizeClass == .compact {
                     ToolbarItem(placement: .topBarLeading) {
                         Button("Family", systemImage: "sidebar.leading") {
                             withAnimation(.snappy(duration: 0.3)) { app.showsFamilySidebar = true }
@@ -395,7 +357,7 @@ struct ShellToolbar: ViewModifier {
 }
 
 /// The assistant toggle at the top right (`AssistantToolbarToggle`; none where `shellAssistant` is
-/// nil, as on the iPhone's tabs); on the Mac right of it the search across the modules
+/// nil, as on iPhone); on the Mac right of it the search across the modules
 /// (`ShellSearchField`), the page's own items left of both. The shell gives them to the module
 /// roots; a page pushed onto a module's stack adds them itself (a pushed page has its own toolbar).
 struct AssistantButton: ViewModifier {

@@ -13,19 +13,19 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
 
     var id: String { rawValue }
 
-    /// The pages that aren't tabs on iPhone, whose tab bar holds five (the overview, three
-    /// modules and the search): sheets opened from the family page (`FamilySidebarHost`).
-    static var phonePages: [Module] {
+    /// On iPhone the shell has no tabs: one page at a time, the last one opened, with the family
+    /// page behind it to pick another (`FamilySidebarHost`).
+    static var onPhone: Bool {
         #if os(iOS)
-        UIDevice.current.userInterfaceIdiom == .phone ? [.appointments, .chores, .knowledge, .settings] : []
+        UIDevice.current.userInterfaceIdiom == .phone
         #else
-        []
+        false
         #endif
     }
 
-    /// What isn't a tab on iPhone: those pages, and the assistant (a sheet there).
-    static var notTabs: [Module] {
-        phonePages.isEmpty ? [] : phonePages + [.assistant]
+    /// What isn't a page of its own on iPhone: the assistant (a sheet there, the Ask Ohana bar's).
+    static var notPages: [Module] {
+        onPhone ? [.assistant] : []
     }
 
     var title: LocalizedStringKey {
