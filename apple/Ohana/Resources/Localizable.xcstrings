@@ -7906,6 +7906,16 @@
         }
       }
     },
+    "Hides the tools": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blendet die Tools aus"
+          }
+        }
+      }
+    },
     "Highlight Too": {
       "localizations": {
         "de": {
@@ -13738,6 +13748,16 @@
         }
       }
     },
+    "Recent": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zuletzt"
+          }
+        }
+      }
+    },
     "Recently updated": {
       "localizations": {
         "de": {
@@ -15188,6 +15208,16 @@
         }
       }
     },
+    "Select Text": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text auswählen"
+          }
+        }
+      }
+    },
     "Select a day / a range of days (across months)": {
       "localizations": {
         "de": {
@@ -15924,6 +15954,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Heute zeigen"
+          }
+        }
+      }
+    },
+    "Shows each tool": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeigt jedes Tool"
           }
         }
       }
@@ -19188,6 +19228,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Heimatadresse verwenden"
+          }
+        }
+      }
+    },
+    "Used %lld tools": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Tools verwendet"
           }
         }
       }

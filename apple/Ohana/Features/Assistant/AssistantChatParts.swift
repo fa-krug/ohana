@@ -200,30 +200,6 @@ struct AssistantChatSkeleton: View {
     }
 }
 
-/// A light moving across the text (the activity line's "Thinking…"): a gradient mask that slides
-/// over it, animated by the render loop, so the view isn't drawn again for it.
-struct AssistantShimmer: ViewModifier {
-    var active: Bool
-    @State private var phase: CGFloat = 0
-
-    func body(content: Content) -> some View {
-        if active {
-            content
-                .mask {
-                    LinearGradient(stops: [.init(color: .black.opacity(0.35), location: 0),
-                                           .init(color: .black, location: 0.5),
-                                           .init(color: .black.opacity(0.35), location: 1)],
-                                   startPoint: UnitPoint(x: phase - 1, y: 0.5), endPoint: UnitPoint(x: phase, y: 0.5))
-                }
-                .onAppear {
-                    withAnimation(.linear(duration: 1.6).repeatForever(autoreverses: false)) { phase = 2 }
-                }
-        } else {
-            content
-        }
-    }
-}
-
 /// The one round button beside the composer's field: Send, Stop or the mic
 /// (`AssistantComposerAction`). One button whose symbol morphs and whose glass fills with the
 /// assistant's color while there is something to send, rather than three swapped in place.
@@ -277,19 +253,5 @@ struct AssistantComposerButton: View {
         .animation(reduceMotion ? nil : .smooth(duration: 0.25), value: prominent)
         .accessibilityLabel(label)
         .help(label)
-    }
-}
-
-extension AnyTransition {
-    /// A message of the user comes up from the composer: from the bottom trailing corner.
-    static var assistantUserItem: AnyTransition {
-        .asymmetric(insertion: .scale(scale: 0.88, anchor: .bottomTrailing).combined(with: .opacity)
-                        .combined(with: .offset(y: 10)),
-                    removal: .opacity)
-    }
-
-    /// An answer, a tool call or a card fades in, sliding up a little.
-    static var assistantItem: AnyTransition {
-        .asymmetric(insertion: .opacity.combined(with: .offset(y: 8)), removal: .opacity)
     }
 }
