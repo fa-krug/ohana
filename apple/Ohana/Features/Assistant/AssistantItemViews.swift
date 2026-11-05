@@ -552,13 +552,12 @@ struct AssistantCalendarCard: View {
 /// Notes for the family's knowledge folder the assistant suggests, like the Reminders card: each
 /// note (made or changed, where, its tags) with what it writes (a new note's or a rewritten text
 /// a few lines long until expanded, the text added, what is replaced), and **Apply** / **Don't
-/// apply** while it waits. Apply asks first, saying what will be written. Once answered, each note
-/// shows how it went and the card how it ended.
+/// apply** while it waits. Apply writes at once (the card already shows what). Once answered, each
+/// note shows how it went and the card how it ended.
 struct AssistantNotesCard: View {
     let edit: AssistantNotesEdit
     let store: AssistantChatStore
     @State private var posting = false
-    @State private var confirming = false
     /// The ops whose text shows whole.
     @State private var expanded: Set<Int> = []
 
@@ -599,16 +598,13 @@ struct AssistantNotesCard: View {
             }
             .padding(.vertical, 2)
             if open || posting {
-                let confirmation = AssistantNotesConfirmation.make(edit.ops)
                 HStack(spacing: 8) {
                     Spacer(minLength: 0)
                     Button("Don’t Apply") {
                         store.declineNotes(edit.id)
                     }
                     .buttonStyle(.bordered)
-                    Button {
-                        confirming = true
-                    } label: {
+                    Button(action: apply) {
                         if posting {
                             ProgressView().controlSize(.small)
                         } else {
@@ -618,12 +614,6 @@ struct AssistantNotesCard: View {
                     .buttonStyle(.borderedProminent)
                     .tint(ModuleTint.assistant)
                     .accessibilityLabel(Text("Apply: \(edit.summary)"))
-                    .confirmationDialog(confirmation.title, isPresented: $confirming, titleVisibility: .visible) {
-                        Button(confirmation.button, action: apply)
-                        Button("Cancel", role: .cancel) {}
-                    } message: {
-                        Text(verbatim: confirmation.message)
-                    }
                 }
                 .disabled(!active)
             }

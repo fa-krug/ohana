@@ -3745,16 +3745,6 @@
         }
       }
     },
-    "Change “%@”?": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "„%@“ ändern?"
-          }
-        }
-      }
-    },
     "Change…": {
       "localizations": {
         "de": {
@@ -5021,16 +5011,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "„%@“ in %@ anlegen"
-          }
-        }
-      }
-    },
-    "Create “%@”?": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "„%@“ anlegen?"
           }
         }
       }
@@ -12667,16 +12647,6 @@
         }
       }
     },
-    "Parts of the text of “%@” are replaced.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Teile des Texts von „%@“ werden ersetzt."
-          }
-        }
-      }
-    },
     "Party": {
       "localizations": {
         "de": {
@@ -14833,16 +14803,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "1 Rezept speichern"
-          }
-        }
-      }
-    },
-    "Save Changes": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Änderungen sichern"
           }
         }
       }
@@ -17481,16 +17441,6 @@
         }
       }
     },
-    "Text is added at the end of “%@”.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Am Ende von „%@“ wird Text ergänzt."
-          }
-        }
-      }
-    },
     "That doesn’t look like an Ohana server address.": {
       "localizations": {
         "de": {
@@ -18301,16 +18251,6 @@
         }
       }
     },
-    "The tags of “%@” change.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die Tags von „%@“ ändern sich."
-          }
-        }
-      }
-    },
     "The time isn’t valid.": {
       "localizations": {
         "de": {
@@ -18337,16 +18277,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Die ganze Familie als JSON-Datei: der Kalender aller Jahre (Eintragsarten, Einträge, Notizen) und die Finanzen (Konten, Kategorien, Buchungen, Einstellungen). Auch Betrachter können exportieren."
-          }
-        }
-      }
-    },
-    "The whole text of “%@” is replaced.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Der ganze Text von „%@“ wird ersetzt."
           }
         }
       }
@@ -20317,16 +20247,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Einen Blick wert: %@"
-          }
-        }
-      }
-    },
-    "Write %lld notes to the knowledge folder?": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld Notizen in den Wissensordner schreiben?"
           }
         }
       }
@@ -22431,16 +22351,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "„%@“ wird mit seinen Nachrichten gelöscht. Was der Assistent geändert hat, bleibt, wie es ist."
-          }
-        }
-      }
-    },
-    "“%@” is created in %@.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "„%@“ wird in %@ angelegt."
           }
         }
       }
