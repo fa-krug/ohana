@@ -47,6 +47,12 @@ struct FamilySidebarHost: ViewModifier {
                 })
         }
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = max($0, 1) }
+        .onChange(of: app.showsFamilySidebar) {
+            // A field of the page left (a kept page's search) gives up the keyboard.
+            if app.showsFamilySidebar {
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            }
+        }
         .onAppear {
             // Another family was picked: its page slides in.
             guard app.showsFamilySidebar else { return }

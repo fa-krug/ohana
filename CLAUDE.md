@@ -647,7 +647,9 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   note ops is kept on disk (`CalendarStore.queueFile`, shown on top of what's loaded)),
   `Shell/` (sidebar-adaptable `TabView` on iPad and Mac; on iPhone no tabs (`Module.onPhone`): one
   page at a time in its own navigation stack, the last one opened (`@AppStorage("phoneModule")`, so
-  also after the app was closed), every other page picked on the family page behind it; settings pinned at the sidebar's foot (`tabViewSidebarBottomBar`; on the Mac, which can't leave a tab out of the sidebar alone and draws nothing for a `.hidden` tab, the tab is hidden only while another page is on screen); family switcher: on iPad and Mac
+  also after the app was closed), every other page picked on the family page behind it; the pages
+  opened are kept, hidden, while another shows (`openedPages`, `shellPageVisible`), so each is
+  where it was left, as tabs are; settings pinned at the sidebar's foot (`tabViewSidebarBottomBar`; on the Mac, which can't leave a tab out of the sidebar alone and draws nothing for a `.hidden` tab, the tab is hidden only while another page is on screen); family switcher: on iPad and Mac
   a system `Menu` (`FamilyMenu`) at the top of the sidebar, on iPhone and where the tab view has no
   sidebar (a narrow iPad window) a family page behind the page / the tabs as in Mail (`FamilySidebar.swift`:
   `FamilySidebarHost` slides them away, `AppModel.showsFamilySidebar`; the toolbar's back button

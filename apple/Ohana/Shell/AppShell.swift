@@ -17,6 +17,9 @@ struct AppShell: View {
     /// iPhone: the page on screen, kept across launches (a scene's storage goes when the app is
     /// swiped away).
     @AppStorage("phoneModule") private var phoneModule: Module = .overview
+    /// iPhone: the pages opened in this family, kept while another shows, so each is where it was
+    /// left (scrolled, pushed), as tabs are.
+    @State private var openedPages: [Module] = []
 
     /// The tab on screen; the overview while the server has its module off (and on iPhone for the
     /// assistant, which isn't a page there).
@@ -147,10 +150,22 @@ struct AppShell: View {
     @ViewBuilder
     private func pages(_ context: FamilyContext, assistantOn: Bool) -> some View {
         if Module.onPhone {
-            page(selection.wrappedValue, assistantOn: assistantOn)
-                // Another page: its own navigation stack, not the last one's.
-                .id(selection.wrappedValue)
-                .assistantBar(context, enabled: assistantOn)
+            let current = selection.wrappedValue
+            let kept = openedPages.filter { context.isEnabled($0) }
+            ZStack {
+                ForEach(kept.contains(current) ? kept : kept + [current]) { item in
+                    let visible = item == current
+                    page(item, assistantOn: assistantOn)
+                        .environment(\.shellPageVisible, visible)
+                        .opacity(visible ? 1 : 0)
+                        .allowsHitTesting(visible)
+                        .accessibilityHidden(!visible)
+                }
+            }
+            .onChange(of: current, initial: true) {
+                if !openedPages.contains(current) { openedPages.append(current) }
+            }
+            .assistantBar(context, enabled: assistantOn)
         } else {
             TabView(selection: selection) {
                 tab(.overview, assistantOn: assistantOn)
@@ -270,6 +285,8 @@ extension EnvironmentValues {
     /// The shell's page on screen, inside a module's navigation stack (nil elsewhere): on the Mac
     /// every page there gets the search field (`ShellSearchField`).
     @Entry var shellModule: Binding<Module>?
+    /// False for a page the iPhone keeps while another shows (`AppShell.openedPages`).
+    @Entry var shellPageVisible = true
 }
 
 /// The assistant beside the modules: an inspector (iPad, Mac), a sheet on iPhone. Not an
@@ -325,6 +342,8 @@ private struct AssistantPresentation: ViewModifier {
 struct ShellToolbar: ViewModifier {
     @Environment(AppModel.self) private var app
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(\.shellPageVisible) private var visible
+    @State private var appeared = false
 
     func body(content: Content) -> some View {
         content
@@ -349,9 +368,13 @@ struct ShellToolbar: ViewModifier {
             }
             .assistantButton()
             #if os(iOS)
-            // The swipe to the family page waits while a page is pushed over a root.
-            .onAppear { app.moduleRootsOnScreen += 1 }
-            .onDisappear { app.moduleRootsOnScreen = max(0, app.moduleRootsOnScreen - 1) }
+            // The swipe to the family page waits while a page is pushed over a root (a kept page
+            // the iPhone hides doesn't count).
+            .onAppear { appeared = true }
+            .onDisappear { appeared = false }
+            .onChange(of: appeared && visible) { _, onScreen in
+                app.moduleRootsOnScreen = max(0, app.moduleRootsOnScreen + (onScreen ? 1 : -1))
+            }
             #endif
     }
 }
