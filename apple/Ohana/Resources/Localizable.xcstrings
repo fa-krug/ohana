@@ -4836,6 +4836,16 @@
         }
       }
     },
+    "Couldn’t open the chat": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Chat konnte nicht geöffnet werden"
+          }
+        }
+      }
+    },
     "Couldn’t reach %@. Check the address of your Ohana server.": {
       "localizations": {
         "de": {
@@ -7996,6 +8006,16 @@
         }
       }
     },
+    "How can I help?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie kann ich helfen?"
+          }
+        }
+      }
+    },
     "How many pages of results each run reads per source. More pages find more doctors but take longer.": {
       "localizations": {
         "de": {
@@ -9336,6 +9356,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Modelle laden"
+          }
+        }
+      }
+    },
+    "Loading the chat": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Chat wird geladen"
           }
         }
       }
@@ -12318,6 +12348,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Öffnet sie wieder"
+          }
+        }
+      }
+    },
+    "Opens the assistant, ready to type.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffnet den Assistenten, bereit zum Schreiben."
           }
         }
       }
@@ -15774,6 +15814,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Alle Tage gleich zeigen (Esc)"
+          }
+        }
+      }
+    },
+    "Show earlier messages": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frühere Nachrichten anzeigen"
           }
         }
       }
