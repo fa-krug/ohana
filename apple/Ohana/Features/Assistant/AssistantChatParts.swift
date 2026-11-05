@@ -200,10 +200,13 @@ struct AssistantChatSkeleton: View {
     }
 }
 
-/// The one round button beside the composer's field: Send, Stop or the mic
-/// (`AssistantComposerAction`). One button whose symbol morphs and whose glass fills with the
+/// The one round button in the composer's box, at its bottom right: Send, Stop or the mic
+/// (`AssistantComposerAction`). One button whose symbol morphs and which fills with the
 /// assistant's color while there is something to send, rather than three swapped in place.
 struct AssistantComposerButton: View {
+    /// Its size, and the attach menu's beside it.
+    static let size: CGFloat = 36
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let action: AssistantComposerAction
     var listening = false
@@ -241,10 +244,13 @@ struct AssistantComposerButton: View {
                 .symbolEffect(.variableColor.iterative, isActive: listening && !reduceMotion)
                 .contentTransition(reduceMotion ? .identity : .symbolEffect(.replace))
                 .foregroundStyle(prominent ? AnyShapeStyle(.white) : enabled ? AnyShapeStyle(.primary) : AnyShapeStyle(.tertiary))
-                .frame(width: 44, height: 44)
+                .frame(width: Self.size, height: Self.size)
+                .background {
+                    // Inside the composer's glass: a plain fill, no glass on glass.
+                    Circle().fill(prominent ? AnyShapeStyle(ModuleTint.assistant.gradient)
+                                            : action == .stop ? AnyShapeStyle(.quaternary) : AnyShapeStyle(.clear))
+                }
                 .contentShape(.circle)
-                .glassEffect(prominent ? .regular.tint(ModuleTint.assistant).interactive() : .regular.interactive(),
-                             in: .circle)
         }
         .buttonStyle(.plain)
         .disabled(!enabled)

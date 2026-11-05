@@ -782,13 +782,22 @@ struct AssistantChatView: View {
                 // Bounces only once the chips don't fit.
                 .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
             }
-            GlassEffectContainer(spacing: 8) {
-                HStack(alignment: .bottom, spacing: 8) {
+            // One box, as in Claude's app: the text over the whole width (two lines at least, it
+            // grows to ten), the attach menu and Send / Stop / the mic in a row under it.
+            VStack(alignment: .leading, spacing: 2) {
+                field
+                HStack(spacing: 8) {
                     attachMenu
-                    field
+                    Spacer(minLength: 0)
                     actionButton
                 }
+                .padding(.horizontal, 6)
+                .padding(.bottom, 6)
             }
+            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 24))
+            .contentShape(.rect(cornerRadius: 24))
+            // A tap anywhere in the box (not on its buttons) starts typing.
+            .onTapGesture { if store.ready { composerFocused = true } }
             // Only once the chat nears the point where older messages get condensed.
             if let usage = store.current?.usage, AssistantContextMeter.shows(usage) {
                 AssistantContextMeter(usage: usage)
@@ -818,13 +827,13 @@ struct AssistantChatView: View {
             #endif
         } label: {
             Image(systemName: "paperclip")
-                .font(.body.weight(.medium))
-                .frame(width: 22, height: 22)
+                .font(.body.weight(.semibold))
+                .frame(width: AssistantComposerButton.size, height: AssistantComposerButton.size)
+                .contentShape(.circle)
         }
         .menuIndicator(.hidden)
-        .buttonStyle(.glass)
-        .buttonBorderShape(.circle)
-        .controlSize(.large)
+        .buttonStyle(.plain)
+        .foregroundStyle(store.ready ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))
         .disabled(!store.ready)
         .accessibilityLabel(Text("Attach images or text files"))
         .help(Text("Attach images or text files"))
@@ -833,7 +842,8 @@ struct AssistantChatView: View {
     private var field: some View {
         TextField(placeholder, text: $text, selection: $selection, axis: .vertical)
             .textFieldStyle(.plain)
-            .lineLimit(1...6)
+            // At least two lines high: longer messages are common.
+            .lineLimit(2...10)
             .focused($composerFocused)
             // The on-screen keyboard's Return puts in a line break and the Send button sends
             // (as in Messages); a hardware keyboard's Return sends. Only hardware keys get here.
@@ -855,10 +865,8 @@ struct AssistantChatView: View {
             .modifier(AssistantImagePaste(enabled: store.ready) { attach(pasted: $0) })
             #endif
             .disabled(!store.ready)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .frame(minHeight: 44)
-            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 22))
+            .padding(.horizontal, 16)
+            .padding(.top, 14)
     }
 
     /// What the button beside the field does: one slot for Send, Stop and (on iPhone and iPad)
