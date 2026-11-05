@@ -15,9 +15,9 @@ final class MealPlanUndo: Identifiable {
 
 /// Meals → Plan: the family's meal plan (port of the web's plan page). The active iteration day
 /// by day (lunch with its recipe, leftovers, away days, shopping days), the past ones folded; the
-/// shopping list in Reminders (toolbar: Shopping List, `ShoppingRemindersSheet`); and for
-/// editors: setting the plan up, refreshing an iteration, starting the next one, swapping or
-/// removing a meal (each undoable for a few seconds). Editors drag a meal
+/// toolbar's More menu: planning the active iteration's days again and the plan's settings
+/// (editors), the shopping list in Reminders (`ShoppingRemindersSheet`); and for editors:
+/// starting the next iteration, swapping or removing a meal (each undoable for a few seconds). Editors drag a meal
 /// onto another day (swapping them) or a recipe onto a day; on iPad and Mac the recipes to drag
 /// sit in a column beside the plan (toolbar: Recipes).
 struct MealPlanView: View {
@@ -61,15 +61,25 @@ struct MealPlanView: View {
                         .help("Recipes to drag onto a day")
                 }
             }
-            if !family.api.client.isDemo {
+            let plan = state.value?.plan
+            if !family.api.client.isDemo || (canEdit && plan != nil) {
                 ToolbarItem(placement: .primaryAction) {
-                    Button("Shopping List", systemImage: "checklist") { showsShopping = true }
-                        .help("The shopping list in Reminders")
-                }
-            }
-            if canEdit, let data = state.value, data.plan != nil {
-                ToolbarItem(placement: .primaryAction) {
-                    Button("Update plan", systemImage: "slider.horizontal.3") { showSetup = true }
+                    Menu {
+                        if canEdit, let active = plan?.activeIteration {
+                            Button("Plan These Days Again…", systemImage: "arrow.triangle.2.circlepath") {
+                                confirmRenew = active
+                            }
+                            .disabled(working)
+                        }
+                        if canEdit, plan != nil {
+                            Button("Plan Settings…", systemImage: "slider.horizontal.3") { showSetup = true }
+                        }
+                        if !family.api.client.isDemo {
+                            Button("Shopping List…", systemImage: "checklist") { showsShopping = true }
+                        }
+                    } label: {
+                        Label("More", systemImage: "ellipsis")
+                    }
                 }
             }
         }
@@ -202,8 +212,6 @@ struct MealPlanView: View {
             familyID: family.family.id,
             canEdit: canEdit,
             shoppingLabel: shoppingLabel,
-            working: working,
-            onRenew: { confirmRenew = iteration },
             onDrop: { item, row in drop(item, onto: row, of: iteration) },
             onAction: { action in
                 switch action {
@@ -368,8 +376,6 @@ struct MealPlanIterationCard: View {
     let canEdit: Bool
     /// The shopping days' line about Reminders; nil: none (the demo).
     var shoppingLabel: String?
-    let working: Bool
-    var onRenew: () -> Void
     /// A recipe or meal dropped onto a day; whether it was used.
     var onDrop: (MealDragItem, MealPlanDayRow) -> Bool
     var onAction: (MealPlanEntryAction) -> Void
@@ -423,12 +429,6 @@ struct MealPlanIterationCard: View {
             .buttonStyle(.plain)
             .accessibilityValue(isExpanded ? Text("Expanded") : Text("Collapsed"))
             Spacer()
-            if !archived && canEdit {
-                Button("Refresh", systemImage: "arrow.triangle.2.circlepath", action: onRenew)
-                    .buttonStyle(.bordered)
-                    .disabled(working)
-                    .help("Plan these days again")
-            }
         }
     }
 }

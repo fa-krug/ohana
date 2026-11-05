@@ -445,7 +445,6 @@ struct LetterFoundSection: View {
                 if let source = review.foundSource {
                     Text("From \(source)")
                 }
-                Text("Done adds the ticked ones: events to the family’s calendar, tasks and deadlines to your Reminders.")
                 if let access = noReminders {
                     Label(access == .restricted
                           ? "Reminders aren’t allowed on this device."
@@ -520,11 +519,6 @@ struct LetterFoundRow: View {
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    if !item.added {
-                        Image(systemName: "info.circle")
-                            .foregroundStyle(Color.accentColor)
-                            .accessibilityHidden(true)
-                    }
                 }
                 .contentShape(.rect)
             }

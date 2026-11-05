@@ -101,6 +101,9 @@ struct CalendarEventSheet: View {
     @State private var deleting: CalendarEvent?
     @State private var askSpan = false
     @State private var customRepeat = false
+    /// The Link field shows once it has a value or "Add Link" was tapped.
+    @State private var addingLink = false
+    @FocusState private var linkFocused: Bool
     /// The draft as it opened, for Cancel.
     private let initial: CalendarEventDraft
 
@@ -141,12 +144,19 @@ struct CalendarEventSheet: View {
                 Section {
                     TextField("Who it is for", text: $draft.input.person)
                     TextField("Location", text: $draft.input.location)
-                    TextField("Link", text: $draft.input.url)
-                        #if os(iOS)
-                        .keyboardType(.URL)
-                        .textInputAutocapitalization(.never)
-                        #endif
-                        .autocorrectionDisabled()
+                    if addingLink || !draft.input.url.isEmpty {
+                        TextField("Link", text: $draft.input.url)
+                            #if os(iOS)
+                            .keyboardType(.URL)
+                            .textInputAutocapitalization(.never)
+                            #endif
+                            .autocorrectionDisabled()
+                            .focused($linkFocused)
+                            // Just added: the field takes the keyboard.
+                            .onAppear { if addingLink { linkFocused = true } }
+                    } else {
+                        Button("Add Link", systemImage: "link") { addingLink = true }
+                    }
                     TextField("Note", text: $draft.input.note, axis: .vertical)
                         .lineLimit(2...5)
                 } footer: {

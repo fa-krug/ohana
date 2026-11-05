@@ -2,8 +2,8 @@ import SwiftUI
 
 /// The knowledge base: the family's documents (the files of its knowledge folder the server has
 /// read), newest first, as a list in a readable column (`columnWidth`): each row with its date,
-/// whose it is, the start of its summary and its tags; narrowed by folder, person and tag (a bar
-/// under the navigation bar, as wide as the list), the left-out ones on request. (Searching them is
+/// whose it is, the start of its summary and its tags; narrowed by folder, person and tag (menus in
+/// a bar under the navigation bar, as wide as the list), the left-out ones on request. (Searching them is
 /// the search page's: its `knowledge` hits.) A row opens the document
 /// (`KnowledgeDocumentView`). Editors only, not the demo (`FamilyContext.knowledgeAvailable`);
 /// inside the shell's navigation stack (a sheet from the family page on iPhone).
@@ -321,20 +321,7 @@ private struct KnowledgeList: View {
             HStack(spacing: 8) {
                 folderMenu
                 if !members.isEmpty { personMenu }
-                ForEach(tags, id: \.tag) { tag in
-                    let selected = query.tag == tag.tag
-                    Button {
-                        query.tag = selected ? nil : tag.tag
-                    } label: {
-                        Label(tag.tag, systemImage: "tag")
-                            .labelStyle(.titleAndIcon)
-                            .font(.subheadline)
-                            .foregroundStyle(selected ? ModuleTint.knowledge : .primary)
-                            .chip(tint: selected ? ModuleTint.knowledge : nil)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(selected ? .isSelected : [])
-                }
+                if !tags.isEmpty || query.tag != nil { tagMenu }
             }
             .padding(.horizontal)
             .padding(.vertical, 8)
@@ -394,6 +381,23 @@ private struct KnowledgeList: View {
         .menuIndicator(.hidden)
     }
 
+    private var tagMenu: some View {
+        Menu {
+            Button("All Tags", systemImage: query.tag == nil ? "checkmark" : "tag") { query.tag = nil }
+            Section {
+                ForEach(tags, id: \.tag) { tag in
+                    Button(tag.tag, systemImage: tag.tag == query.tag ? "checkmark" : "tag") { query.tag = tag.tag }
+                }
+            }
+        } label: {
+            filterChip(query.tag.map { Text(verbatim: $0) } ?? Text("Tags"), systemImage: "tag",
+                       selected: query.tag != nil)
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+    }
+
     private func filterChip(_ title: Text, systemImage: String, selected: Bool) -> some View {
         HStack(spacing: 4) {
             Image(systemName: systemImage)
@@ -422,10 +426,7 @@ private struct KnowledgeList: View {
     private var moduleMenu: some View {
         Toggle("Show Left Out", systemImage: "eye.slash", isOn: $query.excluded)
         Section {
-            if folder.url != nil {
-                Button("Read Now", systemImage: "arrow.clockwise") { family.indexKnowledge(force: true) }
-                    .disabled(running)
-            }
+            // Reading the folder again: Settings → Knowledge (and the empty list) have Read Now.
             Button("Knowledge Settings", systemImage: "gearshape") { family.open(.settings(.knowledge)) }
         }
     }

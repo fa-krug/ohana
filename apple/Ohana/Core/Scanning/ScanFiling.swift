@@ -280,13 +280,16 @@ extension View {
     }
 }
 
-/// The "Save as PDF" sections of a form (its folder picker: `scanFolderPicker`): the switch, and when it's on the name, the tags (chips
-/// to remove, a field to add, the recently used ones) and the folder.
+/// The "Save as PDF" sections of a form (its folder picker: `scanFolderPicker`): the switch, and
+/// when it's on one section with the name, the tags (chips to remove, a field to add, the recently
+/// used ones while the field has the focus or there are no tags yet) and the folder (a row that
+/// opens the picker; the knowledge folder's isn't one to change).
 struct ScanFilingSection: View {
     @Bindable var filing: ScanFiling
     /// Apple's model is still working on the name and tags.
     var suggesting = false
     @State private var newTag = ""
+    @FocusState private var addingTag: Bool
 
     var body: some View {
         Section {
@@ -301,106 +304,119 @@ struct ScanFilingSection: View {
             }
         }
         if filing.savesPDF {
-            nameSection
-            tagsSection
-            folderSection
-        }
-    }
-
-    private var nameSection: some View {
-        Section {
-            TextField("Name", text: Binding(get: { filing.name }, set: { filing.editName($0) }))
-                .autocorrectionDisabled()
-                .lineLimit(1)
-        } header: {
-            Text("Name")
-        } footer: {
-            if suggesting {
-                Label { Text("Suggesting a name and tags…") } icon: { ProgressView().controlSize(.small) }
+            Section {
+                TextField("Name", text: Binding(get: { filing.name }, set: { filing.editName($0) }))
+                    .autocorrectionDisabled()
+                    .lineLimit(1)
+                tagsRow
+                folderRow
+            } footer: {
+                if suggesting {
+                    Label { Text("Suggesting a name and tags…") } icon: { ProgressView().controlSize(.small) }
+                }
             }
         }
     }
 
-    private var tagsSection: some View {
-        Section("Tags") {
-            if !filing.tags.isEmpty {
+    @ViewBuilder private var tagsRow: some View {
+        if !filing.tags.isEmpty {
+            RecipeFlowLayout(spacing: 6) {
+                ForEach(filing.tags, id: \.self) { tag in
+                    Button {
+                        filing.removeTag(tag)
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(tag).lineLimit(1)
+                            Image(systemName: "xmark")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(.secondary)
+                        }
+                        .font(.callout)
+                        .chip(tint: .accentColor)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text("Remove \(tag)"))
+                }
+            }
+        }
+        TextField("Add Tag", text: $newTag)
+            .autocorrectionDisabled()
+            .focused($addingTag)
+            .onSubmit {
+                filing.addTag(newTag)
+                newTag = ""
+            }
+            #if os(iOS)
+            .submitLabel(.done)
+            #endif
+        let recent = filing.recentTags
+        if !recent.isEmpty, addingTag || filing.tags.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Recently used")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 RecipeFlowLayout(spacing: 6) {
-                    ForEach(filing.tags, id: \.self) { tag in
+                    ForEach(recent, id: \.self) { tag in
                         Button {
-                            filing.removeTag(tag)
+                            filing.addTag(tag)
                         } label: {
+                            // Not a `Label`: in a form row it showed only the icon.
                             HStack(spacing: 4) {
-                                Text(tag).lineLimit(1)
-                                Image(systemName: "xmark")
+                                Image(systemName: "plus")
                                     .font(.caption2.weight(.bold))
                                     .foregroundStyle(.secondary)
+                                Text(tag).lineLimit(1)
                             }
                             .font(.callout)
-                            .chip(tint: .accentColor)
+                            .chip()
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel(Text("Remove \(tag)"))
-                    }
-                }
-            }
-            TextField("Add Tag", text: $newTag)
-                .autocorrectionDisabled()
-                .onSubmit {
-                    filing.addTag(newTag)
-                    newTag = ""
-                }
-                #if os(iOS)
-                .submitLabel(.done)
-                #endif
-            let recent = filing.recentTags
-            if !recent.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Recently used")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    RecipeFlowLayout(spacing: 6) {
-                        ForEach(recent, id: \.self) { tag in
-                            Button {
-                                filing.addTag(tag)
-                            } label: {
-                                // Not a `Label`: in a form row it showed only the icon.
-                                HStack(spacing: 4) {
-                                    Image(systemName: "plus")
-                                        .font(.caption2.weight(.bold))
-                                        .foregroundStyle(.secondary)
-                                    Text(tag).lineLimit(1)
-                                }
-                                .font(.callout)
-                                .chip()
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel(Text("Add \(tag)"))
-                        }
+                        .accessibilityLabel(Text("Add \(tag)"))
                     }
                 }
             }
         }
     }
 
-    private var folderSection: some View {
-        Section("Folder") {
-            switch filing.folder {
-            case .knowledge:
-                Label("Knowledge › \(filing.folderName ?? "")", systemImage: "books.vertical")
-                    .lineLimit(1)
-            case .folder:
-                Label(filing.folderName ?? "", systemImage: "folder")
-                    .lineLimit(1)
-            case .missing:
-                Label("The folder can’t be found any more.", systemImage: "folder.badge.questionmark")
-                    .foregroundStyle(.orange)
-            case .none:
-                Label("No folder chosen yet", systemImage: "folder")
-                    .foregroundStyle(.secondary)
+    /// "Folder  X ›": opens the picker. The knowledge folder's root isn't chosen here.
+    @ViewBuilder private var folderRow: some View {
+        if case .knowledge = filing.folder {
+            Label("Knowledge › \(filing.folderName ?? "")", systemImage: "books.vertical")
+                .lineLimit(1)
+        } else {
+            Button {
+                filing.chooseFolder()
+            } label: {
+                HStack(spacing: 8) {
+                    Text("Folder")
+                        .foregroundStyle(.primary)
+                    Spacer(minLength: 8)
+                    folderValue
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                        .accessibilityHidden(true)
+                }
+                .contentShape(.rect)
             }
-            if !filing.inKnowledge {
-                Button("Choose Folder…") { filing.chooseFolder() }
-            }
+            .buttonStyle(.plain)
+            .accessibilityHint(Text("Chooses the folder"))
+        }
+    }
+
+    @ViewBuilder private var folderValue: some View {
+        switch filing.folder {
+        case .folder:
+            Text(verbatim: filing.folderName ?? "")
+                .foregroundStyle(.secondary)
+        case .missing:
+            Label("Can’t be found", systemImage: "folder.badge.questionmark")
+                .foregroundStyle(.orange)
+        default:
+            Text("Choose…")
+                .foregroundStyle(.secondary)
         }
     }
 }

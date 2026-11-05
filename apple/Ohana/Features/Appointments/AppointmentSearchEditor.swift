@@ -165,7 +165,6 @@ struct AppointmentSearchEditor: View {
                 .onChange(of: input.name) { _, value in
                     if value.count > 200 { input.name = String(value.prefix(200)) }
                 }
-            Toggle("Only notify when an appointment is earlier than the earliest seen so far", isOn: $input.notifyOnlyEarlier)
         } header: {
             Text("General")
         } footer: {
@@ -356,6 +355,7 @@ struct AppointmentSearchEditor: View {
             } else {
                 ProgressView()
             }
+            Toggle("Only notify when an appointment is earlier than the earliest seen so far", isOn: $input.notifyOnlyEarlier)
         } header: {
             Text("Notifications")
         } footer: {

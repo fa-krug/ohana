@@ -2,7 +2,8 @@ import MapKit
 import SwiftUI
 
 /// One slot (slot-detail.tsx): the doctor, time, practice and address on a map, the distance
-/// from home; book on the provider's page, mark as booked (a calendar event), ignore. Its
+/// from home; book on the provider's page, mark as booked (a calendar event); More: search on
+/// Google, ignore. Its
 /// commands are in the Appointments menu too while it's on screen. Back from the provider's page
 /// (an in-app Safari view on iOS; the browser on the Mac, back when the app is active again), an
 /// editor gets the booking sheet as "Did you book it?", filled in and stopping the search.
@@ -54,6 +55,7 @@ struct AppointmentSlotView: View {
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
+        .toolbar { toolbar }
         .task(id: [family.revision(.appointments), family.revision(.events)]) { await load() }
         .onAppear { onScreen = true }
         .onDisappear { onScreen = false }
@@ -118,6 +120,23 @@ struct AppointmentSlotView: View {
                     .keyboardShortcut("b", modifiers: .command)
                     .disabled(detail.booking != nil)
                 Button("Ignore This Doctor") { ignore(detail.slot) }
+            }
+        }
+    }
+
+    /// More: Search on Google, Ignore (before the assistant's ✨).
+    @ToolbarContentBuilder private var toolbar: some ToolbarContent {
+        if let slot = state.value?.slot {
+            ToolbarItem(placement: .primaryAction) {
+                Menu("More", systemImage: "ellipsis") {
+                    Button("Search on Google", systemImage: "magnifyingglass") {
+                        openURL(AppointmentLogic.googleSearchURL([slot.doctorName, slot.doctorSubtitle, slot.address]))
+                    }
+                    if canEdit {
+                        Button("Ignore This Doctor", systemImage: "eye.slash") { ignore(slot) }
+                            .help("Skip this doctor with this reason for the visit in this search from now on")
+                    }
+                }
             }
         }
     }
@@ -260,19 +279,10 @@ struct AppointmentSlotView: View {
                 .buttonStyle(.borderedProminent)
                 .help("Open the provider’s page")
         }
-        Button("Search on Google", systemImage: "magnifyingglass") {
-            openURL(AppointmentLogic.googleSearchURL([slot.doctorName, slot.doctorSubtitle, slot.address]))
-        }
-        .buttonStyle(.bordered)
         if detail.booking == nil && canEdit {
             Button("Mark as booked", systemImage: "calendar.badge.checkmark") { booking = true }
                 .buttonStyle(.bordered)
                 .help("Mark as booked (⌘B)")
-        }
-        if canEdit {
-            Button("Ignore", systemImage: "eye.slash") { ignore(slot) }
-                .buttonStyle(.bordered)
-                .help("Skip this doctor with this reason for the visit in this search from now on")
         }
     }
 }

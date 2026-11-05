@@ -274,12 +274,11 @@ struct AssistantChangeRow: View {
 }
 
 /// A question of the assistant: a tap on an option answers it (or, with several to pick, ticks
-/// it), and an own answer can be written instead or as well. Once answered, it shows the answer.
+/// it, and **Answer** sends the ticked ones). An own answer is written in the composer, whose Send
+/// answers the question while it waits (with the ticked options). Once answered, it shows the answer.
 struct AssistantQuestionCard: View {
     let question: AssistantQuestion
     let store: AssistantChatStore
-    @State private var picked: [String] = []
-    @State private var text = ""
 
     /// It waits for the user (the chat's last open question or edit), and whether a turn runs:
     /// given by the chat, which works them out once for all its items, so a card isn't drawn again
@@ -290,22 +289,18 @@ struct AssistantQuestionCard: View {
     var body: some View {
         let open = isOpen
         let active = open && !busy
+        let picked = store.picks(question)
         let chosen = question.answer?.selected ?? picked
         VStack(alignment: .leading, spacing: 8) {
             Text(verbatim: question.question).font(.callout.weight(.semibold))
                 .fixedSize(horizontal: false, vertical: true)
-            if open {
-                Text(question.multiple ? "Pick one or more, or write your own answer" : "Pick one, or write your own answer")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
             ForEach(question.options, id: \.self) { option in
                 let on = chosen.contains(option)
                 Button {
                     if question.multiple {
-                        if let i = picked.firstIndex(of: option) { picked.remove(at: i) } else { picked.append(option) }
+                        store.togglePick(question, option)
                     } else {
-                        store.answer(selected: [option], text: text)
+                        store.answer(selected: [option], text: "")
                     }
                 } label: {
                     HStack(spacing: 8) {
@@ -334,17 +329,15 @@ struct AssistantQuestionCard: View {
                                    ? (question.multiple ? Text("Ticks or unticks it") : Text("Answers with it"))
                                    : Text(verbatim: ""))
             }
-            if open {
-                HStack(spacing: 8) {
-                    TextField("Your own answer…", text: $text)
-                        .textFieldStyle(.roundedBorder)
-                        .onSubmit(submit)
-                        .disabled(!active)
-                    Button("Answer", action: submit)
-                        .buttonStyle(.borderedProminent)
-                        .tint(ModuleTint.assistant)
-                        .disabled(!active || (text.trimmingCharacters(in: .whitespaces).isEmpty
-                                              && !(question.multiple && !picked.isEmpty)))
+            if open, question.multiple {
+                HStack {
+                    Spacer(minLength: 0)
+                    Button("Answer") {
+                        store.answer(selected: picked, text: "")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(ModuleTint.assistant)
+                    .disabled(!active || picked.isEmpty)
                 }
             }
             if let own = question.answer?.text {
@@ -355,10 +348,6 @@ struct AssistantQuestionCard: View {
             }
         }
         .contentCard(cornerRadius: 18, padding: 12)
-    }
-
-    private func submit() {
-        store.answer(selected: question.multiple ? picked : [], text: text)
     }
 }
 
@@ -389,11 +378,6 @@ struct AssistantRemindersCard: View {
                     .fixedSize(horizontal: false, vertical: true)
             } icon: {
                 Image(systemName: "checklist").foregroundStyle(ModuleTint.assistant)
-            }
-            if open {
-                Text("Nothing changes in your Reminders until you apply it.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
             VStack(alignment: .leading, spacing: 6) {
                 ForEach(Array(edit.ops.enumerated()), id: \.offset) { index, op in
@@ -497,11 +481,6 @@ struct AssistantCalendarCard: View {
             } icon: {
                 Image(systemName: "calendar").foregroundStyle(ModuleTint.assistant)
             }
-            if open {
-                Text("Nothing changes in your calendars until you apply it.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
             VStack(alignment: .leading, spacing: 6) {
                 ForEach(Array(edit.ops.enumerated()), id: \.offset) { index, op in
                     row(op, index: index, open: open)
@@ -570,13 +549,12 @@ struct AssistantCalendarCard: View {
 /// Notes for the family's knowledge folder the assistant suggests, like the Reminders card: each
 /// note (made or changed, where, its tags) with what it writes (a new note's or a rewritten text
 /// a few lines long until expanded, the text added, what is replaced), and **Apply** / **Don't
-/// apply** while it waits. Apply asks first, saying what will be written. Once answered, each note
-/// shows how it went and the card how it ended.
+/// apply** while it waits (a new note never overwrites a file, a change only a file still as the
+/// assistant read it). Once answered, each note shows how it went and the card how it ended.
 struct AssistantNotesCard: View {
     let edit: AssistantNotesEdit
     let store: AssistantChatStore
     @State private var posting = false
-    @State private var confirming = false
     /// The ops whose text shows whole.
     @State private var expanded: Set<Int> = []
 
@@ -597,11 +575,6 @@ struct AssistantNotesCard: View {
             } icon: {
                 Image(systemName: "note.text").foregroundStyle(ModuleTint.assistant)
             }
-            if open {
-                Text("Nothing is written to the knowledge folder until you apply it.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(Array(edit.ops.enumerated()), id: \.offset) { index, op in
                     let line = AssistantNoteOpLine.make(op)
@@ -621,7 +594,6 @@ struct AssistantNotesCard: View {
             }
             .padding(.vertical, 2)
             if open || posting {
-                let confirmation = AssistantNotesConfirmation.make(edit.ops)
                 HStack(spacing: 8) {
                     Spacer(minLength: 0)
                     Button("Don’t Apply") {
@@ -629,7 +601,7 @@ struct AssistantNotesCard: View {
                     }
                     .buttonStyle(.bordered)
                     Button {
-                        confirming = true
+                        apply()
                     } label: {
                         if posting {
                             ProgressView().controlSize(.small)
@@ -640,12 +612,6 @@ struct AssistantNotesCard: View {
                     .buttonStyle(.borderedProminent)
                     .tint(ModuleTint.assistant)
                     .accessibilityLabel(Text("Apply: \(edit.summary)"))
-                    .confirmationDialog(confirmation.title, isPresented: $confirming, titleVisibility: .visible) {
-                        Button(confirmation.button, action: apply)
-                        Button("Cancel", role: .cancel) {}
-                    } message: {
-                        Text(verbatim: confirmation.message)
-                    }
                 }
                 .disabled(!active)
             }
@@ -794,11 +760,6 @@ struct AssistantSuggestionsCard: View {
             }
             if let source = edit.source {
                 Text(verbatim: source)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            if open {
-                Text("Nothing is added until you choose.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -1071,18 +1032,29 @@ struct AssistantActivityLine: View {
 }
 
 /// How much of the model's context window the open chat uses; the worker condenses the older
-/// messages before it is full (the bar turns orange when that is near).
+/// messages before it is full. The composer shows it only once that is near (`shows`, in orange).
 struct AssistantContextMeter: View {
     let usage: AssistantUsage
 
+    /// From this share of the window on, the meter shows (orange).
+    static let warning = 70
+
+    static func percent(_ usage: AssistantUsage) -> Int {
+        Int((min(1, usage.used / Swift.max(usage.max, 1)) * 100).rounded())
+    }
+
+    static func shows(_ usage: AssistantUsage) -> Bool {
+        usage.max > 0 && percent(usage) >= warning
+    }
+
     var body: some View {
         let fraction = min(1, usage.used / Swift.max(usage.max, 1))
-        let pct = Int((fraction * 100).rounded())
+        let pct = Self.percent(usage)
         let used = usage.used.formatted(.number.notation(.compactName).precision(.fractionLength(0...1)))
         let max = usage.max.formatted(.number.notation(.compactName).precision(.fractionLength(0...1)))
         HStack(spacing: 8) {
             ProgressView(value: fraction)
-                .tint(pct >= 70 ? .orange : ModuleTint.assistant)
+                .tint(pct >= Self.warning ? .orange : ModuleTint.assistant)
                 .frame(minWidth: 40)
             Text("Context: \(used) of \(max) tokens (\(pct)%)")
                 .monospacedDigit()

@@ -216,7 +216,6 @@ struct FinanceComparisonCard: View {
 /// period's value per month on it. Hidden while none is set.
 struct FinanceBenchmarkCard: View {
     @Bindable var store: FinanceStore
-    @Environment(FamilyContext.self) private var family
 
     private struct Row: Identifiable {
         var id: String
@@ -250,18 +249,6 @@ struct FinanceBenchmarkCard: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             }
-        } else if store.canEdit, let overview = store.overview, overview.benchmark == nil {
-            // None set yet: it's set in Settings → Finance.
-            Button {
-                family.open(.settings(.finance))
-            } label: {
-                Label("Compare with a statistic average…", systemImage: "chart.bar.xaxis")
-                    .font(.callout)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .buttonStyle(.borderless)
-            .padding(.horizontal, 4)
-            .help("Set household figures from the statistics office in the finance settings")
         }
     }
 

@@ -42,12 +42,6 @@ struct MealsWelcomeView: View {
                     family.open(.settings(.members))
                 }
             }
-            Button(action: addRecipe) {
-                Text("Get started").frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.glassProminent)
-            .controlSize(.large)
-            .tint(ModuleTint.meals)
         }
         .frame(maxWidth: 460)
         .frame(maxWidth: .infinity)

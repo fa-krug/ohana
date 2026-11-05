@@ -86,11 +86,6 @@ struct AppointmentsView: View {
     @ViewBuilder private func content(_ overview: AppointmentsOverview) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                Text("Watches Doctolib and jameda and tells you when an appointment frees up.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 4)
-
                 if !overview.booked.isEmpty {
                     bookedSection(overview.booked)
                 }
@@ -152,14 +147,8 @@ struct AppointmentsView: View {
     // MARK: Booked appointments (booked-list.tsx)
 
     private func bookedSection(_ events: [AppointmentEvent]) -> some View {
+        // Each row's date opens its day in the calendar.
         CardSection("Booked appointments", systemImage: "calendar.badge.checkmark", tint: ModuleTint.appointments) {
-            Button("Calendar", systemImage: "calendar") { family.open(.module(.calendar)) }
-                .font(.subheadline)
-                .buttonStyle(.bordered)
-        } content: {
-            Text("Slots you marked as booked; they show in the calendar.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
             ForEach(Array(events.enumerated()), id: \.element.id) { index, event in
                 if index > 0 { Divider() }
                 AppointmentBookedRow(event: event, canEdit: canEdit, open: { pushed = $0 },
@@ -169,7 +158,8 @@ struct AppointmentsView: View {
     }
 }
 
-/// One booked appointment: when, the doctor (to its search), for whom and where.
+/// One booked appointment: when (to its day in the calendar), the doctor (to its search), for whom
+/// and where; removed from its context menu.
 struct AppointmentBookedRow: View {
     let event: AppointmentEvent
     let canEdit: Bool
@@ -207,13 +197,6 @@ struct AppointmentBookedRow: View {
                 .buttonStyle(.borderless)
                 .help("Open the provider’s page")
             }
-            if canEdit {
-                Button(role: .destructive, action: remove) {
-                    Label("Remove", systemImage: "trash").labelStyle(.iconOnly).rowHitTarget()
-                }
-                .buttonStyle(.borderless)
-                .help("Remove")
-            }
         }
         .contextMenu {
             if let searchId = event.searchId {
@@ -245,7 +228,7 @@ struct AppointmentBookedRow: View {
 }
 
 /// A search as a card (search-list.tsx `SearchCard`): name, criteria, status, schedule, last
-/// run, the first three doctors, "run now".
+/// run, the first three doctors, "run now" while it's paused (it's in the context menu otherwise).
 struct AppointmentSearchCard: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     let search: AppointmentSearch
@@ -288,7 +271,8 @@ struct AppointmentSearchCard: View {
                 }
             }
 
-            if canEdit {
+            // An enabled search runs by itself.
+            if canEdit && !search.enabled {
                 AppointmentRunNowButton(search: search, reload: reload)
             }
         }

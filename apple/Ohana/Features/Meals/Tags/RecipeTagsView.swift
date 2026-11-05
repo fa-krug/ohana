@@ -63,11 +63,6 @@ struct RecipeTagsView: View {
 
     private func list(_ tags: [RecipeTag]) -> some View {
         List {
-            Section {
-                Text("Organize your recipes with tags.")
-                    .foregroundStyle(.secondary)
-                    .listRowBackground(Color.clear)
-            }
             ForEach(RecipeTagCategory.allCases) { category in
                 let inCategory = tags.filter { $0.category == category.rawValue }
                     .sorted { $0.name.localizedCompare($1.name) == .orderedAscending }

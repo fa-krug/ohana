@@ -2,8 +2,9 @@ import SwiftUI
 import Testing
 @testable import Ohana
 
-/// The chat view's decisions: what Return does, when the chat follows new content, how wide the
-/// page's chat list is, which provider an API URL is.
+/// The chat view's decisions: what Return does, what the button beside the field is, when the
+/// context meter shows, the page a chat belongs to, when the chat follows new content, how wide
+/// the page's chat list is, which provider an API URL is.
 struct AssistantComposerTests {
     @Test func returnSendsAndShiftReturnBreaksTheLine() {
         // A hardware keyboard's plain Return sends on both.
@@ -21,6 +22,34 @@ struct AssistantComposerTests {
         #expect(AssistantReturnKey.action(for: .command, mac: true) == .system)
         #expect(AssistantReturnKey.action(for: [.command, .shift], mac: false) == .system)
         #expect(AssistantReturnKey.action(for: .control, mac: true) == .system)
+    }
+
+    @Test func sharesOneSlotForSendStopAndTheMic() {
+        // Empty: the mic where there is one, else a Send that can't send.
+        #expect(AssistantComposerAction.make(filled: false, busy: false, canQueue: true, dictation: true, listening: false) == .dictate)
+        #expect(AssistantComposerAction.make(filled: false, busy: false, canQueue: true, dictation: false, listening: false) == .send)
+        #expect(AssistantComposerAction.make(filled: true, busy: false, canQueue: false, dictation: true, listening: false) == .send)
+        // While it answers: Stop, or Send when the message can wait in the chat.
+        #expect(AssistantComposerAction.make(filled: false, busy: true, canQueue: true, dictation: true, listening: false) == .stop)
+        #expect(AssistantComposerAction.make(filled: true, busy: true, canQueue: true, dictation: true, listening: false) == .send)
+        #expect(AssistantComposerAction.make(filled: true, busy: true, canQueue: false, dictation: true, listening: false) == .stop)
+        // Listening: the mic stays, to stop it.
+        #expect(AssistantComposerAction.make(filled: true, busy: false, canQueue: true, dictation: true, listening: true) == .dictate)
+    }
+
+    @Test func showsTheContextMeterOnlyWhenItGetsFull() {
+        #expect(!AssistantContextMeter.shows(AssistantUsage(used: 60, max: 100)))
+        #expect(AssistantContextMeter.shows(AssistantUsage(used: 70, max: 100)))
+        #expect(!AssistantContextMeter.shows(AssistantUsage(used: 10, max: 0)))
+    }
+
+    @Test func pagesTheServerDoesntKnowAreTheOverview() {
+        #expect(AssistantPages.page(of: .finance) == "finance")
+        #expect(AssistantPages.page(of: .settings) == "settings")
+        #expect(AssistantPages.page(of: .knowledge) == "overview")
+        #expect(AssistantPages.page(of: .search) == "overview")
+        #expect(AssistantPages.page(of: .assistant) == "overview")
+        #expect(AssistantPages.page(of: nil) == "overview")
     }
 
     @Test func putsTheLineBreakAtTheCursor() {

@@ -332,21 +332,18 @@ struct FinanceScreen: View {
                     Label("New Transaction", systemImage: "plus")
                 }
                 .help("New Transaction (⌘N)")
-                Button {
-                    scanReceipt()
-                } label: {
-                    Label("Scan Receipt", systemImage: "doc.text.viewfinder")
-                }
-                .help("Add a transaction from a receipt")
-                .disabled(readingReceipt)
-                if !compact { intakeButton }
+                // On the iPhone these are in More.
+                if !compact { addFromMenu }
             }
             ToolbarSpacer(.fixed, placement: .primaryAction)
         }
-        if compact && tab == .transactions {
+        if tab == .transactions {
             ToolbarItem(placement: .primaryAction) { FinanceFilterMenu(store: store) }
         }
-        ToolbarItem(placement: .primaryAction) { moreMenu }
+        // Viewers would find only the settings in it: those are in Settings and the Finance menu.
+        if store.canEdit {
+            ToolbarItem(placement: .primaryAction) { moreMenu }
+        }
     }
 
     #if os(iOS)
@@ -398,43 +395,28 @@ struct FinanceScreen: View {
     }
     #endif
 
-    /// Bringing transactions in (iPad, Mac): Import CSV; for a linked account shown, its sync
-    /// instead; with linked accounts elsewhere, a menu of both.
-    @ViewBuilder
-    private var intakeButton: some View {
-        switch store.intake {
-        case .importCSV:
-            Button {
-                chooseFile(receipt: false)
-            } label: {
-                Label("Import CSV", systemImage: "square.and.arrow.down")
-            }
-            .help("Import a bank statement (⇧⌘I)")
-        case let .sync(account):
-            Button {
-                syncing = account
-            } label: {
-                Label("Sync", systemImage: "arrow.triangle.2.circlepath")
-            }
-            .help("Load the new transactions of \(account.name) from the bank (⇧⌘I)")
-        case .choice:
-            Menu {
-                intakeItems
-            } label: {
-                Label("Import", systemImage: "square.and.arrow.down")
-            }
-            .help("Import a bank statement or sync an account")
+    /// Bringing transactions in (iPad, Mac): one menu of the receipt scan and the intake.
+    private var addFromMenu: some View {
+        Menu {
+            intakeItems
+        } label: {
+            Label("Add from…", systemImage: "square.and.arrow.down")
         }
+        .help("Add transactions from a receipt or the bank")
     }
 
-    /// The same as menu items (the iPhone's More menu, the Import menu).
+    /// Bringing transactions in, as menu items (the iPhone's More menu, the Add from menu): a
+    /// receipt; then Import CSV, for a linked account shown its sync instead, with linked
+    /// accounts elsewhere both (`FinanceIntake`).
     @ViewBuilder
     private var intakeItems: some View {
+        Button("Scan Receipt", systemImage: "doc.text.viewfinder") { scanReceipt() }
+            .disabled(readingReceipt)
         switch store.intake {
         case .importCSV:
             Button("Import CSV", systemImage: "square.and.arrow.down") { chooseFile(receipt: false) }
         case let .sync(account):
-            Button("Sync", systemImage: "arrow.triangle.2.circlepath") { syncing = account }
+            Button("Sync \(account.name)", systemImage: "arrow.triangle.2.circlepath") { syncing = account }
         case let .choice(linked):
             Button("Import CSV…", systemImage: "square.and.arrow.down") { chooseFile(receipt: false) }
             ForEach(linked) { account in
@@ -446,20 +428,19 @@ struct FinanceScreen: View {
     /// Everything the toolbar has no button for, in one list: selecting, adding, tidying up,
     /// the settings.
     private var moreMenu: some View {
+        // Only for editors (the toolbar leaves it out for viewers).
         Menu {
-            if store.canEdit {
-                #if os(iOS)
-                if tab == .transactions {
-                    Section {
-                        Button("Select", systemImage: "checkmark.circle") { withAnimation { editMode = .active } }
-                    }
+            #if os(iOS)
+            if tab == .transactions {
+                Section {
+                    Button("Select", systemImage: "checkmark.circle") { withAnimation { editMode = .active } }
                 }
-                #endif
-                if compact {
-                    Section { intakeItems }
-                }
-                Section { editActions }
             }
+            #endif
+            if compact {
+                Section { intakeItems }
+            }
+            Section { editActions }
             Section {
                 Button("Finance settings", systemImage: "gearshape") { family.open(.settings(.finance)) }
             }
@@ -481,10 +462,6 @@ struct FinanceScreen: View {
                      : String(localized: "Like similar earlier ones (set up the assistant for the rest)"))
             }
             .disabled(store.categorizing != nil)
-            if !store.aiConfigured {
-                // The AI isn't set up: Settings → AI.
-                Button("Set up the assistant", systemImage: "gearshape.2") { family.open(.settings(.assistant)) }
-            }
         }
         Button("Find transfers", systemImage: "arrow.left.arrow.right") { findingTransfers = true }
         Button {

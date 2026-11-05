@@ -1,10 +1,15 @@
 import SwiftUI
 
-/// The family's recipes (web: meals/recipes): Favourites or Want to try, search, tag filter and
-/// sort, a page at a time (`RecipeListModel.pageSize`) as an adaptive grid of cards. File ▸ New
-/// Recipe (⌘N) adds one. Pages shared to Ohana show as placeholders on top of "Want to try" while the server imports
+/// The family's recipes (web: meals/recipes): Favourites or Want to try, search, and one Filter
+/// menu with the sort, the tag filter and (editors) the tags themselves (`manageTags`), a page at
+/// a time (`RecipeListModel.pageSize`) as an adaptive grid of cards. The + adds a recipe (on iPad
+/// and Mac its menu generates or imports one, on iPhone a menu of the three); File ▸ New Recipe
+/// (⌘N) adds one. Pages shared to Ohana show as placeholders on top of "Want to try" while the server imports
 /// them (`RecipeImports`).
 struct RecipeListView: View {
+    /// Opens the tags page (`RecipeTagsView`).
+    var manageTags: () -> Void = {}
+
     @Environment(FamilyContext.self) private var family
     @Environment(\.undoManager) private var undoManager
     @Environment(\.mealsOnScreen) private var onScreen
@@ -126,15 +131,6 @@ struct RecipeListView: View {
             .labelsHidden()
             .frame(maxWidth: 320)
             Spacer(minLength: 0)
-            if !tagFilter.isEmpty {
-                Button {
-                    tagFilter = []
-                } label: {
-                    Label("Clear filters", systemImage: "xmark")
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-            }
         }
         .padding(.top, 4)
     }
@@ -249,32 +245,46 @@ struct RecipeListView: View {
     }
 
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {
-        ToolbarItemGroup(placement: .primaryAction) {
+        ToolbarItem(placement: .primaryAction) {
             Menu {
                 Picker("Sort", selection: $sort) {
                     ForEach(RecipeSort.allCases) { Text($0.title).tag($0) }
                 }
                 .pickerStyle(.inline)
-            } label: {
-                Label("Sort", systemImage: "arrow.up.arrow.down")
-            }
-            if !tags.isEmpty {
-                Button {
-                    showFilter = true
-                } label: {
-                    Label("Filter", systemImage: tagFilter.isEmpty
-                          ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
+                if !tags.isEmpty || !tagFilter.isEmpty {
+                    Section {
+                        if !tags.isEmpty {
+                            Button("Tags…", systemImage: "tag") { showFilter = true }
+                        }
+                        if !tagFilter.isEmpty {
+                            Button("Clear Filters", systemImage: "xmark") { tagFilter = [] }
+                        }
+                    }
                 }
+                if family.canEdit {
+                    Section {
+                        Button("Manage Tags…", systemImage: "square.and.pencil", action: manageTags)
+                    }
+                }
+            } label: {
+                Label("Filter", systemImage: tagFilter.isEmpty
+                      ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
             }
         }
         if family.canEdit {
             #if os(iOS)
             ToolbarSpacer(.fixed, placement: .primaryAction)
             #endif
-            if compact && ai.generate {
-                // On the iPhone the three ways to add a recipe are one menu: as buttons they didn't
-                // fit beside the others and iOS put the rest into a menu of its own.
-                ToolbarItem(placement: .primaryAction) {
+            ToolbarItem(placement: .primaryAction) {
+                if !ai.generate {
+                    Button {
+                        creating = true
+                    } label: {
+                        Label("Add Recipe", systemImage: "plus")
+                    }
+                } else if compact {
+                    // On the iPhone a tap opens the menu: there a long press is all that would show
+                    // the other two ways.
                     Menu {
                         Button("Add Recipe", systemImage: "plus") { creating = true }
                         Section {
@@ -284,25 +294,14 @@ struct RecipeListView: View {
                     } label: {
                         Label("Add Recipe", systemImage: "plus")
                     }
-                }
-            } else {
-                ToolbarItemGroup(placement: .primaryAction) {
-                    if ai.generate {
-                        Button {
-                            generating = true
-                        } label: {
-                            Label("Generate with AI", systemImage: "sparkles")
-                        }
-                        Button {
-                            importing = true
-                        } label: {
-                            Label("Import from Web", systemImage: "globe")
-                        }
-                    }
-                    Button {
-                        creating = true
+                } else {
+                    Menu {
+                        Button("Generate with AI", systemImage: "sparkles") { generating = true }
+                        Button("Import from Web", systemImage: "globe") { importing = true }
                     } label: {
                         Label("Add Recipe", systemImage: "plus")
+                    } primaryAction: {
+                        creating = true
                     }
                 }
             }

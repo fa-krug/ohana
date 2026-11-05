@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// The user's chats in the family, the latest first: open, delete, start a new one. Pushed over
-/// the chat (the panel, a narrow page), or as a column left of it (`AssistantChatColumn`).
+/// The user's chats in the family, the latest first: open, delete. Pushed over the chat (the
+/// iPhone's sheet, a narrow page), or as a column left of it (`AssistantChatColumn`). A new chat
+/// comes from the chat's own toolbar under it.
 struct AssistantChatListView: View {
     let store: AssistantChatStore
     let done: () -> Void
@@ -9,14 +10,6 @@ struct AssistantChatListView: View {
     var body: some View {
         AssistantChatListContent(store: store, done: done)
             .navigationTitle("Chats")
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button("New chat", systemImage: "square.and.pencil") {
-                        store.newChat()
-                        done()
-                    }
-                }
-            }
     }
 }
 

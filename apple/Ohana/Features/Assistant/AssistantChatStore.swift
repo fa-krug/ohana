@@ -58,6 +58,9 @@ final class AssistantChatStore {
     /// Which suggestions the user ticked, per suggestions item (until they're answered; kept here
     /// so a card rebuilt while scrolling keeps them).
     private(set) var suggestionPicks: [String: Set<Int>] = [:]
+    /// The options ticked on a question with several to pick, per question (until it's answered;
+    /// the composer's Send answers with them too).
+    private(set) var questionPicks: [String: [String]] = [:]
 
     @ObservationIgnored let api: FamilyAPI
     /// Called after the assistant (or an undo) changed something, so the screens reload it.
@@ -362,11 +365,20 @@ final class AssistantChatStore {
         )
     }
 
+    /// The open question the composer answers: a message without attachments answers it (with
+    /// the options ticked on it), one with attachments goes as a new message and leaves it unanswered.
+    var composerAnswers: Bool { openQuestion() != nil }
+
     /// Sends a message; while a turn runs, it waits on the server and goes next. Throws when it
-    /// couldn't wait (the composer gets the text back).
+    /// couldn't wait (the composer gets the text back). While a question waits, a message without
+    /// attachments is its answer.
     func send(_ text: String, attachments: [AssistantOutgoingAttachment] = []) async throws {
         let message = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !message.isEmpty || !attachments.isEmpty else { return }
+        if attachments.isEmpty, !message.isEmpty, !busy, let open = openQuestion(), current?.id.isEmpty == false {
+            answer(selected: open.question.multiple ? picks(open.question) : [], text: message)
+            return
+        }
         let input = await input(text: message, attachments: attachments)
         if busy {
             let shown = AssistantQueued(
@@ -515,6 +527,7 @@ final class AssistantChatStore {
         var answered = q
         answered.answer = .init(selected: selected, text: own.isEmpty ? nil : own)
         current?.items[index] = .question(answered)
+        questionPicks[q.id] = nil
         // Nothing else is sent while the Reminders and calendars are read.
         sending = true
         Task {
@@ -700,6 +713,18 @@ final class AssistantChatStore {
                 knowledgeFolder: knowledgeFolder()
             ))
         }
+    }
+
+    /// The options ticked on a question with several to pick.
+    func picks(_ question: AssistantQuestion) -> [String] {
+        questionPicks[question.id] ?? []
+    }
+
+    /// Ticks or unticks `option` of a question with several to pick.
+    func togglePick(_ question: AssistantQuestion, _ option: String) {
+        var picks = picks(question)
+        if let i = picks.firstIndex(of: option) { picks.remove(at: i) } else { picks.append(option) }
+        questionPicks[question.id] = picks
     }
 
     // MARK: Suggestions

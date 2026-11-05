@@ -110,7 +110,6 @@ struct FinanceTransactionsView: View {
             VStack(alignment: .leading, spacing: 12) {
                 if !store.accounts.isEmpty { FinanceAccountCards(store: store) }
                 FinanceStatTiles(income: list.incomeCents, expense: list.expenseCents, currency: store.currency)
-                FinanceFilterBar(store: store)
             }
             .padding(.horizontal, 20)
             .padding(.top, 8)
@@ -668,7 +667,7 @@ struct FinanceSelectionSummary: View {
 
 #if os(macOS)
 /// The Mac's bar above the selected rows: what they add up to, and what can be done with them:
-/// set their category, combine them into a transfer or a split booking, delete them.
+/// set their category, combine two or more into a transfer or a split booking, delete them.
 struct FinanceSelectionBar: View {
     @Bindable var store: FinanceStore
 
@@ -697,20 +696,23 @@ struct FinanceSelectionBar: View {
                     Label("Category", systemImage: "tag")
                 }
                 .menuStyle(.button)
-                Button("Transfer", systemImage: "link") { Task { await store.link(selected.map(\.id)) } }
-                    .disabled(!FinanceStore.canLink(selected))
-                    .help(FinanceStore.canLink(selected) ? Text("Combine into a transfer")
-                          : Text("Parts and split bookings can’t belong to a transfer"))
-                Button("Split", systemImage: "rectangle.split.3x1") {
-                    guard let booking else { return }
-                    Task { await store.split(booking: booking.id, parts: selected.filter { $0.id != booking.id }.map(\.id)) }
+                // Combining takes two or more.
+                if selected.count >= 2 {
+                    Button("Transfer", systemImage: "link") { Task { await store.link(selected.map(\.id)) } }
+                        .disabled(!FinanceStore.canLink(selected))
+                        .help(FinanceStore.canLink(selected) ? Text("Combine into a transfer")
+                              : Text("Parts and split bookings can’t belong to a transfer"))
+                    Button("Split", systemImage: "rectangle.split.3x1") {
+                        guard let booking else { return }
+                        Task { await store.split(booking: booking.id, parts: selected.filter { $0.id != booking.id }.map(\.id)) }
+                    }
+                    .disabled(!FinanceStore.canSplit(selected))
+                    .help(booking.map { b in
+                        FinanceStore.canSplit(selected)
+                            ? Text("\(b.title) (\(store.money(b.amountCents, sign: b.amountCents > 0))) becomes the booking, the others its parts")
+                            : Text("Only transactions that aren’t part of a transfer or split booking yet can be combined")
+                    } ?? Text(verbatim: ""))
                 }
-                .disabled(!FinanceStore.canSplit(selected))
-                .help(booking.map { b in
-                    FinanceStore.canSplit(selected)
-                        ? Text("\(b.title) (\(store.money(b.amountCents, sign: b.amountCents > 0))) becomes the booking, the others its parts")
-                        : Text("Only transactions that aren’t part of a transfer or split booking yet can be combined")
-                } ?? Text(verbatim: ""))
                 Button("Delete", systemImage: "trash", role: .destructive) { Task { await store.delete(selected.map(\.id)) } }
                 Button("Clear selection", systemImage: "xmark") { store.selected = [] }
                     .labelStyle(.iconOnly)

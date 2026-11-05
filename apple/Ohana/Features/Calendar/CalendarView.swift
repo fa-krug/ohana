@@ -380,13 +380,8 @@ struct CalendarPlannerView: View {
                 .fixedSize()
             }
         }
-        if canZoom {
-            ToolbarItem {
-                CalendarZoomButtons()
-            }
-        }
         if !store.readOnly {
-            ToolbarItemGroup {
+            ToolbarItem {
                 Button {
                     store.performUndo()
                 } label: {
@@ -394,15 +389,6 @@ struct CalendarPlannerView: View {
                 }
                 .disabled(!store.canUndo)
                 .help("Undo (⌘Z)")
-                if !compact {
-                    Button {
-                        store.performRedo()
-                    } label: {
-                        Label("Redo", systemImage: "arrow.uturn.forward")
-                    }
-                    .disabled(!store.canRedo)
-                    .help("Redo (⇧⌘Z)")
-                }
             }
             #if os(iOS)
             ToolbarSpacer(.fixed)
@@ -415,24 +401,6 @@ struct CalendarPlannerView: View {
                 Label("More", systemImage: "ellipsis")
             }
         }
-        if !compact {
-            ToolbarItem {
-                Button {
-                    actions.showHelp()
-                } label: {
-                    Label("Help & shortcuts", systemImage: "questionmark")
-                }
-                .help("Help & shortcuts (?)")
-            }
-            ToolbarItem {
-                Button {
-                    family.open(.settings(.calendar))
-                } label: {
-                    Label("Calendar settings", systemImage: "slider.horizontal.3")
-                }
-                .help("Entry types, view and Apple Calendar")
-            }
-        }
     }
 
     /// The toolbar's More menu. Its items read the selection, so they are built in a view of
@@ -441,21 +409,14 @@ struct CalendarPlannerView: View {
     @ViewBuilder
     private var moreMenu: some View {
         if !store.readOnly {
-            if compact {
-                Button("Redo", systemImage: "arrow.uturn.forward") { store.performRedo() }
-                    .disabled(!store.canRedo)
-                Divider()
-            }
+            // ⇧⌘Z stays in the Edit menu (the window's undo manager) and the grid's keys.
+            Button("Redo", systemImage: "arrow.uturn.forward") { store.performRedo() }
+                .disabled(!store.canRedo)
+            Divider()
             Button("Add event", systemImage: "calendar.badge.plus") { actions.addEvent() }
-            Button("Icon & note", systemImage: "face.smiling") { actions.editNote() }
-            Button("Repeat…", systemImage: "repeat") { actions.repeatSelection() }
-                .disabled(!store.canRepeat)
             Divider()
         }
         Button("Select all", systemImage: "checkmark.circle") { store.selectAll() }
-        if !store.needsCoverTypes.isEmpty {
-            Button("Next gap", systemImage: "arrow.right.circle") { jumpToGap() }
-        }
         Divider()
         Button("Copy days", systemImage: "doc.on.doc") { copy() }
             .disabled(store.selection.isEmpty)
@@ -464,9 +425,6 @@ struct CalendarPlannerView: View {
                 .disabled(store.selection.isEmpty)
             Button("Paste", systemImage: "doc.on.clipboard") { store.paste(text: CalendarPasteboard.string) }
                 .disabled(store.selection.isEmpty)
-            Toggle(isOn: $store.skipWeekends) {
-                Label("Skip weekends", systemImage: "calendar.day.timeline.leading")
-            }
         }
         if !monthList && mode == .year {
             Divider()
@@ -479,11 +437,7 @@ struct CalendarPlannerView: View {
             }
         }
         Divider()
-        Button("Reload", systemImage: "arrow.clockwise") { Task { await store.load() } }
-            .keyboardShortcut("r", modifiers: .command)
-        if compact {
-            Button("Help & shortcuts", systemImage: "questionmark.circle") { actions.showHelp() }
-        }
+        Button("Help & shortcuts", systemImage: "questionmark.circle") { actions.showHelp() }
         Button("Calendar settings", systemImage: "slider.horizontal.3") { family.open(.settings(.calendar)) }
     }
 
@@ -501,6 +455,8 @@ struct CalendarPlannerView: View {
                 .keyboardShortcut("]", modifiers: .command)
             Button("Next Gap") { jumpToGap() }
                 .disabled(store.needsCoverTypes.isEmpty)
+            Button("Reload") { Task { await store.load() } }
+                .keyboardShortcut("r", modifiers: .command)
             Divider()
             Button("Details") { actions.showDetails() }
                 .keyboardShortcut("i", modifiers: .command)
@@ -710,30 +666,4 @@ extension CalendarLayoutRule {
     static let sideColumnFrom: CGFloat = monthListBelow + sideColumnWidth + 16
     /// The details under the grid stay this narrow: their buttons stay near their text.
     static let detailsMaxWidth: CGFloat = 720
-}
-
-/// The year grid's zoom in the toolbar: out (more days across) and in (fewer). Reads the zoom
-/// itself, so a step redraws only it.
-private struct CalendarZoomButtons: View {
-    @AppStorage(CalendarZoom.key) private var zoom = CalendarZoom.initial
-
-    var body: some View {
-        ControlGroup {
-            Button {
-                zoom = CalendarZoom.step(zoom, -1)
-            } label: {
-                Label("Zoom out", systemImage: "minus.magnifyingglass")
-            }
-            .disabled(CalendarZoom.clamp(zoom) >= CalendarZoom.max)
-            .help("Zoom out (⌘−)")
-            Button {
-                zoom = CalendarZoom.step(zoom, 1)
-            } label: {
-                Label("Zoom in", systemImage: "plus.magnifyingglass")
-            }
-            .disabled(CalendarZoom.clamp(zoom) <= CalendarZoom.min)
-            .help("Zoom in (⌘+)")
-        }
-        .accessibilityLabel(Text("Zoom"))
-    }
 }

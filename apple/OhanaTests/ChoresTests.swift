@@ -124,6 +124,22 @@ struct ChoreModelTests {
         #expect(draft.input.time == nil && draft.input.effectivePart == .day)
     }
 
+    @Test func theEditorsWhenPicksAPartOrATime() {
+        var draft = ChoreDraft.new(on: Day("2026-11-01")!)
+        #expect(draft.when == .part(.day))
+        draft.when = .part(.evening)
+        #expect(draft.input.part == .evening && draft.input.time == nil)
+        // At a Time: the part's usual time.
+        draft.when = .atTime
+        #expect(draft.when == .atTime && draft.input.time == "18:00")
+        draft.setTime("08:15")
+        draft.when = .atTime
+        #expect(draft.input.time == "08:15" && draft.input.part == .morning)
+        // A part drops the time.
+        draft.when = .part(.day)
+        #expect(draft.when == .part(.day) && draft.input.time == nil && draft.input.effectivePart == .day)
+    }
+
     @Test func encodesTheInputWithNulls() throws {
         let input = ChoreInput(title: "Bins", day: Day("2026-11-03")!)
         let json = try #require(try JSONSerialization.jsonObject(with: APIClient.encoder.encode(input)) as? [String: Any])

@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// The parts of Meals (the web's meals-tabs.tsx).
+/// The parts of Meals (the web's meals-tabs.tsx). The tags are a page of their own, opened from
+/// the recipe list's Filter menu.
 enum MealsSegment: String, CaseIterable, Identifiable {
-    case recipes, plan, tags
+    case recipes, plan
 
     var id: String { rawValue }
 
@@ -10,7 +11,6 @@ enum MealsSegment: String, CaseIterable, Identifiable {
         switch self {
         case .recipes: "Recipes"
         case .plan: "Plan"
-        case .tags: "Tags"
         }
     }
 
@@ -18,7 +18,6 @@ enum MealsSegment: String, CaseIterable, Identifiable {
         switch self {
         case .recipes: "book"
         case .plan: "calendar"
-        case .tags: "tag"
         }
     }
 }
@@ -39,12 +38,13 @@ struct MealsRecipeRef: Hashable, Identifiable {
 }
 
 /// What Meals does with an `AppRoute` of its module: the part to show, the recipe list to show, a
-/// screen to open, the new recipe editor to open.
+/// screen to open, the new recipe editor to open, the tags page to push.
 struct MealsRouting: Equatable {
     var segment: MealsSegment?
     var recipeList: RecipeListType?
     var destination: MealsDestination?
     var createsRecipe = false
+    var showsTags = false
 
     /// Nil for routes of other modules.
     init?(_ route: AppRoute) {
@@ -65,18 +65,20 @@ struct MealsRouting: Equatable {
         case .mealPlan:
             segment = .plan
         case .mealTags:
-            segment = .tags
+            segment = .recipes
+            showsTags = true
         default:
             return nil
         }
     }
 }
 
-/// Meals (web: f/[familyId]/meals): recipes, meal plan and tags behind a
+/// Meals (web: f/[familyId]/meals): recipes and meal plan behind a
 /// segmented picker (in the toolbar on iPad and Mac, under the navigation bar on iPhone); the
-/// part shown last is remembered per device. Lives inside the shell's NavigationStack and takes
+/// part shown last is remembered per device. The tags page is pushed (the recipe list's Filter
+/// menu, `.mealTags`). Lives inside the shell's NavigationStack and takes
 /// the module's routes (`family.open(.recipe(id:))`, …). Its menu (the Mac's menu bar, the
-/// iPad's ⌘-hold list) switches between the parts with ⌥⌘1…3.
+/// iPad's ⌘-hold list) switches between the parts with ⌥⌘1…2.
 struct MealsView: View {
     @Environment(FamilyContext.self) private var family
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -86,6 +88,7 @@ struct MealsView: View {
     @State private var shownRecipe: MealsRecipeRef?
     @State private var cooking: MealsRecipeRef?
     @State private var creatingRecipe = false
+    @State private var managingTags = false
     @State private var onScreen = false
     /// The page is wide enough for the segments in the toolbar.
     @State private var segmentsFit = true
@@ -94,13 +97,10 @@ struct MealsView: View {
         Group {
             switch segment {
             case .recipes:
-                RecipeListView()
+                RecipeListView { managingTags = true }
                     .navigationTitle("Recipes")
             case .plan:
                 MealPlanView()
-            case .tags:
-                RecipeTagsView()
-                    .navigationTitle("Tags")
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -134,6 +134,7 @@ struct MealsView: View {
         .navigationDestination(item: $shownRecipe) {
             MealsRecipeDetailView(recipeID: $0.recipeID, initialServings: $0.servings).assistantButton()
         }
+        .navigationDestination(isPresented: $managingTags) { MealTagsPage() }
         .cookPresentation($cooking)
         .sheet(isPresented: $creatingRecipe) {
             RecipeEditorSheet(mode: .create(.known)) { id in
@@ -145,6 +146,7 @@ struct MealsView: View {
             if let target = routing.segment { segment = target }
             if let list = routing.recipeList { recipeList = list }
             if routing.createsRecipe { creatingRecipe = true }
+            if routing.showsTags { managingTags = true }
             switch routing.destination {
             case let .recipe(id, servings)?: shownRecipe = MealsRecipeRef(recipeID: id, servings: servings)
             case let .cook(id, servings)?: cooking = MealsRecipeRef(recipeID: id, servings: servings)
@@ -153,7 +155,7 @@ struct MealsView: View {
         }
     }
 
-    /// The parts in the module's menu, ⌥⌘1…3.
+    /// The parts in the module's menu, ⌥⌘1…2.
     @ViewBuilder private var sectionCommands: some View {
         ForEach(Array(MealsSegment.allCases.enumerated()), id: \.element) { index, item in
             Button {
@@ -163,6 +165,21 @@ struct MealsView: View {
             }
             .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: [.command, .option])
         }
+    }
+}
+
+/// The tags page pushed over Meals: on screen (File ▸ New Tag) only while it's shown, as Meals
+/// itself is no longer then.
+private struct MealTagsPage: View {
+    @State private var onScreen = false
+
+    var body: some View {
+        RecipeTagsView()
+            .navigationTitle("Tags")
+            .environment(\.mealsOnScreen, onScreen)
+            .onAppear { onScreen = true }
+            .onDisappear { onScreen = false }
+            .assistantButton()
     }
 }
 

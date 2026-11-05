@@ -46,7 +46,7 @@ struct MealPlanSetupSheet: View {
                             .accessibilityLabel("Known-recipe ratio")
                     }
                 } footer: {
-                    Text("The share of meals from your favourites; the rest are recipes you want to try.")
+                    Text("From your favourites; the rest are recipes to try.")
                 }
 
                 Section {
@@ -62,7 +62,7 @@ struct MealPlanSetupSheet: View {
                 } header: {
                     Text("Shopping days")
                 } footer: {
-                    Text("Pick 1–2 shopping days, at least 3 days apart.")
+                    Text("1–2 days, at least 3 days apart.")
                         .foregroundStyle(daysValid ? Color.secondary : Color.red)
                 }
 
@@ -78,17 +78,6 @@ struct MealPlanSetupSheet: View {
                         .padding(.vertical, 4)
                     } header: {
                         Text("Exclude tags")
-                    } footer: {
-                        Text("Recipes with these tags aren’t planned.")
-                    }
-                }
-
-                if replacesPlan {
-                    Section {
-                        Label("Saving plans anew from today: the current meals are replaced.",
-                              systemImage: "exclamationmark.triangle")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
                     }
                 }
             }

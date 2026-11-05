@@ -3,7 +3,7 @@ import SwiftUI
 /// Settings → Members (the web's members and invites cards): accounts with their role and
 /// birthday, people without an account, and the open invite links. A member's row opens their
 /// page (`FamilyMemberPage`) where editors change roles, edit and remove, and everyone sets
-/// their own birthday; editors add people and create invite links here.
+/// their own birthday; editors add people and create invite links with the toolbar's +.
 struct FamilyMembersView: View {
     @Environment(FamilyContext.self) private var family
     @Environment(AppModel.self) private var app
@@ -23,6 +23,11 @@ struct FamilyMembersView: View {
         }
         .ohanaBackground(ModuleTint.settings)
         .navigationTitle("Members")
+        .toolbar {
+            if model.household?.canEdit == true {
+                ToolbarItem(placement: .primaryAction) { addMenu }
+            }
+        }
         .sheet(item: $sheet) { sheet in
             switch sheet {
             case .addPerson:
@@ -61,44 +66,15 @@ struct FamilyMembersView: View {
                 Text("Members")
             }
 
-            if household.canEdit {
+            if household.canEdit, !household.invites.isEmpty {
                 Section {
-                    Button {
-                        sheet = .addPerson
-                    } label: {
-                        Label("Add a person", systemImage: "person.badge.plus")
-                    }
-                    Button {
-                        sheet = .addByEmail
-                    } label: {
-                        Label("Add by email", systemImage: "at")
-                    }
-                } footer: {
-                    Text("For someone without an account, like a child. You can create an invite link for them now or later. Someone with an Ohana account already is added by email.")
-                }
-
-                Section {
-                    if household.invites.isEmpty {
-                        Text("No open invite links.").foregroundStyle(.secondary)
-                    }
                     ForEach(household.invites) { invite in
                         inviteRow(invite, household: household)
-                    }
-                    Menu {
-                        ForEach([FamilyRole.editor, .viewer], id: \.self) { role in
-                            Button {
-                                createInvite(role: role)
-                            } label: {
-                                Text(role.title)
-                            }
-                        }
-                    } label: {
-                        Label("Create invite link", systemImage: "link.badge.plus")
                     }
                 } header: {
                     Text("Invite links")
                 } footer: {
-                    Text("The link lets someone join the family, with a new account or their existing one. Valid for 7 days, once.")
+                    Text("Valid for 7 days, once.")
                 }
             }
         }
@@ -106,6 +82,28 @@ struct FamilyMembersView: View {
         .readableWidth()
         .scrollContentBackground(.hidden)
         .refreshable { await reload() }
+    }
+
+    /// The toolbar's +: adding someone without an account or with one, or an invite link.
+    private var addMenu: some View {
+        Menu {
+            Button("Add a person…", systemImage: "person.badge.plus") { sheet = .addPerson }
+            Button("Add by email…", systemImage: "at") { sheet = .addByEmail }
+            Menu {
+                ForEach([FamilyRole.editor, .viewer], id: \.self) { role in
+                    Button {
+                        createInvite(role: role)
+                    } label: {
+                        Text(role.title)
+                    }
+                }
+            } label: {
+                Label("Invite link", systemImage: "link.badge.plus")
+            }
+        } label: {
+            Label("Add", systemImage: "plus")
+        }
+        .disabled(model.state.isSaved)
     }
 
     // MARK: Rows

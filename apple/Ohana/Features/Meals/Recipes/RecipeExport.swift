@@ -323,11 +323,14 @@ struct RecipeExportSheet: View {
                     Button("Done", role: .close) { dismiss() }
                 }
                 ToolbarItemGroup(placement: .primaryAction) {
+                    // On iOS the share sheet has Copy and Save to Files.
+                    #if os(macOS)
                     if format == .markdown {
                         Button("Copy", systemImage: "doc.on.doc") { copy() }
                     }
                     Button("Save…", systemImage: "square.and.arrow.down") { saving = true }
                         .disabled(format == .pdf && pdf == nil)
+                    #endif
                     if let file {
                         ShareLink(item: file, subject: Text(recipe.detail.title)) {
                             Label("Share", systemImage: "square.and.arrow.up")

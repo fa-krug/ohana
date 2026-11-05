@@ -3,8 +3,8 @@ import SwiftUI
 /// Chores: a day at a time (today first, stepped back and forth), its chores by morning, day and
 /// evening, on today the overdue ones above. A chore (a repeating one's occurrence) is ticked off
 /// here by editors and by the member it's for; anyone turns its notification on or off for
-/// themselves (the bell). Editors add (File ▸ New Chore, ⌘N), edit and delete; every chore is on
-/// the All Chores page (`ChoresAllView`, its toolbar button). Everything shows and changes at once from
+/// themselves (context menu, swipe, editor; a bell marks theirs). Editors add (File ▸ New Chore, ⌘N),
+/// edit and delete; every chore is on the All Chores page (`ChoresAllView`, in the Filter menu). Everything shows and changes at once from
 /// the family's `ChoresStore`, which syncs with the server in the background. Inside the shell's
 /// navigation stack.
 struct ChoresView: View {
@@ -141,13 +141,12 @@ struct ChoresView: View {
             Menu {
                 Picker("Whose chores", selection: $filter) { ChoreFilterChoices(people: store.page?.people ?? [], me: store.me) }
                     .pickerStyle(.inline)
+                Divider()
+                Button("All Chores", systemImage: "list.bullet") { showAll = true }
             } label: {
                 Label("Filter", systemImage: filter == .everyone
                       ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
             }
-        }
-        ToolbarItem {
-            Button("All Chores", systemImage: "list.bullet") { showAll = true }
         }
     }
 
@@ -232,8 +231,7 @@ struct ChoresView: View {
     private func row(_ item: ChoreItem, overdue: Bool) -> some View {
         let canTick = store.canTick(item)
         return ChoreItemRow(item: item, today: today, overdue: overdue, canTick: canTick,
-                            tick: { store.toggleDone(item) }, subscribe: { store.subscribe(item.choreId, !item.subscribed) },
-                            open: { open(item.choreId) })
+                            tick: { store.toggleDone(item) }, open: { open(item.choreId) })
             .id(item.id)
             .listRowBackground(highlighted == item.choreId ? ModuleTint.chores.opacity(0.15) : nil)
             .contextMenu {
@@ -265,6 +263,10 @@ struct ChoresView: View {
                     }
                     .tint(.green)
                 }
+                Button(item.subscribed ? "Don’t Notify Me" : "Notify Me", systemImage: item.subscribed ? "bell.slash" : "bell") {
+                    store.subscribe(item.choreId, !item.subscribed)
+                }
+                .tint(ModuleTint.chores)
             }
     }
 
@@ -311,14 +313,13 @@ struct ChoreFilterChoices: View {
 }
 
 /// One chore on the day: the tick, its title, the time, the repeat sign and whom it's for (an
-/// overdue one its day), and the bell of its notification.
+/// overdue one its day), and a bell when it notifies the signed-in account.
 struct ChoreItemRow: View {
     let item: ChoreItem
     let today: Day
     let overdue: Bool
     let canTick: Bool
     let tick: () -> Void
-    let subscribe: () -> Void
     let open: () -> Void
 
     var body: some View {
@@ -337,14 +338,12 @@ struct ChoreItemRow: View {
             }
             .buttonStyle(.plain)
             .accessibilityHint(Text("Opens the chore"))
-            Button(action: subscribe) {
-                Image(systemName: item.subscribed ? "bell.fill" : "bell")
-                    .foregroundStyle(item.subscribed ? ModuleTint.chores : .secondary)
-                    .rowHitTarget()
+            if item.subscribed {
+                Image(systemName: "bell.fill")
+                    .foregroundStyle(ModuleTint.chores)
+                    .accessibilityLabel(Text("Notifies you"))
+                    .help(Text("Notifies you"))
             }
-            .buttonStyle(.borderless)
-            .accessibilityLabel(item.subscribed ? Text("Notifies you") : Text("Doesn’t notify you"))
-            .help(item.subscribed ? Text("Notifies you") : Text("Doesn’t notify you"))
         }
     }
 

@@ -286,6 +286,13 @@ struct AssistantChatView: View {
             // No shortcut: on the page ⌘N is File ▸ New Chat; beside a module ⌘N is that
             // module's, and ⇧⌘J (Go ▸ Ask the assistant) starts a new chat.
             Button("New chat", systemImage: "square.and.pencil") { newChat() }
+            // Beside another page than the chat's: its next turns about this one. (A message
+            // carries the chat's own page, so this is the only way to move it.)
+            if let page = movablePage {
+                Button("Move to \(AssistantPages.name(page))", systemImage: "mappin.and.ellipse") {
+                    Task { await store.moveHere() }
+                }
+            }
             Button("Copy the chat, with all tool results", systemImage: "doc.on.doc") {
                 copy(store.current?.items ?? [])
             }
@@ -300,6 +307,15 @@ struct AssistantChatView: View {
             newChat()
         }
         .help(Text("New chat"))
+    }
+
+    /// The page beside the panel when the open chat (one the server knows) belongs to another;
+    /// on the assistant's page a chat isn't tied to the page it's read on.
+    private var movablePage: String? {
+        guard mode == .panel, let chat = store.current, !chat.id.isEmpty, let page = chat.page, page != here else {
+            return nil
+        }
+        return here
     }
 
     private func newChat() {
@@ -362,10 +378,6 @@ struct AssistantChatView: View {
     private var conversation: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                // On the page a chat isn't tied to the page it's read on.
-                if mode == .panel, let page = store.current?.page, page != here {
-                    elsewhere(page: page)
-                }
                 if store.current?.items.isEmpty ?? true {
                     suggestions
                 }
@@ -467,22 +479,6 @@ struct AssistantChatView: View {
         }
     }
 
-    private func elsewhere(page: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "mappin.and.ellipse").foregroundStyle(.secondary)
-            Text("This chat belongs to \(AssistantPages.name(page)).")
-                .font(.caption)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            Button("Move to \(AssistantPages.name(here))") {
-                Task { await store.moveHere() }
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-            .disabled(store.current?.id.isEmpty ?? true)
-        }
-        .contentCard(cornerRadius: 14, padding: 10)
-    }
-
     private var suggestions: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
@@ -545,53 +541,13 @@ struct AssistantChatView: View {
                 HStack(alignment: .bottom, spacing: 8) {
                     attachMenu
                     field
-                    if AssistantDictation.isAvailable {
-                        micButton
-                    }
-                    if store.busy {
-                        Button {
-                            Task { await store.stop() }
-                        } label: {
-                            Image(systemName: "stop.fill")
-                                .frame(width: 22, height: 22)
-                        }
-                        .buttonStyle(.glass)
-                        .buttonBorderShape(.circle)
-                        .controlSize(.large)
-                        // On the page, Assistant ▸ Stop has it.
-                        .keyboardShortcut(mode == .page ? nil : KeyboardShortcut(".", modifiers: .command))
-                        .accessibilityLabel(Text("Stop"))
-                        .help(Text("Stop"))
-                    }
-                    if !store.busy || filled {
-                        Button {
-                            send()
-                        } label: {
-                            Image(systemName: "arrow.up")
-                                .font(.body.weight(.semibold))
-                                .frame(width: 22, height: 22)
-                        }
-                        .buttonStyle(.glassProminent)
-                        .buttonBorderShape(.circle)
-                        .controlSize(.large)
-                        .tint(ModuleTint.assistant)
-                        .keyboardShortcut(.return, modifiers: .command)
-                        .disabled(!canSend || !filled)
-                        .accessibilityLabel(store.busy ? Text("Send after this answer") : Text("Send"))
-                        .help(store.busy ? Text("Send after this answer") : Text("Send"))
-                    }
+                    actionButton
                 }
             }
-            if let usage = store.current?.usage, usage.max > 0 {
+            // Only once the chat nears the point where older messages get condensed.
+            if let usage = store.current?.usage, AssistantContextMeter.shows(usage) {
                 AssistantContextMeter(usage: usage)
                     .padding(.horizontal, 8)
-            }
-            if let hint = AssistantKeyboardHint.text(regularWidth: sizeClass != .compact) {
-                Text(verbatim: hint)
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-                    .padding(.horizontal, 8)
-                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .frame(maxWidth: 760)
@@ -660,12 +616,69 @@ struct AssistantChatView: View {
             .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 22))
     }
 
-    private var micButton: some View {
+    /// What the button beside the field does: one slot for Send, Stop and (on iPhone and iPad)
+    /// the mic.
+    private var action: AssistantComposerAction {
+        AssistantComposerAction.make(filled: filled, busy: store.busy,
+                                     canQueue: !(store.current?.id.isEmpty ?? true),
+                                     dictation: AssistantDictation.isAvailable, listening: listening)
+    }
+
+    @ViewBuilder private var actionButton: some View {
+        switch action {
+        case .send:
+            sendButton
+        case .stop:
+            Button {
+                Task { await store.stop() }
+            } label: {
+                Image(systemName: "stop.fill")
+                    .frame(width: 22, height: 22)
+            }
+            .buttonStyle(.glass)
+            .buttonBorderShape(.circle)
+            .controlSize(.large)
+            // On the page, Assistant ▸ Stop has it.
+            .keyboardShortcut(mode == .page ? nil : KeyboardShortcut(".", modifiers: .command))
+            .accessibilityLabel(Text("Stop"))
+            .help(Text("Stop"))
+        case .dictate:
+            micButton
+        }
+    }
+
+    private var sendButton: some View {
         Button {
-            #if os(macOS)
-            composerFocused = true
-            dictation.start()
-            #else
+            send()
+        } label: {
+            Image(systemName: "arrow.up")
+                .font(.body.weight(.semibold))
+                .frame(width: 22, height: 22)
+        }
+        .buttonStyle(.glassProminent)
+        .buttonBorderShape(.circle)
+        .controlSize(.large)
+        .tint(ModuleTint.assistant)
+        .keyboardShortcut(.return, modifiers: .command)
+        .disabled(!canSend || !filled)
+        .accessibilityLabel(store.busy ? Text("Send after this answer") : Text("Send"))
+        .help(store.busy ? Text("Send after this answer") : Text("Send"))
+        // Typing while the assistant answers puts Send in Stop's place: ⌘. still stops it.
+        .background {
+            if store.busy, mode != .page {
+                Button("Stop") { Task { await store.stop() } }
+                    .keyboardShortcut(".", modifiers: .command)
+                    .opacity(0)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
+    }
+
+    /// iPhone and iPad only: the Mac's keyboard has dictation of its own (Edit ▸ Start Dictation).
+    @ViewBuilder private var micButton: some View {
+        #if os(iOS)
+        Button {
             if dictation.isListening {
                 dictation.stop()
             } else {
@@ -673,7 +686,6 @@ struct AssistantChatView: View {
                 let base = text
                 Task { await dictation.start(base: base) { text = $0 } }
             }
-            #endif
         } label: {
             Image(systemName: listening ? "waveform" : "mic")
                 .font(.body.weight(.medium))
@@ -687,6 +699,9 @@ struct AssistantChatView: View {
         .disabled(!store.ready)
         .accessibilityLabel(listening ? Text("Stop dictation") : Text("Dictate"))
         .help(listening ? Text("Stop dictation") : Text("Dictate"))
+        #else
+        sendButton
+        #endif
     }
 
     private var listening: Bool {
@@ -700,7 +715,9 @@ struct AssistantChatView: View {
     private var placeholder: LocalizedStringKey {
         if !store.ready { return "Set up the assistant in the settings first" }
         if listening { return "Listening…" }
-        return store.busy ? "Next message – sent once this answer is done…" : "Ask me anything…"
+        if store.busy { return "Next message – sent once this answer is done…" }
+        // Send answers the open question (a tap on an option does too).
+        return store.composerAnswers ? "Your own answer…" : "Ask me anything…"
     }
 
     private func send() {
@@ -876,17 +893,17 @@ private struct AssistantImagePaste: ViewModifier {
     }
 }
 
-/// The keyboard line under the composer (web: "Enter sends, Shift+Enter for a new line…"),
-/// nil where there is no keyboard to speak of (iPhone).
-enum AssistantKeyboardHint {
-    static func text(regularWidth: Bool) -> String? {
-        #if os(macOS)
-        String(localized: "Return sends, Shift-Return starts a new line. Paste (⌘V) or drop screenshots and files.")
-        #else
-        regularWidth
-            ? String(localized: "With a keyboard, Return sends and Shift-Return starts a new line. Attach, paste or drop screenshots and files.")
-            : nil
-        #endif
+/// The one button beside the composer's field: Send with something to send (while a turn runs,
+/// once the chat has an id to wait in), Stop while a turn runs, else the mic where there is one
+/// (dictating goes on until it's stopped there) or a disabled Send.
+enum AssistantComposerAction: Equatable {
+    case send, stop, dictate
+
+    static func make(filled: Bool, busy: Bool, canQueue: Bool, dictation: Bool, listening: Bool) -> Self {
+        if listening { return .dictate }
+        if busy { return filled && canQueue ? .send : .stop }
+        if filled || !dictation { return .send }
+        return .dictate
     }
 }
 

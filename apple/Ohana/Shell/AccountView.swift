@@ -1,7 +1,7 @@
 import AuthenticationServices
 import SwiftUI
 
-/// The account on this device: profile and language, email, password, passkeys, the signed-in
+/// The account on this device: profile (name, email, language), password, passkeys, the signed-in
 /// devices and browsers, signing out, and (under Advanced, a page of its own) API tokens for
 /// scripts. A page of the settings (`AccountPageView`); a sheet while the account has no family
 /// yet, with the device's settings then. Adding a passkey (and changing the email of an account
@@ -107,7 +107,6 @@ private struct AccountForm: View {
                     Group {
                         if page == .all {
                             profileSection(overview.user)
-                            emailSection(overview.user)
                             passwordSection(overview)
                             passkeysSection(overview)
                             devicesSection(overview)
@@ -213,6 +212,14 @@ private struct AccountForm: View {
                         .disabled(name.count > 100)
                 }
             }
+            LabeledContent("Email", value: user.email)
+            // Without a password, the change is confirmed with a passkey on the server's page.
+            if AccountRules.canChangeEmailHere(user) {
+                Button("Change email…", systemImage: "envelope") { sheet = .email(user.email) }
+            } else {
+                Button("Change with a passkey…", systemImage: "person.badge.key") { openAccountPage() }
+                    .disabled(accountPageOpen)
+            }
             Picker("Language", selection: Binding(get: { user.preferredLanguage }, set: { setLanguage($0) })) {
                 ForEach(AccountLanguage.allCases) { Text($0.title).tag($0.rawValue) }
             }
@@ -223,25 +230,6 @@ private struct AccountForm: View {
                 Text("The name is too long (max. 100).").foregroundStyle(.red)
             } else {
                 Text("The language of notifications and of what Ohana names for you, like a new family’s calendar types.")
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func emailSection(_ user: UserAccount) -> some View {
-        Section {
-            LabeledContent("Email", value: user.email)
-            if AccountRules.canChangeEmailHere(user) {
-                Button("Change email…", systemImage: "envelope") { sheet = .email(user.email) }
-            } else {
-                Button("Change with a passkey…", systemImage: "person.badge.key") { openAccountPage() }
-                    .disabled(accountPageOpen)
-            }
-        } header: {
-            Text("Email")
-        } footer: {
-            if !AccountRules.canChangeEmailHere(user) {
-                Text("Your account has no password, so the change is confirmed with a passkey, in a secure browser sheet of your server.")
             }
         }
     }
@@ -264,8 +252,6 @@ private struct AccountForm: View {
     private var signOutSection: some View {
         Section {
             Button("Sign out", role: .destructive) { confirmSignOut = true }
-        } footer: {
-            Text("Signs this device out and deletes its token.")
         }
     }
 
@@ -273,8 +259,6 @@ private struct AccountForm: View {
 
     private func passwordSection(_ overview: AccountOverview) -> some View {
         Section {
-            Text(overview.user.hasPassword ? "A password is set." : "No password: you sign in with passkeys only.")
-                .foregroundStyle(.secondary)
             Button(overview.user.hasPassword ? "Change password…" : "Set a password…", systemImage: "key") {
                 sheet = .password(hasPassword: overview.user.hasPassword)
             }
@@ -304,7 +288,7 @@ private struct AccountForm: View {
         } header: {
             Text("Passkeys")
         } footer: {
-            Text("Sign in with your fingerprint, face or device PIN. A passkey belongs to your server’s address, so passkeys are added in a secure browser sheet of your server.")
+            Text("Sign in with your fingerprint, face or device PIN. Passkeys are added on your server’s page.")
         }
     }
 
@@ -749,8 +733,6 @@ struct DeviceSettingsSection: View {
             #endif
         } header: {
             Text("This device")
-        } footer: {
-            Text("Applies to this device only.")
         }
     }
 }

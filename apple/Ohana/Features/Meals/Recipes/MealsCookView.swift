@@ -3,8 +3,9 @@ import SwiftUI
 import UIKit
 #endif
 
-/// Cooking a recipe step by step (web: meals/cook/[id], cooking-view.tsx): choose servings and,
-/// for a recipe with both, by hand or with the machine; then one step at a time in big type,
+/// Cooking a recipe step by step (web: meals/cook/[id], cooking-view.tsx): for a recipe with both
+/// methods, first servings and by hand or with the machine (one method starts at once, at the
+/// servings passed in); then one step at a time in big type,
 /// swiping (or ← →) between them, with the step's ingredients scaled. Always presented over
 /// everything (`cookPresentation`), so it has its own Close. The screen stays awake on iPhone
 /// and iPad while it's shown; the step reached is remembered per device. Durations in a step
@@ -68,12 +69,25 @@ private struct RecipeCookSession: View {
         self.recipe = recipe
         _servings = State(initialValue: initialServings)
         let hasManual = !recipe.detail.manualSteps.isEmpty, hasMachine = !recipe.detail.machineSteps.isEmpty
-        _method = State(initialValue: hasManual && hasMachine ? nil : hasMachine ? .machine : .manual)
+        let method: RecipeCookMethod? = hasManual && hasMachine ? nil : hasMachine ? .machine : .manual
+        _method = State(initialValue: method)
+        // With one method there's nothing to choose: cooking starts at once, at the step reached
+        // last (the servings are in the toolbar).
+        if let method, hasManual || hasMachine {
+            let count = recipe.steps(method).count
+            let saved = UserDefaults.standard.object(forKey: Self.progressKey(recipe, method)) as? Int
+            _started = State(initialValue: true)
+            _stepIndex = State(initialValue: saved.flatMap { (0..<count).contains($0) ? $0 : nil } ?? 0)
+        }
     }
 
     private var hasBoth: Bool { !recipe.detail.manualSteps.isEmpty && !recipe.detail.machineSteps.isEmpty }
     private var steps: [RecipeStep] { recipe.steps(method ?? .manual) }
-    private var progressKey: String { "ohana-cooking-\(recipe.detail.id)-\((method ?? .manual).rawValue)" }
+    private var progressKey: String { Self.progressKey(recipe, method ?? .manual) }
+
+    private static func progressKey(_ recipe: RecipeResolved, _ method: RecipeCookMethod) -> String {
+        "ohana-cooking-\(recipe.detail.id)-\(method.rawValue)"
+    }
 
     var body: some View {
         Group {
@@ -241,11 +255,6 @@ private struct RecipeCookSession: View {
                 @unknown default: break
                 }
             }
-            #if os(iOS)
-            Text("Swipe left or right to switch steps")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-            #endif
         }
     }
 

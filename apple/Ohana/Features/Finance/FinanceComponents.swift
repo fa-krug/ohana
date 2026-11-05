@@ -357,61 +357,8 @@ struct FinancePeriodBar: View {
     }
 }
 
-/// The filters of the list as menus in the content (iPad, Mac): account, category, kind.
-struct FinanceFilterBar: View {
-    @Bindable var store: FinanceStore
-
-    var body: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: 8) {
-                if !store.accounts.isEmpty {
-                    Menu {
-                        FinanceAccountFilterPicker(store: store).pickerStyle(.inline)
-                    } label: {
-                        chip("building.columns", FinanceFilterTitles.account(store), active: !store.filter.account.isEmpty)
-                    }
-                }
-                Menu {
-                    FinanceCategoryFilterItems(store: store)
-                } label: {
-                    chip("tag", FinanceFilterTitles.category(store), active: !store.filter.category.isEmpty)
-                }
-                Menu {
-                    FinanceKindFilterPicker(store: store).pickerStyle(.inline)
-                } label: {
-                    chip("arrow.up.arrow.down", store.filter.kind.title, active: store.filter.kind != .all)
-                }
-                Menu {
-                    FinanceSourceFilterPicker(store: store).pickerStyle(.inline)
-                } label: {
-                    chip("tray.and.arrow.down", store.filter.source.title, active: store.filter.source != .all)
-                }
-                if store.filter.isActive {
-                    Button {
-                        Task { await store.clearFilters() }
-                    } label: {
-                        Label("Clear filters", systemImage: "xmark").labelStyle(.iconOnly)
-                    }
-                    .help("Clear filters")
-                }
-            }
-            .menuStyle(.button)
-            .buttonStyle(.bordered)
-            .financeTouchSize()
-            .padding(.vertical, 2)
-        }
-        .scrollIndicators(.hidden)
-    }
-
-    private func chip(_ icon: String, _ title: String, active: Bool) -> some View {
-        Label(title, systemImage: icon)
-            .lineLimit(1)
-            .foregroundStyle(active ? ModuleTint.finance : .primary)
-    }
-}
-
-/// The toolbar's filter menu on iPhone: the same filters as menu items, badged with how many
-/// are on.
+/// The toolbar's filter menu: account, category, kind and origin as menu items, badged (and
+/// filled) with how many are on, Clear inside.
 struct FinanceFilterMenu: View {
     @Bindable var store: FinanceStore
 
@@ -441,17 +388,9 @@ struct FinanceFilterMenu: View {
     }
 }
 
-/// What the filter menus show for the current account and category.
+/// What the filter menu shows for the current category.
 @MainActor
 enum FinanceFilterTitles {
-    static func account(_ store: FinanceStore) -> String {
-        switch store.filter.account {
-        case "": String(localized: "All accounts")
-        case "none": String(localized: "Without account")
-        default: store.account(store.filter.account)?.label ?? String(localized: "Account")
-        }
-    }
-
     static func category(_ store: FinanceStore) -> String {
         switch store.filter.category {
         case "": String(localized: "All categories")

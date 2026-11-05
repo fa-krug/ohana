@@ -302,15 +302,26 @@ enum FamilyPasteboard {
 }
 
 /// A notification channel: the service, its secret (write-only: blank keeps the stored one),
-/// the target (ntfy: the topic's URL), SMTP for email.
+/// the target (ntfy: the topic's URL), SMTP for email; a stored one's test message (of what's
+/// saved, so not while it has changes) and deleting at its foot.
 struct FamilyChannelSheet: View {
     let channel: FamilyChannel?
+    /// Sends a test message through the stored channel.
+    var test: (() async -> Void)?
+    /// Asks before deleting the stored channel; the sheet closes once it's confirmed.
+    var deletion: FamilyConfirmation?
     let save: (FamilyChannelInput) async throws -> Void
+    @Environment(\.dismiss) private var dismiss
     @State private var input: FamilyChannelInput
+    @State private var testing = false
+    @State private var confirmation: FamilyConfirmation?
     private let original: FamilyChannelInput
 
-    init(channel: FamilyChannel?, save: @escaping (FamilyChannelInput) async throws -> Void) {
+    init(channel: FamilyChannel?, test: (() async -> Void)? = nil, deletion: FamilyConfirmation? = nil,
+         save: @escaping (FamilyChannelInput) async throws -> Void) {
         self.channel = channel
+        self.test = test
+        self.deletion = deletion
         self.save = save
         original = channel.map(FamilyChannelInput.init) ?? FamilyChannelInput()
         _input = State(initialValue: original)
@@ -370,9 +381,39 @@ struct FamilyChannelSheet: View {
             Section {
                 Toggle("Active", isOn: $input.enabled)
             }
+            if channel != nil, test != nil || deletion != nil {
+                Section {
+                    if let test {
+                        Button {
+                            testing = true
+                            Task {
+                                await test()
+                                testing = false
+                            }
+                        } label: {
+                            HStack {
+                                Label("Send test message", systemImage: "paperplane")
+                                Spacer(minLength: 8)
+                                if testing { ProgressView().controlSize(.small) }
+                            }
+                        }
+                        .disabled(testing || input != original)
+                    }
+                    if let deletion {
+                        Button("Delete channel", role: .destructive) {
+                            confirmation = FamilyConfirmation(title: deletion.title, button: deletion.button,
+                                                              message: deletion.message) {
+                                deletion.action()
+                                dismiss()
+                            }
+                        }
+                    }
+                }
+            }
         }
         .onChange(of: input.provider) { _, provider in
             if provider == .pushbullet { input.target = "" }
         }
+        .familyConfirmation($confirmation)
     }
 }

@@ -4,7 +4,7 @@ import SwiftUI
 /// for each member — the clashes and the plans that don't work out, checked by the server
 /// (server/lib/digest) — with the days the family is away and the birthdays. Each issue opens
 /// its day in the calendar. Editors mark one "Looks fine" (it's hidden for everyone) and can
-/// restore it from "Hidden". Pushed onto the overview's stack.
+/// restore it from "Hidden" (both a swipe and the context menu). Pushed onto the overview's stack.
 struct WeekAheadView: View {
     @Environment(FamilyContext.self) private var family
     @State private var state: LoadState<WeekAheadDigest> = .idle
@@ -88,21 +88,19 @@ struct WeekAheadView: View {
                 Section {
                     DisclosureGroup(isExpanded: $showsHidden) {
                         ForEach(groups.hidden) { issue in
-                            HStack(spacing: 8) {
-                                WeekAheadIssueRow(issue: issue, showsPeople: true)
-                                    .opacity(0.7)
-                                Button("Restore") { setDismissed(issue, false) }
-                                    .buttonStyle(.bordered)
-                                    .controlSize(.small)
-                                    .disabled(!canEdit)
-                                    .help("Show it again")
-                            }
+                            WeekAheadIssueRow(issue: issue, showsPeople: true)
+                                .opacity(0.7)
+                                .swipeActions(edge: .trailing) {
+                                    if canEdit {
+                                        Button("Restore", systemImage: "arrow.uturn.backward") { setDismissed(issue, false) }
+                                            .tint(.blue)
+                                    }
+                                }
+                                .contextMenu { menu(for: issue) }
                         }
                     } label: {
                         Text("Hidden (\(groups.hidden.count))")
                     }
-                } footer: {
-                    Text("Marked as looking fine. Restore one to see it again.")
                 }
             }
         }
@@ -119,7 +117,11 @@ struct WeekAheadView: View {
     @ViewBuilder private func menu(for issue: WeekAheadIssue) -> some View {
         Button("Show in Calendar", systemImage: "calendar") { family.open(.calendarDay(issue.date)) }
         if canEdit {
-            Button("Looks fine", systemImage: "checkmark") { setDismissed(issue, true) }
+            if issue.dismissed {
+                Button("Restore", systemImage: "arrow.uturn.backward") { setDismissed(issue, false) }
+            } else {
+                Button("Looks fine", systemImage: "checkmark") { setDismissed(issue, true) }
+            }
         }
     }
 

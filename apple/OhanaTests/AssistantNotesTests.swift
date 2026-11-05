@@ -2,8 +2,8 @@ import Foundation
 import Testing
 @testable import Ohana
 
-/// The assistant's notes in the knowledge folder: the edit item, its lines and the dialog before
-/// writing, writing into a real folder, and the requests naming the folder.
+/// The assistant's notes in the knowledge folder: the edit item, its lines, writing into a real
+/// folder, and the requests naming the folder.
 struct AssistantNotesTests {
     static let itemsJSON = """
     {
@@ -117,38 +117,6 @@ struct AssistantNotesTests {
         #expect(AssistantNoteOpLine.Preview.added(String(repeating: "a", count: 400)).isLong)
         #expect(!AssistantNoteOpLine.Preview.replacements([.init(find: "a", with: "b")]).isLong)
         #expect(AssistantNoteOpLine.Preview.replacements([.init(find: "a\nb\nc", with: "b")]).isLong)
-    }
-
-    @Test func asksBeforeWriting() {
-        let create = AssistantNoteOp(op: "create", path: "Notes/Car.md", content: "x")
-        let one = AssistantNotesConfirmation.make([create])
-        #expect(one.title == "Create “Car.md”?")
-        #expect(one.message == "“Car.md” is created in Notes.")
-        #expect(one.button == "Create")
-
-        let rewrite = AssistantNoteOp(op: "update", path: "Home.md", baseHash: "h", change: "content", content: "y")
-        let changed = AssistantNotesConfirmation.make([rewrite])
-        #expect(changed.title == "Change “Home.md”?")
-        #expect(changed.message == "The whole text of “Home.md” is replaced.")
-        #expect(changed.button == "Save Changes")
-
-        let ops = [
-            create,
-            AssistantNoteOp(op: "update", path: "A.md", baseHash: "h", change: "append", content: "y", added: "y"),
-            AssistantNoteOp(op: "update", path: "B.md", baseHash: "h", change: "replace", content: "y"),
-            AssistantNoteOp(op: "update", path: "C.md", baseHash: "h", change: "tags", content: "y", tags: ["T"]),
-        ]
-        let several = AssistantNotesConfirmation.make(ops)
-        #expect(several.title == "Write 4 notes to the knowledge folder?")
-        #expect(several.message == """
-        “Car.md” is created in Notes.
-        Text is added at the end of “A.md”.
-        Parts of the text of “B.md” are replaced.
-        The tags of “C.md” change.
-        """)
-        #expect(several.button == "Save Changes")
-        #expect(AssistantNotesConfirmation.make([create, AssistantNoteOp(op: "create", path: "D.md", content: "z")]).button
-            == "Create")
     }
 
     // MARK: Writing
@@ -387,6 +355,39 @@ struct AssistantNotesTests {
         #expect(first?["text"] as? String == "Hi")
         #expect(first?.keys.contains("knowledgeFolder") == false)
         other.unfollow()
+    }
+
+    @Test func aMessageAnswersTheOpenQuestion() async throws {
+        let folder = try Folder()
+        let q = AssistantQuestion(id: "q1", question: "Which?", options: ["A", "B"], multiple: true, answer: nil,
+                                  skipped: false)
+        let store = store([.question(q)], folder: folder)
+        #expect(store.composerAnswers)
+        store.togglePick(q, "B")
+        try await store.send("And C")
+        guard case let .question(answered) = store.current?.items.first else { Issue.record("question"); return }
+        #expect(!answered.skipped)
+        #expect(answered.answer?.selected == ["B"])
+        #expect(answered.answer?.text == "And C")
+        #expect(store.current?.items.count == 1)
+        let body = try await sent("/answer", host: store.api.client.baseURL.host())
+        #expect(body?["id"] as? String == "q1")
+        #expect(body?["selected"] as? [String] == ["B"])
+        #expect(body?["text"] as? String == "And C")
+        store.unfollow()
+    }
+
+    @Test func aMessageWithAttachmentsSkipsTheQuestion() async throws {
+        let folder = try Folder()
+        let q = AssistantQuestion(id: "q1", question: "Which?", options: ["A"], multiple: false, answer: nil, skipped: false)
+        let store = store([.question(q)], folder: folder)
+        try await store.send("Look", attachments: [.init(kind: "file", name: "a.txt", text: "x")])
+        guard case let .question(skipped) = store.current?.items.first else { Issue.record("question"); return }
+        #expect(skipped.skipped)
+        #expect(skipped.answer == nil)
+        let body = try await sent("/messages", host: store.api.client.baseURL.host())
+        #expect(body?["text"] as? String == "Look")
+        store.unfollow()
     }
 
     @Test func namesTheTool() {

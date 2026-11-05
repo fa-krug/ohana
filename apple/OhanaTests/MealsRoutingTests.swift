@@ -6,9 +6,12 @@ import Testing
 struct MealsRoutingTests {
     @Test func opensTheRightPart() throws {
         #expect(MealsRouting(.mealPlan)?.segment == .plan)
-        #expect(MealsRouting(.mealTags)?.segment == .tags)
+        // The tags are a page pushed over the recipes, no part of their own.
+        let tags = try #require(MealsRouting(.mealTags))
+        #expect(tags.segment == .recipes && tags.showsTags)
+        #expect(MealsRouting(.mealPlan)?.showsTags == false)
         let bare = try #require(MealsRouting(.module(.meals)))
-        #expect(bare.segment == nil && bare.destination == nil && !bare.createsRecipe)
+        #expect(bare.segment == nil && bare.destination == nil && !bare.createsRecipe && !bare.showsTags)
         #expect(MealsRouting(.module(.finance)) == nil)
         #expect(MealsRouting(.settings(.finance)) == nil)
     }
@@ -38,6 +41,7 @@ struct MealsRoutingTests {
         #expect(routing("/f/fam/meals/cook/r9")?.destination == .cook(recipeID: "r9"))
         #expect(routing("/f/fam/meals/shopping/l1")?.segment == .plan)
         #expect(routing("/f/fam/meals/plan")?.segment == .plan)
+        #expect(routing("/f/fam/meals/tags")?.showsTags == true)
         #expect(routing("/f/fam/meals")?.segment == nil)
     }
 

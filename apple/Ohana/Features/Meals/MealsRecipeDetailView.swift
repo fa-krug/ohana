@@ -252,7 +252,7 @@ struct MealsRecipeDetailView: View {
                 // ⌘E is the system's "Use Selection for Find".
                 .keyboardShortcut("e", modifiers: [.command, .option])
                 Menu {
-                    Section("Photo") {
+                    Menu {
                         Button {
                             #if os(iOS)
                             pickingPhoto = true
@@ -283,6 +283,8 @@ struct MealsRecipeDetailView: View {
                                 Label("Remove Photo", systemImage: "photo.badge.minus")
                             }
                         }
+                    } label: {
+                        Label("Photo", systemImage: "photo")
                     }
                     .disabled(photoBusy)
                     Section {

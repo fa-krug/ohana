@@ -280,8 +280,10 @@ struct KnowledgeDocumentView: View {
                 #if os(macOS)
                 Button("Show in Finder", systemImage: "folder") { showInFinder(document) }
                 #endif
-                Button("Read Again", systemImage: "arrow.clockwise") { reindex() }
-                    .disabled(state.isSaved || document.status == .excluded || document.status == .missing)
+                if document.status != .excluded, document.status != .missing {
+                    Button("Read Again", systemImage: "arrow.clockwise") { reindex() }
+                        .disabled(state.isSaved)
+                }
                 if document.status == .ready, makesCards {
                     Button("Write Summary Again", systemImage: "sparkles") { rewriteCard() }
                         .disabled(state.isSaved || document.cardStatus == .pending)

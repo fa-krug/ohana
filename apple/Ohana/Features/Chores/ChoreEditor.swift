@@ -38,6 +38,21 @@ struct ChoreDraft: Equatable, RepeatEditing {
         if let part = time.flatMap(ChorePart.of) { input.part = part }
     }
 
+    /// The editor's When: a part of the day, or at a time. Picking a part drops the time; picking
+    /// At a Time sets the part's usual one (kept when there is a time already).
+    var when: ChoreWhen {
+        get { input.time == nil ? .part(input.part) : .atTime }
+        set {
+            switch newValue {
+            case let .part(part):
+                setTime(nil)
+                input.part = part
+            case .atTime:
+                if input.time == nil { setTimed(true) }
+            }
+        }
+    }
+
     /// When a part's chore without a time is due (the server's, for its notification).
     static func usualTime(_ part: ChorePart) -> String {
         switch part {
@@ -60,6 +75,12 @@ struct ChoreDraft: Equatable, RepeatEditing {
         input.note = input.note.trimmingCharacters(in: .whitespacesAndNewlines)
         return input
     }
+}
+
+/// The editor's When choices: a part of the day, or at a time (which decides the part).
+enum ChoreWhen: Hashable {
+    case part(ChorePart)
+    case atTime
 }
 
 /// What the chores page opens its editor for.
@@ -160,15 +181,13 @@ struct ChoreEditor: View {
                         DatePicker(draft.rule == nil ? "Due" : "Starts",
                                    selection: Binding(get: { draft.input.day.date }, set: { draft.input.day = Day($0) }),
                                    displayedComponents: .date)
-                        // With a time the time decides.
-                        Picker("Part of Day", selection: Binding(get: { draft.input.effectivePart }, set: { draft.input.part = $0 })) {
+                        // A part of the day, or at a time (the time decides the part).
+                        Picker("When", selection: $draft.when) {
                             ForEach(ChorePart.allCases, id: \.self) { part in
-                                Text(part.title).tag(part)
+                                Text(part.title).tag(ChoreWhen.part(part))
                             }
+                            Text("At a Time").tag(ChoreWhen.atTime)
                         }
-                        .pickerStyle(.segmented)
-                        .disabled(draft.input.time != nil)
-                        Toggle("At a time", isOn: Binding(get: { draft.input.time != nil }, set: { draft.setTimed($0) }))
                         if let time = draft.input.time {
                             DatePicker("Time", selection: Binding(get: { CalendarEventSheet.date(of: time, on: draft.input.day) }, set: {
                                 let c = Calendar.current.dateComponents([.hour, .minute], from: $0)

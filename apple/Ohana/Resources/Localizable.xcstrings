@@ -1,6 +1,7 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ %@": {},
     "%@ (%@) becomes the booking, the others its parts": {
       "localizations": {
         "de": {
@@ -1183,6 +1184,16 @@
         }
       }
     },
+    "1–2 days, at least 3 days apart.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1–2 Tage mit mind. 3 Tagen Abstand."
+          }
+        }
+      }
+    },
     "?": {
       "localizations": {
         "de": {
@@ -1303,16 +1314,6 @@
         }
       }
     },
-    "A password is set.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ein Passwort ist gesetzt."
-          }
-        }
-      }
-    },
     "A search watches Doctolib and jameda for a speciality near a place and tells you when an appointment frees up.": {
       "localizations": {
         "de": {
@@ -1339,16 +1340,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ein durchsuchbares PDF im Wissensordner. Sein Text kommt in die Wissensbasis der Familie auf eurem Server."
-          }
-        }
-      }
-    },
-    "A subcategory has the kind of its top-level category.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eine Unterkategorie hat die Art ihrer obersten Kategorie."
           }
         }
       }
@@ -1633,6 +1624,26 @@
         }
       }
     },
+    "Add Family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Familie hinzufügen"
+          }
+        }
+      }
+    },
+    "Add Link": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link hinzufügen"
+          }
+        }
+      }
+    },
     "Add Machine Steps": {
       "localizations": {
         "de": {
@@ -1673,16 +1684,6 @@
         }
       }
     },
-    "Add a channel below first.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lege zuerst unten einen Kanal an."
-          }
-        }
-      }
-    },
     "Add a passkey before you remove the password: an account always keeps a way to sign in.": {
       "localizations": {
         "de": {
@@ -1713,6 +1714,16 @@
         }
       }
     },
+    "Add a person…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Person hinzufügen …"
+          }
+        }
+      }
+    },
     "Add a timed event": {
       "localizations": {
         "de": {
@@ -1729,16 +1740,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Einen Termin mit Uhrzeit am ersten ausgewählten Tag hinzufügen"
-          }
-        }
-      }
-    },
-    "Add a transaction from a receipt": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eine Buchung von einem Kassenbon hinzufügen"
           }
         }
       }
@@ -1793,6 +1794,16 @@
         }
       }
     },
+    "Add by email…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per E-Mail hinzufügen …"
+          }
+        }
+      }
+    },
     "Add category": {
       "localizations": {
         "de": {
@@ -1829,6 +1840,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Termin hinzufügen …"
+          }
+        }
+      }
+    },
+    "Add from…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hinzufügen aus …"
           }
         }
       }
@@ -1939,6 +1960,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zur Auswahl hinzufügen"
+          }
+        }
+      }
+    },
+    "Add transactions from a receipt or the bank": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buchungen aus einem Beleg oder von der Bank hinzufügen"
           }
         }
       }
@@ -2223,16 +2254,6 @@
         }
       }
     },
-    "Align weekdays in the year view": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wochentage in der Jahresansicht untereinander"
-          }
-        }
-      }
-    },
     "All Chores": {
       "localizations": {
         "de": {
@@ -2249,6 +2270,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Alle Ordner"
+          }
+        }
+      }
+    },
+    "All Tags": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Tags"
           }
         }
       }
@@ -2413,22 +2444,12 @@
         }
       }
     },
-    "Always show weekdays": {
+    "Always": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wochentage immer anzeigen"
-          }
-        }
-      }
-    },
-    "Always show weekdays in the year view": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wochentage in der Jahresansicht immer anzeigen"
+            "value": "Immer"
           }
         }
       }
@@ -2619,16 +2640,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Angewendet, %lld von %lld fehlgeschlagen"
-          }
-        }
-      }
-    },
-    "Applies to this device only.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gilt nur für dieses Gerät."
           }
         }
       }
@@ -2883,7 +2894,7 @@
         }
       }
     },
-    "At a time": {
+    "At a Time": {
       "localizations": {
         "de": {
           "stringUnit": {
@@ -2931,6 +2942,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bilder oder Textdateien anhängen"
+          }
+        }
+      }
+    },
+    "Automatic": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatisch"
           }
         }
       }
@@ -3101,6 +3122,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bank"
+          }
+        }
+      }
+    },
+    "Bank accounts, cash or cards; a balance is the opening balance plus the account’s transactions.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bankkonten, Bargeld oder Karten; der Kontostand ist der Anfangsstand plus die Buchungen des Kontos."
           }
         }
       }
@@ -3585,6 +3616,16 @@
         }
       }
     },
+    "Can’t be found": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht mehr zu finden"
+          }
+        }
+      }
+    },
     "Can’t reach your server": {
       "localizations": {
         "de": {
@@ -3741,16 +3782,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "„%@“ ändern"
-          }
-        }
-      }
-    },
-    "Change “%@”?": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "„%@“ ändern?"
           }
         }
       }
@@ -4035,6 +4066,16 @@
         }
       }
     },
+    "Chooses the folder": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wählt den Ordner"
+          }
+        }
+      }
+    },
     "Choose…": {
       "localizations": {
         "de": {
@@ -4101,6 +4142,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tage leeren"
+          }
+        }
+      }
+    },
+    "Clear Filters": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filter zurücksetzen"
           }
         }
       }
@@ -4435,16 +4486,6 @@
         }
       }
     },
-    "Compare with a statistic average…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mit einem statistischen Durchschnitt vergleichen…"
-          }
-        }
-      }
-    },
     "Comparison": {
       "localizations": {
         "de": {
@@ -4715,12 +4756,12 @@
         }
       }
     },
-    "Copy from another year": {
+    "Copy from…": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aus einem anderen Jahr übernehmen"
+            "value": "Übernehmen aus …"
           }
         }
       }
@@ -5021,16 +5062,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "„%@“ in %@ anlegen"
-          }
-        }
-      }
-    },
-    "Create “%@”?": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "„%@“ anlegen?"
           }
         }
       }
@@ -5935,16 +5966,6 @@
         }
       }
     },
-    "Doctors (with their reason for the visit) this search skips. Ignore one from its appointment page.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ärztinnen und Ärzte (mit ihrem Anliegen), die diese Suche überspringt. Ignorieren kannst du auf der Seite eines Termins."
-          }
-        }
-      }
-    },
     "Document": {
       "localizations": {
         "de": {
@@ -5965,16 +5986,6 @@
         }
       }
     },
-    "Doesn’t notify you": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Benachrichtigt dich nicht"
-          }
-        }
-      }
-    },
     "Dog": {
       "localizations": {
         "de": {
@@ -5991,16 +6002,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fertig"
-          }
-        }
-      }
-    },
-    "Done adds the ticked ones: events to the family’s calendar, tasks and deadlines to your Reminders.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "„Fertig“ fügt die angewählten hinzu: Termine zum Kalender der Familie, Aufgaben und Fristen zu deinen Erinnerungen."
           }
         }
       }
@@ -6241,6 +6242,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Jeder Betrag ist eine Spanne pro Monat in %@, von den unteren bis zu den oberen Haushalten; nur ein Wert ist ein einzelner Durchschnitt. Was ihr nicht wisst, bleibt leer."
+          }
+        }
+      }
+    },
+    "Each message is sent once.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jede Nachricht kommt einmal."
           }
         }
       }
@@ -6575,16 +6586,6 @@
         }
       }
     },
-    "Entry types, view and Apple Calendar": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eintragsarten, Ansicht und Apple Kalender"
-          }
-        }
-      }
-    },
     "Esc / ⇧⌘A": {
       "localizations": {
         "de": {
@@ -6635,12 +6636,22 @@
         }
       }
     },
-    "Events go both ways between Ohana and the calendar you pick, repeating ones and edits and deletions too; when both changed, Ohana’s wins. Day entries go to Apple Calendar only, as all-day events. It syncs on this device while Ohana is open.": {
+    "Events and day entries go to the calendar you pick, nothing comes back.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Termine gehen in beide Richtungen zwischen Ohana und dem gewählten Kalender, wiederkehrende sowie Änderungen und Löschungen auch; wurde beides geändert, gilt Ohana. Tageseinträge gehen nur zu Apple Kalender, als ganztägige Termine. Abgeglichen wird auf diesem Gerät, während Ohana geöffnet ist."
+            "value": "Termine und Tageseinträge gehen in den gewählten Kalender, nichts kommt zurück."
+          }
+        }
+      }
+    },
+    "Events sync both ways with the calendar you pick, day entries only go there.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termine werden in beide Richtungen mit dem gewählten Kalender abgeglichen, Tageseinträge gehen nur dorthin."
           }
         }
       }
@@ -6945,16 +6956,6 @@
         }
       }
     },
-    "Every run of this search with what it found. Runs older than 30 days are deleted.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jeder Lauf dieser Suche mit dem, was er gefunden hat. Läufe, die älter als 30 Tage sind, werden gelöscht."
-          }
-        }
-      }
-    },
     "Everyone": {
       "localizations": {
         "de": {
@@ -7225,6 +7226,16 @@
         }
       }
     },
+    "File format": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dateiformat"
+          }
+        }
+      }
+    },
     "Files this device can’t read: %lld": {
       "localizations": {
         "de": {
@@ -7445,12 +7456,12 @@
         }
       }
     },
-    "For other AI agents that use Ohana’s API with an API token:": {
+    "For editors; most changes can be undone. Viewers’ chats only read.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Für andere KI-Agenten, die Ohanas API mit einem API-Token nutzen:"
+            "value": "Für Bearbeiter; die meisten Änderungen lassen sich rückgängig machen. Chats von Betrachtern lesen nur."
           }
         }
       }
@@ -7461,16 +7472,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Für jemanden ohne Konto, z. B. ein Kind. Einen Einladungslink kannst du jetzt oder später erstellen."
-          }
-        }
-      }
-    },
-    "For someone without an account, like a child. You can create an invite link for them now or later. Someone with an Ohana account already is added by email.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Für jemanden ohne Konto, z. B. ein Kind. Einen Einladungslink kannst du jetzt oder später erstellen. Wer schon ein Ohana-Konto hat, wird per E-Mail hinzugefügt."
           }
         }
       }
@@ -7595,6 +7596,26 @@
         }
       }
     },
+    "From this family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Von dieser Familie"
+          }
+        }
+      }
+    },
+    "From your favourites; the rest are recipes to try.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus deinen Favoriten; der Rest sind Rezepte zum Ausprobieren."
+          }
+        }
+      }
+    },
     "G": {
       "localizations": {
         "de": {
@@ -7681,16 +7702,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rezepte werden erstellt …"
-          }
-        }
-      }
-    },
-    "Get started": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Los geht’s"
           }
         }
       }
@@ -8185,12 +8196,12 @@
         }
       }
     },
-    "Image model": {
+    "Image model for recipe photos": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bildmodell"
+            "value": "Bildmodell für Rezeptfotos"
           }
         }
       }
@@ -8271,26 +8282,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rezept importieren"
-          }
-        }
-      }
-    },
-    "Import a bank statement (⇧⌘I)": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kontoauszug importieren (⇧⌘I)"
-          }
-        }
-      }
-    },
-    "Import a bank statement or sync an account": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Einen Kontoauszug importieren oder ein Konto abgleichen"
           }
         }
       }
@@ -8507,6 +8498,16 @@
         }
       }
     },
+    "In columns": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Untereinander"
+          }
+        }
+      }
+    },
     "In the morning, when a weekday in the next two weeks needs cover (e.g. a day-care closure) and nobody covers it yet.": {
       "localizations": {
         "de": {
@@ -8613,6 +8614,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Anleitung"
+          }
+        }
+      }
+    },
+    "Instructions for other AI agents": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anleitung für andere KI-Agenten"
           }
         }
       }
@@ -8749,12 +8760,12 @@
         }
       }
     },
-    "It syncs by itself when you open Ohana and when the meal plan changes. Tick items off in the Reminders app while you shop.": {
+    "It syncs by itself when you open Ohana and when the meal plan changes.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sie gleicht sich von selbst ab, wenn du Ohana öffnest und wenn sich der Essensplan ändert. Hake beim Einkaufen in der Erinnerungen-App ab."
+            "value": "Sie gleicht sich von selbst ab, wenn du Ohana öffnest und wenn sich der Essensplan ändert."
           }
         }
       }
@@ -8845,6 +8856,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tritt bei als"
+          }
+        }
+      }
+    },
+    "Join…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beitreten …"
           }
         }
       }
@@ -9089,22 +9110,22 @@
         }
       }
     },
+    "Leave all amounts empty to remove it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Beträge leer lassen, um ihn zu entfernen."
+          }
+        }
+      }
+    },
     "Leave empty to keep it": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Leer lassen, um ihn zu behalten"
-          }
-        }
-      }
-    },
-    "Leave or delete": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verlassen oder löschen"
           }
         }
       }
@@ -9315,26 +9336,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Modelle laden"
-          }
-        }
-      }
-    },
-    "Load the list from the API, or type a model name. It needs to support tool calls.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lade die Liste von der API oder gib einen Modellnamen ein. Es muss Tool-Aufrufe können."
-          }
-        }
-      }
-    },
-    "Load the new transactions of %@ from the bank (⇧⌘I)": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die neuen Buchungen von %@ bei der Bank abholen (⇧⌘I)"
           }
         }
       }
@@ -9579,6 +9580,16 @@
         }
       }
     },
+    "Manage Tags…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tags verwalten …"
+          }
+        }
+      }
+    },
     "Manual Cooking": {
       "localizations": {
         "de": {
@@ -9625,16 +9636,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Als gebucht eintragen (⌘B)"
-          }
-        }
-      }
-    },
-    "Marked as looking fine. Restore one to see it again.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Als „Passt so“ markiert. Stelle einen Punkt wieder her, um ihn wieder zu sehen."
           }
         }
       }
@@ -9775,6 +9776,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mitglieder"
+          }
+        }
+      }
+    },
+    "Messages and what the assistant reads go to the AI API above.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nachrichten und was der Assistent liest, gehen an die KI-API oben."
           }
         }
       }
@@ -10489,6 +10500,16 @@
         }
       }
     },
+    "New…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neu …"
+          }
+        }
+      }
+    },
     "Next": {
       "localizations": {
         "de": {
@@ -10829,16 +10850,6 @@
         }
       }
     },
-    "No folder chosen yet": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noch kein Ordner gewählt"
-          }
-        }
-      }
-    },
     "No home address yet.": {
       "localizations": {
         "de": {
@@ -10929,32 +10940,12 @@
         }
       }
     },
-    "No open invite links.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Keine offenen Einladungslinks."
-          }
-        }
-      }
-    },
     "No passkeys yet.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Noch keine Passkeys."
-          }
-        }
-      }
-    },
-    "No password: you sign in with passkeys only.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kein Passwort: Du meldest dich nur mit Passkeys an."
           }
         }
       }
@@ -11439,26 +11430,6 @@
         }
       }
     },
-    "Nothing changes in your Reminders until you apply it.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In deinen Erinnerungen ändert sich nichts, bis du es anwendest."
-          }
-        }
-      }
-    },
-    "Nothing changes in your calendars until you apply it.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In deinen Kalendern ändert sich nichts, bis du es anwendest."
-          }
-        }
-      }
-    },
     "Nothing clashes in the next two weeks.": {
       "localizations": {
         "de": {
@@ -11485,36 +11456,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noch nichts gefunden"
-          }
-        }
-      }
-    },
-    "Nothing ignored.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nichts ignoriert."
-          }
-        }
-      }
-    },
-    "Nothing is added until you choose.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Es wird nichts hinzugefügt, bis du auswählst."
-          }
-        }
-      }
-    },
-    "Nothing is written to the knowledge folder until you apply it.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In den Wissensordner wird nichts geschrieben, bis du es anwendest."
           }
         }
       }
@@ -11881,16 +11822,6 @@
         }
       }
     },
-    "Ohana needs access to your reminders to write the shopping list into the list you choose and to keep it up to date. Nothing of your reminders goes to the server.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ohana braucht Zugriff auf deine Erinnerungen, um die Einkaufsliste in die Liste zu schreiben, die du auswählst, und sie aktuell zu halten. Nichts aus deinen Erinnerungen geht an den Server."
-          }
-        }
-      }
-    },
     "Ohana on %@ is signed out right away. It can be connected again.": {
       "localizations": {
         "de": {
@@ -11907,6 +11838,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ohana schreibt, was der Essensplan braucht, in eine Liste in Erinnerungen, jeden Artikel fällig an seinem Einkaufstag. Hake ab, ändere oder ergänze in Erinnerungen: Was du geändert hast, lässt Ohana in Ruhe."
+          }
+        }
+      }
+    },
+    "Ohana writes the shopping list into a list you choose; nothing of your reminders goes to the server.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohana schreibt die Einkaufsliste in eine Liste deiner Wahl; nichts aus deinen Erinnerungen geht an den Server."
           }
         }
       }
@@ -12087,16 +12028,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nur benachrichtigen, wenn ein Termin früher ist als der früheste bisher gesehene"
-          }
-        }
-      }
-    },
-    "Only possible when you are the last member.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nur möglich, wenn du das letzte Mitglied bist."
           }
         }
       }
@@ -12461,16 +12392,6 @@
         }
       }
     },
-    "Organize your recipes with tags.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Organisiere deine Rezepte mit Tags."
-          }
-        }
-      }
-    },
     "Origin": {
       "localizations": {
         "de": {
@@ -12627,16 +12548,6 @@
         }
       }
     },
-    "Part of Day": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tageszeit"
-          }
-        }
-      }
-    },
     "Part of a split booking": {
       "localizations": {
         "de": {
@@ -12663,16 +12574,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Teile und aufgeteilte Buchungen können nicht zu einer Umbuchung gehören"
-          }
-        }
-      }
-    },
-    "Parts of the text of “%@” are replaced.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Teile des Texts von „%@“ werden ersetzt."
           }
         }
       }
@@ -12927,16 +12828,6 @@
         }
       }
     },
-    "Pick 1–2 shopping days, at least 3 days apart.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1–2 Einkaufstage mit mind. 3 Tagen Abstand wählen."
-          }
-        }
-      }
-    },
     "Pick a Doctolib speciality.": {
       "localizations": {
         "de": {
@@ -12987,32 +12878,12 @@
         }
       }
     },
-    "Pick one or more, or write your own answer": {
+    "Pick the AI service you have an account with and paste its key (stored encrypted, never shown again). Load the models from the API or type one; it needs to support tool calls. Everyone in the family uses this setup.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wähle eine oder mehrere Antworten oder schreib deine eigene"
-          }
-        }
-      }
-    },
-    "Pick one, or write your own answer": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wähle eine Antwort oder schreib deine eigene"
-          }
-        }
-      }
-    },
-    "Pick the AI service you have an account with and paste its key. Everyone in the family uses this setup.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wähle den KI-Dienst, bei dem du ein Konto hast, und füge seinen Schlüssel ein. Die ganze Familie nutzt diese Einrichtung."
+            "value": "Wähle den KI-Dienst, bei dem du ein Konto hast, und füge seinen Schlüssel ein (verschlüsselt gespeichert, nie wieder angezeigt). Lade die Modelle von der API oder gib eins ein; es muss Tool-Aufrufe unterstützen. Alle in der Familie nutzen diese Einrichtung."
           }
         }
       }
@@ -13107,6 +12978,26 @@
         }
       }
     },
+    "Plan Settings…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Planeinstellungen …"
+          }
+        }
+      }
+    },
+    "Plan These Days Again…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Tage neu planen …"
+          }
+        }
+      }
+    },
     "Plan next week’s meals without fish.": {
       "localizations": {
         "de": {
@@ -13123,16 +13014,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Plan aufgefrischt"
-          }
-        }
-      }
-    },
-    "Plan these days again": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Diese Tage neu planen"
           }
         }
       }
@@ -13867,16 +13748,6 @@
         }
       }
     },
-    "Recipe photos": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rezeptfotos"
-          }
-        }
-      }
-    },
     "Recipe recognized": {
       "localizations": {
         "de": {
@@ -13903,16 +13774,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rezepte, die du auf einen Tag ziehen kannst"
-          }
-        }
-      }
-    },
-    "Recipes with these tags aren’t planned.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rezepte mit diesen Tags werden nicht eingeplant."
           }
         }
       }
@@ -13957,16 +13818,6 @@
         }
       }
     },
-    "Redo (⇧⌘Z)": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wiederholen (⇧⌘Z)"
-          }
-        }
-      }
-    },
     "Refresh": {
       "localizations": {
         "de": {
@@ -13993,16 +13844,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Neu laden"
-          }
-        }
-      }
-    },
-    "Remember this format for the next statement": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dieses Format für den nächsten Auszug merken"
           }
         }
       }
@@ -14203,16 +14044,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Das Foto von %@ entfernen?"
-          }
-        }
-      }
-    },
-    "Remove the statistic average?": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Statistischen Durchschnitt entfernen?"
           }
         }
       }
@@ -14547,16 +14378,6 @@
         }
       }
     },
-    "Return sends, Shift-Return starts a new line. Paste (⌘V) or drop screenshots and files.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Return sendet, Umschalt-Return beginnt eine neue Zeile. Screenshots und Dateien einfügen (⌘V) oder hier ablegen."
-          }
-        }
-      }
-    },
     "Revoke": {
       "localizations": {
         "de": {
@@ -14837,16 +14658,6 @@
         }
       }
     },
-    "Save Changes": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Änderungen sichern"
-          }
-        }
-      }
-    },
     "Save and Import All Transactions…": {
       "localizations": {
         "de": {
@@ -14937,12 +14748,12 @@
         }
       }
     },
-    "Saved on this device. Weekends are left out when filling, pasting or toggling ranges.": {
+    "Saved on this device.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wird auf diesem Gerät gespeichert. Wochenenden werden beim Füllen, Einfügen und Umschalten von Bereichen ausgelassen."
+            "value": "Wird auf diesem Gerät gespeichert."
           }
         }
       }
@@ -14993,16 +14804,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Speichert ein Rezept"
-          }
-        }
-      }
-    },
-    "Saving plans anew from today: the current meals are replaced.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Speichern plant ab heute neu: die aktuellen Mahlzeiten werden ersetzt."
           }
         }
       }
@@ -15327,16 +15128,6 @@
         }
       }
     },
-    "See all": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alle ansehen"
-          }
-        }
-      }
-    },
     "Select": {
       "localizations": {
         "de": {
@@ -15577,6 +15368,16 @@
         }
       }
     },
+    "Sent through Ohana’s notification service, which can’t read them.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gesendet über Ohanas Benachrichtigungsdienst, der sie nicht lesen kann."
+          }
+        }
+      }
+    },
     "Server": {
       "localizations": {
         "de": {
@@ -15647,16 +15448,6 @@
         }
       }
     },
-    "Set household figures from the statistics office in the finance settings": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Haushaltszahlen vom Statistikamt in den Finanz-Einstellungen festlegen"
-          }
-        }
-      }
-    },
     "Set it": {
       "localizations": {
         "de": {
@@ -15693,16 +15484,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Richte den Assistenten zuerst in den Einstellungen ein"
-          }
-        }
-      }
-    },
-    "Set up the assistant to sort the rest too": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Assistenten einrichten, um auch den Rest einzusortieren"
           }
         }
       }
@@ -15853,6 +15634,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Einkaufsliste"
+          }
+        }
+      }
+    },
+    "Shopping List…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einkaufsliste …"
           }
         }
       }
@@ -16027,16 +15818,6 @@
         }
       }
     },
-    "Show it again": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wieder anzeigen"
-          }
-        }
-      }
-    },
     "Show more (%lld left)": {
       "localizations": {
         "de": {
@@ -16157,22 +15938,22 @@
         }
       }
     },
-    "Sign in with your fingerprint, face or device PIN. A passkey belongs to your server’s address, so passkeys are added in a secure browser sheet of your server.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Anmelden mit Fingerabdruck, Gesicht oder Geräte-PIN. Ein Passkey gehört zur Adresse deines Servers, deshalb fügst du Passkeys in einem sicheren Browserfenster deines Servers hinzu."
-          }
-        }
-      }
-    },
     "Sign in with your fingerprint, face or device PIN. A passkey belongs to your server’s web address, so new ones are added on its web page.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Anmelden mit Fingerabdruck, Gesicht oder Geräte-PIN. Ein Passkey gehört zur Webadresse deines Servers, deshalb fügst du neue auf seiner Webseite hinzu."
+          }
+        }
+      }
+    },
+    "Sign in with your fingerprint, face or device PIN. Passkeys are added on your server’s page.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anmelden mit Fingerabdruck, Gesicht oder Geräte-PIN. Passkeys fügst du auf der Seite deines Servers hinzu."
           }
         }
       }
@@ -16297,16 +16078,6 @@
         }
       }
     },
-    "Signs this device out and deletes its token.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Meldet dieses Gerät ab und löscht sein Token."
-          }
-        }
-      }
-    },
     "Singing": {
       "localizations": {
         "de": {
@@ -16347,22 +16118,22 @@
         }
       }
     },
+    "Skip weekends, range and multi-select": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wochenenden auslassen, Bereich und Mehrfachauswahl"
+          }
+        }
+      }
+    },
     "Sleep": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Schlafen"
-          }
-        }
-      }
-    },
-    "Slots you marked as booked; they show in the calendar.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Termine, die ihr als gebucht eingetragen habt; sie stehen im Kalender."
           }
         }
       }
@@ -16443,26 +16214,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ordne unsere Buchungen ohne Kategorie passenden Kategorien zu."
-          }
-        }
-      }
-    },
-    "Sort the new transactions into categories (like similar ones, the rest with AI)": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die neuen Buchungen in Kategorien einsortieren (wie ähnliche, den Rest mit KI)"
-          }
-        }
-      }
-    },
-    "Sort the new transactions into categories like similar earlier ones": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die neuen Buchungen wie ähnliche frühere in Kategorien einsortieren"
           }
         }
       }
@@ -16951,16 +16702,6 @@
         }
       }
     },
-    "Stored encrypted on the server and never shown again.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wird verschlüsselt auf dem Server gespeichert und nie wieder angezeigt."
-          }
-        }
-      }
-    },
     "Street, ZIP city": {
       "localizations": {
         "de": {
@@ -17171,16 +16912,6 @@
         }
       }
     },
-    "Swipe left or right to switch steps": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wische nach links oder rechts zum Blättern"
-          }
-        }
-      }
-    },
     "Switch family": {
       "localizations": {
         "de": {
@@ -17317,6 +17048,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tags: %@"
+          }
+        }
+      }
+    },
+    "Tags…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tags …"
           }
         }
       }
@@ -17481,16 +17222,6 @@
         }
       }
     },
-    "Text is added at the end of “%@”.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Am Ende von „%@“ wird Text ergänzt."
-          }
-        }
-      }
-    },
     "That doesn’t look like an Ohana server address.": {
       "localizations": {
         "de": {
@@ -17617,16 +17348,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Der Assistent ist auf deinem Ohana-Server ausgeschaltet."
-          }
-        }
-      }
-    },
-    "The assistant may change the calendar, finances, meals and appointment searches for editors (most changes can be undone). Off: it only reads. For viewers it always only reads.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Der Assistent darf für Bearbeiter Kalender, Finanzen, Essen und Terminsuchen ändern (die meisten Änderungen lassen sich rückgängig machen). Aus: Er liest nur. Für Betrachter liest er immer nur."
           }
         }
       }
@@ -17961,16 +17682,6 @@
         }
       }
     },
-    "The meals module can make a photo of a recipe with an image model of the same API. Without one, the photo buttons stay hidden.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Das Essen-Modul kann mit einem Bildmodell derselben API ein Foto zu einem Rezept machen. Ohne Bildmodell bleiben die Foto-Knöpfe ausgeblendet."
-          }
-        }
-      }
-    },
     "The meals of every iteration are deleted and planned anew from today. This can’t be undone.": {
       "localizations": {
         "de": {
@@ -18087,16 +17798,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Das Original liegt im Wissensordner, der auf diesem Gerät nicht gewählt ist."
-          }
-        }
-      }
-    },
-    "The overview stops comparing with it; its figures are gone.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die Übersicht vergleicht nicht mehr damit; die Werte sind dann gelöscht."
           }
         }
       }
@@ -18271,42 +17972,12 @@
         }
       }
     },
-    "The share of meals from your favourites; the rest are recipes you want to try.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Der Anteil der Mahlzeiten aus deinen Favoriten; der Rest sind Rezepte, die du ausprobieren willst."
-          }
-        }
-      }
-    },
-    "The shopping list in Reminders": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die Einkaufsliste in Erinnerungen"
-          }
-        }
-      }
-    },
     "The sync failed.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Der Abgleich ist fehlgeschlagen."
-          }
-        }
-      }
-    },
-    "The tags of “%@” change.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die Tags von „%@“ ändern sich."
           }
         }
       }
@@ -18321,32 +17992,12 @@
         }
       }
     },
-    "The type takes the member’s color: their first type of the year has it, further ones a shade of it.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die Art bekommt die Farbe des Mitglieds: seine erste Art im Jahr genau diese, weitere eine Abstufung davon."
-          }
-        }
-      }
-    },
     "The whole family as a JSON file: the calendar of all years (entry types, entries, notes) and the finances (accounts, categories, transactions, settings). Viewers can export too.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Die ganze Familie als JSON-Datei: der Kalender aller Jahre (Eintragsarten, Einträge, Notizen) und die Finanzen (Konten, Kategorien, Buchungen, Einstellungen). Auch Betrachter können exportieren."
-          }
-        }
-      }
-    },
-    "The whole text of “%@” is replaced.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Der ganze Text von „%@“ wird ersetzt."
           }
         }
       }
@@ -18441,22 +18092,12 @@
         }
       }
     },
-    "These types belong to %@ – every year has its own. Changes are saved immediately. Copying from another year adds the types that %@ doesn’t have yet.": {
+    "These types belong to %@ – every year has its own.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Diese Arten gehören zu %@ – jedes Jahr hat eigene. Änderungen werden sofort gespeichert. Beim Übernehmen aus einem anderen Jahr kommen die Arten hinzu, die %@ noch nicht hat."
-          }
-        }
-      }
-    },
-    "They go through Ohana’s notification service, which can’t read them: only this device can. What is sent is chosen under Household → Notifications.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sie laufen über Ohanas Benachrichtigungsdienst, der sie nicht lesen kann: Das kann nur dieses Gerät. Was gesendet wird, legst du unter Haushalt → Benachrichtigungen fest."
+            "value": "Diese Arten gehören zu %@ – jedes Jahr hat eigene."
           }
         }
       }
@@ -18521,16 +18162,6 @@
         }
       }
     },
-    "This chat belongs to %@.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dieser Chat gehört zu %@."
-          }
-        }
-      }
-    },
     "This device": {
       "localizations": {
         "de": {
@@ -18561,12 +18192,12 @@
         }
       }
     },
-    "This device only. With a list shared in iCloud, everyone sees the items: then turn it on on one device.": {
+    "This device only; with a list shared in iCloud, turn it on on one device.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nur auf diesem Gerät. Bei einer in iCloud geteilten Liste sehen alle die Artikel: Schalte es dann auf einem Gerät ein."
+            "value": "Nur auf diesem Gerät; bei einer in iCloud geteilten Liste auf einem Gerät einschalten."
           }
         }
       }
@@ -18891,12 +18522,12 @@
         }
       }
     },
-    "To sort the transactions. Income categories show for money coming in, expense categories for money going out, “both” for both. Categories can have subcategories, as deep as you like: a subcategory has the kind of its top-level category, and a category’s totals include its subcategories.": {
+    "To sort the transactions; a category’s totals include its subcategories.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zum Einordnen der Buchungen. Einnahme-Kategorien erscheinen bei Geld, das hereinkommt, Ausgabe-Kategorien bei Geld, das hinausgeht, „beides“ bei beidem. Kategorien können Unterkategorien haben, beliebig tief: Eine Unterkategorie hat die Art ihrer obersten Kategorie, und die Summen einer Kategorie enthalten ihre Unterkategorien."
+            "value": "Zum Einordnen der Buchungen; die Summen einer Kategorie enthalten ihre Unterkategorien."
           }
         }
       }
@@ -19471,16 +19102,6 @@
         }
       }
     },
-    "Update plan": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Plan anpassen"
-          }
-        }
-      }
-    },
     "Upload Photo": {
       "localizations": {
         "de": {
@@ -19561,22 +19182,22 @@
         }
       }
     },
-    "Users and families of this server.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Benutzer und Familien dieses Servers."
-          }
-        }
-      }
-    },
     "Vaccination": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Impfung"
+          }
+        }
+      }
+    },
+    "Valid for 7 days, once.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einmal nutzbar, 7 Tage gültig."
           }
         }
       }
@@ -19721,16 +19342,6 @@
         }
       }
     },
-    "Watches Doctolib and jameda and tells you when an appointment frees up.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Beobachtet Doctolib und jameda und meldet sich, wenn ein Termin frei wird."
-          }
-        }
-      }
-    },
     "Web Page": {
       "localizations": {
         "de": {
@@ -19787,6 +19398,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wochentag des Monats"
+          }
+        }
+      }
+    },
+    "Weekdays": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wochentage"
           }
         }
       }
@@ -19867,16 +19488,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Worüber Ohana dich informiert"
-          }
-        }
-      }
-    },
-    "What do the roles do?": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Was bewirken die Rollen?"
           }
         }
       }
@@ -19981,6 +19592,16 @@
         }
       }
     },
+    "When": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wann"
+          }
+        }
+      }
+    },
     "When a search finds a new or earlier appointment. Each search chooses its channels.": {
       "localizations": {
         "de": {
@@ -20021,12 +19642,12 @@
         }
       }
     },
-    "Where Ohana sends news for the family, e.g. a newly free appointment. Tokens and passwords are stored encrypted.": {
+    "Where Ohana sends the family’s news, e.g. a newly free appointment.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wohin Ohana Neuigkeiten für die Familie schickt, z. B. einen frei gewordenen Termin. Tokens und Passwörter werden verschlüsselt gespeichert."
+            "value": "Wohin Ohana die Neuigkeiten der Familie schickt, z. B. einen frei gewordenen Termin."
           }
         }
       }
@@ -20107,16 +19728,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Welche Tage brauchen dieses Jahr noch Betreuung, und wer könnte sie übernehmen?"
-          }
-        }
-      }
-    },
-    "Which news go to the channels below. Each message is sent once; nothing repeats every day.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Welche Neuigkeiten an die Kanäle unten gehen. Jede Nachricht kommt einmal; nichts wiederholt sich täglich."
           }
         }
       }
@@ -20211,26 +19822,6 @@
         }
       }
     },
-    "With a keyboard, Return sends and Shift-Return starts a new line. Attach, paste or drop screenshots and files.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mit Tastatur sendet Return, Umschalt-Return beginnt eine neue Zeile. Screenshots und Dateien anhängen, einfügen oder hier ablegen."
-          }
-        }
-      }
-    },
-    "With any role: the whole family is away from home, the meal plan leaves these days out.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bei jeder Rolle: Die ganze Familie ist nicht zu Hause, der Essensplan lässt diese Tage aus."
-          }
-        }
-      }
-    },
     "With the link, %@ signs in with a new account or their existing one and keeps their birthday. Valid for 7 days, once.": {
       "localizations": {
         "de": {
@@ -20317,16 +19908,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Einen Blick wert: %@"
-          }
-        }
-      }
-    },
-    "Write %lld notes to the knowledge folder?": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld Notizen in den Wissensordner schreiben?"
           }
         }
       }
@@ -20491,16 +20072,6 @@
         }
       }
     },
-    "You can view this family only: its events and day entries go to the calendar you pick, nothing comes back. It syncs on this device while Ohana is open.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Du kannst diese Familie nur ansehen: Ihre Termine und Tageseinträge gehen in den gewählten Kalender, nichts kommt zurück. Abgeglichen wird auf diesem Gerät, während Ohana geöffnet ist."
-          }
-        }
-      }
-    },
     "You can’t remove your own administrator rights.": {
       "localizations": {
         "de": {
@@ -20591,16 +20162,6 @@
         }
       }
     },
-    "Your account has no password, so the change is confirmed with a passkey, in a secure browser sheet of your server.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dein Konto hat kein Passwort, deshalb bestätigst du die Änderung mit einem Passkey – in einem sicheren Browserfenster deines Servers."
-          }
-        }
-      }
-    },
     "Your account has no password, so the change is confirmed with a passkey. That works on the web page of your server.": {
       "localizations": {
         "de": {
@@ -20617,16 +20178,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dein Konto gehört noch zu keiner Familie. Öffne Ohana, um eine zu erstellen oder einer beizutreten."
-          }
-        }
-      }
-    },
-    "Your bank accounts, cash or cards. A transaction can belong to one; the balance is the opening balance plus all its transactions.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eure Bankkonten, Bargeld oder Karten. Eine Buchung kann zu einem gehören; der Kontostand ist der Anfangsstand plus alle seine Buchungen."
           }
         }
       }
@@ -20657,16 +20208,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Deine Familie hat noch keine Rezepte. So legst du los:"
-          }
-        }
-      }
-    },
-    "Your messages and the data the assistant looks at are sent to the AI API you set up above.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Deine Nachrichten und die Daten, die der Assistent ansieht, gehen an die oben eingerichtete KI-API."
           }
         }
       }
@@ -20731,16 +20272,6 @@
         }
       }
     },
-    "Zoom": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zoom"
-          }
-        }
-      }
-    },
     "Zoom In": {
       "localizations": {
         "de": {
@@ -20771,32 +20302,12 @@
         }
       }
     },
-    "Zoom in (⌘+)": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vergrößern (⌘+)"
-          }
-        }
-      }
-    },
     "Zoom out": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Verkleinern"
-          }
-        }
-      }
-    },
-    "Zoom out (⌘−)": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verkleinern (⌘−)"
           }
         }
       }
@@ -21805,16 +21316,6 @@
         }
       }
     },
-    "instructions for AI agents": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Anleitung für KI-Agenten"
-          }
-        }
-      }
-    },
     "last": {
       "localizations": {
         "de": {
@@ -22431,16 +21932,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "„%@“ wird mit seinen Nachrichten gelöscht. Was der Assistent geändert hat, bleibt, wie es ist."
-          }
-        }
-      }
-    },
-    "“%@” is created in %@.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "„%@“ wird in %@ angelegt."
           }
         }
       }

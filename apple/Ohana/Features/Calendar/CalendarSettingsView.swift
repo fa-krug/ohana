@@ -22,6 +22,12 @@ struct CalendarSettingsView: View {
     }
 }
 
+/// Settings → Calendar → Year view's weekdays: over `ohana.calendar.showWeekdays` and
+/// `CalendarWeekdayAlignment`.
+private enum CalendarWeekdays: Hashable {
+    case automatic, always, columns
+}
+
 private struct CalendarSettingsContent: View {
     @Environment(FamilyContext.self) private var family
     @Bindable var store: CalendarStore
@@ -31,13 +37,13 @@ private struct CalendarSettingsContent: View {
     @State private var holidays = CalendarHolidaysModel()
     @AppStorage("ohana.calendar.showWeekdays") private var alwaysWeekdays = false
     @AppStorage(CalendarWeekdayAlignment.key) private var alignWeekdays = false
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     var body: some View {
         LoadStateView(state: loadState, retry: { await store.load() }) { _ in
             Form {
                 typesSection
-                rolesSection
-                viewSection
+                if !compact { viewSection }
                 CalendarHolidaysSection(model: holidays)
                 AppleCalendarSyncSection(prompts: appleSync)
             }
@@ -126,23 +132,16 @@ private struct CalendarSettingsContent: View {
                 } label: {
                     Label("Add type", systemImage: "plus")
                 }
-                if store.types.isEmpty, let source = store.copySource {
-                    Button {
-                        perform { try await store.copyTypes(from: source) }
-                    } label: {
-                        Label("Copy types from \(String(source))", systemImage: "doc.on.doc")
-                    }
-                }
-                let others = (store.typeYears ?? []).filter { $0 != store.year }
-                if !others.isEmpty {
+                let years = copyYears
+                if !years.isEmpty {
                     Menu {
-                        ForEach(others.reversed(), id: \.self) { y in
+                        ForEach(years, id: \.self) { y in
                             Button(String(y)) {
                                 perform { try await store.copyTypes(from: y) }
                             }
                         }
                     } label: {
-                        Label("Copy from another year", systemImage: "calendar.badge.clock")
+                        Label("Copy from…", systemImage: "doc.on.doc")
                     }
                 }
             }
@@ -152,9 +151,19 @@ private struct CalendarSettingsContent: View {
             if store.isViewer {
                 Text("Only editors of the family can change entry types.")
             } else {
-                Text("These types belong to \(String(store.year)) – every year has its own. Changes are saved immediately. Copying from another year adds the types that \(String(store.year)) doesn’t have yet.")
+                Text("These types belong to \(String(store.year)) – every year has its own.")
             }
         }
+    }
+
+    /// The years to copy types from, the closest first (`copySource`, the one an empty year
+    /// starts with, before the others).
+    private var copyYears: [Int] {
+        let year = store.year
+        let others = (store.typeYears ?? []).filter { $0 != year }
+            .sorted { (abs($0 - year), -$0) < (abs($1 - year), -$1) }
+        guard let first = store.copySource else { return others }
+        return [first] + others.filter { $0 != first }
     }
 
     private func typeRow(_ type: CalendarEntryType, index: Int, stats: CalendarTypeStats) -> some View {
@@ -219,42 +228,37 @@ private struct CalendarSettingsContent: View {
         }
     }
 
-    private var rolesSection: some View {
-        Section {
-            DisclosureGroup("What do the roles do?") {
-                ForEach([CalendarRole.needsCover, .covers, .dayOff, .none]) { role in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(role.title).font(.subheadline.weight(.semibold))
-                        Text(role.help).font(.caption).foregroundStyle(.secondary)
-                    }
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Away").font(.subheadline.weight(.semibold))
-                    Text("With any role: the whole family is away from home, the meal plan leaves these days out.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-    }
-
+    /// The year grid's weekday letters: by the zoom, always, or in columns (aligned, the header
+    /// names them). One choice over the two stored settings. The phone never shows the year grid.
     private var viewSection: some View {
         Section {
-            Toggle("Skip weekends", isOn: $store.skipWeekends)
-            #if os(macOS)
-            Toggle("Always show weekdays", isOn: $alwaysWeekdays)
-                .disabled(alignWeekdays)  // aligned, the header names them
-            Toggle("Align weekdays", isOn: $alignWeekdays)
-            #else
-            Toggle("Always show weekdays in the year view", isOn: $alwaysWeekdays)
-                .disabled(alignWeekdays)
-            Toggle("Align weekdays in the year view", isOn: $alignWeekdays)
-            #endif
+            Picker("Weekdays", selection: weekdays) {
+                Text("Automatic").tag(CalendarWeekdays.automatic)
+                Text("Always").tag(CalendarWeekdays.always)
+                Text("In columns").tag(CalendarWeekdays.columns)
+            }
         } header: {
             Text("Calendar view")
         } footer: {
-            Text("Saved on this device. Weekends are left out when filling, pasting or toggling ranges.")
+            Text("Saved on this device.")
         }
+    }
+
+    private var weekdays: Binding<CalendarWeekdays> {
+        Binding(get: {
+            alignWeekdays ? .columns : alwaysWeekdays ? .always : .automatic
+        }, set: { choice in
+            alignWeekdays = choice == .columns
+            if choice != .columns { alwaysWeekdays = choice == .always }
+        })
+    }
+
+    private var compact: Bool {
+        #if os(iOS)
+        sizeClass == .compact
+        #else
+        false
+        #endif
     }
 
 }
@@ -297,20 +301,8 @@ struct CalendarTypeEditor: View {
             Section {
                 memberRow(nil)
                 ForEach(store.members) { memberRow($0) }
-                if memberId != nil {
-                    LabeledContent("Color") {
-                        RoundedRectangle(cornerRadius: 5)
-                            .fill(previewColor)
-                            .frame(width: 22, height: 22)
-                            .accessibilityHidden(true)
-                    }
-                }
             } header: {
                 Text("Member")
-            } footer: {
-                if memberId != nil {
-                    Text("The type takes the member’s color: their first type of the year has it, further ones a shade of it.")
-                }
             }
             if memberId == nil {
                 Section {
@@ -413,10 +405,8 @@ struct CalendarTypeEditor: View {
         .accessibilityAddTraits(memberId == member?.id ? .isSelected : [])
     }
 
-    /// The type's color as it stands; for another member theirs (a nobody's type the color chosen
-    /// here), until the server works out the shade.
-    private var previewColor: Color { Color(calendarHex: previewHex) }
-
+    /// The type's color as it stands (the Icon section's preview): for another member theirs (a
+    /// nobody's type the color chosen here), until the server works out the shade.
     private var previewHex: String {
         if memberId == type.memberId && (memberId != nil || colorKey == type.colorKey) { return type.color }
         if memberId == nil { return MemberColor(key: colorKey)?.hex ?? "#8e8e93" }

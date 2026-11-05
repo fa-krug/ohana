@@ -362,7 +362,7 @@ private struct RecipeIngredientRowEditor: View {
 }
 
 /// One step: for the machine its program and settings, the instruction, and which part of
-/// the recipe's ingredients goes in.
+/// the recipe's ingredients goes in (added from the step's ••• menu).
 private struct RecipeStepEditor: View {
     @Binding var step: RecipeEditorModel.StepRow
     let number: Int
@@ -379,12 +379,18 @@ private struct RecipeStepEditor: View {
                 Text("Step \(number)").font(.subheadline.weight(.semibold))
                 Spacer()
                 Menu {
+                    if let first = ingredients.first {
+                        Button("Add ingredient to step", systemImage: "plus") {
+                            step.shares.append(.init(ingredientRowID: first.id))
+                        }
+                        Divider()
+                    }
                     Button("Move up", systemImage: "arrow.up") { move(-1) }.disabled(!canMoveUp)
                     Button("Move down", systemImage: "arrow.down") { move(1) }.disabled(!canMoveDown)
                     Divider()
                     Button("Remove", systemImage: "trash", role: .destructive, action: remove)
                 } label: {
-                    Image(systemName: "ellipsis")
+                    Label("More", systemImage: "ellipsis").labelStyle(.iconOnly)
                 }
                 .menuStyle(.borderlessButton)
                 .fixedSize()
@@ -445,15 +451,6 @@ private struct RecipeStepEditor: View {
                 .buttonStyle(.borderless)
                 .accessibilityLabel("Remove")
             }
-        }
-        if let first = ingredients.first {
-            Button {
-                step.shares.append(.init(ingredientRowID: first.id))
-            } label: {
-                Label("Add ingredient to step", systemImage: "plus")
-                    .font(.callout)
-            }
-            .buttonStyle(.borderless)
         }
     }
 

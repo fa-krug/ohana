@@ -1,9 +1,11 @@
 import SwiftUI
 
-/// Notifications on this device (`PushNotifications`): on or off, which of the account's
-/// families, a test. Shown only when the server pushes through this build's relay; the events and
-/// channels are the family's (Settings → Household → Notifications).
+/// Notifications on this device (`PushNotifications`), the top of Household → Notifications: on
+/// or off, this family's on this device (when the account has more than one), a test. Shown only
+/// when the server pushes through this build's relay, to viewers too.
 struct PushSettingsSection: View {
+    /// The family whose page this is.
+    let family: FamilySummary
     @Environment(AppModel.self) private var app
     @State private var push = PushNotifications.shared
     @State private var testing = false
@@ -27,24 +29,20 @@ struct PushSettingsSection: View {
                 .disabled(push.busy)
 
                 if push.isOn, push.device?.registered == true {
+                    // With one family, the switch above says it all.
                     if app.families.count > 1 {
-                        ForEach(app.families) { family in
-                            Toggle(isOn: Binding(
-                                get: { push.device?.mutedFamilyIds.contains(family.id) != true },
-                                set: { on in
-                                    Task {
-                                        do {
-                                            try await push.setMuted(family.id, muted: !on, client: client)
-                                        } catch {
-                                            ErrorBanner.shared.show(error.localizedDescription)
-                                        }
+                        Toggle("From this family", isOn: Binding(
+                            get: { push.device?.mutedFamilyIds.contains(family.id) != true },
+                            set: { on in
+                                Task {
+                                    do {
+                                        try await push.setMuted(family.id, muted: !on, client: client)
+                                    } catch {
+                                        ErrorBanner.shared.show(error.localizedDescription)
                                     }
                                 }
-                            )) {
-                                Text(verbatim: family.name)
                             }
-                            .padding(.leading, 12)
-                        }
+                        ))
                     }
                     Button {
                         test(client)
@@ -58,9 +56,9 @@ struct PushSettingsSection: View {
                     .disabled(testing)
                 }
             } header: {
-                Text("Notifications")
+                Text("This device")
             } footer: {
-                Text("They go through Ohana’s notification service, which can’t read them: only this device can. What is sent is chosen under Household → Notifications.")
+                Text("Sent through Ohana’s notification service, which can’t read them.")
             }
             .task(id: ObjectIdentifier(client)) { await push.load(client: client, info: app.serverInfo) }
         }

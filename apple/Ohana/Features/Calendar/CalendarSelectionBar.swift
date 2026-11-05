@@ -10,14 +10,13 @@ let calendarTouchInput: Bool = {
     #endif
 }()
 
-/// The selection's actions: note, clear, event, repeat, skip weekends and (touch) the range and
-/// multi-select modes. Editors only: viewers have none (their details button is in the bar's
-/// header). `compact` (the phone's bar): icons only, the modes in one menu, so they fit a row.
+/// The selection's actions: note, clear, event, repeat, and a menu with skip weekends and (touch)
+/// the range and multi-select modes. Editors only: viewers have none (their details button is in
+/// the bar's header).
 struct CalendarSelectionActions: View {
     @Bindable var store: CalendarStore
     let actions: CalendarActions
     var touch: Bool
-    var compact = false
 
     var body: some View {
         if !store.readOnly {
@@ -31,17 +30,16 @@ struct CalendarSelectionActions: View {
             }
             Button("Clear", systemImage: "eraser") { store.clearSelectedDays() }
                 .help("Remove all entries from the selected days (Delete)")
-            if compact {
-                Menu {
-                    modes
-                } label: {
-                    Label("More", systemImage: modeIcon ?? "ellipsis")
-                }
-                .menuIndicator(.hidden)
-                .tint(modeIcon == nil ? nil : .accentColor)
-            } else {
-                modes.toggleStyle(.button)
+            // The modes in one menu on every size, its icon showing a mode that is on.
+            Menu {
+                modes
+            } label: {
+                Label("More", systemImage: modeIcon ?? "ellipsis")
             }
+            .menuIndicator(.hidden)
+            .labelStyle(.iconOnly)
+            .tint(modeIcon == nil ? nil : .accentColor)
+            .help(touch ? LocalizedStringKey("Skip weekends, range and multi-select") : LocalizedStringKey("Skip weekends"))
         }
     }
 
@@ -121,7 +119,7 @@ struct CalendarSelectionBar: View {
             if !days.isEmpty && store.fill == nil && !store.readOnly {
                 if showDetails {
                     HStack(spacing: 10) {
-                        CalendarSelectionActions(store: store, actions: actions, touch: calendarTouchInput, compact: true)
+                        CalendarSelectionActions(store: store, actions: actions, touch: calendarTouchInput)
                     }
                     .labelStyle(.iconOnly)
                     .font(.body.weight(.medium))
@@ -190,9 +188,7 @@ struct CalendarSelectionBar: View {
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
             }
-        } else if store.readOnly {
-            Text("View only").font(.caption).foregroundStyle(.secondary)
-        } else if selections < Self.hintedSelections {
+        } else if !store.readOnly && selections < Self.hintedSelections {
             Text(calendarTouchInput ? LocalizedStringKey("Tap a day to select it – long-press and drag for a range.")
                                     : LocalizedStringKey("Click or drag over days to select them. Shift-click extends, ⌘-click adds days."))
                 .font(.caption)

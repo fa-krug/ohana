@@ -2,10 +2,12 @@ import SwiftUI
 
 /// All settings in one place, like the system's Settings: the account (a card that opens its
 /// page) on top, then the family's (the web app's settings page with its tabs: the name, the
-/// household (members, people without an account and invites; the home address; notifications),
-/// links to the modules' settings (the shopping list in Reminders and the knowledge folder among them, this device's), export / import, and leaving or deleting the family; viewers
-/// see them read-only), this device's, and the server's administration for administrators. The
-/// settings of a module the server has off don't show.
+/// household (members, people without an account and invites; the home address; notifications,
+/// this device's push notifications among them), links to the modules' settings (the shopping
+/// list in Reminders and the knowledge folder among them, this device's), export / import with
+/// leaving or deleting the family (deleting only for its last member); viewers see them
+/// read-only), this device's, and the server's administration for administrators. The settings of
+/// a module the server has off don't show.
 struct FamilySettingsView: View {
     @Environment(FamilyContext.self) private var family
     @State private var model = FamilySettingsModel()
@@ -279,39 +281,26 @@ private struct FamilySettingsForm: View {
                 } label: {
                     FamilySettingsLabel(title: "Export and import", systemImage: "externaldrive.fill", tint: .teal)
                 }
-            }
-
-            Section {
                 if memberCount > 1 {
                     Button("Leave the family", role: .destructive) { confirmLeave = true }
                         .disabled(model.state.isSaved)
                 }
-                if household.canEdit {
+                // Only its last member deletes a family.
+                if household.canEdit, memberCount <= 1 {
                     Button("Delete the family", role: .destructive) { confirmDelete = true }
-                        .disabled(memberCount > 1 || model.state.isSaved)
-                }
-            } header: {
-                Text("Leave or delete")
-            } footer: {
-                if household.canEdit && memberCount > 1 {
-                    Text("Only possible when you are the last member.")
+                        .disabled(model.state.isSaved)
                 }
             }
 
             DeviceSettingsSection()
-            PushSettingsSection()
 
             if app.me?.isAdmin == true, !app.isDemo {
-                Section {
+                Section("Server") {
                     NavigationLink {
                         AdminView().assistantButton()
                     } label: {
                         FamilySettingsLabel(title: "Administration", systemImage: "person.badge.shield.checkmark", tint: .indigo)
                     }
-                } header: {
-                    Text("Server")
-                } footer: {
-                    Text("Users and families of this server.")
                 }
             }
         }

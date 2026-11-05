@@ -272,7 +272,9 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   fields; one field "IBAN or card number"; "Balance differs: Bank … · Ohana …" when the link's
   `balanceCents` isn't the account's balance; after *Import All* the opening field takes the new
   value), `FinanceIntake` (pure: Import CSV, Sync of the shown
-  account, or a menu of both; the CSV sheet leaves linked accounts out), `FinanceBankSyncSheet`
+  account; with Scan Receipt first they're the iPad / Mac toolbar's *Add from…* menu and the
+  import section of the iPhone's More; the CSV sheet leaves linked accounts out; an import always
+  remembers its format and sorts into categories, no toggles), `FinanceBankSyncSheet`
   (starts the sync, polls it every second: push / photoTAN / SMS TAN, then the CSV import's sort
   into categories; `full`: the account editor's *Import All Transactions*, after a confirmation,
   shows the adopted / added / unmatched counts and "Opening balance set to …" (was …); the rows show their `source` as an icon,
@@ -650,8 +652,9 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   a narrow iPad window) a family page behind the tabs as in Mail (`FamilySidebar.swift`:
   `FamilySidebarHost` slides the tabs away, `AppModel.showsFamilySidebar`; the toolbar's family
   button or a swipe from the leading edge, which a UIKit edge pan only takes while a module root is
-  on screen, `moduleRootsOnScreen`, so it stays "back" on pushed pages; families with new / join, every
-  page of the shell with the tab on screen highlighted, scanning a letter, the settings), assistant `.inspector` ⌘J (a `.sheet` on
+  on screen, `moduleRootsOnScreen`, so it stays "back" on pushed pages; families with one *Add Family*
+  menu (new / join), on iPhone only the pages that aren't tabs (`Module.phonePages`; a compact iPad
+  lists every page) with the one on screen highlighted, scanning a letter, the settings), assistant `.inspector` ⌘J (a `.sheet` on
   iPhone: an inspector there breaks the tabs' navigation bars), toggled by the ✨ button at the top
   right of every page: module roots get it from `shellToolbar()`, a page pushed onto a module's
   stack adds `.assistantButton()`; and its own
@@ -678,8 +681,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   Chores (`Features/Chores/`): `ChoresView` shows one day (a day bar under the navigation bar:
   back / forward, date picker, Today) in Morning / Day / Evening sections, Overdue on top on today,
   from `GET /chores` + `GET /chores/agenda` (62-day windows from today − 30, `ChoreAgenda.window`);
-  rows tick an occurrence off (`POST …/done`, `day` for repeating ones) and toggle the caller's
-  notification bell (`…/subscribe`). Local-first, without sync indicators: `ChoresStore` (one per
+  rows tick an occurrence off (`POST …/done`, `day` for repeating ones) and show a bell while the
+  caller is subscribed (`…/subscribe`: context menu, leading swipe, editor). Local-first, without sync indicators: `ChoresStore` (one per
   family, `FamilyContext.chores`, shared by the pages and the editor) shows the `ResponseCache`
   copies at once and refreshes silently (appear, active, reconnect, `didChange(.chores)`); changes
   (`ChoreChange`: create with a client-made `id` (a 409 counts as done), update, delete, done,
@@ -689,8 +692,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   Support `Ohana/Chores/` (`queueFile`, removed on sign out / pairing) sent in order (after each
   change, at launch / active via `AppModel.sendQueuedChanges`, reconnect); a 4xx drops the change
   and reloads, a network failure retries with backoff. `ChoresAllView` lists every chore by part;
-  `ChoreEditor` (saves and closes at once; part of day, or a
-  time that decides it, repeat via `RepeatEditing`, Notify: the family's accounts, the signed-in
+  `ChoreEditor` (saves and closes at once; one *When* picker: a part of day or At a Time,
+  `ChoreWhen`, repeat via `RepeatEditing`, Notify: the family's accounts, the signed-in
   user ticked on a new chore; viewers get only "Notify me"). Kept lean: no explanatory footers.
   A chore notification's `/f/{id}/chores/{choreId}?day=` opens that day and highlights it
   (`AppRoute.chore(id:day:)`).
@@ -702,13 +705,13 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   reminder only while its title is still Ohana's, items gone from the plan are removed likewise,
   deleted ones don't come back); `ShoppingRemindersUpdates` in `AppShell` syncs on becoming
   active, a family switch and meals changes; set up in `Features/Meals/Reminders/` (Settings →
-  Shopping List, the meal plan's toolbar). Off in the demo. The assistant's Reminders card
+  Shopping List, the meal plan's More menu). Off in the demo. The assistant's Reminders card
   (`edit_reminders`) applies its ops through `RemindersStore` too. Its Calendar card
   (`edit_apple_calendar`, `Features/Assistant/AssistantAppleCalendar.swift`) applies through
   `Core/Calendar/DeviceCalendarStore.swift` (EventKit behind a protocol; read-only access check,
   the assistant never asks for it); every chat request carries `appleCalendar` next to `reminders`.
-  Its Notes card (`edit_knowledge_notes`, `Features/Assistant/AssistantNotes.swift`) asks in a
-  confirmation dialog, then writes into the linked knowledge folder (`FamilyContext.assistantNotes`):
+  Its Notes card (`edit_knowledge_notes`, `Features/Assistant/AssistantNotes.swift`) writes on
+  Apply (no further dialog) into the linked knowledge folder (`FamilyContext.assistantNotes`):
   coordinated atomic UTF-8 writes, a create never overwrites, an update only while the file's
   SHA-256 is `baseHash` (its Finder tags kept unless new ones are given), each written note queued
   with its text (`KnowledgeIndexer.enqueue`), tags-only changes by a forced folder read.
@@ -790,8 +793,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   whole series shifts its BYDAY), `CalendarEventText` (how a multi-day event reads on each day);
   `CalendarStore` snapshots the series (`GET /events/{id}`) before a change for undo.
   The wide calendar (iPad, Mac): from `CalendarLayoutRule.sideColumnFrom` the selected days' details
-  are a column beside the grid, below it narrower (capped at `detailsMaxWidth`); zoom is in the
-  toolbar. The year grid can align weekdays (`CalendarWeekdayAlignment`, 37 columns: every
+  are a column beside the grid, below it narrower (capped at `detailsMaxWidth`); zoom is in More,
+  pinch, ⌘+/−/0 and the Calendar menu (the toolbar: year, Year / Month, Undo, More). The year grid can align weekdays (`CalendarWeekdayAlignment`, 37 columns: every
   consumer finds days through `CalendarGridLayout.Year`); under it `CalendarLegend` lists the year's
   types, a click highlights one (`CalendarStore.highlightedTypes`, other days `Info.dimmed`, Esc
   clears). Days before today are faded, nobody's gray types drawn darker in dark mode
@@ -839,7 +842,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   The knowledge base page (`Module.knowledge`, ⌘9; shown where `FamilyContext.isEnabled(.knowledge)` /
   `AppModel.isEnabled` say `knowledgeAvailable`, `ServerInfo.isEnabled` only says the server has it;
   the demo hides it for now): `Features/Knowledge/KnowledgeView.swift`, `GET /knowledge/documents`
-  (`KnowledgeDocumentQuery`: a tag (chips from `/knowledge/tags`), a folder (subfolders of the paths
+  (`KnowledgeDocumentQuery`: a tag (one menu chip from `/knowledge/tags`), a folder (subfolders of the paths
   seen), a person (`/household`'s members), *Show Left Out* = `status=excluded`; `nextCursor` pages;
   no search field of its own: documents are found by the search page), a list in a 680 pt column
   (`KnowledgeView.columnWidth`, the filter chips' bar as wide), rows with the name, whose it is

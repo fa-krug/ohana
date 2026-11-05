@@ -4,12 +4,11 @@ import AVFAudio
 import Speech
 #endif
 
-/// Speaking a message into the composer (the mic button). On the Mac it starts the system's
-/// dictation in the focused composer (Edit → Start Dictation, no permission needed). On iPhone
-/// and iPad it listens with the Speech framework and writes what it hears into the composer as
-/// it comes; that needs `NSMicrophoneUsageDescription` and `NSSpeechRecognitionUsageDescription`
-/// in the app's Info.plist; without them the button stays hidden (the keyboard has its own
-/// dictation).
+/// Speaking a message into the composer (the mic button, iPhone and iPad only: on the Mac the
+/// system's Edit ▸ Start Dictation works in the composer as in any field). It listens with the
+/// Speech framework and writes what it hears into the composer as it comes; that needs
+/// `NSMicrophoneUsageDescription` and `NSSpeechRecognitionUsageDescription` in the app's
+/// Info.plist; without them the button stays hidden (the keyboard has its own dictation).
 @Observable
 final class AssistantDictation {
     /// Listening right now (iOS).
@@ -17,7 +16,7 @@ final class AssistantDictation {
 
     static var isAvailable: Bool {
         #if os(macOS)
-        true
+        false
         #else
         Bundle.main.object(forInfoDictionaryKey: "NSMicrophoneUsageDescription") != nil
             && Bundle.main.object(forInfoDictionaryKey: "NSSpeechRecognitionUsageDescription") != nil
@@ -30,16 +29,7 @@ final class AssistantDictation {
         return base.last?.isWhitespace == true ? base + heard : base + " " + heard
     }
 
-    #if os(macOS)
-    /// Starts the system's dictation in the composer (it must have the focus).
-    func start() {
-        Task {
-            // The composer takes the focus first.
-            try? await Task.sleep(for: .milliseconds(80))
-            NSApp.sendAction(Selector(("startDictation:")), to: nil, from: nil)
-        }
-    }
-    #else
+    #if os(iOS)
     @ObservationIgnored private var engine: AVAudioEngine?
     @ObservationIgnored private var request: SFSpeechAudioBufferRecognitionRequest?
     @ObservationIgnored private var task: SFSpeechRecognitionTask?

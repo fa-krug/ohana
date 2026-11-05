@@ -41,7 +41,6 @@ struct FinanceSettingsForm: View {
     @State private var sheet: FinanceSettingsSheet?
     @State private var deletingCategory: FinanceCategory?
     @State private var deletingAccount: FinanceAccount?
-    @State private var deletingMapping: String?
     @State private var clearing = false
 
     static let currencies = ["EUR", "USD", "GBP", "CHF", "SEK", "NOK", "DKK", "PLN", "CZK", "HUF", "JPY", "CAD", "AUD"]
@@ -90,13 +89,6 @@ struct FinanceSettingsForm: View {
         } message: { _ in
             Text("All its transactions are deleted as well. This can’t be undone.")
         }
-        .confirmationDialog("Delete this bank format?",
-                            isPresented: Binding { deletingMapping != nil } set: { if !$0 { deletingMapping = nil } },
-                            titleVisibility: .visible, presenting: deletingMapping) { signature in
-            Button("Delete", role: .destructive) { Task { await store.deleteMapping(signature) } }
-        } message: { _ in
-            Text("The next import of this bank’s files asks again how their columns map.")
-        }
         .confirmationDialog("Delete all finance data?", isPresented: $clearing, titleVisibility: .visible) {
             Button("Delete all finance data", role: .destructive) { Task { await store.clearAll() } }
         } message: {
@@ -130,11 +122,18 @@ struct FinanceSettingsForm: View {
                              ?? String(localized: "Not set"))
                     }
                 }
+                // Only once an import saved one (editors: deleting is all there is to do).
+                if store.canEdit, let saved = store.overview?.mappings, !saved.isEmpty {
+                    NavigationLink {
+                        FinanceMappingsView(store: store).assistantButton()
+                    } label: {
+                        LabeledContent("Saved bank formats") { Text(saved.count, format: .number) }
+                    }
+                }
             } footer: {
                 Text("Figures the overview measures your months against, e.g. household spending according to the statistics office.")
             }
             if store.canEdit {
-                mappings
                 Section {
                     Button("Delete all finance data", systemImage: "trash", role: .destructive) { clearing = true }
                 } header: {
@@ -196,7 +195,7 @@ struct FinanceSettingsForm: View {
         } header: {
             Text("Accounts")
         } footer: {
-            Text("Your bank accounts, cash or cards. A transaction can belong to one; the balance is the opening balance plus all its transactions.")
+            Text("Bank accounts, cash or cards; a balance is the opening balance plus the account’s transactions.")
         }
     }
 
@@ -207,14 +206,16 @@ struct FinanceSettingsForm: View {
             }
             if store.canEdit {
                 Button("Add category", systemImage: "plus") { sheet = .newCategory(parent: nil) }
-                Button("Add default categories", systemImage: "square.stack.3d.down.right") {
-                    Task { await store.addDefaultCategories() }
+                if store.categories.isEmpty {
+                    Button("Add default categories", systemImage: "square.stack.3d.down.right") {
+                        Task { await store.addDefaultCategories() }
+                    }
                 }
             }
         } header: {
             Text("Categories")
         } footer: {
-            Text("To sort the transactions. Income categories show for money coming in, expense categories for money going out, “both” for both. Categories can have subcategories, as deep as you like: a subcategory has the kind of its top-level category, and a category’s totals include its subcategories.")
+            Text("To sort the transactions; a category’s totals include its subcategories.")
         }
     }
 
@@ -282,35 +283,53 @@ struct FinanceSettingsForm: View {
             }
         }
     }
+}
 
-    private var mappings: some View {
-        Section {
-            let saved = store.overview?.mappings ?? []
-            if saved.isEmpty {
-                Text("None yet: the import remembers the format of a bank’s files.").foregroundStyle(.secondary)
-            }
-            ForEach(saved, id: \.signature) { m in
-                HStack {
-                    Text(m.signature)
-                        .font(.caption.monospaced())
-                        .lineLimit(2)
-                    Spacer()
-                    Button {
-                        deletingMapping = m.signature
-                    } label: {
-                        Label("Delete", systemImage: "trash")
-                            .labelStyle(.iconOnly)
-                            .frame(minWidth: 44, minHeight: 44)
-                            .contentShape(.rect)
-                    }
-                    .buttonStyle(.borderless)
-                    .help("Delete this bank format")
+/// The CSV formats the import saved per bank (editors): deleting one sets it up anew at the
+/// bank's next import.
+struct FinanceMappingsView: View {
+    @Bindable var store: FinanceStore
+    @State private var deleting: String?
+
+    var body: some View {
+        Form {
+            Section {
+                let saved = store.overview?.mappings ?? []
+                if saved.isEmpty {
+                    Text("None yet: the import remembers the format of a bank’s files.").foregroundStyle(.secondary)
                 }
+                ForEach(saved, id: \.signature) { m in
+                    HStack {
+                        Text(m.signature)
+                            .font(.caption.monospaced())
+                            .lineLimit(2)
+                        Spacer()
+                        Button {
+                            deleting = m.signature
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                                .labelStyle(.iconOnly)
+                                .frame(minWidth: 44, minHeight: 44)
+                                .contentShape(.rect)
+                        }
+                        .buttonStyle(.borderless)
+                        .help("Delete this bank format")
+                    }
+                }
+            } footer: {
+                Text("How the columns of a bank’s CSV files map, recognized by the header row. Remove one to set it up anew at the next import.")
             }
-        } header: {
-            Text("Saved bank formats")
-        } footer: {
-            Text("How the columns of a bank’s CSV files map, recognized by the header row. Remove one to set it up anew at the next import.")
+        }
+        .formStyle(.grouped)
+        .readableWidth()
+        .ohanaBackground(ModuleTint.finance)
+        .navigationTitle("Saved bank formats")
+        .confirmationDialog("Delete this bank format?",
+                            isPresented: Binding { deleting != nil } set: { if !$0 { deleting = nil } },
+                            titleVisibility: .visible, presenting: deleting) { signature in
+            Button("Delete", role: .destructive) { Task { await store.deleteMapping(signature) } }
+        } message: { _ in
+            Text("The next import of this bank’s files asks again how their columns map.")
         }
     }
 }
@@ -646,10 +665,9 @@ struct FinanceCategoryEditor: View {
                             ForEach(FinanceCategoryKind.allCases) { Text($0.title).tag($0) }
                         }
                     } else if let top = store.category(store.tree.top(of: parentId)) {
+                        // A subcategory has the kind of its top-level category.
                         LabeledContent("Kind", value: top.kind.title)
                     }
-                } footer: {
-                    Text("A subcategory has the kind of its top-level category.")
                 }
             }
             .disabled(!store.canEdit)
@@ -722,7 +740,6 @@ struct FinanceBenchmarkEditor: View {
     @State private var expense = FinanceRangeDraft()
     @State private var categories: [String: FinanceRangeDraft] = [:]
     @State private var busy = false
-    @State private var removing = false
     @State private var loaded: FinanceBenchmark??
 
     var body: some View {
@@ -760,10 +777,9 @@ struct FinanceBenchmarkEditor: View {
                         }
                     }
                     .disabled(busy || draft == nil)
-                    if saved != nil {
-                        Button("Remove", systemImage: "trash", role: .destructive) { removing = true }
-                            .disabled(busy)
-                    }
+                } footer: {
+                    // Saving without any amount removes it (`Made.isEmpty`).
+                    if saved != nil { Text("Leave all amounts empty to remove it.") }
                 }
             }
         }
@@ -771,17 +787,6 @@ struct FinanceBenchmarkEditor: View {
         .readableWidth()
         .disabled(!store.canEdit)
         .navigationTitle("Statistic average")
-        .confirmationDialog("Remove the statistic average?", isPresented: $removing, titleVisibility: .visible) {
-            Button("Remove", role: .destructive) {
-                Task {
-                    busy = true
-                    await store.setBenchmark(nil)
-                    busy = false
-                }
-            }
-        } message: {
-            Text("The overview stops comparing with it; its figures are gone.")
-        }
         .onAppear { fill(saved) }
         .onChange(of: saved) { _, value in fill(value) }
     }

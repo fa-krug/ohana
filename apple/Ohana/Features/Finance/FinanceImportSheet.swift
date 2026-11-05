@@ -75,8 +75,9 @@ struct FinanceImportSheet: View {
     @State private var parsed = Parsed()
     @State private var accountId: String?
     @State private var auto = true
-    @State private var remember = true
-    @State private var categorize = true
+    /// The file format's settings (character set, delimiter, …): folded away unless the file
+    /// can't be read with them.
+    @State private var showsFormat = false
     @State private var duplicates: Set<Int> = []
     @State private var transfers = 0
     @State private var splits = 0
@@ -175,22 +176,28 @@ struct FinanceImportSheet: View {
             let binding = Binding { mapping } set: { self.mapping = $0 }
             Section {
                 LabeledContent("File", value: fileName)
-                Picker("Character set", selection: binding.encoding) {
-                    ForEach(FinanceCSVEncoding.allCases, id: \.self) { Text($0.title).tag($0) }
+                DisclosureGroup("File format", isExpanded: $showsFormat) {
+                    Picker("Character set", selection: binding.encoding) {
+                        ForEach(FinanceCSVEncoding.allCases, id: \.self) { Text($0.title).tag($0) }
+                    }
+                    Picker("Delimiter", selection: binding.delimiter) {
+                        ForEach(FinanceCSV.delimiters, id: \.0) { Text(verbatim: $0.1).tag($0.0) }
+                    }
+                    Stepper(value: binding.skipRows, in: 0...50) {
+                        LabeledContent("Rows before the table", value: "\(mapping.skipRows)")
+                    }
+                    Toggle("First row holds the column names", isOn: binding.hasHeader)
+                    Picker("Date format", selection: binding.dateFormat) {
+                        ForEach(FinanceDateFormat.allCases, id: \.self) { Text(verbatim: $0.rawValue).tag($0) }
+                    }
+                    Picker("Number format", selection: binding.decimal) {
+                        Text(verbatim: "1.234,56").tag(",")
+                        Text(verbatim: "1,234.56").tag(".")
+                    }
                 }
-                Picker("Delimiter", selection: binding.delimiter) {
-                    ForEach(FinanceCSV.delimiters, id: \.0) { Text(verbatim: $0.1).tag($0.0) }
-                }
-                Stepper(value: binding.skipRows, in: 0...50) {
-                    LabeledContent("Rows before the table", value: "\(mapping.skipRows)")
-                }
-                Toggle("First row holds the column names", isOn: binding.hasHeader)
             }
             Section("Columns") {
                 columnPicker("Date", selection: Binding { Optional(mapping.date) } set: { self.mapping?.date = $0 ?? 0 })
-                Picker("Date format", selection: binding.dateFormat) {
-                    ForEach(FinanceDateFormat.allCases, id: \.self) { Text(verbatim: $0.rawValue).tag($0) }
-                }
                 Picker("Amounts", selection: Binding { mapping.amount == nil } set: { split in
                     if split {
                         self.mapping?.debit = mapping.debit ?? 0
@@ -204,10 +211,6 @@ struct FinanceImportSheet: View {
                 }) {
                     Text("One column (+/−)").tag(false)
                     Text("Debit and credit").tag(true)
-                }
-                Picker("Number format", selection: binding.decimal) {
-                    Text(verbatim: "1.234,56").tag(",")
-                    Text(verbatim: "1,234.56").tag(".")
                 }
                 if mapping.amount == nil {
                     columnPicker("Debit (out)", selection: binding.debit)
@@ -278,24 +281,6 @@ struct FinanceImportSheet: View {
                     Task { await check() }
                 })
                 .disabled(busy)
-            }
-            if mapping?.signature.isEmpty == false {
-                Toggle("Remember this format for the next statement", isOn: $remember)
-            }
-            // Sorting goes through the assistant's routes: not without it.
-            if !store.categories.isEmpty, family.isEnabled(.assistant) {
-                Toggle(store.aiConfigured
-                       ? String(localized: "Sort the new transactions into categories (like similar ones, the rest with AI)")
-                       : String(localized: "Sort the new transactions into categories like similar earlier ones"),
-                       isOn: $categorize)
-                if !store.aiConfigured {
-                    // Settings → AI (closes the import without importing).
-                    Button("Set up the assistant to sort the rest too", systemImage: "gearshape.2") {
-                        dismiss()
-                        family.open(.settings(.assistant))
-                    }
-                    .font(.callout)
-                }
             }
         }
         Section("Rows") {
@@ -381,11 +366,13 @@ struct FinanceImportSheet: View {
         guard let data, let mapping else { return }
         guard let text = try? FinanceCSV.decode(data, encoding: mapping.encoding).text else {
             parsed = Parsed()
+            showsFormat = true
             return
         }
         let table = FinanceCSV.table(text, mapping: mapping)
         let result = FinanceCSV.map(table.rows, mapping: mapping)
         parsed = Parsed(header: table.header, width: table.rows.first?.count ?? 0, ok: result.ok, errors: result.errors.count)
+        if parsed.ok.isEmpty { showsFormat = true }
     }
 
     /// A dry run: which rows are there already, and how many transfers and split bookings
@@ -410,14 +397,16 @@ struct FinanceImportSheet: View {
         busy = true
         do {
             let res = try await store.importRows(parsed.ok, accountId: accountId, auto: auto)
-            if remember, var mapping, !mapping.signature.isEmpty {
+            // The format is remembered for the bank's next statement (by its header row).
+            if var mapping, !mapping.signature.isEmpty {
                 mapping.accountId = accountId
                 mapping.autoTransfers = auto
                 await store.saveMapping(mapping)
             }
             let ids = res.ids
-            if categorize && family.isEnabled(.assistant) && !store.categories.isEmpty && !ids.isEmpty {
-                // Runs on after the sheet closed; its toast reports.
+            // Sorting goes through the assistant's routes: not without it.
+            if family.isEnabled(.assistant) && !store.categories.isEmpty && !ids.isEmpty {
+                // Runs on after the sheet closed; its toast reports (and offers Undo).
                 Task { await store.categorize(ids: ids) }
             }
             dismiss()

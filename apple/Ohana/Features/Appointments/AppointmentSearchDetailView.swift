@@ -2,7 +2,7 @@ import SwiftUI
 
 /// One search (search-detail.tsx): its criteria, schedule and last run, "run now" (polling until
 /// the worker is done), the earliest slot per doctor by day with the distance from home, the
-/// ignore list; editors edit, pause, delete. Its commands are in the Appointments menu too while
+/// ignore list (when something is ignored); History in the More menu; editors edit, pause, delete. Its commands are in the Appointments menu too while
 /// it's on screen.
 struct AppointmentSearchDetailView: View {
     @Environment(FamilyContext.self) private var family
@@ -11,6 +11,7 @@ struct AppointmentSearchDetailView: View {
     @State private var state: LoadState<AppointmentSearchDetail> = .idle
     @State private var editing = false
     @State private var confirmDelete = false
+    @State private var showHistory = false
     @State private var width: CGFloat = 0
     /// Deleted here: no more reloads (they'd answer 404) while the page goes away.
     @State private var deleted = false
@@ -35,6 +36,9 @@ struct AppointmentSearchDetailView: View {
         .onAppear { onScreen = true }
         .onDisappear { onScreen = false }
         .focusedSceneValue(\.moduleMenu, onScreen && canEdit ? state.value.map { menu($0.search) } : nil)
+        .navigationDestination(isPresented: $showHistory) {
+            AppointmentHistoryView(searchID: searchID).assistantButton()
+        }
         .sheet(isPresented: $editing) {
             if let search = state.value?.search {
                 AppointmentSearchEditor(search: search) { _ in }
@@ -89,19 +93,16 @@ struct AppointmentSearchDetailView: View {
 
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {
         if let search = state.value?.search {
-            ToolbarItem(placement: .primaryAction) {
-                NavigationLink(value: AppointmentRoute.history(search.id)) {
-                    Label("History", systemImage: "clock.arrow.circlepath")
-                }
-                .help("History")
-            }
             if canEdit {
                 ToolbarItem(placement: .primaryAction) {
                     Button("Edit", systemImage: "pencil") { editing = true }
                         .help("Edit (⌘E)")
                 }
-                ToolbarItem(placement: .primaryAction) {
-                    Menu("More", systemImage: "ellipsis") {
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Menu("More", systemImage: "ellipsis") {
+                    Button("History", systemImage: "clock.arrow.circlepath") { showHistory = true }
+                    if canEdit {
                         Toggle(isOn: Binding(get: { search.enabled }, set: { value in
                             perform { try await AppointmentActions.setEnabled(family, search.id, value) }
                         })) {
@@ -125,7 +126,7 @@ struct AppointmentSearchDetailView: View {
                             .frame(maxWidth: .infinity)
                         VStack(spacing: 20) {
                             summary(search)
-                            ignored(search)
+                            if !search.ignored.isEmpty { ignored(search) }
                         }
                         .frame(width: 360)
                     }
@@ -133,7 +134,7 @@ struct AppointmentSearchDetailView: View {
                     VStack(spacing: 20) {
                         summary(search)
                         results(detail)
-                        ignored(search)
+                        if !search.ignored.isEmpty { ignored(search) }
                     }
                 }
             }
@@ -227,27 +228,19 @@ struct AppointmentSearchDetailView: View {
 
     // MARK: Ignore list
 
+    /// Shown only when something is ignored.
     private func ignored(_ search: AppointmentSearch) -> some View {
         CardSection("Ignore list", systemImage: "eye.slash") {
-            Text("Doctors (with their reason for the visit) this search skips. Ignore one from its appointment page.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            if search.ignored.isEmpty {
-                Text("Nothing ignored.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            } else {
-                ForEach(search.ignored) { entry in
-                    ViewThatFits(in: .horizontal) {
-                        HStack {
-                            ignoredEntry(entry)
-                            Spacer()
-                            showAgain(entry)
-                        }
-                        VStack(alignment: .leading, spacing: 8) {
-                            ignoredEntry(entry)
-                            showAgain(entry)
-                        }
+            ForEach(search.ignored) { entry in
+                ViewThatFits(in: .horizontal) {
+                    HStack {
+                        ignoredEntry(entry)
+                        Spacer()
+                        showAgain(entry)
+                    }
+                    VStack(alignment: .leading, spacing: 8) {
+                        ignoredEntry(entry)
+                        showAgain(entry)
                     }
                 }
             }
@@ -284,10 +277,6 @@ struct AppointmentHistoryView: View {
         LoadStateView(state: state, retry: load) { runs in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 16) {
-                    Text("Every run of this search with what it found. Runs older than 30 days are deleted.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 4)
                     if runs.isEmpty {
                         ContentUnavailableView("No runs yet.", systemImage: "clock")
                     }

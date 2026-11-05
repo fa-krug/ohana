@@ -202,7 +202,7 @@ struct CalendarSelectionDetails: View {
                     .foregroundStyle(.secondary)
             }
             ForEach(shown, id: \.self) { day in
-                dayCard(day)
+                dayCard(day, single: days.count == 1)
             }
             if days.count > 1 && withContent.count > Self.maxDays {
                 Text("Only the first \(Self.maxDays) days are listed.")
@@ -218,7 +218,9 @@ struct CalendarSelectionDetails: View {
             || store.holidays[day] != nil
     }
 
-    private func dayCard(_ day: Day) -> some View {
+    /// `single`: the only day selected, so it has its own Add event (for several, the bar's adds
+    /// on the first).
+    private func dayCard(_ day: Day, single: Bool) -> some View {
         let types = store.types(on: day)
         let events = store.events[day] ?? []
         let holidays = store.holidays[day] ?? []
@@ -233,7 +235,7 @@ struct CalendarSelectionDetails: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.red)
                 }
-                if !store.readOnly {
+                if single && !store.readOnly {
                     Button {
                         actions.addEvent(on: day)
                     } label: {
@@ -283,8 +285,11 @@ struct CalendarSelectionDetails: View {
         family.open(.appointmentSearch(id: id))
     }
 
+    /// A tap opens the event's editor (like a note's row); Delete, the link and the appointment
+    /// search are in its context menu.
     private func eventRow(_ event: CalendarEvent, on day: Day) -> some View {
-        HStack(alignment: .top, spacing: 10) {
+        let url = URL(string: event.url).flatMap { event.url.isEmpty ? nil : $0 }
+        return HStack(alignment: .top, spacing: 10) {
             Image(systemName: event.isAppointment ? "stethoscope" : "clock")
                 .foregroundStyle(Color.accentColor)
                 .frame(width: 20)
@@ -305,41 +310,22 @@ struct CalendarSelectionDetails: View {
                 if !event.note.isEmpty {
                     Text(event.note).font(.caption)
                 }
-                if let url = URL(string: event.url), !event.url.isEmpty {
-                    Link(destination: url) {
-                        Label("Open link", systemImage: "link").font(.caption)
-                    }
-                }
-                if event.isAppointment, let searchID = event.searchId {
-                    Button {
-                        openSearch(searchID)
-                    } label: {
-                        Label("Open the appointment search", systemImage: "stethoscope").font(.caption)
-                    }
-                    .buttonStyle(.borderless)
-                }
             }
             Spacer(minLength: 0)
-            if !store.readOnly {
-                Menu {
-                    Button("Edit", systemImage: "pencil") { actions.editEvent(event) }
-                    Button("Delete", systemImage: "trash", role: .destructive) { deleting = event }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                        .frame(minWidth: 44, minHeight: 44)
-                        .contentShape(.rect)
-                }
-                .menuIndicator(.hidden)
-                .buttonStyle(.borderless)
-                .fixedSize()
-                .accessibilityLabel("Event actions")
-            }
         }
         .contentShape(.rect)
+        .onTapGesture { if !store.readOnly { actions.editEvent(event) } }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(store.readOnly ? [] : .isButton)
         // Onto another day of the grid (iPad, Mac: phones have no grid next to the details).
         .modifier(CalendarEventDragSource(store: store, event: event, day: day,
                                           enabled: !store.readOnly && sizeClass != .compact))
         .contextMenu {
+            if let url {
+                Link(destination: url) {
+                    Label("Open link", systemImage: "link")
+                }
+            }
             if event.isAppointment, let searchID = event.searchId {
                 Button("Open the appointment search", systemImage: "stethoscope") { openSearch(searchID) }
             }

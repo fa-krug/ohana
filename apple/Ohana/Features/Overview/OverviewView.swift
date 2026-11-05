@@ -61,23 +61,12 @@ private struct OverviewAskField: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Button {
-                if let question = OverviewAsk.question(text) {
-                    send(question)
-                } else {
-                    family.ask(newChat: true)
-                }
-            } label: {
-                Image(systemName: "sparkles")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(ModuleTint.assistant)
-                    .frame(width: iconSize, height: iconSize)
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text("Ask the assistant"))
-            .help(Text("Ask the assistant"))
+            Image(systemName: "sparkles")
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(ModuleTint.assistant)
+                .frame(width: iconSize, height: iconSize)
+                .frame(minWidth: 44, minHeight: 44)
+                .accessibilityHidden(true)
             TextField("Ask Ohana…", text: $text)
                 .textFieldStyle(.plain)
                 .font(.body)
@@ -348,7 +337,7 @@ private struct OverviewTodayCard: View {
     }
 }
 
-/// The week ahead's open conflicts and warnings, the first few of them, and "See all".
+/// The week ahead's open conflicts and warnings and the first few of them; the header opens them all.
 private struct OverviewWeekAheadCard: View {
     let summary: WeekAheadSummary
 
@@ -390,11 +379,6 @@ private struct OverviewWeekAheadCard: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
-                }
-                OverviewRow(route: .weekAhead) {
-                    Label("See all", systemImage: "list.bullet")
-                        .foregroundStyle(Color.ohana)
-                        .fontWeight(.medium)
                 }
             }
         }

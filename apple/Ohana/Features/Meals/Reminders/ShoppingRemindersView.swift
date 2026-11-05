@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The family's shopping list in Reminders on this device (Settings → Shopping List, and the meal
-/// plan's toolbar): asking for the access (saying why first), choosing a list or making a new
+/// plan's More menu): asking for the access (saying why first), choosing a list or making a new
 /// one, turning it off, "Sync now" and how the last sync went. Viewers can use it too; in the demo
 /// it isn't offered.
 struct ShoppingRemindersView: View {
@@ -59,7 +59,7 @@ struct ShoppingRemindersView: View {
             }
             .disabled(asking)
         } footer: {
-            Text("Ohana needs access to your reminders to write the shopping list into the list you choose and to keep it up to date. Nothing of your reminders goes to the server.")
+            Text("Ohana writes the shopping list into a list you choose; nothing of your reminders goes to the server.")
         }
     }
 
@@ -117,7 +117,7 @@ struct ShoppingRemindersView: View {
             if missing {
                 Text("The chosen list is gone. Choose another one.").foregroundStyle(.red)
             } else {
-                Text("This device only. With a list shared in iCloud, everyone sees the items: then turn it on on one device.")
+                Text("This device only; with a list shared in iCloud, turn it on on one device.")
             }
         }
         if listID != nil, !missing {
@@ -138,7 +138,7 @@ struct ShoppingRemindersView: View {
         } header: {
             Text("Sync")
         } footer: {
-            Text("It syncs by itself when you open Ohana and when the meal plan changes. Tick items off in the Reminders app while you shop.")
+            Text("It syncs by itself when you open Ohana and when the meal plan changes.")
         }
     }
 

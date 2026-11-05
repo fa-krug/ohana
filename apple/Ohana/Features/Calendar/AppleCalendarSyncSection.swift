@@ -38,8 +38,8 @@ struct AppleCalendarSyncSection: View {
                 Text("Apple Calendar")
             } footer: {
                 Text(family.canEdit
-                     ? "Events go both ways between Ohana and the calendar you pick, repeating ones and edits and deletions too; when both changed, Ohana’s wins. Day entries go to Apple Calendar only, as all-day events. It syncs on this device while Ohana is open."
-                     : "You can view this family only: its events and day entries go to the calendar you pick, nothing comes back. It syncs on this device while Ohana is open.")
+                     ? "Events sync both ways with the calendar you pick, day entries only go there."
+                     : "Events and day entries go to the calendar you pick, nothing comes back.")
             }
         }
     }

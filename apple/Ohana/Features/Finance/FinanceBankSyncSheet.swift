@@ -36,7 +36,7 @@ extension FinanceBankSync {
 
 /// Syncs a linked account with its bank: starts the sync on the server, polls it about once a
 /// second, and shows what the bank asks for (approve the login in its app, or type a photoTAN /
-/// SMS TAN). When done it reports the new transactions and, as after a CSV import, can sort
+/// SMS TAN). When done it reports the new transactions and, as after a CSV import, sorts
 /// them into categories. Cancel stops the sync on the server too. `full` imports the bank's whole
 /// history: the account's transactions it already has are taken over, not added again; it first
 /// says so and starts only with Import All.
@@ -57,7 +57,6 @@ struct FinanceBankSyncSheet: View {
     @State private var attempt = 0
     @State private var tan = ""
     @State private var sending = false
-    @State private var categorize = true
     /// A full import waits for Import All.
     @State private var confirmed = false
 
@@ -294,15 +293,6 @@ struct FinanceBankSyncSheet: View {
                 }
             }
         }
-        // As after a CSV import; sorting goes through the assistant's routes: not without it.
-        if canSort && !result.ids.isEmpty {
-            Section {
-                Toggle(store.aiConfigured
-                       ? String(localized: "Sort the new transactions into categories (like similar ones, the rest with AI)")
-                       : String(localized: "Sort the new transactions into categories like similar earlier ones"),
-                       isOn: $categorize)
-            }
-        }
     }
 
     private func failed(_ message: String) -> some View {
@@ -355,9 +345,10 @@ struct FinanceBankSyncSheet: View {
         }
     }
 
-    /// Closes; the new transactions are sorted afterwards, like after a CSV import.
+    /// Closes; the new transactions are sorted afterwards, like after a CSV import (sorting goes
+    /// through the assistant's routes: not without it; the toast offers Undo).
     private func finish() {
-        if categorize, canSort, sync?.status == .done, let ids = sync?.result?.ids, !ids.isEmpty {
+        if canSort, sync?.status == .done, let ids = sync?.result?.ids, !ids.isEmpty {
             // Runs on after the sheet closed; its toast reports.
             Task { await store.categorize(ids: ids) }
         }

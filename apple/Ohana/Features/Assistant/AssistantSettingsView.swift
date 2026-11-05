@@ -1,9 +1,8 @@
 import SwiftUI
 
 /// Settings → Assistant (web: components/assistant/ai-settings.tsx): the family's
-/// OpenAI-compatible AI (provider, key, model; the URL and context window under Advanced; a
-/// test), the model for recipe photos, the web search, and whether the assistant may change
-/// things. Editors only; viewers see who can set it up. Keys are write-only: the server only
+/// OpenAI-compatible AI (provider, key, model, a test; the URL, context window and the model for
+/// recipe photos under Advanced), the web search, and whether the assistant may change things. Editors only; viewers see who can set it up. Keys are write-only: the server only
 /// says that one is stored (and its last four characters); a blank field keeps it.
 struct AssistantSettingsView: View {
     /// Shown as a sheet (from the chat): Cancel asks before unsaved changes are dropped.
@@ -112,25 +111,6 @@ private struct AssistantSettingsForm: View {
         Form {
             endpointSection
             advancedSection
-            Section {
-                Button {
-                    Task { await runTest() }
-                } label: {
-                    if busy == .test { ProgressView().controlSize(.small) } else { Text("Test") }
-                }
-                .buttonStyle(.bordered)
-                .disabled(busy != nil || !settings.configured || dirty)
-                if let test {
-                    Label {
-                        Text(verbatim: test.text)
-                    } icon: {
-                        Image(systemName: test.ok ? "checkmark.circle.fill" : "xmark.circle.fill")
-                            .foregroundStyle(test.ok ? .green : .red)
-                    }
-                    .font(.callout)
-                }
-            }
-            photosSection
             searchSection
             permissionsSection
         }
@@ -188,71 +168,72 @@ private struct AssistantSettingsForm: View {
                 Text("Other (OpenAI-compatible)").tag(AssistantProviders.other)
             }
             .onChange(of: baseUrl) { models = nil }
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    SecureField("API key", text: $apiKey,
-                                prompt: Text(verbatim: settings.hasKey == true ? "••••••••\(settings.keyHint ?? "")" : "sk-…"))
-                    if settings.hasKey == true {
-                        Button("Remove", role: .destructive) { confirmRemoveKey = true }
-                            .disabled(busy != nil)
-                    }
+            // A saved key shows as its last characters in the field; typing replaces it.
+            HStack {
+                SecureField("API key", text: $apiKey,
+                            prompt: Text(verbatim: settings.hasKey == true ? "••••••••\(settings.keyHint ?? "")" : "sk-…"))
+                if settings.hasKey == true {
+                    Button("Remove", role: .destructive) { confirmRemoveKey = true }
+                        .disabled(busy != nil)
                 }
-                Group {
-                    if settings.hasKey == true {
-                        Text("A key ending in \(settings.keyHint ?? "") is saved. Type a new one to replace it.")
-                    } else {
-                        Text("Stored encrypted on the server and never shown again.")
-                    }
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
             }
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    if let models, !models.isEmpty {
-                        Picker("Model", selection: $model) {
-                            if model.isEmpty { Text("Pick a model").tag("") }
-                            ForEach(Self.unique([model] + models).filter { !$0.isEmpty }, id: \.self) { m in
-                                Text(verbatim: m).tag(m)
-                            }
-                        }
-                    } else {
-                        TextField("Model", text: $model, prompt: Text(verbatim: "gpt-4.1-mini"))
-                            .autocorrectionDisabled()
-                            #if os(iOS)
-                            .textInputAutocapitalization(.never)
-                            #endif
-                    }
-                    Button {
-                        Task { await loadModels() }
-                    } label: {
-                        if busy == .models {
-                            ProgressView().controlSize(.small)
-                        } else {
-                            Label("Load models", systemImage: "arrow.clockwise")
+            HStack {
+                if let models, !models.isEmpty {
+                    Picker("Model", selection: $model) {
+                        if model.isEmpty { Text("Pick a model").tag("") }
+                        ForEach(Self.unique([model] + models).filter { !$0.isEmpty }, id: \.self) { m in
+                            Text(verbatim: m).tag(m)
                         }
                     }
-                    #if os(iOS)
-                    // Just the icon: the label wraps next to the model on an iPhone.
-                    .labelStyle(.iconOnly)
-                    #endif
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    .help("Load models")
-                    .disabled(baseUrl.isEmpty || busy != nil)
+                } else {
+                    TextField("Model", text: $model, prompt: Text(verbatim: "gpt-4.1-mini"))
+                        .autocorrectionDisabled()
+                        #if os(iOS)
+                        .textInputAutocapitalization(.never)
+                        #endif
                 }
-                Text("Load the list from the API, or type a model name. It needs to support tool calls.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Button {
+                    Task { await loadModels() }
+                } label: {
+                    if busy == .models {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Label("Load models", systemImage: "arrow.clockwise")
+                    }
+                }
+                #if os(iOS)
+                // Just the icon: the label wraps next to the model on an iPhone.
+                .labelStyle(.iconOnly)
+                #endif
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .help("Load models")
+                .disabled(baseUrl.isEmpty || busy != nil)
+            }
+            Button {
+                Task { await runTest() }
+            } label: {
+                if busy == .test { ProgressView().controlSize(.small) } else { Text("Test") }
+            }
+            .disabled(busy != nil || !settings.configured || dirty)
+            if let test {
+                Label {
+                    Text(verbatim: test.text)
+                } icon: {
+                    Image(systemName: test.ok ? "checkmark.circle.fill" : "xmark.circle.fill")
+                        .foregroundStyle(test.ok ? .green : .red)
+                }
+                .font(.callout)
             }
         } header: {
             Text("AI model")
         } footer: {
-            Text("Pick the AI service you have an account with and paste its key. Everyone in the family uses this setup.")
+            Text("Pick the AI service you have an account with and paste its key (stored encrypted, never shown again). Load the models from the API or type one; it needs to support tool calls. Everyone in the family uses this setup.")
         }
     }
 
-    /// What only some need: another service's address, a model's context window.
+    /// What only some need: another service's address, a model's context window, the image model
+    /// for recipe photos.
     private var advancedSection: some View {
         Section {
             DisclosureGroup("Advanced", isExpanded: $showAdvanced) {
@@ -279,14 +260,16 @@ private struct AssistantSettingsForm: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+                imageModelField
             }
         }
     }
 
-    private var photosSection: some View {
-        Section {
+    /// The model for the meals' recipe photos (of the same API; none: no photo buttons).
+    private var imageModelField: some View {
+        VStack(alignment: .leading, spacing: 6) {
             HStack {
-                TextField("Image model", text: $imageModel, prompt: Text(verbatim: "gpt-image-1"))
+                TextField("Image model for recipe photos", text: $imageModel, prompt: Text(verbatim: "gpt-image-1"))
                     .autocorrectionDisabled()
                     #if os(iOS)
                     .textInputAutocapitalization(.never)
@@ -304,13 +287,9 @@ private struct AssistantSettingsForm: View {
                     .accessibilityLabel(Text("Pick a model"))
                 }
             }
-        } header: {
-            Text("Recipe photos")
-        } footer: {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("The meals module can make a photo of a recipe with an image model of the same API. Without one, the photo buttons stay hidden.")
-                Text("E.g. gpt-image-1 or dall-e-3 (OpenAI), gemini-2.5-flash-image (Google’s Gemini API). Empty: no AI photos.")
-            }
+            Text("E.g. gpt-image-1 or dall-e-3 (OpenAI), gemini-2.5-flash-image (Google’s Gemini API). Empty: no AI photos.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -346,19 +325,16 @@ private struct AssistantSettingsForm: View {
                 set: { value in Task { await save(.init(allowWrites: value)) } }
             )) {
                 Text("Allow changes")
-                Text("The assistant may change the calendar, finances, meals and appointment searches for editors (most changes can be undone). Off: it only reads. For viewers it always only reads.")
+                Text("For editors; most changes can be undone. Viewers’ chats only read.")
             }
             .disabled(busy != nil)
         } header: {
             Text("Permissions")
         } footer: {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Your messages and the data the assistant looks at are sent to the AI API you set up above.")
-                HStack(spacing: 4) {
-                    Text("For other AI agents that use Ohana’s API with an API token:")
-                    Link(destination: family.api.client.url(family.api.path("/agent"))) {
-                        Text("instructions for AI agents")
-                    }
+                Text("Messages and what the assistant reads go to the AI API above.")
+                Link(destination: family.api.client.url(family.api.path("/agent"))) {
+                    Text("Instructions for other AI agents")
                 }
             }
         }

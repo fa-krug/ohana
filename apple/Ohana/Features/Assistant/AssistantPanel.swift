@@ -13,10 +13,10 @@ struct AssistantPanel: View {
     /// On iPhone: full height to type at once; half height keeps the page behind usable.
     @State private var detent: PresentationDetent = .large
 
-    /// The page beside the panel (web: `pageOf`; the assistant's page counts as the overview).
+    /// The page beside the panel (web: `pageOf`), as the server knows it: a page it has no name
+    /// for (the assistant's own, the knowledge base, the search) counts as the overview.
     private var here: String {
-        guard let module = shell?.module.wrappedValue, module != .assistant else { return "overview" }
-        return module.rawValue
+        AssistantPages.page(of: shell?.module.wrappedValue)
     }
 
     var body: some View {
@@ -42,8 +42,17 @@ struct AssistantPanel: View {
     }
 }
 
-/// The page names the chat's banner uses.
+/// The pages a chat can belong to (the server's `PAGES`), their names and examples.
 enum AssistantPages {
+    /// The pages the server takes; any other is the overview.
+    static let all = ["overview", "calendar", "finance", "meals", "appointments", "chores", "settings"]
+
+    /// The page a chat beside `module` belongs to.
+    static func page(of module: Module?) -> String {
+        guard let module, all.contains(module.rawValue) else { return "overview" }
+        return module.rawValue
+    }
+
     static func name(_ page: String) -> String {
         switch page {
         case "calendar": String(localized: "Calendar")

@@ -89,10 +89,12 @@ private struct LeadingEdgeSwipe: UIGestureRecognizerRepresentable {
     }
 }
 
-/// The family page: the families to switch to with creating or joining one below them (in the
-/// demo: connecting a server), every page of the shell (the tab on screen highlighted; on iPhone
-/// the appointments, the chores, the knowledge base and the settings aren't tabs, `Module.phonePages`), scanning a letter and
-/// the settings last. It also shows the invite links the app was opened with (`InviteInbox`).
+/// The family page: the families to switch to with Add Family (new or join) below them (in the
+/// demo: connecting a server), the pages that aren't tabs on this layout (on iPhone the
+/// appointments, the chores and the knowledge base, `Module.phonePages`; on a narrow iPad, whose
+/// tab bar has no settings and leaves the rest to the sidebar it lacks, every page, the one on
+/// screen highlighted), scanning a letter and the settings last. It also shows the invite links
+/// the app was opened with (`InviteInbox`).
 private struct FamilySidebar: View {
     let current: Module
     @Binding var dragged: CGFloat?
@@ -114,19 +116,35 @@ private struct FamilySidebar: View {
                     if app.isDemo {
                         row("Connect your Ohana", systemImage: "server.rack") { app.showsConnect = true }
                     } else {
-                        row("New family", systemImage: "plus") { creating = true }
-                        row("Join a family", systemImage: "person.badge.plus") { joining = InviteRequest() }
+                        Menu {
+                            Button("New…", systemImage: "plus") {
+                                close()
+                                creating = true
+                            }
+                            Button("Join…", systemImage: "person.badge.plus") {
+                                close()
+                                joining = InviteRequest()
+                            }
+                        } label: {
+                            Label {
+                                Text("Add Family")
+                            } icon: {
+                                Image(systemName: "plus").foregroundStyle(Color.ohana)
+                            }
+                        }
                     }
                 } footer: {
                     if let me = app.me {
                         Text("Signed in as \(me.displayName)")
                     }
                 }
-                Section {
-                    ForEach(pages) { page in
-                        row(page.title, systemImage: page.systemImage, tint: page.tint) { page.open() }
-                            .listRowBackground(page == current ? Color.ohana.opacity(0.15) : nil)
-                            .accessibilityAddTraits(page == current ? .isSelected : [])
+                if !pages.isEmpty {
+                    Section {
+                        ForEach(pages) { page in
+                            row(page.title, systemImage: page.systemImage, tint: page.tint) { page.open() }
+                                .listRowBackground(page == current ? Color.ohana.opacity(0.15) : nil)
+                                .accessibilityAddTraits(page == current ? .isSelected : [])
+                        }
                     }
                 }
                 Section {
@@ -177,9 +195,13 @@ private struct FamilySidebar: View {
         }
     }
 
-    /// The overview, the modules the server has on and the search, in the sidebar's order.
+    /// The pages that aren't tabs here, the server has on: on iPhone `Module.phonePages` (the
+    /// settings have their own row below); elsewhere (a narrow iPad) the overview, the modules
+    /// and the search, in the sidebar's order.
     private var pages: [Module] {
-        ([.overview] + Module.modules + [.search]).filter { app.isEnabled($0) }
+        let phonePages = Module.phonePages
+        let all: [Module] = phonePages.isEmpty ? [.overview] + Module.modules + [.search] : phonePages
+        return all.filter { $0 != .settings && app.isEnabled($0) }
     }
 
     private func choose(_ id: String) {
