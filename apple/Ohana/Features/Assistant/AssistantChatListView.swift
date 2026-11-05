@@ -1,15 +1,57 @@
 import SwiftUI
 
-/// The user's chats in the family, the latest first: open, delete. Pushed over the chat (the
-/// iPhone's sheet, a narrow page), or as a column left of it (`AssistantChatColumn`). A new chat
-/// comes from the chat's own toolbar under it.
+/// The user's chats in the family, the latest first: open, delete. Pushed over the chat (from its
+/// Chats button), or as a column left of it (`AssistantChatColumn`). A new chat comes from the
+/// chat's own header under it.
 struct AssistantChatListView: View {
     let store: AssistantChatStore
+    /// Pushed in the panel beside a module: a header of its own with a back button, as the chat
+    /// has (the window's toolbar is left alone, `AssistantChatView.headerInPanel`).
+    var inPanel = false
+    /// Back to the chat without picking one (the panel's back button).
+    var back: () -> Void = {}
     let done: () -> Void
 
     var body: some View {
         AssistantChatListContent(store: store, done: done)
             .navigationTitle("Chats")
+            .modifier(PanelHeader(enabled: inPanel, back: back))
+    }
+
+    private struct PanelHeader: ViewModifier {
+        let enabled: Bool
+        let back: () -> Void
+
+        func body(content: Content) -> some View {
+            if enabled {
+                content
+                    .navigationBarBackButtonHidden(true)
+                    #if os(iOS)
+                    .toolbar(.hidden, for: .navigationBar)
+                    #endif
+                    .safeAreaBar(edge: .top, spacing: 0) {
+                        ZStack {
+                            Text("Chats")
+                                .font(.headline)
+                                .accessibilityAddTraits(.isHeader)
+                            HStack {
+                                Button(action: back) {
+                                    Label("Back", systemImage: "chevron.backward")
+                                }
+                                .labelStyle(.iconOnly)
+                                .buttonStyle(.glass)
+                                .buttonBorderShape(.circle)
+                                .help(Text("Back"))
+                                Spacer()
+                            }
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                    }
+            } else {
+                content
+            }
+        }
     }
 }
 

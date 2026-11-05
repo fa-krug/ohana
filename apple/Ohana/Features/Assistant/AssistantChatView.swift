@@ -22,7 +22,7 @@ struct AssistantChatView: View {
     let store: AssistantChatStore
     let mode: AssistantChatMode
     /// The chat list is a column beside the chat (the page when there is room): no history
-    /// button then. The panel beside a module has none either, only the sheet on iPhone.
+    /// button then.
     var listBeside = false
     /// Takes the family's `ask` requests (only while this view is the one on screen).
     var takesRequests = true
@@ -53,6 +53,12 @@ struct AssistantChatView: View {
     /// went back there). Scrolling up turns it off, so an answer can be read while it streams.
     @State private var following = true
     @State private var scrollPhase: ScrollPhase = .idle
+    /// Where the window of drawn items starts (`AssistantItemWindow`), worked out for the chat
+    /// `windowKey` names.
+    @State private var windowStart = 0
+    @State private var windowKey: WindowKey?
+    /// Items animate in from this chat (`AssistantChatStore.session`) on: not the ones it opened with.
+    @State private var settledSession: Int?
     #if os(macOS)
     @State private var pasteMonitor: Any?
     #endif
@@ -73,13 +79,15 @@ struct AssistantChatView: View {
             // A bar, not an inset: the chat scrolling under it fades out behind it (the scroll
             // edge effect), instead of running through the title and buttons.
             .safeAreaBar(edge: .top, spacing: 0) { if headerInPanel { panelHeader } }
-            .navigationTitle(Text(verbatim: store.current?.title ?? String(localized: "Assistant")))
+            .navigationTitle(Text(verbatim: title))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar { if visible && !headerInPanel { toolbar } }
             .navigationDestination(isPresented: $showChats) {
-                AssistantChatListView(store: store) {
+                AssistantChatListView(store: store, inPanel: headerInPanel) {
+                    showChats = false
+                } done: {
                     showChats = false
                     composerFocused = true
                 }
@@ -102,6 +110,9 @@ struct AssistantChatView: View {
                 takeRequest()
             }
             .onChange(of: here, initial: true) { store.page = here }
+            .onChange(of: WindowKey(session: store.session, loaded: store.current != nil), initial: true) { _, key in
+                startWindow(key)
+            }
             .onChange(of: family.assistantRequest?.id, initial: true) { takeRequest() }
             .onChange(of: takesRequests) { takeRequest() }
             .onChange(of: scenePhase) {
@@ -224,30 +235,28 @@ struct AssistantChatView: View {
         return .systemAction
     }
 
-    // MARK: Toolbar
+    // MARK: Header
 
+    /// The same buttons everywhere, in the same order: Chats (the history), the chat's title, New
+    /// chat and More. Beside a module they're the panel's own header; in the iPhone's sheet and on
+    /// the page they're in the toolbar.
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {
         #if os(iOS)
         if isSheet {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Close", systemImage: "xmark") { dismiss() }
             }
+            ToolbarItem(placement: .topBarLeading) { chatsButton }
+            ToolbarItem(placement: .principal) {
+                titleText.font(.headline)
+            }
         }
         #endif
-        // Beside a module the chats are on the page ("Open as a page"); the iPhone's sheet has
-        // no page to open, so it keeps the button.
-        if !listBeside, mode == .page || isSheet {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    showChats = true
-                } label: {
-                    Label("Chats", systemImage: "clock.arrow.circlepath")
-                }
-                .help(Text("Chats"))
-            }
-            ToolbarSpacer(.fixed, placement: .primaryAction)
+        if mode == .page, !listBeside {
+            ToolbarItem(placement: .navigation) { chatsButton }
         }
-        ToolbarItem(placement: .primaryAction) { newChatMenu }
+        ToolbarItem(placement: .primaryAction) { newChatButton }
+        ToolbarItem(placement: .primaryAction) { moreMenu }
     }
 
     /// Beside a module (the inspector on Mac and iPad) the panel's buttons are in a header of its
@@ -257,35 +266,65 @@ struct AssistantChatView: View {
 
     private var panelHeader: some View {
         HStack(spacing: 8) {
-            Text(verbatim: store.current?.title ?? String(localized: "Assistant"))
-                .font(.headline)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .accessibilityAddTraits(.isHeader)
-            newChatMenu
+            chatsButton
                 .labelStyle(.iconOnly)
-                .menuIndicator(.hidden)
                 .buttonStyle(.glass)
                 .buttonBorderShape(.circle)
-            Button {
-                family.open(.assistantChat(id: store.currentID))
-            } label: {
-                Label("Open as a page", systemImage: "arrow.up.left.and.arrow.down.right")
-                    .labelStyle(.iconOnly)
-            }
-            .buttonStyle(.glass)
-            .buttonBorderShape(.circle)
-            .help(Text("Open as a page"))
+            titleText
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+                .accessibilityAddTraits(.isHeader)
+            newChatButton
+                .labelStyle(.iconOnly)
+                .buttonStyle(.glass)
+                .buttonBorderShape(.circle)
+            moreMenu
+                .labelStyle(.iconOnly)
+                .buttonStyle(.glass)
+                .buttonBorderShape(.circle)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
     }
 
-    private var newChatMenu: some View {
+    private var title: String { store.current?.title ?? String(localized: "Assistant") }
+
+    /// The chat's title, cross-fading when it changes (a new chat gets its title from the server).
+    private var titleText: some View {
+        Text(verbatim: title)
+            .lineLimit(1)
+            .contentTransition(.opacity)
+            .animation(reduceMotion ? nil : .smooth, value: title)
+    }
+
+    /// The chats, pushed over the chat.
+    private var chatsButton: some View {
+        Button {
+            showChats = true
+        } label: {
+            Label("Chats", systemImage: "clock.arrow.circlepath")
+        }
+        .help(Text("Chats"))
+    }
+
+    private var newChatButton: some View {
+        // No shortcut: on the page ⌘N is File ▸ New Chat; beside a module ⌘N is that module's,
+        // and ⇧⌘J (Go ▸ Ask the assistant) starts a new chat.
+        Button {
+            newChat()
+        } label: {
+            Label("New chat", systemImage: "square.and.pencil")
+        }
+        .help(Text("New chat"))
+    }
+
+    private var moreMenu: some View {
         Menu {
-            // No shortcut: on the page ⌘N is File ▸ New Chat; beside a module ⌘N is that
-            // module's, and ⇧⌘J (Go ▸ Ask the assistant) starts a new chat.
-            Button("New chat", systemImage: "square.and.pencil") { newChat() }
+            if headerInPanel {
+                Button("Open as a page", systemImage: "arrow.up.left.and.arrow.down.right") {
+                    family.open(.assistantChat(id: store.currentID))
+                }
+            }
             // Beside another page than the chat's: its next turns about this one. (A message
             // carries the chat's own page, so this is the only way to move it.)
             if let page = movablePage {
@@ -302,11 +341,10 @@ struct AssistantChatView: View {
                 Button("Assistant settings", systemImage: "gearshape") { showSettings = true }
             }
         } label: {
-            Label("New chat", systemImage: "square.and.pencil")
-        } primaryAction: {
-            newChat()
+            Label("More", systemImage: "ellipsis")
         }
-        .help(Text("New chat"))
+        .menuIndicator(.hidden)
+        .help(Text("More"))
     }
 
     /// The page beside the panel when the open chat (one the server knows) belongs to another;
@@ -335,7 +373,9 @@ struct AssistantChatView: View {
     @ViewBuilder private var content: some View {
         if let settings = store.settings, !settings.configured {
             AssistantSetupView(canEdit: family.canEdit) { showSettings = true }
-        } else if store.settings == nil, let error = store.settingsError {
+        } else if store.settings == nil, let error = store.settingsError, store.current == nil, store.currentID == nil {
+            // Only with nothing else to show: a chat (read from the device) shows, the composer
+            // offers to try again.
             ContentUnavailableView {
                 Label("Couldn’t load", systemImage: "exclamationmark.triangle")
             } description: {
@@ -344,9 +384,8 @@ struct AssistantChatView: View {
                 Button("Try again") { Task { await store.loadSettings() } }
                     .buttonStyle(.glassProminent)
             }
-        } else if store.settings == nil {
-            ProgressView().controlSize(.large).frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
+            // At once, before the settings are known: the chat shows and the composer waits.
             conversation
                 .safeAreaInset(edge: .bottom, spacing: 0) { composer }
                 .overlay { if dropping { dropHint } }
@@ -375,31 +414,30 @@ struct AssistantChatView: View {
         (store.current?.items ?? []).enumerated().filter { $0.element.isVisible }.map { ($0.offset, $0.element) }
     }
 
+    /// The chat being opened (no copy of it here yet): a placeholder rather than an empty chat.
+    private var opening: Bool { store.currentID != nil && store.current == nil }
+
+    /// The conversation, the placeholder while a chat opens, or why it couldn't. Another chat
+    /// cross-fades in (the two overlap at the bottom, where the user reads).
     private var conversation: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                if store.current?.items.isEmpty ?? true {
-                    suggestions
-                }
-                let items = visibleItems
-                // Worked out once here for every item (each card asking the store would draw every
-                // card again with each piece of a streaming answer).
-                let waiting = store.waitingIndex
-                let busy = store.busy
-                let saved = store.savedCopy != nil
-                ForEach(Array(items.enumerated()), id: \.element.offset) { index, entry in
-                    AssistantItemView(item: entry.item, store: store, saved: saved, waiting: entry.offset == waiting,
-                                      busy: busy, open: open)
-                        .equatable()
-                        .contextMenu { itemMenu(items: items, index: index) }
-                }
-                if store.busy {
-                    AssistantActivityLine(store: store)
-                }
-                ForEach(store.current?.queued ?? []) { entry in
-                    AssistantQueuedRow(entry: entry, store: store)
+            ZStack(alignment: .bottom) {
+                if opening {
+                    if let error = store.openError {
+                        openFailed(error)
+                            .transition(.opacity)
+                    } else {
+                        AssistantChatSkeleton()
+                            .transition(.opacity)
+                    }
+                } else {
+                    chatItems
+                        .id(store.session)
+                        .transition(.opacity)
                 }
             }
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.2),
+                       value: FadeKey(session: store.session, opening: opening, failed: store.openError != nil))
             .frame(maxWidth: 760)
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 16)
@@ -418,15 +456,103 @@ struct AssistantChatView: View {
                 scroll.scrollTo(edge: .bottom)
             }
         }
-        .onChange(of: store.currentID) {
+        .onChange(of: store.session) {
             following = true
             scroll.scrollTo(edge: .bottom)
         }
         .overlay(alignment: .bottomTrailing) {
             if !following { jumpToLatest }
         }
-        .reloadsWhenReconnected(stale: store.savedCopy?.updating == false, store.retrySaved)
+        .reloadsWhenReconnected(stale: store.savedCopy?.updating == false || store.openError != nil, store.retrySaved)
         .animation(reduceMotion ? nil : .snappy, value: following)
+    }
+
+    /// The chat's items, from the window's start on (`AssistantItemWindow`); a new chat welcomes.
+    /// New items come in animated (counted, not on every piece of a streaming answer), from the
+    /// moment the chat has opened on.
+    private var chatItems: some View {
+        let all = visibleItems
+        let positions = all.map(\.offset)
+        let key = WindowKey(session: store.session, loaded: store.current != nil)
+        let start = windowKey == key ? windowStart : AssistantItemWindow.start(positions)
+        let hidden = AssistantItemWindow.hidden(positions, start: start)
+        let shown = Array(all.enumerated()).dropFirst(hidden)
+        // Worked out once here for every item (each card asking the store would draw every
+        // card again with each piece of a streaming answer).
+        let waiting = store.waitingIndex
+        let busy = store.busy
+        let saved = store.savedCopy != nil
+        let queued = store.current?.queued ?? []
+        let animates = !reduceMotion && settledSession == store.session
+        return VStack(alignment: .leading, spacing: 12) {
+            if store.current?.items.isEmpty ?? true {
+                AssistantWelcome(examples: AssistantPages.examples(store.current?.page ?? here), visible: visible) { example in
+                    text = example
+                    composerFocused = true
+                }
+                .transition(.opacity)
+            }
+            if hidden > 0 {
+                Button {
+                    showEarlier(positions, start: start, keeping: all[hidden].offset)
+                } label: {
+                    Label("Show earlier messages", systemImage: "arrow.up")
+                }
+                .buttonStyle(.glass)
+                .frame(maxWidth: .infinity)
+            }
+            ForEach(shown, id: \.element.offset) { index, entry in
+                AssistantItemView(item: entry.item, store: store, saved: saved, waiting: entry.offset == waiting,
+                                  busy: busy, open: open)
+                    .equatable()
+                    // The whole list: an answer's start may lie before the window.
+                    .contextMenu { itemMenu(items: all, index: index) }
+                    .transition(entry.item.isUser ? .assistantUserItem : .assistantItem)
+            }
+            if busy {
+                AssistantActivityLine(store: store)
+                    .transition(.opacity)
+            }
+            ForEach(queued) { entry in
+                AssistantQueuedRow(entry: entry, store: store)
+                    .transition(.assistantUserItem)
+            }
+        }
+        .scrollTargetLayout()
+        .animation(animates ? .snappy(duration: 0.32) : nil,
+                   value: ItemCounts(items: store.current?.items.count ?? 0, queued: queued.count, busy: busy))
+    }
+
+    /// A chat came on screen (another one, or the one being opened got its items): its window
+    /// starts at its last items, and what comes from now on animates in. A new chat animates from
+    /// its first message on.
+    private func startWindow(_ key: WindowKey) {
+        windowStart = AssistantItemWindow.start(visibleItems.map(\.offset))
+        windowKey = key
+        if key.loaded || store.currentID == nil { settledSession = key.session }
+    }
+
+    /// Draws more of the earlier items, keeping the one at the top where it was.
+    private func showEarlier(_ positions: [Int], start: Int, keeping first: Int) {
+        following = false
+        windowStart = AssistantItemWindow.earlier(positions, start: start)
+        windowKey = WindowKey(session: store.session, loaded: store.current != nil)
+        scroll.scrollTo(id: first, anchor: .top)
+    }
+
+    private func openFailed(_ error: String) -> some View {
+        ContentUnavailableView {
+            Label("Couldn’t open the chat", systemImage: "exclamationmark.triangle")
+        } description: {
+            Text(verbatim: error)
+        } actions: {
+            Button("Try again") {
+                if let id = store.currentID { Task { await store.open(id) } }
+            }
+            .buttonStyle(.glassProminent)
+            .tint(ModuleTint.assistant)
+        }
+        .frame(minHeight: 280)
     }
 
     /// Floats over the chat while the user reads further up.
@@ -479,31 +605,25 @@ struct AssistantChatView: View {
         }
     }
 
-    private var suggestions: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 10) {
-                TintedIcon(systemImage: "sparkles", tint: ModuleTint.assistant)
-                Text("Ask me anything about your family’s plans, for example:")
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            // An example goes into the composer, to read (and change) before it's sent: the
-            // assistant may change things.
-            ForEach(AssistantPages.examples(store.current?.page ?? here), id: \.self) { example in
-                Button {
-                    text = example
-                    composerFocused = true
-                } label: {
-                    Text(verbatim: example)
-                        .multilineTextAlignment(.leading)
-                        .contentCard(cornerRadius: 16, padding: 12)
-                        .contentShape(.rect)
-                }
-                .buttonStyle(.plain)
-                .accessibilityHint(Text("Puts it in the message field"))
-            }
-        }
-        .padding(.top, 8)
+    /// The chat `windowStart` was worked out for: another chat, or the one being opened once its
+    /// items are there.
+    private struct WindowKey: Equatable {
+        var session: Int
+        var loaded: Bool
+    }
+
+    /// What cross-fades the conversation: another chat, its placeholder, why it couldn't open.
+    private struct FadeKey: Equatable {
+        var session: Int
+        var opening: Bool
+        var failed: Bool
+    }
+
+    /// What animates the chat's items: one more (or fewer), a turn starting or ending.
+    private struct ItemCounts: Equatable {
+        var items: Int
+        var queued: Int
+        var busy: Bool
     }
 
     // MARK: Composer
@@ -513,12 +633,30 @@ struct AssistantChatView: View {
     }
 
     /// While the assistant answers, a message waits and goes next (once the chat has its id).
+    /// Not while a chat opens: a message then would start a new chat in its place.
     private var canSend: Bool {
-        store.ready && preparing == 0 && (!store.busy || !(store.current?.id.isEmpty ?? true))
+        store.ready && preparing == 0 && !opening && (!store.busy || !(store.current?.id.isEmpty ?? true))
     }
 
     private var composer: some View {
         VStack(alignment: .leading, spacing: 6) {
+            // The settings couldn't be loaded (and there's no copy here): the chat shows, sending waits.
+            if store.settings == nil, let error = store.settingsError {
+                HStack(spacing: 8) {
+                    Label {
+                        Text(verbatim: error).lineLimit(2)
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle")
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    Spacer(minLength: 0)
+                    Button("Try again") { Task { await store.loadSettings() } }
+                        .font(.caption.weight(.semibold))
+                        .buttonStyle(.borderless)
+                }
+                .padding(.horizontal, 8)
+            }
             if !attachments.isEmpty || preparing > 0 {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
@@ -624,48 +762,16 @@ struct AssistantChatView: View {
                                      dictation: AssistantDictation.isAvailable, listening: listening)
     }
 
-    @ViewBuilder private var actionButton: some View {
-        switch action {
-        case .send:
-            sendButton
-        case .stop:
-            Button {
-                Task { await store.stop() }
-            } label: {
-                Image(systemName: "stop.fill")
-                    .frame(width: 22, height: 22)
-            }
-            .buttonStyle(.glass)
-            .buttonBorderShape(.circle)
-            .controlSize(.large)
-            // On the page, Assistant ▸ Stop has it.
-            .keyboardShortcut(mode == .page ? nil : KeyboardShortcut(".", modifiers: .command))
-            .accessibilityLabel(Text("Stop"))
-            .help(Text("Stop"))
-        case .dictate:
-            micButton
+    /// One button that morphs between Send, Stop and the mic (`AssistantComposerButton`).
+    private var actionButton: some View {
+        let action = action
+        return AssistantComposerButton(action: action, listening: listening, busy: store.busy,
+                                       enabled: enabled(action), shortcut: shortcut(action)) {
+            perform(action)
         }
-    }
-
-    private var sendButton: some View {
-        Button {
-            send()
-        } label: {
-            Image(systemName: "arrow.up")
-                .font(.body.weight(.semibold))
-                .frame(width: 22, height: 22)
-        }
-        .buttonStyle(.glassProminent)
-        .buttonBorderShape(.circle)
-        .controlSize(.large)
-        .tint(ModuleTint.assistant)
-        .keyboardShortcut(.return, modifiers: .command)
-        .disabled(!canSend || !filled)
-        .accessibilityLabel(store.busy ? Text("Send after this answer") : Text("Send"))
-        .help(store.busy ? Text("Send after this answer") : Text("Send"))
         // Typing while the assistant answers puts Send in Stop's place: ⌘. still stops it.
         .background {
-            if store.busy, mode != .page {
+            if action == .send, store.busy, mode != .page {
                 Button("Stop") { Task { await store.stop() } }
                     .keyboardShortcut(".", modifiers: .command)
                     .opacity(0)
@@ -675,10 +781,32 @@ struct AssistantChatView: View {
         }
     }
 
-    /// iPhone and iPad only: the Mac's keyboard has dictation of its own (Edit ▸ Start Dictation).
-    @ViewBuilder private var micButton: some View {
-        #if os(iOS)
-        Button {
+    private func enabled(_ action: AssistantComposerAction) -> Bool {
+        switch action {
+        case .send: canSend && filled
+        case .stop: true
+        case .dictate: store.ready
+        }
+    }
+
+    private func shortcut(_ action: AssistantComposerAction) -> KeyboardShortcut? {
+        switch action {
+        case .send: KeyboardShortcut(.return, modifiers: .command)
+        // On the page, Assistant ▸ Stop has it.
+        case .stop: mode == .page ? nil : KeyboardShortcut(".", modifiers: .command)
+        case .dictate: nil
+        }
+    }
+
+    private func perform(_ action: AssistantComposerAction) {
+        switch action {
+        case .send:
+            send()
+        case .stop:
+            Task { await store.stop() }
+        case .dictate:
+            // iPhone and iPad only: the Mac's keyboard has dictation of its own (Edit ▸ Start Dictation).
+            #if os(iOS)
             if dictation.isListening {
                 dictation.stop()
             } else {
@@ -686,22 +814,8 @@ struct AssistantChatView: View {
                 let base = text
                 Task { await dictation.start(base: base) { text = $0 } }
             }
-        } label: {
-            Image(systemName: listening ? "waveform" : "mic")
-                .font(.body.weight(.medium))
-                .symbolEffect(.variableColor.iterative, isActive: listening)
-                .frame(width: 22, height: 22)
+            #endif
         }
-        .buttonStyle(.glass)
-        .buttonBorderShape(.circle)
-        .controlSize(.large)
-        .tint(listening ? ModuleTint.assistant : nil)
-        .disabled(!store.ready)
-        .accessibilityLabel(listening ? Text("Stop dictation") : Text("Dictate"))
-        .help(listening ? Text("Stop dictation") : Text("Dictate"))
-        #else
-        sendButton
-        #endif
     }
 
     private var listening: Bool {
@@ -713,7 +827,8 @@ struct AssistantChatView: View {
     }
 
     private var placeholder: LocalizedStringKey {
-        if !store.ready { return "Set up the assistant in the settings first" }
+        // Until the settings are known the field just waits (disabled), without a word of setting up.
+        if store.settings?.configured == false { return "Set up the assistant in the settings first" }
         if listening { return "Listening…" }
         if store.busy { return "Next message – sent once this answer is done…" }
         // Send answers the open question (a tap on an option does too).

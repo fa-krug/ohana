@@ -4,7 +4,7 @@ import Testing
 
 /// The chat view's decisions: what Return does, what the button beside the field is, when the
 /// context meter shows, the page a chat belongs to, when the chat follows new content, how wide
-/// the page's chat list is, which provider an API URL is.
+/// the page's chat list is, which of a long chat's items are drawn, which provider an API URL is.
 struct AssistantComposerTests {
     @Test func returnSendsAndShiftReturnBreaksTheLine() {
         // A hardware keyboard's plain Return sends on both.
@@ -150,6 +150,38 @@ struct AssistantComposerTests {
         // The chat keeps its minimum: a narrow page caps the column.
         #expect(Layout.clamp(400, totalWidth: 700) == 700 - Layout.minChatWidth)
         #expect(Layout.clamp(400, totalWidth: 500) == Layout.minWidth)
+    }
+
+    @Test func drawsTheLastItemsOfALongChatFirst() {
+        typealias Window = AssistantItemWindow
+        // A short chat: all of it.
+        #expect(Window.start([0, 1, 2], page: 5) == 0)
+        #expect(Window.hidden([0, 1, 2], start: 0, page: 5) == 0)
+        // Positions with gaps (items that aren't shown): the window starts at the 3rd from the end.
+        let positions = [0, 2, 3, 5, 8, 9, 12]
+        let start = Window.start(positions, page: 3)
+        #expect(start == 8)
+        #expect(Window.hidden(positions, start: start, page: 3) == 4)
+        // New items join the window: it still starts there, and nothing moves out at the top.
+        #expect(Window.hidden(positions + [13, 14], start: start, page: 3) == 4)
+        // Earlier: three more, then the rest.
+        let earlier = Window.earlier(positions, start: start, page: 3)
+        #expect(earlier == 2)
+        #expect(Window.hidden(positions, start: earlier, page: 3) == 1)
+        #expect(Window.earlier(positions, start: earlier, page: 3) == 0)
+        #expect(Window.hidden(positions, start: 0, page: 3) == 0)
+        // A chat that came back shorter than its window's start: its last items still show.
+        #expect(Window.hidden([0, 1, 2, 3], start: 8, page: 3) == 1)
+        #expect(Window.start([], page: 3) == 0)
+        #expect(Window.hidden([], start: 0, page: 3) == 0)
+    }
+
+    @Test func offersAnExampleWithAnIconForEveryPage() {
+        for page in AssistantPages.all + ["knowledge"] {
+            let examples = AssistantPages.examples(page)
+            #expect(examples.count == 2)
+            #expect(examples.allSatisfy { !$0.icon.isEmpty && !$0.text.isEmpty })
+        }
     }
 
     @Test func namesTheProviderOfAnAPIURL() {
