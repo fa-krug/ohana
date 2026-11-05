@@ -3,7 +3,8 @@ import SwiftUI
 /// The frame around a family (the web app's components/shell/app-shell.tsx): the modules as a
 /// sidebar in sections (iPad, Mac) or a floating Liquid Glass tab bar (iPhone), the family
 /// switcher, the search across the modules (its own tab, ⌘K), and the assistant as an inspector
-/// on the right (a sheet on iPhone), ⌘J. The iPhone's tab bar holds five tabs: with more, iOS
+/// on the right (a sheet on iPhone, opened from the Ask Ohana bar above the tabs), ⌘J. The
+/// iPhone's tab bar holds five tabs: with more, iOS
 /// puts the rest under "More", which pushes a tab's own navigation stack under a second bar. So
 /// there the appointments, the chores, the knowledge base and the settings (`Module.phonePages`) open as sheets from
 /// the family page (`FamilySidebarHost`) instead.
@@ -75,13 +76,21 @@ struct AppShell: View {
                 SidebarSettingsButton(selected: selection.wrappedValue == .settings) { module = .settings }
             }
             .sheet(item: $phonePage) { page in
-                PhonePageSheet(page: page)
+                PhonePageSheet(page: page, assistant: assistantOn ? $showAssistant : nil)
             }
             .onChange(of: module) { if let module { storedModule = module } }
             #if os(iOS)
             .tabBarMinimizeBehavior(.onScrollDown)
             #endif
-            .modifier(AssistantPresentation(isPresented: $showAssistant, enabled: assistantOn))
+            // iPhone: the assistant one tap away, above the tabs.
+            .assistantAccessory(context, enabled: assistantOn)
+            // A page's sheet shows the assistant over itself (one presentation at a time).
+            .modifier(AssistantPresentation(isPresented: $showAssistant, enabled: assistantOn,
+                                            covered: phonePage != nil))
+            .onChange(of: phonePage) {
+                // Closed with its assistant still open: that goes too, not over the tabs.
+                if phonePage == nil, AssistantAccessoryHost.shows { showAssistant = false }
+            }
             #if os(iOS)
             // Where the tab view has no sidebar: the family page behind the tabs.
             .modifier(FamilySidebarHost(active: sizeClass == .compact, current: selection.wrappedValue))
@@ -164,6 +173,11 @@ struct AppShell: View {
     private func show(_ target: Module) {
         guard Module.notTabs.contains(target) else {
             module = target
+            // A tab (a link in the assistant over a page's sheet): the sheet would cover it.
+            if phonePage != nil {
+                showAssistant = false
+                phonePage = nil
+            }
             return
         }
         if target == .assistant {
@@ -211,16 +225,21 @@ struct AppShell: View {
                 .shellToolbar()
                 .demoBanner()
         }
-        // Not on the assistant's own page (iPad, Mac), nor without the assistant.
-        .environment(\.shellAssistant, item == .assistant || !assistantOn ? nil : $showAssistant)
+        // Not on the assistant's own page (iPad, Mac), nor without the assistant, nor on iPhone:
+        // the Ask Ohana bar is there instead (`AssistantAccessory`).
+        .environment(\.shellAssistant, item == .assistant || !assistantOn || AssistantAccessoryHost.shows
+                     ? nil : $showAssistant)
         .environment(\.shellModule, selection)
     }
 }
 
 /// On iPhone, a page that isn't a tab (`Module.phonePages`): its root in a sheet of its own, with
-/// a close button where the tabs' pages have the family button.
+/// a close button where the tabs' pages have the family button. It covers the Ask Ohana bar, so
+/// its pages have the ✨, and the assistant opens over it (`assistant`: the shell's toggle; nil
+/// without the assistant).
 private struct PhonePageSheet: View {
     let page: Module
+    let assistant: Binding<Bool>?
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -231,9 +250,14 @@ private struct PhonePageSheet: View {
                         Button("Close", systemImage: "xmark") { dismiss() }
                     }
                 }
+                .assistantButton()
                 .demoBanner()
         }
+        .environment(\.shellAssistant, assistant)
         .errorBanner()
+        .sheet(isPresented: assistant ?? .constant(false)) {
+            AssistantPanel().errorBannerWhenCompact()
+        }
     }
 }
 
@@ -281,7 +305,7 @@ extension Module {
 
 extension EnvironmentValues {
     /// The shell's assistant toggle, inside a module's navigation stack (nil elsewhere: sheets
-    /// of their own, the assistant's own page).
+    /// of their own, the assistant's own page, the iPhone's tabs, which have the Ask Ohana bar).
     @Entry var shellAssistant: Binding<Bool>?
     /// The shell's page on screen, inside a module's navigation stack (nil elsewhere): on the Mac
     /// every page there gets the search field (`ShellSearchField`).
@@ -296,10 +320,17 @@ private struct AssistantPresentation: ViewModifier {
     /// The server has the assistant on; off, the panel never shows (the views stay as they are,
     /// so turning it on or off doesn't rebuild the shell).
     var enabled = true
+    /// On iPhone a page's sheet is up: it shows the assistant's sheet over itself.
+    var covered = false
 
     /// What the sheet or inspector shows: never while the assistant is off.
     private var shown: Binding<Bool> {
         Binding { enabled && isPresented } set: { isPresented = $0 }
+    }
+
+    /// The iPhone's sheet: not while a page's sheet shows it.
+    private var sheetShown: Binding<Bool> {
+        Binding { enabled && isPresented && !covered } set: { isPresented = $0 }
     }
 
     func body(content: Content) -> some View {
@@ -313,7 +344,7 @@ private struct AssistantPresentation: ViewModifier {
     private func presentation(_ content: Content) -> some View {
         #if os(iOS)
         if UIDevice.current.userInterfaceIdiom == .phone {
-            content.sheet(isPresented: shown) {
+            content.sheet(isPresented: sheetShown) {
                 AssistantPanel().errorBannerWhenCompact()
             }
         } else {
@@ -336,7 +367,7 @@ private struct AssistantPresentation: ViewModifier {
 }
 
 /// The toolbar every module page gets from the shell: the family sidebar's button (on iPhone,
-/// where the tab view has no sidebar) and the assistant toggle.
+/// where the tab view has no sidebar) and the assistant toggle (not on iPhone's tabs).
 struct ShellToolbar: ViewModifier {
     @Environment(AppModel.self) private var app
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -363,7 +394,8 @@ struct ShellToolbar: ViewModifier {
     }
 }
 
-/// The assistant toggle at the top right; on the Mac right of it the search across the modules
+/// The assistant toggle at the top right (`AssistantToolbarToggle`; none where `shellAssistant` is
+/// nil, as on the iPhone's tabs); on the Mac right of it the search across the modules
 /// (`ShellSearchField`), the page's own items left of both. The shell gives them to the module
 /// roots; a page pushed onto a module's stack adds them itself (a pushed page has its own toolbar).
 struct AssistantButton: ViewModifier {
@@ -381,7 +413,7 @@ struct AssistantButton: ViewModifier {
                     .toolbar {
                         if let showAssistant {
                             ToolbarSpacer(.fixed, placement: .primaryAction)
-                            ToolbarItem(placement: .primaryAction) { button(showAssistant) }
+                            ToolbarItem(placement: .primaryAction) { AssistantToolbarToggle(isOpen: showAssistant) }
                         }
                         #if os(macOS)
                         if let module {
@@ -392,15 +424,6 @@ struct AssistantButton: ViewModifier {
                         #endif
                     }
             }
-    }
-
-    private func button(_ showAssistant: Binding<Bool>) -> some View {
-        Button {
-            showAssistant.wrappedValue.toggle()
-        } label: {
-            Label("Assistant", systemImage: "sparkles")
-        }
-        .help("Assistant (⌘J)")
     }
 }
 

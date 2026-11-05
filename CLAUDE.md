@@ -655,9 +655,15 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   on screen, `moduleRootsOnScreen`, so it stays "back" on pushed pages; families with one *Add Family*
   menu (new / join), on iPhone only the pages that aren't tabs (`Module.phonePages`; a compact iPad
   lists every page) with the one on screen highlighted, scanning a letter, the settings), assistant `.inspector` ⌘J (a `.sheet` on
-  iPhone: an inspector there breaks the tabs' navigation bars), toggled by the ✨ button at the top
-  right of every page: module roots get it from `shellToolbar()`, a page pushed onto a module's
-  stack adds `.assistantButton()`; and its own
+  iPhone: an inspector there breaks the tabs' navigation bars), toggled by the ✨ toggle at the top
+  right of every page (`AssistantToolbarToggle`: tinted while open, breathing while a turn runs):
+  module roots get it from `shellToolbar()`, a page pushed onto a module's stack adds
+  `.assistantButton()`; on iPhone the tabs' pages have none: the *Ask Ohana* bar above the tabs
+  (`tabViewBottomAccessory`, `Features/Assistant/AssistantAccessory.swift`, one button → `family.ask()`;
+  while a turn runs its status and the chat's title, compact beside a shrunk tab bar) takes its
+  place, and only `Module.phonePages`' sheets, which cover it, show the ✨ and the assistant over
+  themselves; the bar and the ✨ count as viewers of the chat (`addViewer`), so a turn is followed
+  to its end after the panel closes; and its own
   page, `AppRoute`: `family.open(.recipe(id:))` etc. switches to the module, whose root takes it
   with `family.takeRoute(for:)`; server paths `/f/{id}/…` and `ohana://f/{id}/…` map onto routes;
   the search tab (`Module.search`, `Tab(role: .search)`, ⌘K → `family.startSearch()`,
@@ -669,9 +675,9 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   system's `.searchable` field always goes last)),
   `DesignSystem/` (solid content cards — Liquid Glass only on bars and floating controls —, `.readableWidth()` on every page's list or grouped form (a 760 pt column on wide windows; scroll pages cap their stack with `.frame(maxWidth:)` instead), error banner, `CancelButton`/`discardGuard`; the module sets `newItem`/`moduleMenu` focused values for File ▸ New and its menu; the Mac draws those menus in the menu bar, where views have no `AppModel` / `FamilyContext` in their environment: pass values in, never `@Environment` them there), `Features/<Module>/` (plus `Account/`, `Admin/`).
   On iPhone a page's toolbar stays small (the main action, perhaps a filter, one More menu in
-  sections, the ✨): what doesn't fit iOS moves into an overflow menu of its own, with the page's
+  sections; the assistant is the bar above the tabs): what doesn't fit iOS moves into an overflow menu of its own, with the page's
   More as a submenu, so a full page leaves something out instead (Finance has no search field
-  there: its search button took the ✨'s place); segmented pickers go under the navigation bar there (`safeAreaBar`, as in
+  there, only a search button); segmented pickers go under the navigation bar there (`safeAreaBar`, as in
   Meals and Finance), not in it (they can't shrink).
   Drag and drop (iPad, Mac) carries the payloads of `Core/Support/DragItems.swift` (own UTTypes,
   declared in `project.yml`, each naming its family): a recipe or a planned meal onto a day of the
