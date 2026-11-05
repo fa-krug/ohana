@@ -91,7 +91,11 @@ struct AssistantUserBubble: View {
                 }
                 if !text.isEmpty {
                     Text(verbatim: text)
+                        // iOS selects in a sheet (the message's Select Text): selectable text is
+                        // costly to lay out there.
+                        #if os(macOS)
                         .textSelection(.enabled)
+                        #endif
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -983,9 +987,10 @@ struct AssistantQueuedRow: View {
     }
 }
 
-/// What the assistant is doing right now, under the chat while it answers: sparkles that light up
-/// in turn and the status with a light moving across it (both still under Reduce Motion). The
-/// timeline ticks once a second, for the seconds and the status; the animations run on their own.
+/// What the assistant is doing right now, under the chat while it answers: the sparkles, gently
+/// pulsing (still under Reduce Motion), and the status, cross-fading as it changes. The only thing
+/// in the chat that moves on its own; nothing ticks: "Writing…" turns into "Thinking…" after a
+/// pause by a task that waits for that moment.
 struct AssistantActivityLine: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let store: AssistantChatStore
@@ -993,33 +998,35 @@ struct AssistantActivityLine: View {
     /// After this long without a new piece of text, the model is busy with its next step.
     private static let writingPause: TimeInterval = 2
 
+    /// The piece of text (its time) the pause came after.
+    @State private var pausedAfter: Date?
+
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 1)) { context in
-            let a = store.activity
-            let since = a?.at ?? context.date
-            let secs = Int(context.date.timeIntervalSince(since))
-            let status = text(a, now: context.date)
-            HStack(spacing: 8) {
-                Image(systemName: "sparkles")
-                    .foregroundStyle(ModuleTint.assistant)
-                    .symbolEffect(.pulse.byLayer, options: .repeating, isActive: !reduceMotion)
-                    .accessibilityHidden(true)
-                Text(verbatim: status)
-                    .lineLimit(1)
-                    .contentTransition(.opacity)
-                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: status)
-                    .modifier(AssistantShimmer(active: !reduceMotion))
-                if secs >= 5 {
-                    Text(verbatim: "\(secs) s").monospacedDigit().foregroundStyle(.tertiary)
-                }
-            }
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 4)
+        let a = store.activity
+        let status = text(a)
+        HStack(spacing: 8) {
+            Image(systemName: "sparkles")
+                .foregroundStyle(ModuleTint.assistant)
+                .symbolEffect(.pulse, options: .repeating, isActive: !reduceMotion)
+                .accessibilityHidden(true)
+            Text(verbatim: status)
+                .lineLimit(1)
+                .contentTransition(.opacity)
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: status)
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 4)
+        .task(id: a?.at) {
+            guard let a, a.activity.kind == "writing" else { return }
+            let left = a.at.addingTimeInterval(Self.writingPause).timeIntervalSinceNow
+            if left > 0 { try? await Task.sleep(for: .seconds(left)) }
+            guard !Task.isCancelled else { return }
+            pausedAfter = a.at
         }
     }
 
-    private func text(_ a: AssistantActivityState?, now: Date) -> String {
+    private func text(_ a: AssistantActivityState?) -> String {
         guard let a else { return String(localized: "Thinking…") }
         let running = (store.current?.items ?? []).compactMap { item -> AssistantToolCall? in
             if case let .tool(t) = item, t.status == "running" { t } else { nil }
@@ -1033,7 +1040,7 @@ struct AssistantActivityLine: View {
         case "tool" where !running.isEmpty:
             let more = running.count > 1 ? " (+\(running.count - 1))" : ""
             return AssistantToolLabels.label(running[running.count - 1]) + more + "…"
-        case "writing" where now.timeIntervalSince(a.at) < Self.writingPause:
+        case "writing" where pausedAfter != a.at:
             return String(localized: "Writing…")
         default:
             return String(localized: "Thinking…")

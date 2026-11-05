@@ -3,7 +3,7 @@ import Testing
 @testable import Ohana
 
 /// The chat view's decisions: what Return does, what the button beside the field is, when the
-/// context meter shows, the page a chat belongs to, when the chat follows new content, how wide
+/// context meter shows, the page a chat belongs to, how the chat scrolls, how wide
 /// the page's chat list is, which of a long chat's items are drawn, which provider an API URL is.
 struct AssistantComposerTests {
     @Test func returnSendsAndShiftReturnBreaksTheLine() {
@@ -78,44 +78,69 @@ struct AssistantComposerTests {
     }
 
     typealias Metrics = AssistantScrollFollow.Metrics
+    typealias Follow = AssistantScrollFollow
 
-    @Test func followsTheEndUntilTheUserScrollsUp() {
-        let atEnd = Metrics(offset: 500, maxOffset: 500)
+    @Test func neverScrollsAlongWithAnAnswer() {
+        let atEnd = Metrics(offset: 500, maxOffset: 500, visibleHeight: 600)
         #expect(atEnd.isAtBottom)
-        // The answer grew: the end moved away, the user didn't move. Still following, so pin.
-        let grown = Metrics(offset: 500, maxOffset: 620)
+        // The answer grew past the bottom: nothing scrolls, "Jump to latest" shows.
+        let grown = Metrics(offset: 500, maxOffset: 620, visibleHeight: 600)
         #expect(!grown.isAtBottom)
-        #expect(AssistantScrollFollow.follows(true, from: atEnd, to: grown))
-        #expect(AssistantScrollFollow.shouldPin(following: true, metrics: grown, scrolling: false))
-        // Not while the user scrolls; an animation doesn't count (on macOS it may never end).
-        #expect(!AssistantScrollFollow.shouldPin(following: true, metrics: grown, scrolling: true))
-        #expect(AssistantScrollFollow.userScrolls(.interacting))
-        #expect(AssistantScrollFollow.userScrolls(.decelerating))
-        #expect(!AssistantScrollFollow.userScrolls(.animating))
-        #expect(!AssistantScrollFollow.userScrolls(.idle))
-        // The user scrolled up: no longer following, even while the answer grows on.
-        let up = Metrics(offset: 300, maxOffset: 620)
-        #expect(!AssistantScrollFollow.follows(true, from: grown, to: up))
-        let more = Metrics(offset: 300, maxOffset: 700)
-        #expect(!AssistantScrollFollow.follows(false, from: up, to: more))
-        #expect(!AssistantScrollFollow.shouldPin(following: false, metrics: more, scrolling: false))
-        // Back near the end (within the threshold): following again.
-        let back = Metrics(offset: 670, maxOffset: 700)
-        #expect(AssistantScrollFollow.follows(false, from: more, to: back))
-    }
-
-    @Test func aShrinkingChatIsntTheUserScrolling() {
-        // Another chat opened, the keyboard went away: the offset drops with the end.
-        let before = Metrics(offset: 900, maxOffset: 900)
-        let shorter = Metrics(offset: 600, maxOffset: 800)
-        #expect(!shorter.isAtBottom)
-        #expect(AssistantScrollFollow.follows(true, from: before, to: shorter))
-        #expect(AssistantScrollFollow.shouldPin(following: true, metrics: shorter, scrolling: false))
-        let clamped = Metrics(offset: 380, maxOffset: 300)
-        #expect(AssistantScrollFollow.follows(true, from: Metrics(offset: 500, maxOffset: 500), to: clamped))
+        #expect(Follow.pin(pending: false, from: atEnd, to: grown, scrolling: false) == (false, false))
+        // Back near the end (within the threshold): at the end again.
+        #expect(Metrics(offset: 590, maxOffset: 620, visibleHeight: 600).isAtBottom)
         // A chat shorter than the view is always at its end.
         #expect(Metrics(offset: 0, maxOffset: -200).isAtBottom)
-        #expect(!AssistantScrollFollow.shouldPin(following: true, metrics: Metrics(offset: 0, maxOffset: -200), scrolling: false))
+    }
+
+    @Test func keepsTheEndInViewWhenTheKeyboardComesUp() {
+        // At the end, the keyboard takes 300 points: back to the end until it is there.
+        let atEnd = Metrics(offset: 500, maxOffset: 500, visibleHeight: 600)
+        let keyboard = Metrics(offset: 500, maxOffset: 800, visibleHeight: 300)
+        #expect(Follow.pin(pending: false, from: atEnd, to: keyboard, scrolling: false) == (true, true))
+        // Still on the way (the keyboard slides in): on.
+        let sliding = Metrics(offset: 650, maxOffset: 800, visibleHeight: 300)
+        #expect(Follow.pin(pending: true, from: keyboard, to: sliding, scrolling: false) == (true, true))
+        // There: done, and the answer growing afterwards scrolls nothing.
+        let there = Metrics(offset: 800, maxOffset: 800, visibleHeight: 300)
+        #expect(Follow.pin(pending: true, from: sliding, to: there, scrolling: false) == (false, false))
+        #expect(Follow.pin(pending: false, from: there, to: Metrics(offset: 800, maxOffset: 900, visibleHeight: 300),
+                           scrolling: false) == (false, false))
+        // Read further up: the keyboard leaves the chat where it is.
+        let up = Metrics(offset: 100, maxOffset: 500, visibleHeight: 600)
+        #expect(Follow.pin(pending: false, from: up, to: Metrics(offset: 100, maxOffset: 800, visibleHeight: 300),
+                           scrolling: false) == (false, false))
+        // The user scrolling ends it.
+        #expect(Follow.pin(pending: true, from: keyboard, to: sliding, scrolling: true) == (false, false))
+        // The first measurement (the last turn gets its room below): to the end it opened at.
+        let first = Metrics(offset: 0, maxOffset: 0, visibleHeight: 0)
+        #expect(Follow.pin(pending: false, from: first, to: Metrics(offset: 0, maxOffset: 400, visibleHeight: 600),
+                           scrolling: false) == (true, true))
+        // An animation isn't the user scrolling (on macOS it may never end).
+        #expect(Follow.userScrolls(.interacting))
+        #expect(Follow.userScrolls(.decelerating))
+        #expect(!Follow.userScrolls(.animating))
+        #expect(!Follow.userScrolls(.idle))
+    }
+
+    @Test func givesTheLastTurnTheVisibleHeight() {
+        #expect(Follow.turnHeight(visible: 600.6) == 600 - 2 * Follow.padding)
+        #expect(Follow.turnHeight(visible: 10) == 0)
+        #expect(Follow.turnHeight(visible: 0) == 0)
+    }
+
+    @Test func scrollsANewMessageToTheTop() {
+        // Sent, or come in while the user reads at the end.
+        #expect(Follow.scrollsToTurn(from: 4, to: 9, sameChat: true, sent: true, atEnd: false))
+        #expect(Follow.scrollsToTurn(from: 4, to: 9, sameChat: true, sent: false, atEnd: true))
+        // Not while the user reads further up and didn't send it.
+        #expect(!Follow.scrollsToTurn(from: 4, to: 9, sameChat: true, sent: false, atEnd: false))
+        // Not on opening a chat (it opens at its end), nor for another chat.
+        #expect(!Follow.scrollsToTurn(from: nil, to: 9, sameChat: true, sent: true, atEnd: true))
+        #expect(!Follow.scrollsToTurn(from: 4, to: 9, sameChat: false, sent: true, atEnd: true))
+        // Nor when the chat came back shorter.
+        #expect(!Follow.scrollsToTurn(from: 9, to: 4, sameChat: true, sent: true, atEnd: true))
+        #expect(!Follow.scrollsToTurn(from: 9, to: nil, sameChat: true, sent: true, atEnd: true))
     }
 
     #if os(macOS)
@@ -128,15 +153,14 @@ struct AssistantComposerTests {
         let top = Metrics(ScrollGeometry(contentOffset: CGPoint(x: 0, y: -52), contentSize: content,
                                          contentInsets: insets, containerSize: size))
         #expect(!top.isAtBottom)
+        #expect(top.visibleHeight == 390)
         let end = Metrics(ScrollGeometry(contentOffset: CGPoint(x: 0, y: 358), contentSize: content,
                                          contentInsets: insets, containerSize: size))
         #expect(end.isAtBottom)
-        #expect(!AssistantScrollFollow.shouldPin(following: true, metrics: end, scrolling: false))
-        // A short chat with the toolbar's inset just applied: still at its end, so still following.
+        // A short chat with the toolbar's inset just applied: still at its end.
         let short = Metrics(ScrollGeometry(contentOffset: CGPoint(x: 0, y: -52), contentSize: CGSize(width: 420, height: 330),
                                            contentInsets: insets, containerSize: size))
         #expect(short.isAtBottom)
-        #expect(AssistantScrollFollow.follows(true, from: Metrics(offset: 0, maxOffset: -4), to: short))
     }
     #endif
 
