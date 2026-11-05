@@ -18,7 +18,8 @@ struct OverviewView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                if family.isEnabled(.assistant) { OverviewAskField() }
+                // On iPhone the Ask Ohana bar above the tabs takes its place.
+                if family.isEnabled(.assistant), !AssistantAccessoryHost.shows { OverviewAskField() }
                 LoadStateView(state: state, retry: load) { dashboard in
                     OverviewGrid(dashboard: dashboard)
                 }
