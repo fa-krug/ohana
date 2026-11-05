@@ -89,7 +89,7 @@ struct FamilyAvatar: View {
             .overlay {
                 // Only with a photo: `RemoteImage` needs the app's model in the environment.
                 if let path = MemberPhoto.path(photo) {
-                    RemoteImage(path: path) { Color.clear }
+                    RemoteImage(path: path, maxPixelSize: max(64, Int(size * 3))) { Color.clear }
                         .frame(width: size, height: size)
                         .clipShape(.circle)
                 }

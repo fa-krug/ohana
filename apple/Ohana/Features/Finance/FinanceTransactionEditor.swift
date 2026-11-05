@@ -298,7 +298,7 @@ struct FinanceTransactionEditor: View {
     @ViewBuilder
     private func links(_ t: FinanceTransaction) -> some View {
         let origin = t.origin
-        if let (icon, text) = FinanceLinkInfo(store.list?.transactions ?? [t]).detail(t, store: store) {
+        if let (icon, text) = (store.list != nil ? store.linkInfo : FinanceLinkInfo([t])).detail(t, store: store) {
             Section {
                 Label(text, systemImage: icon).foregroundStyle(.secondary)
                 if let origin { Label(origin.title, systemImage: origin.icon ?? "pencil").foregroundStyle(.secondary) }

@@ -49,14 +49,20 @@ final class CalendarStore {
     private static let skipWeekendsKey = "ohana.calendar.skipWeekends"
 
     let api: FamilyAPI
-    private(set) var year: Int
+    private(set) var year: Int {
+        didSet { if year != oldValue { clearDerived() } }
+    }
     private(set) var phase: Phase = .loading
     private(set) var family: CalendarFamilyInfo?
     /// The types of `year` (every year has its own), in order.
-    private(set) var types: [CalendarEntryType] = []
+    private(set) var types: [CalendarEntryType] = [] {
+        didSet { typesChanged() }
+    }
     /// The years that have types; nil until loaded.
     private(set) var typeYears: [Int]?
-    private(set) var entries: CalendarEntries = [:]
+    private(set) var entries: CalendarEntries = [:] {
+        didSet { clearDerived() }
+    }
     private(set) var notes: CalendarNotes = [:]
     private(set) var events: [Day: [CalendarEvent]] = [:]
     private(set) var birthdays: [Day: [CalendarBirthday]] = [:]
@@ -136,6 +142,16 @@ final class CalendarStore {
     private let ownReadOnly: Bool
     /// The year whose state (the server's or the saved copy) is shown; nil before the first.
     private var shownYear: Int?
+    /// The server's answer shown last (polling skips an equal one).
+    @ObservationIgnored private var lastAnswer: AnswerFingerprint?
+
+    // Worked out from the types and entries when they change, not on every redraw of a grid.
+    /// Each type's place in `types`.
+    @ObservationIgnored private var typeIndex: [String: Int] = [:]
+    /// Each type's role (`CalendarMath.roles`).
+    @ObservationIgnored private var typeRoles: [String: CalendarRole] = [:]
+    @ObservationIgnored private var statsCache: [String: CalendarTypeStats]?
+    @ObservationIgnored private var gapDaysCache: [Day]?
 
     /// `queueFile` keeps the queue on the device (`CalendarStore.queueFile(for:)`): changes not
     /// sent before the app quit are read back and sent again.
@@ -202,7 +218,33 @@ final class CalendarStore {
     var canUndo: Bool { !readOnly && !undoStack.isEmpty }
     var canRedo: Bool { !readOnly && !redoStack.isEmpty }
 
-    func type(_ id: String) -> CalendarEntryType? { types.first { $0.id == id } }
+    func type(_ id: String) -> CalendarEntryType? {
+        let types = types
+        return typeIndex[id].map { types[$0] }
+    }
+
+    private func typesChanged() {
+        var index: [String: Int] = [:], roles: [String: CalendarRole] = [:]
+        index.reserveCapacity(types.count)
+        for (i, type) in types.enumerated() where index[type.id] == nil {
+            index[type.id] = i
+            roles[type.id] = type.role
+        }
+        typeIndex = index
+        typeRoles = roles
+        clearDerived()
+    }
+
+    private func clearDerived() {
+        statsCache = nil
+        gapDaysCache = nil
+    }
+
+    /// The types' roles (`CalendarMath.roles(types)`), kept while the types don't change.
+    var roles: [String: CalendarRole] {
+        _ = types.count  // observed like the types
+        return typeRoles
+    }
 
     func member(_ id: String?) -> CalendarMember? {
         guard let id else { return nil }
@@ -214,25 +256,38 @@ final class CalendarStore {
 
     /// A day's entry types, in the order of the types.
     func types(on day: Day) -> [CalendarEntryType] {
-        let ids = entries[day] ?? []
-        return types.filter { ids.contains($0.id) }
+        let types = types
+        guard let ids = entries[day], !ids.isEmpty else { return [] }
+        if ids.count == 1 { return typeIndex[ids[0]].map { [types[$0]] } ?? [] }
+        // In the order of the types, each once (as filtering the types would give them).
+        return Set(ids.compactMap { typeIndex[$0] }).sorted().map { types[$0] }
     }
 
     func isGap(_ day: Day) -> Bool {
-        CalendarMath.isGap(day, entries[day], roles: CalendarMath.roles(types))
+        CalendarMath.isGap(day, entries[day], roles: roles)
     }
 
     /// What a grid needs for all of its days, worked out once per redraw of the grid.
     func cellContext(gridFocused: Bool) -> CalendarCellContext {
+        CalendarCellContext(roles: roles, today: .today, focus: gridFocused || dragging ? focus : nil,
+                            selectionTypes: selectionTypes, highlight: activeHighlight)
+    }
+
+    /// The days' look without the selection, the fill, drops and the focus (the year grid draws
+    /// those on top: a change of the selection doesn't redraw the days).
+    func contentContext() -> CalendarCellContext {
+        CalendarCellContext(roles: roles, today: .today, focus: nil, selectionTypes: [], highlight: activeHighlight)
+    }
+
+    /// The types every selected day has (the chips that show as on).
+    var selectionTypes: Set<String> {
         var common: Set<String>?
         for day in selection {
             let ids = Set(entries[day] ?? [])
             common = common.map { $0.intersection(ids) } ?? ids
             if common?.isEmpty == true { break }
         }
-        return CalendarCellContext(roles: CalendarMath.roles(types), today: .today,
-                                   focus: gridFocused || dragging ? focus : nil, selectionTypes: common ?? [],
-                                   highlight: activeHighlight)
+        return common ?? []
     }
 
     /// The highlighted types the year has (a stale id, or none loaded yet, highlights nothing).
@@ -264,22 +319,48 @@ final class CalendarStore {
     /// A day's cell as values: the cells don't read the store themselves, so a change redraws
     /// only the days it touches, not the whole year.
     func cell(_ day: Day, _ context: CalendarCellContext) -> CalendarDayCell.Info {
-        let dayTypes = types(on: day)
+        var info = contentCell(day, context)
         let selected = selection.contains(day)
+        info.selected = selected
+        info.preview = fill?.targetSet.contains(day) ?? false
+        info.dropTarget = dropTarget == day
+        info.focused = context.focus == day
+        if selected { info.onTypes = context.selectionTypes }
+        return info
+    }
+
+    /// A day's cell without what the selection, the fill, drops and the focus add (`cell`): what
+    /// the year grid's days draw. Reads none of those, so a view building it isn't redrawn by them.
+    func contentCell(_ day: Day, _ context: CalendarCellContext) -> CalendarDayCell.Info {
+        let dayTypes = types(on: day)
         return CalendarDayCell.Info(
             types: dayTypes, note: notes[day], events: events[day] ?? [], holidays: holidays[day] ?? [],
             birthdays: birthdays[day] ?? [],
-            selected: selected, preview: fill?.targetSet.contains(day) ?? false, dropTarget: dropTarget == day,
-            focused: context.focus == day,
             isToday: day == context.today, gap: CalendarMath.isGap(day, entries[day], roles: context.roles),
-            onTypes: selected ? context.selectionTypes : Set(dayTypes.map(\.id)),
+            onTypes: dayTypes.isEmpty ? [] : Set(dayTypes.map(\.id)),
             allTypes: types, readOnly: readOnly,
             dimmed: !context.highlight.isEmpty && !dayTypes.contains { context.highlight.contains($0.id) }
         )
     }
 
-    var stats: [String: CalendarTypeStats] { CalendarMath.stats(entries, types: types, year: year) }
-    var gapDays: [Day] { CalendarMath.gapDays(entries, types: types, year: year) }
+    /// Per type its days and workdays in the year; worked out again only after the entries, the
+    /// types or the year changed.
+    var stats: [String: CalendarTypeStats] {
+        let (entries, types, year) = (entries, types, year)
+        if let statsCache { return statsCache }
+        let stats = CalendarMath.stats(entries, types: types, year: year)
+        statsCache = stats
+        return stats
+    }
+
+    /// The year's weekdays that need cover and have none, in order; kept like `stats`.
+    var gapDays: [Day] {
+        let (entries, types, year) = (entries, types, year)
+        if let gapDaysCache { return gapDaysCache }
+        let days = CalendarMath.gapDays(entries, types: types, year: year)
+        gapDaysCache = days
+        return days
+    }
     var needsCoverTypes: [CalendarEntryType] { types.filter { $0.role == .needsCover } }
 
     func showToast(_ text: String, undo: Bool = false) {
@@ -299,20 +380,22 @@ final class CalendarStore {
     /// the same state every 15 seconds, and an equal value would still redraw everything that
     /// reads it.
     func apply(_ state: CalendarState, savedAt date: Date? = nil) {
+        apply(CalendarPreparedState(state, year: year), savedAt: date)
+    }
+
+    /// `apply` with the days already worked out (`CalendarPreparedState`, off the main thread):
+    /// here only the queue goes on top and what changed is assigned.
+    private func apply(_ state: CalendarPreparedState, savedAt date: Date?) {
         shownYear = year
         update(\.savedCopy, date.map { SavedCopy(date: $0, updating: true) })
         update(\.family, state.family)
         update(\.isViewer, ownReadOnly || state.family.readOnly)
         updateReadOnly()
-        update(\.types, state.types
-            .filter { $0.year == nil || $0.year == year }
-            .enumerated()
-            .sorted { ($0.element.position ?? $0.offset, $0.offset) < ($1.element.position ?? $1.offset, $1.offset) }
-            .map(\.element))
+        update(\.types, state.types)
         // A highlighted type the year doesn't have (deleted, or another year's) goes.
         update(\.highlightedTypes, activeHighlight)
         update(\.typeYears, state.typeYears)
-        var entries = Self.byDay(state.entries), notes = Self.byDay(state.notes ?? [:])
+        var entries = state.entries, notes = state.notes
         for batch in queue {
             switch batch {
             case let .entries(ops): CalendarMath.apply(ops, to: &entries, year: year)
@@ -321,9 +404,9 @@ final class CalendarStore {
         }
         update(\.entries, entries)
         update(\.notes, notes)
-        update(\.events, Self.byDay(state.events ?? [:]))
-        update(\.birthdays, Self.byDay(state.birthdays ?? [:]))
-        update(\.holidays, Self.byDay(state.holidays ?? [:]))
+        update(\.events, state.events)
+        update(\.birthdays, state.birthdays)
+        update(\.holidays, state.holidays)
         if let members = state.members { update(\.members, members) }
         update(\.phase, .loaded)
     }
@@ -336,26 +419,42 @@ final class CalendarStore {
         if self[keyPath: path] != value { self[keyPath: path] = value }
     }
 
-    static func byDay<V>(_ map: [String: V]) -> [Day: V] {
-        var out: [Day: V] = [:]
-        for (key, value) in map { if let day = Day(key) { out[day] = value } }
-        return out
-    }
-
     /// Fetches the year. A quiet load (polling, another screen's change) shows no errors. With
     /// nothing of the year shown yet, its copy on the device shows meanwhile, and stays while the
-    /// server can't be reached.
+    /// server can't be reached. The copy and the answer are read, decoded and sorted by day off
+    /// the main thread; an answer just like the one shown last (polling) is left at that.
     func load(quiet: Bool = false) async {
         let (version, sent, year) = (self.version, self.sent, self.year)
+        // The key the prefetch fills too (`Prefetch`): `api.cached` files it under the URL.
         let get = api.cached("", query: ["year": String(year)], as: CalendarState.self)
-        if shownYear != year, let copy = get.saved() {
-            apply(copy.value, savedAt: copy.date)
+        if shownYear != year {
+            let copy = await CalendarPreparedState.saved(cache: get.client.cache, key: get.key, year: year)
+            // Still the year to show, and nothing (the server's answer) shown for it meanwhile.
+            if let copy, year == self.year, shownYear != year {
+                apply(copy.state, savedAt: copy.date)
+            }
         } else if !quiet, savedCopy != nil {
             savedCopy?.updating = true
         }
         do {
-            let state = try await get.fetch()
+            let client = get.client
+            let (data, _) = try await client.data(for: client.request(.get, get.path, query: get.query))
             // The year switched: its own load is under way.
+            guard year == self.year else { return }
+            let fingerprint = AnswerFingerprint(year: year, version: version, sent: sent, data: data)
+            if fingerprint == lastAnswer, version == self.version, sent == self.sent, savedCopy == nil, isLoaded {
+                // The same answer as the one shown, and nothing changed here since: nothing to do.
+                client.cache?.write(data, for: get.key)
+                reloadAfterSave = pending
+                return
+            }
+            let state: CalendarPreparedState
+            do {
+                state = try await CalendarPreparedState.decode(data, year: year)
+            } catch {
+                throw APIError.decoding(error.description)
+            }
+            client.cache?.write(data, for: get.key)
             guard year == self.year else { return }
             // Something changed or was sent meanwhile, which the answer may miss: ask again, now
             // or once the queue is sent.
@@ -365,7 +464,8 @@ final class CalendarStore {
             }
             // What's still queued shows on top of it; once it's sent, the server's state alone.
             reloadAfterSave = pending
-            apply(state)
+            apply(state, savedAt: nil)
+            lastAnswer = fingerprint
         } catch let error as APIError where error.status == 404 {
             phase = .notFound
             dropSavedCopy()
@@ -393,6 +493,7 @@ final class CalendarStore {
     private func dropSavedCopy() {
         savedCopy = nil
         shownYear = nil
+        lastAnswer = nil
         updateReadOnly()
     }
 
@@ -840,6 +941,7 @@ final class CalendarStore {
         holidays = [:]
         // The new year shows its own copy on the device, if it has one, or nothing until loaded.
         savedCopy = nil
+        lastAnswer = nil
         updateReadOnly()
         Task { await load() }
     }
@@ -1134,6 +1236,68 @@ final class CalendarStore {
         // A load that started before this would bring the old days back.
         version += 1
     }
+}
+
+/// A loaded `CalendarState` as the store keeps it: the days parsed into `Day`s, the year's types
+/// in order. Made off the main thread (`decode`, `saved`): for a year with many entries and events
+/// that's the slow part of a load.
+nonisolated struct CalendarPreparedState: Sendable {
+    let family: CalendarFamilyInfo
+    let types: [CalendarEntryType]
+    let typeYears: [Int]?
+    let entries: CalendarEntries
+    let notes: CalendarNotes
+    let events: [Day: [CalendarEvent]]
+    let birthdays: [Day: [CalendarBirthday]]
+    let holidays: [Day: [CalendarHoliday]]
+    let members: [CalendarMember]?
+
+    init(_ state: CalendarState, year: Int) {
+        family = state.family
+        types = state.types
+            .filter { $0.year == nil || $0.year == year }
+            .enumerated()
+            .sorted { ($0.element.position ?? $0.offset, $0.offset) < ($1.element.position ?? $1.offset, $1.offset) }
+            .map(\.element)
+        typeYears = state.typeYears
+        entries = Self.byDay(state.entries)
+        notes = Self.byDay(state.notes ?? [:])
+        events = Self.byDay(state.events ?? [:])
+        birthdays = Self.byDay(state.birthdays ?? [:])
+        holidays = Self.byDay(state.holidays ?? [:])
+        members = state.members
+    }
+
+    static func byDay<V>(_ map: [String: V]) -> [Day: V] {
+        var out: [Day: V] = [:]
+        out.reserveCapacity(map.count)
+        for (key, value) in map { if let day = Day(key) { out[day] = value } }
+        return out
+    }
+
+    /// The server's answer, decoded and prepared off the main thread.
+    @concurrent
+    static func decode(_ data: Data, year: Int) async throws(OffMainJSON.Failure) -> CalendarPreparedState {
+        let state = try await OffMainJSON.decode(CalendarState.self, from: data)
+        return CalendarPreparedState(state, year: year)
+    }
+
+    /// The copy kept on the device under `key`, read, decoded and prepared off the main thread;
+    /// nil without one (or one that no longer decodes).
+    @concurrent
+    static func saved(cache: ResponseCache?, key: String, year: Int) async -> (state: CalendarPreparedState, date: Date)? {
+        guard let copy = await OffMainJSON.saved(CalendarState.self, cache: cache, key: key) else { return nil }
+        return (CalendarPreparedState(copy.value, year: year), copy.date)
+    }
+}
+
+/// The server's last answer the store applied, and what it was applied to: the same bytes for
+/// the same year, with nothing changed or sent here since, give the same calendar.
+private struct AnswerFingerprint: Equatable {
+    let year: Int
+    let version: Int
+    let sent: Int
+    let data: Data
 }
 
 /// An event moved to other days (dragged), for undo: its first day before and after.

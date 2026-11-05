@@ -7,11 +7,28 @@ enum FinanceMoney {
     /// `sign`: a "+" on income too; `whole`: no cents (averages per month).
     static func format(_ cents: Int, currency: String, sign: Bool = false, whole: Bool = false,
                        locale: Locale = .autoupdatingCurrent) -> String {
-        let amount = Decimal(cents) / 100
-        var style = Decimal.FormatStyle.Currency(code: currency.isEmpty ? "EUR" : currency, locale: locale)
+        (Decimal(cents) / 100).formatted(style(currency: currency.isEmpty ? "EUR" : currency, sign: sign, whole: whole, locale: locale))
+    }
+
+    private struct StyleKey: Hashable {
+        var currency: String
+        var sign: Bool
+        var whole: Bool
+        var locale: Locale
+    }
+
+    /// The styles made so far: amounts are formatted per table cell, and there are only a few.
+    private static var styles: [StyleKey: Decimal.FormatStyle.Currency] = [:]
+
+    private static func style(currency: String, sign: Bool, whole: Bool, locale: Locale) -> Decimal.FormatStyle.Currency {
+        let key = StyleKey(currency: currency, sign: sign, whole: whole, locale: locale)
+        if let style = styles[key] { return style }
+        var style = Decimal.FormatStyle.Currency(code: currency, locale: locale)
         if sign { style = style.sign(strategy: .always(showZero: false)) }
         if whole { style = style.precision(.fractionLength(0)) }
-        return amount.formatted(style)
+        if styles.count >= 64 { styles.removeAll() }
+        styles[key] = style
+        return style
     }
 
     /// Parses an amount: the decimal separator is the last "," or "." followed by one or two

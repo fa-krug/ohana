@@ -4,7 +4,7 @@ import Foundation
 // server/lib/appointments/app-routes.ts, server/lib/calendar/events.ts `PublicEvent`).
 
 /// One doctor's earliest slot of a run (`DoctorSlot`).
-struct AppointmentDoctorSlot: Codable, Hashable, Identifiable {
+nonisolated struct AppointmentDoctorSlot: Codable, Hashable, Identifiable, Sendable {
     let resultId: Int
     let doctorName: String
     let doctorSubtitle: String
@@ -24,8 +24,6 @@ struct AppointmentDoctorSlot: Codable, Hashable, Identifiable {
     let source: String
 
     var id: Int { resultId }
-    var date: Date? { Date.server(slot) }
-    var day: Day? { date.map { Day($0) } }
     var sourceName: String { source == "jameda" ? "jameda" : "Doctolib" }
 
     /// Street, then zip code and city.
@@ -39,13 +37,19 @@ struct AppointmentDoctorSlot: Codable, Hashable, Identifiable {
         guard let lat = Double(practiceLatitude), let lng = Double(practiceLongitude) else { return nil }
         return (lat, lng)
     }
+}
+
+@MainActor
+extension AppointmentDoctorSlot {
+    var date: Date? { Date.server(slot) }
+    var day: Day? { date.map { Day($0) } }
 
     /// The provider's booking page; scraped data, so only ever http(s).
     var bookingURL: URL? { AppointmentLogic.safeURL(bookingUrl) }
 }
 
 /// A run of a search (`RunSummary`).
-struct AppointmentRunSummary: Codable, Hashable, Identifiable {
+nonisolated struct AppointmentRunSummary: Codable, Hashable, Identifiable, Sendable {
     let id: String
     /// RUNNING | OK | NO_AVAILABILITY | ERROR (and INTERRUPTED from older runs)
     let status: String
@@ -61,7 +65,7 @@ struct AppointmentRunSummary: Codable, Hashable, Identifiable {
 }
 
 /// A doctor (with the reason for the visit) the search skips (`IgnoredItem`).
-struct AppointmentIgnoredItem: Codable, Hashable, Identifiable {
+nonisolated struct AppointmentIgnoredItem: Codable, Hashable, Identifiable, Sendable {
     let id: Int
     let doctorName: String
     let motiveLabel: String
@@ -70,7 +74,7 @@ struct AppointmentIgnoredItem: Codable, Hashable, Identifiable {
 }
 
 /// A search with its latest run and results (`SearchListItem`).
-struct AppointmentSearch: Codable, Hashable, Identifiable {
+nonisolated struct AppointmentSearch: Codable, Hashable, Identifiable, Sendable {
     let id: String
     let name: String
     let sources: String
@@ -114,7 +118,7 @@ struct AppointmentSearch: Codable, Hashable, Identifiable {
 }
 
 /// An event in the calendar (`PublicEvent`); here the booked appointments.
-struct AppointmentEvent: Codable, Hashable, Identifiable {
+nonisolated struct AppointmentEvent: Codable, Hashable, Identifiable, Sendable {
     let id: String
     let date: String
     let start: String?
@@ -129,14 +133,14 @@ struct AppointmentEvent: Codable, Hashable, Identifiable {
     let searchId: String?
 }
 
-/// GET /appointments
-struct AppointmentsOverview: Codable, Hashable {
+/// GET /appointments (decoded off the main thread, as the pages below).
+nonisolated struct AppointmentsOverview: Codable, Hashable, OffMainDecodable {
     let searches: [AppointmentSearch]
     let booked: [AppointmentEvent]
 }
 
 /// A notification channel as the search form offers it (no secrets).
-struct AppointmentChannelOption: Codable, Hashable, Identifiable {
+nonisolated struct AppointmentChannelOption: Codable, Hashable, Identifiable, Sendable {
     let id: String
     let name: String
     let provider: String
@@ -144,14 +148,14 @@ struct AppointmentChannelOption: Codable, Hashable, Identifiable {
 }
 
 /// The family's home address (`HomeDto`).
-struct AppointmentHome: Codable, Hashable {
+nonisolated struct AppointmentHome: Codable, Hashable, Sendable {
     let address: String
     let lat: Double
     let lng: Double
 }
 
 /// GET /appointments/options
-struct AppointmentOptions: Codable, Hashable {
+nonisolated struct AppointmentOptions: Codable, Hashable, OffMainDecodable {
     let channels: [AppointmentChannelOption]
     /// The family's members by name: "who is it for".
     let people: [String]
@@ -159,13 +163,13 @@ struct AppointmentOptions: Codable, Hashable {
 }
 
 /// GET /appointments/searches/{id}
-struct AppointmentSearchDetail: Codable, Hashable {
+nonisolated struct AppointmentSearchDetail: Codable, Hashable, OffMainDecodable {
     let search: AppointmentSearch
     let home: AppointmentHome?
 }
 
 /// A run with what it found (`RunWithResults`).
-struct AppointmentRunWithResults: Codable, Hashable, Identifiable {
+nonisolated struct AppointmentRunWithResults: Codable, Hashable, Identifiable, Sendable {
     let run: AppointmentRunSummary
     let doctors: [AppointmentDoctorSlot]
 
@@ -173,12 +177,12 @@ struct AppointmentRunWithResults: Codable, Hashable, Identifiable {
 }
 
 /// GET /appointments/searches/{id}/runs
-struct AppointmentRunsResponse: Codable, Hashable {
+nonisolated struct AppointmentRunsResponse: Codable, Hashable, OffMainDecodable {
     let runs: [AppointmentRunWithResults]
 }
 
 /// A slot marked as booked: its calendar event.
-struct AppointmentBookingInfo: Codable, Hashable {
+nonisolated struct AppointmentBookingInfo: Codable, Hashable, Sendable {
     let eventId: String
     let date: String
     let start: String?
@@ -187,7 +191,7 @@ struct AppointmentBookingInfo: Codable, Hashable {
 }
 
 /// GET /appointments/searches/{id}/slots/{resultId} (`SlotDetailData` + booking state)
-struct AppointmentSlotDetail: Codable, Hashable {
+nonisolated struct AppointmentSlotDetail: Codable, Hashable, OffMainDecodable {
     let slot: AppointmentDoctorSlot
     let searchId: String
     let searchName: String

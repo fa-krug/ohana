@@ -68,10 +68,12 @@ nonisolated final class ResponseCache: Sendable {
 }
 
 /// A value kept on the device and when it came from the server.
-struct Saved<Value> {
+nonisolated struct Saved<Value> {
     let value: Value
     let date: Date
 }
+
+extension Saved: Sendable where Value: Sendable {}
 
 /// A GET whose last answer is kept on the device (`ResponseCache`): `saved()` is that copy (nil
 /// without one, and always in the demo), `fetch()` asks the server and keeps its answer. Screens
@@ -96,6 +98,13 @@ struct CachedGet<Value: Decodable> {
         let value = try client.decode(Value.self, from: data)
         client.cache?.write(data, for: key)
         return value
+    }
+
+    /// Asks the server and keeps its answer without decoding it (the prefetch: the screen
+    /// decodes the copy when it opens, and a copy that doesn't decode counts as none).
+    func refresh() async throws {
+        let (data, _) = try await client.data(for: client.request(.get, path, query: query))
+        client.cache?.write(data, for: key)
     }
 }
 

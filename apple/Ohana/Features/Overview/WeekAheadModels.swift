@@ -3,7 +3,7 @@ import SwiftUI
 /// GET /api/v1/families/{id}/digest?today= (server/lib/digest): the next two weeks for each
 /// member, with what doesn't work out. Decoded leniently: what a newer server adds (a kind, a
 /// severity, fields in `data`) still shows.
-struct WeekAheadDigest: Codable, Hashable {
+nonisolated struct WeekAheadDigest: Codable, Hashable, OffMainDecodable {
     let from: Day
     let to: Day
     /// The server looks up the events' places; without, travel is only judged by the place names.
@@ -16,7 +16,7 @@ struct WeekAheadDigest: Codable, Hashable {
     var birthdays: [OverviewBirthday]
 }
 
-extension WeekAheadDigest {
+nonisolated extension WeekAheadDigest {
     init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         from = try c.decode(Day.self, forKey: .from)
@@ -30,7 +30,7 @@ extension WeekAheadDigest {
 }
 
 /// A member of the family (an account, or a person without one) in the two weeks.
-struct WeekAheadPerson: Codable, Hashable, Identifiable {
+nonisolated struct WeekAheadPerson: Codable, Hashable, Identifiable, Sendable {
     let id: String
     let name: String
     /// Has an account (a member who can sign in); false for the family's people.
@@ -41,7 +41,7 @@ struct WeekAheadPerson: Codable, Hashable, Identifiable {
     var events: Int
 }
 
-extension WeekAheadPerson {
+nonisolated extension WeekAheadPerson {
     init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(String.self, forKey: .id)
@@ -53,7 +53,7 @@ extension WeekAheadPerson {
 }
 
 /// Days the family is away, and the names of their types ("Vacation").
-struct WeekAheadAway: Codable, Hashable, Identifiable {
+nonisolated struct WeekAheadAway: Codable, Hashable, Identifiable, Sendable {
     let from: Day
     let to: Day
     var names: [String]
@@ -62,7 +62,7 @@ struct WeekAheadAway: Codable, Hashable, Identifiable {
 }
 
 /// How much an issue matters: a clash (red), something to look at (orange), good to know (gray).
-enum WeekAheadSeverity: String, Codable, Hashable, Comparable {
+nonisolated enum WeekAheadSeverity: String, Codable, Hashable, Comparable, Sendable {
     case conflict, warning, info
 
     /// An unknown severity (a newer server's) counts as `info`.
@@ -80,7 +80,10 @@ enum WeekAheadSeverity: String, Codable, Hashable, Comparable {
     }
 
     static func < (a: WeekAheadSeverity, b: WeekAheadSeverity) -> Bool { a.rank < b.rank }
+}
 
+@MainActor
+extension WeekAheadSeverity {
     var systemImage: String {
         switch self {
         case .conflict: "exclamationmark.octagon.fill"
@@ -108,7 +111,7 @@ enum WeekAheadSeverity: String, Codable, Hashable, Comparable {
 }
 
 /// One thing that doesn't work out (server/lib/digest/checks.ts `Issue`).
-struct WeekAheadIssue: Codable, Hashable, Identifiable {
+nonisolated struct WeekAheadIssue: Codable, Hashable, Identifiable, Sendable {
     /// The kind and the occurrences it's about: what "Looks fine" hides.
     let key: String
     /// overlap, tight_transfer, during_trip, packed_day, long_travel_day, travel_week,
@@ -126,14 +129,14 @@ struct WeekAheadIssue: Codable, Hashable, Identifiable {
 
     var id: String { key }
 
-    struct Person: Codable, Hashable {
+    struct Person: Codable, Hashable, Sendable {
         /// The account's or person's id; nil for a name the family doesn't have.
         var id: String?
         let name: String
     }
 
     /// An occurrence the issue is about.
-    struct Event: Codable, Hashable {
+    struct Event: Codable, Hashable, Sendable {
         let id: String
         var occurrence: Day?
         let title: String
@@ -167,16 +170,6 @@ struct WeekAheadIssue: Codable, Hashable, Identifiable {
             end = try c.decodeIfPresent(String.self, forKey: .end)
             location = try c.decodeIfPresent(String.self, forKey: .location) ?? ""
         }
-
-        /// "16:15–17:30", "from 09:00" on the first day of one over several days; nil all day.
-        var time: String? {
-            CalendarEventTime.text(date: date, endDate: endDate ?? date, start: start, end: end, on: date)
-        }
-
-        /// "16:15–17:30 Football training", or the title alone for an all-day event.
-        var line: String {
-            time.map { "\($0) \(title)" } ?? title
-        }
     }
 
     init(key: String, kind: String, severity: WeekAheadSeverity, date: Day, people: [Person] = [],
@@ -203,16 +196,32 @@ struct WeekAheadIssue: Codable, Hashable, Identifiable {
         dismissed = try c.decodeIfPresent(Bool.self, forKey: .dismissed) ?? false
     }
 
-    /// What the issue says, in the app's language (`WeekAheadText`).
-    var sentence: String { WeekAheadText.sentence(self) }
-
     /// "Mia, Leo": who it's about; empty when nobody in particular.
     var names: String { people.map(\.name).formatted(.list(type: .and)) }
 }
 
+@MainActor
+extension WeekAheadIssue {
+    /// What the issue says, in the app's language (`WeekAheadText`).
+    var sentence: String { WeekAheadText.sentence(self) }
+}
+
+@MainActor
+extension WeekAheadIssue.Event {
+    /// "16:15–17:30", "from 09:00" on the first day of one over several days; nil all day.
+    var time: String? {
+        CalendarEventTime.text(date: date, endDate: endDate ?? date, start: start, end: end, on: date)
+    }
+
+    /// "16:15–17:30 Football training", or the title alone for an all-day event.
+    var line: String {
+        time.map { "\($0) \(title)" } ?? title
+    }
+}
+
 /// The overview's `weekAhead` (server/lib/families/dashboard.ts): how many open conflicts and
 /// warnings the two weeks have, and the first few issues.
-struct WeekAheadSummary: Codable, Hashable {
+nonisolated struct WeekAheadSummary: Codable, Hashable, Sendable {
     var conflicts: Int
     var warnings: Int
     var top: [WeekAheadIssue]
@@ -221,7 +230,7 @@ struct WeekAheadSummary: Codable, Hashable {
     var hasIssues: Bool { conflicts + warnings > 0 }
 }
 
-extension WeekAheadSummary {
+nonisolated extension WeekAheadSummary {
     init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         conflicts = try c.decodeIfPresent(Int.self, forKey: .conflicts) ?? 0

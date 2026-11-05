@@ -1,67 +1,44 @@
 import SwiftUI
 
 /// GET /search: what matched the query across the modules (server lib/families/search.ts).
-struct FamilySearchResult: Decodable, Hashable {
-    var query: String
-    var currency: String
-    var results: [FamilySearchHit]
+/// Decoded off the main thread (`OffMainDecodable`), its groups made once there too.
+nonisolated struct FamilySearchResult: Decodable, Hashable, OffMainDecodable {
+    let query: String
+    let currency: String
+    let results: [FamilySearchHit]
     /// How many more matched than are listed, by kind.
-    var more: [String: Int]
-
+    let more: [String: Int]
     /// The hits by kind, in the server's order; kinds this app doesn't know are left out.
-    var groups: [(kind: FamilySearchHit.Kind, hits: [FamilySearchHit])] {
-        FamilySearchHit.Kind.allCases.compactMap { kind in
-            let hits = results.filter { $0.kind == kind }
-            return hits.isEmpty ? nil : (kind, hits)
+    let groups: [FamilySearchGroup]
+
+    private enum CodingKeys: String, CodingKey { case query, currency, results, more }
+
+    init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        query = try c.decode(String.self, forKey: .query)
+        currency = try c.decode(String.self, forKey: .currency)
+        results = try c.decode([FamilySearchHit].self, forKey: .results)
+        more = try c.decode([String: Int].self, forKey: .more)
+        groups = FamilySearchGroup.groups(results)
+    }
+}
+
+/// The hits of one kind.
+nonisolated struct FamilySearchGroup: Hashable, Sendable {
+    let kind: FamilySearchHit.Kind
+    let hits: [FamilySearchHit]
+
+    static func groups(_ results: [FamilySearchHit]) -> [FamilySearchGroup] {
+        let byKind = Dictionary(grouping: results.filter { $0.kind != nil }) { $0.kind! }
+        return FamilySearchHit.Kind.allCases.compactMap { kind in
+            byKind[kind].map { FamilySearchGroup(kind: kind, hits: $0) }
         }
     }
 }
 
-struct FamilySearchHit: Decodable, Hashable, Identifiable {
-    enum Kind: String, CaseIterable {
+nonisolated struct FamilySearchHit: Decodable, Hashable, Identifiable, Sendable {
+    enum Kind: String, CaseIterable, Sendable {
         case recipe, event, note, transaction, search, chore, person, chat, knowledge
-
-        var title: LocalizedStringKey {
-            switch self {
-            case .recipe: "Recipes"
-            case .event: "Events"
-            case .note: "Notes"
-            case .transaction: "Transactions"
-            case .search: "Appointment searches"
-            case .chore: "Chores"
-            case .person: "People"
-            case .knowledge: "Knowledge"
-            case .chat: "Chats"
-            }
-        }
-
-        var systemImage: String {
-            switch self {
-            case .recipe: "fork.knife"
-            case .event: "calendar.badge.clock"
-            case .note: "note.text"
-            case .transaction: "banknote"
-            case .search: "stethoscope"
-            case .chore: "checklist.checked"
-            case .person: "person"
-            case .knowledge: "books.vertical"
-            case .chat: "bubble.left.and.text.bubble.right"
-            }
-        }
-
-        /// The module the hit opens in.
-        var module: Module {
-            switch self {
-            case .recipe: .meals
-            case .event, .note: .calendar
-            case .transaction: .finance
-            case .search: .appointments
-            case .chore: .chores
-            case .person: .settings
-            case .knowledge: .knowledge
-            case .chat: .assistant
-            }
-        }
     }
 
     /// The server's kind; nil for one this app doesn't know yet.
@@ -89,7 +66,55 @@ struct FamilySearchHit: Decodable, Hashable, Identifiable {
     enum CodingKeys: String, CodingKey {
         case kindName = "kind", itemID = "id", title, detail, day, time, amountCents, account, icon, page, snippet
     }
+}
 
+@MainActor
+extension FamilySearchHit.Kind {
+    var title: LocalizedStringKey {
+        switch self {
+        case .recipe: "Recipes"
+        case .event: "Events"
+        case .note: "Notes"
+        case .transaction: "Transactions"
+        case .search: "Appointment searches"
+        case .chore: "Chores"
+        case .person: "People"
+        case .knowledge: "Knowledge"
+        case .chat: "Chats"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .recipe: "fork.knife"
+        case .event: "calendar.badge.clock"
+        case .note: "note.text"
+        case .transaction: "banknote"
+        case .search: "stethoscope"
+        case .chore: "checklist.checked"
+        case .person: "person"
+        case .knowledge: "books.vertical"
+        case .chat: "bubble.left.and.text.bubble.right"
+        }
+    }
+
+    /// The module the hit opens in.
+    var module: Module {
+        switch self {
+        case .recipe: .meals
+        case .event, .note: .calendar
+        case .transaction: .finance
+        case .search: .appointments
+        case .chore: .chores
+        case .person: .settings
+        case .knowledge: .knowledge
+        case .chat: .assistant
+        }
+    }
+}
+
+@MainActor
+extension FamilySearchHit {
     /// A knowledge document's file kind, for its icon (by its name).
     var fileKind: KnowledgeFileKind { KnowledgeFileKind(path: title) }
 

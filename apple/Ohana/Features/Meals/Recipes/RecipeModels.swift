@@ -4,7 +4,7 @@ import Foundation
 // server/lib/meals/app-routes.ts, server/lib/meals/ai/recipes.ts). Field names match the JSON.
 
 /// "KNOWN" (Favourites) or "TO_TRY" (Want to try).
-enum RecipeListType: String, Codable, CaseIterable, Identifiable, Hashable {
+nonisolated enum RecipeListType: String, Codable, CaseIterable, Identifiable, Hashable, Sendable {
     case known = "KNOWN"
     case toTry = "TO_TRY"
 
@@ -58,7 +58,7 @@ enum RecipeTagCategory: String, CaseIterable, Identifiable {
     }
 }
 
-struct RecipeTag: Codable, Hashable, Identifiable {
+nonisolated struct RecipeTag: Codable, Hashable, Identifiable, Sendable {
     let id: String
     let category: String
     let nameEn: String
@@ -67,11 +67,11 @@ struct RecipeTag: Codable, Hashable, Identifiable {
     var name: String { RecipeLocale.pick(en: nameEn, de: nameDe) }
 }
 
-struct RecipeTagsResponse: Codable {
+nonisolated struct RecipeTagsResponse: Codable, OffMainDecodable {
     let tags: [RecipeTag]
 }
 
-struct RecipeSummary: Codable, Hashable, Identifiable {
+nonisolated struct RecipeSummary: Codable, Hashable, Identifiable, Sendable {
     let id: String
     let title: String
     let description: String
@@ -89,13 +89,13 @@ struct RecipeSummary: Codable, Hashable, Identifiable {
     var imagePath: String? { RecipeImage.path(image) }
 }
 
-struct RecipeListPage: Codable {
+nonisolated struct RecipeListPage: Codable, OffMainDecodable {
     let items: [RecipeSummary]
     let totalCount: Int
 }
 
 /// One of the shared ingredients (IngredientLite).
-struct RecipeCatalogIngredient: Codable, Hashable, Identifiable {
+nonisolated struct RecipeCatalogIngredient: Codable, Hashable, Identifiable, Sendable {
     let id: Int
     let nameEn: String
     let nameDe: String
@@ -105,19 +105,19 @@ struct RecipeCatalogIngredient: Codable, Hashable, Identifiable {
 }
 
 /// One of the shared units (UnitLite).
-struct RecipeUnit: Codable, Hashable, Identifiable {
+nonisolated struct RecipeUnit: Codable, Hashable, Identifiable, Sendable {
     let id: Int
     let nameEn: String
     let nameDe: String
     let abbreviation: String
 }
 
-struct RecipeCatalog: Codable {
+nonisolated struct RecipeCatalog: Codable, OffMainDecodable {
     let ingredients: [RecipeCatalogIngredient]
     let units: [RecipeUnit]
 }
 
-struct RecipeIngredient: Codable, Hashable, Identifiable {
+nonisolated struct RecipeIngredient: Codable, Hashable, Identifiable, Sendable {
     let id: Int
     let ingredientId: Int
     let quantity: String
@@ -125,12 +125,12 @@ struct RecipeIngredient: Codable, Hashable, Identifiable {
     let order: Int
 }
 
-struct RecipeStepIngredient: Codable, Hashable {
+nonisolated struct RecipeStepIngredient: Codable, Hashable, Sendable {
     let recipeIngredientId: Int
     let quantity: String
 }
 
-struct RecipeStep: Codable, Hashable, Identifiable {
+nonisolated struct RecipeStep: Codable, Hashable, Identifiable, Sendable {
     let id: Int
     let method: String
     let stepNumber: Int
@@ -145,7 +145,7 @@ struct RecipeStep: Codable, Hashable, Identifiable {
     let ingredients: [RecipeStepIngredient]
 }
 
-struct RecipeDetail: Codable, Hashable, Identifiable {
+nonisolated struct RecipeDetail: Codable, Hashable, Identifiable, Sendable {
     let id: String
     let title: String
     let description: String
@@ -167,7 +167,7 @@ struct RecipeDetail: Codable, Hashable, Identifiable {
 }
 
 /// GET /meals/recipes/{id}: the recipe with the shared ingredients and units it names.
-struct RecipeDetailResponse: Codable {
+nonisolated struct RecipeDetailResponse: Codable, OffMainDecodable {
     let recipe: RecipeDetail
     let ingredients: [RecipeCatalogIngredient]
     let units: [RecipeUnit]
@@ -175,7 +175,7 @@ struct RecipeDetailResponse: Codable {
 
 /// GET /meals/status: whether the family's AI is set up (lib/meals/ai/status.ts) and how many
 /// recipes the family has (nil from older servers).
-struct MealsAIStatus: Codable, Equatable {
+nonisolated struct MealsAIStatus: Codable, Equatable, OffMainDecodable {
     let generate: Bool
     let photos: Bool
     var recipeCount: Int?
@@ -475,11 +475,12 @@ extension RecipeBulkInput.Recipe {
 // MARK: Helpers
 
 /// Which of a row's two names to show: the app's language (German or English).
-enum RecipeLocale {
-    static var isGerman: Bool {
+nonisolated enum RecipeLocale {
+    /// Worked out once: a tag's name asks it for every chip drawn, and the app's language only
+    /// changes with a relaunch.
+    static let isGerman: Bool =
         (Bundle.main.preferredLocalizations.first ?? Locale.current.language.languageCode?.identifier ?? "en")
             .hasPrefix("de")
-    }
 
     /// The `locale` the list's name ordering uses.
     static var code: String { isGerman ? "de" : "en" }
@@ -489,7 +490,7 @@ enum RecipeLocale {
     }
 }
 
-enum RecipeImage {
+nonisolated enum RecipeImage {
     /// The server path of a recipe's photo (served to the family's members only).
     static func path(_ image: String) -> String? {
         image.isEmpty ? nil : "/api/images/\(image)"

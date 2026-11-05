@@ -370,8 +370,14 @@ struct AssistantChatView: View {
                     suggestions
                 }
                 let items = visibleItems
+                // Worked out once here for every item (each card asking the store would draw every
+                // card again with each piece of a streaming answer).
+                let waiting = store.waitingIndex
+                let busy = store.busy
+                let saved = store.savedCopy != nil
                 ForEach(Array(items.enumerated()), id: \.element.offset) { index, entry in
-                    AssistantItemView(item: entry.item, store: store, saved: store.savedCopy != nil, open: open)
+                    AssistantItemView(item: entry.item, store: store, saved: saved, waiting: entry.offset == waiting,
+                                      busy: busy, open: open)
                         .equatable()
                         .contextMenu { itemMenu(items: items, index: index) }
                 }

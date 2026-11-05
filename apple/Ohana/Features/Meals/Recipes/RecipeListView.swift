@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// The family's recipes (web: meals/recipes): Favourites or Want to try, search, tag filter and
-/// sort, a page of 20 at a time as an adaptive grid of cards. File ▸ New Recipe (⌘N) adds one.
-/// Pages shared to Ohana show as placeholders on top of "Want to try" while the server imports
+/// sort, a page at a time (`RecipeListModel.pageSize`) as an adaptive grid of cards. File ▸ New
+/// Recipe (⌘N) adds one. Pages shared to Ohana show as placeholders on top of "Want to try" while the server imports
 /// them (`RecipeImports`).
 struct RecipeListView: View {
     @Environment(FamilyContext.self) private var family
@@ -68,9 +68,17 @@ struct RecipeListView: View {
             guard onScreen, scenePhase == .active else { return }
             await imports.poll(family)
         }
+        // Two tasks, so the two requests run side by side; each shows its copy on the device
+        // first (the toolbar's Filter and AI buttons don't wait for the server).
         .task(id: family.revision(.recipes)) {
-            tags = (try? await RecipeTagsView.request(family.api).fetchOrSaved().tags) ?? tags
-            ai = (try? await RecipeListModel.statusRequest(family.api).fetchOrSaved()) ?? ai
+            let get = RecipeTagsView.request(family.api)
+            if tags.isEmpty, let copy = await get.savedOffMain(), !Task.isCancelled { tags = copy.value.tags }
+            tags = (try? await get.fetchOrSaved().tags) ?? tags
+        }
+        .task(id: family.revision(.recipes)) {
+            let get = RecipeListModel.statusRequest(family.api)
+            if ai == .none, let copy = await get.savedOffMain(), !Task.isCancelled { ai = copy.value }
+            ai = (try? await get.fetchOrSaved()) ?? ai
         }
         .toolbar { toolbar }
         .focusedSceneValue(\.newItem, onScreen && family.canEdit
@@ -198,8 +206,13 @@ struct RecipeListView: View {
                 }
             }
             if model.hasMore {
+                // Not `onAppear`: in the (non-lazy) stack it fired as soon as the first page
+                // showed, asking for the next one before anyone scrolled. The last card's
+                // `onAppear` (the lazy grid's) asks ahead; this catches a page that ends on screen.
                 ProgressView().frame(maxWidth: .infinity).padding()
-                    .onAppear { Task { await model.loadMore(family.api) } }
+                    .onScrollVisibilityChange(threshold: 0.01) { visible in
+                        if visible { Task { await model.loadMore(family.api) } }
+                    }
             }
             if !visible.isEmpty {
                 Text("\(model.totalCount) recipes")
@@ -311,7 +324,9 @@ struct RecipeCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            RemoteImage(path: recipe.imagePath) { RecipePhotoPlaceholder() }
+            // 150 pt high, at most ~430 pt wide: 800 px is plenty, the full 1024 px photo isn't
+            // needed in memory for every card.
+            RemoteImage(path: recipe.imagePath, maxPixelSize: 800) { RecipePhotoPlaceholder() }
                 .frame(height: 150)
                 .frame(maxWidth: .infinity)
                 .clipped()
@@ -391,7 +406,15 @@ final class RecipeListModel {
         var revision: Int
     }
 
-    static let pageSize = 20
+    /// Rows per request. A wide window (Mac, iPad) shows 20 cards on one screen, so it asked
+    /// for page after page at once; more rows per request make fewer round trips.
+    static var pageSize: Int {
+        #if os(macOS)
+        60
+        #else
+        UIDevice.current.userInterfaceIdiom == .pad ? 60 : 30
+        #endif
+    }
 
     /// Where the page keeps its list and sort (`@AppStorage`), and what they start as.
     static let listKey = "meals.recipes.list"
@@ -422,6 +445,9 @@ final class RecipeListModel {
     /// asked (`LoadState.saved`).
     private(set) var saved: (date: Date, updating: Bool)?
     private var loadingMore = false
+    /// Counts the times `items` were replaced, so a copy read off the main thread doesn't
+    /// overwrite an answer that arrived meanwhile.
+    private var generation = 0
 
     var hasMore: Bool { items.count < totalCount }
 
@@ -453,12 +479,18 @@ final class RecipeListModel {
         let get = Self.firstPage(api, q, limit: limit)
         if let shown = saved, loadedQuery == q {
             saved = (shown.date, true)
-        } else if loadedQuery != q || items.isEmpty, q.query.isEmpty, let copy = get.saved() {
-            items = copy.value.items
-            totalCount = copy.value.totalCount
-            loadedQuery = q
-            error = nil
-            saved = (copy.date, true)
+        } else if loadedQuery != q || items.isEmpty, q.query.isEmpty {
+            // The copy is read and decoded off the main thread; meanwhile another query may have
+            // started (this task cancelled) or an answer arrived.
+            let start = generation
+            if let copy = await get.savedOffMain(), !Task.isCancelled, generation == start {
+                generation += 1
+                items = copy.value.items
+                totalCount = copy.value.totalCount
+                loadedQuery = q
+                error = nil
+                saved = (copy.date, true)
+            }
         }
         do {
             let page: RecipeListPage = if q.query.isEmpty {
@@ -466,6 +498,9 @@ final class RecipeListModel {
             } else {
                 try await api.get("/meals/recipes", query: get.query)
             }
+            // Another query took over while this one was decoded: its answer would flash.
+            try Task.checkCancellation()
+            generation += 1
             items = page.items
             totalCount = page.totalCount
             loadedQuery = q
@@ -481,6 +516,7 @@ final class RecipeListModel {
             } else if items.isEmpty || loadedQuery != q || saved != nil {
                 saved = nil
                 self.error = error.localizedDescription
+                generation += 1
                 items = []
                 loadedQuery = q
             } else {

@@ -5,7 +5,7 @@ import Foundation
 
 /// Someone a chore can be for: a member with an account, or one of the family's people without
 /// one (`familyNames` on the server).
-struct ChorePerson: Codable, Hashable, Identifiable {
+nonisolated struct ChorePerson: Codable, Hashable, Identifiable, Sendable {
     let id: String
     let name: String
     /// A member with an account (can tick their chores off themselves, can be notified).
@@ -13,7 +13,7 @@ struct ChorePerson: Codable, Hashable, Identifiable {
 }
 
 /// The part of the day a chore is for. With a time the time decides (`of(time:)`).
-enum ChorePart: String, Codable, CaseIterable, Hashable {
+nonisolated enum ChorePart: String, Codable, CaseIterable, Hashable, Sendable {
     case morning, day, evening
 
     /// The part of a time "HH:MM": before 12:00 the morning, before 17:00 the day, else the evening.
@@ -48,7 +48,7 @@ enum ChorePart: String, Codable, CaseIterable, Hashable {
 }
 
 /// One chore: once (due on `day`) or repeating (`rrule` from `day` on), maybe for someone.
-struct Chore: Codable, Hashable, Identifiable {
+nonisolated struct Chore: Codable, Hashable, Identifiable, Sendable {
     let id: String
     let title: String
     let note: String
@@ -75,8 +75,6 @@ struct Chore: Codable, Hashable, Identifiable {
     let updatedAt: String
 
     var isRepeating: Bool { rrule != nil }
-    var rule: RepeatRule? { rrule.flatMap(RepeatRule.init) }
-    var doneDate: Date? { doneAt.flatMap(Date.server) }
 
     /// The chore with the account (un)subscribed, before the server answers.
     func subscribing(_ on: Bool, me: String?) -> Chore {
@@ -90,7 +88,13 @@ struct Chore: Codable, Hashable, Identifiable {
     }
 }
 
+@MainActor
 extension Chore {
+    var rule: RepeatRule? { rrule.flatMap(RepeatRule.init) }
+    var doneDate: Date? { doneAt.flatMap(Date.server) }
+}
+
+nonisolated extension Chore {
     private enum CodingKeys: String, CodingKey {
         case id, title, note, assignee, day, time, part, rrule, done, doneAt, doneBy, next, subscriberIds, subscribed,
              createdAt, updatedAt
@@ -118,7 +122,7 @@ extension Chore {
 }
 
 /// One chore on one day: a single chore on its day, or an occurrence of a repeating one.
-struct ChoreItem: Codable, Hashable, Identifiable {
+nonisolated struct ChoreItem: Codable, Hashable, Identifiable, Sendable {
     let choreId: String
     /// The occurrence (a single chore's day).
     let day: Day
@@ -173,9 +177,9 @@ struct ChoreItem: Codable, Hashable, Identifiable {
 }
 
 /// GET /chores/agenda?from=&to=&today=: every day of the range with its chores, and the open
-/// single chores whose day passed.
-struct ChoreAgenda: Codable, Equatable {
-    struct DayItems: Codable, Equatable {
+/// single chores whose day passed. Decoded off the main thread (as the chores' page).
+nonisolated struct ChoreAgenda: Codable, Equatable, OffMainDecodable {
+    nonisolated struct DayItems: Codable, Equatable, Sendable {
         let date: Day
         var items: [ChoreItem]
     }
@@ -218,7 +222,7 @@ struct ChoreAgenda: Codable, Equatable {
 }
 
 /// GET /chores?today=
-struct ChoresPage: Codable, Equatable {
+nonisolated struct ChoresPage: Codable, Equatable, OffMainDecodable {
     var chores: [Chore]
     /// Whom chores can be for.
     var people: [ChorePerson]
@@ -227,7 +231,7 @@ struct ChoresPage: Codable, Equatable {
 }
 
 /// The answer of POST, PATCH, GET /chores/{id}, POST /chores/{id}/done and …/subscribe.
-struct ChoreResponse: Codable {
+nonisolated struct ChoreResponse: Codable, OffMainDecodable {
     let chore: Chore
 }
 

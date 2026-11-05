@@ -4,7 +4,7 @@ import SwiftUI
 // The administration routes (server/lib/admin/app-routes.ts, /api/v1/admin/...).
 
 /// An account (server/lib/admin/users.ts `AdminUserDto`).
-struct AdminUser: Codable, Hashable, Identifiable {
+nonisolated struct AdminUser: Codable, Hashable, Identifiable, Sendable {
     let id: String
     let email: String
     let name: String
@@ -20,7 +20,8 @@ struct AdminUser: Codable, Hashable, Identifiable {
     var isPending: Bool { onboardingStep == "SET_CREDENTIALS" }
 }
 
-struct AdminUserList: Codable, Hashable {
+/// Decoded off the main thread (`OffMainDecodable`), as `AdminFamilyList`.
+nonisolated struct AdminUserList: Codable, Hashable, OffMainDecodable {
     let users: [AdminUser]
 }
 
@@ -38,7 +39,7 @@ struct AdminSetupLink: Codable, Hashable {
 }
 
 /// A family with its members (server/lib/admin/families.ts `AdminFamilyDto`).
-struct AdminFamily: Codable, Hashable, Identifiable {
+nonisolated struct AdminFamily: Codable, Hashable, Identifiable, Sendable {
     let id: String
     let name: String
     let createdAt: String
@@ -47,7 +48,7 @@ struct AdminFamily: Codable, Hashable, Identifiable {
     var editorCount: Int { members.filter { $0.role == .editor }.count }
 }
 
-struct AdminFamilyMember: Codable, Hashable, Identifiable {
+nonisolated struct AdminFamilyMember: Codable, Hashable, Identifiable, Sendable {
     let userId: String
     let email: String
     let name: String
@@ -57,7 +58,7 @@ struct AdminFamilyMember: Codable, Hashable, Identifiable {
     var displayName: String { name.isEmpty ? email : name }
 }
 
-struct AdminFamilyList: Codable, Hashable {
+nonisolated struct AdminFamilyList: Codable, Hashable, OffMainDecodable {
     let families: [AdminFamily]
 }
 

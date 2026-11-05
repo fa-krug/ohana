@@ -7,7 +7,7 @@ import Foundation
 
 /// GET/PUT /ai/settings. Editors get the whole setup (never the keys, only their last four
 /// characters); viewers only whether it is set up.
-struct AssistantSettings: Codable, Equatable {
+nonisolated struct AssistantSettings: Codable, Equatable, OffMainDecodable {
     var configured: Bool
     var canEdit: Bool
     var baseUrl: String?
@@ -37,13 +37,13 @@ struct AssistantSettingsPatch: Encodable {
     var imageModel: String?
 }
 
-struct AssistantModelList: Decodable { let models: [String] }
-struct AssistantTestResult: Decodable { let ok: Bool; let model: String; let reply: String }
+nonisolated struct AssistantModelList: OffMainDecodable { let models: [String] }
+nonisolated struct AssistantTestResult: OffMainDecodable { let ok: Bool; let model: String; let reply: String }
 
 // MARK: Chats
 
 /// What a running turn does right now.
-struct AssistantActivity: Codable, Equatable {
+nonisolated struct AssistantActivity: Codable, Equatable, Sendable {
     /// thinking | writing | tool | compacting | retrying (and later kinds).
     var kind: String
     var attempt: Int?
@@ -51,13 +51,13 @@ struct AssistantActivity: Codable, Equatable {
 }
 
 /// How full the model's context is: the tokens the chat uses, and the most it takes.
-struct AssistantUsage: Codable, Equatable {
+nonisolated struct AssistantUsage: Codable, Equatable, Sendable {
     var used: Double
     var max: Double
 }
 
 /// A message written while the assistant answered: it goes next (attachments by name).
-struct AssistantQueued: Codable, Equatable, Identifiable {
+nonisolated struct AssistantQueued: Codable, Equatable, Identifiable, Sendable {
     var id: String
     var text: String
     var attachments: [AssistantAttachmentRef]?
@@ -67,7 +67,7 @@ struct AssistantQueued: Codable, Equatable, Identifiable {
 }
 
 /// An attachment as the chat shows it: images with their data URL (while the server keeps it).
-struct AssistantAttachmentRef: Codable, Equatable, Hashable {
+nonisolated struct AssistantAttachmentRef: Codable, Equatable, Hashable, Sendable {
     /// image | file
     var kind: String
     var name: String
@@ -75,7 +75,7 @@ struct AssistantAttachmentRef: Codable, Equatable, Hashable {
 }
 
 /// A chat as the list shows it (`summaryOf` in chats.ts).
-struct AssistantChatSummary: Codable, Equatable, Identifiable {
+nonisolated struct AssistantChatSummary: Codable, Equatable, Identifiable, Sendable {
     var id: String
     var title: String
     /// idle | running
@@ -88,27 +88,29 @@ struct AssistantChatSummary: Codable, Equatable, Identifiable {
     var updatedAt: String
 
     var isRunning: Bool { status == "running" }
+}
 
+extension AssistantChatSummary {
     var updatedDate: Date? { AssistantDates.parse(updatedAt) }
 }
 
-struct AssistantChatList: Decodable { let chats: [AssistantChatSummary] }
+nonisolated struct AssistantChatList: OffMainDecodable { let chats: [AssistantChatSummary] }
 
 /// GET /ai/chats/{id}: the chat, its items (by position) and their revision.
-struct AssistantChatState: Decodable {
+nonisolated struct AssistantChatState: OffMainDecodable {
     let chat: AssistantChatSummary
     let rev: Int
     let items: [AssistantItem]
 }
 
 /// POST /ai/chats/{id}/queue (202) and /unqueue.
-struct AssistantQueueResult: Decodable {
+nonisolated struct AssistantQueueResult: OffMainDecodable {
     let chat: AssistantChatSummary
     let id: String?
 }
 
 /// A request against /families/{id} that undoes (part of) a change the assistant made.
-struct AssistantUndoStep: Codable, Equatable {
+nonisolated struct AssistantUndoStep: Codable, Equatable, Sendable {
     /// POST | PATCH | DELETE
     var method: String
     /// Relative to the family, e.g. `/entries` or `/types/x?year=2027`.
@@ -118,7 +120,7 @@ struct AssistantUndoStep: Codable, Equatable {
 
 // MARK: Items
 
-struct AssistantToolCall: Equatable {
+nonisolated struct AssistantToolCall: Equatable, Sendable {
     var id: String
     var name: String
     var args: [String: JSONValue]
@@ -131,7 +133,7 @@ struct AssistantToolCall: Equatable {
     var interrupted: Bool
 }
 
-struct AssistantChange: Equatable {
+nonisolated struct AssistantChange: Equatable, Sendable {
     var id: String
     /// entries | notes | types | events | categories | transactions | benchmark | recipes |
     /// plan | appointments (and later modules' kinds)
@@ -141,7 +143,7 @@ struct AssistantChange: Equatable {
     var undone: Bool
 }
 
-struct AssistantQuestion: Equatable {
+nonisolated struct AssistantQuestion: Equatable, Sendable {
     var id: String
     var question: String
     var options: [String]
@@ -151,7 +153,7 @@ struct AssistantQuestion: Equatable {
     /// The user wrote a new message instead.
     var skipped: Bool
 
-    struct Answer: Codable, Equatable {
+    nonisolated struct Answer: Codable, Equatable, Sendable {
         var selected: [String]
         var text: String?
     }
@@ -160,7 +162,7 @@ struct AssistantQuestion: Equatable {
 /// A change of the user's Reminders the assistant suggests (`kind: "reminders"`, server
 /// lib/assistant/tools/reminders.ts): nothing changes until the user applies it on their device,
 /// which answers with one result per op.
-struct AssistantRemindersEdit: Equatable {
+nonisolated struct AssistantRemindersEdit: Equatable, Sendable {
     var id: String
     /// What it does, e.g. "Add 3 reminders to Groceries".
     var summary: String
@@ -171,7 +173,7 @@ struct AssistantRemindersEdit: Equatable {
     var skipped: Bool
 
     /// `{applied: true, results}` or `{applied: false}`.
-    struct Answer: Codable, Equatable {
+    nonisolated struct Answer: Codable, Equatable, Sendable {
         var applied: Bool
         var results: [AssistantReminderResult]?
 
@@ -186,7 +188,7 @@ struct AssistantRemindersEdit: Equatable {
 /// moves to), `title`?, `notes`? ("" clears them), `due`? (null clears it); complete | uncomplete |
 /// delete: `id`. Decoded leniently: an op this app doesn't know keeps its `op` (and fails when
 /// applied).
-struct AssistantReminderOp: Decodable, Equatable {
+nonisolated struct AssistantReminderOp: Decodable, Equatable, Sendable {
     /// add | update | complete | uncomplete | delete
     var op: String
     var id: String?
@@ -195,8 +197,68 @@ struct AssistantReminderOp: Decodable, Equatable {
     var listTitle: String
     var title: String?
     var notes: String?
-    var due: DueChange
+    /// What it does to the due date, the date as `ReminderDue` writes it (`due` reads it as one).
+    /// Kept as text: `ReminderDue` is the main actor's, and the op is decoded off it.
+    var dueText: DueText
 
+    nonisolated enum DueText: Equatable, Sendable {
+        case keep
+        case clear
+        /// "YYYY-MM-DD" or "YYYY-MM-DDTHH:MM", as `ReminderDue.description`.
+        case set(String)
+    }
+
+    init(op: String, id: String? = nil, itemTitle: String? = nil, list: String, listTitle: String,
+         title: String? = nil, notes: String? = nil, dueText: DueText) {
+        self.op = op
+        self.id = id
+        self.itemTitle = itemTitle
+        self.list = list
+        self.listTitle = listTitle
+        self.title = title
+        self.notes = notes
+        self.dueText = dueText
+    }
+
+    private enum Keys: String, CodingKey { case op, id, itemTitle, list, listTitle, title, notes, due }
+
+    init(from decoder: any Decoder) throws {
+        guard let c = try? decoder.container(keyedBy: Keys.self) else {
+            self.init(op: "", list: "", listTitle: "", dueText: .keep)
+            return
+        }
+        func opt(_ key: Keys) -> String? { try? c.decodeIfPresent(String.self, forKey: key) }
+        let due: DueText
+        if !c.contains(.due) {
+            due = .keep
+        } else if (try? c.decodeNil(forKey: .due)) == true {
+            due = .clear
+        } else if let text = opt(.due), let value = Self.dueDescription(text) {
+            due = .set(value)
+        } else {
+            due = .keep
+        }
+        self.init(op: opt(.op) ?? "", id: opt(.id), itemTitle: opt(.itemTitle), list: opt(.list) ?? "",
+                  listTitle: opt(.listTitle) ?? "", title: opt(.title), notes: opt(.notes), dueText: due)
+    }
+
+    /// `ReminderDue(text)?.description`, off the main actor: "2026-11-07" or "2026-11-07T18:30"
+    /// (seconds are ignored); nil for anything else.
+    static func dueDescription(_ text: String) -> String? {
+        let parts = text.split(separator: "T", maxSplits: 1).map(String.init)
+        guard let first = parts.first, first.count == 10, let day = Day(first) else { return nil }
+        guard parts.count == 2 else { return day.description }
+        let clock = parts[1].split(separator: ":").map { Int($0) }
+        guard clock.count >= 2, let hour = clock[0], let minute = clock[1],
+              (0...23).contains(hour), (0...59).contains(minute) else { return nil }
+        return day.description + String(format: "T%02d:%02d", hour, minute)
+    }
+
+    /// The reminder it is about: the new one's title for add, else the reminder's.
+    var subject: String { (op == "add" ? title : itemTitle) ?? "" }
+}
+
+extension AssistantReminderOp {
     /// What an op does to the due date.
     enum DueChange: Equatable {
         /// Not part of the op.
@@ -208,45 +270,27 @@ struct AssistantReminderOp: Decodable, Equatable {
 
     init(op: String, id: String? = nil, itemTitle: String? = nil, list: String, listTitle: String,
          title: String? = nil, notes: String? = nil, due: DueChange = .keep) {
-        self.op = op
-        self.id = id
-        self.itemTitle = itemTitle
-        self.list = list
-        self.listTitle = listTitle
-        self.title = title
-        self.notes = notes
-        self.due = due
+        let text: DueText = switch due {
+        case .keep: .keep
+        case .clear: .clear
+        case let .set(value): .set(value.description)
+        }
+        self.init(op: op, id: id, itemTitle: itemTitle, list: list, listTitle: listTitle, title: title, notes: notes,
+                  dueText: text)
     }
 
-    private enum Keys: String, CodingKey { case op, id, itemTitle, list, listTitle, title, notes, due }
-
-    init(from decoder: any Decoder) throws {
-        guard let c = try? decoder.container(keyedBy: Keys.self) else {
-            self.init(op: "", list: "", listTitle: "")
-            return
+    var due: DueChange {
+        switch dueText {
+        case .keep: .keep
+        case .clear: .clear
+        case let .set(text): ReminderDue(text).map(DueChange.set) ?? .keep
         }
-        func opt(_ key: Keys) -> String? { try? c.decodeIfPresent(String.self, forKey: key) }
-        let due: DueChange
-        if !c.contains(.due) {
-            due = .keep
-        } else if (try? c.decodeNil(forKey: .due)) == true {
-            due = .clear
-        } else if let text = opt(.due), let value = ReminderDue(text) {
-            due = .set(value)
-        } else {
-            due = .keep
-        }
-        self.init(op: opt(.op) ?? "", id: opt(.id), itemTitle: opt(.itemTitle), list: opt(.list) ?? "",
-                  listTitle: opt(.listTitle) ?? "", title: opt(.title), notes: opt(.notes), due: due)
     }
-
-    /// The reminder it is about: the new one's title for add, else the reminder's.
-    var subject: String { (op == "add" ? title : itemTitle) ?? "" }
 }
 
 /// How one op went on the device: `{ok: true, id?}`, `{ok: false, error}`, or `{ok: false,
 /// declined: true}` for a suggestion the user left out (a calendar edit's and suggestions' too).
-struct AssistantReminderResult: Codable, Equatable {
+nonisolated struct AssistantReminderResult: Codable, Equatable, Sendable {
     var ok: Bool
     /// The reminder (the new one for add).
     var id: String?
@@ -266,7 +310,7 @@ struct AssistantReminderResult: Codable, Equatable {
 /// A change of the device's calendars the assistant suggests (`kind: "calendar"`, server
 /// lib/assistant/tools/apple-calendar.ts): like a Reminders edit, nothing changes until the user
 /// applies it on their device, which answers with one result per op.
-struct AssistantCalendarEdit: Equatable {
+nonisolated struct AssistantCalendarEdit: Equatable, Sendable {
     var id: String
     /// What it does, e.g. "Add “Dentist” to Family".
     var summary: String
@@ -288,7 +332,7 @@ struct AssistantCalendarEdit: Equatable {
 /// to), `title`?, `start`?, `end`?, `allDay`?, `location`?, `notes`? ("" clears them); delete:
 /// `id`, `span`?. Decoded leniently: an op this app doesn't know keeps its `op` (and fails when
 /// applied).
-struct AssistantCalendarOp: Decodable, Equatable {
+nonisolated struct AssistantCalendarOp: Decodable, Equatable, Sendable {
     /// add | update | delete
     var op: String
     var id: String?
@@ -365,7 +409,7 @@ struct AssistantCalendarOp: Decodable, Equatable {
 /// A change of notes in the family's knowledge folder the assistant suggests (`kind: "notes"`,
 /// server lib/assistant/tools/notes.ts): like a Reminders edit, nothing is written until the user
 /// applies it on a device that has the folder, which answers with one result per op.
-struct AssistantNotesEdit: Equatable {
+nonisolated struct AssistantNotesEdit: Equatable, Sendable {
     var id: String
     /// What it does, e.g. "Create “Car.md” in Notes".
     var summary: String
@@ -449,7 +493,7 @@ nonisolated struct AssistantNoteOp: Decodable, Equatable, Sendable {
 /// What the chat shows: messages, tool activity, changes (with undo), questions, changes of the
 /// user's Reminders, calendars and knowledge notes to apply, suggestions to add. Decoded by
 /// `kind`; a kind this app doesn't know yet becomes `.unknown` (and isn't shown).
-enum AssistantItem: Decodable, Equatable {
+nonisolated enum AssistantItem: Decodable, Equatable, Sendable {
     case user(text: String, attachments: [AssistantAttachmentRef])
     /// An answer; `sources`: the knowledge passages its `[[k:<n>]]` markers cite (`AssistantSource`).
     case assistant(text: String, sources: [AssistantSource] = [])
@@ -559,6 +603,14 @@ enum AssistantItem: Decodable, Equatable {
     }
 
     var isUser: Bool { if case .user = self { true } else { false } }
+
+    /// A question, an edit or suggestions: these wait for the user.
+    var canWait: Bool {
+        switch self {
+        case .question, .reminders, .calendar, .suggestions, .notes: true
+        default: false
+        }
+    }
 }
 
 // MARK: Streams
@@ -566,7 +618,7 @@ enum AssistantItem: Decodable, Equatable {
 /// What a chat's stream (server-sent events) says: the chat, items that changed (by position;
 /// `rev` once they are saved up to that revision), text as it is written, then the end (no
 /// turn runs any more) or "reconnect" (ask again to go on following).
-enum AssistantChatEvent: Equatable {
+nonisolated enum AssistantChatEvent: Equatable, Sendable {
     case chat(AssistantChatSummary)
     case items(rev: Int?, items: [(seq: Int, item: AssistantItem)])
     case delta(seq: Int, text: String)
@@ -585,14 +637,14 @@ enum AssistantChatEvent: Equatable {
         }
     }
 
-    private struct ItemsData: Decodable {
-        struct Entry: Decodable { let seq: Int; let item: AssistantItem }
+    private nonisolated struct ItemsData: Decodable {
+        nonisolated struct Entry: Decodable { let seq: Int; let item: AssistantItem }
         let rev: Int?
         let items: [Entry]
     }
 
-    private struct DeltaData: Decodable { let seq: Int; let text: String }
-    private struct EndData: Decodable { let deleted: Bool? }
+    private nonisolated struct DeltaData: Decodable { let seq: Int; let text: String }
+    private nonisolated struct EndData: Decodable { let deleted: Bool? }
 
     /// One event from its name and JSON data; nil for pings and events this app doesn't know.
     static func parse(event: String, data: String) throws -> AssistantChatEvent? {
@@ -619,7 +671,7 @@ enum AssistantChatEvent: Equatable {
 
 /// Reads server-sent events line by line: `event: …` then `data: …` (blank lines may or may
 /// not arrive; a data line completes an event either way).
-struct AssistantSSEParser {
+nonisolated struct AssistantSSEParser {
     private var event: String?
 
     /// The event a line completes, as (name, data); nil for anything else.
@@ -635,6 +687,30 @@ struct AssistantSSEParser {
             event = nil
         }
         return nil
+    }
+}
+
+/// A chat's stream read away from the main thread: its lines through `AssistantSSEParser`, each
+/// event decoded (a long chat's items are a lot of JSON, and text arrives many times a second).
+/// Pings are left out; nil is an event this app doesn't know (or that didn't decode): the stream is
+/// alive all the same.
+nonisolated enum AssistantEventStream {
+    static func events(_ lines: AsyncThrowingStream<String, any Error>) -> AsyncThrowingStream<AssistantChatEvent?, any Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task.detached(priority: .userInitiated) {
+                var parser = AssistantSSEParser()
+                do {
+                    for try await line in lines {
+                        guard let (name, data) = parser.feed(line), name != "ping" else { continue }
+                        continuation.yield(try? AssistantChatEvent.parse(event: name, data: data))
+                    }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
     }
 }
 

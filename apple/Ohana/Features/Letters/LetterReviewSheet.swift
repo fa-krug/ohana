@@ -252,7 +252,14 @@ final class LetterReview: Identifiable {
     static func familyNames(_ api: FamilyAPI) -> @MainActor () async -> [String] {
         {
             let request = FamilySettingsModel.request(api)
-            guard let household = (try? await request.fetchOrSaved()) ?? request.saved()?.value else { return [] }
+            let household: FamilyHousehold
+            if let fetched = try? await request.fetchOrSaved() {
+                household = fetched
+            } else if let copy = await request.savedOffMain() {
+                household = copy.value
+            } else {
+                return []
+            }
             return household.members.map(\.name).filter { !$0.isEmpty } + household.people.map(\.name)
         }
     }

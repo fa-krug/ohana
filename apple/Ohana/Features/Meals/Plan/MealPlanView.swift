@@ -174,13 +174,14 @@ struct MealPlanView: View {
                     }
                     .contentCard()
                 }
-                if !plan.pastIterations.isEmpty {
+                let past = plan.pastIterations
+                if !past.isEmpty {
                     Text("Previous plans")
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 4)
                         .padding(.top, 8)
-                    ForEach(plan.pastIterations) { iteration in
+                    ForEach(past) { iteration in
                         card(iteration, plan: plan, away: away, archived: true)
                     }
                 }
@@ -196,7 +197,7 @@ struct MealPlanView: View {
     private func card(_ iteration: MealPlanIteration, plan: MealPlanDTO, away: [String: [String]], archived: Bool) -> some View {
         MealPlanIterationCard(
             iteration: iteration,
-            rows: iteration.dayRows(away: away),
+            away: away,
             archived: archived,
             familyID: family.family.id,
             canEdit: canEdit,
@@ -359,7 +360,9 @@ enum MealPlanEntryAction {
 /// One iteration: its days with lunch and dinner; past ones start folded.
 struct MealPlanIterationCard: View {
     let iteration: MealPlanIteration
-    let rows: [MealPlanDayRow]
+    /// The away days (`dayRows`): the rows are made only while the card is open, so the folded
+    /// past iterations cost nothing each time the page is drawn.
+    let away: [String: [String]]
     let archived: Bool
     let familyID: String
     let canEdit: Bool
@@ -379,10 +382,12 @@ struct MealPlanIterationCard: View {
         VStack(alignment: .leading, spacing: 0) {
             header
             if isExpanded {
+                let rows = iteration.dayRows(away: away)
+                let today = Day.today
                 Divider().padding(.vertical, 10)
                 VStack(spacing: 0) {
                     ForEach(rows) { row in
-                        MealPlanDayRowView(row: row, isToday: row.day == .today, familyID: familyID, canEdit: canEdit,
+                        MealPlanDayRowView(row: row, today: today, familyID: familyID, canEdit: canEdit,
                                            shoppingLabel: shoppingLabel, onDrop: { onDrop($0, row) }, onAction: onAction)
                         if row.id != rows.last?.id {
                             Divider().opacity(0.6)
@@ -435,7 +440,8 @@ struct MealPlanIterationCard: View {
 /// recipe or meal (outlined while one hovers it).
 struct MealPlanDayRowView: View {
     let row: MealPlanDayRow
-    let isToday: Bool
+    /// Worked out once per card, not per row (`Day.today` makes a calendar each time).
+    let today: Day
     let familyID: String
     let canEdit: Bool
     var shoppingLabel: String?
@@ -463,7 +469,7 @@ struct MealPlanDayRowView: View {
                         .accessibilityLabel("Shopping day")
                 }
             }
-            if row.isShoppingDay, row.day >= .today, let shoppingLabel {
+            if row.isShoppingDay, row.day >= today, let shoppingLabel {
                 Button { onAction(.shoppingSettings) } label: {
                     Label { Text(verbatim: shoppingLabel) } icon: { Image(systemName: "checklist") }
                         .font(.subheadline.weight(.medium))
@@ -515,6 +521,8 @@ struct MealPlanDayRowView: View {
         .contentShape(.rect)
         .mealDropDestination(enabled: canEdit, action: onDrop) { targeted = $0 }
     }
+
+    private var isToday: Bool { row.day == today }
 
     @ViewBuilder
     private var lunch: some View {

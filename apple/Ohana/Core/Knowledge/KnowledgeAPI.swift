@@ -28,13 +28,13 @@ nonisolated struct KnowledgeFolderInfo: Codable, Equatable, Sendable {
     var lastManifestDevice: String?
 }
 
-nonisolated struct KnowledgeFolderResponse: Codable, Sendable {
+nonisolated struct KnowledgeFolderResponse: Codable, OffMainDecodable {
     var folder: KnowledgeFolderInfo?
 }
 
 /// GET /knowledge/status: the folder, the family's documents by status and the number of chunks
 /// (Settings → Knowledge). Without a folder every count is 0.
-nonisolated struct KnowledgeStatusInfo: Codable, Equatable, Sendable {
+nonisolated struct KnowledgeStatusInfo: Codable, Equatable, OffMainDecodable {
     nonisolated struct Counts: Codable, Equatable, Sendable {
         var pending = 0
         var ready = 0
@@ -51,7 +51,7 @@ nonisolated struct KnowledgeStatusInfo: Codable, Equatable, Sendable {
 }
 
 /// GET /knowledge/tags: the tags of the family's documents (every subfolder's), the most used first.
-nonisolated struct KnowledgeTagsResponse: Codable, Equatable, Sendable {
+nonisolated struct KnowledgeTagsResponse: Codable, Equatable, OffMainDecodable {
     nonisolated struct Tag: Codable, Equatable, Sendable {
         var tag: String
         var count: Int
@@ -102,7 +102,7 @@ nonisolated struct KnowledgeManifestBody: Encodable, Sendable {
     var device: String?
 }
 
-nonisolated struct KnowledgeManifestAnswer: Decodable, Sendable {
+nonisolated struct KnowledgeManifestAnswer: OffMainDecodable {
     /// The paths whose text the server wants.
     var upload: [String]
 }
@@ -161,15 +161,29 @@ extension FamilyAPI {
         cached("/knowledge/tags")
     }
 
-    /// Sends the manifest; the paths the server wants the text of.
+    /// Sends the manifest; the paths the server wants the text of. The body (up to 20 000 files)
+    /// is encoded off the main thread.
     func sendKnowledgeManifest(_ body: KnowledgeManifestBody) async throws -> [String] {
-        let answer: KnowledgeManifestAnswer = try await send(.post, "/knowledge/manifest", body: body)
-        return answer.upload
+        let encoded = try await KnowledgeJSON.encode(body)
+        let (data, _) = try await client.data(for: client.request(.post, path("/knowledge/manifest"), body: encoded))
+        return try await client.decode(KnowledgeManifestAnswer.self, from: data).upload
     }
 
-    /// Uploads a file's text (202: the server's worker indexes it).
+    /// Uploads a file's text (202: the server's worker indexes it); its JSON (up to 2 MB of text)
+    /// is made off the main thread.
     func uploadKnowledgeDocument(_ body: KnowledgeUploadBody) async throws {
-        try await perform(.put, "/knowledge/documents", body: body)
+        let encoded = try await KnowledgeJSON.encode(body)
+        _ = try await client.data(for: client.request(.put, path("/knowledge/documents"), body: encoded))
+    }
+}
+
+/// The indexer's big request bodies, encoded off the main thread (as `APIClient.encoder` would).
+nonisolated enum KnowledgeJSON {
+    @concurrent
+    static func encode(_ body: some Encodable & Sendable) async throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.withoutEscapingSlashes]
+        return try encoder.encode(body)
     }
 }
 

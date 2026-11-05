@@ -121,6 +121,25 @@ struct DemoOverviewTests {
         #expect(h.events[0].hasChannels == false)
     }
 
+    /// The screens decode these off the main thread (`OffMainDecodable`): the same as on it.
+    @Test func screensDecodeOffTheMainThread() async throws {
+        func data(_ path: String, query: [String: String] = [:]) -> Data {
+            var url = DemoServer.baseURL.appending(path: "/api/v1/families/demo" + path)
+            if !query.isEmpty { url.append(queryItems: query.map { URLQueryItem(name: $0.key, value: $0.value) }) }
+            return Self.server.respond(to: URLRequest(url: url)).0
+        }
+        let today = ["today": Self.today.description]
+        let overview = data("/overview", query: today)
+        #expect(try await OffMainJSON.decode(OverviewDashboard.self, from: overview)
+            == APIClient.decoder.decode(OverviewDashboard.self, from: overview))
+        let digest = data("/digest", query: today)
+        #expect(try await OffMainJSON.decode(WeekAheadDigest.self, from: digest)
+            == APIClient.decoder.decode(WeekAheadDigest.self, from: digest))
+        let household = data("/household")
+        #expect(try await OffMainJSON.decode(FamilyHousehold.self, from: household)
+            == APIClient.decoder.decode(FamilyHousehold.self, from: household))
+    }
+
     @Test func exportIsAFamilyFile() throws {
         let (data, response) = Self.server.respond(to: URLRequest(url: DemoServer.baseURL.appending(path: "/api/v1/families/demo/export")))
         #expect(response.statusCode == 200)

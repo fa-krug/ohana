@@ -273,7 +273,8 @@ extension CalendarText {
     static func selectionSummary(_ days: [Day]) -> String {
         guard let first = days.first, let last = days.last else { return "" }
         if days.count == 1 { return selectionTitle(days) }
-        guard zip(days, days.dropFirst()).allSatisfy({ $0.adding(days: 1) == $1 }) else {
+        // Sorted days without repeats (the selection's): consecutive when the span is as long.
+        guard CalendarMath.isContiguous(days) else {
             return selectionAnnouncement(days.count)
         }
         let style: Date.IntervalFormatStyle = first.year == last.year

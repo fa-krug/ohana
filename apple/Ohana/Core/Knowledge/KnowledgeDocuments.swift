@@ -145,10 +145,19 @@ nonisolated struct KnowledgeChunk: Decodable, Hashable, Identifiable, Sendable {
 
 /// GET /knowledge/documents/{id}: the document with its card's facts and its text.
 nonisolated struct KnowledgeDocumentDetail: Decodable, Hashable, Sendable {
+    /// A page of the text.
+    nonisolated struct PageText: Hashable, Sendable {
+        var page: Int
+        var text: String
+    }
+
     var document: KnowledgeDocumentSummary
     /// Nil without a card.
     var facts: [KnowledgeFact]?
     var chunks: [KnowledgeChunk]
+    /// The text page by page (chunks joined in order), pages without text left out. Worked out
+    /// once, while decoding (off the main thread), not on every redraw of the page.
+    let textByPage: [PageText]
 
     private enum CodingKeys: String, CodingKey { case facts, chunks }
 
@@ -159,34 +168,34 @@ nonisolated struct KnowledgeDocumentDetail: Decodable, Hashable, Sendable {
         facts = (try? c.decodeIfPresent([KnowledgeFact].self, forKey: .facts))?
             .map { $0.filter { !$0.text.isEmpty } }
         chunks = (try? c.decodeIfPresent([KnowledgeChunk].self, forKey: .chunks)) ?? []
+        textByPage = Self.pages(chunks)
     }
 
-    /// The text page by page (chunks joined in order), pages without text left out.
-    var textByPage: [(page: Int, text: String)] {
+    private static func pages(_ chunks: [KnowledgeChunk]) -> [PageText] {
         let sorted = chunks.sorted { ($0.page, $0.seq) < ($1.page, $1.seq) }
-        var pages: [(page: Int, text: String)] = []
+        var pages: [PageText] = []
         for chunk in sorted {
             if let last = pages.last, last.page == chunk.page {
                 pages[pages.count - 1].text += "\n\n" + chunk.text
             } else {
-                pages.append((chunk.page, chunk.text))
+                pages.append(PageText(page: chunk.page, text: chunk.text))
             }
         }
         return pages.filter { !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     }
 }
 
-nonisolated struct KnowledgeDocumentResponse: Decodable, Sendable {
+nonisolated struct KnowledgeDocumentResponse: OffMainDecodable {
     var document: KnowledgeDocumentDetail
 }
 
 /// POST …/reindex and …/exclude answer the document without facts or chunks.
-nonisolated struct KnowledgeDocumentSummaryResponse: Decodable, Sendable {
+nonisolated struct KnowledgeDocumentSummaryResponse: OffMainDecodable {
     var document: KnowledgeDocumentSummary
 }
 
-/// A page of GET /knowledge/documents.
-nonisolated struct KnowledgeDocumentsPage: Decodable, Hashable, Sendable {
+/// A page of GET /knowledge/documents (decoded off the main thread).
+nonisolated struct KnowledgeDocumentsPage: Decodable, Hashable, OffMainDecodable {
     var documents: [KnowledgeDocumentSummary]
     /// Nil on the last page.
     var nextCursor: String?

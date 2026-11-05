@@ -10,7 +10,7 @@ import Foundation
 // `LetterFind.swift`), without a chat.
 
 /// The suggestions of one tool call (`kind: "suggestions"`).
-struct AssistantSuggestions: Equatable {
+nonisolated struct AssistantSuggestions: Equatable, Sendable {
     var id: String
     /// What it found, e.g. "3 dates from the school letter".
     var summary: String
@@ -51,8 +51,8 @@ struct AssistantSuggestions: Equatable {
 /// `note`?), a task (`due`? "YYYY-MM-DD" or "YYYY-MM-DDTHH:MM") or a deadline (`due` always), the
 /// last two with the Reminders list they go into (`list`, `listTitle`; null: the device's default
 /// list). Decoded leniently: a kind this app doesn't know keeps its `op` (and can't be added).
-struct AssistantSuggestionOp: Decodable, Equatable {
-    enum Kind: Equatable {
+nonisolated struct AssistantSuggestionOp: Decodable, Equatable, Sendable {
+    nonisolated enum Kind: Equatable, Sendable {
         case event, task, deadline, unknown
 
         init(_ op: String) {
@@ -118,7 +118,9 @@ struct AssistantSuggestionOp: Decodable, Equatable {
                   start: opt(.start), end: opt(.end), location: opt(.location), person: opt(.person), note: opt(.note),
                   due: opt(.due), list: opt(.list), listTitle: opt(.listTitle))
     }
+}
 
+extension AssistantSuggestionOp {
     // MARK: Reading the values
 
     /// "HH:MM" as hour and minute; nil for anything else.

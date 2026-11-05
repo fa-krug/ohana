@@ -4,7 +4,7 @@ import Foundation
 // publicTransaction, overviewData, financeSummary, the routes' answers). Amounts are integer
 // cents, negative for money going out; days are "YYYY-MM-DD".
 
-enum FinanceCategoryKind: String, Codable, CaseIterable, Hashable, Identifiable {
+nonisolated enum FinanceCategoryKind: String, Codable, CaseIterable, Hashable, Identifiable, Sendable {
     case expense, income, both
 
     var id: String { rawValue }
@@ -19,7 +19,7 @@ enum FinanceCategoryKind: String, Codable, CaseIterable, Hashable, Identifiable 
 }
 
 /// A category (publicCategory). A subcategory has the kind of its top-level category.
-struct FinanceCategory: Codable, Hashable, Identifiable {
+nonisolated struct FinanceCategory: Codable, Hashable, Identifiable, Sendable {
     var id: String
     var name: String
     var color: String
@@ -35,7 +35,7 @@ struct FinanceCategory: Codable, Hashable, Identifiable {
 }
 
 /// A bank account with its balance: the opening balance plus all its transactions (publicAccount).
-struct FinanceAccount: Codable, Hashable, Identifiable {
+nonisolated struct FinanceAccount: Codable, Hashable, Identifiable, Sendable {
     var id: String
     var name: String
     var color: String
@@ -51,7 +51,7 @@ struct FinanceAccount: Codable, Hashable, Identifiable {
 }
 
 /// An account's bank connection (publicAccount `bank`); the credentials stay on the server.
-struct FinanceBankLink: Codable, Hashable {
+nonisolated struct FinanceBankLink: Codable, Hashable, Sendable {
     var provider: String
     /// Which account at the bank (or `card`); nil: the only one there.
     var iban: String?
@@ -62,7 +62,10 @@ struct FinanceBankLink: Codable, Hashable {
     /// from older servers; nil for a card).
     var balanceCents: Int? = nil
     var balanceAt: String? = nil
+}
 
+@MainActor
+extension FinanceBankLink {
     /// The provider's name, else its id (one this app doesn't know yet).
     var providerName: String { FinanceBankProvider(rawValue: provider)?.title ?? provider }
     var lastSync: Date? { lastSyncAt.flatMap(Date.server) }
@@ -262,13 +265,13 @@ struct FinanceBankSync: Codable, Hashable, Identifiable {
 }
 
 /// A booking that has parts: how many, and what it still counts itself.
-struct FinanceSplitInfo: Codable, Hashable {
+nonisolated struct FinanceSplitInfo: Codable, Hashable, Sendable {
     var parts: Int
     var remainderCents: Int
 }
 
 /// A transaction (publicTransaction with links).
-struct FinanceTransaction: Codable, Hashable, Identifiable {
+nonisolated struct FinanceTransaction: Codable, Hashable, Identifiable, Sendable {
     var id: String
     var date: String
     var amountCents: Int
@@ -287,7 +290,6 @@ struct FinanceTransaction: Codable, Hashable, Identifiable {
     /// Where it came from: "manual", "csv" or "bank" (nil from an older server).
     var source: String?
 
-    var day: Day? { Day(date) }
     /// Where it came from; an older server only says whether it was imported.
     var origin: FinanceSource? {
         source.flatMap(FinanceSource.init(rawValue:)) ?? (imported ? .imported : nil)
@@ -296,8 +298,13 @@ struct FinanceTransaction: Codable, Hashable, Identifiable {
     var title: String { !payee.isEmpty ? payee : (!description.isEmpty ? description : "—") }
 }
 
+@MainActor
+extension FinanceTransaction {
+    var day: Day? { Day(date) }
+}
+
 /// Where a transaction came from (its `source`).
-enum FinanceSource: String, Hashable {
+nonisolated enum FinanceSource: String, Hashable, Sendable {
     case manual, csv, bank
     /// An older server's imported row: a CSV file or a bank sync.
     case imported
@@ -323,12 +330,12 @@ enum FinanceSource: String, Hashable {
 }
 
 /// An amount per month from lowCents to highCents (the same twice for a single value).
-struct FinanceCentsRange: Codable, Hashable {
+nonisolated struct FinanceCentsRange: Codable, Hashable, Sendable {
     var lowCents: Int
     var highCents: Int
 }
 
-struct FinanceBenchmarkCategory: Codable, Hashable {
+nonisolated struct FinanceBenchmarkCategory: Codable, Hashable, Sendable {
     var categoryId: String
     var lowCents: Int
     var highCents: Int
@@ -337,7 +344,7 @@ struct FinanceBenchmarkCategory: Codable, Hashable {
 }
 
 /// A statistic average to compare with: ranges per month.
-struct FinanceBenchmark: Codable, Hashable {
+nonisolated struct FinanceBenchmark: Codable, Hashable, Sendable {
     var label: String
     var income: FinanceCentsRange?
     var expense: FinanceCentsRange?
@@ -345,14 +352,18 @@ struct FinanceBenchmark: Codable, Hashable {
 }
 
 /// GET /finance (overviewData), also the answer of PATCH /finance/settings and DELETE /finance.
-struct FinanceOverview: Codable, Hashable {
+/// Decoded off the main thread (as the list, the balances and the summary).
+nonisolated struct FinanceOverview: Codable, Hashable, OffMainDecodable {
     var currency: String
     /// Saved bank formats; kept as JSON so ones this app can't read survive a save.
     var csvMappings: [JSONValue]
     var benchmark: FinanceBenchmark?
     var categories: [FinanceCategory]
     var accounts: [FinanceAccount]
+}
 
+@MainActor
+extension FinanceOverview {
     /// The saved mappings this app can read, newest first.
     var mappings: [FinanceCSVMapping] {
         csvMappings.compactMap { FinanceCSVMapping(json: $0) }
@@ -360,14 +371,14 @@ struct FinanceOverview: Codable, Hashable {
 }
 
 /// GET /finance/transactions
-struct FinanceTransactionList: Codable, Hashable {
+nonisolated struct FinanceTransactionList: Codable, Hashable, OffMainDecodable {
     var transactions: [FinanceTransaction]
     var total: Int
     var incomeCents: Int
     var expenseCents: Int
 }
 
-struct FinanceSummaryMonth: Codable, Hashable, Identifiable {
+nonisolated struct FinanceSummaryMonth: Codable, Hashable, Identifiable, Sendable {
     /// "YYYY-MM"
     var month: String
     var incomeCents: Int
@@ -376,7 +387,7 @@ struct FinanceSummaryMonth: Codable, Hashable, Identifiable {
     var id: String { month }
 }
 
-struct FinanceSummaryCategory: Codable, Hashable {
+nonisolated struct FinanceSummaryCategory: Codable, Hashable, Sendable {
     var categoryId: String?
     var incomeCents: Int
     var expenseCents: Int
@@ -384,7 +395,7 @@ struct FinanceSummaryCategory: Codable, Hashable {
 }
 
 /// GET /finance/summary (financeSummary).
-struct FinanceSummary: Codable, Hashable {
+nonisolated struct FinanceSummary: Codable, Hashable, OffMainDecodable {
     var currency: String
     var incomeCents: Int
     var expenseCents: Int
@@ -414,7 +425,7 @@ struct FinanceImportResult: Codable, Hashable {
 }
 
 /// Two transactions that look like money moved between two of the family's accounts.
-struct FinanceTransferPair: Codable, Hashable, Identifiable {
+nonisolated struct FinanceTransferPair: Codable, Hashable, Identifiable, Sendable {
     var out: FinanceTransaction
     var incoming: FinanceTransaction
 
@@ -427,12 +438,12 @@ struct FinanceTransferPair: Codable, Hashable, Identifiable {
 }
 
 /// GET /finance/transfers/suggestions
-struct FinanceTransferSuggestions: Codable {
+nonisolated struct FinanceTransferSuggestions: Codable, OffMainDecodable {
     var pairs: [FinanceTransferPair]
 }
 
 /// GET /finance/accounts?at=
-struct FinanceAccountsAt: Codable {
+nonisolated struct FinanceAccountsAt: Codable, OffMainDecodable {
     var at: String?
     var accounts: [FinanceAccount]
 }
@@ -532,11 +543,11 @@ enum FinanceOp {
 
 /// Day arithmetic on "YYYY-MM-DD" strings (lib/calendar/dates.ts, without time zones).
 enum FinanceDates {
-    static var utc: Calendar {
+    static let utc: Calendar = {
         var c = Calendar(identifier: .gregorian)
         c.timeZone = TimeZone(identifier: "UTC")!
         return c
-    }
+    }()
 
     static func date(_ day: Day) -> Date {
         utc.date(from: DateComponents(year: day.year, month: day.month, day: day.day))!

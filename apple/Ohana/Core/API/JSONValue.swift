@@ -2,7 +2,7 @@ import Foundation
 
 /// Any JSON: for payloads the app passes through without a model of its own (the assistant's
 /// undo steps, settings blobs, tool arguments).
-enum JSONValue: Codable, Hashable, Sendable {
+nonisolated enum JSONValue: Codable, Hashable, Sendable {
     case null
     case bool(Bool)
     case number(Double)
@@ -44,4 +44,4 @@ enum JSONValue: Codable, Hashable, Sendable {
 }
 
 /// An empty request or response body.
-struct Empty: Codable, Sendable {}
+nonisolated struct Empty: Codable, Sendable {}

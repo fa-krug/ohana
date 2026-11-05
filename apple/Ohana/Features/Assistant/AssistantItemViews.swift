@@ -10,11 +10,17 @@ struct AssistantItemView: View, Equatable {
     let store: AssistantChatStore
     /// The chat is its copy on the device: no undo meanwhile.
     var saved = false
+    /// It is the chat's question or edit that waits for the user (`AssistantChatStore.waitingIndex`).
+    var waiting = false
+    /// A turn runs (or a message is on its way): what waits can't be answered meanwhile.
+    var busy = false
     /// Opens a place of the app a tool call names.
     var open: (AppRoute) -> Void = { _ in }
 
     static func == (a: Self, b: Self) -> Bool {
-        a.item == b.item && a.store === b.store && a.saved == b.saved
+        // `busy` counts only for what can wait: the other items aren't drawn again as turns start and end.
+        a.item == b.item && a.store === b.store && a.saved == b.saved && a.waiting == b.waiting
+            && (a.busy == b.busy || !a.item.canWait)
     }
 
     var body: some View {
@@ -22,7 +28,7 @@ struct AssistantItemView: View, Equatable {
         case let .user(text, attachments):
             AssistantUserBubble(text: text, attachments: attachments)
         case let .assistant(text, sources):
-            AssistantAnswerView(text: text, sources: sources, open: open)
+            AssistantAnswerView(text: text, sources: sources, familyID: family.family.id, open: open)
                 .padding(.horizontal, 4)
         case let .tool(tool):
             AssistantToolRow(tool: tool, route: AssistantToolLinks.route(tool, familyID: family.family.id), open: open)
@@ -31,15 +37,15 @@ struct AssistantItemView: View, Equatable {
                 await store.undo(change.id)
             }
         case let .question(question):
-            AssistantQuestionCard(question: question, store: store)
+            AssistantQuestionCard(question: question, store: store, isOpen: waiting, busy: busy)
         case let .reminders(edit):
-            AssistantRemindersCard(edit: edit, store: store)
+            AssistantRemindersCard(edit: edit, store: store, isOpen: waiting, busy: busy)
         case let .calendar(edit):
-            AssistantCalendarCard(edit: edit, store: store)
+            AssistantCalendarCard(edit: edit, store: store, isOpen: waiting, busy: busy)
         case let .suggestions(edit):
-            AssistantSuggestionsCard(edit: edit, store: store)
+            AssistantSuggestionsCard(edit: edit, store: store, isOpen: waiting, busy: busy)
         case let .notes(edit):
-            AssistantNotesCard(edit: edit, store: store)
+            AssistantNotesCard(edit: edit, store: store, isOpen: waiting, busy: busy)
         case .compacted:
             HStack(spacing: 8) {
                 VStack { Divider() }
@@ -275,11 +281,15 @@ struct AssistantQuestionCard: View {
     @State private var picked: [String] = []
     @State private var text = ""
 
-    private var isOpen: Bool { store.openQuestion()?.question.id == question.id }
+    /// It waits for the user (the chat's last open question or edit), and whether a turn runs:
+    /// given by the chat, which works them out once for all its items, so a card isn't drawn again
+    /// with every piece of an answer being written.
+    var isOpen = false
+    var busy = false
 
     var body: some View {
         let open = isOpen
-        let active = open && !store.busy
+        let active = open && !busy
         let chosen = question.answer?.selected ?? picked
         VStack(alignment: .leading, spacing: 8) {
             Text(verbatim: question.question).font(.callout.weight(.semibold))
@@ -364,11 +374,15 @@ struct AssistantRemindersCard: View {
     /// Apply found no access.
     @State private var refused = false
 
-    private var isOpen: Bool { store.openRemindersEdit()?.edit.id == edit.id }
+    /// It waits for the user (the chat's last open question or edit), and whether a turn runs:
+    /// given by the chat, which works them out once for all its items, so a card isn't drawn again
+    /// with every piece of an answer being written.
+    var isOpen = false
+    var busy = false
 
     var body: some View {
         let open = isOpen
-        let active = open && !store.busy && !posting
+        let active = open && !busy && !posting
         VStack(alignment: .leading, spacing: 8) {
             Label {
                 Text(verbatim: edit.summary).font(.callout.weight(.semibold))
@@ -467,11 +481,15 @@ struct AssistantCalendarCard: View {
     /// Apply found no access.
     @State private var refused = false
 
-    private var isOpen: Bool { store.openCalendarEdit()?.edit.id == edit.id }
+    /// It waits for the user (the chat's last open question or edit), and whether a turn runs:
+    /// given by the chat, which works them out once for all its items, so a card isn't drawn again
+    /// with every piece of an answer being written.
+    var isOpen = false
+    var busy = false
 
     var body: some View {
         let open = isOpen
-        let active = open && !store.busy
+        let active = open && !busy
         VStack(alignment: .leading, spacing: 8) {
             Label {
                 Text(verbatim: edit.summary).font(.callout.weight(.semibold))
@@ -562,11 +580,15 @@ struct AssistantNotesCard: View {
     /// The ops whose text shows whole.
     @State private var expanded: Set<Int> = []
 
-    private var isOpen: Bool { store.openNotesEdit()?.edit.id == edit.id }
+    /// It waits for the user (the chat's last open question or edit), and whether a turn runs:
+    /// given by the chat, which works them out once for all its items, so a card isn't drawn again
+    /// with every piece of an answer being written.
+    var isOpen = false
+    var busy = false
 
     var body: some View {
         let open = isOpen
-        let active = open && !store.busy && !posting
+        let active = open && !busy && !posting
         let declined = edit.answer?.applied == false || edit.skipped
         VStack(alignment: .leading, spacing: 8) {
             Label {
@@ -753,11 +775,15 @@ struct AssistantSuggestionsCard: View {
     /// Add found no access to Reminders.
     @State private var refused = false
 
-    private var isOpen: Bool { store.openSuggestions()?.edit.id == edit.id }
+    /// It waits for the user (the chat's last open question or edit), and whether a turn runs:
+    /// given by the chat, which works them out once for all its items, so a card isn't drawn again
+    /// with every piece of an answer being written.
+    var isOpen = false
+    var busy = false
 
     var body: some View {
         let open = isOpen
-        let active = open && !store.busy && !posting
+        let active = open && !busy && !posting
         let picks = store.picks(edit)
         VStack(alignment: .leading, spacing: 8) {
             Label {

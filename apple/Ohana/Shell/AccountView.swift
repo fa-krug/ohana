@@ -525,9 +525,10 @@ private struct AccountForm: View {
     private func load() async {
         guard let client = app.client else { return }
         let get = client.cached("/api/v1/me/account", as: AccountOverview.self)
-        await LoadState.run($state, saved: {
-            // The name field shows the copy's name while the server is asked.
-            let copy = get.saved()
+        await LoadState.run($state, savedOffMain: {
+            // The name field shows the copy's name while the server is asked. The copy is read
+            // and decoded off the main thread.
+            let copy = await get.savedOffMain()
             if let copy, !nameFocused { name = copy.value.user.name }
             return copy
         }, get.fetch)

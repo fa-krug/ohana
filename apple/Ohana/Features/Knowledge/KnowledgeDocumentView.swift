@@ -40,15 +40,24 @@ struct KnowledgeDocumentView: View {
         }
     }
 
+    /// The document, whether cards are made (the status' copy on the device, else the server's)
+    /// and the members, side by side.
     private func load() async {
+        async let cards = cardsMade()
+        async let found = loadMembers()
         await LoadState.run($state, family.api.knowledgeDocument(target.id)) { $0.document }
+        if let cards = await cards { makesCards = cards }
+        if let found = await found { members = found }
+    }
+
+    private func cardsMade() async -> Bool? {
         let status = family.api.knowledgeStatus()
-        if let saved = status.saved()?.value {
-            makesCards = saved.makesCards
-        } else if let info = try? await status.fetchOrSaved() {
-            makesCards = info.makesCards
-        }
-        if let found = await KnowledgeMember.load(family.api) { members = found }
+        if let saved = await status.savedOffMain() { return saved.value.makesCards }
+        return (try? await status.fetchOrSaved())?.makesCards
+    }
+
+    private func loadMembers() async -> [KnowledgeMember]? {
+        await KnowledgeMember.load(family.api)
     }
 
     // MARK: Content
@@ -222,11 +231,14 @@ struct KnowledgeDocumentView: View {
                 ForEach(Array(pages.enumerated()), id: \.element.page) { index, page in
                     if index > 0 { Divider() }
                     DisclosureGroup(isExpanded: expandedBinding(page.page)) {
-                        Text(marked(page.text, quote: page.page == target.page ? target.quote : nil))
-                            .font(.callout)
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.top, 6)
+                        // Only an open page's text is made (and marked): not every page's on each redraw.
+                        if expanded.contains(page.page) {
+                            Text(marked(page.text, quote: page.page == target.page ? target.quote : nil))
+                                .font(.callout)
+                                .textSelection(.enabled)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.top, 6)
+                        }
                     } label: {
                         Text("Page \(page.page)")
                     }

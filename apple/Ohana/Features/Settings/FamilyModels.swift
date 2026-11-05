@@ -4,8 +4,8 @@ import UniformTypeIdentifiers
 
 // The shapes of server/lib/families/app-routes.ts (GET /household and the changes under it).
 
-/// GET /api/v1/families/{id}/household
-struct FamilyHousehold: Codable, Hashable {
+/// GET /api/v1/families/{id}/household, decoded off the main thread (`OffMainDecodable`).
+nonisolated struct FamilyHousehold: Codable, Hashable, OffMainDecodable {
     let name: String
     let role: FamilyRole
     let selfId: String
@@ -44,7 +44,7 @@ struct FamilyHousehold: Codable, Hashable {
 }
 
 /// server/lib/families/members.ts `MemberDto`.
-struct FamilyMember: Codable, Hashable, Identifiable {
+nonisolated struct FamilyMember: Codable, Hashable, Identifiable, Sendable {
     let userId: String
     let email: String
     let name: String
@@ -67,7 +67,7 @@ struct FamilyMember: Codable, Hashable, Identifiable {
 }
 
 /// A member without an account (a child, a grandparent).
-struct FamilyPerson: Codable, Hashable, Identifiable {
+nonisolated struct FamilyPerson: Codable, Hashable, Identifiable, Sendable {
     let id: String
     let name: String
     let birthday: Day?
@@ -81,7 +81,7 @@ struct FamilyPerson: Codable, Hashable, Identifiable {
     var photoCrop: MemberPhotoCrop?
 }
 
-struct FamilyInvite: Codable, Hashable, Identifiable {
+nonisolated struct FamilyInvite: Codable, Hashable, Identifiable, Sendable {
     let id: String
     let url: String
     let role: FamilyRole
@@ -89,6 +89,10 @@ struct FamilyInvite: Codable, Hashable, Identifiable {
     let expiresAt: String
 
     var link: URL? { URL(string: url) }
+}
+
+@MainActor
+extension FamilyInvite {
     var expiryDate: Date? { Date.server(expiresAt) }
 }
 
@@ -105,7 +109,7 @@ struct FamilyAddedPerson: Codable, Hashable {
     let invite: FamilyNewInvite?
 }
 
-struct FamilyHome: Codable, Hashable {
+nonisolated struct FamilyHome: Codable, Hashable, Sendable {
     let address: String?
     let lat: Double?
     let lng: Double?
@@ -187,7 +191,7 @@ enum FamilyChannelField: String, Hashable {
 }
 
 /// server/lib/notifications/channels.ts `ChannelDto` (the secret is never sent back).
-struct FamilyChannel: Codable, Hashable, Identifiable {
+nonisolated struct FamilyChannel: Codable, Hashable, Identifiable, Sendable {
     let id: String
     let name: String
     let provider: String
@@ -199,6 +203,10 @@ struct FamilyChannel: Codable, Hashable, Identifiable {
     let smtpUsername: String
     let smtpFrom: String
 
+}
+
+@MainActor
+extension FamilyChannel {
     var kind: FamilyChannelProvider? { FamilyChannelProvider(rawValue: provider) }
 }
 
@@ -247,7 +255,7 @@ struct FamilyChannelInput: Codable, Hashable {
 }
 
 /// server/lib/notifications/prefs-shared.ts `EventPref` with `hasChannels` (EVENT_HAS_CHANNELS).
-struct FamilyEventPref: Codable, Hashable, Identifiable {
+nonisolated struct FamilyEventPref: Codable, Hashable, Identifiable, Sendable {
     let event: String
     var enabled: Bool
     /// nil: all of the family's enabled channels.
@@ -257,6 +265,10 @@ struct FamilyEventPref: Codable, Hashable, Identifiable {
     let hasChannels: Bool
 
     var id: String { event }
+}
+
+@MainActor
+extension FamilyEventPref {
 
     /// The module the event belongs to (hidden when the server has it off); nil for unknown ones.
     var module: Module? {

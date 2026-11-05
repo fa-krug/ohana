@@ -761,6 +761,27 @@ struct CalendarSavedCopyTests {
         #expect(!FileManager.default.fileExists(atPath: queueFile.path()))
     }
 
+    /// Polling leaves an answer like the last one as it is; after a change here (refused by the
+    /// server) the same answer still puts the server's state back.
+    @Test func theSameAnswerAfterARefusalPutsTheServersStateBack() async throws {
+        CalendarQueueStubProtocol.reset()
+        CalendarQueueStubProtocol.state = Self.json
+        let store = CalendarStore(api: FamilyAPI(client: client(), familyID: "f1"), year: 2026, readOnly: false)
+        store.skipWeekends = false
+        await store.load()
+        #expect(store.phase == .loaded)
+        #expect(store.types(on: d("2026-03-02")).map(\.id) == ["sick"])
+        await store.load(quiet: true)
+        #expect(store.entries == [d("2026-03-02"): ["sick"]])
+
+        CalendarQueueStubProtocol.entriesStatus = 422
+        store.select(d("2026-03-03"))
+        store.toggleOnSelection("sick")
+        #expect(store.entries[d("2026-03-03")] == ["sick"])
+        #expect(await until { !store.pending && store.entries[d("2026-03-03")] == nil })
+        #expect(store.entries == [d("2026-03-02"): ["sick"]])
+    }
+
     @Test func readsTheQueueBackAndSendsItWhenTheServerAnswers() async throws {
         CalendarQueueStubProtocol.reset()
         CalendarQueueStubProtocol.entriesStatus = 503

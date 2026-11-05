@@ -191,7 +191,8 @@ struct CalendarSelectionDetails: View {
 
     var body: some View {
         let days = store.selectedDays
-        let shown = days.count == 1 ? days : days.filter(hasContent).prefix(Self.maxDays).map { $0 }
+        let withContent = days.count == 1 ? days : days.filter(hasContent)
+        let shown = days.count == 1 ? days : Array(withContent.prefix(Self.maxDays))
         VStack(alignment: .leading, spacing: 12) {
             if days.isEmpty {
                 Text(store.readOnly ? LocalizedStringKey("View only") : LocalizedStringKey("Select days to see and change them."))
@@ -203,7 +204,7 @@ struct CalendarSelectionDetails: View {
             ForEach(shown, id: \.self) { day in
                 dayCard(day)
             }
-            if days.count > 1 && days.filter(hasContent).count > Self.maxDays {
+            if days.count > 1 && withContent.count > Self.maxDays {
                 Text("Only the first \(Self.maxDays) days are listed.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)

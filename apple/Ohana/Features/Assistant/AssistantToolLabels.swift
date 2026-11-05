@@ -119,9 +119,30 @@ enum AssistantToolLabels {
 
     private static func formatted(_ day: String, template: String) -> String {
         guard let d = noon(day) else { return day }
+        return formatter(template).string(from: d)
+    }
+
+    /// Formatters by template (and the locale they were made for): making one takes long, and a
+    /// chat's tool rows ask for them every time they're drawn.
+    private static var formatters: [String: DateFormatter] = [:]
+    private static var intervalFormatters: [String: DateIntervalFormatter] = [:]
+
+    private static func formatter(_ template: String) -> DateFormatter {
+        let key = Locale.current.identifier + "|" + template
+        if let f = formatters[key] { return f }
         let f = DateFormatter()
         f.setLocalizedDateFormatFromTemplate(template)
-        return f.string(from: d)
+        formatters[key] = f
+        return f
+    }
+
+    private static func interval() -> DateIntervalFormatter {
+        let key = Locale.current.identifier
+        if let f = intervalFormatters[key] { return f }
+        let f = DateIntervalFormatter()
+        f.dateTemplate = "dMMMy"
+        intervalFormatters[key] = f
+        return f
     }
 
     private static func lastOfMonth(_ day: String) -> Int {
@@ -143,9 +164,7 @@ enum AssistantToolLabels {
             }
             if from == to { return formatted(from, template: "dMMMy") }
             guard let a = noon(from), let b = noon(to) else { return "\(from) – \(to)" }
-            let f = DateIntervalFormatter()
-            f.dateTemplate = "dMMMy"
-            return f.string(from: a, to: b)
+            return interval().string(from: a, to: b)
         }
         if !from.isEmpty {
             let d = formatted(from, template: "dMMMy")

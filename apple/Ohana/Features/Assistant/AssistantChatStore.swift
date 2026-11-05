@@ -74,6 +74,11 @@ final class AssistantChatStore {
     @ObservationIgnored private var seen = Set<String>()
     @ObservationIgnored private var following: Task<Void, Never>?
     @ObservationIgnored private var followID = 0
+    /// Text the stream wrote that isn't shown yet: pieces arrive many times a second, and each
+    /// shown one draws the chat again, so they're shown together, at most every `deltaInterval`.
+    @ObservationIgnored private var pendingDeltas: [(chat: String, seq: Int, text: String)] = []
+    @ObservationIgnored private var deltaFlush: Task<Void, Never>?
+    static let deltaInterval: Duration = .milliseconds(50)
     /// How many views show the store (the panel and the page may both); the last one to go
     /// stops following.
     @ObservationIgnored private var viewers = 0
@@ -122,10 +127,15 @@ final class AssistantChatStore {
 
     func loadSettings() async {
         let get = Self.settingsRequest(api)
-        if settings == nil { settings = get.saved()?.value }
+        if settings == nil {
+            // The copy on the device, read and decoded off the main thread.
+            let copy = await get.savedOffMain()
+            if settings == nil { settings = copy?.value }
+        }
         do {
-            settings = try await get.fetch()
-            settingsError = nil
+            let fetched = try await get.fetch()
+            if settings != fetched { settings = fetched }
+            if settingsError != nil { settingsError = nil }
         } catch is CancellationError {
         } catch {
             settingsError = error.localizedDescription
@@ -146,18 +156,28 @@ final class AssistantChatStore {
     /// Before the assistant first shows: its settings, the chats and the latest chat, so the
     /// panel has them drawn before it slides in (a running turn isn't followed: no one looks yet).
     func preload() async {
-        if settings == nil { await loadSettings() }
+        // The settings beside the chats and the latest chat: neither waits for the other.
+        async let settingsLoaded: Void = loadSettingsIfNeeded()
         if !chatsLoaded { await loadChats() }
         await restoreLatest(follow: false)
+        await settingsLoaded
+    }
+
+    private func loadSettingsIfNeeded() async {
+        if settings == nil { await loadSettings() }
     }
 
     func loadChats() async {
         let get = Self.chatsRequest(api)
         // Only into an empty list: the server's chats are never replaced by the copy.
-        if !chatsLoaded, chats.isEmpty, let copy = get.saved() { chats = copy.value.chats }
+        if !chatsLoaded, chats.isEmpty {
+            let copy = await get.savedOffMain()
+            if !chatsLoaded, chats.isEmpty, let copy { chats = copy.value.chats }
+        }
         do {
-            chats = try await get.fetch().chats
-            chatsLoaded = true
+            let fetched = try await get.fetch().chats
+            if chats != fetched { chats = fetched }
+            if !chatsLoaded { chatsLoaded = true }
         } catch {
             // Offline or not allowed: the list stays as it is.
         }
@@ -166,16 +186,19 @@ final class AssistantChatStore {
     /// Back in the app (another device may have chatted meanwhile): the list and the open chat
     /// catch up.
     func refresh() async {
+        // The list beside the open chat.
+        async let listed: Void = loadChats()
         if let id = currentID, savedCopy?.updating == false { await fetch(id, follow: false) }
         if let id = current?.id, !id.isEmpty, following == nil { follow(id) }
-        await loadChats()
+        await listed
     }
 
     /// Tries again to reach the server for the open chat's copy and the list (the connection is
     /// back).
     func retrySaved() async {
+        async let listed: Void = loadChats()
         if let id = currentID, savedCopy?.updating == false { await fetch(id, follow: true) }
-        await loadChats()
+        await listed
     }
 
     /// Shows a chat as given, marking what it changed so far as seen (previews and tests).
@@ -204,12 +227,17 @@ final class AssistantChatStore {
             return
         }
         picks += 1
+        let pick = picks
         unfollow()
         currentID = id
         current = nil
         savedCopy = nil
         activity = nil
-        if let copy = chatState(id).saved() {
+        // The copy on the device, read and decoded off the main thread (a long chat's items take a
+        // while); meanwhile another chat may have been picked, which then loads itself.
+        let copy = await chatState(id).savedOffMain()
+        guard picks == pick, currentID == id else { return }
+        if current == nil, let copy {
             for item in copy.value.items { markSeen(item) }
             var chat = Self.chat(id, copy.value)
             // A turn that ran then has ended or goes on without this device: the server says.
@@ -242,8 +270,10 @@ final class AssistantChatStore {
             let s = try await chatState(id).fetch()
             guard currentID == id, current == shown else { return }
             for item in s.items { markSeen(item) }
-            current = Self.chat(id, s)
-            savedCopy = nil
+            // The same as shown (nothing new since): the chat isn't drawn again.
+            let chat = Self.chat(id, s)
+            if current != chat { current = chat }
+            if savedCopy != nil { savedCopy = nil }
             summary(s.chat)
             if s.chat.isRunning, following { follow(id) }
         } catch {
@@ -430,12 +460,7 @@ final class AssistantChatStore {
     /// that wait for the user (the last of them, as on the server: one waits at a time).
     private func openWaiting() -> Int? {
         guard let items = current?.items, !busy, savedCopy == nil,
-              let index = items.lastIndex(where: {
-                  switch $0 {
-                  case .question, .reminders, .calendar, .suggestions, .notes: true
-                  default: false
-                  }
-              }),
+              let index = items.lastIndex(where: \.canWait),
               !items[(index + 1)...].contains(where: \.isUser)
         else { return nil }
         switch items[index] {
@@ -447,6 +472,9 @@ final class AssistantChatStore {
         default: return nil
         }
     }
+
+    /// The position of the item that waits for the user (the chat works it out once for its items).
+    var waitingIndex: Int? { openWaiting() }
 
     /// The open chat's question that waits for an answer, with its position.
     func openQuestion() -> (index: Int, question: AssistantQuestion)? {
@@ -786,6 +814,7 @@ final class AssistantChatStore {
     func unfollow() {
         following?.cancel()
         following = nil
+        flushDeltas()
     }
 
     /// A view shows the store (`onAppear`).
@@ -854,17 +883,18 @@ final class AssistantChatStore {
                 } else {
                     break
                 }
-                var parser = AssistantSSEParser()
-                for try await line in try await api.client.lines(req) {
+                // Read and decoded off the main thread; only the events come here.
+                for try await event in AssistantEventStream.events(try await api.client.lines(req)) {
                     if Task.isCancelled { break }
-                    guard let (name, data) = parser.feed(line), name != "ping" else { continue }
                     heard = true
-                    guard let event = try? AssistantChatEvent.parse(event: name, data: data) else { continue }
+                    guard let event else { continue }
                     if case let .chat(s) = event, chatID == nil { chatID = s.id }
                     if case .end = event { ended = true }
-                    if let chatID { apply(chatID, event) }
+                    if let chatID { receive(chatID, event) }
                 }
+                flushDeltas()
             } catch {
+                flushDeltas()
                 if Task.isCancelled || error is CancellationError { break }
                 if first != nil, !heard, sending {
                     // The message didn't get through: the chat says so (it stays visible).
@@ -910,7 +940,9 @@ final class AssistantChatStore {
     private func summary(_ s: AssistantChatSummary) {
         var list = chats.filter { $0.id != s.id }
         list.append(s)
-        chats = list.sorted { $0.updatedAt > $1.updatedAt }
+        list.sort { $0.updatedAt > $1.updatedAt }
+        // Unchanged (the stream repeats the chat with every step): the list isn't drawn again.
+        if list != chats { chats = list }
     }
 
     /// The messages that wait as the server says, then the ones still on their way to it.
@@ -931,6 +963,51 @@ final class AssistantChatStore {
         default:
             return []
         }
+    }
+
+    /// An event of the stream being followed: text is gathered and shown every `deltaInterval`
+    /// (`flushDeltas`), anything else after the text before it.
+    private func receive(_ id: String, _ event: AssistantChatEvent) {
+        guard case let .delta(seq, text) = event else {
+            flushDeltas()
+            apply(id, event)
+            return
+        }
+        if let last = pendingDeltas.last, last.chat == id, last.seq == seq {
+            pendingDeltas[pendingDeltas.count - 1].text += text
+        } else {
+            pendingDeltas.append((id, seq, text))
+        }
+        guard deltaFlush == nil else { return }
+        deltaFlush = Task { [weak self] in
+            try? await Task.sleep(for: Self.deltaInterval)
+            guard !Task.isCancelled else { return }
+            self?.flushDeltas()
+        }
+    }
+
+    /// Shows the text gathered from the stream (all of it in one change of the chat).
+    private func flushDeltas() {
+        deltaFlush?.cancel()
+        deltaFlush = nil
+        guard !pendingDeltas.isEmpty else { return }
+        let pending = pendingDeltas
+        pendingDeltas = []
+        applyDeltas(pending)
+    }
+
+    /// Text written into answers of the open chat, as one change.
+    private func applyDeltas(_ deltas: [(chat: String, seq: Int, text: String)]) {
+        guard var c = current else { return }
+        var changed = false
+        for (chat, seq, text) in deltas where chat == c.id {
+            guard c.items.indices.contains(seq), case let .assistant(before, sources) = c.items[seq] else { continue }
+            c.items[seq] = .assistant(text: before + text, sources: sources)
+            changed = true
+        }
+        guard changed else { return }
+        current = c
+        activity = .init(activity: .init(kind: "writing"), at: .now)
     }
 
     /// What a chat's stream says (exposed for tests).
@@ -972,11 +1049,7 @@ final class AssistantChatStore {
             let areas = AssistantChangeAreas.unique(changed)
             if !areas.isEmpty { onChange(areas) }
         case let .delta(seq, text):
-            guard isOpen, var c = current, c.items.indices.contains(seq),
-                  case let .assistant(before, sources) = c.items[seq] else { break }
-            c.items[seq] = .assistant(text: before + text, sources: sources)
-            current = c
-            activity = .init(activity: .init(kind: "writing"), at: .now)
+            applyDeltas([(id, seq, text)])
         case let .end(deleted):
             if deleted {
                 chats.removeAll { $0.id == id }

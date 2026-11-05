@@ -120,8 +120,9 @@ enum Prefetch {
         return answered
     }
 
+    /// Keeps the answer without decoding it on the main actor: the screen decodes its copy.
     private static func fetch<Value>(_ get: CachedGet<Value>) -> Job {
-        Job { _ = try await get.fetch(); return [] }
+        Job { try await get.refresh(); return [] }
     }
 
     /// The recipes of the plan's active iteration, so they can be cooked offline.

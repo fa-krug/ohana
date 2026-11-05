@@ -1,7 +1,7 @@
 import Foundation
 
 /// The signed-in account (server/lib/auth/serialize.ts `UserDto`).
-struct UserAccount: Codable, Hashable, Identifiable {
+nonisolated struct UserAccount: Codable, Hashable, Identifiable, Sendable {
     let id: String
     let email: String
     let name: String
@@ -14,12 +14,12 @@ struct UserAccount: Codable, Hashable, Identifiable {
     var displayName: String { name.isEmpty ? email : name }
 }
 
-enum FamilyRole: String, Codable, Hashable {
+nonisolated enum FamilyRole: String, Codable, Hashable, Sendable {
     case editor, viewer
 }
 
 /// One of the account's families (server/lib/families/manage.ts `listFamiliesOf`).
-struct FamilySummary: Codable, Hashable, Identifiable {
+nonisolated struct FamilySummary: Codable, Hashable, Identifiable, Sendable {
     let id: String
     let name: String
     let role: FamilyRole
@@ -28,8 +28,8 @@ struct FamilySummary: Codable, Hashable, Identifiable {
     var canEdit: Bool { role == .editor }
 }
 
-/// GET /api/v1/me
-struct MeResponse: Codable {
+/// GET /api/v1/me, decoded off the main thread (`OffMainDecodable`).
+nonisolated struct MeResponse: Codable, OffMainDecodable {
     let user: UserAccount
     let families: [FamilySummary]
 }

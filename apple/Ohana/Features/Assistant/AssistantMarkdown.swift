@@ -39,7 +39,19 @@ enum AssistantMarkdownBlock: Equatable {
             && cells(lines[i + 1]).count == cells(lines[i]).count
     }
 
-    private static func isListItem(_ line: String) -> Bool { line.prefixMatch(of: listItem) != nil }
+    // The regexes only where they can match: they are slow, and every line of an answer is tried
+    // against them several times, again with each piece of a streaming answer.
+
+    private static func isListItem(_ line: String) -> Bool {
+        guard let first = line.first(where: { !$0.isWhitespace }),
+              first.isNumber || "-*•+".contains(first) else { return false }
+        return line.prefixMatch(of: listItem) != nil
+    }
+
+    private static func heading(_ line: String) -> Substring? {
+        guard line.hasPrefix("#") else { return nil }
+        return line.wholeMatch(of: headingLine)?.2
+    }
 
     private static func alignment(_ rule: String) -> HorizontalAlignment? {
         let left = rule.hasPrefix(":"), right = rule.hasSuffix(":")
@@ -67,8 +79,8 @@ enum AssistantMarkdownBlock: Equatable {
                 blocks.append(.code(code.joined(separator: "\n")))
                 continue
             }
-            if let m = line.wholeMatch(of: headingLine) {
-                blocks.append(.heading(String(m.2)))
+            if let title = heading(line) {
+                blocks.append(.heading(String(title)))
                 i += 1
                 continue
             }
@@ -96,7 +108,7 @@ enum AssistantMarkdownBlock: Equatable {
             }
             var para: [String] = []
             while i < lines.count, !lines[i].trimmingCharacters(in: .whitespaces).isEmpty, !lines[i].hasPrefix("```"),
-                  lines[i].wholeMatch(of: headingLine) == nil, !isListItem(lines[i]), !isTableStart(lines, i) {
+                  heading(lines[i]) == nil, !isListItem(lines[i]), !isTableStart(lines, i) {
                 para.append(lines[i])
                 i += 1
             }
@@ -125,6 +137,44 @@ enum AssistantMarkdownBlock: Equatable {
     }
 }
 
+/// Answers already read, so none is read twice: an answer's blocks by its text and sources, each
+/// inline part (paragraph, list item, cell) by its text. A streaming answer's finished paragraphs
+/// aren't read again with each new piece of text, nor an answer drawn again (a chat opened again,
+/// the panel built again). Bounded by the length of the texts kept.
+enum AssistantMarkdownCache {
+    private final class Box<Value> {
+        let value: Value
+        init(_ value: Value) { self.value = value }
+    }
+
+    private static func cache<Value>(_: Value.Type) -> NSCache<NSString, Box<Value>> {
+        let cache = NSCache<NSString, Box<Value>>()
+        cache.totalCostLimit = 4_000_000
+        return cache
+    }
+
+    private static let blockCache = cache([AssistantMarkdownBlock].self)
+    private static let inlineCache = cache(AttributedString.self)
+
+    /// `AssistantMarkdownBlock.parse` of the text prepared for its sources.
+    static func blocks(_ text: String, sources: [AssistantSource]) -> [AssistantMarkdownBlock] {
+        let key = (sources.map(\.ref).joined(separator: " ") + "\u{0}" + text) as NSString
+        if let hit = blockCache.object(forKey: key) { return hit.value }
+        let blocks = AssistantMarkdownBlock.parse(AssistantSourceMarkers.prepare(text, sources: sources))
+        blockCache.setObject(Box(blocks), forKey: key, cost: key.length)
+        return blocks
+    }
+
+    /// `AssistantMarkdownBlock.inline`.
+    static func inline(_ text: String) -> AttributedString {
+        let key = text as NSString
+        if let hit = inlineCache.object(forKey: key) { return hit.value }
+        let inline = AssistantMarkdownBlock.inline(text)
+        inlineCache.setObject(Box(inline), forKey: key, cost: key.length)
+        return inline
+    }
+}
+
 /// An answer of the assistant, rendered from its Markdown: its source markers as chips (those
 /// without a source, and one still being written, hidden).
 struct AssistantMarkdownView: View {
@@ -133,8 +183,7 @@ struct AssistantMarkdownView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            let prepared = AssistantSourceMarkers.prepare(text, sources: sources)
-            ForEach(Array(AssistantMarkdownBlock.parse(prepared).enumerated()), id: \.offset) { _, block in
+            ForEach(Array(AssistantMarkdownCache.blocks(text, sources: sources).enumerated()), id: \.offset) { _, block in
                 blockView(block)
             }
         }
@@ -145,10 +194,10 @@ struct AssistantMarkdownView: View {
     @ViewBuilder private func blockView(_ block: AssistantMarkdownBlock) -> some View {
         switch block {
         case let .paragraph(text):
-            Text(AssistantMarkdownBlock.inline(text))
+            Text(AssistantMarkdownCache.inline(text))
                 .fixedSize(horizontal: false, vertical: true)
         case let .heading(text):
-            Text(AssistantMarkdownBlock.inline(text)).font(.headline)
+            Text(AssistantMarkdownCache.inline(text)).font(.headline)
         case let .list(ordered, items):
             VStack(alignment: .leading, spacing: 4) {
                 ForEach(Array(items.enumerated()), id: \.offset) { index, item in
@@ -156,7 +205,7 @@ struct AssistantMarkdownView: View {
                         Text(verbatim: ordered ? "\(index + 1)." : "•")
                             .monospacedDigit()
                             .foregroundStyle(.secondary)
-                        Text(AssistantMarkdownBlock.inline(item))
+                        Text(AssistantMarkdownCache.inline(item))
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
@@ -173,7 +222,7 @@ struct AssistantMarkdownView: View {
                 Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 6) {
                     GridRow {
                         ForEach(Array(header.enumerated()), id: \.offset) { c, cell in
-                            Text(AssistantMarkdownBlock.inline(cell)).bold()
+                            Text(AssistantMarkdownCache.inline(cell)).bold()
                                 .gridColumnAlignment(alignments.indices.contains(c) ? alignments[c] ?? .leading : .leading)
                         }
                     }
@@ -181,7 +230,7 @@ struct AssistantMarkdownView: View {
                     ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
                         GridRow {
                             ForEach(header.indices, id: \.self) { c in
-                                Text(AssistantMarkdownBlock.inline(row.indices.contains(c) ? row[c] : ""))
+                                Text(AssistantMarkdownCache.inline(row.indices.contains(c) ? row[c] : ""))
                             }
                         }
                     }

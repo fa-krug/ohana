@@ -154,3 +154,17 @@ extension View {
         modifier(AppointmentPolling(busy: busy, reload: reload))
     }
 }
+
+extension Binding {
+    /// The state as the pages load it: an answer just like the one shown (polling, every 3 s while
+    /// a run is under way) isn't assigned again, so the page isn't redrawn for nothing.
+    func keepingEqualAnswers<T: Equatable>() -> Binding where Value == LoadState<T> {
+        let base = self
+        return Binding {
+            base.wrappedValue
+        } set: { new in
+            if case let .loaded(old) = base.wrappedValue, case let .loaded(value) = new, old == value { return }
+            base.wrappedValue = new
+        }
+    }
+}

@@ -1,4 +1,7 @@
 import SwiftUI
+#if os(macOS)
+import AppKit
+#endif
 
 /// The transactions of one day, in the server's order (newest first).
 struct FinanceDayGroup: Identifiable {
@@ -91,19 +94,18 @@ struct FinanceTransactionsView: View {
 
     @ViewBuilder
     private func content(_ list: FinanceTransactionList) -> some View {
-        let info = FinanceLinkInfo(list.transactions)
         #if os(iOS)
         if sizeClass == .compact {
-            compactList(list, info: info)
+            compactList(list, info: store.linkInfo)
         } else {
-            table(list, info: info)
+            table(list)
         }
         #else
-        table(list, info: info)
+        table(list)
         #endif
     }
 
-    private func table(_ list: FinanceTransactionList, info: FinanceLinkInfo) -> some View {
+    private func table(_ list: FinanceTransactionList) -> some View {
         VStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 12) {
                 if !store.accounts.isEmpty { FinanceAccountCards(store: store) }
@@ -115,7 +117,7 @@ struct FinanceTransactionsView: View {
             if list.transactions.isEmpty {
                 empty.frame(maxHeight: .infinity)
             } else {
-                FinanceTransactionTable(store: store, transactions: list.transactions, info: info, onEdit: onEdit)
+                FinanceTransactionTable(store: store, transactions: list.transactions, onEdit: onEdit)
                 if list.total > list.transactions.count { more(list) }
             }
         }
@@ -328,7 +330,8 @@ struct FinanceTransactionMenu: View {
     }
 }
 
-/// A transaction as the table sorts it: with the names its category and account show.
+/// A transaction as the table sorts it: with the names its category and account show, and
+/// what its cells show, worked out once per list (not in every cell, at every selection change).
 nonisolated struct FinanceTableRow: Identifiable, Sendable {
     let transaction: FinanceTransaction
     let id: String
@@ -337,9 +340,18 @@ nonisolated struct FinanceTableRow: Identifiable, Sendable {
     let amountCents: Int
     let category: String
     let account: String
+    /// The date as the Date column shows it.
+    let dateText: String
+    let categoryValue: FinanceCategory?
+    /// "Food › Groceries" (the Category cell's help), "" without a category.
+    let categoryPath: String
+    let accountValue: FinanceAccount?
+    /// The links' line under the payee (`FinanceLinkInfo.detail`).
+    let detail: (icon: String, text: String)?
 
-    @MainActor
-    init(transaction t: FinanceTransaction, category: String = "", account: String = "") {
+    init(transaction t: FinanceTransaction, category: String = "", account: String = "", dateText: String? = nil,
+         categoryValue: FinanceCategory? = nil, categoryPath: String = "", accountValue: FinanceAccount? = nil,
+         detail: (icon: String, text: String)? = nil) {
         transaction = t
         id = t.id
         date = t.date
@@ -347,6 +359,63 @@ nonisolated struct FinanceTableRow: Identifiable, Sendable {
         amountCents = t.amountCents
         self.category = category
         self.account = account
+        self.dateText = dateText ?? t.date
+        self.categoryValue = categoryValue
+        self.categoryPath = categoryPath
+        self.accountValue = accountValue
+        self.detail = detail
+    }
+
+    /// The rows of the store's list, in its order.
+    @MainActor
+    static func rows(_ store: FinanceStore) -> [FinanceTableRow] {
+        let format = Date.FormatStyle.dateTime.day().month(.abbreviated).year()
+        var dates: [String: String] = [:]
+        var paths: [String: String] = [:]
+        var rows: [FinanceTableRow] = []
+        let transactions = store.list?.transactions ?? []
+        rows.reserveCapacity(transactions.count)
+        for t in transactions {
+            let category = store.category(t.categoryId)
+            let account = store.account(t.accountId)
+            let dateText = dates[t.date] ?? (Day(t.date)?.formatted(format) ?? t.date)
+            dates[t.date] = dateText
+            var path = ""
+            if let category {
+                path = paths[category.id] ?? store.tree.path(category.id)
+                paths[category.id] = path
+            }
+            let detail = store.linkInfo.detail(t, store: store).map { (icon: $0.0, text: $0.1) }
+            rows.append(FinanceTableRow(transaction: t, category: category?.label ?? "", account: account?.label ?? "",
+                                        dateText: dateText, categoryValue: category, categoryPath: path,
+                                        accountValue: account, detail: detail))
+        }
+        return rows
+    }
+}
+
+/// The table's rows, sorted, kept between body passes: the table is drawn again at every
+/// selection change, and building and sorting all rows each time made that slow.
+@MainActor
+final class FinanceTableRowsCache {
+    private var source: (list: Int, overview: Int)?
+    private var unsorted: [FinanceTableRow] = []
+    private var order: [KeyPathComparator<FinanceTableRow>]?
+    private var sorted: [FinanceTableRow] = []
+
+    func rows(_ store: FinanceStore, sortedBy order: [KeyPathComparator<FinanceTableRow>]) -> [FinanceTableRow] {
+        // Read in the body: changes of the list or the overview draw the table again.
+        let source = (list: store.listRevision, overview: store.overviewRevision)
+        if self.source == nil || self.source! != source {
+            unsorted = FinanceTableRow.rows(store)
+            self.source = source
+            self.order = nil
+        }
+        if self.order != order {
+            sorted = FinanceTableSort.sorted(unsorted, by: order)
+            self.order = order
+        }
+        return sorted
     }
 }
 
@@ -369,37 +438,34 @@ enum FinanceTableSort {
 struct FinanceTransactionTable: View {
     @Bindable var store: FinanceStore
     let transactions: [FinanceTransaction]
-    let info: FinanceLinkInfo
     let onEdit: (FinanceTransaction) -> Void
     @State private var sortOrder = FinanceTableSort.newestFirst
+    @State private var rowsCache = FinanceTableRowsCache()
     @SceneStorage("finance.columns") private var columns: TableColumnCustomization<FinanceTableRow>
 
     var body: some View {
-        let rows = FinanceTableSort.sorted(transactions.map {
-            FinanceTableRow(transaction: $0, category: store.category($0.categoryId)?.label ?? "",
-                            account: store.account($0.accountId)?.label ?? "")
-        }, by: sortOrder)
+        let rows = rowsCache.rows(store, sortedBy: sortOrder)
         Table(rows, selection: $store.selected, sortOrder: $sortOrder, columnCustomization: $columns) {
             TableColumn("Date", value: \.date) { row in
-                Text(Day(row.date)?.formatted(.dateTime.day().month(.abbreviated).year()) ?? row.date)
+                Text(row.dateText)
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
             }
             .width(min: 80, ideal: 100, max: 130)
             .customizationID("date")
             TableColumn("Payee", value: \.title, comparator: .localizedStandard) { row in
-                payee(row.transaction)
+                payee(row)
             }
             .width(min: 180, ideal: 320)
             .customizationID("payee")
             .disabledCustomizationBehavior(.visibility)
             TableColumn("Category", value: \.category, comparator: .localizedStandard) { row in
-                category(row.transaction)
+                category(row)
             }
             .width(min: 120, ideal: 180)
             .customizationID("category")
             TableColumn("Account", value: \.account, comparator: .localizedStandard) { row in
-                if let account = store.account(row.transaction.accountId) { FinanceAccountChip(account: account) }
+                if let account = row.accountValue { FinanceAccountChip(account: account) }
             }
             .width(min: 80, ideal: 120)
             .customizationID("account")
@@ -429,8 +495,9 @@ struct FinanceTransactionTable: View {
         .opacity(store.loadingList ? 0.6 : 1)
     }
 
-    private func payee(_ t: FinanceTransaction) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
+    private func payee(_ row: FinanceTableRow) -> some View {
+        let t = row.transaction
+        return VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 6) {
                 Text(t.title).lineLimit(1)
                 if let origin = t.origin, let icon = origin.icon {
@@ -439,34 +506,106 @@ struct FinanceTransactionTable: View {
                         .accessibilityLabel(origin.title)
                 }
             }
-            if let (icon, text) = info.detail(t, store: store) {
-                Label(text, systemImage: icon).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            if let detail = row.detail {
+                Label(detail.text, systemImage: detail.icon).font(.caption).foregroundStyle(.secondary).lineLimit(1)
             } else if !t.payee.isEmpty && !t.description.isEmpty {
                 Text(t.description).font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
         }
     }
 
+    /// Editors change the category from the cell. On the Mac the cell is a plain button whose
+    /// menu is built when it opens: a `Menu` per row built the whole category tree for each row
+    /// shown, again at every selection change.
     @ViewBuilder
-    private func category(_ t: FinanceTransaction) -> some View {
+    private func category(_ row: FinanceTableRow) -> some View {
+        let t = row.transaction
         if store.canEdit {
+            #if os(macOS)
+            Button {
+                FinanceCategoryPopUp.show(tree: store.tree, selection: t.categoryId,
+                                          fits: { FinanceCategoryTree.fits($0, income: t.amountCents > 0) }) { id in
+                    Task { await store.setCategory([t.id], to: id) }
+                }
+            } label: {
+                FinanceCategoryLabel(category: row.categoryValue)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .help(row.categoryPath)
+            #else
             Menu {
                 FinanceCategoryMenuItems(tree: store.tree, selection: t.categoryId,
                                          fits: { FinanceCategoryTree.fits($0, income: t.amountCents > 0) }) { id in
                     Task { await store.setCategory([t.id], to: id) }
                 }
             } label: {
-                FinanceCategoryLabel(category: store.category(t.categoryId))
+                FinanceCategoryLabel(category: row.categoryValue)
             }
             .menuStyle(.button)
             .buttonStyle(.borderless)
             .menuIndicator(.hidden)
-            .help(store.category(t.categoryId).map { store.tree.path($0.id) } ?? "")
+            .help(row.categoryPath)
+            #endif
         } else {
-            FinanceCategoryLabel(category: store.category(t.categoryId))
+            FinanceCategoryLabel(category: row.categoryValue)
         }
     }
 }
+
+#if os(macOS)
+/// A table row's category menu (the Mac), built when it opens: the category tree, the current
+/// one checked, a category with subcategories a submenu holding itself and them, as
+/// `FinanceCategoryMenuItems`.
+enum FinanceCategoryPopUp {
+    static func show(tree: FinanceCategoryTree, selection: String?, fits: (FinanceCategory) -> Bool,
+                     pick: @escaping (String?) -> Void) {
+        let target = Target(pick: pick)
+        func item(_ title: String, id: String?) -> NSMenuItem {
+            let item = NSMenuItem(title: title, action: #selector(Target.choose(_:)), keyEquivalent: "")
+            item.target = target
+            item.representedObject = id
+            item.state = selection == id ? .on : .off
+            return item
+        }
+        func add(_ node: FinanceCategoryTree.Node, to menu: NSMenu) {
+            let own = item(node.category.label, id: node.id)
+            guard !node.children.isEmpty else {
+                menu.addItem(own)
+                return
+            }
+            let submenu = NSMenu(title: node.category.label)
+            submenu.addItem(own)
+            submenu.addItem(.separator())
+            for child in tree.children(of: node.id) { add(child, to: submenu) }
+            let parent = NSMenuItem(title: node.category.label, action: nil, keyEquivalent: "")
+            parent.submenu = submenu
+            menu.addItem(parent)
+        }
+        let menu = NSMenu()
+        menu.addItem(item(String(localized: "Uncategorized"), id: nil))
+        menu.addItem(.separator())
+        for node in tree.children(of: nil) where fits(node.category) { add(node, to: menu) }
+        // Returns once the menu closed, after the chosen item's action.
+        withExtendedLifetime(target) {
+            _ = menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
+        }
+    }
+
+    private final class Target: NSObject {
+        let pick: (String?) -> Void
+
+        init(pick: @escaping (String?) -> Void) {
+            self.pick = pick
+        }
+
+        @objc func choose(_ sender: NSMenuItem) {
+            pick(sender.representedObject as? String)
+        }
+    }
+}
+#endif
 
 /// Combining the selected transactions into a transfer or a split booking.
 struct FinanceCombineButtons: View {

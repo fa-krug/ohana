@@ -302,10 +302,11 @@ struct CalendarYearGrid: View {
     @AppStorage("ohana.calendar.showWeekdays") private var alwaysWeekdays = false
     @AppStorage(CalendarZoom.key) private var zoom = CalendarZoom.initial
     @AppStorage(CalendarWeekdayAlignment.key) private var alignWeekdays = false
-    @Environment(\.calendarGridFocused) private var gridFocused
     @State private var width: CGFloat = 900
     @State private var position = ScrollPosition(edge: .leading)
-    @State private var offset: CGFloat = 0
+    /// How far the grid is scrolled sideways. Not state: it changes at every frame of a scroll,
+    /// and only the zoom and the reveal read it.
+    @State private var scrolled = CalendarYearScroll()
     @State private var pinchStart: Int?
     /// The month names, the day numbers and the rows grow with Dynamic Type.
     @ScaledMetric(relativeTo: .caption) private var labelWidth: CGFloat = 40
@@ -352,7 +353,7 @@ struct CalendarYearGrid: View {
             .scrollPosition($position)
             .scrollBounceBehavior(.basedOnSize)
             .scrollIndicators(CalendarZoom.clamp(zoom) < CalendarZoom.max ? .automatic : .hidden)
-            .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.x } action: { _, x in offset = x }
+            .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.x } action: { _, x in scrolled.offset = x }
         }
         .frame(height: layout.height)
         .accessibilityElement(children: .contain)
@@ -406,18 +407,13 @@ struct CalendarYearGrid: View {
         let iconSize = min(max(layout.rowHeight * 0.42, 12), 32)
         let hit: (CGPoint, Bool) -> Day? = { layout.day(at: $0, year: year, clamp: $1) }
         let last = store.canRepeat ? store.selection.max() : nil
-        let context = store.cellContext(gridFocused: gridFocused)
         var days = layout
         days.headerHeight = 0
         return VStack(spacing: 0) {
             header(layout, today: today)
-            CalendarYearDays(store: store, year: year,
-                             months: (1...12).map { month in
-                                 (1...CalendarMath.daysInMonth(year: year, month: month)).map {
-                                     store.cell(Day(year: year, month: month, day: $0), context)
-                                 }
-                             },
-                             layout: days, showWeekday: showWeekday, iconSize: iconSize)
+            // Builds the days itself, from what they show: a change of the selection, which this
+            // grid reads (the fill handle), doesn't build them again.
+            CalendarYearDays(store: store, year: year, layout: days, showWeekday: showWeekday, iconSize: iconSize)
                 .equatable()
         }
         .frame(width: layout.width, height: layout.height, alignment: .topLeading)
@@ -472,7 +468,7 @@ struct CalendarYearGrid: View {
         if let focus = store.focus, focus.year == store.year {
             center = new.frame(of: focus).midX
         } else {
-            center = (offset + viewport / 2) / old.width * new.width
+            center = (scrolled.offset + viewport / 2) / old.width * new.width
         }
         scrollTo(x: center - viewport / 2, in: new)
     }
@@ -484,9 +480,9 @@ struct CalendarYearGrid: View {
         let frame = layout.frame(of: reveal.day)
         if reveal.center {
             scrollTo(x: frame.midX - viewport / 2, in: layout)
-        } else if frame.minX < offset {
+        } else if frame.minX < scrolled.offset {
             scrollTo(x: frame.minX, in: layout)
-        } else if frame.maxX > offset + viewport {
+        } else if frame.maxX > scrolled.offset + viewport {
             scrollTo(x: frame.maxX - viewport, in: layout)
         }
     }
@@ -495,6 +491,11 @@ struct CalendarYearGrid: View {
         let maxX = max(0, layout.width - viewport)
         position.scrollTo(x: min(max(0, x), maxX))
     }
+}
+
+/// `CalendarYearGrid`'s horizontal scroll offset, kept without redrawing the grid.
+final class CalendarYearScroll {
+    var offset: CGFloat = 0
 }
 
 /// One month as weeks of seven days; `style` picks the cell (`.month`: the web's month view on

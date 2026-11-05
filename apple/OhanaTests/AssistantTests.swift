@@ -151,6 +151,32 @@ struct AssistantDecodingTests {
         let names = lines.compactMap { tight.feed($0)?.event }
         #expect(names == ["delta", "end"])
     }
+
+    @Test func readsTheStreamOffTheMainThread() async throws {
+        let lines = ["event: ping", "data: {}", "event: chat", "data: {\"bad\":1}", "event: delta",
+                     "data: {\"seq\":1,\"text\":\"Hel\"}", "event: future", "data: {}", "event: end", "data: {}"]
+        let source = AsyncThrowingStream<String, any Error> { continuation in
+            for line in lines { continuation.yield(line) }
+            continuation.finish()
+        }
+        var events: [AssistantChatEvent?] = []
+        for try await event in AssistantEventStream.events(source) { events.append(event) }
+        // Pings left out; an event that doesn't decode or isn't known is nil (the stream is alive).
+        #expect(events == [nil, .delta(seq: 1, text: "Hel"), nil, .end(deleted: false)])
+    }
+
+    @Test func readsDueDatesAsReminderDueWrites() throws {
+        #expect(AssistantReminderOp.dueDescription("2026-11-07") == "2026-11-07")
+        #expect(AssistantReminderOp.dueDescription("2026-11-07T18:30:15") == "2026-11-07T18:30")
+        #expect(AssistantReminderOp.dueDescription("2026-11-07T7:5") == "2026-11-07T07:05")
+        #expect(AssistantReminderOp.dueDescription("2026-11-07T25:00") == nil)
+        #expect(AssistantReminderOp.dueDescription("tomorrow") == nil)
+        for text in ["2026-11-07", "2026-11-07T18:30:15", "2026-11-07T7:5", "2026-11-07T25:00", "2026-13-01"] {
+            #expect(AssistantReminderOp.dueDescription(text) == ReminderDue(text)?.description)
+        }
+        let op = try JSONDecoder().decode(AssistantReminderOp.self, from: Data(#"{"op":"add","list":"l","listTitle":"L","due":"2026-11-07T18:30"}"#.utf8))
+        #expect(op.due == .set(ReminderDue(day: Day(year: 2026, month: 11, day: 7), hour: 18, minute: 30)))
+    }
 }
 
 /// What the assistant's changes make reload.
@@ -308,6 +334,19 @@ struct AssistantRenderingTests {
             .table(header: ["Day", "Amount"], alignments: [], rows: [["Mon", "3"]]),
             .code("code"),
         ])
+    }
+
+    @Test func keepsWhatItRead() {
+        let text = "## Plan\n\nSee [[k:4]] **this**.\n\n- a"
+        let sources = [AssistantSource(ref: "k:4", documentId: "d", name: "Doc.pdf")]
+        let blocks = AssistantMarkdownCache.blocks(text, sources: sources)
+        #expect(blocks == AssistantMarkdownBlock.parse(AssistantSourceMarkers.prepare(text, sources: sources)))
+        #expect(AssistantMarkdownCache.blocks(text, sources: sources) == blocks)
+        // Other sources number the chips otherwise: not the same entry.
+        #expect(AssistantMarkdownCache.blocks(text, sources: []) == AssistantMarkdownBlock.parse(
+            AssistantSourceMarkers.prepare(text, sources: [])))
+        #expect(AssistantMarkdownCache.inline("**b** [x](https://x.example)") ==
+            AssistantMarkdownBlock.inline("**b** [x](https://x.example)"))
     }
 
     @Test func dropsLinksThatArentWeb() {

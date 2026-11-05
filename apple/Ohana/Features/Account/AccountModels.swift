@@ -8,8 +8,9 @@ import AppKit
 
 // The account routes (server/lib/auth/app-routes.ts, /api/v1/me/...).
 
-/// GET /api/v1/me/account: everything the account screen shows.
-struct AccountOverview: Codable, Hashable {
+/// GET /api/v1/me/account: everything the account screen shows. Decoded off the main thread
+/// (`OffMainDecodable`).
+nonisolated struct AccountOverview: Codable, Hashable, OffMainDecodable {
     let user: UserAccount
     let passkeys: [AccountPasskey]
     let tokens: [AccountToken]
@@ -18,24 +19,30 @@ struct AccountOverview: Codable, Hashable {
 }
 
 /// A passkey (server/lib/auth/passkey-management.ts `PasskeyDto`).
-struct AccountPasskey: Codable, Hashable, Identifiable {
+nonisolated struct AccountPasskey: Codable, Hashable, Identifiable, Sendable {
     let id: String
     let deviceName: String
     let createdAt: String
     let lastUsedAt: String?
+}
 
+@MainActor
+extension AccountPasskey {
     var createdDate: Date? { Date.server(createdAt) }
     var lastUsedDate: Date? { lastUsedAt.flatMap(Date.server) }
 }
 
 /// An API token; `current` is the one this device signs in with.
-struct AccountToken: Codable, Hashable, Identifiable {
+nonisolated struct AccountToken: Codable, Hashable, Identifiable, Sendable {
     let id: String
     let name: String
     let createdAt: String
     let lastUsedAt: String?
     let current: Bool
+}
 
+@MainActor
+extension AccountToken {
     var createdDate: Date? { Date.server(createdAt) }
     var lastUsedDate: Date? { lastUsedAt.flatMap(Date.server) }
 }

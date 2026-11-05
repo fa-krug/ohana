@@ -170,10 +170,27 @@ final class FinanceStore {
     var overview: FinanceOverview? {
         didSet {
             if oldValue?.categories != overview?.categories { tree = FinanceCategoryTree(overview?.categories ?? []) }
+            if oldValue?.accounts != overview?.accounts {
+                accountsByID = Dictionary((overview?.accounts ?? []).map { ($0.id, $0) }) { a, _ in a }
+            }
+            overviewRevision &+= 1
         }
     }
     private(set) var tree = FinanceCategoryTree([])
-    var list: FinanceTransactionList?
+    /// The accounts by id: the list's rows look theirs up.
+    private(set) var accountsByID: [String: FinanceAccount] = [:]
+    var list: FinanceTransactionList? {
+        didSet {
+            linkInfo = FinanceLinkInfo(list?.transactions ?? [])
+            listRevision &+= 1
+        }
+    }
+    /// The list's transfers and splits, worked out once per answer (not in every row).
+    private(set) var linkInfo = FinanceLinkInfo([])
+    /// Count the changes of `overview` and `list`: what the table derives from them is kept until
+    /// they change (`FinanceTableRowsCache`).
+    private(set) var overviewRevision = 0
+    private(set) var listRevision = 0
     var summary: FinanceSummary?
     /// The columns the overview compares, for the period of `summary`.
     var comparisons: [FinanceComparison]?
@@ -245,7 +262,7 @@ final class FinanceStore {
     var accounts: [FinanceAccount] { overview?.accounts ?? [] }
 
     func category(_ id: String?) -> FinanceCategory? { tree.category(id) }
-    func account(_ id: String?) -> FinanceAccount? { id.flatMap { id in accounts.first { $0.id == id } } }
+    func account(_ id: String?) -> FinanceAccount? { id.flatMap { accountsByID[$0] } }
 
     /// The account's balance on the period's balance day, else now.
     func balance(of account: FinanceAccount) -> Int {
@@ -285,7 +302,8 @@ final class FinanceStore {
 
     func loadOverview() async {
         let get = Self.overviewRequest(api)
-        if overview == nil, let copy = get.saved() {
+        // The copy is read and decoded off the main thread; an answer that came meanwhile wins.
+        if overview == nil, let copy = await get.savedOffMain(), overview == nil {
             overview = copy.value
             overviewCopy = SavedCopy(date: copy.date, updating: true)
         } else {
@@ -322,12 +340,14 @@ final class FinanceStore {
     func loadList() async {
         listSeq += 1
         let seq = listSeq
-        loadingList = true
         let query = Self.listQuery(period, filter, limit: limit)
         // Only the first page is kept on the device, and not a search's.
         let get = limit == Self.page && filter.q.trimmingCharacters(in: .whitespaces).isEmpty
             ? Self.listRequest(api, query) : nil
-        if query != listQuery, let copy = get?.saved() {
+        // The copy is read and decoded off the main thread; a newer request takes over meanwhile.
+        let copy = query != listQuery ? await get?.savedOffMain() : nil
+        guard seq == listSeq else { return }
+        if query != listQuery, let copy {
             list = copy.value
             listQuery = query
             listCopy = SavedCopy(date: copy.date, updating: true)
@@ -375,7 +395,9 @@ final class FinanceStore {
         }
         // While the period runs they're today's: kept as such, so tomorrow starts with them too.
         let get = Self.balancesRequest(api, at: at)
-        if at != balancesAt, let copy = get.saved() {
+        let copy = at != balancesAt ? await get.savedOffMain() : nil
+        guard seq == balancesSeq else { return }
+        if at != balancesAt, let copy {
             balances = Self.balances(copy.value, at: at)
             balancesAt = at
             balancesCopy = SavedCopy(date: copy.date, updating: true)
@@ -411,7 +433,9 @@ final class FinanceStore {
         summarySeq += 1
         let seq = summarySeq
         let period = self.period
-        if period != summaryPeriod, let copy = savedSummary(period) {
+        let copy = period != summaryPeriod ? await savedSummary(period) : nil
+        guard seq == summarySeq else { return }
+        if period != summaryPeriod, let copy {
             summary = copy.summary
             comparisons = copy.comparisons
             summaryPeriod = period
@@ -454,36 +478,55 @@ final class FinanceStore {
     }
 
     /// The period's summary kept on the device, with its comparisons when all of them are; from
-    /// the oldest copy's date.
-    private func savedSummary(_ period: FinancePeriod) -> (summary: FinanceSummary, comparisons: [FinanceComparison]?, date: Date)? {
-        guard let summary = summaryGet(period.query).saved() else { return nil }
+    /// the oldest copy's date. The copies are read and decoded together, off the main thread.
+    private func savedSummary(_ period: FinancePeriod) async -> (summary: FinanceSummary, comparisons: [FinanceComparison]?, date: Date)? {
+        let ranges = period.comparisonRanges()
+        // The summary's key first, then one per comparison (nil: no completed month yet).
+        let keys: [String?] = [summaryGet(period.query).key] + ranges.map { range in
+            if let from = range.from, range.to < from { return nil }
+            return summaryGet(Self.summaryQuery(range)).key
+        }
+        let cache = api.client.cache
+        let copies = await withTaskGroup(of: (Int, Saved<FinanceSummary>?).self) { group in
+            for (i, key) in keys.enumerated() {
+                guard let key else { continue }
+                group.addTask { (i, await OffMainJSON.saved(FinanceSummary.self, cache: cache, key: key)) }
+            }
+            var out = [Saved<FinanceSummary>?](repeating: nil, count: keys.count)
+            for await (i, copy) in group { out[i] = copy }
+            return out
+        }
+        guard let summary = copies[0] else { return nil }
         var comparisons: [FinanceComparison] = []
         var date = summary.date
-        for range in period.comparisonRanges() {
+        for (range, copy) in zip(ranges, copies.dropFirst()) {
             if let from = range.from, range.to < from {
                 comparisons.append(.none(range))
                 continue
             }
-            guard let copy = summaryGet(Self.summaryQuery(range)).saved() else {
-                return (summary.value, nil, summary.date)
-            }
+            guard let copy else { return (summary.value, nil, summary.date) }
             comparisons.append(.from(copy.value, range: range))
             date = min(date, copy.date)
         }
         return (summary.value, comparisons, date)
     }
 
+    /// The comparison columns' summaries, asked for together; in the ranges' order.
     private func loadComparisons(_ period: FinancePeriod) async throws -> [FinanceComparison] {
-        var out: [FinanceComparison] = []
-        for range in period.comparisonRanges() {
-            if let from = range.from, range.to < from {
-                out.append(.none(range)) // no completed month yet
-                continue
+        let ranges = period.comparisonRanges()
+        let summaries = try await withThrowingTaskGroup(of: (Int, FinanceSummary).self) { group in
+            for (i, range) in ranges.enumerated() {
+                if let from = range.from, range.to < from { continue } // no completed month yet
+                let query = Self.summaryQuery(range)
+                group.addTask { (i, try await self.fetchSummary(query)) }
             }
-            let summary = try await fetchSummary(Self.summaryQuery(range))
-            out.append(.from(summary, range: range))
+            var out: [Int: FinanceSummary] = [:]
+            for try await (i, summary) in group { out[i] = summary }
+            return out
         }
-        return out
+        return ranges.enumerated().map { i, range in
+            summaries[i].map { .from($0, range: range) } ?? .none(range)
+        }
     }
 
     // MARK: Requests

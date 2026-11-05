@@ -3,8 +3,8 @@ import Foundation
 /// GET /api/v1/server (public, no token): which Ohana the server runs and which of its modules
 /// are on. The app needs `requiredAPIVersion` and hides the modules a server turned off
 /// (`DISABLED_MODULES` on the server: their routes answer 404). A server from before this route
-/// answers 404 itself: `legacy`, API version 0.
-struct ServerInfo: Codable, Equatable {
+/// answers 404 itself: `legacy`, API version 0. Decoded off the main thread (`OffMainDecodable`).
+nonisolated struct ServerInfo: Codable, Equatable, OffMainDecodable {
     var name: String
     var version: String
     var apiVersion: Int
@@ -17,7 +17,7 @@ struct ServerInfo: Codable, Equatable {
     /// when it has that off or is older.
     var holidays: Bool
 
-    struct Push: Codable, Equatable {
+    struct Push: Codable, Equatable, Sendable {
         /// The relay the app registers with (`PUSH_RELAY_URL` on the server).
         var relay: URL
     }
@@ -25,14 +25,13 @@ struct ServerInfo: Codable, Equatable {
     /// The oldest API version this app works with: older servers are refused.
     static let requiredAPIVersion = 1
 
-    /// The modules a server can turn off.
-    static let optionalModules: [Module] = [.finance, .meals, .appointments, .chores, .assistant, .knowledge]
-
     /// What a server without /api/v1/server is taken for: everything it had then on (the
     /// chores and the knowledge base came later, so such a server has neither).
-    static let legacy = ServerInfo(name: "Ohana", version: "", apiVersion: 0,
-                                   modules: ([Module.calendar] + optionalModules.filter { $0 != .chores && $0 != .knowledge })
-                                       .map(\.rawValue))
+    static let legacy = ServerInfo(name: "Ohana", version: "", apiVersion: 0, modules: legacyModules)
+
+    /// `legacy`'s modules (`Module`'s raw values): the calendar and the optional modules but the
+    /// chores and the knowledge base. Spelled out: decoding runs off the main actor, `Module` on it.
+    static let legacyModules = ["calendar", "finance", "meals", "appointments", "assistant"]
 
     init(name: String, version: String, apiVersion: Int, modules: [String], push: Push? = nil, holidays: Bool = false) {
         self.name = name
@@ -50,7 +49,7 @@ struct ServerInfo: Codable, Equatable {
         name = try c.decodeIfPresent(String.self, forKey: .name) ?? "Ohana"
         version = try c.decodeIfPresent(String.self, forKey: .version) ?? ""
         apiVersion = try c.decodeIfPresent(Int.self, forKey: .apiVersion) ?? 0
-        modules = try c.decodeIfPresent([String].self, forKey: .modules) ?? Self.legacy.modules
+        modules = try c.decodeIfPresent([String].self, forKey: .modules) ?? Self.legacyModules
         push = try? c.decodeIfPresent(Push.self, forKey: .push)
         holidays = (try? c.decodeIfPresent(Bool.self, forKey: .holidays)) ?? false
     }
@@ -61,6 +60,12 @@ struct ServerInfo: Codable, Equatable {
 
     /// The app can talk to this server.
     var isSupported: Bool { apiVersion >= Self.requiredAPIVersion }
+}
+
+@MainActor
+extension ServerInfo {
+    /// The modules a server can turn off.
+    static let optionalModules: [Module] = [.finance, .meals, .appointments, .chores, .assistant, .knowledge]
 
     /// Whether the server has `module` on. The overview, the calendar and the settings are
     /// always there. The knowledge base is for editors only, outside the demo, too: the family's

@@ -7,11 +7,18 @@ import WidgetKit
 /// switched, the app signed out or left the screen. The widgets load the overview themselves
 /// (`WidgetLoader`).
 enum WidgetSync {
-    /// The modules the server has off (`WidgetStore`), and a reload.
+    /// The modules the server has off (`WidgetStore`), and a reload. The Keychain is only asked
+    /// when they differ from what this run saved last (each refresh and family switch lands here).
     static func show(disabledModules: [String]) {
-        WidgetStore.saveDisabledModules(disabledModules)
+        if disabledModules != savedModules {
+            WidgetStore.saveDisabledModules(disabledModules)
+            savedModules = disabledModules
+        }
         reloadSoon()
     }
+
+    /// What `show` saved last in this run.
+    private static var savedModules: [String]?
 
     static func reload() {
         pending?.cancel()

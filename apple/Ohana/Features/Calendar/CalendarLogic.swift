@@ -10,12 +10,12 @@ typealias CalendarNotes = [Day: CalendarNote]
 typealias CalendarPattern = [[String]]
 
 /// Per type: all days of the year with it, and the workdays (Mon–Fri that are not a day off).
-struct CalendarTypeStats: Equatable {
+nonisolated struct CalendarTypeStats: Equatable, Sendable {
     var days = 0
     var workdays = 0
 }
 
-enum CalendarMath {
+nonisolated enum CalendarMath {
     // MARK: Days
 
     /// Days since 1970-01-01 (Howard Hinnant's days_from_civil).

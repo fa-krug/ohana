@@ -158,6 +158,8 @@ struct OverviewColumns: Layout {
     struct Cache {
         var frames: [CGRect] = []
         var height: CGFloat = 0
+        /// The width `frames` were arranged for.
+        var width: CGFloat?
     }
 
     func makeCache(subviews: Subviews) -> Cache { Cache() }
@@ -169,7 +171,10 @@ struct OverviewColumns: Layout {
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache) {
-        arrange(width: bounds.width, subviews: subviews, cache: &cache)
+        // Placed at the width just measured (the usual pass), the cards aren't measured twice.
+        if cache.width != bounds.width || cache.frames.count != subviews.count {
+            arrange(width: bounds.width, subviews: subviews, cache: &cache)
+        }
         for (subview, frame) in zip(subviews, cache.frames) {
             subview.place(at: CGPoint(x: bounds.minX + frame.minX, y: bounds.minY + frame.minY),
                           proposal: ProposedViewSize(frame.size))
@@ -188,7 +193,8 @@ struct OverviewColumns: Layout {
     }
 
     private func arrange(width: CGFloat, subviews: Subviews, cache: inout Cache) {
-        // Measured again on every pass (a handful of cards): a card's height changes with its data.
+        // Measured again on every size request (a handful of cards): a card's height changes with
+        // its data; placing reuses what was measured for its width.
         let count = Self.columnCount(width: width, minColumnWidth: minColumnWidth, maxColumns: maxColumns, spacing: spacing)
         let columnWidth = max((width - spacing * CGFloat(count - 1)) / CGFloat(count), 0)
         var bottoms = Array(repeating: CGFloat(0), count: count)
@@ -202,7 +208,7 @@ struct OverviewColumns: Layout {
             bottoms[column] = y + height
             filled[column] = true
         }
-        cache = Cache(frames: frames, height: bottoms.max() ?? 0)
+        cache = Cache(frames: frames, height: bottoms.max() ?? 0, width: width)
     }
 }
 

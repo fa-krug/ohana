@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// GET /api/v1/families/{id}/overview (server/lib/families/dashboard.ts `Dashboard`).
-struct OverviewDashboard: Codable, Hashable {
+/// GET /api/v1/families/{id}/overview (server/lib/families/dashboard.ts `Dashboard`). The first
+/// screen at launch: decoded off the main thread (`OffMainDecodable`).
+nonisolated struct OverviewDashboard: Codable, Hashable, OffMainDecodable {
     let today: Day
     let calendar: OverviewCalendarSummary
     /// Names of today's "away" types (no meal is planned then).
@@ -17,7 +18,7 @@ struct OverviewDashboard: Codable, Hashable {
     let weekAhead: WeekAheadSummary?
 }
 
-extension OverviewDashboard {
+nonisolated extension OverviewDashboard {
     /// The parts of modules a server can turn off (meals, finance, appointments) may be missing
     /// or null: they're empty then (and their cards hidden, `FamilyContext.isEnabled`).
     init(from decoder: any Decoder) throws {
@@ -39,13 +40,13 @@ extension OverviewDashboard {
 }
 
 /// server/lib/calendar/summary.ts `CalendarSummary`.
-struct OverviewCalendarSummary: Codable, Hashable {
+nonisolated struct OverviewCalendarSummary: Codable, Hashable, Sendable {
     /// The first uncovered weekday from today on, if any.
     let nextGap: Day?
     let upcoming: [OverviewEntryRun]
 }
 
-struct OverviewEntryRun: Codable, Hashable {
+nonisolated struct OverviewEntryRun: Codable, Hashable, Sendable {
     let name: String
     let color: String
     let from: Day
@@ -53,7 +54,7 @@ struct OverviewEntryRun: Codable, Hashable {
 }
 
 /// server/lib/calendar/events.ts `PublicEvent`: an event, or one occurrence of a repeating one.
-struct OverviewEvent: Codable, Hashable {
+nonisolated struct OverviewEvent: Codable, Hashable, Sendable {
     let id: String
     /// The occurrence's original day, for an event that repeats.
     var occurrence: Day?
@@ -80,7 +81,10 @@ struct OverviewEvent: Codable, Hashable {
 
     /// Unique in a list: occurrences of a series share its id.
     var uid: String { occurrence.map { "\(id)@\($0)" } ?? id }
+}
 
+@MainActor
+extension OverviewEvent {
     /// The time shown on `day` ("from 09:00" on the first day of one that spans days, "until
     /// 17:00" on its last); nil: all day.
     func time(on day: Day) -> String? {
@@ -90,7 +94,7 @@ struct OverviewEvent: Codable, Hashable {
 
 /// One line of "coming up": a run of a calendar type (its icon, and with whom the type belongs
 /// to, if anyone), or a timed event.
-enum OverviewUpcomingItem: Codable, Hashable, Identifiable {
+nonisolated enum OverviewUpcomingItem: Codable, Hashable, Identifiable, Sendable {
     case entry(date: Day, to: Day, name: String, color: String, icon: String, member: CalendarMember?)
     case event(date: Day, event: OverviewEvent)
 
@@ -161,7 +165,7 @@ enum OverviewUpcomingItem: Codable, Hashable, Identifiable {
 }
 
 /// A day of "coming up" and what's on it.
-struct OverviewUpcomingDay: Hashable, Identifiable {
+nonisolated struct OverviewUpcomingDay: Hashable, Identifiable, Sendable {
     let day: Day
     var items: [OverviewUpcomingItem]
 
@@ -169,8 +173,8 @@ struct OverviewUpcomingDay: Hashable, Identifiable {
 }
 
 /// server/lib/meals/queries/meal-plan.ts `MealsSummary`.
-struct OverviewMealsSummary: Codable, Hashable {
-    struct Today: Codable, Hashable {
+nonisolated struct OverviewMealsSummary: Codable, Hashable, Sendable {
+    struct Today: Codable, Hashable, Sendable {
         let recipeId: String
         let recipeTitle: String
         let isLeftover: Bool
@@ -180,8 +184,8 @@ struct OverviewMealsSummary: Codable, Hashable {
 }
 
 /// server/lib/finance/summary.ts `MonthSummary`.
-struct OverviewMonthSummary: Codable, Hashable {
-    struct TopExpense: Codable, Hashable {
+nonisolated struct OverviewMonthSummary: Codable, Hashable, Sendable {
+    struct TopExpense: Codable, Hashable, Sendable {
         let categoryId: String
         let name: String
         let icon: String
@@ -205,14 +209,12 @@ struct OverviewMonthSummary: Codable, Hashable {
 }
 
 /// server/lib/families/dashboard.ts `SearchFind`.
-struct OverviewSearchFind: Codable, Hashable, Identifiable {
-    struct First: Codable, Hashable {
+nonisolated struct OverviewSearchFind: Codable, Hashable, Identifiable, Sendable {
+    struct First: Codable, Hashable, Sendable {
         let resultId: Int
         let doctorName: String
         /// ISO 8601
         let slot: String
-
-        var date: Date? { Date.server(slot) }
     }
 
     let id: String
@@ -225,13 +227,18 @@ struct OverviewSearchFind: Codable, Hashable, Identifiable {
 }
 
 /// server/lib/families/birthdays.ts `BirthdayDay`.
-struct OverviewBirthday: Codable, Hashable, Identifiable {
+nonisolated struct OverviewBirthday: Codable, Hashable, Identifiable, Sendable {
     let day: Day
     let name: String
     /// The age they turn that day.
     let age: Int
 
     var id: String { "\(name)|\(day)" }
+}
+
+@MainActor
+extension OverviewSearchFind.First {
+    var date: Date? { Date.server(slot) }
 }
 
 enum OverviewFormat {

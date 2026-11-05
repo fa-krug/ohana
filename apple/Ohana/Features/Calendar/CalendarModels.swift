@@ -4,7 +4,7 @@ import Foundation
 // events.ts; the web client's components/calendar/api.ts types).
 
 /// What a type does for the coverage check (server/lib/calendar/core.ts `Role`).
-enum CalendarRole: String, Codable, CaseIterable, Hashable, Identifiable {
+nonisolated enum CalendarRole: String, Codable, CaseIterable, Hashable, Identifiable, Sendable {
     case none
     case needsCover = "needs_cover"
     case covers
@@ -54,7 +54,7 @@ enum CalendarRole: String, Codable, CaseIterable, Hashable, Identifiable {
 /// An entry type of one year (vacation.ts `publicType`). It belongs to a member, whose color it
 /// takes (the server works it out: their first type of the year has it, further ones shades of it);
 /// a nobody's type may have a color of its own (`colorKey`), else it is gray.
-struct CalendarEntryType: Codable, Hashable, Identifiable {
+nonisolated struct CalendarEntryType: Codable, Hashable, Identifiable, Sendable {
     var id: String
     var year: Int?
     var name: String
@@ -105,7 +105,7 @@ struct CalendarEntryType: Codable, Hashable, Identifiable {
 }
 
 /// Icon and/or comment on a day. The icon is an SF Symbol's name ("" none; `CalendarSymbol`).
-struct CalendarNote: Codable, Hashable {
+nonisolated struct CalendarNote: Codable, Hashable, Sendable {
     var icon: String
     var comment: String
 
@@ -119,7 +119,10 @@ struct CalendarNote: Codable, Hashable {
         icon = try c.decodeIfPresent(String.self, forKey: .icon) ?? ""
         comment = try c.decodeIfPresent(String.self, forKey: .comment) ?? ""
     }
+}
 
+@MainActor
+extension CalendarNote {
     /// The note in words, where it can only be text (VoiceOver, tooltips): the icon's name, then
     /// the comment.
     var text: String {
@@ -129,7 +132,7 @@ struct CalendarNote: Codable, Hashable {
 
 /// A member of the family as the calendar names them (family-routes.ts `familyState` `members`):
 /// an account or a person without one, with their `MemberColor` key and profile picture.
-struct CalendarMember: Codable, Hashable, Identifiable {
+nonisolated struct CalendarMember: Codable, Hashable, Identifiable, Sendable {
     let id: String
     let name: String
     /// Has an account (nil where it isn't sent: the overview).
@@ -140,7 +143,7 @@ struct CalendarMember: Codable, Hashable, Identifiable {
 }
 
 /// A member's birthday on a day: who, and the age they turn.
-struct CalendarBirthday: Codable, Hashable {
+nonisolated struct CalendarBirthday: Codable, Hashable, Sendable {
     let name: String
     let age: Int
 }
@@ -148,7 +151,7 @@ struct CalendarBirthday: Codable, Hashable {
 /// A public holiday or a day of school holidays of the family's region (`GET /holidays`), by
 /// name: its day also has an entry of the type it was imported into (`holiday`,
 /// `school-holidays`), which colors it.
-struct CalendarHoliday: Codable, Hashable {
+nonisolated struct CalendarHoliday: Codable, Hashable, Sendable {
     let name: String
     /// "public" or "school" (kept as sent: a newer server may add kinds).
     let kind: String
@@ -158,7 +161,7 @@ struct CalendarHoliday: Codable, Hashable {
 /// imported from Apple Calendar; one occurrence of it when it repeats. It may span several days
 /// (`date` to `endDate`); the lists by day show it on each of them. An occurrence is addressed as
 /// (`id`, `occurrence`): `id` is always the series', `occurrence` its original day.
-struct CalendarEvent: Codable, Hashable {
+nonisolated struct CalendarEvent: Codable, Hashable, Sendable {
     let id: String
     /// The occurrence's original day, for an event that repeats (also when it was moved).
     let occurrence: Day?
@@ -400,7 +403,7 @@ enum CalendarEventSpan: String, Codable {
 }
 
 /// The family as GET /families/{id} describes it (family-routes.ts `publicFamily`).
-struct CalendarFamilyInfo: Codable, Hashable {
+nonisolated struct CalendarFamilyInfo: Codable, Hashable, Sendable {
     let id: String
     let name: String
     let access: String
@@ -410,7 +413,7 @@ struct CalendarFamilyInfo: Codable, Hashable {
 
 /// GET /families/{id}?year=: the family and its calendar of the year (family-routes.ts
 /// `familyState`).
-struct CalendarState: Codable {
+nonisolated struct CalendarState: Codable, OffMainDecodable {
     let family: CalendarFamilyInfo
     let types: [CalendarEntryType]
     let typeYears: [Int]?
@@ -427,16 +430,16 @@ struct CalendarState: Codable {
 // MARK: Requests
 
 /// An entry op of POST /entries (core.ts `EntryOp`).
-struct CalendarEntryOp: Codable, Hashable {
-    enum Action: String, Codable { case add, remove }
+nonisolated struct CalendarEntryOp: Codable, Hashable, Sendable {
+    enum Action: String, Codable, Sendable { case add, remove }
     let action: Action
     let type: String
     let dates: [Day]
 }
 
 /// A note op of POST /notes (core.ts `NoteOp`).
-struct CalendarNoteOp: Codable, Hashable {
-    enum Action: String, Codable { case set, clear }
+nonisolated struct CalendarNoteOp: Codable, Hashable, Sendable {
+    enum Action: String, Codable, Sendable { case set, clear }
     let action: Action
     let dates: [Day]
     var icon: String?

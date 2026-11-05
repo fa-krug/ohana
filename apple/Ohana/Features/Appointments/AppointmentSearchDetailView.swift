@@ -61,7 +61,7 @@ struct AppointmentSearchDetailView: View {
 
     private func load() async {
         guard !deleted else { return }
-        await LoadState.run($state, family.api.cached("/appointments/searches/\(searchID)"))
+        await LoadState.run($state.keepingEqualAnswers(), family.api.cached("/appointments/searches/\(searchID)"))
     }
 
     /// The Appointments menu (editors): Run Now ⌘R, Edit ⌘E, pause, Delete ⌘⌫.
@@ -308,7 +308,7 @@ struct AppointmentHistoryView: View {
     }
 
     private func load() async {
-        await LoadState.run($state, family.api.cached("/appointments/searches/\(searchID)/runs",
+        await LoadState.run($state.keepingEqualAnswers(), family.api.cached("/appointments/searches/\(searchID)/runs",
                                                       as: AppointmentRunsResponse.self)) { $0.runs }
     }
 

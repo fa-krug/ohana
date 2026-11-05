@@ -105,7 +105,8 @@ struct MealPlanRecipeRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            RemoteImage(path: recipe.imagePath)
+            // A 44 pt thumbnail: 200 px fills it at 3x, not the whole photo.
+            RemoteImage(path: recipe.imagePath, maxPixelSize: 200)
                 .frame(width: 44, height: 44)
                 .clipShape(.rect(cornerRadius: 10))
                 .accessibilityHidden(true)

@@ -46,8 +46,11 @@ struct RecipeEditorSheet: View {
 
     private func load() async {
         await LoadState.run($state) {
-            let c = try await RecipeCatalogCache.load(family.api)
-            let t = try await RecipeTagsView.request(family.api).fetchOrSaved()
+            // Side by side: the catalog (every ingredient) and the tags are separate requests.
+            let api = family.api
+            async let catalog = RecipeCatalogCache.load(api)
+            async let tags = RecipeTagsView.request(api).fetchOrSaved()
+            let (c, t) = try await (catalog, tags)
             let model: RecipeEditorModel
             switch mode {
             case let .create(list):

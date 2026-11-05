@@ -239,6 +239,7 @@ enum FamilyMembersSheet: Identifiable {
     var id: Self { self }
 }
 
+@MainActor
 extension FamilyHousehold {
     /// "for Hanna · Viewer · valid until 8 Nov 2026"
     func details(of invite: FamilyInvite) -> String {

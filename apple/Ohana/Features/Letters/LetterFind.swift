@@ -10,7 +10,8 @@ import Foundation
 // tasks and deadlines into the user's Reminders).
 
 /// The server's answer: `ai` false when the family hasn't set up the assistant (then no items).
-struct LetterFindings: Decodable, Equatable {
+/// Decoded off the main thread.
+nonisolated struct LetterFindings: Decodable, Equatable, OffMainDecodable {
     var ai: Bool
     /// Who the letter is from, when the model said.
     var source: String?
@@ -39,7 +40,7 @@ struct LetterFindings: Decodable, Equatable {
 /// The server's name for the PDF: a title (without the date and the person), the letter's date,
 /// the family member it's about (as the family lists them) and tags from the ones sent. Each
 /// piece is optional; one that doesn't decode is left out.
-struct LetterFiling: Decodable, Equatable {
+nonisolated struct LetterFiling: Decodable, Equatable, Sendable {
     var title: String?
     var date: Day?
     var person: String?
@@ -65,7 +66,10 @@ struct LetterFiling: Decodable, Equatable {
         person = text(.person)
         tags = (try? c.decodeIfPresent([String].self, forKey: .tags)) ?? []
     }
+}
 
+@MainActor
+extension LetterFiling {
     var suggestion: LetterSuggestion {
         LetterSuggestion(title: title, date: date, tags: tags, person: person).cleaned()
     }

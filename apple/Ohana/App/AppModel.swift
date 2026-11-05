@@ -71,7 +71,8 @@ final class AppModel {
         didSet {
             guard !isDemo, selectedFamilyID != oldValue else { return }
             UserDefaults.standard.set(selectedFamilyID, forKey: Keys.family)
-            SharedConnection.remember(familyID: selectedFamilyID)
+            let familyID = selectedFamilyID
+            Self.writeShared { SharedConnection.remember(familyID: familyID) }
             syncWidgets()
             prefetch()
         }
@@ -140,7 +141,8 @@ final class AppModel {
            let token = Keychain.load(Keys.token) {
             connect(server: url, token: token)
             // Also for installs from before the share extensions: they read it from the Keychain.
-            SharedConnection.remember(server: url, familyID: selectedFamilyID)
+            let familyID = selectedFamilyID
+            Self.writeShared { SharedConnection.remember(server: url, familyID: familyID) }
         } else {
             connectDemo()
         }
@@ -185,7 +187,8 @@ final class AppModel {
             ChoresStore.removeQueues(server: server)
             KnowledgeIndexer.removeAll(server: server)
             connect(server: server, token: token)
-            SharedConnection.remember(server: server, familyID: selectedFamilyID)
+            let familyID = selectedFamilyID
+            Self.writeShared { SharedConnection.remember(server: server, familyID: familyID) }
             await refresh()
         }
     }
@@ -347,7 +350,8 @@ final class AppModel {
             ChoresStore.removeQueues(server: client.baseURL)
             KnowledgeIndexer.removeAll(server: client.baseURL)
             AppleCalendarSync.shared.removeAll(server: client.baseURL)
-            SharedConnection.forget()
+            // After the writes still waiting, so none of them brings the server back.
+            Self.sharedWrites.sync { SharedConnection.forget() }
             if syncsWidgets { WidgetSync.reload() }
             // The server drops the device's push with its token.
             PushNotifications.shared.forget()
@@ -364,6 +368,15 @@ final class AppModel {
     private func syncWidgets() {
         guard syncsWidgets, !isDemo, phase == .ready else { return }
         WidgetSync.show(disabledModules: Module.allCases.filter { !isEnabled($0) }.map(\.rawValue))
+    }
+
+    /// The share extensions' copy of the connection (`SharedConnection`) is written here, in
+    /// order and off the main thread: each Keychain write is a few round trips to the security
+    /// daemon, which would hold up the launch and every family switch.
+    private static let sharedWrites = DispatchQueue(label: "de.fa-krug.Ohana.shared-connection", qos: .utility)
+
+    private static func writeShared(_ write: @escaping @Sendable () -> Void) {
+        sharedWrites.async(execute: write)
     }
 
     /// The server a link brought in the demo, once.

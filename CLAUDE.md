@@ -630,7 +630,17 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `Core/API/Prefetch.swift` loads the selected family's main screens and the meal plan's
   recipes in the background after launch / a family switch / reconnecting (every 15 min at most,
   not in Low Data Mode) through the screens' own request builders (`OverviewView.request`,
-  `FinanceStore.listRequest`, …: keep them shared, or the screen won't find the copy). Offline
+  `FinanceStore.listRequest`, …: keep them shared, or the screen won't find the copy; it keeps
+  the raw answers, `CachedGet.refresh()`, without decoding them). **Off the main thread:** the
+  app's code is on the main actor by default, so a model the screens load is declared
+  `nonisolated struct` (and so is every type it holds, `Sendable`) conforming to
+  `OffMainDecodable` (`Core/API/OffMainJSON.swift`): `get` / `send`, `CachedGet.fetch()` and
+  `LoadState.run` then decode it off the main thread by themselves, and stores read their copy
+  with `await get.savedOffMain()` (re-checking after the await that it's still the one wanted),
+  not `saved()`; members that need the main actor go into a `@MainActor extension`. Polling
+  stores skip an answer whose bytes are the ones shown (`CalendarStore.load`). Photos:
+  `RemoteImage` decodes off the main thread at `maxPixelSize` and keeps the files under the
+  server's `ResponseCache` folder (`RemoteImageStore`). Offline
   writes, server wins (a refusal drops the change and reloads): the calendar's queue of entry /
   note ops is kept on disk (`CalendarStore.queueFile`, shown on top of what's loaded)),
   `Shell/` (sidebar-adaptable `TabView`; on iPhone five tabs, overview, calendar, finance, meals and

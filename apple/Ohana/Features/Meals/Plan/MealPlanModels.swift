@@ -4,7 +4,7 @@ import Foundation
 // `getMealPlanView` in server/lib/meals/queries/meal-plan.ts, `awayDays`, `listTags`).
 
 /// GET /meals/plan
-struct MealPlanResponse: Codable {
+nonisolated struct MealPlanResponse: Codable, OffMainDecodable {
     /// Null until the family sets up a plan.
     let plan: MealPlanDTO?
     /// Day ("YYYY-MM-DD") → the calendar types that make the whole family away that day.
@@ -14,7 +14,7 @@ struct MealPlanResponse: Codable {
 }
 
 /// `MealPlanView` (web): the family's one plan with its settings and iterations.
-struct MealPlanDTO: Codable {
+nonisolated struct MealPlanDTO: Codable, Sendable {
     let id: String
     let iterationWeeks: Int
     /// Weekdays, Monday = 0 … Sunday = 6.
@@ -31,7 +31,7 @@ struct MealPlanDTO: Codable {
     var knownRatioValue: Double { Double(knownRatio) ?? 0.7 }
 }
 
-struct MealPlanIteration: Codable, Identifiable, Hashable {
+nonisolated struct MealPlanIteration: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let startDate: Day
     let endDate: Day
@@ -45,7 +45,7 @@ struct MealPlanIteration: Codable, Identifiable, Hashable {
     var isActive: Bool { status == "ACTIVE" }
 }
 
-struct MealPlanEntry: Codable, Identifiable, Hashable {
+nonisolated struct MealPlanEntry: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let date: Day
     /// LUNCH (the plan only plans lunch; dinner is "something light").
@@ -58,7 +58,7 @@ struct MealPlanEntry: Codable, Identifiable, Hashable {
     let isLocked: Bool
 }
 
-struct MealPlanTag: Codable, Identifiable, Hashable {
+nonisolated struct MealPlanTag: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let category: String
     let nameEn: String
@@ -121,12 +121,12 @@ struct MealPlanMoveInput: Codable {
 }
 
 /// A page of GET /recipes (server/lib/meals/queries/recipes.ts `RecipeListResult`), for swapping.
-struct MealPlanRecipePage: Codable {
+nonisolated struct MealPlanRecipePage: Codable, OffMainDecodable {
     let items: [MealPlanRecipeOption]
     let totalCount: Int
 }
 
-struct MealPlanRecipeOption: Codable, Identifiable, Hashable {
+nonisolated struct MealPlanRecipeOption: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let title: String
     /// KNOWN | TO_TRY
@@ -196,7 +196,7 @@ enum MealPlanRecipes {
 // MARK: Logic of the plan page
 
 /// The language of names the server picks (tags, shopping items): the app's own.
-enum MealPlanLanguage {
+nonisolated enum MealPlanLanguage {
     static var current: String {
         Bundle.main.preferredLocalizations.first?.hasPrefix("de") == true ? "de" : "en"
     }

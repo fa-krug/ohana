@@ -40,18 +40,38 @@ extension LoadState {
     /// reached.
     static func run(_ state: Binding<LoadState<Value>>, saved: () -> Saved<Value>? = { nil },
                     _ load: () async throws -> Value) async {
+        state.wrappedValue = state.wrappedValue.updating(copy: saved)
+        await finish(state, load)
+    }
+
+    /// `run`, with the copy on the device read and decoded off the main thread
+    /// (`OffMainDecodable`): what showed before (the spinner) stays for the moment that takes.
+    static func run(_ state: Binding<LoadState<Value>>, savedOffMain saved: () async -> Saved<Value>?,
+                    _ load: () async throws -> Value) async {
         switch state.wrappedValue {
-        case .loaded:
-            break
-        case let .saved(value, date, _):
-            state.wrappedValue = .saved(value, date: date, updating: true)
+        case .loaded, .saved:
+            state.wrappedValue = state.wrappedValue.updating(copy: { nil })
         case .idle, .loading, .failed:
-            if let copy = saved() {
-                state.wrappedValue = .saved(copy.value, date: copy.date, updating: true)
-            } else {
-                state.wrappedValue = .loading
-            }
+            let copy = await saved()
+            state.wrappedValue = state.wrappedValue.updating(copy: { copy })
         }
+        await finish(state, load)
+    }
+
+    /// The state while the server is asked: a value stays (a copy as updating), with nothing
+    /// shown the copy on the device, else the spinner.
+    private func updating(copy saved: () -> Saved<Value>?) -> LoadState {
+        switch self {
+        case .loaded:
+            self
+        case let .saved(value, date, _):
+            .saved(value, date: date, updating: true)
+        case .idle, .loading, .failed:
+            if let copy = saved() { .saved(copy.value, date: copy.date, updating: true) } else { .loading }
+        }
+    }
+
+    private static func finish(_ state: Binding<LoadState<Value>>, _ load: () async throws -> Value) async {
         do {
             state.wrappedValue = .loaded(try await load())
         } catch is CancellationError {

@@ -106,23 +106,32 @@ struct MealsChipButton: View {
     }
 }
 
-/// Lays its children out in rows, wrapping like text (tags, chips).
+/// Lays its children out in rows, wrapping like text (tags, chips). The children's sizes are
+/// measured once per layout pass (the cache), not again for every proposal and placement.
 struct RecipeFlowLayout: Layout {
     var spacing: CGFloat = 6
 
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let rows = arrange(width: proposal.width ?? .infinity, subviews: subviews)
+    func makeCache(subviews: Subviews) -> [CGSize] {
+        subviews.map { $0.sizeThatFits(.unspecified) }
+    }
+
+    func updateCache(_ cache: inout [CGSize], subviews: Subviews) {
+        cache = makeCache(subviews: subviews)
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout [CGSize]) -> CGSize {
+        let rows = arrange(width: proposal.width ?? .infinity, sizes: cache)
         let width = rows.map(\.width).max() ?? 0
         let height = rows.map(\.height).reduce(0, +) + spacing * CGFloat(max(0, rows.count - 1))
         return CGSize(width: proposal.width ?? width, height: height)
     }
 
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout [CGSize]) {
         var y = bounds.minY
-        for row in arrange(width: bounds.width, subviews: subviews) {
+        for row in arrange(width: bounds.width, sizes: cache) {
             var x = bounds.minX
             for index in row.indices {
-                let size = subviews[index].sizeThatFits(.unspecified)
+                let size = cache[index]
                 subviews[index].place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
                 x += size.width + spacing
             }
@@ -132,10 +141,9 @@ struct RecipeFlowLayout: Layout {
 
     private struct Row { var indices: [Int] = []; var width: CGFloat = 0; var height: CGFloat = 0 }
 
-    private func arrange(width: CGFloat, subviews: Subviews) -> [Row] {
+    private func arrange(width: CGFloat, sizes: [CGSize]) -> [Row] {
         var rows: [Row] = [Row()]
-        for index in subviews.indices {
-            let size = subviews[index].sizeThatFits(.unspecified)
+        for (index, size) in sizes.enumerated() {
             let extra = rows[rows.count - 1].indices.isEmpty ? size.width : size.width + spacing
             if rows[rows.count - 1].width + extra > width, !rows[rows.count - 1].indices.isEmpty {
                 rows.append(Row())
@@ -241,7 +249,7 @@ enum RecipeCatalogCache {
             return catalog
         } catch {
             // Not kept for the session: the next time asks the server again.
-            return try get.savedIfTemporary(error)
+            return try await get.savedIfTemporary(error)
         }
     }
 }

@@ -216,7 +216,8 @@ struct ScanKnowledge {
         }
         let fetched = await fetch.value
         deadline.cancel()
-        return (fetched ?? request.saved()?.value)?.tags.map(\.tag) ?? []
+        let tags = if let fetched { fetched } else { await request.savedOffMain()?.value }
+        return tags?.tags.map(\.tag) ?? []
     }
 }
 

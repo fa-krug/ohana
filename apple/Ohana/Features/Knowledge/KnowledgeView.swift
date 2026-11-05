@@ -181,10 +181,19 @@ private struct KnowledgeList: View {
         let get = family.api.knowledgeDocuments(current)
         switch state {
         case .idle, .loading, .failed:
-            if cached, let copy = get.saved() {
-                state = .saved(copy.value, date: copy.date, updating: true)
-            } else {
-                state = .loading
+            // The copy is read and decoded off the main thread; shown only while it's still this
+            // query's turn and nothing came in meanwhile.
+            let copy = cached ? await get.savedOffMain() : nil
+            guard current == query else { return }
+            switch state {
+            case .idle, .loading, .failed:
+                if let copy {
+                    state = .saved(copy.value, date: copy.date, updating: true)
+                } else if !state.isLoading {
+                    state = .loading
+                }
+            case .loaded, .saved:
+                break
             }
         case let .saved(value, date, _):
             state = .saved(value, date: date, updating: true)
@@ -198,8 +207,11 @@ private struct KnowledgeList: View {
             // An answer for an older query (polling, becoming active, the indexer) is dropped.
             guard current == query else { return }
             let merged = loaded.map { $0.refreshed(with: fresh, limit: limit) } ?? fresh
+            // Polling (every 15 s while something waits): the same list isn't assigned again.
+            if case let .loaded(shown) = state, shown == merged { return }
             state = .loaded(merged)
-            seenPaths.formUnion(merged.documents.map(\.path))
+            let paths = merged.documents.map(\.path)
+            if !seenPaths.isSuperset(of: paths) { seenPaths.formUnion(paths) }
         } catch {
             guard current == query, !Task.isCancelled, !(error is CancellationError) else { return }
             state = state.failing(error)
@@ -209,9 +221,24 @@ private struct KnowledgeList: View {
     /// The device's folder, the server's status (folder, cards), the tags and the members.
     private func loadSide() async {
         folder = indexer.folder.state()
-        if let info = try? await family.api.knowledgeStatus().fetchOrSaved() { status = info }
-        if let answer = try? await family.api.knowledgeTags().fetchOrSaved() { tags = answer.tags }
-        if let found = await KnowledgeMember.load(family.api) { members = found }
+        async let info = loadStatus()
+        async let answer = loadTags()
+        async let found = loadMembers()
+        if let info = await info, info != status { status = info }
+        if let answer = await answer, answer.tags != tags { tags = answer.tags }
+        if let found = await found, found != members { members = found }
+    }
+
+    private func loadStatus() async -> KnowledgeStatusInfo? {
+        try? await family.api.knowledgeStatus().fetchOrSaved()
+    }
+
+    private func loadTags() async -> KnowledgeTagsResponse? {
+        try? await family.api.knowledgeTags().fetchOrSaved()
+    }
+
+    private func loadMembers() async -> [KnowledgeMember]? {
+        await KnowledgeMember.load(family.api)
     }
 
     private func loadMore(after next: String) async {

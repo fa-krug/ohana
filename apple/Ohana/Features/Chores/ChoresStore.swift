@@ -225,8 +225,11 @@ final class ChoresStore {
     @ObservationIgnored private var refreshAgain = false
     /// `removeQueues` ran since this store was made (signed out): it sends and keeps nothing more.
     @ObservationIgnored private let generation: Int
+    /// Reads the copies on the device (`init`); the queue is sent once they're there.
+    @ObservationIgnored private var copies: Task<Void, Never>?
 
-    /// The copies on the device show at once; a queue left from before is sent.
+    /// The copies on the device show as soon as they're read (off the main thread), the queued
+    /// changes on top; a queue left from before is sent after that.
     init(api: FamilyAPI, canEdit: Bool, queueFile: URL? = nil, today: Day = .today) {
         self.api = api
         familyCanEdit = canEdit
@@ -236,17 +239,28 @@ final class ChoresStore {
            let saved = try? JSONDecoder().decode([ChoreChange].self, from: data) {
             queue = saved
         }
-        if let page = Self.pageRequest(api, today: today).saved()?.value {
-            var snapshot = ChoresSnapshot(page: page)
-            if let agenda = Self.agendaRequest(api, around: today, today: today).saved()?.value { snapshot.take(agenda) }
+        let page = Self.pageRequest(api, today: today), agenda = Self.agendaRequest(api, around: today, today: today)
+        copies = Task { [weak self] in
+            async let savedPage = page.savedOffMain()
+            async let savedAgenda = agenda.savedOffMain()
+            let (p, a) = await (savedPage, savedAgenda)
+            // The server answered meanwhile: its state is newer than the copies.
+            guard let self, base == nil, let p else { return }
+            var snapshot = ChoresSnapshot(page: p.value)
+            if let a { snapshot.take(a.value) }
             base = snapshot
+            rebuild()
         }
-        rebuild()
         if !queue.isEmpty { Task { await flush() } }
         Connectivity.shared.whenReconnected { [weak self] in
             self?.retryNow()
             Task { await self?.refresh() }
         }
+    }
+
+    /// Waits until the copies on the device are read (and shown, when there were any).
+    func copiesRead() async {
+        await copies?.value
     }
 
     // MARK: Reading
@@ -352,13 +366,16 @@ final class ChoresStore {
         let today = Day.today
         let window = ChoreAgenda.window(around: day, today: today)
         guard base != nil, !windowsLoaded.contains(window.from), !windowsLoading.contains(window.from) else { return }
-        if base?.covers(window) == false, let copy = Self.agendaRequest(api, around: day, today: today).saved() {
-            base?.take(copy.value)
-            rebuild()
-        }
         windowsLoading.insert(window.from)
         Task {
             defer { windowsLoading.remove(window.from) }
+            // Its copy on the device meanwhile (read off the main thread), unless the server's
+            // answer for it came in since.
+            if base?.covers(window) == false, let copy = await Self.agendaRequest(api, around: day, today: today).savedOffMain(),
+               !windowsLoaded.contains(window.from), base?.covers(window) == false {
+                base?.take(copy.value)
+                rebuild()
+            }
             while true {
                 let sent = self.sent
                 guard let agenda = try? await Self.agendaRequest(api, around: day, today: today).fetch() else { return }
@@ -435,6 +452,8 @@ final class ChoresStore {
     private var closed: Bool { generation != Self.generation }
 
     private func flush() async {
+        // The changes go on top of the copies: those first.
+        await copies?.value
         guard !flushing, !closed else { return }
         flushing = true
         var took = false, refused = false

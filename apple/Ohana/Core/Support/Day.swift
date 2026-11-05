@@ -1,8 +1,9 @@
 import Foundation
+import os
 
 /// A calendar day as the server writes it: "YYYY-MM-DD", in the user's own calendar (no time
 /// zone: a day is the same day everywhere, like the web app's lib/calendar/dates.ts).
-struct Day: Hashable, Comparable, Codable, CustomStringConvertible {
+nonisolated struct Day: Hashable, Comparable, Codable, CustomStringConvertible, Sendable {
     let year: Int
     let month: Int
     let day: Int
@@ -21,12 +22,21 @@ struct Day: Hashable, Comparable, Codable, CustomStringConvertible {
 
     /// The Gregorian calendar in the user's time zone: the server's days are Gregorian whatever
     /// calendar the device shows.
+    /// Made once and kept while the time zone and locale stay (it's asked for per row and per
+    /// cell: a new one each time is slow).
     static var calendar: Calendar {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = .current
-        calendar.locale = .current
-        return calendar
+        let (zone, locale) = (TimeZone.current, Locale.current)
+        return cachedCalendar.withLock { cached in
+            if let cached, cached.timeZone == zone, cached.locale == locale { return cached }
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = zone
+            calendar.locale = locale
+            cached = calendar
+            return calendar
+        }
     }
+
+    private static let cachedCalendar = OSAllocatedUnfairLock<Calendar?>(initialState: nil)
 
     init(_ date: Date, calendar: Calendar = Day.calendar) {
         let c = calendar.dateComponents([.year, .month, .day], from: date)

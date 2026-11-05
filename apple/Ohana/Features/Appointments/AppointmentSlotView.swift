@@ -104,7 +104,7 @@ struct AppointmentSlotView: View {
     }
 
     private func load() async {
-        await LoadState.run($state, family.api.cached("/appointments/searches/\(searchID)/slots/\(resultID)"))
+        await LoadState.run($state.keepingEqualAnswers(), family.api.cached("/appointments/searches/\(searchID)/slots/\(resultID)"))
     }
 
     /// The Appointments menu: the page's actions, Mark as Booked with ⌘B.

@@ -164,34 +164,29 @@ final class APIClient {
             for try await byte in bytes { body.append(byte) }
             try check(http, data: body)
         }
-        return AsyncThrowingStream { continuation in
-            let task = Task {
-                do {
-                    for try await line in bytes.lines { continuation.yield(line) }
-                    continuation.finish()
-                } catch {
-                    continuation.finish(throwing: error)
-                }
+        let (stream, continuation) = AsyncThrowingStream<String, any Error>.makeStream()
+        let task = Self.readLines(bytes, into: continuation)
+        continuation.onTermination = { _ in task.cancel() }
+        return stream
+    }
+
+    /// Reads the lines of a streamed answer off the main actor (a task started here would run
+    /// on it, reading every byte there).
+    private nonisolated static func readLines(_ bytes: sending URLSession.AsyncBytes,
+                                              into continuation: AsyncThrowingStream<String, any Error>.Continuation)
+        -> Task<Void, Never> {
+        Task {
+            do {
+                for try await line in bytes.lines { continuation.yield(line) }
+                continuation.finish()
+            } catch {
+                continuation.finish(throwing: error)
             }
-            continuation.onTermination = { _ in task.cancel() }
         }
     }
 
     static func describe(_ error: any Error) -> String {
-        switch error {
-        case let DecodingError.keyNotFound(key, ctx):
-            "missing \(path(ctx.codingPath + [key]))"
-        case let DecodingError.typeMismatch(_, ctx), let DecodingError.valueNotFound(_, ctx):
-            "wrong type at \(path(ctx.codingPath))"
-        case let DecodingError.dataCorrupted(ctx):
-            "unreadable data at \(path(ctx.codingPath))"
-        default:
-            error.localizedDescription
-        }
-    }
-
-    private static func path(_ keys: [any CodingKey]) -> String {
-        keys.map { $0.intValue.map { "[\($0)]" } ?? $0.stringValue }.joined(separator: ".")
+        OffMainJSON.describe(error)
     }
 }
 

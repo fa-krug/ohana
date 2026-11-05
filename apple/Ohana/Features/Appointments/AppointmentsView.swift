@@ -75,7 +75,7 @@ struct AppointmentsView: View {
     }
 
     private func load() async {
-        await LoadState.run($state, Self.request(family.api))
+        await LoadState.run($state.keepingEqualAnswers(), Self.request(family.api))
     }
 
     /// The searches' and bookings' GET (the prefetch asks the same).

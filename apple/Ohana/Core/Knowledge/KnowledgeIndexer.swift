@@ -253,10 +253,11 @@ final class KnowledgeIndexer {
             return
         }
         let asked = Set(wanted.map(\.precomposedStringWithCanonicalMapping))
-        unreadable = unreadable.filter { asked.contains($0.key) }
-        let byPath = Dictionary(files.map { ($0.local.path, $0) }, uniquingKeysWith: { first, _ in first })
+        if !unreadable.isEmpty { unreadable = unreadable.filter { asked.contains($0.key) } }
+        // Most runs are asked for nothing: then no look-ups over every file (on the main actor).
+        let byPath = wanted.isEmpty ? [:] : Dictionary(files.map { ($0.local.path, $0) }, uniquingKeysWith: { first, _ in first })
         var queued = Set<String>()
-        for match in Self.match(wanted, in: files.filter { $0.hash != nil }.map(\.local)) {
+        for match in wanted.isEmpty ? [] : Self.match(wanted, in: files.filter { $0.hash != nil }.map(\.local)) {
             guard let file = byPath[match.path], let info = file.info else { continue }
             // A scan waiting with the text read already: kept, not read again.
             if let waiting = queue.upload(for: info.path), waiting.textFile != nil, waiting.folderId == folderID,

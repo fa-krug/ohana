@@ -284,7 +284,7 @@ struct ChoresStoreTests {
     }
 
     /// A store whose copies on the device are the server's answers.
-    private func store(_ directory: URL, canEdit: Bool = true, queueFile: URL? = nil) throws -> ChoresStore {
+    private func store(_ directory: URL, canEdit: Bool = true, queueFile: URL? = nil) async throws -> ChoresStore {
         let cache = ResponseCache(directory: directory.appending(path: "responses"))
         let api = api(cache: cache)
         let (page, agenda) = try answers(canEdit: canEdit)
@@ -293,6 +293,8 @@ struct ChoresStoreTests {
         ResponseCache.waitForWrites()
         let store = ChoresStore(api: api, canEdit: canEdit, queueFile: queueFile)
         store.me = "u1"
+        // Read off the main thread: there as soon as that's done.
+        await store.copiesRead()
         return store
     }
 
@@ -306,7 +308,7 @@ struct ChoresStoreTests {
         let directory = temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
         let queueFile = directory.appending(path: "queue/queue.json")
-        let first = try store(directory, queueFile: queueFile)
+        let first = try await store(directory, queueFile: queueFile)
         // The copy on the device at once.
         #expect(first.phase == .loaded && first.page?.chores.count == 2)
         let dishes = try #require(item(first, "dishes"))
@@ -323,7 +325,7 @@ struct ChoresStoreTests {
         #expect(first.pending)
 
         // The app quit and starts again: the changes show on top of the copy.
-        let second = try store(directory, queueFile: queueFile)
+        let second = try await store(directory, queueFile: queueFile)
         #expect(item(second, "dishes")?.done == true)
         #expect(item(second, id)?.title == "Plants")
         #expect(item(second, "car")?.subscribed == true)
@@ -348,7 +350,7 @@ struct ChoresStoreTests {
         let directory = temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
         let queueFile = directory.appending(path: "queue.json")
-        let store = try store(directory, queueFile: queueFile)
+        let store = try await store(directory, queueFile: queueFile)
         store.toggleDone(try #require(item(store, "car")))
         #expect(item(store, "car")?.done == true)
         // The server wins: dropped, also from the device, and the chores asked again.
@@ -363,7 +365,7 @@ struct ChoresStoreTests {
         let directory = temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
         let queueFile = directory.appending(path: "queue.json")
-        let store = try store(directory, queueFile: queueFile)
+        let store = try await store(directory, queueFile: queueFile)
         store.delete("car")
         #expect(item(store, "car") == nil)
         #expect(await until { ChoresStubProtocol.requests.contains("DELETE /api/v1/families/f1/chores/car") })
@@ -383,7 +385,7 @@ struct ChoresStoreTests {
         ChoresStubProtocol.writeStatus = 409
         let directory = temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
-        let store = try store(directory)
+        let store = try await store(directory)
         let id = store.save(ChoreInput(title: "Plants", day: today))
         #expect(await until { !store.pending })
         // Not dropped: it stays while the server can't be asked for its chores.
@@ -396,7 +398,7 @@ struct ChoresStoreTests {
         ChoresStubProtocol.offline = true
         let directory = temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
-        let store = try store(directory, canEdit: false)
+        let store = try await store(directory, canEdit: false)
         #expect(!store.canEdit)
         store.save(ChoreInput(title: "Plants", day: today))
         store.delete("car")

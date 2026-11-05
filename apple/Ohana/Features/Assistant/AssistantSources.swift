@@ -227,8 +227,9 @@ nonisolated enum AssistantSourceExcerpt {
 struct AssistantAnswerView: View {
     let text: String
     let sources: [AssistantSource]
+    /// The family whose pages (`/f/{id}/…` links) open in the app; other links open in the browser.
+    var familyID: String?
     var open: (AppRoute) -> Void = { _ in }
-    @Environment(\.openURL) private var openURL
     @State private var shown: AssistantSource?
 
     var body: some View {
@@ -243,8 +244,13 @@ struct AssistantAnswerView: View {
                 shown = AssistantSourceMarkers.source(of: url, in: sources)
                 return .handled
             }
-            openURL(url)
-            return .handled
+            // As the chat's own links, without reading its handler from the environment: the chat
+            // sets a new one each time it is drawn, which would draw every answer again with it.
+            if url.scheme == nil, let (family, route) = AppRoute.parse(url: url), family == familyID {
+                open(route)
+                return .handled
+            }
+            return .systemAction
         })
         .sheet(item: $shown) { source in
             AssistantSourceSheet(source: source, number: (sources.firstIndex(of: source) ?? 0) + 1) { route in
@@ -458,7 +464,7 @@ struct AssistantSourceSheet: View {
             availability = AssistantSourceAvailability.refused(document: error.status ?? 404, knowledgeBase: knowledgeBase)
                 ?? .available
         } catch {
-            document = family.api.knowledgeDocument(source.documentId).saved()?.value.document.document
+            document = await family.api.knowledgeDocument(source.documentId).savedOffMain()?.value.document.document
             availability = .available
         }
     }
