@@ -37,6 +37,8 @@ struct CalendarPlannerView: View {
     @Environment(FamilyContext.self) private var family
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.undoManager) private var undoManager
+    /// False while the iPhone keeps the page hidden behind another (`shellPageVisible`).
+    @Environment(\.shellPageVisible) private var pageVisible
     @Bindable var store: CalendarStore
     @State private var actions: CalendarActions
     @AppStorage("ohana.calendar.mode") private var mode: CalendarMode = .year
@@ -106,7 +108,12 @@ struct CalendarPlannerView: View {
         })
         .focusedSceneValue(\.moduleMenu, moduleMenu)
         .task(id: reloadKey) { await store.load(quiet: store.isLoaded) }
-        .task { await store.poll() }
+        // Not while the iPhone keeps the page hidden; back on screen, what changed meanwhile.
+        .task(id: pageVisible) {
+            guard pageVisible else { return }
+            if store.isLoaded { await store.load(quiet: true) }
+            await store.poll()
+        }
         .onAppear {
             let family = family
             store.notify = { area in family.didChange(area) }

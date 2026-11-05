@@ -57,6 +57,8 @@ struct KnowledgeMember: Identifiable, Hashable {
 private struct KnowledgeList: View {
     @Environment(FamilyContext.self) private var family
     @Environment(\.scenePhase) private var scenePhase
+    /// False while the iPhone keeps the page hidden behind another (`shellPageVisible`).
+    @Environment(\.shellPageVisible) private var pageVisible
     let indexer: KnowledgeIndexer
 
     /// Every document loaded for `query` (its pages after the first included).
@@ -99,6 +101,7 @@ private struct KnowledgeList: View {
     private struct PollKey: Hashable {
         var waiting: Bool
         var active: Bool
+        var visible: Bool
     }
 
     /// The page is wide enough for the tags in a column beside the list (`tagColumnFrom`).
@@ -137,10 +140,10 @@ private struct KnowledgeList: View {
             }
             await refresh(full: true)
         }
-        .task(id: PollKey(waiting: waiting, active: scenePhase == .active)) {
+        .task(id: PollKey(waiting: waiting, active: scenePhase == .active, visible: pageVisible)) {
             // The worker reads what was just sent: looked at again now and then while it shows and
             // the app is in front.
-            guard scenePhase == .active else { return }
+            guard scenePhase == .active, pageVisible else { return }
             while waiting, !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(15))
                 guard !Task.isCancelled else { return }
@@ -149,6 +152,10 @@ private struct KnowledgeList: View {
         }
         .onChange(of: scenePhase) {
             if scenePhase == .active { Task { await refresh(full: true) } }
+        }
+        .onChange(of: pageVisible) {
+            // Back on screen (iPhone): what changed meanwhile.
+            if pageVisible { Task { await refresh(full: true) } }
         }
         .onChange(of: indexer.phase) { _, phase in
             // A run (or its uploads) finished: the server has more.
