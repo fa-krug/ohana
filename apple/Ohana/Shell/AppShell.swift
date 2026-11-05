@@ -51,7 +51,7 @@ struct AppShell: View {
                         tab($0, assistantOn: assistantOn)
                     }
                     #if os(macOS)
-                    // The Mac's sidebar lists tabs outside a section first: here they're last.
+                    // Out of the list (see `tab`) but while on screen: then the list's last row.
                     tab(.settings, assistantOn: assistantOn)
                     #endif
                 }
@@ -71,11 +71,9 @@ struct AppShell: View {
             }
             .tabViewStyle(.sidebarAdaptable)
             .tabViewSidebarHeader { FamilySwitcher() }
-            #if os(iOS)
             .tabViewSidebarBottomBar {
                 SidebarSettingsButton(selected: selection.wrappedValue == .settings) { module = .settings }
             }
-            #endif
             .sheet(item: $phonePage) { page in
                 PhonePageSheet(page: page)
             }
@@ -191,11 +189,13 @@ struct AppShell: View {
         // The assistant (a sheet from the toolbar) and the settings (the family picker) live in
         // the sidebar; a compact tab bar (iPad) keeps the modules. On iPhone they aren't tabs.
         .defaultVisibility(item == .assistant || item == .settings ? .hidden : .automatic, for: .tabBar)
+        // The settings stand at the sidebar's foot instead (`SidebarSettingsButton`).
         #if os(iOS)
-        // The settings stand at the sidebar's foot instead (`SidebarSettingsButton`). The Mac
-        // can't hide a tab from the sidebar alone (a `.hidden` tab draws nothing when picked), so
-        // there they are the sidebar's last row.
         .defaultVisibility(item == .settings ? .hidden : .automatic, for: .sidebar)
+        #else
+        // The Mac can't leave a tab out of the sidebar alone, and a `.hidden` tab draws nothing
+        // when picked: hidden only while another page is on screen.
+        .hidden(item == .settings && selection.wrappedValue != .settings)
         #endif
     }
 
@@ -237,9 +237,8 @@ private struct PhonePageSheet: View {
     }
 }
 
-#if os(iOS)
-/// The settings at the foot of the sidebar (iPad), below the modules however many there are: a
-/// row like the sidebar's own, highlighted while the settings are on screen.
+/// The settings at the foot of the sidebar (iPad, Mac), below the modules however many there are:
+/// a row like the sidebar's own, highlighted while the settings are on screen.
 private struct SidebarSettingsButton: View {
     let selected: Bool
     let action: () -> Void
@@ -248,9 +247,15 @@ private struct SidebarSettingsButton: View {
     var body: some View {
         Button(action: action) {
             Label(Module.settings.title, systemImage: Module.settings.systemImage)
+                .labelStyle(.titleAndIcon)
+                .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 10)
+                #if os(macOS)
+                .padding(.vertical, 6)
+                #else
                 .padding(.vertical, 11)
+                #endif
                 .background(
                     .primary.opacity(selected ? 0.1 : hovering ? 0.05 : 0),
                     in: .rect(cornerRadius: 10)
@@ -262,7 +267,6 @@ private struct SidebarSettingsButton: View {
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
-#endif
 
 extension Notification.Name {
     /// Switches the shell to a module (`object`: a `Module`), e.g. from an overview card.
