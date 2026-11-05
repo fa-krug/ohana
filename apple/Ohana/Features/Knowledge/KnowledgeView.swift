@@ -1,9 +1,10 @@
 import SwiftUI
 
 /// The knowledge base: the family's documents (the files of its knowledge folder the server has
-/// read), newest first, as cards with their date, whose they are, their tags and the start of
-/// their summary; searched (`q`) and narrowed by folder, person and tag (a bar under the
-/// navigation bar), the left-out ones on request. A card opens the document
+/// read), newest first, as a list in a readable column (`columnWidth`): each row with its date,
+/// whose it is, the start of its summary and its tags; narrowed by folder, person and tag (a bar
+/// under the navigation bar, as wide as the list), the left-out ones on request. (Searching them is
+/// the search page's: its `knowledge` hits.) A row opens the document
 /// (`KnowledgeDocumentView`). Editors only, not the demo (`FamilyContext.knowledgeAvailable`);
 /// inside the shell's navigation stack (a sheet from the family page on iPhone).
 struct KnowledgeView: View {
@@ -61,7 +62,6 @@ private struct KnowledgeList: View {
     @State private var state: LoadState<KnowledgeDocumentsPage> = .idle
     /// The query `state` belongs to: another one starts from nothing.
     @State private var shownQuery: KnowledgeDocumentQuery?
-    @State private var typed = ""
     @State private var query = KnowledgeDocumentQuery()
     @State private var status: KnowledgeStatusInfo?
     @State private var tags: [KnowledgeTagsResponse.Tag] = []
@@ -104,7 +104,6 @@ private struct KnowledgeList: View {
         LoadStateView(state: state, retry: { await refresh(full: true) }) { _ in
             content
         }
-        .pageSearchable(text: $typed, prompt: Text("Search documents"))
         .safeAreaBar(edge: .top) {
             if state.value != nil, !documents.isEmpty || query.isFiltered {
                 filterBar
@@ -115,12 +114,6 @@ private struct KnowledgeList: View {
         #endif
         .toolbar { toolbar }
         .focusedSceneValue(\.moduleMenu, ModuleMenu(title: "Knowledge") { moduleMenu })
-        .task(id: typed) {
-            // What's typed is asked for once typing pauses.
-            if !typed.isEmpty { try? await Task.sleep(for: .milliseconds(350)) }
-            guard !Task.isCancelled, query.text != typed else { return }
-            query.text = typed
-        }
         .onChange(of: query) {
             // Another query: never the last one's documents under it.
             shownQuery = query
@@ -183,8 +176,8 @@ private struct KnowledgeList: View {
         let current = query
         let loaded = state.value
         let limit = KnowledgeDocumentsPage.refreshLimit(loaded: loaded?.documents.count ?? 0)
-        // The first page without a search is kept on the device; a search, or more, isn't.
-        let cached = current.trimmedText.isEmpty && limit == KnowledgeDocumentQuery.pageSize
+        // The first page is kept on the device; more isn't.
+        let cached = limit == KnowledgeDocumentQuery.pageSize
         let get = family.api.knowledgeDocuments(current)
         switch state {
         case .idle, .loading, .failed:
@@ -242,23 +235,25 @@ private struct KnowledgeList: View {
         if documents.isEmpty {
             emptyState
         } else {
-            ScrollView {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 320), spacing: 16, alignment: .top)], spacing: 16) {
-                    ForEach(documents) { document in
-                        NavigationLink(value: KnowledgeDocumentTarget(id: document.id)) {
-                            KnowledgeDocumentCard(document: document, members: members)
-                        }
-                        .buttonStyle(.plain)
+            List {
+                ForEach(documents) { document in
+                    NavigationLink(value: KnowledgeDocumentTarget(id: document.id)) {
+                        KnowledgeDocumentRow(document: document, members: members)
                     }
                 }
                 if let cursor {
                     ProgressView()
                         .frame(maxWidth: .infinity)
-                        .padding()
+                        .padding(.vertical, 8)
                         .task(id: cursor) { await loadMore(after: cursor) }
                 }
             }
-            .contentMargins(16, for: .scrollContent)
+            #if os(iOS)
+            .listStyle(.insetGrouped)
+            #else
+            .listStyle(.inset)
+            #endif
+            .readableWidth(Self.columnWidth)
             .refreshable { await refresh(full: true) }
         }
     }
@@ -266,11 +261,7 @@ private struct KnowledgeList: View {
     @ViewBuilder
     private var emptyState: some View {
         if query.isFiltered {
-            if !query.trimmedText.isEmpty {
-                ContentUnavailableView.search(text: query.trimmedText)
-            } else {
-                ContentUnavailableView("No documents", systemImage: "doc.text.magnifyingglass")
-            }
+            ContentUnavailableView("No documents", systemImage: "doc.text.magnifyingglass")
         } else if folder.url == nil, status?.folder == nil {
             ContentUnavailableView {
                 Label("No knowledge folder", systemImage: "books.vertical")
@@ -295,6 +286,9 @@ private struct KnowledgeList: View {
 
     // MARK: Filters
 
+    /// The list's column (and its filter bar's) on a wide window.
+    static let columnWidth: CGFloat = 680
+
     private var filterBar: some View {
         ScrollView(.horizontal) {
             HStack(spacing: 8) {
@@ -318,7 +312,11 @@ private struct KnowledgeList: View {
             .padding(.horizontal)
             .padding(.vertical, 8)
         }
-        .scrollIndicators(.hidden)
+        // Never a scroll bar under the chips (the Mac's "always show" setting too).
+        .scrollIndicators(.never)
+        // As wide as the list below, not the window.
+        .frame(maxWidth: Self.columnWidth)
+        .frame(maxWidth: .infinity)
     }
 
     private var folderMenu: some View {
@@ -406,57 +404,70 @@ private struct KnowledgeList: View {
     }
 }
 
-/// A document as a card: its icon, name, date and folder, whose it is, the start of its summary,
-/// its tags and, while it isn't simply there, its status.
-struct KnowledgeDocumentCard: View {
+/// A document as a row of the list: its icon, name, whose it is and date, its folder, the start of
+/// its summary, its tags and, while it isn't simply there, its status.
+struct KnowledgeDocumentRow: View {
     let document: KnowledgeDocumentSummary
     let members: [KnowledgeMember]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top, spacing: 12) {
-                TintedIcon(systemImage: document.kind.systemImage, tint: ModuleTint.knowledge)
-                VStack(alignment: .leading, spacing: 2) {
+        HStack(alignment: .top, spacing: 12) {
+            TintedIcon(systemImage: document.kind.systemImage, tint: ModuleTint.knowledge, size: 30)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(verbatim: document.name)
-                        .font(.headline)
-                        .lineLimit(2)
-                    Text(verbatim: KnowledgeWording.subtitle(document))
+                        .font(.body.weight(.semibold))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Spacer(minLength: 0)
+                    if let person = document.person {
+                        KnowledgePersonIcon(person: person, members: members, size: 18)
+                            .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 4 }
+                    }
+                    Text(verbatim: KnowledgeWording.dateText(document))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                        .layoutPriority(1)
+                }
+                if let folder = KnowledgeWording.folder(document) {
+                    Text(verbatim: folder)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
+                        .truncationMode(.head)
                 }
-                Spacer(minLength: 0)
-                if let person = document.person {
-                    KnowledgePersonIcon(person: person, members: members, size: 24)
-                }
-            }
-            if let summary = document.summary, !summary.isEmpty {
-                // The assistant's summary: marked by a small sparkle.
-                HStack(alignment: .firstTextBaseline, spacing: 5) {
-                    Image(systemName: "sparkles")
-                        .font(.caption2)
-                        .foregroundStyle(ModuleTint.knowledge)
-                        .accessibilityLabel(Text("By the assistant"))
-                    Text(verbatim: summary)
-                        .lineLimit(3)
-                }
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .accessibilityElement(children: .combine)
-            }
-            if document.status != .ready || !document.tags.isEmpty {
-                RecipeFlowLayout(spacing: 6) {
-                    KnowledgeStatusBadge(status: document.status)
-                    ForEach(document.tags, id: \.self) { tag in
-                        Text(verbatim: tag)
-                            .font(.caption)
-                            .chip()
+                if let summary = document.summary, !summary.isEmpty {
+                    // The assistant's summary: marked by a small sparkle.
+                    HStack(alignment: .firstTextBaseline, spacing: 5) {
+                        Image(systemName: "sparkles")
+                            .font(.caption2)
+                            .foregroundStyle(ModuleTint.knowledge)
+                            .accessibilityLabel(Text("By the assistant"))
+                        Text(verbatim: summary)
+                            .lineLimit(2)
                     }
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .accessibilityElement(children: .combine)
+                    .padding(.top, 1)
+                }
+                if document.status != .ready || !document.tags.isEmpty {
+                    RecipeFlowLayout(spacing: 4) {
+                        KnowledgeStatusBadge(status: document.status)
+                        ForEach(document.tags, id: \.self) { tag in
+                            Text(verbatim: tag)
+                                .font(.caption2)
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 2)
+                                .background(.secondary.opacity(0.15), in: .capsule)
+                        }
+                    }
+                    .padding(.top, 2)
                 }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .contentCard()
+        .padding(.vertical, 4)
         .contentShape(.rect)
     }
 }
@@ -511,9 +522,9 @@ enum KnowledgeWording {
         date(document).formatted(date: .abbreviated, time: .omitted)
     }
 
-    /// "12 Mar 2026 · Insurance › Car".
-    static func subtitle(_ document: KnowledgeDocumentSummary) -> String {
+    /// The folders it's in, "Insurance › Car"; nil at the folder's top.
+    static func folder(_ document: KnowledgeDocumentSummary) -> String? {
         let folders = document.folderParts
-        return ([dateText(document)] + (folders.isEmpty ? [] : [folders.joined(separator: " › ")])).joined(separator: " · ")
+        return folders.isEmpty ? nil : folders.joined(separator: " › ")
     }
 }

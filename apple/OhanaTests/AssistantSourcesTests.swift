@@ -60,6 +60,12 @@ struct AssistantSourcesTests {
         #expect(String(text[chip.range].characters) == "[2]")
         #expect(AssistantSourceMarkers.number(of: URL(string: "ohana-source://2")!) == 2)
         #expect(AssistantSourceMarkers.number(of: URL(string: "https://example.com")!) == nil)
+        // The chip's link opens its source; a number without one, or another link, none.
+        #expect(AssistantSourceMarkers.source(of: try #require(chip.link), in: sources) == sources[1])
+        #expect(AssistantSourceMarkers.source(of: URL(string: "ohana-source://1")!, in: sources) == sources[0])
+        #expect(AssistantSourceMarkers.source(of: URL(string: "ohana-source://9")!, in: sources) == nil)
+        #expect(AssistantSourceMarkers.source(of: URL(string: "ohana-source://0")!, in: sources) == nil)
+        #expect(AssistantSourceMarkers.source(of: URL(string: "https://example.com/1")!, in: sources) == nil)
         // In code no chip can go.
         #expect(AssistantSourceMarkers.stripPlaceholders("let a = 1\u{E000}2\u{E001}") == "let a = 1")
     }

@@ -134,6 +134,13 @@ nonisolated enum AssistantSourceMarkers {
         return Int(url.host() ?? "")
     }
 
+    /// The source a chip's link names (its number counts from 1); nil for other links and numbers
+    /// without a source.
+    static func source(of url: URL, in sources: [AssistantSource]) -> AssistantSource? {
+        guard let number = number(of: url), sources.indices.contains(number - 1) else { return nil }
+        return sources[number - 1]
+    }
+
     /// The answer with its sources as footnotes, for the clipboard.
     static func transcript(_ text: String, sources: [AssistantSource]) -> String {
         let body = plain(text, sources: sources)
@@ -232,8 +239,8 @@ struct AssistantAnswerView: View {
             }
         }
         .environment(\.openURL, OpenURLAction { url in
-            if let number = AssistantSourceMarkers.number(of: url) {
-                if sources.indices.contains(number - 1) { shown = sources[number - 1] }
+            if AssistantSourceMarkers.number(of: url) != nil {
+                shown = AssistantSourceMarkers.source(of: url, in: sources)
                 return .handled
             }
             openURL(url)

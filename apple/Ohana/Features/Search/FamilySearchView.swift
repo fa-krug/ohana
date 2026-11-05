@@ -26,6 +26,9 @@ struct FamilySearchView: View {
 
     var body: some View {
         content
+            // Any size: an empty state alone would otherwise shrink the page, and its background
+            // with it, to the message's size (a tinted box in the middle of the window).
+            .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
             .ohanaBackground()
             .navigationTitle("Search")
             .task(id: searchKey) { await search() }

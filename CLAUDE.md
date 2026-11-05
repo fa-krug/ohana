@@ -818,11 +818,12 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   The knowledge base page (`Module.knowledge`, ⌘9; shown where `FamilyContext.isEnabled(.knowledge)` /
   `AppModel.isEnabled` say `knowledgeAvailable`, `ServerInfo.isEnabled` only says the server has it;
   the demo hides it for now): `Features/Knowledge/KnowledgeView.swift`, `GET /knowledge/documents`
-  (`KnowledgeDocumentQuery`: `q` (not kept on the device), a tag (chips from `/knowledge/tags`), a
-  folder (subfolders of the paths seen), a person (`/household`'s members), *Show Left Out* =
-  `status=excluded`; `nextCursor` pages), cards with the date (`docDate`, else the file's), whose it
-  is (`MemberIcon`), tags, the summary's start (marked with a sparkle: the assistant's) and a badge
-  unless ready; empty: no folder on this device nor on the server → Settings → Knowledge, else
+  (`KnowledgeDocumentQuery`: a tag (chips from `/knowledge/tags`), a folder (subfolders of the paths
+  seen), a person (`/household`'s members), *Show Left Out* = `status=excluded`; `nextCursor` pages;
+  no search field of its own: documents are found by the search page), a list in a 680 pt column
+  (`KnowledgeView.columnWidth`, the filter chips' bar as wide), rows with the name, whose it is
+  (`MemberIcon`) and the date (`docDate`, else the file's), the folder, two lines of the summary
+  (marked with a sparkle: the assistant's), tags and a badge unless ready; empty: no folder on this device nor on the server → Settings → Knowledge, else
   "Nothing read yet". Another query starts from `.idle` (never the last one's documents under it),
   answers for an older query are dropped; a refresh asks for as many as are loaded (≤ 200,
   `KnowledgeDocumentsPage.refreshed`), so it keeps the pages; it reloads on becoming active, after the
@@ -837,9 +838,10 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   their query (`AppRoute.parse(url:)` / `parse(link:)`). *Open original* (`Core/Knowledge/KnowledgeOriginal.swift`,
   `Features/Knowledge/KnowledgeOriginalView.swift`: `KnowledgeOriginalOpener` + `.knowledgeOriginal(_:)`):
   the folder's bookmark + the path (`locate`: each part compared NFC, an iCloud placeholder by its
-  real name), copied coordinated (iCloud loads it; `KnowledgeOriginalLoader`: Cancel and a 120 s
-  timeout stop the wait with `NSFileCoordinator.cancel()`, a file not on the device fails at once
-  while offline) into the temporary directory within the security scope, the copy deleted when the
+  real name), copied coordinated (iCloud loads it; `KnowledgeOriginalLoader`, off the main actor: the copy
+  blocks a GCD thread of its own, and Cancel and a 120 s timeout end the wait whether or not
+  `NSFileCoordinator.cancel()` frees it (a late copy is deleted); a file not on the device fails at
+  once while offline) into the temporary directory within the security scope, the copy deleted when the
   viewer closes (and `KnowledgeOriginals` swept at launch); a PDF in PDFKit at the page with the quote marked
   (`KnowledgeQuoteMatch`: the words in order, whitespace, case, accents and punctuation ignored, else
   its first 8, 5, 3 words; on its page, then the pages beside it), anything else in Quick Look; no

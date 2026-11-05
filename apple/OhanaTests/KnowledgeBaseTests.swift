@@ -127,11 +127,11 @@ struct KnowledgeListTests {
     @Test func queries() {
         #expect(KnowledgeDocumentQuery().items() == ["limit": "50"])
         #expect(!KnowledgeDocumentQuery().isFiltered)
-        var query = KnowledgeDocumentQuery(text: "  Police ", tag: "Auto", folder: "Versicherungen/Auto", person: "u1")
+        var query = KnowledgeDocumentQuery(tag: "Auto", folder: "Versicherungen/Auto", person: "u1")
         #expect(query.isFiltered)
-        #expect(query.items(cursor: "c2") == ["limit": "50", "q": "Police", "tag": "Auto", "folder": "Versicherungen/Auto",
+        #expect(query.items(cursor: "c2") == ["limit": "50", "tag": "Auto", "folder": "Versicherungen/Auto",
                                              "person": "u1", "cursor": "c2"])
-        query = KnowledgeDocumentQuery(text: "   ", excluded: true)
+        query = KnowledgeDocumentQuery(excluded: true)
         #expect(query.isFiltered)
         #expect(query.items() == ["limit": "50", "status": "excluded"])
     }
@@ -150,13 +150,15 @@ struct KnowledgeListTests {
     }
 
     @MainActor
-    @Test func subtitles() throws {
+    @Test func datesAndFolders() throws {
         let document = try decode(KnowledgeDocumentSummary.self,
                                   #"{"id": "d", "path": "A/B/c.pdf", "docDate": "2026-03-12", "mtime": 0}"#)
         let date = Day(year: 2026, month: 3, day: 12).date.formatted(date: .abbreviated, time: .omitted)
-        #expect(KnowledgeWording.subtitle(document) == "\(date) · A › B")
+        #expect(KnowledgeWording.dateText(document) == date)
+        #expect(KnowledgeWording.folder(document) == "A › B")
         let top = try decode(KnowledgeDocumentSummary.self, #"{"id": "d", "path": "c.pdf", "mtime": 0}"#)
-        #expect(KnowledgeWording.subtitle(top) == Date(timeIntervalSince1970: 0).formatted(date: .abbreviated, time: .omitted))
+        #expect(KnowledgeWording.dateText(top) == Date(timeIntervalSince1970: 0).formatted(date: .abbreviated, time: .omitted))
+        #expect(KnowledgeWording.folder(top) == nil)
     }
 }
 
@@ -330,6 +332,39 @@ struct KnowledgeReviewTests {
         }
         #expect(KnowledgeOriginalError.offline.localizedDescription.contains("connection"))
         #expect(!KnowledgeOriginalError.timedOut.offersSettings)
+    }
+
+    /// A copy iCloud never finishes (a coordinated read that doesn't return, whatever
+    /// `NSFileCoordinator.cancel()` does) ends in an error, never a wait without end.
+    @Test func anOriginalICloudNeverLoadsEndsTheWait() async throws {
+        let root = try LetterFilingTests.temporaryFolder()
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root.appending(path: "Versicherungen"), withIntermediateDirectories: true)
+        try Data("%PDF".utf8).write(to: root.appending(path: "Versicherungen/Beitragsrechnung 2026.pdf"))
+        let folder = try linked(root)
+        let release = DispatchSemaphore(value: 0)
+        defer { for _ in 0..<2 { release.signal() } }
+        let hanging: KnowledgeOriginalLoader.Copy = { url, name, coordinator in
+            release.wait()
+            return try KnowledgeOriginal.copy(url, name: name, coordinator: coordinator)
+        }
+
+        let clock = ContinuousClock()
+        let started = clock.now
+        await #expect(throws: KnowledgeOriginalError.timedOut) {
+            try await KnowledgeOriginalLoader(copy: hanging).fetch(path: "Versicherungen/Beitragsrechnung 2026.pdf",
+                                                                   folder: folder, online: true, timeout: .milliseconds(200))
+        }
+        #expect(clock.now - started < .seconds(5))
+
+        let loader = KnowledgeOriginalLoader(copy: hanging)
+        Task {
+            try? await Task.sleep(for: .milliseconds(100))
+            loader.cancel()
+        }
+        await #expect(throws: CancellationError.self) {
+            try await loader.fetch(path: "Versicherungen/Beitragsrechnung 2026.pdf", folder: folder, online: true)
+        }
     }
 
     @Test func leftoverCopiesAreSwept() throws {

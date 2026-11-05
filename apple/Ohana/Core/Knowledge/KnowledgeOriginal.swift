@@ -230,65 +230,122 @@ nonisolated enum KnowledgeQuoteMatch {
 }
 
 /// Loads one original (`KnowledgeOriginal`): finds the file, then copies it for the viewer, which
-/// waits while iCloud loads it. `cancel()` (the user's) and the timeout stop that wait
-/// (`NSFileCoordinator.cancel()`); a file that isn't on the device fails at once while offline.
+/// waits while iCloud loads it. `cancel()` (the user's) and the timeout end that wait whether or not
+/// iCloud answers: the coordinated copy blocks a thread of its own, and `fetch` stops waiting for it
+/// (`NSFileCoordinator.cancel()` doesn't always free it; a copy that ends after that is deleted). A
+/// file that isn't on the device fails at once while offline. Nothing of it runs on the main actor:
+/// resolving the folder's bookmark and asking iCloud may block, and the app then froze.
 nonisolated final class KnowledgeOriginalLoader: @unchecked Sendable {
     private enum Stop { case cancelled, timedOut }
+
+    /// Copies the file (`KnowledgeOriginal.copy`); the tests pass one that never ends, as iCloud
+    /// may not.
+    typealias Copy = @Sendable (_ url: URL, _ name: String, _ coordinator: NSFileCoordinator) throws -> KnowledgeOriginalFile
 
     /// How long iCloud may take to load a file.
     static let defaultTimeout = Duration.seconds(120)
 
     private let coordinator = NSFileCoordinator()
+    private let copy: Copy
     private let lock = NSLock()
     private var stop: Stop?
+    /// `fetch` waiting for the copy.
+    private var waiter: CheckedContinuation<KnowledgeOriginalFile, any Error>?
 
-    init() {}
+    init(copy: @escaping Copy = { try KnowledgeOriginal.copy($0, name: $1, coordinator: $2) }) {
+        self.copy = copy
+    }
 
     /// Stops the load (Cancel).
     func cancel() { halt(.cancelled) }
 
     private func halt(_ reason: Stop) {
-        lock.withLock { if stop == nil { stop = reason } }
+        let (waiting, stopped) = lock.withLock { () -> (CheckedContinuation<KnowledgeOriginalFile, any Error>?, Stop) in
+            if stop == nil { stop = reason }
+            defer { waiter = nil }
+            return (waiter, stop ?? reason)
+        }
         coordinator.cancel()
+        waiting?.resume(throwing: Self.error(stopped))
     }
 
     private var stopped: Stop? { lock.withLock { stop } }
 
+    private static func error(_ stop: Stop) -> any Error {
+        switch stop {
+        case .cancelled: CancellationError()
+        case .timedOut: KnowledgeOriginalError.timedOut
+        }
+    }
+
     /// The original of the document at `path`, copied for the viewer. `online`: there's a
     /// connection (else a file iCloud keeps off the device isn't waited for). Throws
     /// `KnowledgeOriginalError`, or `CancellationError` after `cancel()`.
+    @concurrent
     func fetch(path: String, folder: KnowledgeFolder, online: Bool,
                timeout: Duration = KnowledgeOriginalLoader.defaultTimeout) async throws -> KnowledgeOriginalFile {
+        try await withTaskCancellationHandler {
+            try await load(path: path, folder: folder, online: online, timeout: timeout)
+        } onCancel: {
+            cancel()
+        }
+    }
+
+    @concurrent
+    private func load(path: String, folder: KnowledgeFolder, online: Bool, timeout: Duration) async throws -> KnowledgeOriginalFile {
+        if let stopped { throw Self.error(stopped) }
         let root = try KnowledgeOriginal.linkedRoot(folder.state())
         let access = root.startAccessingSecurityScopedResource()
         defer { if access { root.stopAccessingSecurityScopedResource() } }
-        let found = await Task.detached(priority: .userInitiated) { () -> (url: URL, onDevice: Bool)? in
-            KnowledgeOriginal.locate(path, in: root).map { ($0, KnowledgeICloud.isOnDevice($0)) }
-        }.value
-        guard let found else { throw KnowledgeOriginalError.notFound }
-        if stopped == .cancelled { throw CancellationError() }
-        if !found.onDevice {
+        guard let url = KnowledgeOriginal.locate(path, in: root) else { throw KnowledgeOriginalError.notFound }
+        if let stopped { throw Self.error(stopped) }
+        if !KnowledgeICloud.isOnDevice(url) {
             guard online else { throw KnowledgeOriginalError.offline }
-            try? FileManager.default.startDownloadingUbiquitousItem(at: found.url)
+            try? FileManager.default.startDownloadingUbiquitousItem(at: url)
         }
         let timer = Task { [weak self] in
             try? await Task.sleep(for: timeout)
             if !Task.isCancelled { self?.halt(.timedOut) }
         }
         defer { timer.cancel() }
-        let name = KnowledgePath.parts(path).last ?? found.url.lastPathComponent
+        let name = KnowledgePath.parts(path).last ?? url.lastPathComponent
+        return try await copied(url, name: name)
+    }
+
+    /// The copy, on a thread of its own (a coordinated read blocks until iCloud has loaded the
+    /// file); its end, or `halt`, whichever comes first, ends the wait.
+    private func copied(_ url: URL, name: String) async throws -> KnowledgeOriginalFile {
         let coordinator = coordinator
-        do {
-            return try await Task.detached(priority: .userInitiated) {
-                try KnowledgeOriginal.copy(found.url, name: name, coordinator: coordinator)
-            }.value
-        } catch {
-            switch stopped {
-            case .cancelled: throw CancellationError()
-            case .timedOut: throw KnowledgeOriginalError.timedOut
-            case nil:
-                KnowledgeFolder.log.error("Original not copied: \(error.localizedDescription, privacy: .public)")
-                throw KnowledgeOriginalError.unreadable
+        let copy = copy
+        return try await withCheckedThrowingContinuation { continuation in
+            let early = lock.withLock { () -> Stop? in
+                if let stop { return stop }
+                waiter = continuation
+                return nil
+            }
+            if let early { return continuation.resume(throwing: Self.error(early)) }
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                let result = Result { try copy(url, name, coordinator) }
+                let waiting = lock.withLock { () -> CheckedContinuation<KnowledgeOriginalFile, any Error>? in
+                    defer { waiter = nil }
+                    return waiter
+                }
+                guard let waiting else {
+                    // Given up on (cancelled, timed out): the late copy goes.
+                    if case let .success(file) = result { file.discard() }
+                    return
+                }
+                switch result {
+                case let .success(file):
+                    waiting.resume(returning: file)
+                case let .failure(error):
+                    if let stopped {
+                        waiting.resume(throwing: Self.error(stopped))
+                    } else {
+                        KnowledgeFolder.log.error("Original not copied: \(error.localizedDescription, privacy: .public)")
+                        waiting.resume(throwing: KnowledgeOriginalError.unreadable)
+                    }
+                }
             }
         }
     }

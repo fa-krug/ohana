@@ -232,9 +232,8 @@ extension KnowledgeDocumentsPage {
     }
 }
 
-/// What the list asks for: the search, a tag, a subfolder, whose documents, or the left-out ones.
+/// What the list asks for: a tag, a subfolder, whose documents, or the left-out ones.
 nonisolated struct KnowledgeDocumentQuery: Hashable, Sendable {
-    var text = ""
     var tag: String?
     /// A subfolder ("Insurance/Car"), with its subfolders.
     var folder: String?
@@ -245,15 +244,12 @@ nonisolated struct KnowledgeDocumentQuery: Hashable, Sendable {
 
     static let pageSize = 50
 
-    var trimmedText: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
-
     /// Anything narrows the list.
-    var isFiltered: Bool { !trimmedText.isEmpty || tag != nil || folder != nil || person != nil || excluded }
+    var isFiltered: Bool { tag != nil || folder != nil || person != nil || excluded }
 
     /// The query of GET /knowledge/documents (empty parts left out).
     func items(cursor: String? = nil, limit: Int = pageSize) -> [String: String?] {
         var items: [String: String?] = ["limit": String(limit)]
-        if !trimmedText.isEmpty { items["q"] = trimmedText }
         if let tag, !tag.isEmpty { items["tag"] = tag }
         if let folder, !folder.isEmpty { items["folder"] = folder }
         if let person, !person.isEmpty { items["person"] = person }
