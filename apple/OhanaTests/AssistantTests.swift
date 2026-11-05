@@ -667,3 +667,50 @@ struct AssistantRemindersTests {
         #expect(nothing.calls.isEmpty)
     }
 }
+
+/// A message sent while a turn runs waits on the server (`/queue`) and can be taken back
+/// (`/unqueue`). Both used to read `current` inside `current?.queued = …`: an exclusivity
+/// conflict that crashed the app (Debug builds check it).
+struct AssistantQueueTests {
+    @Test func queuesAndTakesBackAMessageWhileATurnRuns() async throws {
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [QueueStubProtocol.self]
+        let client = APIClient(baseURL: URL(string: "https://queue.example")!, token: nil,
+                               session: URLSession(configuration: config))
+        let store = AssistantChatStore(api: FamilyAPI(client: client, familyID: "f1"))
+        store.remindersContext = { nil }
+        store.calendarContext = { nil }
+        store.show(AssistantChat(id: "c1", title: "Hi", status: "running", items: [.user(text: "Hi", attachments: [])],
+                                 rev: 1, usage: nil, page: "overview", queued: []))
+        #expect(store.busy)
+
+        try await store.send("And next year?")
+        #expect(store.current?.queued.map(\.id) == ["q1"])
+        #expect(store.current?.items.count == 1)
+
+        await store.unqueue("q1")
+        #expect(store.current?.queued.isEmpty == true)
+    }
+}
+
+/// Answers `/queue` with the message waiting and `/unqueue` with nothing waiting.
+nonisolated final class QueueStubProtocol: URLProtocol {
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        let path = request.url?.path() ?? ""
+        let queued = path.hasSuffix("/queue") ? #"[{"id":"q1","text":"And next year?"}]"# : "[]"
+        let body = """
+        {"id":"q1","chat":{"id":"c1","title":"Hi","status":"running","activity":null,"usage":null,"page":"overview",
+         "queued":\(queued),"updatedAt":"2026-11-05T08:00:00.000Z"}}
+        """
+        let response = HTTPURLResponse(url: request.url!, statusCode: 202, httpVersion: nil,
+                                       headerFields: ["Content-Type": "application/json"])!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: Data(body.utf8))
+        client?.urlProtocolDidFinishLoading(self)
+    }
+
+    override func stopLoading() {}
+}

@@ -842,7 +842,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   The knowledge base page (`Module.knowledge`, ⌘9; shown where `FamilyContext.isEnabled(.knowledge)` /
   `AppModel.isEnabled` say `knowledgeAvailable`, `ServerInfo.isEnabled` only says the server has it;
   the demo hides it for now): `Features/Knowledge/KnowledgeView.swift`, `GET /knowledge/documents`
-  (`KnowledgeDocumentQuery`: a tag (one menu chip from `/knowledge/tags`), a folder (subfolders of the paths
+  (`KnowledgeDocumentQuery`: a tag (from `/knowledge/tags` with counts: a list in a column beside the documents from `tagColumnFrom`, narrower one menu chip), a folder (subfolders of the paths
   seen), a person (`/household`'s members), *Show Left Out* = `status=excluded`; `nextCursor` pages;
   no search field of its own: documents are found by the search page), a list in a 680 pt column
   (`KnowledgeView.columnWidth`, the filter chips' bar as wide), rows with the name, whose it is

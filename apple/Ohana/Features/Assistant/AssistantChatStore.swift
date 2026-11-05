@@ -443,7 +443,10 @@ final class AssistantChatStore {
             let r = try await api.send(.post, "/ai/chats/\(Self.enc(id))/queue", body: input, as: AssistantQueueResult.self)
             summary(r.chat)
             guard current?.id == id else { return }
-            current?.queued = Self.queued(r.chat, before: current?.queued.filter { $0.id != shown.id } ?? [])
+            // Worked out before the assignment: reading `current` inside `current?.queued = …`
+            // overlaps its modification (a fatal exclusivity conflict).
+            let queued = Self.queued(r.chat, before: current?.queued.filter { $0.id != shown.id } ?? [])
+            current?.queued = queued
             current?.status = r.chat.status
             // The turn was over by then: the message started the next one.
             if r.chat.isRunning, following == nil { follow(id) }
@@ -462,7 +465,10 @@ final class AssistantChatStore {
             struct Body: Encodable { let id: String }
             let r = try await api.send(.post, "/ai/chats/\(Self.enc(id))/unqueue", body: Body(id: entry),
                                        as: AssistantQueueResult.self)
-            if current?.id == id { current?.queued = Self.queued(r.chat, before: current?.queued ?? []) }
+            if current?.id == id {
+                let queued = Self.queued(r.chat, before: current?.queued ?? [])
+                current?.queued = queued
+            }
         } catch {
             ErrorBanner.shared.show(error)
         }
