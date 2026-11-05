@@ -17,7 +17,8 @@ final class KnowledgeOriginalOpener {
         let name: String
         /// From 1.
         let page: Int?
-        let quote: String?
+        /// Where the quote is (found off the main actor: a long PDF's text takes a while).
+        let match: KnowledgePDFHighlight.Match?
     }
 
     /// Loading (a file iCloud may have to load first).
@@ -47,8 +48,10 @@ final class KnowledgeOriginalOpener {
             do {
                 let file = try await loader.fetch(path: path, folder: folder, online: online)
                 guard !Task.isCancelled else { return file.discard() }
+                let match = file.isPDF ? await KnowledgePDFHighlight.locate(in: file.url, page: page, quote: quote) : nil
+                guard !Task.isCancelled else { return file.discard() }
                 if file.isPDF, let pdfDocument = PDFDocument(url: file.url) {
-                    pdf = ShownPDF(file: file, document: pdfDocument, name: name, page: page, quote: quote)
+                    pdf = ShownPDF(file: file, document: pdfDocument, name: name, page: page, match: match)
                 } else {
                     previewClosed()
                     previewFile = file
@@ -135,7 +138,7 @@ struct KnowledgePDFViewer: View {
 
     var body: some View {
         NavigationStack {
-            KnowledgePDFView(document: shown.document, page: shown.page, quote: shown.quote)
+            KnowledgePDFView(document: shown.document, page: shown.page, match: shown.match)
                 .ignoresSafeArea(edges: .bottom)
                 .navigationTitle(Text(verbatim: shown.name))
                 #if os(iOS)
@@ -165,11 +168,11 @@ private typealias PDFRepresentable = NSViewRepresentable
 private typealias PlatformColor = NSColor
 #endif
 
-/// PDFKit's view: the document at `page` (from 1), `quote` marked and scrolled to.
+/// PDFKit's view: the document at `page` (from 1), the quote (`match`) marked and scrolled to.
 private struct KnowledgePDFView: PDFRepresentable {
     let document: PDFDocument
     var page: Int?
-    var quote: String?
+    var match: KnowledgePDFHighlight.Match?
 
     #if os(iOS)
     func makeUIView(context: Context) -> PDFView { make() }
@@ -185,7 +188,7 @@ private struct KnowledgePDFView: PDFRepresentable {
         view.displayMode = .singlePageContinuous
         view.displayDirection = .vertical
         view.document = document
-        let selection = quote.flatMap { KnowledgePDFHighlight.selection(in: document, page: page, quote: $0) }
+        let selection = match.flatMap { match in document.page(at: match.page)?.selection(for: match.range) }
         selection?.color = PlatformColor.systemYellow.withAlphaComponent(0.5)
         let target = page.flatMap { document.page(at: min(max($0, 1), max(document.pageCount, 1)) - 1) }
         // Once laid out: before, going to a place doesn't stick.
@@ -204,19 +207,34 @@ private struct KnowledgePDFView: PDFRepresentable {
 /// Where a quote is in a PDF: on its page, else the pages next to it (or anywhere without a page),
 /// matched like `KnowledgeQuoteMatch` (whitespace, case and accents ignored; its first words when
 /// the whole isn't there).
-enum KnowledgePDFHighlight {
-    static func selection(in document: PDFDocument, page: Int?, quote: String) -> PDFSelection? {
+nonisolated enum KnowledgePDFHighlight {
+    /// The quote's place: a page (0-based) and the range of its text.
+    struct Match: Hashable, Sendable {
+        var page: Int
+        var range: NSRange
+    }
+
+    /// Where `quote` is in the PDF at `url`, looked for off the main actor (each page's text is
+    /// read, all of them without a `page`).
+    @concurrent
+    static func locate(in url: URL, page: Int?, quote: String?) async -> Match? {
+        guard let quote, let document = PDFDocument(url: url) else { return nil }
+        return match(in: document, page: page, quote: quote)
+    }
+
+    static func match(in document: PDFDocument, page: Int?, quote: String) -> Match? {
         guard !quote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
         for index in pageOrder(page: page, count: document.pageCount) {
-            guard let pdfPage = document.page(at: index), let text = pdfPage.string,
+            guard !Task.isCancelled else { return nil }
+            guard let text = document.page(at: index)?.string,
                   let range = KnowledgeQuoteMatch.nsRange(of: quote, in: text) else { continue }
-            return pdfPage.selection(for: range)
+            return Match(page: index, range: range)
         }
         return nil
     }
 
     /// The pages looked at (0-based): `page` (from 1) and the ones beside it; all without one.
-    nonisolated static func pageOrder(page: Int?, count: Int) -> [Int] {
+    static func pageOrder(page: Int?, count: Int) -> [Int] {
         guard count > 0 else { return [] }
         guard let page else { return Array(0..<count) }
         let index = page - 1

@@ -1,3 +1,4 @@
+import CoreText
 import Foundation
 import Testing
 @testable import Ohana
@@ -244,6 +245,30 @@ struct KnowledgeOriginalTests {
         #expect(KnowledgePDFHighlight.pageOrder(page: nil, count: 3) == [0, 1, 2])
         #expect(KnowledgePDFHighlight.pageOrder(page: 9, count: 3).isEmpty)
         #expect(KnowledgePDFHighlight.pageOrder(page: 1, count: 0).isEmpty)
+    }
+
+    /// The quote's place in an original PDF, found before the viewer opens (off the main actor).
+    @Test func findsTheQuoteInAPDF() async throws {
+        let folder = try LetterFilingTests.temporaryFolder()
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let url = folder.appending(path: "Beitragsrechnung 2026.pdf")
+        var box = CGRect(x: 0, y: 0, width: 500, height: 300)
+        let context = try #require(CGContext(url as CFURL, mediaBox: &box, nil))
+        let font = CTFontCreateWithName("Helvetica" as CFString, 12, nil)
+        for text in ["Beitragsrechnung 2026", "Die Mitglieds-Nr. lautet 123 456 789 bei der Kasse."] {
+            context.beginPDFPage(nil)
+            let line = CTLineCreateWithAttributedString(
+                NSAttributedString(string: text, attributes: [NSAttributedString.Key(kCTFontAttributeName as String): font]))
+            context.textPosition = CGPoint(x: 20, y: 150)
+            CTLineDraw(line, context)
+            context.endPDFPage()
+        }
+        context.closePDF()
+
+        let match = await KnowledgePDFHighlight.locate(in: url, page: nil, quote: "Mitglieds-Nr. lautet 123 456 789")
+        #expect(match?.page == 1)
+        #expect(await KnowledgePDFHighlight.locate(in: url, page: 1, quote: "nicht in diesem Dokument") == nil)
+        #expect(await KnowledgePDFHighlight.locate(in: url, page: 1, quote: nil) == nil)
     }
 }
 

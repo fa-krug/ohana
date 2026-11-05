@@ -843,7 +843,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `NSFileCoordinator.cancel()` frees it (a late copy is deleted); a file not on the device fails at
   once while offline) into the temporary directory within the security scope, the copy deleted when the
   viewer closes (and `KnowledgeOriginals` swept at launch); a PDF in PDFKit at the page with the quote marked
-  (`KnowledgeQuoteMatch`: the words in order, whitespace, case, accents and punctuation ignored, else
+  (found off the main actor before the viewer opens, `KnowledgePDFHighlight.locate`; `KnowledgeQuoteMatch`: the words in order, whitespace, case, accents and punctuation ignored, else
   its first 8, 5, 3 words; on its page, then the pages beside it), anything else in Quick Look; no
   folder here (or missing, replaced) → an alert offering Settings → Knowledge.
   Sources in the assistant (`Features/Assistant/AssistantSources.swift`): an answer item's `sources`
