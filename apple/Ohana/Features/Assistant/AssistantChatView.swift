@@ -49,10 +49,20 @@ struct AssistantChatView: View {
     @State private var dictation = AssistantDictation()
     @FocusState private var composerFocused: Bool
     @State private var scroll = ScrollPosition(edge: .bottom)
-    /// New content scrolls into view while this is on: the user is at the end of the chat (or
-    /// went back there). Scrolling up turns it off, so an answer can be read while it streams.
-    @State private var following = true
+    /// The end of the chat is in view; else "Jump to latest" floats over it. Nothing scrolls along
+    /// with an answer: sending scrolls the message to the top, the answer grows below it.
+    @State private var atEnd = true
     @State private var scrollPhase: ScrollPhase = .idle
+    /// How tall the last turn is at least (the visible height of the chat, `AssistantTurnLayout`).
+    @State private var turnHeight: CGFloat = 0
+    /// The visible height changed with the end in view: back to the end until it is there.
+    @State private var pinning = false
+    /// The user sent a message: it scrolls to the top once it is in the chat.
+    @State private var sentPending = false
+    /// A scroll to the end waits for the update to be through (`scrollToEndSoon`).
+    @State private var endQueued = false
+    /// iOS: the message whose text the "Select Text" sheet shows.
+    @State private var selecting: AssistantSelectableText?
     /// Where the window of drawn items starts (`AssistantItemWindow`), worked out for the chat
     /// `windowKey` names.
     @State private var windowStart = 0
@@ -360,7 +370,7 @@ struct AssistantChatView: View {
         store.newChat()
         text = ""
         attachments = []
-        following = true
+        sentPending = false
         composerFocused = true
     }
 
@@ -441,8 +451,11 @@ struct AssistantChatView: View {
             .frame(maxWidth: 760)
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.vertical, AssistantScrollFollow.padding)
+            // Exactly as wide as the scroll view: nothing in the chat can make it pan sideways.
+            .containerRelativeFrame(.horizontal)
         }
+        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
         .scrollPosition($scroll)
         .defaultScrollAnchor(.bottom, for: .initialOffset)
         .scrollDismissesKeyboard(.interactively)
@@ -450,41 +463,96 @@ struct AssistantChatView: View {
         .onScrollGeometryChange(for: AssistantScrollFollow.Metrics.self) { geometry in
             AssistantScrollFollow.Metrics(geometry)
         } action: { old, new in
-            following = AssistantScrollFollow.follows(following, from: old, to: new)
-            // The answer grew (or the keyboard came up): keep its end in view.
-            if AssistantScrollFollow.shouldPin(following: following, metrics: new, scrolling: AssistantScrollFollow.userScrolls(scrollPhase)) {
-                scroll.scrollTo(edge: .bottom)
-            }
+            scrolled(from: old, to: new)
         }
         .onChange(of: store.session) {
-            following = true
-            scroll.scrollTo(edge: .bottom)
+            sentPending = false
+            jumpToEnd()
+        }
+        .onChange(of: TurnKey(session: store.session, start: lastTurnStart)) { old, new in
+            if AssistantScrollFollow.scrollsToTurn(from: old.start, to: new.start, sameChat: old.session == new.session,
+                                                   sent: sentPending, atEnd: atEnd) {
+                // To the end, not to the message by its id (not laid out yet at this point): the
+                // last turn is as tall as the chat's visible part, so the message then stands at
+                // the top (`AssistantTurnLayout`).
+                withAnimation(reduceMotion ? nil : .smooth(duration: 0.35)) { scroll.scrollTo(edge: .bottom) }
+            }
+            if new.start != old.start { sentPending = false }
         }
         .overlay(alignment: .bottomTrailing) {
-            if !following { jumpToLatest }
+            if !atEnd { jumpToLatest }
         }
         .reloadsWhenReconnected(stale: store.savedCopy?.updating == false || store.openError != nil, store.retrySaved)
-        .animation(reduceMotion ? nil : .snappy, value: following)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: atEnd)
+        #if os(iOS)
+        .sheet(item: $selecting) { AssistantSelectTextSheet(text: $0.text) }
+        #endif
+    }
+
+    /// The scroll view moved or changed size: is the end in view, how tall is the last turn, and
+    /// (the keyboard came up, the window changed) back to the end it showed. The answer growing
+    /// never scrolls the chat.
+    private func scrolled(from old: AssistantScrollFollow.Metrics, to new: AssistantScrollFollow.Metrics) {
+        let height = AssistantScrollFollow.turnHeight(visible: new.visibleHeight)
+        // The first measurement gives the last turn its room: still at the end it opened at.
+        let measured = turnHeight == 0 && height > 0
+        if height != turnHeight { turnHeight = height }
+        if new.isAtBottom != atEnd { atEnd = new.isAtBottom }
+        let pin = AssistantScrollFollow.pin(pending: pinning, from: old, to: new,
+                                            scrolling: AssistantScrollFollow.userScrolls(scrollPhase))
+        if pin.pending != pinning { pinning = pin.pending }
+        if pin.scroll || measured { scrollToEndSoon() }
+    }
+
+    /// To the end once this update is through: the keyboard shrinks the chat before its insets
+    /// and the last turn follow, and an end worked out in between lies past the real one (the
+    /// chat would spring back from there).
+    private func scrollToEndSoon() {
+        guard !endQueued else { return }
+        endQueued = true
+        Task { @MainActor in
+            endQueued = false
+            jumpToEnd()
+        }
+    }
+
+    /// To the end at once, never animated by the change that asked for it (a chat opening
+    /// cross-fades).
+    private func jumpToEnd() {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) { scroll.scrollTo(edge: .bottom) }
+    }
+
+    /// The position of the user's last message: the last turn starts there.
+    private var lastTurnStart: Int? {
+        guard let items = store.current?.items else { return nil }
+        return items.lastIndex { $0.isUser }
     }
 
     /// The chat's items, from the window's start on (`AssistantItemWindow`); a new chat welcomes.
-    /// New items come in animated (counted, not on every piece of a streaming answer), from the
-    /// moment the chat has opened on.
+    /// Tool calls one after the other are one row (`AssistantItemGroups`); the last turn is at
+    /// least as tall as the chat's visible part (`AssistantTurnLayout`). New items come in
+    /// animated (counted, not on every piece of a streaming answer), from the moment the chat has
+    /// opened on.
     private var chatItems: some View {
         let all = visibleItems
         let positions = all.map(\.offset)
         let key = WindowKey(session: store.session, loaded: store.current != nil)
         let start = windowKey == key ? windowStart : AssistantItemWindow.start(positions)
         let hidden = AssistantItemWindow.hidden(positions, start: start)
-        let shown = Array(all.enumerated()).dropFirst(hidden)
+        let shown = Array(all.dropFirst(hidden))
+        let entries = AssistantItemGroups.make(shown)
+        let turnStart = all.last { $0.item.isUser }?.offset
         // Worked out once here for every item (each card asking the store would draw every
         // card again with each piece of a streaming answer).
         let waiting = store.waitingIndex
         let busy = store.busy
         let saved = store.savedCopy != nil
         let queued = store.current?.queued ?? []
+        let familyID = family.family.id
         let animates = !reduceMotion && settledSession == store.session
-        return VStack(alignment: .leading, spacing: 12) {
+        return AssistantTurnLayout(turnHeight: turnHeight) {
             if store.current?.items.isEmpty ?? true {
                 AssistantWelcome(examples: AssistantPages.examples(store.current?.page ?? here), visible: visible) { example in
                     text = example
@@ -501,13 +569,23 @@ struct AssistantChatView: View {
                 .buttonStyle(.glass)
                 .frame(maxWidth: .infinity)
             }
-            ForEach(shown, id: \.element.offset) { index, entry in
-                AssistantItemView(item: entry.item, store: store, saved: saved, waiting: entry.offset == waiting,
-                                  busy: busy, open: open)
-                    .equatable()
-                    // The whole list: an answer's start may lie before the window.
-                    .contextMenu { itemMenu(items: all, index: index) }
-                    .transition(entry.item.isUser ? .assistantUserItem : .assistantItem)
+            ForEach(entries) { entry in
+                Group {
+                    if entry.isTools {
+                        AssistantToolGroupRow(tools: shown[entry.range].compactMap(\.item.tool), familyID: familyID,
+                                              open: open)
+                            .equatable()
+                    } else {
+                        let item = shown[entry.range.lowerBound].item
+                        AssistantItemView(item: item, store: store, saved: saved, waiting: entry.id == waiting,
+                                          busy: busy, open: open)
+                            .equatable()
+                    }
+                }
+                // The whole list: an answer's start may lie before the window.
+                .contextMenu { itemMenu(items: all, index: hidden + entry.range.lowerBound, group: entry.range.count) }
+                .transition(.assistantTurnItem)
+                .assistantTurnStart(entry.id == turnStart)
             }
             if busy {
                 AssistantActivityLine(store: store)
@@ -515,11 +593,11 @@ struct AssistantChatView: View {
             }
             ForEach(queued) { entry in
                 AssistantQueuedRow(entry: entry, store: store)
-                    .transition(.assistantUserItem)
+                    .transition(.assistantTurnItem)
             }
         }
         .scrollTargetLayout()
-        .animation(animates ? .snappy(duration: 0.32) : nil,
+        .animation(animates ? .easeOut(duration: 0.2) : nil,
                    value: ItemCounts(items: store.current?.items.count ?? 0, queued: queued.count, busy: busy))
     }
 
@@ -530,11 +608,12 @@ struct AssistantChatView: View {
         windowStart = AssistantItemWindow.start(visibleItems.map(\.offset))
         windowKey = key
         if key.loaded || store.currentID == nil { settledSession = key.session }
+        // Opened at its end, also once the items of a chat being opened are there.
+        jumpToEnd()
     }
 
     /// Draws more of the earlier items, keeping the one at the top where it was.
     private func showEarlier(_ positions: [Int], start: Int, keeping first: Int) {
-        following = false
         windowStart = AssistantItemWindow.earlier(positions, start: start)
         windowKey = WindowKey(session: store.session, loaded: store.current != nil)
         scroll.scrollTo(id: first, anchor: .top)
@@ -570,26 +649,27 @@ struct AssistantChatView: View {
         .controlSize(.large)
         .help(Text("Jump to latest"))
         .padding(16)
-        .transition(.scale.combined(with: .opacity))
+        .transition(.opacity)
     }
 
-    /// Back to the end of the chat, following it again (animated unless Reduce Motion is on).
+    /// Back to the end of the chat (animated unless Reduce Motion is on).
     private func scrollToLatest() {
-        following = true
         withAnimation(reduceMotion ? nil : .smooth) { scroll.scrollTo(edge: .bottom) }
     }
 
     /// Copy: the message, or a whole answer (everything since the user's last message) with the
-    /// tool results.
-    @ViewBuilder private func itemMenu(items: [(offset: Int, item: AssistantItem)], index: Int) -> some View {
+    /// tool results; on iOS the message's text to select. `group`: how many tool calls the row
+    /// shows from `index` on.
+    @ViewBuilder private func itemMenu(items: [(offset: Int, item: AssistantItem)], index: Int, group: Int = 1) -> some View {
         let item = items[index].item
         if case let .assistant(text, sources) = item {
-            Button("Copy", systemImage: "doc.on.doc") {
-                AssistantTranscript.copy(AssistantSourceMarkers.transcript(text, sources: sources))
-            }
+            let plain = AssistantSourceMarkers.transcript(text, sources: sources)
+            Button("Copy", systemImage: "doc.on.doc") { AssistantTranscript.copy(plain) }
+            selectTextButton(plain)
         }
         if case let .user(text, _) = item, !text.isEmpty {
             Button("Copy", systemImage: "doc.on.doc") { AssistantTranscript.copy(text) }
+            selectTextButton(text)
         }
         if !item.isUser {
             Button("Copy the answer, with all tool results", systemImage: "text.document") {
@@ -600,9 +680,19 @@ struct AssistantChatView: View {
                 copy(items[start...end].map(\.item))
             }
         }
-        if case let .tool(tool) = item, let route = AssistantToolLinks.route(tool, familyID: family.family.id) {
+        if group == 1, case let .tool(tool) = item, let route = AssistantToolLinks.route(tool, familyID: family.family.id) {
             Button("Show", systemImage: "arrow.up.forward.square") { open(route) }
         }
+    }
+
+    /// iOS: selecting text inside the chat would make every message costlier to lay out, so a
+    /// message's text is selected in a sheet. The Mac selects in place.
+    @ViewBuilder private func selectTextButton(_ text: String) -> some View {
+        #if os(iOS)
+        Button("Select Text", systemImage: "selection.pin.in.out") {
+            selecting = AssistantSelectableText(text: text)
+        }
+        #endif
     }
 
     /// The chat `windowStart` was worked out for: another chat, or the one being opened once its
@@ -617,6 +707,12 @@ struct AssistantChatView: View {
         var session: Int
         var opening: Bool
         var failed: Bool
+    }
+
+    /// Where the last turn starts (`lastTurnStart`), in which chat.
+    private struct TurnKey: Equatable {
+        var session: Int
+        var start: Int?
     }
 
     /// What animates the chat's items: one more (or fewer), a turn starting or ending.
@@ -674,6 +770,8 @@ struct AssistantChatView: View {
                     .padding(.horizontal, 4)
                     .padding(.vertical, 6)
                 }
+                // Bounces only once the chips don't fit.
+                .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
             }
             GlassEffectContainer(spacing: 8) {
                 HStack(alignment: .bottom, spacing: 8) {
@@ -845,11 +943,13 @@ struct AssistantChatView: View {
         let files = attachments
         text = ""
         attachments = []
-        scrollToLatest()
+        // Scrolled to the top once it is in the chat (a waiting message: once its turn comes).
+        sentPending = true
         Task {
             do {
                 try await store.send(message, attachments: files.map(\.outgoing))
             } catch {
+                sentPending = false
                 // It couldn't wait: back in the box, to send again.
                 if text.isEmpty { text = message }
                 if attachments.isEmpty { attachments = files }
@@ -1066,27 +1166,51 @@ enum AssistantReturnKey {
     }
 }
 
-/// When the chat scrolls along with new content: while the user is at (or near) its end. Once
-/// they scroll up it stays where they read, until they scroll back down or jump to the latest.
+/// How the chat scrolls. Never along with an answer: sending scrolls the message to the top of
+/// the chat, and its answer grows into the room below it (the last turn is at least as tall as
+/// the visible part); past the bottom, "Jump to latest" shows. Only a change of the visible
+/// height (the keyboard, the window, the first measurement) keeps the end in view that was.
 enum AssistantScrollFollow {
     /// Closer than this to the end counts as at the end.
     static let threshold: CGFloat = 48
+    /// The chat's padding above and below its items: the last turn leaves it free, so its message
+    /// stands that far below the top.
+    static let padding: CGFloat = 12
 
     struct Metrics: Equatable {
         /// The vertical content offset, and the largest it can be (the end of the chat).
         var offset: CGFloat
         var maxOffset: CGFloat
+        /// How much of the chat is in view (the scroll view less its bars).
+        var visibleHeight: CGFloat = 0
 
         var distanceFromBottom: CGFloat { max(0, maxOffset - offset) }
         var isAtBottom: Bool { distanceFromBottom <= AssistantScrollFollow.threshold }
     }
 
-    /// After the scroll view changed: still following? A move up while the end didn't move up
-    /// too (the content didn't shrink, the view didn't grow) is the user scrolling away.
-    static func follows(_ following: Bool, from old: Metrics, to new: Metrics) -> Bool {
-        if new.isAtBottom { return true }
-        if new.offset < old.offset - 0.5, new.maxOffset >= old.maxOffset - 0.5 { return false }
-        return following
+    /// The last turn's least height for this visible height: all of it but the padding above and
+    /// below, in whole points (a fraction would lay the chat out again for nothing).
+    static func turnHeight(visible: CGFloat) -> CGFloat {
+        max(0, (visible - 2 * padding).rounded(.down))
+    }
+
+    /// After the scroll view changed: whether to scroll to the end now, and whether to go on doing
+    /// so until it is there. The visible height changed while the end was in view (or was first
+    /// measured): back to the end. The content growing alone never scrolls; the user scrolling
+    /// ends it.
+    static func pin(pending: Bool, from old: Metrics, to new: Metrics, scrolling: Bool) -> (scroll: Bool, pending: Bool) {
+        if scrolling { return (false, false) }
+        let resized = abs(new.visibleHeight - old.visibleHeight) > 0.5
+        let pending = pending || resized && (old.isAtBottom || old.visibleHeight <= 0)
+        guard pending, new.distanceFromBottom > 0.5 else { return (false, false) }
+        return (true, true)
+    }
+
+    /// Whether the last turn's start (the user's last message) scrolls to the top: a later one in
+    /// the same chat (not the one it opened with), when the user sent it or reads at the end.
+    static func scrollsToTurn(from old: Int?, to new: Int?, sameChat: Bool, sent: Bool, atEnd: Bool) -> Bool {
+        guard sameChat, let old, let new, new > old else { return false }
+        return sent || atEnd
     }
 
     /// The user's own scrolling, not an animation: on macOS an animated scroll to where the chat
@@ -1094,21 +1218,14 @@ enum AssistantScrollFollow {
     static func userScrolls(_ phase: ScrollPhase) -> Bool {
         phase.isScrolling && phase != .animating
     }
-
-    /// Whether to scroll to the end now: following, not there, and the user isn't scrolling.
-    static func shouldPin(following: Bool, metrics: Metrics, scrolling: Bool) -> Bool {
-        following && !scrolling && metrics.distanceFromBottom > 0.5
-    }
 }
 
 extension AssistantScrollFollow.Metrics {
     init(_ geometry: ScrollGeometry) {
+        // The container leaves out the bars (toolbar or header, composer, keyboard): it is what's in
+        // view. The offset starts at -top.
         offset = geometry.contentOffset.y
-        #if os(macOS)
-        // The container leaves out the bars (toolbar, composer); the offset starts at -top.
         maxOffset = geometry.contentSize.height - geometry.containerSize.height - geometry.contentInsets.top
-        #else
-        maxOffset = geometry.contentSize.height + geometry.contentInsets.bottom - geometry.containerSize.height
-        #endif
+        visibleHeight = geometry.containerSize.height
     }
 }

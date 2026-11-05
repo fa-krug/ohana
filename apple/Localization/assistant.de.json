@@ -266,5 +266,9 @@
   "Image model for recipe photos": "Bildmodell für Rezeptfotos",
   "Instructions for other AI agents": "Anleitung für andere KI-Agenten",
   "Messages and what the assistant reads go to the AI API above.": "Nachrichten und was der Assistent liest, gehen an die KI-API oben.",
-  "Pick the AI service you have an account with and paste its key (stored encrypted, never shown again). Load the models from the API or type one; it needs to support tool calls. Everyone in the family uses this setup.": "Wähle den KI-Dienst, bei dem du ein Konto hast, und füge seinen Schlüssel ein (verschlüsselt gespeichert, nie wieder angezeigt). Lade die Modelle von der API oder gib eins ein; es muss Tool-Aufrufe unterstützen. Alle in der Familie nutzen diese Einrichtung."
+  "Pick the AI service you have an account with and paste its key (stored encrypted, never shown again). Load the models from the API or type one; it needs to support tool calls. Everyone in the family uses this setup.": "Wähle den KI-Dienst, bei dem du ein Konto hast, und füge seinen Schlüssel ein (verschlüsselt gespeichert, nie wieder angezeigt). Lade die Modelle von der API oder gib eins ein; es muss Tool-Aufrufe unterstützen. Alle in der Familie nutzen diese Einrichtung.",
+  "Select Text": "Text auswählen",
+  "Used %lld tools": "%lld Tools verwendet",
+  "Shows each tool": "Zeigt jedes Tool",
+  "Hides the tools": "Blendet die Tools aus"
 }

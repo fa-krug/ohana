@@ -758,8 +758,17 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   list column), the title, New chat, More (Open as a page, Move to …, Copy, settings). It shows at
   once: the conversation doesn't wait for the settings (only the composer does), a chat being opened
   shows `AssistantChatSkeleton`, a long one draws its last 40 items (`AssistantItemWindow`, "Show
-  earlier messages"); new items animate in by count (never per streamed piece), not those a chat
-  opens with, and another chat cross-fades (`AssistantChatStore.session`). Recipes are in Spotlight (`RecipeSpotlight.swift`: every family's,
+  earlier messages"); new items animate in by count (never per streamed piece; opacity and a small
+  offset, nothing scales), not those a chat opens with, and another chat cross-fades
+  (`AssistantChatStore.session`). Nothing scrolls along with an answer: the last turn (from the
+  user's last message on) is at least the chat's visible height (`AssistantTurnLayout`,
+  `AssistantChatTurns.swift`), so sending scrolls to the end, which puts the message at the top, and
+  the answer grows into the room below; past the bottom "Jump to latest" shows; only a change of the
+  visible height (keyboard, window) keeps the end in view (`AssistantScrollFollow`). Tool calls one
+  after the other are one row (`AssistantItemGroups`, `AssistantToolGroupRow`: the running one with a
+  spinner, then "Used 3 tools", a tap unfolds them); the activity line has one pulsing symbol and no
+  timer. On iOS messages aren't selectable in place (costly to lay out): their menu's *Select Text*
+  opens the plain text in a sheet (`AssistantSelectTextSheet`); the Mac selects in place. Recipes are in Spotlight (`RecipeSpotlight.swift`: every family's,
   after loading the account and after recipe changes; emptied in the demo / with Meals off; a result
   opens `ohana://f/{id}/meals/recipes/{id}`). The recipe list's *Import from Web* sheet
   (`RecipeImportView`, editors, with the meals AI) posts a URL to `…/meals/recipes/import`, then
