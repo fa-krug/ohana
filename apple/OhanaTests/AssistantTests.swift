@@ -328,6 +328,20 @@ struct AssistantStoreTests {
                                  rev: 2, usage: nil, page: nil, queued: []))
         #expect(store.openQuestion() == nil)
     }
+
+    @Test func aQuestionCanBeAnsweredBeforeTheStreamSaysTheTurnEnded() {
+        let store = store()
+        store.show(AssistantChat(id: "c1", title: "Q", status: "running", items: [.user(text: "Hi", attachments: [])],
+                                 rev: 1, usage: nil, page: nil, queued: []))
+        #expect(store.busy)
+        let q = AssistantQuestion(id: "q", question: "Which?", options: ["A", "B"], multiple: false, answer: nil, skipped: false)
+        // The question is saved a poll before the chat says "idle": it ends the turn already.
+        store.apply("c1", .items(rev: 2, items: [(1, .question(q))]))
+        #expect(store.current?.isRunning == true)
+        #expect(!store.busy)
+        #expect(store.openQuestion()?.question.id == "q")
+        #expect(store.waitingIndex == 1)
+    }
 }
 
 struct AssistantRenderingTests {
