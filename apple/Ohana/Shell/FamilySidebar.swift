@@ -96,53 +96,21 @@ private struct LeadingEdgeSwipe: UIGestureRecognizerRepresentable {
     }
 }
 
-/// The family page: the families to switch to with Add Family (new or join) below them (in the
-/// demo: connecting a server), every page in the sidebar's order, the one on screen highlighted
-/// (on iPhone the assistant opens as a sheet), scanning a letter and the settings last. It also shows the invite links
-/// the app was opened with (`InviteInbox`).
+/// The family page: the family on screen under the title, every page in the sidebar's order (not
+/// the assistant: the Ask Ohana bar or the ✨ open it), the one on screen highlighted, scanning a
+/// letter and the settings last (the families to switch to are there, `FamilyListSection`). It
+/// also shows the invite links the app was opened with (`InviteInbox`).
 private struct FamilySidebar: View {
     let current: Module
     @Binding var dragged: CGFloat?
     let width: CGFloat
     @Environment(AppModel.self) private var app
     @Environment(FamilyContext.self) private var family
-    @State private var creating = false
     @State private var joining: InviteRequest?
 
     var body: some View {
         NavigationStack {
             List {
-                Section {
-                    ForEach(app.families) { item in
-                        Button { choose(item.id) } label: {
-                            FamilyRow(family: item, selected: item.id == app.selectedFamilyID)
-                        }
-                    }
-                    if app.isDemo {
-                        row("Connect your Ohana", systemImage: "server.rack") { app.showsConnect = true }
-                    } else {
-                        Menu {
-                            Button("New…", systemImage: "plus") {
-                                close()
-                                creating = true
-                            }
-                            Button("Join…", systemImage: "person.badge.plus") {
-                                close()
-                                joining = InviteRequest()
-                            }
-                        } label: {
-                            Label {
-                                Text("Add Family")
-                            } icon: {
-                                Image(systemName: "plus").foregroundStyle(Color.ohana)
-                            }
-                        }
-                    }
-                } footer: {
-                    if let me = app.me {
-                        Text("Signed in as \(me.displayName)")
-                    }
-                }
                 if !pages.isEmpty {
                     Section {
                         ForEach(pages) { page in
@@ -164,6 +132,7 @@ private struct FamilySidebar: View {
             // Rows read as text, not as links: only their icons and the check take the app's color.
             .tint(.primary)
             .navigationTitle(Text(verbatim: "Ohana"))
+            .navigationSubtitleCompat(app.selectedFamily?.name ?? "")
         }
         // Swiping back to the tabs; vertical drags stay the list's.
         .simultaneousGesture(
@@ -184,7 +153,6 @@ private struct FamilySidebar: View {
                 }
         )
         .accessibilityAction(.escape) { close() }
-        .sheet(isPresented: $creating) { CreateFamilySheet().errorBanner() }
         // In the demo an invite waits for the server (the connect sheet shows it).
         .inviteJoinSheet($joining, claimsLinks: !app.isDemo)
     }
@@ -205,15 +173,9 @@ private struct FamilySidebar: View {
     }
 
     /// The pages the server has on, in the sidebar's order: the overview, the modules and the
-    /// search (the settings have their own row below).
+    /// search (the settings have their own row below; the assistant has the bar or the ✨).
     private var pages: [Module] {
-        ([.overview] + Module.modules + [.search]).filter { app.isEnabled($0) }
-    }
-
-    private func choose(_ id: String) {
-        guard id != app.selectedFamilyID else { return close() }
-        // The shell is built anew for that family; its host slides the page in.
-        app.selectedFamilyID = id
+        ([.overview] + Module.modules + [.search]).filter { $0 != .assistant && app.isEnabled($0) }
     }
 
     private func close() {
@@ -221,31 +183,4 @@ private struct FamilySidebar: View {
     }
 }
 
-/// A family on the page: its badge, name and members, checked when it is on screen.
-private struct FamilyRow: View {
-    let family: FamilySummary
-    let selected: Bool
-
-    var body: some View {
-        HStack(spacing: 12) {
-            FamilyBadge(name: family.name, id: family.id, size: 36)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(family.name)
-                Text(family.canEdit
-                    ? "\(family.memberCount) members"
-                    : "\(family.memberCount) members · View only")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer(minLength: 0)
-            if selected {
-                Image(systemName: "checkmark")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(Color.ohana)
-            }
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(selected ? .isSelected : [])
-    }
-}
 #endif

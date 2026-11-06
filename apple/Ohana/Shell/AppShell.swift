@@ -165,7 +165,8 @@ struct AppShell: View {
             .onChange(of: current, initial: true) {
                 if !openedPages.contains(current) { openedPages.append(current) }
             }
-            .assistantBar(context, enabled: assistantOn)
+            // Not under the settings.
+            .assistantBar(context, enabled: assistantOn && current != .settings)
         } else {
             TabView(selection: selection) {
                 tab(.overview, assistantOn: assistantOn)

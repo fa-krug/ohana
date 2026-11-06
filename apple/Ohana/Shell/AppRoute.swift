@@ -72,7 +72,7 @@ enum AppRoute: Hashable {
 
 /// The pages of the family's settings a route can open.
 enum SettingsPage: String, Hashable, CaseIterable {
-    case members, home, notifications, calendar, finance, shopping, assistant, knowledge, data
+    case general, members, home, notifications, calendar, finance, shopping, assistant, knowledge, data, device
 
     /// The module whose settings the page holds; nil for the family's own pages.
     var module: Module? {
@@ -82,7 +82,7 @@ enum SettingsPage: String, Hashable, CaseIterable {
         case .shopping: .meals
         case .assistant: .assistant
         case .knowledge: .knowledge
-        case .members, .home, .notifications, .data: nil
+        case .general, .members, .home, .notifications, .data, .device: nil
         }
     }
 }

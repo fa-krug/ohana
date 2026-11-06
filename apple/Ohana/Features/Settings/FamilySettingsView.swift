@@ -1,13 +1,14 @@
 import SwiftUI
 
 /// All settings in one place, like the system's Settings: the account (a card that opens its
-/// page) on top, then the family's (the web app's settings page with its tabs: the name, the
-/// household (members, people without an account and invites; the home address; notifications,
-/// this device's push notifications among them), links to the modules' settings (the shopping
-/// list in Reminders and the knowledge folder among them, this device's), export / import with
-/// leaving or deleting the family (deleting only for its last member); viewers see them
-/// read-only), this device's, and the server's administration for administrators. The settings of
-/// a module the server has off don't show.
+/// page) on top, on iPhone and a narrow iPad the families to switch to, then the family's pages
+/// (general: the name, export / import, leaving or deleting the family (deleting only for its last
+/// member); the household's members, home address and notifications, this device's push
+/// notifications among them), links to the modules' settings (the shopping list in Reminders and
+/// the knowledge folder among them, this device's), this device's, and the server's administration
+/// for administrators; viewers see them read-only. The settings of a module the server has off
+/// don't show. The list shows at once: every row is a link, what the household holds (GET
+/// /household, loaded meanwhile) shows on the pages.
 struct FamilySettingsView: View {
     @Environment(FamilyContext.self) private var family
     @State private var model = FamilySettingsModel()
@@ -15,27 +16,27 @@ struct FamilySettingsView: View {
     @State private var page: SettingsPage?
 
     var body: some View {
-        LoadStateView(state: model.state, retry: { await model.load(family.api) }) { household in
-            FamilySettingsForm(model: model, household: household)
-        }
-        .ohanaBackground(ModuleTint.settings)
-        .navigationTitle("Settings")
-        .task(id: [family.revision(.family), family.revision(.settings)]) { await model.load(family.api) }
-        .navigationDestination(item: $page) { page in
-            FamilySettingsPageView(page: page, model: model).id(page).assistantButton()
-        }
-        .onChange(of: family.pendingRoute, initial: true) {
-            guard let route = family.takeRoute(for: .settings) else { return }
-            page = FamilySettingsPageView.page(for: route)
-        }
+        FamilySettingsForm(model: model)
+            .ohanaBackground(ModuleTint.settings)
+            .navigationTitle("Settings")
+            // The household, for the pages, before one opens.
+            .task(id: [family.revision(.family), family.revision(.settings)]) { await model.load(family.api) }
+            .navigationDestination(item: $page) { page in
+                FamilySettingsPageView(page: page, model: model).id(page).assistantButton()
+            }
+            .onChange(of: family.pendingRoute, initial: true) {
+                guard let route = family.takeRoute(for: .settings) else { return }
+                page = FamilySettingsPageView.page(for: route)
+            }
     }
 }
 
-/// One page of the settings: the household's (members, home address, notifications), a module's
-/// settings, or the family's data.
+/// One page of the settings: the family's (general, members, home address, notifications), a
+/// module's settings, the family's data, or this device's.
 struct FamilySettingsPageView: View {
     let page: SettingsPage
     let model: FamilySettingsModel
+    @Environment(FamilyContext.self) private var family
 
     /// The page a route opens; nil for the settings themselves.
     static func page(for route: AppRoute) -> SettingsPage? {
@@ -45,15 +46,38 @@ struct FamilySettingsPageView: View {
 
     var body: some View {
         switch page {
-        case .members: FamilyMembersView(model: model)
-        case .home: FamilyHomeAddressView(model: model)
-        case .notifications: FamilyNotificationsView(model: model)
+        case .general: household(FamilyGeneralView(model: model))
+        case .members: household(FamilyMembersView(model: model))
+        case .home: household(FamilyHomeAddressView(model: model))
+        case .notifications: household(FamilyNotificationsView(model: model))
         case .calendar: CalendarSettingsView()
         case .finance: FinanceSettingsView()
         case .shopping: ShoppingRemindersView()
         case .assistant: AssistantSettingsView()
         case .knowledge: KnowledgeSettingsView()
-        case .data: FamilyDataView(familyName: model.household?.name ?? "", canEdit: model.household?.canEdit ?? false)
+        case .data: FamilyDataView(familyName: model.household?.name ?? family.family.name, canEdit: family.canEdit)
+        case .device: DeviceSettingsView()
+        }
+    }
+
+    /// A page of the household's: while it loads (or failed) that over the page.
+    private func household(_ content: some View) -> some View {
+        content.overlay {
+            switch model.state {
+            case .idle, .loading:
+                ProgressView().controlSize(.large)
+            case let .failed(message):
+                ContentUnavailableView {
+                    Label("Couldn’t load", systemImage: "exclamationmark.triangle")
+                } description: {
+                    Text(message)
+                } actions: {
+                    Button("Try again") { Task { await model.load(family.api) } }
+                        .buttonStyle(.glassProminent)
+                }
+            case .loaded, .saved:
+                EmptyView()
+            }
         }
     }
 }
@@ -155,21 +179,27 @@ struct FamilySettingsLabel: View {
 private struct FamilySettingsForm: View {
     @Environment(FamilyContext.self) private var family
     @Environment(AppModel.self) private var app
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    #endif
     let model: FamilySettingsModel
-    let household: FamilyHousehold
 
-    @State private var name = ""
-    @State private var confirmLeave = false
-    @State private var confirmDelete = false
-
-    private var memberCount: Int { household.members.count }
-    private var trimmedName: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
+    /// Where there's no sidebar with the family menu: the families here.
+    private var listsFamilies: Bool {
+        #if os(iOS)
+        Module.onPhone || sizeClass == .compact
+        #else
+        false
+        #endif
+    }
 
     var body: some View {
         Form {
             accountSection
 
-            if !household.canEdit {
+            if listsFamilies { FamilyListSection() }
+
+            if !family.canEdit {
                 Section {
                     Label("You are a viewer in this family: you can look at everything but not change it.",
                           systemImage: "eye")
@@ -178,121 +208,57 @@ private struct FamilySettingsForm: View {
             }
 
             Section {
-                if model.canEdit {
-                    HStack {
-                        TextField("Family name", text: $name)
-                            .onSubmit(rename)
-                            .submitLabel(.done)
-                        if trimmedName != household.name {
-                            Button("Save", action: rename)
-                                .buttonStyle(.borderedProminent)
-                                .disabled(trimmedName.isEmpty)
-                        }
-                    }
-                } else {
-                    LabeledContent("Family name", value: household.name)
+                link(.general) {
+                    FamilySettingsLabel(title: "General", systemImage: "gearshape.fill", tint: .gray)
+                }
+                link(.members) {
+                    FamilySettingsLabel(title: "Members", systemImage: "person.2.fill", tint: .ohana)
+                }
+                link(.home) {
+                    FamilySettingsLabel(title: "Home address", systemImage: "house.fill", tint: .indigo)
+                }
+                link(.notifications) {
+                    FamilySettingsLabel(title: "Notifications", systemImage: "bell.badge.fill", tint: .red)
                 }
             } header: {
-                Text("Family")
-            } footer: {
-                if model.canEdit && trimmedName.isEmpty {
-                    Text("A family needs a name.").foregroundStyle(.red)
-                }
-            }
-
-            Section("Household") {
-                NavigationLink {
-                    FamilySettingsPageView(page: .members, model: model).assistantButton()
-                } label: {
-                    LabeledContent {
-                        Text(household.members.count + household.people.count, format: .number)
-                    } label: {
-                        FamilySettingsLabel(title: "Members", systemImage: "person.2.fill", tint: .ohana)
-                    }
-                }
-                NavigationLink {
-                    FamilySettingsPageView(page: .home, model: model).assistantButton()
-                } label: {
-                    LabeledContent {
-                        Text(household.home.address ?? String(localized: "Not set."))
-                            .lineLimit(1)
-                    } label: {
-                        FamilySettingsLabel(title: "Home address", systemImage: "house.fill", tint: .indigo)
-                    }
-                }
-                NavigationLink {
-                    FamilySettingsPageView(page: .notifications, model: model).assistantButton()
-                } label: {
-                    LabeledContent {
-                        Text(household.channels.count, format: .number)
-                    } label: {
-                        FamilySettingsLabel(title: "Notifications", systemImage: "bell.badge.fill", tint: .red)
-                    }
-                }
+                Text(verbatim: app.selectedFamily?.name ?? family.family.name)
             }
 
             Section("Modules") {
-                NavigationLink {
-                    FamilySettingsPageView(page: .calendar, model: model).assistantButton()
-                } label: {
+                link(.calendar) {
                     FamilySettingsLabel(title: "Calendar", systemImage: Module.calendar.systemImage, tint: ModuleTint.calendar)
                 }
                 if family.isEnabled(.finance) {
-                    NavigationLink {
-                        FamilySettingsPageView(page: .finance, model: model).assistantButton()
-                    } label: {
+                    link(.finance) {
                         FamilySettingsLabel(title: "Finance", systemImage: Module.finance.systemImage, tint: ModuleTint.finance)
                     }
                 }
                 if family.isEnabled(.meals), !app.isDemo {
-                    NavigationLink {
-                        FamilySettingsPageView(page: .shopping, model: model).assistantButton()
-                    } label: {
-                        LabeledContent {
-                            ShoppingRemindersStatus()
-                        } label: {
-                            FamilySettingsLabel(title: "Shopping List", systemImage: "checklist", tint: ModuleTint.meals)
-                        }
+                    link(.shopping) {
+                        FamilySettingsLabel(title: "Shopping List", systemImage: "checklist", tint: ModuleTint.meals)
                     }
                 }
                 if family.isEnabled(.assistant) {
-                    NavigationLink {
-                        FamilySettingsPageView(page: .assistant, model: model).assistantButton()
-                    } label: {
+                    link(.assistant) {
                         FamilySettingsLabel(title: "Assistant", systemImage: "sparkles", tint: ModuleTint.assistant)
                     }
                 }
                 if family.knowledgeAvailable {
-                    NavigationLink {
-                        FamilySettingsPageView(page: .knowledge, model: model).assistantButton()
-                    } label: {
-                        LabeledContent {
-                            KnowledgeFolderStatus()
-                        } label: {
-                            FamilySettingsLabel(title: "Knowledge", systemImage: "books.vertical.fill", tint: ModuleTint.knowledge)
-                        }
+                    link(.knowledge) {
+                        FamilySettingsLabel(title: "Knowledge", systemImage: "books.vertical.fill", tint: ModuleTint.knowledge)
                     }
                 }
             }
 
-            Section("Data") {
-                NavigationLink {
-                    FamilySettingsPageView(page: .data, model: model).assistantButton()
-                } label: {
-                    FamilySettingsLabel(title: "Export and import", systemImage: "externaldrive.fill", tint: .teal)
-                }
-                if memberCount > 1 {
-                    Button("Leave the family", role: .destructive) { confirmLeave = true }
-                        .disabled(model.state.isSaved)
-                }
-                // Only its last member deletes a family.
-                if household.canEdit, memberCount <= 1 {
-                    Button("Delete the family", role: .destructive) { confirmDelete = true }
-                        .disabled(model.state.isSaved)
+            Section {
+                link(.device) {
+                    #if os(macOS)
+                    FamilySettingsLabel(title: "This device", systemImage: "desktopcomputer", tint: .blue)
+                    #else
+                    FamilySettingsLabel(title: "This device", systemImage: "iphone", tint: .blue)
+                    #endif
                 }
             }
-
-            DeviceSettingsSection()
 
             if app.me?.isAdmin == true, !app.isDemo {
                 Section("Server") {
@@ -308,17 +274,13 @@ private struct FamilySettingsForm: View {
         .readableWidth()
         .scrollContentBackground(.hidden)
         .refreshable { await model.load(family.api) }
-        .onAppear { name = household.name }
-        .onChange(of: household.name) { _, new in name = new }
-        .confirmationDialog(Text("Leave \(household.name)?"), isPresented: $confirmLeave, titleVisibility: .visible) {
-            Button("Leave the family", role: .destructive, action: leave)
-        } message: {
-            Text("You won’t see it anymore unless someone adds you again.")
-        }
-        .confirmationDialog(Text("Delete \(household.name)?"), isPresented: $confirmDelete, titleVisibility: .visible) {
-            Button("Delete the family", role: .destructive, action: delete)
-        } message: {
-            Text("Everything in it is deleted. This can’t be undone.")
+    }
+
+    private func link(_ page: SettingsPage, @ViewBuilder label: () -> some View) -> some View {
+        NavigationLink {
+            FamilySettingsPageView(page: page, model: model).assistantButton()
+        } label: {
+            label()
         }
     }
 
@@ -347,8 +309,90 @@ private struct FamilySettingsForm: View {
             }
         }
     }
+}
 
-    private func rename() {
+/// Settings → General: the family's name, its export and import, leaving it or (its last member)
+/// deleting it.
+private struct FamilyGeneralView: View {
+    @Environment(FamilyContext.self) private var family
+    @Environment(AppModel.self) private var app
+    let model: FamilySettingsModel
+
+    @State private var name = ""
+    @State private var confirmLeave = false
+    @State private var confirmDelete = false
+
+    private var trimmedName: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    var body: some View {
+        Form {
+            if let household = model.household {
+                content(household)
+            }
+        }
+        .formStyle(.grouped)
+        .readableWidth()
+        .scrollContentBackground(.hidden)
+        .ohanaBackground(ModuleTint.settings)
+        .navigationTitle("General")
+        .refreshable { await model.load(family.api) }
+        .onChange(of: model.household?.name, initial: true) { _, new in name = new ?? "" }
+    }
+
+    @ViewBuilder
+    private func content(_ household: FamilyHousehold) -> some View {
+        Section {
+            if model.canEdit {
+                HStack {
+                    TextField("Family name", text: $name)
+                        .onSubmit { rename(household) }
+                        .submitLabel(.done)
+                    if trimmedName != household.name {
+                        Button("Save") { rename(household) }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(trimmedName.isEmpty)
+                    }
+                }
+            } else {
+                LabeledContent("Family name", value: household.name)
+            }
+        } header: {
+            Text("Family")
+        } footer: {
+            if model.canEdit && trimmedName.isEmpty {
+                Text("A family needs a name.").foregroundStyle(.red)
+            }
+        }
+
+        Section("Data") {
+            NavigationLink {
+                FamilySettingsPageView(page: .data, model: model).assistantButton()
+            } label: {
+                FamilySettingsLabel(title: "Export and import", systemImage: "externaldrive.fill", tint: .teal)
+            }
+            if household.members.count > 1 {
+                Button("Leave the family", role: .destructive) { confirmLeave = true }
+                    .disabled(model.state.isSaved)
+            }
+            // Only its last member deletes a family.
+            if household.canEdit, household.members.count <= 1 {
+                Button("Delete the family", role: .destructive) { confirmDelete = true }
+                    .disabled(model.state.isSaved)
+            }
+        }
+        .confirmationDialog(Text("Leave \(household.name)?"), isPresented: $confirmLeave, titleVisibility: .visible) {
+            Button("Leave the family", role: .destructive) { leave(household) }
+        } message: {
+            Text("You won’t see it anymore unless someone adds you again.")
+        }
+        .confirmationDialog(Text("Delete \(household.name)?"), isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button("Delete the family", role: .destructive, action: delete)
+        } message: {
+            Text("Everything in it is deleted. This can’t be undone.")
+        }
+    }
+
+    private func rename(_ household: FamilyHousehold) {
         let new = trimmedName
         guard model.canEdit, !new.isEmpty, new != household.name else { return }
         let api = family.api
@@ -358,7 +402,7 @@ private struct FamilySettingsForm: View {
         }
     }
 
-    private func leave() {
+    private func leave(_ household: FamilyHousehold) {
         let api = family.api, selfId = household.selfId
         perform {
             try await api.perform(.delete, "/household/members/\(selfId)")
@@ -372,5 +416,19 @@ private struct FamilySettingsForm: View {
             try await api.perform(.delete, "/household")
             await app.refresh()
         }
+    }
+}
+
+/// Settings → This device: the theme and (on the Mac) the menu bar assistant.
+private struct DeviceSettingsView: View {
+    var body: some View {
+        Form {
+            DeviceSettingsSection()
+        }
+        .formStyle(.grouped)
+        .readableWidth()
+        .scrollContentBackground(.hidden)
+        .ohanaBackground(ModuleTint.settings)
+        .navigationTitle("This device")
     }
 }

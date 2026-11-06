@@ -137,3 +137,64 @@ struct FamilyBadge: View {
             .accessibilityHidden(true)
     }
 }
+
+/// Settings → Families, on iPhone and a narrow iPad (elsewhere the sidebar's family menu): the
+/// families to switch to, with Add Family (new or join) below them; in the demo connecting a server.
+struct FamilyListSection: View {
+    @Environment(AppModel.self) private var app
+    @State private var creating = false
+    @State private var joining: InviteRequest?
+
+    var body: some View {
+        Section("Families") {
+            ForEach(app.families) { item in
+                // The shell is built anew for that family, on the settings again.
+                Button { app.selectedFamilyID = item.id } label: {
+                    FamilyRow(family: item, selected: item.id == app.selectedFamilyID)
+                }
+                .tint(.primary)
+            }
+            if app.isDemo {
+                Button("Connect your Ohana", systemImage: "server.rack") { app.showsConnect = true }
+            } else {
+                Menu {
+                    Button("New…", systemImage: "plus") { creating = true }
+                    Button("Join…", systemImage: "person.badge.plus") { joining = InviteRequest() }
+                } label: {
+                    Label("Add Family", systemImage: "plus")
+                }
+                .sheet(isPresented: $creating) { CreateFamilySheet().errorBanner() }
+                // The family page claims the invite links the app is opened with.
+                .inviteJoinSheet($joining, claimsLinks: false)
+            }
+        }
+    }
+}
+
+/// A family in Settings → Families: its badge, name and members, checked when it is on screen.
+struct FamilyRow: View {
+    let family: FamilySummary
+    let selected: Bool
+
+    var body: some View {
+        HStack(spacing: 12) {
+            FamilyBadge(name: family.name, id: family.id, size: 36)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(family.name)
+                Text(family.canEdit
+                    ? "\(family.memberCount) members"
+                    : "\(family.memberCount) members · View only")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+            if selected {
+                Image(systemName: "checkmark")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Color.ohana)
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+}

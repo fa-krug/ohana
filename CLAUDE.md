@@ -655,13 +655,14 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   sidebar (a narrow iPad window) a family page behind the page / the tabs as in Mail (`FamilySidebar.swift`:
   `FamilySidebarHost` slides them away, `AppModel.showsFamilySidebar`; the toolbar's back button
   (iPhone) / family button or a swipe from the leading edge, which a UIKit edge pan only takes while a module root is
-  on screen, `moduleRootsOnScreen`, so it stays "back" on pushed pages; families with one *Add Family*
-  menu (new / join), every page with the one on screen highlighted (the assistant's row opens its
-  sheet on iPhone, Search's ready to type), scanning a letter, the settings), assistant `.inspector` ⌘J (a `.sheet` on
+  on screen, `moduleRootsOnScreen`, so it stays "back" on pushed pages; the family on screen as the
+  title's subtitle, every page but the assistant with the one on screen highlighted (Search's ready
+  to type), scanning a letter, the settings; the families to switch to with one *Add Family* menu
+  (new / join) are in the settings there, `FamilyListSection`), assistant `.inspector` ⌘J (a `.sheet` on
   iPhone, `Module.notPages`: an inspector there breaks the page's navigation bar), toggled by the ✨ toggle at the top
   right of every page (`AssistantToolbarToggle`: tinted while open, breathing while a turn runs):
   module roots get it from `shellToolbar()`, a page pushed onto a module's stack adds
-  `.assistantButton()`; on iPhone the pages have none: the *Ask Ohana* bar at the bottom, the
+  `.assistantButton()`; on iPhone the pages have none: the *Ask Ohana* bar at the bottom (not under the settings), the
   screen's full width (`.assistantBar`, a glass capsule in a `safeAreaBar`, hidden while the keyboard
   is up; `Features/Assistant/AssistantBar.swift`, one button → `family.ask()`; while a turn runs its
   status and the chat's title) takes its place; the bar and the ✨ count as viewers of the chat (`addViewer`), so a turn is followed
