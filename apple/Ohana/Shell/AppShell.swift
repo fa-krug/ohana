@@ -20,9 +20,13 @@ struct AppShell: View {
     /// iPhone: the pages opened in this family, kept while another shows, so each is where it was
     /// left (scrolled, pushed), as tabs are.
     @State private var openedPages: [Module] = []
-    /// iPhone, at launch: the loading screen stays over the shell while every page is built
+    /// At launch the loading screen stays over the shell while every page is built
     /// (`prebuildPages`), so none has to be built when it's first opened.
-    @State private var launchLoading = Module.onPhone && !AppShell.launchBuilt
+    @State private var launchLoading = !AppShell.launchBuilt
+    /// iPad, Mac: the tab a route or a tap asked for while the launch built the tabs.
+    @State private var tabAfterLaunch: Module?
+    /// Mac: the window's toolbar while the launch builds the tabs (each tab's items would flash by).
+    @State private var launchToolbarHidden = !AppShell.launchBuilt
     /// The pages were built at launch: later shells (another family, another server) build theirs
     /// while the family page is open instead.
     private static var launchBuilt = false
@@ -65,12 +69,15 @@ struct AppShell: View {
             .modifier(FamilySidebarHost(active: Module.onPhone || sizeClass == .compact,
                                         current: selection.wrappedValue))
             #endif
-            // The launch's loading screen, until the pages are built (iPhone).
+            // The launch's loading screen, until the pages are built.
             .overlay {
                 // There from the first frame (the root's own loading screen fades into the shell):
                 // faded in, the pages showed through for a moment.
                 if launchLoading { LoadingScreen().transition(.asymmetric(insertion: .identity, removal: .opacity)) }
             }
+            #if os(macOS)
+            .toolbar(launchToolbarHidden ? .hidden : .automatic, for: .windowToolbar)
+            #endif
             // The letter scanner over everything (the family menu, Spotlight / Siri / Shortcuts).
             .modifier(ShellLetterScan(context: context, assistantSheet: $showAssistant))
             // The panel's settings and chats before it first opens, so it doesn't wait for them.
@@ -151,6 +158,8 @@ struct AppShell: View {
             showAssistant = true
             return
         }
+        // The launch is going through the tabs: this one once it's done.
+        if launchLoading, !Module.onPhone { tabAfterLaunch = target }
         guard Module.onPhone, app.showsFamilySidebar else {
             module = target
             return
@@ -172,11 +181,13 @@ struct AppShell: View {
         }
     }
 
-    /// iPhone: the pages the family page lists that weren't opened yet, built hidden one at a time
-    /// (each takes a few hundred milliseconds), so a page picked slides in at once, as a page opened
-    /// before does. Not the search page: it takes the keyboard on appearing. At launch all of them,
-    /// behind the loading screen (`launchLoading`); later (another family) while the family page is
-    /// open, stopping as soon as it closes (the task is cancelled).
+    /// The pages that weren't opened yet, built ahead (each takes a few hundred milliseconds, and
+    /// built when first opened it showed: a blank page or a spinner, the iPhone's slide held up).
+    /// At launch all of them, behind the loading screen (`launchLoading`): on iPhone hidden, one at a
+    /// time; on iPad and the Mac each tab picked for a moment (a tab view builds a tab only when it's
+    /// picked, and keeps it), then the one to show. Not the search page: it takes the keyboard on
+    /// appearing. Later (another family, another server) on iPhone while the family page is open,
+    /// stopping as soon as it closes (the task is cancelled); iPad and Mac build theirs when opened.
     private func prebuildPages(_ context: FamilyContext) async {
         let atLaunch = launchLoading
         if atLaunch {
@@ -184,22 +195,36 @@ struct AppShell: View {
             // The loading screen drawn first.
             try? await Task.sleep(for: .milliseconds(16))
         } else {
-            guard app.showsFamilySidebar else { return }
+            guard Module.onPhone, app.showsFamilySidebar else { return }
             // The family page's slide first.
             try? await Task.sleep(for: .milliseconds(400))
         }
-        let pages = ([.overview] + Module.modules + [.settings]).filter { !Module.notPages.contains($0) }
-        for page in pages where context.isEnabled(page) && !openedPages.contains(page) {
-            guard !Task.isCancelled, atLaunch || app.showsFamilySidebar else { return }
-            openedPages.append(page)
-            // Each on its own (the loading screen's spinner turns in between), with a pause for a tap.
-            try? await Task.sleep(for: .milliseconds(atLaunch ? 16 : 100))
+        let pages = ([.overview] + Module.modules + [.settings])
+            .filter { !Module.notPages.contains($0) && context.isEnabled($0) }
+        if Module.onPhone {
+            for page in pages where !openedPages.contains(page) {
+                guard !Task.isCancelled, atLaunch || app.showsFamilySidebar else { return }
+                openedPages.append(page)
+                // Each on its own (the loading screen's spinner turns in between), with a pause for a tap.
+                try? await Task.sleep(for: .milliseconds(atLaunch ? 16 : 100))
+            }
+        } else {
+            let start = selection.wrappedValue
+            // Not the assistant's page either: it takes the keyboard on appearing.
+            for page in pages where page != start && page != .assistant {
+                guard !Task.isCancelled else { break }
+                module = page
+                try? await Task.sleep(for: .milliseconds(16))
+            }
+            module = tabAfterLaunch ?? start
+            tabAfterLaunch = nil
         }
-        if atLaunch {
-            // The last one drawn, then the pages show.
-            try? await Task.sleep(for: .milliseconds(50))
-            withAnimation(.smooth(duration: 0.3)) { launchLoading = false }
-        }
+        guard atLaunch else { return }
+        // The last one drawn and the toolbar back (laid out under the loading screen), then the
+        // pages show.
+        launchToolbarHidden = false
+        try? await Task.sleep(for: .milliseconds(100))
+        withAnimation(.smooth(duration: 0.3)) { launchLoading = false }
     }
 
     /// The pages: on iPhone the one on screen, with the Ask Ohana bar below it; elsewhere the tab
@@ -254,6 +279,7 @@ struct AppShell: View {
             .tabViewSidebarBottomBar {
                 SidebarSettingsButton(selected: selection.wrappedValue == .settings) { module = .settings }
             }
+            .task { await prebuildPages(context) }
         }
     }
 

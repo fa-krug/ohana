@@ -654,7 +654,9 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   knowledge base, the recipe imports, also waits for `shellPageVisible` and reloads on coming back); at launch every page is built hidden
   behind the loading screen (`launchLoading`, `prebuildPages`, not the search), for a family opened
   later while the family page is open, and one picked before that is built first, then slid in
-  (`AppShell.show`: the page rows leave the slide to it); the pushed-aside pages are one `.geometryGroup()`, or a page shown while aside skips the slide); settings pinned at the sidebar's foot (`tabViewSidebarBottomBar`; on the Mac, which can't leave a tab out of the sidebar alone and draws nothing for a `.hidden` tab, the tab is hidden only while another page is on screen); family switcher: on iPad and Mac
+  (`AppShell.show`: the page rows leave the slide to it); on iPad and the Mac the launch picks each
+  tab once behind it (not the search or the assistant: they take the keyboard), the Mac's toolbar
+  hidden meanwhile; the pushed-aside pages are one `.geometryGroup()`, or a page shown while aside skips the slide); settings pinned at the sidebar's foot (`tabViewSidebarBottomBar`; on the Mac, which can't leave a tab out of the sidebar alone and draws nothing for a `.hidden` tab, the tab is hidden only while another page is on screen); family switcher: on iPad and Mac
   a system `Menu` (`FamilyMenu`) at the top of the sidebar, on iPhone and where the tab view has no
   sidebar (a narrow iPad window) a family page behind the page / the tabs as in Mail (`FamilySidebar.swift`:
   `FamilySidebarHost` slides them away, `AppModel.showsFamilySidebar`; the toolbar's back button
@@ -762,7 +764,9 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   The assistant: `family.ask(prompt, send:, newChat:, attachments:)` opens it ready to type from anywhere (⇧⌘J, the overview's field, the Mac's menu bar item (`MenuBarItem`, an AppKit status item: SwiftUI's `MenuBarExtra` re-sets its icon on every window redraw and crashed the app), the
   `AskOhanaIntent` App Shortcut). The chat (`AssistantChatView`, the same in the panel, the iPhone's
   sheet and the page) has one header everywhere: Chats (the history, pushed; not on the page with its
-  list column), the title, New chat, More (Open as a page, Move to …, Copy, settings). It shows at
+  list column), the title, New chat, More (Open as a page, Move to …, Copy, settings; it never reads
+  `\.dismiss` itself, `AssistantDismissReader` keeps it: on the iPad's page that redrew the chat
+  without end). It shows at
   once: the conversation doesn't wait for the settings (only the composer does), a chat being opened
   shows `AssistantChatSkeleton`, a long one draws its last 40 items (`AssistantItemWindow`, "Show
   earlier messages"); new items animate in by count (never per streamed piece; opacity and a small

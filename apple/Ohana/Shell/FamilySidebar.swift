@@ -37,9 +37,10 @@ struct FamilySidebarHost: ViewModifier {
                     .accessibilityHidden(!open)
             }
             content
-                // Moved as one: without it, a page shown while pushed aside (opened for the first
-                // time) appeared in its place over the family page instead of sliding in.
-                .geometryGroup()
+                // iPhone: moved as one; without it, a page shown while pushed aside (opened for the
+                // first time) appeared in its place over the family page instead of sliding in. Not
+                // around the tab view (iPad): it laid out without end on the assistant's page.
+                .phoneGeometryGroup()
                 .offset(x: active ? progress * width : 0)
                 .allowsHitTesting(!open)
                 .accessibilityHidden(active && open)
@@ -68,6 +69,13 @@ struct FamilySidebarHost: ViewModifier {
             dragged = nil
             app.showsFamilySidebar = opening
         }
+    }
+}
+
+private extension View {
+    /// `geometryGroup()` on iPhone only (`Module.onPhone` never changes, so neither does the view).
+    @ViewBuilder func phoneGeometryGroup() -> some View {
+        if Module.onPhone { geometryGroup() } else { self }
     }
 }
 

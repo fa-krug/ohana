@@ -15,7 +15,10 @@ enum AssistantChatMode {
 /// chat. Put it into a `NavigationStack` (its toolbar and the pushed chat list need one).
 struct AssistantChatView: View {
     @Environment(FamilyContext.self) private var family
-    @Environment(\.dismiss) private var dismiss
+    /// The sheet's dismiss action (iPhone), kept by `AssistantDismissReader`, not read here: on
+    /// the iPad's page `\.dismiss` changes with every update, and read here each change drew the
+    /// whole chat again, whose toolbar changed it again (a loop at full CPU).
+    @State private var dismissBox = AssistantDismissBox()
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -89,6 +92,7 @@ struct AssistantChatView: View {
     var body: some View {
         content
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background { AssistantDismissReader(box: dismissBox) }
             // A bar, not an inset: the chat scrolling under it fades out behind it (the scroll
             // edge effect), instead of running through the title and buttons.
             .safeAreaBar(edge: .top, spacing: 0) { if headerInPanel { panelHeader } }
@@ -235,7 +239,7 @@ struct AssistantChatView: View {
     /// Opens a place of the app: the panel on iPhone gets out of the way.
     private func open(_ route: AppRoute) {
         family.open(route)
-        if isSheet { dismiss() }
+        if isSheet { dismissBox.action?() }
     }
 
     /// Links in answers: the app's own pages (`/f/{id}/…`) open in the app, web links in the
@@ -257,7 +261,7 @@ struct AssistantChatView: View {
         #if os(iOS)
         if isSheet {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Close", systemImage: "xmark") { dismiss() }
+                Button("Close", systemImage: "xmark") { dismissBox.action?() }
             }
             ToolbarItem(placement: .topBarLeading) { chatsButton }
             ToolbarItem(placement: .principal) {
@@ -1248,5 +1252,21 @@ extension AssistantScrollFollow.Metrics {
         offset = geometry.contentOffset.y
         maxOffset = geometry.contentSize.height - geometry.containerSize.height - geometry.contentInsets.top
         visibleHeight = geometry.containerSize.height
+    }
+}
+
+/// Holds the dismiss action for a view that mustn't observe it (`AssistantChatView`).
+final class AssistantDismissBox {
+    var action: DismissAction?
+}
+
+/// Reads `\.dismiss` into a box: only this view is drawn again when it changes.
+private struct AssistantDismissReader: View {
+    let box: AssistantDismissBox
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        let _ = (box.action = dismiss)
+        Color.clear.accessibilityHidden(true)
     }
 }
