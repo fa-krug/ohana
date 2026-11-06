@@ -57,10 +57,13 @@ enum CalendarLayoutRule {
 struct CalendarReveal: Equatable {
     let day: Day
     var center = true
+    /// False for the day a page opens on: it is simply there, not scrolled to.
+    var animated = true
     private let id = UUID()
 
-    init(_ day: Day, center: Bool = true) {
+    init(_ day: Day, center: Bool = true, animated: Bool = true) {
         self.day = day
         self.center = center
+        self.animated = animated
     }
 }

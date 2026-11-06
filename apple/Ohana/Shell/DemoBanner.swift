@@ -39,8 +39,10 @@ struct DemoBanner: View {
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity)
         .background {
+            // Within the strip: a style background reaches into the safe area by default, up behind
+            // the navigation bar, where it covered the large title of a page built out of sight.
             Color.ohana.opacity(0.12)
-                .background(Color.pageBackground)
+                .background(Color.pageBackground, ignoresSafeAreaEdges: [])
         }
         .overlay(alignment: .bottom) { Divider() }
     }

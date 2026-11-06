@@ -20,7 +20,7 @@ struct FamilyHomeAddressView: View {
             if let household = model.household {
                 form(household)
             } else {
-                ProgressView()
+                PageLoadingView()
             }
         }
         .ohanaBackground(ModuleTint.settings)

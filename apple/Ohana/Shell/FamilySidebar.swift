@@ -37,6 +37,9 @@ struct FamilySidebarHost: ViewModifier {
                     .accessibilityHidden(!open)
             }
             content
+                // Moved as one: without it, a page shown while pushed aside (opened for the first
+                // time) appeared in its place over the family page instead of sliding in.
+                .geometryGroup()
                 .offset(x: active ? progress * width : 0)
                 .allowsHitTesting(!open)
                 .accessibilityHidden(active && open)
@@ -124,7 +127,7 @@ private struct FamilySidebar: View {
                     }
                 }
                 Section {
-                    row("Scan letter", systemImage: "doc.text.viewfinder") { family.scanLetter() }
+                    row("Scan letter", systemImage: "doc.text.viewfinder", closes: true) { family.scanLetter() }
                     row(Module.settings.title, systemImage: Module.settings.systemImage) { Module.settings.open() }
                         .listRowBackground(current == .settings ? Color.ohana.opacity(0.15) : nil)
                 }
@@ -157,12 +160,13 @@ private struct FamilySidebar: View {
         .inviteJoinSheet($joining, claimsLinks: !app.isDemo)
     }
 
+    /// `closes`: slides the family page away itself; a page's row leaves that to the shell, which
+    /// slides once the page is built (`AppShell.show`).
     private func row(_ title: LocalizedStringKey, systemImage: String, tint: Color = .ohana,
-                     action: @escaping () -> Void) -> some View {
+                     closes: Bool = false, action: @escaping () -> Void) -> some View {
         Button {
-            // The page first, so the one sliding in is the new one.
             action()
-            close()
+            if closes { close() }
         } label: {
             Label {
                 Text(title)

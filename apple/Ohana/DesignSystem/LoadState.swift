@@ -126,9 +126,7 @@ struct LoadStateView<Value, Content: View>: View {
     var body: some View {
         switch state {
         case .idle, .loading:
-            ProgressView()
-                .controlSize(.large)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            PageLoadingView()
         case let .failed(message):
             ContentUnavailableView {
                 Label("Couldn’t load", systemImage: "exclamationmark.triangle")
@@ -146,6 +144,27 @@ struct LoadStateView<Value, Content: View>: View {
             content(value)
                 .reloadsWhenReconnected(stale: state.isStale, retry)
         }
+    }
+}
+
+/// A page's spinner while it loads: nothing at first (the copy on the device, or a quick answer,
+/// is usually there within a moment), then the spinner fades in. So a page opening doesn't flash
+/// a spinner before its content.
+struct PageLoadingView: View {
+    /// How long the page stays empty before the spinner shows.
+    static let delay: Duration = .milliseconds(400)
+    @State private var shown = false
+
+    var body: some View {
+        ProgressView()
+            .controlSize(.large)
+            .opacity(shown ? 1 : 0)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .task {
+                try? await Task.sleep(for: Self.delay)
+                guard !Task.isCancelled else { return }
+                withAnimation(.easeIn(duration: 0.2)) { shown = true }
+            }
     }
 }
 

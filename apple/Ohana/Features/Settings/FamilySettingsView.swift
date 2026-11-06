@@ -65,7 +65,7 @@ struct FamilySettingsPageView: View {
         content.overlay {
             switch model.state {
             case .idle, .loading:
-                ProgressView().controlSize(.large)
+                PageLoadingView()
             case let .failed(message):
                 ContentUnavailableView {
                     Label("Couldn’t load", systemImage: "exclamationmark.triangle")

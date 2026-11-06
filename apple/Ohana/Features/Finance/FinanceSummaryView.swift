@@ -16,7 +16,7 @@ struct FinanceSummaryView: View {
                 if let summary = store.summary {
                     content(summary)
                 } else {
-                    ProgressView().controlSize(.large).frame(maxWidth: .infinity, minHeight: 240)
+                    PageLoadingView().frame(minHeight: 240)
                 }
             }
             .padding()

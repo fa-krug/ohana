@@ -12,7 +12,7 @@ struct CalendarSettingsView: View {
             if let store {
                 CalendarSettingsContent(store: store)
             } else {
-                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+                PageLoadingView()
             }
         }
         .navigationTitle("Calendar")

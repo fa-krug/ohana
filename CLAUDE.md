@@ -623,7 +623,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `Core/API/ResponseCache.swift` (offline: the last answer of each screen's GET kept under
   Caches per server, `api.cached("/meals/plan")` → `CachedGet` `saved()` / `fetch()`;
   `LoadState.run($state, api.cached(…))` shows the copy at once as `.saved(…, updating:)`,
-  silently (no sync or save indicators anywhere: only errors show, in the error banner), and
+  silently (no sync or save indicators anywhere: only errors show, in the error banner; with nothing
+  to show yet `PageLoadingView`, empty for 0.4 s, then a spinner), and
   keeps it while the server can't be reached (`APIError.isUnreachable`: offline, no answer, a
   gateway's 502–504; any other failure goes to the banner, `showUnlessUnreachable`), loading
   again when the connection is back (`reloadsWhenReconnected`); editing waits for the server's
@@ -650,7 +651,10 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   also after the app was closed), every other page picked on the family page behind it; the pages
   opened are kept, hidden, while another shows (`openedPages`, `shellPageVisible`), so each is
   where it was left, as tabs are (a hidden page still "appears": what polls, the calendar, the
-  knowledge base, the recipe imports, also waits for `shellPageVisible` and reloads on coming back); settings pinned at the sidebar's foot (`tabViewSidebarBottomBar`; on the Mac, which can't leave a tab out of the sidebar alone and draws nothing for a `.hidden` tab, the tab is hidden only while another page is on screen); family switcher: on iPad and Mac
+  knowledge base, the recipe imports, also waits for `shellPageVisible` and reloads on coming back); at launch every page is built hidden
+  behind the loading screen (`launchLoading`, `prebuildPages`, not the search), for a family opened
+  later while the family page is open, and one picked before that is built first, then slid in
+  (`AppShell.show`: the page rows leave the slide to it); the pushed-aside pages are one `.geometryGroup()`, or a page shown while aside skips the slide); settings pinned at the sidebar's foot (`tabViewSidebarBottomBar`; on the Mac, which can't leave a tab out of the sidebar alone and draws nothing for a `.hidden` tab, the tab is hidden only while another page is on screen); family switcher: on iPad and Mac
   a system `Menu` (`FamilyMenu`) at the top of the sidebar, on iPhone and where the tab view has no
   sidebar (a narrow iPad window) a family page behind the page / the tabs as in Mail (`FamilySidebar.swift`:
   `FamilySidebarHost` slides them away, `AppModel.showsFamilySidebar`; the toolbar's back button

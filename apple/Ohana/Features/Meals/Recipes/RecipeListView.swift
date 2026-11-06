@@ -148,7 +148,7 @@ struct RecipeListView: View {
             }
             .padding(.top, 40)
         } else if model.loadedQuery == nil {
-            ProgressView().controlSize(.large).frame(maxWidth: .infinity).padding(.top, 80)
+            PageLoadingView().padding(.top, 80)
         } else if visible.isEmpty && importCards.isEmpty {
             if !key.query.isEmpty {
                 ContentUnavailableView.search(text: key.query).padding(.top, 40)

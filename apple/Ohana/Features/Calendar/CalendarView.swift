@@ -15,7 +15,7 @@ struct CalendarView: View {
             if let store {
                 CalendarPlannerView(store: store)
             } else {
-                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+                PageLoadingView()
             }
         }
         .ohanaBackground(ModuleTint.calendar)
@@ -50,6 +50,9 @@ struct CalendarPlannerView: View {
     @AppStorage(CalendarWeekdayAlignment.key) private var alignWeekdays = false
     @State private var month = Day.today.month
     @State private var reveal: CalendarReveal?
+    /// The list of months has scrolled to the month it opens on: hidden until then, so it
+    /// doesn't show January first and then jump.
+    @State private var listPositioned = false
     /// Which layout the calendar's width allows (nil until measured). Only that, not the width:
     /// a width in the state would draw the whole page again at every step of a resize (the
     /// assistant panel sliding in), its toolbar and menus too.
@@ -194,6 +197,7 @@ struct CalendarPlannerView: View {
                 }
                 .padding(.horizontal)
                 .padding(.top, 8)
+                .opacity(listPositioned ? 1 : 0)
                 let list = monthListHit
                 LazyVStack(alignment: .leading, spacing: 6, pinnedViews: .sectionHeaders) {
                     ForEach(1...12, id: \.self) { m in
@@ -218,16 +222,20 @@ struct CalendarPlannerView: View {
                 .frame(maxWidth: .infinity)
                 .coordinateSpace(.named(CalendarMonthList.space))
                 .modifier(keyboard(enabled: !compact))
+                .opacity(listPositioned ? 1 : 0)
             }
             .refreshable { await store.load() }
             .safeAreaInset(edge: .bottom) { bottomBar(showDetails: true) }
             .task(id: store.year) {
                 try? await Task.sleep(for: .milliseconds(80))
                 proxy.scrollTo(Self.monthID(startDay?.month ?? 1), anchor: .top)
+                listPositioned = true
             }
             .onChange(of: reveal) { _, reveal in
                 guard let reveal, reveal.day.year == store.year else { return }
-                withAnimation { proxy.scrollTo(Self.monthID(reveal.day.month), anchor: reveal.center ? .top : nil) }
+                withAnimation(reveal.animated ? .default : nil) {
+                    proxy.scrollTo(Self.monthID(reveal.day.month), anchor: reveal.center ? .top : nil)
+                }
             }
         }
     }
@@ -300,12 +308,14 @@ struct CalendarPlannerView: View {
                     .refreshable { await store.load() }
                     .task(id: store.year) {
                         try? await Task.sleep(for: .milliseconds(80))
-                        if let day = startDay { reveal = CalendarReveal(day) }
+                        if let day = startDay { reveal = CalendarReveal(day, animated: false) }
                     }
                     .onChange(of: reveal) { _, reveal in
                         guard let reveal, reveal.day.year == store.year else { return }
                         if mode == .year {
-                            withAnimation { proxy.scrollTo(CalendarYearGrid.rowID(reveal.day.month), anchor: reveal.center ? .center : nil) }
+                            withAnimation(reveal.animated ? .default : nil) {
+                                proxy.scrollTo(CalendarYearGrid.rowID(reveal.day.month), anchor: reveal.center ? .center : nil)
+                            }
                         } else {
                             month = reveal.day.month
                         }

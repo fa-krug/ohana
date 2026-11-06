@@ -41,7 +41,7 @@ struct ChoresView: View {
                         .buttonStyle(.glassProminent)
                 }
             } else {
-                ProgressView().controlSize(.large).frame(maxWidth: .infinity, maxHeight: .infinity)
+                PageLoadingView()
             }
         }
         .ohanaBackground(ModuleTint.chores)

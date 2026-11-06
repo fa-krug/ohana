@@ -11,7 +11,7 @@ struct FinanceView: View {
             if let store, store.family === family {
                 FinanceScreen(store: store)
             } else {
-                ProgressView().controlSize(.large).frame(maxWidth: .infinity, maxHeight: .infinity)
+                PageLoadingView()
             }
         }
         .ohanaBackground(ModuleTint.finance)

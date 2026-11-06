@@ -11,7 +11,7 @@ struct FinanceSettingsView: View {
             if let store, store.family === family {
                 FinanceSettingsForm(store: store)
             } else {
-                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+                PageLoadingView()
             }
         }
         .ohanaBackground(ModuleTint.finance)
@@ -58,7 +58,7 @@ struct FinanceSettingsForm: View {
                     Button("Try again") { Task { await store.loadOverview() } }.buttonStyle(.glassProminent)
                 }
             } else {
-                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+                PageLoadingView()
             }
         }
         .reloadsWhenReconnected(stale: store.savedCopy?.updating == false) { await store.loadOverview() }

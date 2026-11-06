@@ -17,9 +17,15 @@ struct AppointmentsView: View {
     private var canEdit: Bool { family.canEdit && !state.isSaved }
 
     var body: some View {
-        LoadStateView(state: state, retry: load) { overview in
-            content(overview)
+        // The scroll view from the start, the spinner inside it: swapped in once loaded, it took the
+        // large title along a moment later, which collapsed.
+        ScrollView {
+            LoadStateView(state: state, retry: load) { overview in
+                content(overview)
+            }
+            .frame(minHeight: state.value == nil ? 280 : nil)
         }
+        .refreshable { await load() }
         .ohanaBackground(ModuleTint.appointments)
         .navigationTitle("Appointments")
         .toolbar {
@@ -84,28 +90,25 @@ struct AppointmentsView: View {
     }
 
     @ViewBuilder private func content(_ overview: AppointmentsOverview) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                if !overview.booked.isEmpty {
-                    bookedSection(overview.booked)
-                }
+        VStack(alignment: .leading, spacing: 24) {
+            if !overview.booked.isEmpty {
+                bookedSection(overview.booked)
+            }
 
-                if overview.searches.isEmpty {
-                    emptyState
-                } else {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 340), spacing: 16, alignment: .top)], spacing: 16) {
-                        ForEach(overview.searches) { search in
-                            AppointmentSearchCard(search: search, canEdit: canEdit, reload: load)
-                                .contextMenu { menu(for: search) }
-                        }
+            if overview.searches.isEmpty {
+                emptyState
+            } else {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 340), spacing: 16, alignment: .top)], spacing: 16) {
+                    ForEach(overview.searches) { search in
+                        AppointmentSearchCard(search: search, canEdit: canEdit, reload: load)
+                            .contextMenu { menu(for: search) }
                     }
                 }
             }
-            .padding()
-            .frame(maxWidth: 1200)
-            .frame(maxWidth: .infinity)
         }
-        .refreshable { await load() }
+        .padding()
+        .frame(maxWidth: 1200)
+        .frame(maxWidth: .infinity)
     }
 
     private var emptyState: some View {
