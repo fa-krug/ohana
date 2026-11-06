@@ -58,7 +58,28 @@ struct AppleCalendarSyncSection: View {
         Toggle("Day entries as all-day events", isOn: Binding(get: { state.entries }, set: { on in
             Task { await sync.setEntries(on, for: family) }
         }))
-        if let error = sync.error(family.api) {
+        let error = sync.error(family.api)
+        let running = sync.isRunning(family.api)
+        LabeledContent("Last synced") {
+            if running {
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text("Syncing…")
+                }
+            } else if let date = state.lastSync {
+                // Re-drawn every few seconds, so "now" turns into "1 minute ago".
+                TimelineView(.periodic(from: .now, by: 10)) { _ in
+                    HStack(spacing: 6) {
+                        Image(systemName: error == nil ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                            .foregroundStyle(error == nil ? .green : .orange)
+                        Text(date, format: .relative(presentation: .named))
+                    }
+                }
+            } else {
+                Text("Never")
+            }
+        }
+        if let error {
             Label(error, systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
         }
         let held = sync.heldBack(family.api)
@@ -68,6 +89,7 @@ struct AppleCalendarSyncSection: View {
                 .foregroundStyle(.orange)
         }
         Button("Sync now", systemImage: "arrow.clockwise") { Task { await sync.sync(family) } }
+            .disabled(running)
         if calendar == nil {
             Button("Pick another calendar", systemImage: "calendar") {
                 Task { if await sync.requestAccess() { prompts.picking = true } }
