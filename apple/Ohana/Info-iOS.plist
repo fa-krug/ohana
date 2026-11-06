@@ -116,6 +116,16 @@
 			<key>UTTypeIdentifier</key>
 			<string>de.fa-krug.ohana.calendar-event</string>
 		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Ohana calendar entry type</string>
+			<key>UTTypeIdentifier</key>
+			<string>de.fa-krug.ohana.calendar-type</string>
+		</dict>
 	</array>
 </dict>
 </plist>

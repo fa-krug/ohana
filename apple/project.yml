@@ -112,6 +112,9 @@ targets:
           - UTTypeIdentifier: de.fa-krug.ohana.calendar-event
             UTTypeDescription: Ohana calendar event
             UTTypeConformsTo: [public.data]
+          - UTTypeIdentifier: de.fa-krug.ohana.calendar-type
+            UTTypeDescription: Ohana calendar entry type
+            UTTypeConformsTo: [public.data]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: de.fa-krug.Ohana
@@ -249,6 +252,9 @@ targets:
             UTTypeConformsTo: [public.data]
           - UTTypeIdentifier: de.fa-krug.ohana.calendar-event
             UTTypeDescription: Ohana calendar event
+            UTTypeConformsTo: [public.data]
+          - UTTypeIdentifier: de.fa-krug.ohana.calendar-type
+            UTTypeDescription: Ohana calendar entry type
             UTTypeConformsTo: [public.data]
     settings:
       base:

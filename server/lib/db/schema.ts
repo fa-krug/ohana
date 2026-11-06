@@ -210,6 +210,8 @@ export const calEntryTypes = sqliteTable(
     position: integer("position").notNull().default(0),
     /** The whole family is away from home on its days: the meal plan leaves them out. */
     away: integer("away", { mode: "boolean" }).notNull().default(false),
+    /** Its days go to Apple Calendar when a device syncs the family's calendar there. */
+    appleSync: integer("apple_sync", { mode: "boolean" }).notNull().default(true),
   },
   (t) => ({ pk: primaryKey({ columns: [t.familyId, t.year, t.id] }) }),
 );

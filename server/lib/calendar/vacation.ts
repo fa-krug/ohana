@@ -132,6 +132,7 @@ export function publicType(t: TypeRow) {
     icon: typeIcon(t),
     position: t.position,
     away: t.away ?? false,
+    appleSync: t.apple_sync ?? true,
   };
 }
 
@@ -148,7 +149,15 @@ export function exportType(t: TypeRow, names: Map<string, string>) {
     icon: t.icon,
     position: t.position,
     away: t.away ?? false,
+    appleSync: t.apple_sync ?? true,
   };
+}
+
+/** Whether a type's days go to Apple Calendar (optional: true). */
+export function cleanAppleSync(v: unknown): boolean {
+  if (v === undefined || v === null) return true;
+  if (typeof v !== "boolean") throw new HttpError(400, "appleSync must be true or false");
+  return v;
 }
 
 /** The optional "away" flag of a type (Ohana's addition; family-planner's files have none). */
@@ -236,6 +245,7 @@ export function parseVacationImport(body: Record<string, unknown>) {
       icon: cleanTypeIcon(t.icon),
       position: Number.isInteger(t.position) ? (t.position as number) : i,
       away: cleanAway(t.away),
+      apple_sync: cleanAppleSync(t.appleSync),
     });
   }
   if (perYear.size > MAX_IMPORT_YEARS) throw new HttpError(400, "Too many years");
@@ -428,6 +438,17 @@ async function types({ db, store, req, url, method, rest, loadWith, now, require
   const types = all.filter((t) => t.year === year);
   if (!write) return json(types.map(publicType));
 
+  if (rest.length === 2 && rest[1] === "order" && method === "POST") {
+    // The year's types in a new order: `ids` lists them all (ids or names), first to last.
+    if (!Array.isArray(body.ids)) throw new HttpError(400, "ids must be an array");
+    const ordered = body.ids.map((ref) => resolveType(types, ref, year));
+    if (new Set(ordered.map((t) => t.id)).size !== ordered.length || ordered.length !== types.length) {
+      throw new HttpError(400, "ids must list each of the year's types once");
+    }
+    await store.upsertTypes(ordered.map((t, position) => ({ ...t, position })));
+    return json((await relisted(year)).map(publicType));
+  }
+
   if (rest.length === 1 && method === "POST") {
     if (types.length >= MAX_TYPES) throw new HttpError(400, "Too many entry types");
     const name = cleanName(body.name);
@@ -447,6 +468,7 @@ async function types({ db, store, req, url, method, rest, loadWith, now, require
       icon: cleanTypeIcon(body.icon),
       position: types.reduce((m, t) => Math.max(m, t.position + 1), 0),
       away: cleanAway(body.away),
+      apple_sync: cleanAppleSync(body.appleSync),
     };
     await store.upsertTypes([type]);
     return json(publicType(await typeIn(year, type.id)), 201);
@@ -462,6 +484,7 @@ async function types({ db, store, req, url, method, rest, loadWith, now, require
       if (body.role !== undefined) next.role = cleanRole(body.role);
       if (body.icon !== undefined) next.icon = cleanTypeIcon(body.icon);
       if (body.away !== undefined) next.away = cleanAway(body.away);
+      if (body.appleSync !== undefined) next.apple_sync = cleanAppleSync(body.appleSync);
       if (body.position !== undefined) {
         if (!Number.isInteger(body.position)) {
           throw new HttpError(400, "position must be an integer");

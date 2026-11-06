@@ -33,6 +33,8 @@ private struct CalendarSettingsContent: View {
     @Bindable var store: CalendarStore
     @State private var editing: CalendarEntryType?
     @State private var deleting: CalendarEntryType?
+    /// The type a dragged one hovers over (Mac).
+    @State private var dropTarget: String?
     @State private var appleSync = AppleCalendarSyncPrompts()
     @State private var holidays = CalendarHolidaysModel()
     @AppStorage("ohana.calendar.showWeekdays") private var alwaysWeekdays = false
@@ -119,6 +121,7 @@ private struct CalendarSettingsContent: View {
             let stats = store.stats
             ForEach(Array(store.types.enumerated()), id: \.element.id) { index, type in
                 typeRow(type, index: index, stats: stats[type.id] ?? CalendarTypeStats())
+                    .listRowBackground(dropTarget == type.id ? Color.accentColor.opacity(0.15) : nil)
             }
             .onMove(perform: store.typesReadOnly ? nil : { from, to in
                 perform { try await store.moveTypes(from: from, to: to) }
@@ -151,7 +154,7 @@ private struct CalendarSettingsContent: View {
             if store.isViewer {
                 Text("Only editors of the family can change entry types.")
             } else {
-                Text("These types belong to \(String(store.year)) – every year has its own.")
+                Text("These types belong to \(String(store.year)) – every year has its own. The switch decides whether a type’s days go to Apple Calendar.")
             }
         }
     }
@@ -167,17 +170,29 @@ private struct CalendarSettingsContent: View {
     }
 
     private func typeRow(_ type: CalendarEntryType, index: Int, stats: CalendarTypeStats) -> some View {
-        Group {
-            if store.typesReadOnly {
-                typeLabel(type, stats: stats)
-            } else {
-                NavigationLink {
-                    CalendarTypeEditor(store: store, type: type).assistantButton()
-                } label: {
-                    typeLabel(type, stats: stats)
-                }
+        // Not a NavigationLink: the row holds the Apple Calendar switch, and on the Mac it is
+        // dragged to reorder (a grouped Form there ignores `onMove`).
+        HStack(spacing: 12) {
+            typeLabel(type, stats: stats)
+                .contentShape(.rect)
+                .onTapGesture { if !store.typesReadOnly { editing = type } }
+                .accessibilityAddTraits(store.typesReadOnly ? [] : .isButton)
+                .accessibilityAction { if !store.typesReadOnly { editing = type } }
+            if type.appleSync != nil {
+                appleSyncToggle(type)
+            }
+            if !store.typesReadOnly {
+                Image(systemName: "chevron.forward")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+                    .contentShape(.rect)
+                    .onTapGesture { editing = type }
+                    .accessibilityHidden(true)
             }
         }
+        #if os(macOS)
+        .modifier(CalendarTypeReorder(store: store, type: type, targeted: $dropTarget))
+        #endif
         .contextMenu {
             if !store.typesReadOnly {
                 Button("Edit", systemImage: "pencil") { editing = type }
@@ -200,6 +215,21 @@ private struct CalendarSettingsContent: View {
             }
         }
         #endif
+    }
+
+    /// Whether the type's days go to Apple Calendar (on the devices that sync the family's
+    /// calendar there); saved at once, for the whole family.
+    private func appleSyncToggle(_ type: CalendarEntryType) -> some View {
+        Toggle("Sync with Apple Calendar", isOn: Binding(get: { type.syncsToApple }, set: { on in
+            perform { try await store.updateType(type.id, CalendarTypePatch(appleSync: on)) }
+        }))
+        .labelsHidden()
+        .toggleStyle(.switch)
+        #if os(macOS)
+        .controlSize(.small)
+        #endif
+        .disabled(store.typesReadOnly)
+        .help("Sync with Apple Calendar")
     }
 
     private func typeLabel(_ type: CalendarEntryType, stats: CalendarTypeStats) -> some View {
@@ -262,6 +292,41 @@ private struct CalendarSettingsContent: View {
     }
 
 }
+
+#if os(macOS)
+/// Drags a type onto another one's place in the list (editors): it takes that place, the ones
+/// between move up or down. `targeted` is the type it hovers over.
+private struct CalendarTypeReorder: ViewModifier {
+    let store: CalendarStore
+    let type: CalendarEntryType
+    @Binding var targeted: String?
+
+    func body(content: Content) -> some View {
+        if store.typesReadOnly {
+            content
+        } else {
+            content
+                .draggable(store.typeDragItem(type)) {
+                    HStack(spacing: 8) {
+                        CalendarTypeBadge(type: type, member: store.member(of: type), size: 18)
+                        Text(type.name)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(.regularMaterial, in: .capsule)
+                }
+                .dropDestination(for: CalendarTypeDragItem.self) { items, _ in
+                    targeted = nil
+                    guard let item = items.first else { return false }
+                    perform { try await store.dropType(item, onto: type.id) }
+                    return true
+                } isTargeted: { over in
+                    if over { targeted = type.id } else if targeted == type.id { targeted = nil }
+                }
+        }
+    }
+}
+#endif
 
 /// Edits one type: name, member (whose color it takes; a nobody's type a color of its own), role,
 /// icon, away; deletes it. A page pushed

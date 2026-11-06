@@ -235,7 +235,8 @@ enum AppleSyncMapping {
         return (read.title == o.title, read.location == o.location, read.note == o.note)
     }
 
-    /// The runs of days with the same type, in `window` (types are per year: a run ends with it).
+    /// The runs of days with the same type, in `window` (types are per year: a run ends with it);
+    /// none of a type kept out of Apple Calendar (`syncsToApple`).
     /// A run is titled "Type (Member)" for a type that belongs to someone (`members`: names by id),
     /// like an event's person in brackets; a new member makes it a new run.
     static func spans(entries: [Day: [String]], types: [Int: [CalendarEntryType]], members: [String: String] = [:],
@@ -247,7 +248,8 @@ enum AppleSyncMapping {
         var out: [AppleSyncSpan] = []
         for (key, list) in days {
             let parts = key.split(separator: "/", maxSplits: 1)
-            guard let year = Int(parts[0]), let type = types[year]?.first(where: { $0.id == String(parts[1]) }) else { continue }
+            guard let year = Int(parts[0]), let type = types[year]?.first(where: { $0.id == String(parts[1]) }),
+                  type.syncsToApple else { continue }
             for run in CalendarMath.runs(list.sorted()) {
                 guard let first = run.first, let last = run.last else { continue }
                 out.append(AppleSyncSpan(typeID: type.id, title: title(type, members: members), first: first, last: last))

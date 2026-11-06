@@ -242,6 +242,7 @@ describe("calendar API", () => {
       icon: "exclamationmark.triangle",
       position: 3,
       away: false,
+      appleSync: true,
     });
     const nobody = await s.call("POST", `/families/${f.id}/types?year=2026`, { name: "School trip", memberId: null });
     expect(nobody.data).toMatchObject({ memberId: null, color: "#8e8e93" });
@@ -261,6 +262,36 @@ describe("calendar API", () => {
     // The colors follow: the owner's types are now four, shaded by position.
     expect(state.types.map((t: any) => t.color)).toEqual([0, 1, 2, 3].map((i) => typeShade(memberColorHex("blue"), i)));
     expect(state.entries).toEqual({});
+  });
+
+  it("reorders a year's types and keeps some out of Apple Calendar", async () => {
+    const s = setup();
+    const f = newFamily(s);
+    const ids = async () => (await s.call("GET", `/families/${f.id}/types?year=2026`)).data.map((t: any) => t.id);
+    expect(await ids()).toEqual(["holiday", "vacation", "sick"]);
+
+    const ordered = await s.call("POST", `/families/${f.id}/types/order?year=2026`, { ids: ["sick", "Holiday", "vacation"] });
+    expect(ordered.status).toBe(200);
+    expect(ordered.data.map((t: any) => [t.id, t.position])).toEqual([["sick", 0], ["holiday", 1], ["vacation", 2]]);
+    expect(await ids()).toEqual(["sick", "holiday", "vacation"]);
+    // Every type once, else nothing changes.
+    for (const body of [{ ids: ["sick", "holiday"] }, { ids: ["sick", "sick", "vacation"] }, { ids: "sick" }]) {
+      expect((await s.call("POST", `/families/${f.id}/types/order?year=2026`, body)).status).toBe(400);
+    }
+    expect((await s.call("POST", `/families/${f.id}/types/order?year=2026`, { ids: ["sick", "holiday", "nope"] })).status).toBe(404);
+    expect((await f.view("POST", `/families/${f.id}/types/order?year=2026`, { ids: ["holiday", "sick", "vacation"] })).status).toBe(403);
+    expect(await ids()).toEqual(["sick", "holiday", "vacation"]);
+
+    const off = await s.call("PATCH", `/families/${f.id}/types/sick?year=2026`, { appleSync: false });
+    expect(off.data.appleSync).toBe(false);
+    expect((await s.call("PATCH", `/families/${f.id}/types/sick?year=2026`, { appleSync: "no" })).status).toBe(400);
+    const created = await s.call("POST", `/families/${f.id}/types?year=2026`, { name: "Private", appleSync: false });
+    expect(created.data).toMatchObject({ appleSync: false, position: 3 });
+    // Copies keep it.
+    const copied = await s.call("POST", `/families/${f.id}/types/copy`, { from: 2026, to: 2027 });
+    expect(copied.data.map((t: any) => [t.id, t.appleSync])).toEqual([
+      ["sick", false], ["holiday", true], ["vacation", true], ["private", false],
+    ]);
   });
 
   it("gives entry types an icon: their own or their role's", async () => {
@@ -535,7 +566,7 @@ describe("calendar API", () => {
     const s = setup();
     const f = newFamily(s);
     await s.call("POST", `/families/${f.id}/types/copy`, { from: 2026, to: 2027 });
-    await s.call("PATCH", `/families/${f.id}/types/sick?year=2027`, { name: "Ill", position: 7, icon: "thermometer" });
+    await s.call("PATCH", `/families/${f.id}/types/sick?year=2027`, { name: "Ill", position: 7, icon: "thermometer", appleSync: false });
     await s.call("POST", `/families/${f.id}/entries`, {
       ops: [
         { types: ["vacation", "sick"], dates: ["2026-08-03"] },

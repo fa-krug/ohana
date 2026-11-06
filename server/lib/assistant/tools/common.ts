@@ -119,6 +119,7 @@ export const PHRASES = {
     typeAdded: (name: string, year: number) => `Added the type “${name}” (${year})`,
     typeChanged: (name: string, year: number) => `Changed the type “${name}” (${year})`,
     typesCopied: (n: number, from: number, to: number) => `Copied ${n} types from ${from} to ${to}`,
+    typesReordered: (year: number) => `Reordered the types of ${year}`,
     categoryAdded: (name: string) => `Added the category “${name}”`,
     categoryChanged: (name: string) => `Changed the category “${name}”`,
     transactions: (n: number) => `${n} ${n === 1 ? "transaction" : "transactions"} changed`,
@@ -134,6 +135,7 @@ export const PHRASES = {
     typeChanged: (name: string, year: number) => `Art „${name}“ geändert (${year})`,
     typesCopied: (n: number, from: number, to: number) =>
       `${n} Arten von ${from} nach ${to} kopiert`,
+    typesReordered: (year: number) => `Arten von ${year} neu sortiert`,
     categoryAdded: (name: string) => `Kategorie „${name}“ hinzugefügt`,
     categoryChanged: (name: string) => `Kategorie „${name}“ geändert`,
     transactions: (n: number) => `${n} ${n === 1 ? "Buchung" : "Buchungen"} geändert`,

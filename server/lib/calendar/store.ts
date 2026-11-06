@@ -43,6 +43,8 @@ export interface TypeRow {
   /** The whole family is away from home on its days (the meal plan skips them).
    *  Optional: family-planner's rows and files have none (false). */
   away?: boolean;
+  /** Its days go to Apple Calendar (the app's sync). Optional: true when left out. */
+  apple_sync?: boolean;
 }
 
 /** A type to write: its color comes from the member (or `color_key`), so a given one is ignored. */
@@ -137,6 +139,7 @@ function withColors(
       icon: t.icon ?? null,
       position: t.position,
       away: t.away,
+      apple_sync: t.appleSync,
     };
   });
 }
@@ -220,6 +223,7 @@ export class DrizzleCalendarStore implements CalendarStore {
           icon: t.icon ?? null,
           position: t.position,
           away: t.away ?? false,
+          appleSync: t.apple_sync ?? true,
         };
         tx.insert(calEntryTypes)
           .values({ familyId: t.family_id, year: t.year, id: t.id, ...set })
@@ -345,6 +349,7 @@ export class DrizzleCalendarStore implements CalendarStore {
               icon: t.icon ?? null,
               position: t.position,
               away: t.away ?? false,
+              appleSync: t.apple_sync ?? true,
             })),
           )
           .run();

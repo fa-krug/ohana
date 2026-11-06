@@ -17051,6 +17051,16 @@
         }
       }
     },
+    "Sync with Apple Calendar": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit Apple Kalender synchronisieren"
+          }
+        }
+      }
+    },
     "Sync with Apple Calendar…": {
       "localizations": {
         "de": {
@@ -18181,12 +18191,12 @@
         }
       }
     },
-    "These types belong to %@ – every year has its own.": {
+    "These types belong to %@ – every year has its own. The switch decides whether a type’s days go to Apple Calendar.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Diese Arten gehören zu %@ – jedes Jahr hat eigene."
+            "value": "Diese Arten gehören zu %@ – jedes Jahr hat eigene. Der Schalter legt fest, ob die Tage einer Art in Apple Kalender übertragen werden."
           }
         }
       }

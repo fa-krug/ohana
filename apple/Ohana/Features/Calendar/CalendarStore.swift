@@ -987,6 +987,7 @@ final class CalendarStore {
             }
             if let icon = patch.icon { types[i].icon = icon ?? types[i].role.defaultIcon }
             if let away = patch.away { types[i].away = away }
+            if let appleSync = patch.appleSync { types[i].appleSync = appleSync }
             if let position = patch.position { types[i].position = position }
         }
         version += 1
@@ -1029,6 +1030,20 @@ final class CalendarStore {
             await load(quiet: true)
             throw error
         }
+    }
+
+    /// A type of the shown year to drag onto another place in the list.
+    func typeDragItem(_ type: CalendarEntryType) -> CalendarTypeDragItem {
+        CalendarTypeDragItem(familyID: api.familyID, year: year, typeID: type.id)
+    }
+
+    /// A dragged type dropped onto `targetID`: it takes that type's place. Another family's or
+    /// year's type is ignored.
+    func dropType(_ item: CalendarTypeDragItem, onto targetID: String) async throws {
+        guard item.familyID == api.familyID, item.year == year,
+              let from = types.firstIndex(where: { $0.id == item.typeID }),
+              let to = types.firstIndex(where: { $0.id == targetID }), from != to else { return }
+        try await moveTypes(from: [from], to: to > from ? to + 1 : to)
     }
 
     func deleteType(_ id: String) async throws {

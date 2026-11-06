@@ -148,7 +148,12 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   of its own (`color_key`, API `colorKey`, shaded per color the same way; none: gray; giving the
   type to a member clears it; the type editor shows the palette for "Nobody"); GET
   `/families/{id}` lists `members` with their colors. Export files name a type's member (matched
-  by name on import) and keep `colorKey`.
+  by name on import) and keep `colorKey`. Order: `position`, `POST /types/order {ids}` (all of the
+  year's, first to last; the assistant's `manage_entry_types` "order", undone the same way); the app
+  drags rows (`onMove`; on the Mac, whose grouped Form ignores it, `CalendarTypeDragItem`).
+  `apple_sync` (API `appleSync`, default true, family-wide; exported, copied with the year): whether
+  the type's days go to Apple Calendar (`AppleSyncMapping.spans` leaves the others out, so turning
+  it off removes their runs there); a switch on each row of Settings → Calendar's types.
   Icons are SF Symbol names the app draws (`icons.ts`): a type's `icon` (null: its role's,
   `ROLE_ICONS`; the API always answers one) and a note's `icon` ("" or a symbol; an import's
   emoji moves into the comment).
@@ -847,7 +852,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   (Ohana wins a conflict; viewers one way), a repeating event as one series (`RepeatRule` ↔
   `EKRecurrenceRule`, master by `calendarItemIdentifier`) whose occurrences changed or deleted on
   their own sync day by day within the window (`AppleSyncException` per original day; one pass more
-  after a series changed as a whole), day entries as all-day runs to Apple only; Ohana's copies
+  after a series changed as a whole), day entries as all-day runs to Apple only (not of types with `appleSync` off); Ohana's copies
   carry `ohana://f/{id}/calendar/{day}?event=|entry=` as their URL and imports keep their
   `externalId`, so devices sharing an iCloud calendar link instead of copying twice.
   The knowledge base on the device (`Core/Knowledge/`, phase 12; editors, module on, not the demo:

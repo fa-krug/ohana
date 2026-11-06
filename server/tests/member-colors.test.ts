@@ -267,7 +267,7 @@ describe("the assistant's manage_entry_types", () => {
     const changed = await run(s, { action: "update", type: "kita", member: null });
     expect(changed.result).toMatchObject({ memberId: null, member: null, color: NEUTRAL_COLOR });
     expect(changed.change!.undo).toEqual([
-      { method: "PATCH", path: "/types/kita?year=2026", body: { name: "Kita", memberId: s.editor.id, colorKey: null, role: "none", icon: null } },
+      { method: "PATCH", path: "/types/kita?year=2026", body: { name: "Kita", memberId: s.editor.id, colorKey: null, role: "none", icon: null, appleSync: true } },
     ]);
     const teal = await run(s, { action: "update", type: "kita", color: "teal" });
     expect(teal.result).toMatchObject({ colorKey: "teal", color: memberColorHex("teal") });
@@ -280,7 +280,23 @@ describe("the assistant's manage_entry_types", () => {
     await expect(run(s, { action: "add", name: "Y", icon: "✈️" })).rejects.toThrow(/SF Symbol/);
     const reset = await run(s, { action: "update", type: "trip", icon: null, role: "covers" });
     expect(reset.result).toMatchObject({ icon: "checkmark.shield" });
-    expect(reset.change!.undo[0].body).toEqual({ name: "Trip", memberId: s.editor.id, colorKey: null, role: "none", icon: "airplane" });
+    expect(reset.change!.undo[0].body).toEqual({ name: "Trip", memberId: s.editor.id, colorKey: null, role: "none", icon: "airplane", appleSync: true });
+  });
+
+  it("keeps a type out of Apple Calendar and reorders the year's types", async () => {
+    const s = setup();
+    const added = await run(s, { action: "add", name: "Private", appleSync: false });
+    expect(added.result).toMatchObject({ appleSync: false });
+    const on = await run(s, { action: "update", type: "private", appleSync: true });
+    expect(on.result).toMatchObject({ appleSync: true });
+    expect(on.change!.undo[0].body).toMatchObject({ appleSync: false });
+
+    const before = (await new DrizzleCalendarStore(s.db).listTypes(s.family.id)).filter((t) => t.year === 2026).map((t) => t.id);
+    const reversed = [...before].reverse();
+    const ordered = await run(s, { action: "order", types: reversed });
+    expect((ordered.result as any[]).map((t) => t.id)).toEqual(reversed);
+    expect(ordered.change!.undo).toEqual([{ method: "POST", path: "/types/order?year=2026", body: { ids: before } }]);
+    await expect(run(s, { action: "order", types: reversed.slice(1) })).rejects.toThrow(/each of 2026's types once/);
   });
 });
 

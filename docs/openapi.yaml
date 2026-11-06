@@ -1665,6 +1665,7 @@ paths:
                   oneOf: [{$ref: "#/components/schemas/SymbolName"}, {type: "null"}]
                   description: "The type's own icon; `null` or left out: its role's (`EntryType.icon`)."
                 away: {type: boolean, default: false}
+                appleSync: {type: boolean, default: true}
       responses:
         "201":
           description: The type.
@@ -1697,6 +1698,38 @@ paths:
       responses:
         "200":
           description: The target year's types.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: "#/components/schemas/EntryType"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/families/{familyId}/types/order:
+    post:
+      tags: [Calendar]
+      operationId: orderEntryTypes
+      summary: Put a year's types in a new order
+      description: "`ids` lists every type of the year once (ids or names), first to last; their positions become 0, 1, 2 … (the colors' shades follow). Answers the year's types."
+      x-ohana-role: editor
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+        - $ref: "#/components/parameters/TypeYear"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                year: {type: [integer, string], description: "YYYY (when not in the query)"}
+                ids: {type: array, items: {type: string}}
+      responses:
+        "200":
+          description: The year's types.
           content:
             application/json:
               schema:
@@ -1742,6 +1775,7 @@ paths:
                   oneOf: [{$ref: "#/components/schemas/SymbolName"}, {type: "null"}]
                   description: "The type's own icon; `null`: back to its role's; left out: kept."
                 away: {type: boolean}
+                appleSync: {type: boolean}
                 position: {type: integer}
       responses:
         "200":
@@ -6254,7 +6288,7 @@ components:
         `covers` (covers a day), `day_off` (no cover needed, e.g. a holiday), `none`.
     EntryType:
       type: object
-      required: [id, year, name, memberId, color, colorKey, role, icon, position, away]
+      required: [id, year, name, memberId, color, colorKey, role, icon, position, away, appleSync]
       properties:
         id: {type: string, pattern: "^[a-z0-9][a-z0-9-]{0,47}$", description: "Unique within the year (made from the name)."}
         year: {type: integer}
@@ -6279,6 +6313,7 @@ components:
             → `sun.max`). Never null.
         position: {type: integer}
         away: {type: boolean, description: "The whole family is away on its days (the meal plan skips them)."}
+        appleSync: {type: boolean, description: "Its days go to Apple Calendar on devices that sync the family's calendar there."}
     EntriesByDay:
       type: object
       description: Day (YYYY-MM-DD) → ids of the entry types on that day.

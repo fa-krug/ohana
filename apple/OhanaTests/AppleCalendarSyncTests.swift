@@ -146,6 +146,17 @@ struct AppleSyncMappingTests {
         ])
     }
 
+    @Test func leavesOutTypesKeptOutOfAppleCalendar() {
+        let types: [Int: [CalendarEntryType]] = [2026: [
+            CalendarEntryType(id: "vac", year: 2026, name: "Vacation", color: "#0f0", role: .covers),
+            CalendarEntryType(id: "shift", year: 2026, name: "Shift", color: "#00f", role: .none, appleSync: false),
+            CalendarEntryType(id: "sick", year: 2026, name: "Sick", color: "#f00", role: .none, appleSync: true),
+        ]]
+        let entries: [Day: [String]] = [d("2026-11-02"): ["vac", "shift", "sick"]]
+        let spans = AppleSyncMapping.spans(entries: entries, types: types, window: window)
+        #expect(spans.map(\.typeID) == ["sick", "vac"])
+    }
+
     @Test func namesTheMemberOfARunsType() {
         let types: [Int: [CalendarEntryType]] = [2026: [
             CalendarEntryType(id: "vac", year: 2026, name: "Vacation", memberId: "p1", color: "#30a46c", role: .covers),

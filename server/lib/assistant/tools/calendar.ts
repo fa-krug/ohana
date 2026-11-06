@@ -11,6 +11,7 @@ import { cleanTypeIcon } from "@/lib/calendar/icons";
 import {
   applyEntryOps,
   applyNoteOps,
+  cleanAppleSync,
   cleanColorKey,
   cleanRole,
   MAX_TYPES,
@@ -291,11 +292,11 @@ export const calendarTools: Record<string, Tool> = {
     spec: {
       name: "manage_entry_types",
       description:
-        `Adds, changes, deletes or copies entry types. Every year has its own types. Each type belongs to a family member (or nobody: member null) and takes its color from theirs; nobody's may have a color of its own (null: gray); icon: an SF Symbol name (null: its role default). "add": name, role, member (name; default: the user), color, icon. "update": type (id or name) and any of name, role, member, color, icon. "delete": type (also deletes its entries in that year; needs confirmed). "copy_year": from and to (years).`,
+        `Adds, changes, deletes or copies entry types. Every year has its own types. Each type belongs to a family member (or nobody: member null) and takes its color from theirs; nobody's may have a color of its own (null: gray); icon: an SF Symbol name (null: its role default); appleSync: whether its days go to Apple Calendar on devices that sync the family's calendar there (default true). "add": name, role, member (name; default: the user), color, icon, appleSync. "update": type (id or name) and any of name, role, member, color, icon, appleSync. "order": types (ids or names, all of the year's, first to last). "delete": type (also deletes its entries in that year; needs confirmed). "copy_year": from and to (years).`,
       parameters: {
         type: "object",
         properties: {
-          action: { type: "string", enum: ["add", "update", "delete", "copy_year"] },
+          action: { type: "string", enum: ["add", "update", "order", "delete", "copy_year"] },
           year: { type: "integer" },
           type: { type: "string" },
           name: { type: "string" },
@@ -303,6 +304,8 @@ export const calendarTools: Record<string, Tool> = {
           color: { type: ["string", "null"] },
           role: { type: "string", enum: ["none", "needs_cover", "covers", "day_off"] },
           icon: { type: ["string", "null"] },
+          appleSync: { type: "boolean" },
+          types: { type: "array", items: { type: "string" } },
           from: { type: "integer" },
           to: { type: "integer" },
           confirmed: { type: "boolean" },
@@ -336,6 +339,7 @@ export const calendarTools: Record<string, Tool> = {
             role: cleanRole(args.role),
             icon: cleanTypeIcon(args.icon),
             position: types.reduce((m, t) => Math.max(m, t.position + 1), 0),
+            apple_sync: cleanAppleSync(args.appleSync),
           };
           await store.upsertTypes([type]);
           return {
@@ -356,6 +360,7 @@ export const calendarTools: Record<string, Tool> = {
           if (args.color !== undefined) next.color_key = cleanColorKey(args.color);
           if (args.role !== undefined) next.role = cleanRole(args.role);
           if (args.icon !== undefined) next.icon = cleanTypeIcon(args.icon);
+          if (args.appleSync !== undefined) next.apple_sync = cleanAppleSync(args.appleSync);
           await store.upsertTypes([next]);
           return {
             result: typeOut(await typeIn(year, next.id), members),
@@ -372,8 +377,26 @@ export const calendarTools: Record<string, Tool> = {
                   colorKey: type.color_key ?? null,
                   role: type.role,
                   icon: type.icon,
+                  appleSync: type.apple_sync ?? true,
                 },
               }],
+            },
+          };
+        }
+        case "order": {
+          if (!Array.isArray(args.types)) throw new HttpError(400, "types must be an array");
+          const ordered = args.types.map((ref) => resolveType(types, ref, year));
+          if (new Set(ordered.map((t) => t.id)).size !== ordered.length || ordered.length !== types.length) {
+            throw new HttpError(400, `types must list each of ${year}'s types once (${types.map((t) => t.name).join(", ")})`);
+          }
+          await store.upsertTypes(ordered.map((t, position) => ({ ...t, position })));
+          return {
+            result: (await store.listTypes(familyId)).filter((t) => t.year === year).map((t) => typeOut(t, members)),
+            summary: `Reordered the types of ${year}`,
+            change: {
+              kind: "types",
+              summary: PHRASES[lang].typesReordered(year),
+              undo: [{ method: "POST", path: `/types/order?year=${year}`, body: { ids: types.map((t) => t.id) } }],
             },
           };
         }
@@ -416,7 +439,7 @@ export const calendarTools: Record<string, Tool> = {
           };
         }
       }
-      throw new HttpError(400, "action must be add, update, delete or copy_year");
+      throw new HttpError(400, "action must be add, update, order, delete or copy_year");
     },
   },
 

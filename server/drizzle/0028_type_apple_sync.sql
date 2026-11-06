@@ -1,0 +1,1 @@
+ALTER TABLE `cal_entry_types` ADD `apple_sync` integer DEFAULT true NOT NULL;
