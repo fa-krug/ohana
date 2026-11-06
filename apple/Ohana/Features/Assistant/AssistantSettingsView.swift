@@ -16,7 +16,7 @@ struct AssistantSettingsView: View {
         Group {
             if family.canEdit {
                 LoadStateView(state: state, retry: load) { settings in
-                    AssistantSettingsForm(settings: settings, hasChanges: $hasChanges) { state = .loaded($0) }
+                    AssistantSettingsForm(settings: settings, inSheet: inSheet, hasChanges: $hasChanges) { state = .loaded($0) }
                 }
             } else {
                 AssistantSettingsViewerView()
@@ -75,6 +75,7 @@ private struct AssistantSettingsViewerView: View {
 private struct AssistantSettingsForm: View {
     @Environment(FamilyContext.self) private var family
     let settings: AssistantSettings
+    let inSheet: Bool
     @Binding var hasChanges: Bool
     let saved: (AssistantSettings) -> Void
 
@@ -107,24 +108,46 @@ private struct AssistantSettingsForm: View {
             || !searchKey.isEmpty
     }
 
+    /// Save in the toolbar, except on the Mac's settings page: a pushed page's confirmation
+    /// action goes to the window toolbar's end, over the assistant panel.
+    private var saveInToolbar: Bool {
+        #if os(macOS)
+        inSheet
+        #else
+        true
+        #endif
+    }
+
+    private var saveButton: some View {
+        Button {
+            Task { await save() }
+        } label: {
+            if busy == .save { ProgressView().controlSize(.small) } else { Text("Save") }
+        }
+        .keyboardShortcut(.defaultAction)
+        .disabled(busy != nil || !dirty)
+    }
+
     var body: some View {
         Form {
             endpointSection
             advancedSection
             searchSection
             permissionsSection
+            if !saveInToolbar {
+                Section {
+                    HStack {
+                        Spacer()
+                        saveButton.buttonStyle(.borderedProminent)
+                    }
+                }
+            }
         }
         .formStyle(.grouped)
         .readableWidth()
         .toolbar {
-            ToolbarItem(placement: .confirmationAction) {
-                Button {
-                    Task { await save() }
-                } label: {
-                    if busy == .save { ProgressView().controlSize(.small) } else { Text("Save") }
-                }
-                .keyboardShortcut(.defaultAction)
-                .disabled(busy != nil || !dirty)
+            if saveInToolbar {
+                ToolbarItem(placement: .confirmationAction) { saveButton }
             }
         }
         .onAppear { apply(settings) }
