@@ -80,6 +80,9 @@ final class AssistantChatStore {
     @ObservationIgnored private(set) var lastTextAt: Date?
     /// A message is on its way to the server.
     private(set) var sending = false { didSet { updateTurn() } }
+    /// Notes or suggestions are being written / added on this device (they're marked answered
+    /// only after that): busy meanwhile, so the card can't be applied twice.
+    private var applying = false
     /// What the turn in the open chat does, as far as this device follows it (`AssistantTurn`).
     private(set) var turn = AssistantTurn.idle
     /// `turn.running` alone, for what shows only that (the ✨ toggle): not drawn again with each step.
@@ -156,8 +159,11 @@ final class AssistantChatStore {
         return store
     }
 
-    /// A turn runs in the open chat (or a message is on its way).
-    var busy: Bool { sending || current?.isRunning == true }
+    /// A turn runs in the open chat (or a message is on its way). A question or edit that waits
+    /// for the user ends the turn on the server, so once one shows the chat isn't busy any more,
+    /// even before the stream says the turn ended (up to a poll later): the card can be answered
+    /// at once, without "Thinking…" under it.
+    var busy: Bool { applying || ((sending || current?.isRunning == true) && pendingWaiting() == nil) }
 
     var isFollowing: Bool { following != nil }
 
@@ -545,8 +551,11 @@ final class AssistantChatStore {
 
     /// The position of the open chat's question, Reminders, calendar or notes edit or suggestions
     /// that wait for the user (the last of them, as on the server: one waits at a time).
-    private func openWaiting() -> Int? {
-        guard let items = current?.items, !busy, savedCopy == nil,
+    private func openWaiting() -> Int? { pendingWaiting() }
+
+    /// See `openWaiting`; `busy` rests on it (an answer sent marks the item answered first).
+    private func pendingWaiting() -> Int? {
+        guard let items = current?.items, savedCopy == nil,
               let index = items.lastIndex(where: \.canWait),
               !items[(index + 1)...].contains(where: \.isUser)
         else { return nil }
@@ -752,6 +761,8 @@ final class AssistantChatStore {
             return .notWaiting
         }
         sending = true
+        applying = true
+        defer { applying = false }
         let results = await AssistantNotesApply.perform(open.edit.ops, notes: knowledgeNotes(),
                                                         folderID: sentKnowledgeFolder)
         if results.contains(where: \.ok) { onChange([.knowledge]) }
@@ -839,6 +850,8 @@ final class AssistantChatStore {
             guard current?.id == chatID, let again = openSuggestions(), again.edit.id == id else { return .notWaiting }
         }
         sending = true
+        applying = true
+        defer { applying = false }
         let results = await AssistantSuggestionsApply.perform(
             open.edit.ops, picks: selected, events: events ?? FamilyEventCreator(api: api),
             reminders: needsReminders ? reminders : nil, defaultListID: needsReminders ? reminders.defaultListID : nil
