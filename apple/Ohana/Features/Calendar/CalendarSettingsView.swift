@@ -60,9 +60,9 @@ private struct CalendarSettingsContent: View {
             let family = family
             store.notify = { area in family.didChange(area) }
         }
-        // A type just added opens in its editor.
-        .navigationDestination(item: $editing) { type in
-            CalendarTypeEditor(store: store, type: type).assistantButton()
+        // A type tapped, or just added, opens in its editor.
+        .sheet(item: $editing) { type in
+            CalendarTypeEditor(store: store, type: type)
         }
         .confirmationDialog(deleteTitle, isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
                             titleVisibility: .visible, presenting: deleting) { type in
@@ -170,8 +170,8 @@ private struct CalendarSettingsContent: View {
     }
 
     private func typeRow(_ type: CalendarEntryType, index: Int, stats: CalendarTypeStats) -> some View {
-        // Not a NavigationLink: the row holds the Apple Calendar switch, and on the Mac it is
-        // dragged to reorder (a grouped Form there ignores `onMove`).
+        // Not a Button: the row holds the Apple Calendar switch, and on the Mac it is dragged to
+        // reorder (a grouped Form there ignores `onMove`). A tap opens the editor (a sheet).
         HStack(spacing: 12) {
             typeLabel(type, stats: stats)
                 .contentShape(.rect)
@@ -180,14 +180,6 @@ private struct CalendarSettingsContent: View {
                 .accessibilityAction { if !store.typesReadOnly { editing = type } }
             if type.appleSync != nil {
                 appleSyncToggle(type)
-            }
-            if !store.typesReadOnly {
-                Image(systemName: "chevron.forward")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-                    .contentShape(.rect)
-                    .onTapGesture { editing = type }
-                    .accessibilityHidden(true)
             }
         }
         #if os(macOS)
@@ -329,8 +321,8 @@ private struct CalendarTypeReorder: ViewModifier {
 #endif
 
 /// Edits one type: name, member (whose color it takes; a nobody's type a color of its own), role,
-/// icon, away; deletes it. A page pushed
-/// from the list of types, with Cancel and Done instead of the back button.
+/// icon, away; deletes it. A sheet over the list of types, with Cancel and Done (pushed, the Mac
+/// put them at the window toolbar's end, over the assistant panel).
 struct CalendarTypeEditor: View {
     let store: CalendarStore
     let type: CalendarEntryType
@@ -352,85 +344,93 @@ struct CalendarTypeEditor: View {
     @State private var loaded = false
 
     var body: some View {
-        Form {
-            Section {
-                TextField("Name", text: $name)
-                    .onChange(of: name) { _, value in suggestIcon(for: value) }
-            } header: {
-                Text("Name")
-            } footer: {
-                if name.trimmingCharacters(in: .whitespaces).isEmpty {
-                    Text("Give it a name.").foregroundStyle(.red)
-                }
-            }
-            Section {
-                memberRow(nil)
-                ForEach(store.members) { memberRow($0) }
-            } header: {
-                Text("Member")
-            }
-            if memberId == nil {
+        NavigationStack {
+            Form {
                 Section {
-                    FamilyColorChoice(selection: colorKey, used: [:]) { color in
-                        colorKey = colorKey == color.rawValue ? nil : color.rawValue
-                    }
+                    TextField("Name", text: $name)
+                        .onChange(of: name) { _, value in suggestIcon(for: value) }
                 } header: {
-                    Text("Color")
+                    Text("Name")
                 } footer: {
-                    Text("Without a color the type is gray. Tap the chosen one again to remove it.")
+                    if name.trimmingCharacters(in: .whitespaces).isEmpty {
+                        Text("Give it a name.").foregroundStyle(.red)
+                    }
+                }
+                Section {
+                    memberRow(nil)
+                    ForEach(store.members) { memberRow($0) }
+                } header: {
+                    Text("Member")
+                }
+                if memberId == nil {
+                    Section {
+                        FamilyColorChoice(selection: colorKey, used: [:]) { color in
+                            colorKey = colorKey == color.rawValue ? nil : color.rawValue
+                        }
+                    } header: {
+                        Text("Color")
+                    } footer: {
+                        Text("Without a color the type is gray. Tap the chosen one again to remove it.")
+                    }
+                }
+                Section {
+                    Picker("Role", selection: $role) {
+                        ForEach(CalendarRole.allCases) { Text($0.title).tag($0) }
+                    }
+                    Toggle("Away", isOn: $away)
+                } footer: {
+                    Text(role.help + "\n" + String(localized: "Away: the whole family is away from home on these days, the meal plan plans no meals for them."))
+                }
+                Section {
+                    LabeledContent("Preview") {
+                        CalendarTypeBadge(name: name, color: previewHex, icon: icon, member: store.member(memberId), size: 28)
+                    }
+                    CalendarSymbolGrid(symbols: CalendarSymbol.typeIcons,
+                                       selection: Binding(get: { icon }, set: { pickedIcon = $0; iconTouched = true }),
+                                       suggested: CalendarSymbol.suggestions(for: name))
+                } header: {
+                    Text("Icon")
+                }
+                Section {
+                    Button("Delete type", role: .destructive) { confirmDelete = true }
                 }
             }
-            Section {
-                Picker("Role", selection: $role) {
-                    ForEach(CalendarRole.allCases) { Text($0.title).tag($0) }
+            .formStyle(.grouped)
+            .readableWidth()
+            .navigationTitle(type.name)
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    CancelButton(hasChanges: hasChanges)
                 }
-                Toggle("Away", isOn: $away)
-            } footer: {
-                Text(role.help + "\n" + String(localized: "Away: the whole family is away from home on these days, the meal plan plans no meals for them."))
-            }
-            Section {
-                LabeledContent("Preview") {
-                    CalendarTypeBadge(name: name, color: previewHex, icon: icon, member: store.member(memberId), size: 28)
-                }
-                CalendarSymbolGrid(symbols: CalendarSymbol.typeIcons,
-                                   selection: Binding(get: { icon }, set: { pickedIcon = $0; iconTouched = true }),
-                                   suggested: CalendarSymbol.suggestions(for: name))
-            } header: {
-                Text("Icon")
-            }
-            Section {
-                Button("Delete type", role: .destructive) { confirmDelete = true }
-            }
-        }
-        .formStyle(.grouped)
-        .readableWidth()
-        .navigationTitle(type.name)
-        .navigationBarBackButtonHidden()
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                CancelButton(hasChanges: hasChanges)
-            }
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Done") { save() }
-                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
-                    .keyboardShortcut(.defaultAction)
-            }
-        }
-        .confirmationDialog("Delete “\(type.name)”?", isPresented: $confirmDelete, titleVisibility: .visible) {
-            Button("Delete", role: .destructive) {
-                perform {
-                    try await store.deleteType(type.id)
-                    dismiss()
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { save() }
+                        .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .keyboardShortcut(.defaultAction)
                 }
             }
-        } message: {
-            let used = store.daysWith(type.id)
-            if used > 0 {
-                Text(CalendarText.usedOn(used, year: store.year))
+            .confirmationDialog("Delete “\(type.name)”?", isPresented: $confirmDelete, titleVisibility: .visible) {
+                Button("Delete", role: .destructive) {
+                    perform {
+                        try await store.deleteType(type.id)
+                        dismiss()
+                    }
+                }
+            } message: {
+                let used = store.daysWith(type.id)
+                if used > 0 {
+                    Text(CalendarText.usedOn(used, year: store.year))
+                }
             }
         }
         .discardGuard(hasChanges: hasChanges)
         .errorBanner()
+        .presentationDetents([.large])
+        #if os(macOS)
+        .frame(minWidth: 480, minHeight: 600)
+        #endif
         .onAppear {
             guard !loaded else { return }
             loaded = true
