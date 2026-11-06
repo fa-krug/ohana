@@ -13,6 +13,8 @@ struct ChoresView: View {
     @Environment(\.scenePhase) private var scenePhase
     /// The day on screen.
     @State private var shown = Day.today
+    /// The last step went to a later day: the list slides in from the trailing edge.
+    @State private var steppedForward = true
     @State private var filter: ChoreFilter = .everyone
     @State private var editing: ChoreEditorTarget?
     @State private var deleting: ChoreItem?
@@ -30,7 +32,12 @@ struct ChoresView: View {
     var body: some View {
         Group {
             if let page = store.page {
-                content(page)
+                // Another day slides in from the side it lies on.
+                ZStack {
+                    content(page)
+                        .id(shown)
+                        .transition(.push(from: steppedForward ? .trailing : .leading))
+                }
             } else if case let .failed(message) = store.phase {
                 ContentUnavailableView {
                     Label("Couldn’t load", systemImage: "exclamationmark.triangle")
@@ -94,9 +101,15 @@ struct ChoresView: View {
 
     // MARK: Day
 
+    private func go(to day: Day) {
+        guard day != shown else { return }
+        steppedForward = day > shown
+        withAnimation(.snappy) { shown = day }
+    }
+
     private var dayBar: some View {
         HStack(spacing: 8) {
-            Button { shown = shown.adding(days: -1) } label: {
+            Button { go(to: shown.adding(days: -1)) } label: {
                 Label("Previous Day", systemImage: "chevron.left").labelStyle(.iconOnly)
             }
             .buttonBorderShape(.circle)
@@ -108,7 +121,7 @@ struct ChoresView: View {
             .buttonStyle(.plain)
             .accessibilityHint(Text("Picks a day"))
             .popover(isPresented: $pickingDay) {
-                DatePicker("Day", selection: Binding(get: { shown.date }, set: { shown = Day($0); pickingDay = false }),
+                DatePicker("Day", selection: Binding(get: { shown.date }, set: { go(to: Day($0)); pickingDay = false }),
                            displayedComponents: .date)
                     .datePickerStyle(.graphical)
                     .labelsHidden()
@@ -117,9 +130,9 @@ struct ChoresView: View {
                     .presentationCompactAdaptation(.popover)
             }
             if shown != today {
-                Button("Today") { shown = today }
+                Button("Today") { go(to: today) }
             }
-            Button { shown = shown.adding(days: 1) } label: {
+            Button { go(to: shown.adding(days: 1)) } label: {
                 Label("Next Day", systemImage: "chevron.right").labelStyle(.iconOnly)
             }
             .buttonBorderShape(.circle)
@@ -156,9 +169,9 @@ struct ChoresView: View {
         Picker("Whose Chores", selection: $filter) { ChoreFilterChoices(people: store.page?.people ?? [], me: store.me) }
             .pickerStyle(.inline)
         Divider()
-        Button("Previous Day") { shown = shown.adding(days: -1) }
-        Button("Next Day") { shown = shown.adding(days: 1) }
-        Button("Today") { shown = today }
+        Button("Previous Day") { go(to: shown.adding(days: -1)) }
+        Button("Next Day") { go(to: shown.adding(days: 1)) }
+        Button("Today") { go(to: today) }
         Divider()
         Button("All Chores") { showAll = true }
     }
@@ -237,11 +250,11 @@ struct ChoresView: View {
             .contextMenu {
                 if canTick {
                     Button(item.done ? "Not Done" : "Done", systemImage: item.done ? "circle" : "checkmark.circle") {
-                        store.toggleDone(item)
+                        withAnimation(.snappy) { store.toggleDone(item) }
                     }
                 }
                 Button(item.subscribed ? "Don’t Notify Me" : "Notify Me", systemImage: item.subscribed ? "bell.slash" : "bell") {
-                    store.subscribe(item.choreId, !item.subscribed)
+                    withAnimation(.snappy) { store.subscribe(item.choreId, !item.subscribed) }
                 }
                 Button(canEdit ? "Edit" : "Show", systemImage: canEdit ? "pencil" : "info.circle") { open(item.choreId) }
                 if canEdit {
@@ -259,12 +272,12 @@ struct ChoresView: View {
             .swipeActions(edge: .leading) {
                 if canTick {
                     Button(item.done ? "Not Done" : "Done", systemImage: item.done ? "arrow.uturn.backward" : "checkmark") {
-                        store.toggleDone(item)
+                        withAnimation(.snappy) { store.toggleDone(item) }
                     }
                     .tint(.green)
                 }
                 Button(item.subscribed ? "Don’t Notify Me" : "Notify Me", systemImage: item.subscribed ? "bell.slash" : "bell") {
-                    store.subscribe(item.choreId, !item.subscribed)
+                    withAnimation(.snappy) { store.subscribe(item.choreId, !item.subscribed) }
                 }
                 .tint(ModuleTint.chores)
             }
@@ -341,6 +354,7 @@ struct ChoreItemRow: View {
             if item.subscribed {
                 Image(systemName: "bell.fill")
                     .foregroundStyle(ModuleTint.chores)
+                    .transition(.symbolEffect(.appear))
                     .accessibilityLabel(Text("Notifies you"))
                     .help(Text("Notifies you"))
             }
@@ -371,15 +385,25 @@ struct ChoreItemRow: View {
         }
     }
 
+    /// Counts the taps that ticked it off here (not a change from elsewhere): the bounce and the
+    /// haptic follow it.
+    @State private var ticked = 0
+
     private var tickButton: some View {
-        Button(action: tick) {
+        Button {
+            if !item.done { ticked += 1 }
+            withAnimation(.snappy) { tick() }
+        } label: {
             Image(systemName: item.done ? "checkmark.circle.fill" : "circle")
                 .font(.title3)
                 .foregroundStyle(item.done ? ModuleTint.chores : .secondary)
+                .contentTransition(.symbolEffect(.replace.magic(fallback: .downUp.byLayer)))
+                .symbolEffect(.bounce, value: ticked)
                 .frame(width: 26)
                 .rowHitTarget()
         }
         .buttonStyle(.borderless)
+        .sensoryFeedback(.success, trigger: ticked)
         .disabled(!canTick)
         .accessibilityLabel(item.done ? Text("Done") : Text("Not done"))
         .accessibilityHint(Text(item.done ? "Opens it again" : "Ticks it off"))

@@ -476,12 +476,15 @@ struct LetterFoundRow: View {
             if item.added {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(.green)
+                    .imageScale(.large)
+                    .transition(.symbolEffect(.appear))
                     .accessibilityLabel(Text("Added"))
             } else {
-                Button(action: toggle) {
+                Button { withAnimation(.snappy) { toggle() } } label: {
                     Image(systemName: item.picked ? "checkmark.circle.fill" : "circle")
                         .foregroundStyle(item.picked ? Color.accentColor : .secondary)
                         .imageScale(.large)
+                        .contentTransition(.symbolEffect(.replace.magic(fallback: .downUp.byLayer)))
                         .contentShape(.rect)
                 }
                 .buttonStyle(.plain)
@@ -528,6 +531,7 @@ struct LetterFoundRow: View {
             .accessibilityHint(item.added ? Text("Added") : Text("Edits it"))
         }
         .opacity(item.picked || item.added ? 1 : 0.6)
+        .animation(.snappy, value: item.added)
         .padding(.vertical, 2)
     }
 }

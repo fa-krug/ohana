@@ -199,6 +199,7 @@ struct FinanceStatTiles: View {
             .foregroundStyle(.secondary)
             // The amount keeps its sign: the color isn't the only hint that it's negative.
             Text(value)
+                .contentTransition(.numericText())
                 .font((inline ? Font.subheadline : .headline).weight(.semibold).monospacedDigit())
                 .foregroundStyle(color)
                 .lineLimit(typeSize.isAccessibilitySize ? nil : 1)
