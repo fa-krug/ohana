@@ -124,7 +124,7 @@ struct AppointmentSlotView: View {
         }
     }
 
-    /// More: Search on Google, Ignore (before the assistant's ✨).
+    /// More: Search on Google, Ignore.
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {
         if let slot = state.value?.slot {
             ToolbarItem(placement: .primaryAction) {

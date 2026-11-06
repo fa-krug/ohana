@@ -18,8 +18,7 @@ struct OverviewView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                // On iPhone the Ask Ohana bar at the bottom takes its place.
-                if family.isEnabled(.assistant), !Module.onPhone { OverviewAskField() }
+                if family.isEnabled(.assistant) { OverviewAskField() }
                 LoadStateView(state: state, retry: load) { dashboard in
                     OverviewGrid(dashboard: dashboard)
                 }
@@ -33,7 +32,7 @@ struct OverviewView: View {
         .navigationTitle("Overview")
         .refreshable { await load() }
         .task(id: reloadKey) { await load() }
-        .navigationDestination(isPresented: $showsWeekAhead) { WeekAheadView().assistantButton() }
+        .navigationDestination(isPresented: $showsWeekAhead) { WeekAheadView().shellPageItems() }
         .onChange(of: family.pendingRoute, initial: true) {
             // The week ahead is pushed; the overview itself pops back to it.
             guard let route = family.takeRoute(for: .overview) else { return }

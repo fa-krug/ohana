@@ -106,7 +106,7 @@ struct MealPlanView: View {
             Text("The meals of these days are planned anew.")
         }
         .navigationDestination(item: $shownRecipe) {
-            MealsRecipeDetailView(recipeID: $0.recipeID, initialServings: $0.servings).assistantButton()
+            MealsRecipeDetailView(recipeID: $0.recipeID, initialServings: $0.servings).shellPageItems()
         }
         .cookPresentation($cooking)
         .overlay(alignment: .bottom) {

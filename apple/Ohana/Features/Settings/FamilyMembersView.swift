@@ -115,7 +115,7 @@ struct FamilyMembersView: View {
         let isSelf = member.userId == household.selfId
         if household.canEdit || isSelf {
             NavigationLink {
-                FamilyMemberPage(model: model, subject: .member(member.userId)).assistantButton()
+                FamilyMemberPage(model: model, subject: .member(member.userId)).shellPageItems()
             } label: {
                 memberLabel(member, isSelf: isSelf)
             }
@@ -148,7 +148,7 @@ struct FamilyMembersView: View {
     private func personRow(_ person: FamilyPerson, household: FamilyHousehold) -> some View {
         if household.canEdit {
             NavigationLink {
-                FamilyMemberPage(model: model, subject: .person(person.id)).assistantButton()
+                FamilyMemberPage(model: model, subject: .person(person.id)).shellPageItems()
             } label: {
                 personLabel(person, household: household)
             }

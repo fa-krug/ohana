@@ -108,7 +108,7 @@ private struct LeadingEdgeSwipe: UIGestureRecognizerRepresentable {
 }
 
 /// The family page: the family on screen under the title, every page in the sidebar's order (not
-/// the assistant: the Ask Ohana bar or the ✨ open it), the one on screen highlighted, scanning a
+/// the assistant: its floating button opens it), the one on screen highlighted, scanning a
 /// letter and the settings last (the families to switch to are there, `FamilyListSection`). It
 /// also shows the invite links the app was opened with (`InviteInbox`).
 private struct FamilySidebar: View {
@@ -185,7 +185,7 @@ private struct FamilySidebar: View {
     }
 
     /// The pages the server has on, in the sidebar's order: the overview, the modules and the
-    /// search (the settings have their own row below; the assistant has the bar or the ✨).
+    /// search (the settings have their own row below; the assistant has its floating button).
     private var pages: [Module] {
         ([.overview] + Module.modules + [.search]).filter { $0 != .assistant && app.isEnabled($0) }
     }

@@ -173,10 +173,10 @@ private struct KnowledgeList: View {
             }
         }
         .navigationDestination(for: KnowledgeDocumentTarget.self) {
-            KnowledgeDocumentView(target: $0).assistantButton()
+            KnowledgeDocumentView(target: $0).shellPageItems()
         }
         // `.id`: another route replaces the pushed page with a fresh one.
-        .navigationDestination(item: $pushed) { KnowledgeDocumentView(target: $0).id($0).assistantButton() }
+        .navigationDestination(item: $pushed) { KnowledgeDocumentView(target: $0).id($0).shellPageItems() }
     }
 
     // MARK: Loading

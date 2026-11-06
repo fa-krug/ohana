@@ -2,10 +2,11 @@ import SwiftUI
 
 /// The frame around a family (the web app's components/shell/app-shell.tsx): the modules as a
 /// sidebar in sections (iPad, Mac; a tab bar on a narrow iPad), the family switcher, the search
-/// across the modules (its own tab, ⌘K), and the assistant as an inspector on the right, ⌘J. On
-/// iPhone there are no tabs: one page at a time, the last one opened (also after the app was
-/// closed), with the family page behind it listing every page (`FamilySidebarHost`), and the
-/// assistant as a sheet from the Ask Ohana bar at the bottom (`AssistantBar`).
+/// across the modules (its own tab, ⌘K), and the assistant: a round button at the bottom right
+/// of every page opening it (⌘J) as a panel floating over the page, a sheet on iPhone
+/// (`AssistantFloating`). On iPhone there are no tabs: one page at a time, the last one opened
+/// (also after the app was closed), with the family page behind it listing every page
+/// (`FamilySidebarHost`).
 struct AppShell: View {
     @Environment(AppModel.self) private var app
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -227,8 +228,9 @@ struct AppShell: View {
         withAnimation(.smooth(duration: 0.3)) { launchLoading = false }
     }
 
-    /// The pages: on iPhone the one on screen, with the Ask Ohana bar below it; elsewhere the tab
-    /// view (a sidebar, or a tab bar on a narrow iPad).
+    /// The pages: on iPhone the one on screen (the assistant's button in its bottom toolbar,
+    /// `ShellPageItems`); elsewhere the tab view (a sidebar, or a tab bar on a narrow iPad), each
+    /// page with the button over it.
     @ViewBuilder
     private func pages(_ context: FamilyContext, assistantOn: Bool) -> some View {
         if Module.onPhone {
@@ -248,8 +250,6 @@ struct AppShell: View {
                 if !openedPages.contains(current) { openedPages.append(current) }
             }
             .task(id: app.showsFamilySidebar) { await prebuildPages(context) }
-            // Not under the settings.
-            .assistantBar(context, enabled: assistantOn && current != .settings)
         } else {
             TabView(selection: selection) {
                 tab(.overview, assistantOn: assistantOn)
@@ -313,11 +313,13 @@ struct AppShell: View {
                 .shellToolbar()
                 .demoBanner()
         }
-        // Not on the assistant's own page (iPad, Mac), nor without the assistant, nor on iPhone:
-        // the Ask Ohana bar is there instead (`AssistantBar`).
-        .environment(\.shellAssistant, item == .assistant || !assistantOn || Module.onPhone
-                     ? nil : $showAssistant)
         .environment(\.shellModule, selection)
+        // iPhone: in each page's bottom toolbar, beside a search field there (`ShellPageItems`).
+        .environment(\.shellAssistant, assistantOn && Module.onPhone ? $showAssistant : nil)
+        // Here, inside the tab, so a narrow iPad's tab bar stays clear. Not on the assistant's own
+        // page.
+        .assistantFloatingButton(isOpen: $showAssistant,
+                                 enabled: assistantOn && item != .assistant && !Module.onPhone)
     }
 }
 
@@ -364,8 +366,8 @@ extension Module {
 }
 
 extension EnvironmentValues {
-    /// The shell's assistant toggle, inside a module's navigation stack (nil elsewhere: sheets
-    /// of their own, the assistant's own page, the iPhone's tabs, which have the Ask Ohana bar).
+    /// iPhone: the shell's assistant sheet, for the button in every page's bottom toolbar (nil
+    /// elsewhere, and without the assistant).
     @Entry var shellAssistant: Binding<Bool>?
     /// The shell's page on screen, inside a module's navigation stack (nil elsewhere): on the Mac
     /// every page there gets the search field (`ShellSearchField`).
@@ -374,56 +376,46 @@ extension EnvironmentValues {
     @Entry var shellPageVisible = true
 }
 
-/// The assistant beside the modules: an inspector (iPad, Mac), a sheet on iPhone. Not an
-/// inspector there too: around the page, even closed, it puts its navigation bar under the
-/// status bar.
+/// The assistant over the modules: a panel floating at the right of the page (iPad, Mac), a sheet
+/// on iPhone and a narrow iPad (`AssistantFloating`). Both are always there, so a size class change
+/// doesn't rebuild the shell.
 private struct AssistantPresentation: ViewModifier {
     @Binding var isPresented: Bool
     /// The server has the assistant on; off, the panel never shows (the views stay as they are,
     /// so turning it on or off doesn't rebuild the shell).
     var enabled = true
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
-    /// What the sheet or inspector shows: never while the assistant is off.
-    private var shown: Binding<Bool> {
-        Binding { enabled && isPresented } set: { isPresented = $0 }
+    /// Floating over the page, rather than a sheet.
+    private var floats: Bool {
+        #if os(iOS)
+        !Module.onPhone && sizeClass != .compact
+        #else
+        true
+        #endif
+    }
+
+    private var sheet: Binding<Bool> {
+        Binding { !floats && enabled && isPresented } set: { isPresented = $0 }
     }
 
     func body(content: Content) -> some View {
-        presentation(content)
+        content
+            .overlay(alignment: .bottomTrailing) {
+                if floats { AssistantFloatingPanel(isOpen: enabled && isPresented) }
+            }
+            .sheet(isPresented: sheet) {
+                AssistantPanel().errorBannerWhenCompact()
+            }
             // Here, not in the shell: what reads the state is drawn again when it changes, and the
             // shell holds every module's page.
             .onChange(of: isPresented) { UserDefaults.standard.set(isPresented, forKey: AppShell.assistantOpenKey) }
     }
-
-    @ViewBuilder
-    private func presentation(_ content: Content) -> some View {
-        #if os(iOS)
-        if UIDevice.current.userInterfaceIdiom == .phone {
-            content.sheet(isPresented: shown) {
-                AssistantPanel().errorBannerWhenCompact()
-            }
-        } else {
-            inspector(content)
-        }
-        #else
-        inspector(content)
-        #endif
-    }
-
-    private func inspector(_ content: Content) -> some View {
-        content.inspector(isPresented: shown) {
-            // Kept while closed, so it opens without being built (and closes without being taken
-            // apart) while it slides; closed, it puts no items in the window's toolbar.
-            AssistantPanel(visible: enabled && isPresented)
-                .errorBannerWhenCompact()
-                .inspectorColumnWidth(min: 320, ideal: 400, max: 560)
-        }
-    }
 }
 
 /// The toolbar every module page gets from the shell: the way to the family page (iPhone: back
-/// to it; a narrow iPad, where the tab view has no sidebar: its sidebar button) and the assistant
-/// toggle (not on iPhone).
+/// to it; a narrow iPad, where the tab view has no sidebar: its sidebar button) and on the Mac the
+/// search field at its end.
 struct ShellToolbar: ViewModifier {
     @Environment(AppModel.self) private var app
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -451,7 +443,7 @@ struct ShellToolbar: ViewModifier {
                 }
                 #endif
             }
-            .assistantButton()
+            .shellPageItems()
             #if os(iOS)
             // The swipe to the family page waits while a page is pushed over a root (a kept page
             // the iPhone hides doesn't count).
@@ -464,32 +456,34 @@ struct ShellToolbar: ViewModifier {
     }
 }
 
-/// The assistant toggle at the top right (`AssistantToolbarToggle`; none where `shellAssistant` is
-/// nil, as on iPhone); on the Mac right of it the search across the modules
-/// (`ShellSearchField`), the page's own items left of both. The shell gives them to the module
-/// roots; a page pushed onto a module's stack adds them itself (a pushed page has its own toolbar).
-struct AssistantButton: ViewModifier {
-    @Environment(\.shellAssistant) private var showAssistant
+/// What the shell adds to every page's toolbar: on the Mac the search across the modules at its end
+/// (`ShellSearchField`), the page's own items left of it; on iPhone the assistant's round button
+/// at the bottom right (`AssistantFloatingButton`), in the bottom toolbar so a search field there
+/// sits beside it, not under it. The shell gives them to the module roots; a page pushed onto a
+/// module's stack adds them itself (a pushed page has its own toolbar).
+struct ShellPageItems: ViewModifier {
     @Environment(\.shellModule) private var module
+    @Environment(\.shellAssistant) private var showAssistant
 
     func body(content: Content) -> some View {
         // From an overlay: toolbar items line up in view order, so the page's own buttons come
-        // first, then the assistant's, then (Mac) the search field at the top right.
+        // first, then the shell's.
         content
             .overlay {
                 Color.clear
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
                     .toolbar {
-                        if let showAssistant {
-                            ToolbarSpacer(.fixed, placement: .primaryAction)
-                            ToolbarItem(placement: .primaryAction) { AssistantToolbarToggle(isOpen: showAssistant) }
-                        }
                         #if os(macOS)
                         if let module {
-                            // Its own capsule, not one with the assistant's button.
                             ToolbarSpacer(.fixed, placement: .primaryAction)
                             ToolbarItem(placement: .primaryAction) { ShellSearchField(module: module) }
+                        }
+                        #else
+                        if let showAssistant {
+                            ToolbarSpacer(.flexible, placement: .bottomBar)
+                            ToolbarItem(placement: .bottomBar) { AssistantFloatingButton(isOpen: showAssistant) }
+                                .sharedBackgroundVisibility(.hidden)
                         }
                         #endif
                     }
@@ -502,8 +496,8 @@ extension View {
         modifier(ShellToolbar())
     }
 
-    func assistantButton() -> some View {
-        modifier(AssistantButton())
+    func shellPageItems() -> some View {
+        modifier(ShellPageItems())
     }
 }
 

@@ -34,8 +34,8 @@ struct AssistantActivityState: Equatable {
     var at: Date
 }
 
-/// What a turn in the open chat does, for what shows it outside the chat (the Ask Ohana bar, the
-/// ✨ toggle): assigned only when it changes, so they aren't drawn again with each piece of text.
+/// What a turn in the open chat does, for what shows it outside the chat (the floating
+/// button): assigned only when it changes, so they aren't drawn again with each piece of text.
 struct AssistantTurn: Equatable {
     /// A turn runs (or a message is on its way).
     var running = false
@@ -85,7 +85,7 @@ final class AssistantChatStore {
     private var applying = false
     /// What the turn in the open chat does, as far as this device follows it (`AssistantTurn`).
     private(set) var turn = AssistantTurn.idle
-    /// `turn.running` alone, for what shows only that (the ✨ toggle): not drawn again with each step.
+    /// `turn.running` alone, for what shows only that (the floating button): not drawn again with each step.
     private(set) var turnRunning = false
     /// Which suggestions the user ticked, per suggestions item (until they're answered; kept here
     /// so a card rebuilt while scrolling keeps them).

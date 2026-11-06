@@ -1,14 +1,14 @@
 import SwiftUI
 
-/// The assistant beside a module: the shell's inspector (⌘J), a sheet on iPhone (web:
-/// chat-panel.tsx in the right sidebar). The chat itself is `AssistantChatView`; the family's
+/// The assistant over a module: the shell's floating panel (⌘J, `AssistantFloatingPanel`), a
+/// sheet on iPhone (web: chat-panel.tsx in the right sidebar). The chat itself is `AssistantChatView`; the family's
 /// chats are kept by `AssistantChatStore`, which follows a running turn live and tells the other
 /// modules what the assistant changed. The assistant's page shows the same store.
 struct AssistantPanel: View {
     @Environment(FamilyContext.self) private var family
     @Environment(\.horizontalSizeClass) private var sizeClass
     @FocusedValue(\.shell) private var shell
-    /// Shown: the inspector keeps the panel while it is closed (`AssistantChatView.visible`).
+    /// Shown: the floating panel is kept while it is closed (`AssistantChatView.visible`).
     var visible = true
     /// On iPhone: full height to type at once; half height keeps the page behind usable.
     @State private var detent: PresentationDetent = .large

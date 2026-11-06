@@ -115,7 +115,7 @@ struct FinanceSettingsForm: View {
             categories
             Section {
                 NavigationLink {
-                    FinanceBenchmarkEditor(store: store).assistantButton()
+                    FinanceBenchmarkEditor(store: store).shellPageItems()
                 } label: {
                     LabeledContent("Statistic average") {
                         Text(store.overview?.benchmark.map { $0.label.isEmpty ? String(localized: "Set, without a source") : $0.label }
@@ -125,7 +125,7 @@ struct FinanceSettingsForm: View {
                 // Only once an import saved one (editors: deleting is all there is to do).
                 if store.canEdit, let saved = store.overview?.mappings, !saved.isEmpty {
                     NavigationLink {
-                        FinanceMappingsView(store: store).assistantButton()
+                        FinanceMappingsView(store: store).shellPageItems()
                     } label: {
                         LabeledContent("Saved bank formats") { Text(saved.count, format: .number) }
                     }

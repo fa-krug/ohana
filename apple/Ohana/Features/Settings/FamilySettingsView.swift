@@ -22,7 +22,7 @@ struct FamilySettingsView: View {
             // The household, for the pages, before one opens.
             .task(id: [family.revision(.family), family.revision(.settings)]) { await model.load(family.api) }
             .navigationDestination(item: $page) { page in
-                FamilySettingsPageView(page: page, model: model).id(page).assistantButton()
+                FamilySettingsPageView(page: page, model: model).id(page).shellPageItems()
             }
             .onChange(of: family.pendingRoute, initial: true) {
                 guard let route = family.takeRoute(for: .settings) else { return }
@@ -263,7 +263,7 @@ private struct FamilySettingsForm: View {
             if app.me?.isAdmin == true, !app.isDemo {
                 Section("Server") {
                     NavigationLink {
-                        AdminView().assistantButton()
+                        AdminView().shellPageItems()
                     } label: {
                         FamilySettingsLabel(title: "Administration", systemImage: "person.badge.shield.checkmark", tint: .indigo)
                     }
@@ -278,7 +278,7 @@ private struct FamilySettingsForm: View {
 
     private func link(_ page: SettingsPage, @ViewBuilder label: () -> some View) -> some View {
         NavigationLink {
-            FamilySettingsPageView(page: page, model: model).assistantButton()
+            FamilySettingsPageView(page: page, model: model).shellPageItems()
         } label: {
             label()
         }
@@ -288,7 +288,7 @@ private struct FamilySettingsForm: View {
     private var accountSection: some View {
         Section {
             NavigationLink {
-                AccountPageView().assistantButton()
+                AccountPageView().shellPageItems()
             } label: {
                 HStack(spacing: 14) {
                     if app.isDemo {
@@ -366,7 +366,7 @@ private struct FamilyGeneralView: View {
 
         Section("Data") {
             NavigationLink {
-                FamilySettingsPageView(page: .data, model: model).assistantButton()
+                FamilySettingsPageView(page: .data, model: model).shellPageItems()
             } label: {
                 FamilySettingsLabel(title: "Export and import", systemImage: "externaldrive.fill", tint: .teal)
             }

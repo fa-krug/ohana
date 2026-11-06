@@ -2,7 +2,7 @@ import PhotosUI
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Where the chat is shown: the panel beside a module (the shell's inspector, a sheet on
+/// Where the chat is shown: the panel over a module (the shell's floating panel, a sheet on
 /// iPhone), or the assistant's own page.
 enum AssistantChatMode {
     case panel, page
@@ -59,6 +59,8 @@ struct AssistantChatView: View {
     @State private var scrollPhase: ScrollPhase = .idle
     /// How tall the last turn is at least (the visible height of the chat, `AssistantTurnLayout`).
     @State private var turnHeight: CGFloat = 0
+    /// How wide the scroll view is (the chat is laid out to it).
+    @State private var chatWidth: CGFloat = 0
     /// The visible height changed with the end in view: back to the end until it is there.
     @State private var pinning = false
     /// The user sent a message: it scrolls to the top once it is in the chat.
@@ -99,6 +101,8 @@ struct AssistantChatView: View {
             .navigationTitle(Text(verbatim: title))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+            // The floating panel's header is its own.
+            .toolbar(headerInPanel ? .hidden : .automatic, for: .navigationBar)
             #endif
             .toolbar { if visible && !headerInPanel { toolbar } }
             .navigationDestination(isPresented: $showChats) {
@@ -276,9 +280,8 @@ struct AssistantChatView: View {
         ToolbarItem(placement: .primaryAction) { moreMenu }
     }
 
-    /// Beside a module (the inspector on Mac and iPad) the panel's buttons are in a header of its
-    /// own, not in the window's toolbar: the toolbar's items came and went with every opening
-    /// and closing of the panel, the slowest part of its sliding in.
+    /// Over a module (the floating panel on Mac and iPad) the panel's buttons are in a header of its
+    /// own, not in the window's toolbar (which isn't above the panel).
     private var headerInPanel: Bool { mode == .panel && !isSheet }
 
     private var panelHeader: some View {
@@ -459,8 +462,16 @@ struct AssistantChatView: View {
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 16)
             .padding(.vertical, AssistantScrollFollow.padding)
-            // Exactly as wide as the scroll view: nothing in the chat can make it pan sideways.
-            .containerRelativeFrame(.horizontal)
+            // Exactly as wide as the scroll view: nothing in the chat can make it pan sideways. Its
+            // own width, not `containerRelativeFrame`: in the floating panel (an overlay) that took
+            // the window's.
+            .frame(width: chatWidth > 0 ? chatWidth : nil)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Its frame, not its scroll geometry: that didn't tell when the panel went from its first,
+        // narrow layout to its width.
+        .onGeometryChange(for: CGFloat.self) { $0.size.width.rounded() } action: { width in
+            if width != chatWidth { chatWidth = width }
         }
         .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
         .scrollPosition($scroll)

@@ -70,7 +70,7 @@ Ohana/
                   LoadState / LoadStateView, ErrorBanner, CancelButton / discardGuard, RemoteImage,
                   Tints (Color.ohana, ModuleTint; shared with the widgets)
   Shell/          RootView, LoadingScreen, ConnectServerView (pairing), DemoBanner, AppShell
-                  (sidebar-adaptable TabView, family switcher, assistant inspector ⌘J), AccountView
+                  (sidebar-adaptable TabView, family switcher, the assistant's floating button and panel ⌘J), AccountView
   Features/       One folder per module: Overview, Calendar, Finance, Meals, Appointments,
                   Assistant, Settings
   Resources/      Assets (app icon, accent color), Localizable.xcstrings (en + de), Demo (demo data)

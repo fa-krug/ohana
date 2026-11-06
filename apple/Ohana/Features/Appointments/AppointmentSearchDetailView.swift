@@ -37,7 +37,7 @@ struct AppointmentSearchDetailView: View {
         .onDisappear { onScreen = false }
         .focusedSceneValue(\.moduleMenu, onScreen && canEdit ? state.value.map { menu($0.search) } : nil)
         .navigationDestination(isPresented: $showHistory) {
-            AppointmentHistoryView(searchID: searchID).assistantButton()
+            AppointmentHistoryView(searchID: searchID).shellPageItems()
         }
         .sheet(isPresented: $editing) {
             if let search = state.value?.search {

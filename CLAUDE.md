@@ -669,27 +669,31 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   on screen, `moduleRootsOnScreen`, so it stays "back" on pushed pages; the family on screen as the
   title's subtitle, every page but the assistant with the one on screen highlighted (Search's ready
   to type), scanning a letter, the settings; the families to switch to with one *Add Family* menu
-  (new / join) are in the settings there, `FamilyListSection`), assistant `.inspector` ⌘J (a `.sheet` on
-  iPhone, `Module.notPages`: an inspector there breaks the page's navigation bar), toggled by the ✨ toggle at the top
-  right of every page (`AssistantToolbarToggle`: tinted while open, breathing while a turn runs):
-  module roots get it from `shellToolbar()`, a page pushed onto a module's stack adds
-  `.assistantButton()`; on iPhone the pages have none: the *Ask Ohana* bar at the bottom (not under the settings), the
-  screen's full width (`.assistantBar`, a glass capsule in a `safeAreaBar`, hidden while the keyboard
-  is up; `Features/Assistant/AssistantBar.swift`, one button → `family.ask()`; while a turn runs its
-  status and the chat's title) takes its place; the bar and the ✨ count as viewers of the chat (`addViewer`), so a turn is followed
+  (new / join) are in the settings there, `FamilyListSection`), the assistant ⌘J: a round button at
+  the bottom right of every page (`Features/Assistant/AssistantFloating.swift`,
+  `AssistantFloatingButton`: the assistant's color, a still dot while a turn runs, an ✕ while open;
+  not on the assistant's own page; on iPad and the Mac an overlay of each tab's page,
+  `.assistantFloatingButton`, hidden on iOS while the keyboard is up; on iPhone in each page's bottom
+  toolbar, so a page's search field (`pageSearchable`, pinned to the bottom bar there) sits beside it,
+  given by `shellPageItems()`, which module roots get from `shellToolbar()` and a page pushed onto a
+  module's stack adds itself) opening a panel floating over the page above it on iPad and the Mac
+  (`AssistantFloatingPanel`, an overlay of the shell, 400 pt, below the page's toolbar: it never
+  resizes the page, opening only scales and fades it) and a `.sheet` on iPhone and a narrow iPad
+  (`Module.notPages`; both presentations always attached, so a size class change doesn't rebuild the
+  shell); the button counts as a viewer of the chat (`addViewer`), so a turn is followed
   to its end after the panel closes; and its own
   page, `AppRoute`: `family.open(.recipe(id:))` etc. switches to the module, whose root takes it
   with `family.takeRoute(for:)`; server paths `/f/{id}/…` and `ohana://f/{id}/…` map onto routes;
   the search tab (`Module.search`, `Tab(role: .search)`; on iPhone a page like the others, ⌘K → `family.startSearch()`,
   `Features/Search/`) opens its hits the same way, a transaction as `.financeTransaction`; on the
   Mac it's no sidebar row but a field at the right end of every page's toolbar, `ShellSearchField`
-  (added with the ✨ by `.assistantButton()`, `family.searchQuery`; typing shows the search page,
-  whose field then takes the keyboard, `searchHandoff`): every toolbar ends the page's items, ✨,
+  (added by `.shellPageItems()`, `family.searchQuery`; typing shows the search page,
+  whose field then takes the keyboard, `searchHandoff`): every toolbar ends the page's items, then
   search; a page's own filter is `.pageSearchable` (on the Mac a field among its items: the
   system's `.searchable` field always goes last)),
   `DesignSystem/` (solid content cards — Liquid Glass only on bars and floating controls —, `.readableWidth()` on every page's list or grouped form (a 760 pt column on wide windows; scroll pages cap their stack with `.frame(maxWidth:)` instead), error banner, `CancelButton`/`discardGuard`; the module sets `newItem`/`moduleMenu` focused values for File ▸ New and its menu; the Mac draws those menus in the menu bar, where views have no `AppModel` / `FamilyContext` in their environment: pass values in, never `@Environment` them there), `Features/<Module>/` (plus `Account/`, `Admin/`).
   On iPhone a page's toolbar stays small (the main action, perhaps a filter, one More menu in
-  sections; the assistant is the bar at the bottom): what doesn't fit iOS moves into an overflow menu of its own, with the page's
+  sections; the assistant is the round button at the bottom): what doesn't fit iOS moves into an overflow menu of its own, with the page's
   More as a submenu, so a full page leaves something out instead (Finance has no search field
   there, only a search button); segmented pickers go under the navigation bar there (`safeAreaBar`, as in
   Meals and Finance), not in it (they can't shrink).
@@ -791,8 +795,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   to a new one once quiet, unless the user picked one); `preload()` (the shell, at start) decides on
   the list's device copy and loads only that chat. A chat's answers are parsed off the main thread
   before it's shown (`AssistantMarkdownCache.prewarm`: its last 40 visible items, in `open` and
-  `fetch`). Few moving parts: the ✨ toggle shows a still dot while a turn runs, the Ask Ohana bar
-  reads only `store.turn` (assigned when it changes), streamed text shows every 80 ms and `activity`
+  `fetch`). Few moving parts: the floating button shows a still dot while a turn runs (it reads only
+  `store.turnRunning`), `store.turn` is assigned only when it changes, streamed text shows every 80 ms and `activity`
   is re-assigned while writing at most once a second (`lastTextAt` has the last piece). Recipes are in Spotlight (`RecipeSpotlight.swift`: every family's,
   after loading the account and after recipe changes; emptied in the demo / with Meals off; a result
   opens `ohana://f/{id}/meals/recipes/{id}`). The recipe list's *Import from Web* sheet
@@ -950,10 +954,12 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   built and uploaded by Xcode Cloud (`apple/ci_scripts/ci_post_clone.sh` runs XcodeGen); version
   from `MARKETING_VERSION` (the plists say `$(MARKETING_VERSION)`), build numbers Xcode Cloud's;
   `Resources/PrivacyInfo.xcprivacy` declares the `UserDefaults` use. Steps in `apple/README.md` → Releasing.
-  Keeping the Mac smooth while the assistant panel slides (each step lays out the whole window):
-  the panel stays in the inspector while closed (`AssistantPanel(visible:)`: closed, no toolbar
-  items, no ask requests, not a viewer of the chat) and has its buttons in a header of its own,
-  not in the toolbar; every page (`AppShell`) and the panel take any size
+  Keeping the Mac smooth: the assistant panel floats over the page instead of an inspector beside it
+  (an inspector laid out the whole window at every step of its slide), stays built while closed
+  (`AssistantPanel(visible:)`: closed, invisible, no hit testing, no toolbar items, no ask requests,
+  not a viewer of the chat) and has its buttons in a header of its own, not in the toolbar; the
+  chat is laid out to its scroll view's measured width (never `containerRelativeFrame`, which in
+  the overlay took the window's); every page (`AppShell`) and the panel take any size
   (`.frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)`), so the window
   doesn't measure them for its smallest size — never a frame or a custom `Layout` around the tab
   view itself (that lays out without end); no `ViewThatFits` in a toolbar; no width in a page's

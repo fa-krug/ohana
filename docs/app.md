@@ -168,8 +168,8 @@ result opens where it lives, a transaction in its editor.
 
 ## The assistant
 
-The ✨ button at the top right of every page opens the assistant next to what you're looking at
-(⌘J on the Mac and iPad keyboards, ⇧⌘J for a new question). On the Mac it's also in the menu bar,
+The round ✨ button at the bottom right of every page opens the assistant over what you're looking
+at (⌘J on the Mac and iPad keyboards, ⇧⌘J for a new question); tap it again to close it. On the Mac it's also in the menu bar,
 and *Ask Ohana* is available as a Shortcut and to Siri.
 
 If you let the app use Reminders, the assistant can read your open reminders (any list) and

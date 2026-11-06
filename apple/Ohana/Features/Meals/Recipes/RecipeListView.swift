@@ -190,7 +190,7 @@ struct RecipeListView: View {
                 }
                 ForEach(visible) { recipe in
                     NavigationLink {
-                        MealsRecipeDetailView(recipeID: recipe.id).assistantButton()
+                        MealsRecipeDetailView(recipeID: recipe.id).shellPageItems()
                     } label: {
                         RecipeCard(recipe: recipe)
                     }

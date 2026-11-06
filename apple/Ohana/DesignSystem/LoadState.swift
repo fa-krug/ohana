@@ -276,7 +276,7 @@ struct ErrorBannerOverlay: ViewModifier {
     }
 }
 
-/// The banner for content that is a sheet only on compact width (an inspector): elsewhere the
+/// The banner for content that is a sheet only on compact width (the assistant's panel): elsewhere the
 /// window's own banner shows above it already.
 struct CompactErrorBanner: ViewModifier {
     @Environment(\.horizontalSizeClass) private var sizeClass

@@ -86,7 +86,7 @@ struct ChoresView: View {
         }
         .onChange(of: store.page) { openPending() }
         .navigationDestination(isPresented: $showAll) {
-            ChoresAllView(filter: $filter).assistantButton()
+            ChoresAllView(filter: $filter).shellPageItems()
         }
         .sheet(item: $editing) { target in
             ChoreEditorHost(target: target, filter: filter, day: shown)

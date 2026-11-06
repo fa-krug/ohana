@@ -134,7 +134,7 @@ struct MealsView: View {
         .onDisappear { onScreen = false }
         .focusedSceneValue(\.moduleMenu, onScreen ? ModuleMenu(title: "Meals") { sectionCommands } : nil)
         .navigationDestination(item: $shownRecipe) {
-            MealsRecipeDetailView(recipeID: $0.recipeID, initialServings: $0.servings).assistantButton()
+            MealsRecipeDetailView(recipeID: $0.recipeID, initialServings: $0.servings).shellPageItems()
         }
         .navigationDestination(isPresented: $managingTags) { MealTagsPage() }
         .cookPresentation($cooking)
@@ -182,7 +182,7 @@ private struct MealTagsPage: View {
             .environment(\.mealsOnScreen, onScreen && pageVisible)
             .onAppear { onScreen = true }
             .onDisappear { onScreen = false }
-            .assistantButton()
+            .shellPageItems()
     }
 }
 

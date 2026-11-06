@@ -23,7 +23,7 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
         #endif
     }
 
-    /// What isn't a page of its own on iPhone: the assistant (a sheet there, the Ask Ohana bar's).
+    /// What isn't a page of its own on iPhone: the assistant (a sheet there, from the floating button).
     static var notPages: [Module] {
         onPhone ? [.assistant] : []
     }
