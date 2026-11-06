@@ -224,6 +224,7 @@ private struct AssistantSettingsForm: View {
                         .foregroundStyle(test.ok ? .green : .red)
                 }
                 .font(.callout)
+                .transition(.symbolEffect(.appear).combined(with: .opacity))
             }
         } header: {
             Text("AI model")
@@ -403,9 +404,9 @@ private struct AssistantSettingsForm: View {
         do {
             let r = try await family.api.send(.post, "/ai/test", body: Empty(), as: AssistantTestResult.self)
             let reply = r.reply.isEmpty ? "…" : r.reply
-            test = (true, String(localized: "\(r.model) answered: \(reply)"))
+            withAnimation(.snappy) { test = (true, String(localized: "\(r.model) answered: \(reply)")) }
         } catch {
-            test = (false, error.localizedDescription)
+            withAnimation(.snappy) { test = (false, error.localizedDescription) }
         }
     }
 

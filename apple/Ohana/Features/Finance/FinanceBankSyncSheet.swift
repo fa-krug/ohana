@@ -69,6 +69,8 @@ struct FinanceBankSyncSheet: View {
     var body: some View {
         NavigationStack {
             Form { content }
+                // One step gives way to the next (the bank asks, then done) without a jump.
+                .animation(.snappy, value: screen)
                 .formStyle(.grouped)
                 .readableWidth()
                 .navigationTitle(full ? String(localized: "Import All Transactions") : account.label)
@@ -119,6 +121,19 @@ struct FinanceBankSyncSheet: View {
 
     // MARK: States
 
+    /// Which of the states below shows (the TAN's kind too: push or typed).
+    private var screen: String {
+        if !started { return "intro" }
+        if problem != nil { return "problem" }
+        guard let sync else { return "progress" }
+        switch sync.status {
+        case .failed: return "failed"
+        case .done: return "done"
+        case .tan: if let tan = sync.tan { return "tan-" + tan.type.rawValue } else { return "progress" }
+        default: return "progress"
+        }
+    }
+
     @ViewBuilder
     private var content: some View {
         if !started {
@@ -135,8 +150,11 @@ struct FinanceBankSyncSheet: View {
             Section {
                 VStack(spacing: 12) {
                     ProgressView().controlSize(.large)
-                    Text(sync?.progressText(bank: bank) ?? String(localized: "Connecting to \(bank)…"))
+                    let step = sync?.progressText(bank: bank) ?? String(localized: "Connecting to \(bank)…")
+                    Text(step)
                         .foregroundStyle(.secondary)
+                        .contentTransition(.opacity)
+                        .animation(.snappy, value: step)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 24)

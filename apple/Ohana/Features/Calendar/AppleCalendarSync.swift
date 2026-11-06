@@ -202,6 +202,7 @@ final class AppleCalendarSync {
 
     func error(_ api: FamilyAPI) -> String? { Self.key(api).flatMap { errors[$0] } }
     func heldBack(_ api: FamilyAPI) -> Int { Self.key(api).flatMap { heldBack[$0] } ?? 0 }
+    func isRunning(_ api: FamilyAPI) -> Bool { Self.key(api).map { running.contains($0) } ?? false }
 
     // MARK: When it runs
 

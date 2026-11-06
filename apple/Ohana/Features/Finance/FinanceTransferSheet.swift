@@ -71,12 +71,15 @@ struct FinanceTransferSheet: View {
         func account(_ t: FinanceTransaction) -> String { store.account(t.accountId)?.name ?? String(localized: "Without account") }
         let title = [pair.out.payee, pair.out.description, pair.incoming.payee, pair.incoming.description].first { !$0.isEmpty } ?? "—"
         return Button {
-            if on { checked.remove(pair.id) } else { checked.insert(pair.id) }
+            withAnimation(.snappy) {
+                if on { checked.remove(pair.id) } else { checked.insert(pair.id) }
+            }
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: on ? "checkmark.circle.fill" : "circle")
                     .foregroundStyle(on ? ModuleTint.finance : .secondary)
                     .font(.title3)
+                    .contentTransition(.symbolEffect(.replace.magic(fallback: .downUp.byLayer)))
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title).lineLimit(1)

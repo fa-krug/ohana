@@ -159,6 +159,8 @@ struct AssistantChatRow: View {
         HStack(spacing: 10) {
             Image(systemName: isOpen ? "bubble.left.fill" : "bubble.left")
                 .foregroundStyle(isOpen ? ModuleTint.assistant : .secondary)
+                .contentTransition(.symbolEffect(.replace))
+                .animation(.snappy, value: isOpen)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: chat.title)

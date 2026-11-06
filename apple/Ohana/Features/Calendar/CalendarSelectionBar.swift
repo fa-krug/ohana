@@ -187,6 +187,8 @@ struct CalendarSelectionBar: View {
                 Text(CalendarText.selectionSummary(days))
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
+                    .contentTransition(.numericText())
+                    .animation(.snappy, value: days)
             }
         } else if !store.readOnly && selections < Self.hintedSelections {
             Text(calendarTouchInput ? LocalizedStringKey("Tap a day to select it – long-press and drag for a range.")
@@ -211,6 +213,9 @@ struct CalendarSelectionBar: View {
                 line.font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
         }
+        // Days added or taken away: the count rolls.
+        .contentTransition(.numericText())
+        .animation(.snappy, value: days)
     }
 
     /// One day: its note (the icon in the theme color), holidays, events and birthdays in a line

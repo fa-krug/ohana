@@ -722,9 +722,11 @@ struct AssistantEditOpRow: View {
                 Image(systemName: result.ok ? "checkmark" : "exclamationmark.circle.fill")
                     .font(.caption.bold())
                     .foregroundStyle(result.ok ? Color.green : .red)
+                    .transition(.symbolEffect(.appear))
                     .accessibilityLabel(result.ok ? Text("Done") : Text("Failed"))
             }
         }
+        .animation(.snappy, value: result?.ok)
         .font(.callout)
         .opacity(declined || result?.isDeclined == true ? 0.6 : 1)
         .accessibilityElement(children: .combine)
@@ -853,15 +855,19 @@ struct AssistantSuggestionRow: View {
     let toggle: () -> Void
 
     var body: some View {
-        if open {
-            Button(action: toggle) { content }
-                .buttonStyle(.plain)
-                .disabled(!enabled)
-                .accessibilityAddTraits(picked ? .isSelected : [])
-                .accessibilityHint(Text("Ticks or unticks it"))
-        } else {
-            content
+        Group {
+            if open {
+                Button { withAnimation(.snappy) { toggle() } } label: { content }
+                    .buttonStyle(.plain)
+                    .disabled(!enabled)
+                    .accessibilityAddTraits(picked ? .isSelected : [])
+                    .accessibilityHint(Text("Ticks or unticks it"))
+            } else {
+                content
+            }
         }
+        // Answered: the tick gives way to how it went.
+        .animation(.snappy, value: open)
     }
 
     private var faded: Bool { declined || result?.isDeclined == true }
@@ -871,6 +877,7 @@ struct AssistantSuggestionRow: View {
             if open {
                 Image(systemName: picked ? "checkmark.circle.fill" : "circle")
                     .foregroundStyle(picked ? ModuleTint.assistant : .secondary)
+                    .contentTransition(.symbolEffect(.replace.magic(fallback: .downUp.byLayer)))
                     .accessibilityHidden(true)
             }
             Image(systemName: line.icon)
@@ -941,10 +948,13 @@ struct AssistantEditOutcome: View {
             if applied {
                 Image(systemName: failed ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
                     .foregroundStyle(failed ? Color.orange : .green)
+                    .transition(.symbolEffect(.appear))
             } else if answer != nil {
                 Image(systemName: "xmark.circle")
+                    .transition(.symbolEffect(.appear))
             }
         }
+        .animation(.snappy, value: answer?.applied)
         .font(.caption)
         .foregroundStyle(.secondary)
     }

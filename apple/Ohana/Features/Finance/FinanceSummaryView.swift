@@ -22,6 +22,9 @@ struct FinanceSummaryView: View {
             .padding()
             .frame(maxWidth: 1200)
             .frame(maxWidth: .infinity)
+            // Another period: the numbers roll and the charts grow into the new values.
+            .animation(.snappy, value: store.summary)
+            .animation(.snappy, value: store.comparisons)
         }
         .task { await store.loadSummary() }
     }
@@ -183,6 +186,7 @@ struct FinanceComparisonCard: View {
         VStack(alignment: .trailing, spacing: 1) {
             if let value {
                 Text(store.money(value, sign: row.id == "net", whole: true))
+                    .contentTransition(.numericText())
                     .font(row.strong || first ? .subheadline.weight(.semibold).monospacedDigit() : .subheadline.monospacedDigit())
                     .foregroundStyle(row.id == "net" && value < 0 ? .red : first || row.strong ? .primary : .secondary)
                 if !first, let delta = delta(row, base: current, value: value) {
@@ -294,6 +298,7 @@ struct FinanceBenchmarkCard: View {
                 Spacer()
                 VStack(alignment: .trailing, spacing: 1) {
                     Text(row.cents.map { store.money($0, whole: true) } ?? "—")
+                        .contentTransition(.numericText())
                         .font(.subheadline.weight(.semibold).monospacedDigit())
                     if let standing {
                         let tone = standing.tone(higherIsGood: row.higherIsGood)
@@ -398,6 +403,7 @@ struct FinanceMonthlyChart: View {
                     Text(store.money(m.expenseCents))
                     Text(store.money(net, sign: true)).foregroundStyle(net < 0 ? .red : .primary)
                 }
+                .contentTransition(.numericText())
                 .font(.subheadline.monospacedDigit())
                 .lineLimit(1)
                 .accessibilityElement(children: .combine)
@@ -573,6 +579,7 @@ struct FinanceCategoryBreakdown: View {
             VStack(spacing: 0) {
                 Text(income ? String(localized: "Income") : String(localized: "Expenses")).font(.caption).foregroundStyle(.secondary)
                 Text(store.money(total, whole: true)).font(.headline.monospacedDigit())
+                    .contentTransition(.numericText())
             }
         }
     }
@@ -623,7 +630,9 @@ struct FinanceBreakdownRowView: View {
                     .lineLimit(1)
                 Spacer()
                 Text(store.money(row.cents)).font(.subheadline.monospacedDigit())
+                    .contentTransition(.numericText())
                 Text(verbatim: "\(share) %").font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                    .contentTransition(.numericText())
                     .frame(minWidth: 40, alignment: .trailing)
             }
             .accessibilityElement(children: .combine)

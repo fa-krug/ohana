@@ -106,9 +106,12 @@ struct ChoresAllView: View {
                 if chore.subscribed {
                     Image(systemName: "bell.fill")
                         .foregroundStyle(ModuleTint.chores)
+                        .transition(.symbolEffect(.appear))
                         .accessibilityLabel(Text("Notifies you"))
                 }
             }
+            .animation(.snappy, value: chore.done)
+            .animation(.snappy, value: chore.subscribed)
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
