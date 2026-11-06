@@ -195,6 +195,20 @@ extension AssistantAttachments {
         return data
     }
 
+    /// Pasted text this long (characters or lines) is attached as a text file, as in Claude's
+    /// app; shorter text goes into the field.
+    static let pastedTextChars = 1_000
+    static let pastedTextLines = 10
+
+    static func isLongPaste(_ text: String) -> Bool {
+        text.count >= pastedTextChars || text.split(separator: "\n", omittingEmptySubsequences: false).count >= pastedTextLines
+    }
+
+    /// Pasted text as a text file.
+    static func pastedText(_ text: String) -> AssistantPendingAttachment {
+        AssistantPendingAttachment(kind: "file", name: String(localized: "Pasted text.txt"), text: cut(text))
+    }
+
     /// A text file that was cut to what the server takes.
     static func wasCut(_ attachment: AssistantPendingAttachment) -> Bool {
         attachment.kind == "file" && (attachment.text?.hasSuffix("\n…(cut off)") ?? false)
@@ -211,13 +225,14 @@ nonisolated struct AssistantPastedImage: Transferable {
 }
 
 #if os(macOS)
-/// What ⌘V brings into the chat on the Mac: image files copied in the Finder, or a picture (a
-/// screenshot). Nil when the clipboard holds text (or files that aren't images): the composer
-/// pastes it as usual.
+/// What ⌘V brings into the chat on the Mac: image files copied in the Finder, a picture (a
+/// screenshot), or long text (as a file, `isLongPaste`). Nil for shorter text (or files that
+/// aren't images): the composer pastes it as usual.
 enum AssistantPasteboard {
     enum Content: Equatable {
         case files([URL])
         case image(Data)
+        case text(String)
     }
 
     static func content(_ pasteboard: NSPasteboard = .general) -> Content? {
@@ -226,7 +241,9 @@ enum AssistantPasteboard {
             let images = urls.filter { AssistantAttachments.kind(of: $0) == "image" }
             return images.isEmpty ? nil : .files(images)
         }
-        if pasteboard.string(forType: .string) != nil { return nil }
+        if let text = pasteboard.string(forType: .string) {
+            return AssistantAttachments.isLongPaste(text) ? .text(text) : nil
+        }
         if let data = pasteboard.data(forType: .png) ?? pasteboard.data(forType: .tiff) { return .image(data) }
         return nil
     }

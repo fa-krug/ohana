@@ -159,6 +159,39 @@ describe("AI settings", () => {
     expect((await home.call("PUT", `${home.ai}/settings`, { baseUrl: "http://localhost:11434/v1" })).status).toBe(200);
   });
 
+  it("sends the stored key only to the stored endpoint", async () => {
+    const sent: [string, string | null][] = [];
+    const spy = ((input: string | URL | Request, init?: RequestInit) => {
+      const url = input instanceof Request ? input.url : String(input);
+      sent.push([new URL(url).host, new Headers(init?.headers).get("authorization")]);
+      return fakeFetch(input, init);
+    }) as typeof fetch;
+    const t = family({ modelNet: { fetch: spy, resolve: () => Promise.resolve(["93.184.216.34"]) } });
+    await t.call("PUT", `${t.ai}/settings`, { baseUrl: AI, apiKey: KEY, model: "mock-small" });
+    // Asking another URL about its models: no key, unless it comes along. (The test always
+    // uses the saved settings.)
+    await t.call("POST", `${t.ai}/models`, { baseUrl: "https://elsewhere.test/v1" });
+    await t.call("POST", `${t.ai}/test`, { baseUrl: "https://elsewhere.test/v1" });
+    await t.call("POST", `${t.ai}/models`, { baseUrl: "https://elsewhere.test/v1", apiKey: "sk-other-123456789" });
+    // The stored endpoint gets the stored key (the same URL written another way too).
+    await t.call("POST", `${t.ai}/models`, { baseUrl: `${AI}/` });
+    await t.call("POST", `${t.ai}/test`);
+    expect(sent).toEqual([
+      ["elsewhere.test", null],
+      ["mock.test", `Bearer ${KEY}`],
+      ["elsewhere.test", "Bearer sk-other-123456789"],
+      ["mock.test", `Bearer ${KEY}`],
+      ["mock.test", `Bearer ${KEY}`],
+    ]);
+    // Saving the same URL keeps the key; another URL without a key removes it.
+    await t.call("PUT", `${t.ai}/settings`, { baseUrl: AI, model: "mock-large" });
+    expect((await t.call("GET", `${t.ai}/settings`)).data.hasKey).toBe(true);
+    await t.call("PUT", `${t.ai}/settings`, { baseUrl: "https://elsewhere.test/v1" });
+    expect((await t.call("GET", `${t.ai}/settings`)).data.hasKey).toBe(false);
+    await t.call("PUT", `${t.ai}/settings`, { baseUrl: AI, apiKey: KEY });
+    expect((await t.call("GET", `${t.ai}/settings`)).data.hasKey).toBe(true);
+  });
+
   it("lists the endpoint's models and tests the connection", async () => {
     const t = family();
     // The form can ask before anything is saved.

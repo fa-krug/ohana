@@ -5,6 +5,7 @@
 
 import type { Db } from "@/lib/db";
 import { AuthError } from "@/lib/auth/errors";
+import { assertTokenScope } from "@/lib/auth/token-scope";
 import { type AuthToken, type User, findToken, touchToken } from "@/lib/auth/tokens";
 import { errorResponse } from "./family-api";
 import { HttpError, json, readBody } from "./http";
@@ -28,6 +29,8 @@ export function apiAuth(db: Db, req: Request, now: Date): { user: User; token: A
   const match = /^Bearer\s+(\S+)$/i.exec(req.headers.get("authorization") ?? "");
   const found = match ? findToken(db, match[1], "api", now) : null;
   if (!found) throw new AuthError(401, "A valid API token is required (Authorization: Bearer …).");
+  // The account, the administration and invites are no family's: never an agent token's.
+  assertTokenScope(found.token, null);
   touchToken(db, found.token, now);
   if (found.user.onboardingStep === "SET_CREDENTIALS") throw new HttpError(403, "Set your password first");
   return found;

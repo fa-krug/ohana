@@ -209,12 +209,16 @@ struct AssistantComposerTests {
         #expect(Window.hidden([], start: 0, page: 3) == 0)
     }
 
-    @Test func offersAnExampleWithAnIconForEveryPage() {
-        for page in AssistantPages.all + ["knowledge"] {
-            let examples = AssistantPages.examples(page)
-            #expect(examples.count == 2)
-            #expect(examples.allSatisfy { !$0.icon.isEmpty && !$0.text.isEmpty })
-        }
+    @Test func attachesLongPastedTextAsAFile() {
+        #expect(!AssistantAttachments.isLongPaste("Hi"))
+        #expect(!AssistantAttachments.isLongPaste(String(repeating: "a", count: 999)))
+        #expect(AssistantAttachments.isLongPaste(String(repeating: "a", count: 1_000)))
+        #expect(!AssistantAttachments.isLongPaste(Array(repeating: "line", count: 9).joined(separator: "\n")))
+        #expect(AssistantAttachments.isLongPaste(Array(repeating: "line", count: 10).joined(separator: "\n")))
+        let file = AssistantAttachments.pastedText("Some text")
+        #expect(file.kind == "file")
+        #expect(file.text == "Some text")
+        #expect(file.name.hasSuffix(".txt"))
     }
 
     @Test func namesTheProviderOfAnAPIURL() {

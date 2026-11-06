@@ -251,3 +251,92 @@ Accounts: \`POST ${f}/accounts\` \`{"name", "color": "#22c55e", "icon", "opening
 (its transactions are deleted too).
 `;
 }
+
+// ---- the prompt for an outside agent (POST /families/{id}/agent/token) ----
+
+/** Where the API is described (the website's copy describes the latest Ohana). */
+export const OPENAPI_URL = "https://ohana.fa-krug.de/openapi.yaml";
+export const API_REFERENCE_URL = "https://ohana.fa-krug.de/api-reference.html";
+
+export interface AgentPromptInput {
+  /** Public API base, e.g. https://ohana.example/api/v1 */
+  base: string;
+  family: { id: string; name: string };
+  /** Whether the user who asks is only a viewer. */
+  readOnly: boolean;
+  /** Today as YYYY-MM-DD. */
+  today: string;
+  /** The agent token and when it expires. */
+  token: string;
+  expiresAt: Date;
+  /** The server's modules that are on (`enabledModules()`). */
+  modules: readonly string[];
+}
+
+/** Where each module's data starts (paths below the family). */
+const MODULE_PATHS: Record<string, (year: string, today: string) => string> = {
+  calendar: (year) =>
+    `calendar: the family path itself with \`?year=${year}\` (entry types, day entries, notes, events), \`/events?from=&to=\``,
+  finance: (year) => `finance: \`/finance\` (accounts, categories), \`/finance/transactions?from=${year}-01-01&to=${year}-12-31\``,
+  meals: () => "meals: `/meals/plan`, `/meals/recipes`, `/meals/shopping`",
+  chores: (_, today) => `chores: \`/chores\`, \`/chores/agenda?from=${today}&to=${today}&today=${today}\``,
+  appointments: () => "doctor appointments: `/appointments`",
+  knowledge: () => "knowledge base (the family's paperwork): `/knowledge/documents?q=`",
+};
+
+/** The Markdown prompt the app copies for an outside AI agent: the token, the family, the API
+ *  basics and where the schema is. Compact: it is pasted into a chat. */
+export function buildAgentPrompt(input: AgentPromptInput): string {
+  const { base, family, readOnly, today, token, expiresAt, modules } = input;
+  const s = `${base}/families/${family.id}`;
+  const expires = `${expiresAt.toISOString().slice(0, 16).replace("T", " ")} UTC`;
+  const year = today.slice(0, 4);
+  // The knowledge base is for editors only (viewers get 404 there).
+  const areas = modules
+    .filter((m) => MODULE_PATHS[m] && !(readOnly && m === "knowledge"))
+    .map((m) => `  - ${MODULE_PATHS[m](year, today)}`);
+  const access = readOnly
+    ? "**read-only**: the user is a viewer of this family, so every change is refused (403). Only read and answer questions; an editor of the family can make them an editor."
+    : "**read and write**, as the user (an editor of this family), except members, people, invites, " +
+      "notification channels, the assistant's settings and deleting the family: those stay with the app (403).";
+
+  return `# Ohana: access to the family “${family.name}”
+
+You are helping me with my family's data in Ohana (calendar, finances, meals, chores, …) through
+its HTTP API. Today is ${today}. Talk to me in my language.
+
+## Access
+
+- API base: ${base}
+- Family: “${family.name}”, id \`${family.id}\`; every path is under \`${s}\`
+- Token: \`${token}\`
+- Send it with every request: \`Authorization: Bearer <token>\`. Don't show it to anyone or
+  write it into files.
+- It expires at ${expires} (valid for 1 hour) and works only for this family's API. After
+  that (401), ask me to copy a new prompt from the Ohana app.
+- Access: ${access}
+
+## First steps
+
+1. Read the family's instructions: \`GET ${s}/agent\` (Markdown: how the calendar works, its
+   entry types with ids, finance conventions, example requests).
+2. The full API: the OpenAPI schema ${OPENAPI_URL} (readable: ${API_REFERENCE_URL}). It
+   describes the latest Ohana; this server's version is at \`GET ${base}/server\`.
+
+## Conventions
+
+- JSON in and out (\`content-type: application/json\`); errors are \`{"error": "…"}\` with a 4xx status.
+- Dates are \`YYYY-MM-DD\`; money is integer cents (\`-4599\` = −45.99, negative = money out).
+- Where things are (paths below the family's):
+  - overview of today and the coming days: \`/overview?today=${today}\`; search: \`/search?q=…&today=${today}\`
+${areas.join("\n")}
+- Read the current state before changing anything and check the result afterwards. Ask me
+  before bigger changes (many items, deleting, renaming); small, clearly asked ones are fine.
+
+## Example (with \`OHANA_TOKEN\` set to the token)
+
+\`\`\`sh
+curl -s "${s}/overview?today=${today}" -H "authorization: Bearer $OHANA_TOKEN"
+\`\`\`
+`;
+}

@@ -45,12 +45,24 @@ export interface AppTokenDto {
   lastUsedAt: Date | null;
   /** The token of the request: this device's. */
   current: boolean;
+  /** When it stops working (an agent token's hour); null: never. */
+  expiresAt: Date | null;
+  /** An agent token's family: it only works for that family's API. Null: the whole account's. */
+  familyId: string | null;
 }
 
 const WRONG_PASSWORD = "Current password is incorrect.";
 
 function tokenDto(row: AuthToken, currentId: string): AppTokenDto {
-  return { id: row.id, name: row.name, createdAt: row.createdAt, lastUsedAt: row.lastUsedAt, current: row.id === currentId };
+  return {
+    id: row.id,
+    name: row.name,
+    createdAt: row.createdAt,
+    lastUsedAt: row.lastUsedAt,
+    current: row.id === currentId,
+    expiresAt: row.expiresAt,
+    familyId: row.familyId,
+  };
 }
 
 function tokensOf(c: AppCtx): AppTokenDto[] {

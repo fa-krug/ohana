@@ -2773,16 +2773,6 @@
         }
       }
     },
-    "Ask me anything about your family’s plans, for example:": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Frag mich alles zu den Plänen deiner Familie, zum Beispiel:"
-          }
-        }
-      }
-    },
     "Ask me anything…": {
       "localizations": {
         "de": {
@@ -4715,12 +4705,32 @@
         }
       }
     },
+    "Copied": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopiert"
+          }
+        }
+      }
+    },
     "Copied.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Kopiert."
+          }
+        }
+      }
+    },
+    "Copies instructions for an AI agent, with access to the family for one hour.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopiert Anweisungen für einen KI-Agenten, mit Zugang zur Familie für eine Stunde."
           }
         }
       }
@@ -4741,6 +4751,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kopieren / Ausschneiden / Einsetzen. Auf eine größere Auswahl eingesetzt, werden die kopierten Tage wiederholt, bis sie gefüllt ist."
+          }
+        }
+      }
+    },
+    "Copy Prompt for AI Agent": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prompt für KI-Agenten kopieren"
           }
         }
       }
@@ -7325,16 +7345,6 @@
         }
       }
     },
-    "Find a dermatologist appointment before June.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Such mir einen Hautarzttermin vor Juni."
-          }
-        }
-      }
-    },
     "Find recipes, calendar events and notes, transactions, appointment searches, people and chats.": {
       "localizations": {
         "de": {
@@ -8041,16 +8051,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wie viele Tokens das Modell auf einmal verarbeitet. Leer: aus der Modellliste der API, wenn sie es angibt, sonst 128.000. Lange Chats werden zusammengefasst, bevor es voll ist."
-          }
-        }
-      }
-    },
-    "How much did we spend on groceries this year, per month?": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wie viel haben wir dieses Jahr pro Monat für Lebensmittel ausgegeben?"
           }
         }
       }
@@ -9465,16 +9465,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lange drücken + ziehen"
-          }
-        }
-      }
-    },
-    "Look up next year’s public holidays here and add them to the calendar.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Such die Feiertage des nächsten Jahres heraus und trag sie in den Kalender ein."
           }
         }
       }
@@ -12707,6 +12697,16 @@
         }
       }
     },
+    "Pasted text.txt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eingefügter Text.txt"
+          }
+        }
+      }
+    },
     "Pause": {
       "localizations": {
         "de": {
@@ -13043,16 +13043,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Diese Tage neu planen …"
-          }
-        }
-      }
-    },
-    "Plan next week’s meals without fish.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Plane das Essen für nächste Woche ohne Fisch."
           }
         }
       }
@@ -13427,16 +13417,6 @@
         }
       }
     },
-    "Puts it in the message field": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Setzt es ins Nachrichtenfeld"
-          }
-        }
-      }
-    },
     "Puzzle": {
       "localizations": {
         "de": {
@@ -13743,16 +13723,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Beleg"
-          }
-        }
-      }
-    },
-    "Recent": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zuletzt"
           }
         }
       }
@@ -15557,16 +15527,6 @@
         }
       }
     },
-    "Set up this year’s entry types: day care closed, each parent’s vacation and public holidays.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Leg die Arten für dieses Jahr an: Kita geschlossen, Urlaub für jedes Elternteil und Feiertage."
-          }
-        }
-      }
-    },
     "Set up your first plan to get cooking!": {
       "localizations": {
         "de": {
@@ -15653,16 +15613,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Einladungslink teilen"
-          }
-        }
-      }
-    },
-    "Share this week’s chores fairly between the children.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verteile die Aufgaben dieser Woche fair unter den Kindern."
           }
         }
       }
@@ -16297,16 +16247,6 @@
         }
       }
     },
-    "Sort our uncategorized transactions into categories.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ordne unsere Buchungen ohne Kategorie passenden Kategorien zu."
-          }
-        }
-      }
-    },
     "Sorted ^[%lld transaction](inflect: true) into categories": {
       "localizations": {
         "de": {
@@ -16817,16 +16757,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Unterkategorie von %@"
-          }
-        }
-      }
-    },
-    "Suggest categories for our finances and add them.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Schlag Kategorien für unsere Finanzen vor und leg sie an."
           }
         }
       }
@@ -17927,6 +17857,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Die Fotos konnten nicht gemacht werden: %@"
+          }
+        }
+      }
+    },
+    "The prompt’s access works for one hour.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Zugang im Prompt gilt eine Stunde."
           }
         }
       }
@@ -19601,16 +19541,6 @@
         }
       }
     },
-    "What do we need to buy for this week’s meals?": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Was müssen wir für die Gerichte dieser Woche einkaufen?"
-          }
-        }
-      }
-    },
     "What do you want to ask?": {
       "localizations": {
         "de": {
@@ -19817,36 +19747,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Welcher"
-          }
-        }
-      }
-    },
-    "Which chores are overdue, and whose are they?": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Welche Aufgaben sind überfällig, und wessen sind sie?"
-          }
-        }
-      }
-    },
-    "Which days this year still need cover, and who could take them?": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Welche Tage brauchen dieses Jahr noch Betreuung, und wer könnte sie übernehmen?"
-          }
-        }
-      }
-    },
-    "Which searches found something, and what is the earliest slot?": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Welche Suchen haben etwas gefunden, und was ist der früheste Termin?"
           }
         }
       }

@@ -206,8 +206,7 @@ final class AssistantChatStore {
     func preload() async {
         // The settings beside the chats and the latest chat: neither waits for the other.
         async let settingsLoaded: Void = loadSettingsIfNeeded()
-        // Decided on the list's copy on the device; the server's list after it (the welcome's
-        // recent chats).
+        // Decided on the list's copy on the device; the server's list after it (the chat list).
         await restoreLatest(follow: false)
         if !chatsLoaded { await loadChats() }
         await settingsLoaded
@@ -945,8 +944,7 @@ final class AssistantChatStore {
 
     /// Each time the assistant shows. The first time in a session it opens on the latest chat if
     /// that still runs or was active in the last `within` (the conversation goes on where it
-    /// was), else on a new chat with the recent chats on its welcome: a long chat isn't laid out
-    /// only to be left. Later, a chat opened that way which the user hasn't left meanwhile gives
+    /// was), else on a new chat: a long chat isn't laid out only to be left. Later, a chat opened that way which the user hasn't left meanwhile gives
     /// way to a new chat once it has gone quiet.
     func restoreLatest(within: TimeInterval = reopenWithin, now: Date = .now, follow: Bool = true) async {
         guard !restoredLatest else {

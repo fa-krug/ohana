@@ -17,7 +17,15 @@ export function hashToken(token: string): string {
 
 export function createToken(
   db: Db,
-  args: { userId: string; kind: TokenKind; name?: string; canReset?: boolean; ttlMs?: number | null },
+  args: {
+    userId: string;
+    kind: TokenKind;
+    name?: string;
+    canReset?: boolean;
+    ttlMs?: number | null;
+    /** An agent token: only this family's API (`token-scope.ts`). */
+    familyId?: string | null;
+  },
   now: Date,
 ): { token: string; row: AuthToken } {
   const token = PREFIX[args.kind] + randomBytes(32).toString("base64url");
@@ -34,6 +42,7 @@ export function createToken(
       canReset: args.canReset ?? false,
       createdAt: now,
       expiresAt: ttl === null ? null : new Date(now.getTime() + ttl),
+      familyId: args.familyId ?? null,
     })
     .returning()
     .get();

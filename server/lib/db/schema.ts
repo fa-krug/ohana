@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  type AnySQLiteColumn,
   blob,
   check,
   foreignKey,
@@ -45,6 +46,9 @@ export const authTokens = sqliteTable(
     createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
     lastUsedAt: integer("last_used_at", { mode: "timestamp" }),
     expiresAt: integer("expires_at", { mode: "timestamp" }),
+    /** An agent token (an API token the app mints for an outside AI agent, 1 hour): it only
+     *  works for this family's API (`lib/auth/token-scope.ts`). Null: the whole account's. */
+    familyId: text("family_id").references((): AnySQLiteColumn => families.id, { onDelete: "cascade" }),
   },
   (t) => ({
     authTokensUserKindIdx: index("auth_tokens_user_kind_idx").on(t.userId, t.kind),

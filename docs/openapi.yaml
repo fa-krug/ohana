@@ -18,6 +18,15 @@ info:
       `ohana://auth-callback?token=…`) or with `POST /api/v1/me/tokens`. The account routes
       (`/api/v1/me…`, `/api/v1/admin/…`, `/api/v1/invites/…`, `POST /api/v1/families`) accept
       **only** an API token.
+    * **Agent tokens** (`POST /api/v1/families/{familyId}/agent/token`): API tokens for an
+      outside AI agent that expire after one hour and are scoped to one family (`familyId` in
+      the token list). They work only for `GET /api/health`, `GET /api/v1/server` and
+      `/api/v1/families/{familyId}[/…]` of their family, with the user's role there, except
+      that they can't change members, people, invites, notification channels or the
+      assistant's settings (`/household/members|people|invites|notifications…`,
+      `/ai/settings|models|test`) or delete the family (403); every other route (the account, the administration, invites, other families, new families,
+      images) answers 403 "This token only works for the family's API.", and they can't
+      create tokens.
     * **Session cookie** (`cookieAuth`): `ohana_session`, set by the server's sign-in pages.
       The family routes accept it too. A request authenticated by the cookie that changes
       something (any method but GET/HEAD) must be same-origin (`Origin` / `Referer` of the
@@ -4843,6 +4852,43 @@ paths:
               schema: {type: string}
         "401": {$ref: "#/components/responses/Unauthorized"}
         "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/families/{familyId}/agent/token:
+    post:
+      tags: [Assistant]
+      operationId: createAgentToken
+      summary: A one-hour token and a prompt for an outside AI agent
+      description: >-
+        Creates an agent token for the caller: an API token named "AI agent" that expires after
+        one hour and works only for this family's API (`/api/v1/families/{familyId}[/…]`, plus
+        `GET /api/v1/server` and `/api/health`), with the caller's role (a viewer's agent only
+        reads; an editor's can't change members, people, invites, notification channels or the
+        assistant's settings, or delete the family: 403). It is listed with the account's API tokens (`familyId`, `expiresAt`) and can be
+        revoked there. `prompt` is Markdown (English) to paste into the agent: the API base, the
+        family, the token and its expiry, the conventions, where the OpenAPI schema is and the
+        family's instructions (`GET …/agent`). The app's assistant offers it as *Copy Prompt for
+        AI Agent*. Off with the assistant module. A request signed in with an agent token gets
+        403: an agent can't extend its own access. The body is ignored.
+      x-ohana-role: viewer
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+      responses:
+        "201":
+          description: The token (shown once), when it expires, and the prompt.
+          headers:
+            Cache-Control:
+              schema: {type: string, enum: [no-store]}
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [token, expiresAt, prompt]
+                properties:
+                  token: {type: string, description: "The secret; send it as `Authorization: Bearer <token>`."}
+                  expiresAt: {type: string, format: date-time}
+                  prompt: {type: string, description: "Markdown for the agent; contains the token."}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
   /api/v1/families/{familyId}/ai/settings:
     parameters:
       - $ref: "#/components/parameters/FamilyId"
@@ -4862,7 +4908,8 @@ paths:
       summary: Change the AI settings (only the fields given)
       description: >-
         `baseUrl` is an OpenAI-compatible API (private addresses only when the server allows
-        them). Keys are stored encrypted; `apiKey: ""` removes the key. Saving makes the
+        them). Keys are stored encrypted; `apiKey: ""` removes the key, and so does another
+        `baseUrl` without an `apiKey` (the key belongs to its endpoint). Saving makes the
         knowledge base's failed cards wait for the worker again.
       x-ohana-role: editor
       requestBody:
@@ -4881,6 +4928,9 @@ paths:
       tags: [AI settings]
       operationId: listAiModels
       summary: The endpoint's models (may try an unsaved URL / key)
+      description: >-
+        Without `baseUrl` the saved endpoint. The saved key goes only to the saved endpoint:
+        another `baseUrl` gets the `apiKey` sent with it, or none.
       x-ohana-role: editor
       parameters:
         - $ref: "#/components/parameters/FamilyId"
@@ -5515,6 +5565,8 @@ components:
       description: >-
         An API token: `Authorization: Bearer <token>`. Created by pairing the app
         (`/device/pair`) or with `POST /api/v1/me/tokens`; the server stores only its hash.
+        An agent token (`POST /api/v1/families/{familyId}/agent/token`) works for one hour and
+        only for its family's routes.
     cookieAuth:
       type: apiKey
       in: cookie
@@ -5683,7 +5735,8 @@ components:
     Forbidden:
       description: >-
         A viewer asked for a change ("You can only view this family"), a cross-origin cookie
-        write, or an account that must set its password first (`{error}`).
+        write, an account that must set its password first, or an agent token outside its
+        family (`{error}`).
       content:
         application/json:
           schema: {$ref: "#/components/schemas/Error"}
@@ -6149,6 +6202,15 @@ components:
         createdAt: {type: string, format: date-time}
         lastUsedAt: {type: [string, "null"], format: date-time}
         current: {type: boolean, description: "The token of this request."}
+        expiresAt:
+          type: [string, "null"]
+          format: date-time
+          description: When it stops working (an agent token's hour); null = never.
+        familyId:
+          type: [string, "null"]
+          description: >-
+            An agent token's family: it works only for that family's API. Null: the whole
+            account's.
     AccountOverview:
       type: object
       required: [user, passkeys, tokens, sessions]

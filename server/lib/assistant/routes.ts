@@ -20,7 +20,10 @@ import { DrizzleFinanceStore, type TransactionRow } from "@/lib/finance/store";
 import { type SecretBox, getSecretBox } from "@/lib/secrets";
 import { eq } from "drizzle-orm";
 import { families } from "@/lib/db/schema";
-import { buildAgentDoc } from "./agent";
+import { AGENT_TOKEN_NAME, AGENT_TOKEN_TTL_MS } from "@/lib/auth/token-scope";
+import { createToken } from "@/lib/auth/tokens";
+import { enabledModules } from "@/lib/server-info";
+import { buildAgentDoc, buildAgentPrompt } from "./agent";
 import { mealTagNames } from "./tools/meals";
 import type { Lookups } from "./tools/common";
 import { matchSimilar, type Search, suggestCategories } from "./categorize";
@@ -157,6 +160,9 @@ function cleanKey(v: unknown, field: string): string {
 export function handleAi(env: AiEnv): FamilyRoute {
   return (ctx) => {
     if (ctx.rest.length === 1 && ctx.rest[0] === "agent" && ctx.method === "GET") return agent(ctx);
+    if (ctx.rest.length === 2 && ctx.rest[0] === "agent" && ctx.rest[1] === "token" && ctx.method === "POST") {
+      return agentToken(ctx);
+    }
     if (ctx.rest[0] !== "ai") return null;
     if (ctx.rest[1] === "chats") {
       return handleChats(ctx, env, async (familyId) => {
@@ -190,13 +196,19 @@ async function getSettings({ load }: Ctx, env: AiEnv) {
 
 /** PUT /ai/settings {baseUrl, apiKey ("" removes it), model, searchProvider, searchKey,
  *  allowWrites, contextWindow (tokens, 0: from the endpoint), imageModel ("" = no recipe
- *  photos)}: only the fields given change. Saving lets the knowledge base's failed cards be made
+ *  photos)}: only the fields given change; another baseUrl without an apiKey removes the key. Saving lets the knowledge base's failed cards be made
  *  again. */
 async function putSettings({ req, load }: Ctx, env: AiEnv) {
   const { family } = await load("edit");
   const body = await readBody(req);
   const row = await loadRow(env.store, family.id);
-  if (body.baseUrl !== undefined) row.base_url = await cleanBaseUrl(body.baseUrl, env);
+  if (body.baseUrl !== undefined) {
+    const baseUrl = await cleanBaseUrl(body.baseUrl, env);
+    // The stored key belongs to its endpoint: another URL gets it only with the key again (else
+    // an editor, who never sees the key, could send it to a server of their own).
+    if (baseUrl !== row.base_url && body.apiKey === undefined) row.api_key_enc = "";
+    row.base_url = baseUrl;
+  }
   if (body.model !== undefined) {
     if (typeof body.model !== "string" || body.model.length > 200) {
       throw new HttpError(400, "model must be a string (max. 200)");
@@ -242,7 +254,10 @@ async function putSettings({ req, load }: Ctx, env: AiEnv) {
 async function provider(row: AiSettingsRow, env: AiEnv, override: Record<string, unknown> = {}): Promise<Provider> {
   const baseUrl = override.baseUrl !== undefined ? await cleanBaseUrl(override.baseUrl, env) : row.base_url;
   if (!baseUrl) throw new HttpError(400, "Enter the URL of an OpenAI-compatible API first");
-  const apiKey = override.apiKey ? cleanKey(override.apiKey, "apiKey") : openKey(env, row.api_key_enc);
+  // The stored key only for the stored endpoint: another URL gets the key it comes with, or none.
+  const apiKey = override.apiKey
+    ? cleanKey(override.apiKey, "apiKey")
+    : baseUrl === row.base_url ? openKey(env, row.api_key_enc) : "";
   return { baseUrl, apiKey, model: row.model };
 }
 
@@ -472,4 +487,30 @@ async function agent({ db, store, publicBase, loadWith }: Ctx): Promise<Response
   return new Response(doc, {
     headers: { ...NO_STORE, "access-control-allow-origin": "*", "content-type": "text/markdown; charset=utf-8" },
   });
+}
+
+/** POST /families/{id}/agent/token: a one-hour API token for an outside AI agent that works only
+ *  for this family's API (`auth_tokens.family_id`, lib/auth/token-scope.ts), and the prompt to
+ *  paste into the agent. Any member; the agent acts with the user's role. An agent token can't
+ *  mint another (403), or it could keep its access for ever. */
+async function agentToken({ db, publicBase, load, requireUser, scopedTo, now }: Ctx): Promise<Response> {
+  const user = requireUser();
+  if (scopedTo) throw new HttpError(403, "An agent token can't create tokens.");
+  const { family, access } = await load("view");
+  const { token, row } = createToken(
+    db,
+    { userId: user.id, kind: "api", name: AGENT_TOKEN_NAME, ttlMs: AGENT_TOKEN_TTL_MS, familyId: family.id },
+    now,
+  );
+  const expiresAt = row.expiresAt!;
+  const prompt = buildAgentPrompt({
+    base: publicBase,
+    family: { id: family.id, name: family.name },
+    readOnly: access !== "edit",
+    today: now.toISOString().slice(0, 10),
+    token,
+    expiresAt,
+    modules: enabledModules(),
+  });
+  return json({ token, expiresAt: expiresAt.toISOString(), prompt }, 201, NO_STORE);
 }

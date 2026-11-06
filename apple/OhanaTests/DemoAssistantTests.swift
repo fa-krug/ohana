@@ -119,7 +119,7 @@ struct DemoAssistantTests {
     @Test func opensOnANewChatWhenTheLatestIsQuiet() async {
         let store = store()
         await store.preload()
-        // Nothing opened (nothing heavy prepared), the list there for the welcome's recent chats.
+        // Nothing opened (nothing heavy prepared), the list there for the chat list.
         #expect(store.ready)
         #expect(store.currentID == nil)
         #expect(store.current == nil)

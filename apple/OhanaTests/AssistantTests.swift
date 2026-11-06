@@ -770,3 +770,21 @@ nonisolated final class QueueStubProtocol: URLProtocol {
 
     override func stopLoading() {}
 }
+
+/// "Copy Prompt for AI Agent": the server's answer to `POST /agent/token`, decoded off the main
+/// thread; the demo (no server) refuses it.
+struct AssistantAgentPromptTests {
+    @Test func decodesTheTokenAnswer() async throws {
+        let json = Data(#"{"token":"oha_agent_abc","expiresAt":"2026-11-06T13:00:00.000Z","prompt":"You can use the family's API…"}"#.utf8)
+        let access = try await OffMainJSON.decode(AssistantAgentAccess.self, from: json)
+        #expect(access == AssistantAgentAccess(token: "oha_agent_abc", expiresAt: "2026-11-06T13:00:00.000Z",
+                                               prompt: "You can use the family's API…"))
+        #expect(AssistantAgentAccess.path == "/agent/token")
+    }
+
+    @MainActor
+    @Test func theDemoRefusesIt() async {
+        let api = FamilyAPI(client: APIClient(demo: DemoServer()), familyID: DemoServer.familyID)
+        await #expect(throws: (any Error).self) { try await AssistantAgentAccess.request(api) }
+    }
+}

@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { cookies, headers, perRequest } from "@/lib/http/request-context";
 import { SESSION_COOKIE, cookieSecure, SESSION_TTL_MS, getAllowedRpIds, resolveRpId } from "./config";
 import { AuthError } from "./errors";
+import { assertTokenScope } from "./token-scope";
 import { type AuthToken, type User, createToken, deleteToken, findToken, touchToken } from "./tokens";
 
 export interface Auth {
@@ -58,14 +59,17 @@ export async function clearSessionCookie(): Promise<void> {
   cookies().delete(SESSION_COOKIE);
 }
 
-/** The user of an API request: a personal API token as `Authorization: Bearer …`. */
-export function getApiUser(req: Request): User | null {
+/** The user of an API request: a personal API token as `Authorization: Bearer …`. `familyId`:
+ *  the family the request is for (null: none, e.g. the account); an agent token of another
+ *  family (or used outside one) is refused with 403. */
+export function getApiUser(req: Request, familyId: string | null = null): User | null {
   const header = req.headers.get("authorization") ?? "";
   const match = /^Bearer\s+(\S+)$/i.exec(header);
   if (!match) return null;
   const now = new Date();
   const found = findToken(db, match[1], "api", now);
   if (!found) return null;
+  assertTokenScope(found.token, familyId);
   touchToken(db, found.token, now);
   return found.user;
 }

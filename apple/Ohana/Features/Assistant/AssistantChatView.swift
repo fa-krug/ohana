@@ -44,6 +44,9 @@ struct AssistantChatView: View {
     @State private var preparing = 0
     @State private var showChats = false
     @State private var showSettings = false
+    /// "Copy Prompt for AI Agent": the request runs (taps meanwhile do nothing), then the note.
+    @State private var copyingAgentPrompt = false
+    @State private var agentPromptCopied = false
     @State private var importing = false
     @State private var dropping = false
     @State private var photos: [PhotosPickerItem] = []
@@ -158,6 +161,9 @@ struct AssistantChatView: View {
                 let items = photos
                 photos = []
                 attach(items)
+            }
+            .alert("Copied", isPresented: $agentPromptCopied) {} message: {
+                Text("The prompt’s access works for one hour.")
             }
             .modifier(AssistantPageCommands(enabled: mode == .page, menu: moduleMenu) { newChat() })
     }
@@ -356,6 +362,12 @@ struct AssistantChatView: View {
                 copy(store.current?.items ?? [])
             }
             .disabled(store.current?.items.isEmpty ?? true)
+            // Viewers too (their prompt reads only); the demo has no server to ask.
+            if !family.api.client.isDemo {
+                Button("Copy Prompt for AI Agent", systemImage: "terminal") { copyAgentPrompt() }
+                    .disabled(copyingAgentPrompt)
+                    .accessibilityHint(Text("Copies instructions for an AI agent, with access to the family for one hour."))
+            }
             if family.canEdit {
                 Divider()
                 Button("Assistant settings", systemImage: "gearshape") { showSettings = true }
@@ -382,6 +394,22 @@ struct AssistantChatView: View {
         attachments = []
         sentPending = false
         composerFocused = true
+    }
+
+    /// Asks the server for an agent's prompt (a token valid for an hour in it) and copies it.
+    private func copyAgentPrompt() {
+        guard !copyingAgentPrompt else { return }
+        copyingAgentPrompt = true
+        Task {
+            defer { copyingAgentPrompt = false }
+            do {
+                let access = try await AssistantAgentAccess.request(family.api)
+                FamilyPasteboard.copy(access.prompt)
+                agentPromptCopied = true
+            } catch {
+                ErrorBanner.shared.show(error)
+            }
+        }
     }
 
     private func copy(_ items: [AssistantItem]) {
@@ -578,11 +606,8 @@ struct AssistantChatView: View {
         let animates = !reduceMotion && settledSession == store.session
         return AssistantTurnLayout(turnHeight: turnHeight) {
             if store.current?.items.isEmpty ?? true {
-                AssistantWelcome(store: store, examples: AssistantPages.examples(store.current?.page ?? here)) { example in
-                    text = example
-                    composerFocused = true
-                }
-                .transition(.opacity)
+                AssistantWelcome()
+                    .transition(.opacity)
             }
             if hidden > 0 {
                 Button {
@@ -837,7 +862,7 @@ struct AssistantChatView: View {
             // Only the text read on the device is attached, never the picture.
             Button("Scan Letter", systemImage: "doc.text.viewfinder") { scanningLetter = true }
             #if os(iOS)
-            // ⌘V pastes pictures from iOS 27 on; this works everywhere.
+            // Paste in the field takes pictures too; this works without the edit menu.
             Button("Paste image", systemImage: "doc.on.clipboard") { pasteImages() }
             #endif
         } label: {
@@ -877,7 +902,8 @@ struct AssistantChatView: View {
             #if os(macOS)
             .onSubmit { send() }
             #else
-            .modifier(AssistantImagePaste(enabled: store.ready) { attach(pasted: $0) })
+            .modifier(AssistantPaste(enabled: store.ready, images: { attach(pasted: $0) },
+                                     text: { attach(pastedText: $0) }))
             #endif
             .disabled(!store.ready)
             .padding(.horizontal, 16)
@@ -1053,6 +1079,11 @@ struct AssistantChatView: View {
         }
     }
 
+    /// Long pasted text, as a text file (`AssistantAttachments.isLongPaste`).
+    private func attach(pastedText text: String) {
+        prepare(1) { _ in AssistantAttachments.pastedText(text) }
+    }
+
     /// Files and pictures dropped on the chat.
     private func drop(_ providers: [NSItemProvider]) {
         prepare(providers.count) { n in
@@ -1085,6 +1116,7 @@ struct AssistantChatView: View {
             switch content {
             case let .files(urls): attach(urls)
             case let .image(data): attach(pasted: [data])
+            case let .text(text): attach(pastedText: text)
             }
             return nil
         }
@@ -1115,25 +1147,32 @@ private struct AssistantPageCommands: ViewModifier {
     }
 }
 
-/// ⌘V with pictures on the clipboard attaches them (iOS 27 and later; the text field pastes
-/// text as usual).
-private struct AssistantImagePaste: ViewModifier {
+/// Paste (the edit menu, ⌘V) attaches the clipboard's pictures, and long text as a file
+/// (`AssistantAttachments.isLongPaste`); shorter text goes into the field as usual. Pictures:
+/// iOS 27's `pasteDestination`, before it the field's UIKit text view (`AssistantTextPaste`),
+/// which takes the text on every version.
+private struct AssistantPaste: ViewModifier {
     let enabled: Bool
-    let paste: ([Data]) -> Void
+    let images: ([Data]) -> Void
+    let text: (String) -> Void
 
     func body(content: Content) -> some View {
         // Only the iOS 27 SDK (Swift 6.4, Xcode 27) has `pasteDestination` on iOS; older Xcodes
         // (CI's) build without it.
         #if os(iOS) && compiler(>=6.4)
         if #available(iOS 27, *) {
-            content.pasteDestination(for: AssistantPastedImage.self) { images in
-                paste(images.map(\.data))
-            } validator: { images in
-                enabled ? images : []
-            }
-        } else {
             content
+                .background(AssistantTextPaste(enabled: enabled, takesImages: false, images: images, text: text))
+                .pasteDestination(for: AssistantPastedImage.self) { pasted in
+                    images(pasted.map(\.data))
+                } validator: { pasted in
+                    enabled ? pasted : []
+                }
+        } else {
+            content.background(AssistantTextPaste(enabled: enabled, takesImages: true, images: images, text: text))
         }
+        #elseif os(iOS)
+        content.background(AssistantTextPaste(enabled: enabled, takesImages: true, images: images, text: text))
         #else
         content
         #endif

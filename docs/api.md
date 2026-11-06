@@ -19,6 +19,21 @@ Create a token in the app under *Settings → Account* (API tokens), or with
 `POST /api/v1/me/tokens` using an existing one. The token is shown once; the server stores only
 its hash. Every token acts as its account: it can do what the account may do in each family.
 
+## AI agents
+
+To let an outside AI agent (Claude Code, ChatGPT, …) work with a family, choose *Copy Prompt for
+AI Agent* in the app's assistant and paste the prompt into the agent. It holds a token that
+works for **one hour** and **only for that family's API** (`/api/v1/families/{id}/…`, plus
+`/api/v1/server`): it can't reach your account (`/api/v1/me…`, so no new tokens or password),
+the administration, invites or your other families (`403`). It acts with your role in the
+family, so a viewer's agent can only read, and an editor's can change everything but what would
+outlast the hour or send the family's data elsewhere: members and people, invites, notification
+channels, the assistant's settings and deleting the family stay with the app (`403`). The token shows among your API tokens until it
+expires, and you can revoke it there. Scripts get the same with
+`POST /api/v1/families/{id}/agent/token` → `{ "token", "expiresAt", "prompt" }`. The prompt
+points the agent to `GET /api/v1/families/{id}/agent`: the family's instructions (its calendar's
+entry types with their ids, the finance conventions and ready-to-use requests).
+
 ## A first look around
 
 ```bash

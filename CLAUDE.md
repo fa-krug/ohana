@@ -82,8 +82,17 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   setup links are rows of `auth_tokens` (`kind` session | api | setup) holding only the SHA-256
   of the token (`tokens.ts`). A session opened with a setup link has `canReset` (may set a
   password without the old one). `session.ts`: `getAuth()` (session cookie of the current
-  request, memoized per request and cookie value), `getApiUser(req)` (Bearer API token).
-  `config.ts`: `WEBAUTHN_RP_ID` / `WEBAUTHN_ORIGIN` default to `APP_URL`'s host / origin,
+  request, memoized per request and cookie value), `getApiUser(req, familyId?)` (Bearer API
+  token). **Agent tokens** (`token-scope.ts`): API tokens with `family_id` set (name "AI agent",
+  1 hour, minted by `POST /families/{id}/agent/token`) work only for `/api/health`,
+  `/api/v1/server` and `/api/v1/families/{that id}[/…]`, else 403 (`OUT_OF_SCOPE`); inside it
+  `agentMayChange` (checked by `createFamilyApi`) holds back writes to members, people, invites,
+  notification channels / events, `/ai/settings|models|test` and deleting the family (`AGENT_HOLD`); checked by
+  the `/api` middleware in `http/api.ts` (every Bearer request) and again where users are
+  resolved: `apiAuth` (me / admin / invites: never), `getApiUser` / `requireFamilyApi` (the
+  family asked for), the family API's `authenticate` (the path's; `Ctx.scopedTo`). A new route
+  taking a Bearer token outside a family must go through one of them. `GET /me/tokens` lists them
+  (`familyId`, `expiresAt`). `config.ts`: `WEBAUTHN_RP_ID` / `WEBAUTHN_ORIGIN` default to `APP_URL`'s host / origin,
   `cookieSecure()` when `APP_URL` is https. Password sign-in is rate limited
   (`rate-limit.ts`). Onboarding steps: SET_CREDENTIALS (admin-created account, via setup link)
   → ADD_PASSKEY (optional) → COMPLETED. The first account (`/setup`, only while there are no
@@ -291,7 +300,10 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   (what the model gets, append-only, summaries among them) in `lib/db/schema/assistant.ts`;
   `store.ts` is the AI part of the `Store` (`DrizzleAssistantStore`, `ctx.assistant`; queue and
   item revisions in immediate transactions). Routes: `routes.ts` `handleAi(env)` (settings,
-  models, test, categorize, letter, `/agent`) and `chat-routes.ts` (chats; they save the message and
+  models, test, categorize, letter, `GET /agent`: the family's Markdown instructions for outside
+  agents, `POST /agent/token`: an agent token (any member; 403 with an agent token) and
+  `agent.ts` `buildAgentPrompt`'s Markdown prompt holding it, `{token, expiresAt, prompt}`, the
+  app's *Copy Prompt for AI Agent*) and `chat-routes.ts` (chats; they save the message and
   leave the chat running without a holder, then stream it from the database). **Turns run
   only in the worker:** `runner.ts` `ChatRunner.tick()` claims waiting chats (`pendingChats`,
   `claimChatNow`) and runs `chats.ts` `Runner` (the tool loop `chat.ts` `runChat` against
@@ -773,7 +785,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   The assistant: `family.ask(prompt, send:, newChat:, attachments:)` opens it ready to type from anywhere (⇧⌘J, the overview's field, the Mac's menu bar item (`MenuBarItem`, an AppKit status item: SwiftUI's `MenuBarExtra` re-sets its icon on every window redraw and crashed the app), the
   `AskOhanaIntent` App Shortcut). The chat (`AssistantChatView`, the same in the panel, the iPhone's
   sheet and the page) has one header everywhere: Chats (the history, pushed; not on the page with its
-  list column), the title, New chat, More (Open as a page, Move to …, Copy, settings; it never reads
+  list column), the title, New chat, More (Open as a page, Move to …, Copy, *Copy Prompt for AI Agent*: `POST /agent/token`'s prompt to the clipboard, not in the demo, `AssistantAgentPrompt.swift`; settings; it never reads
   `\.dismiss` itself, `AssistantDismissReader` keeps it: on the iPad's page that redrew the chat
   without end). It shows at
   once: the conversation doesn't wait for the settings (only the composer does), a chat being opened
@@ -789,8 +801,12 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   after the other are one row (`AssistantItemGroups`, `AssistantToolGroupRow`: the running one with a
   spinner, then "Used 3 tools", a tap unfolds them); the activity line has one pulsing symbol and no
   timer. On iOS messages aren't selectable in place (costly to lay out): their menu's *Select Text*
-  opens the plain text in a sheet (`AssistantSelectTextSheet`); the Mac selects in place. It opens on a new chat
-  (still welcome: examples and the 3 latest chats under "Recent") unless the latest chat runs or was
+  opens the plain text in a sheet (`AssistantSelectTextSheet`); the Mac selects in place. Paste in the
+  composer attaches the clipboard's pictures, and long text (≥ 1 000 characters or 10 lines,
+  `isLongPaste`) as "Pasted text.txt"; shorter text goes into the field. iOS: `AssistantTextPaste`
+  (the field's UIKit text view's paste delegate; rich text only while the clipboard holds a picture
+  and no text, so Paste is offered), pictures by `pasteDestination` from iOS 27; the Mac a ⌘V monitor. It opens on a new chat
+  (the welcome: only the sparkles and "How can I help?"; earlier chats are in Chats) unless the latest chat runs or was
   active in the last 15 minutes (`restoreLatest`, `reopenWithin`; a chat reopened that way gives way
   to a new one once quiet, unless the user picked one); `preload()` (the shell, at start) decides on
   the list's device copy and loads only that chat. A chat's answers are parsed off the main thread

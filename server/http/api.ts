@@ -22,6 +22,7 @@ import { AuthError } from "@/lib/auth/errors";
 import { handle } from "@/lib/auth/route";
 import { serializeUser } from "@/lib/auth/serialize";
 import { getApiUser } from "@/lib/auth/session";
+import { OUT_OF_SCOPE, pathInScope } from "@/lib/auth/token-scope";
 import { deleteToken, findToken } from "@/lib/auth/tokens";
 import { handleEvents } from "@/lib/calendar/events";
 import { handleFamily } from "@/lib/calendar/family-routes";
@@ -59,6 +60,19 @@ function requireModule(m: ModuleName): void {
 
 export function apiRoutes(db: Db): Hono {
   const api = new Hono();
+
+  // ---- agent tokens: only their family's API (lib/auth/token-scope.ts) ----
+  // Every request under /api with a Bearer token passes here first: a token scoped to a family
+  // reaches /api/health, /api/v1/server and /api/v1/families/{that family}[/…] only. The routes
+  // check it again where they resolve the user.
+  api.use("*", async (c, next) => {
+    const match = /^Bearer\s+(\S+)$/i.exec(c.req.header("authorization") ?? "");
+    const found = match ? findToken(db, match[1], "api", new Date()) : null;
+    if (found?.token.familyId && !pathInScope(new URL(c.req.url).pathname, found.token.familyId)) {
+      return Response.json({ error: OUT_OF_SCOPE }, { status: 403 });
+    }
+    await next();
+  });
 
   // ---- server ----
   api.get("/health", () => Response.json({ status: "ok" }));
@@ -224,7 +238,13 @@ export function apiRoutes(db: Db): Hono {
 
   // ---- recipe and member photos, for members of their family (API token) ----
   api.get("/images/*", async (c) => {
-    const user = getApiUser(c.req.raw);
+    let user;
+    try {
+      user = getApiUser(c.req.raw);
+    } catch (e) {
+      if (e instanceof AuthError) return Response.json({ error: e.message }, { status: e.status });
+      throw e;
+    }
     return serveImage(db, user?.id ?? null, pathAfter(c, "/api/images").join("/"));
   });
 

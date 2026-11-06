@@ -1,0 +1,1 @@
+ALTER TABLE `auth_tokens` ADD `family_id` text REFERENCES families(id) ON DELETE cascade;

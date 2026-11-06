@@ -8,6 +8,7 @@ import type { Db } from "@/lib/db";
 import { SESSION_COOKIE, getAppUrl } from "@/lib/auth/config";
 import { AuthError } from "@/lib/auth/errors";
 import { assertSameOrigin } from "@/lib/auth/origin";
+import { AGENT_HOLD, agentMayChange, assertTokenScope } from "@/lib/auth/token-scope";
 import { type User, findToken, touchToken } from "@/lib/auth/tokens";
 import { getRole } from "@/lib/families/roles";
 import { type CalendarStore, DrizzleCalendarStore, type FamilyRow } from "@/lib/calendar/store";
@@ -48,6 +49,9 @@ export interface Ctx {
   publicBase: string;
   /** Who is asking; null without signing in (`requireUser` / `load` then answer 401). */
   principal: User | null;
+  /** Set when the request is signed in with an agent token (only this family's API): its
+   *  family's id. Such a request mustn't mint tokens. */
+  scopedTo: string | null;
   now: Date;
   /** The signed-in user; 401 without one. */
   requireUser(): User;
@@ -81,21 +85,28 @@ function cookieValue(req: Request, name: string): string | null {
   return null;
 }
 
-/** The user of a request: an API token (Bearer) or, without one, the session cookie. */
-function authenticate(db: Db, req: Request, now: Date): { user: User; via: "token" | "cookie" } | null {
+/** The user of a request: an API token (Bearer) or, without one, the session cookie.
+ *  `familyId`: the path's; an agent token of another family is refused (403). */
+function authenticate(
+  db: Db,
+  req: Request,
+  now: Date,
+  familyId: string,
+): { user: User; via: "token" | "cookie"; scopedTo: string | null } | null {
   const header = req.headers.get("authorization");
   if (header) {
     const match = /^Bearer\s+(\S+)$/i.exec(header);
     const found = match ? findToken(db, match[1], "api", now) : null;
     if (!found) throw new HttpError(401, "Your session has ended, sign in again");
+    assertTokenScope(found.token, familyId);
     touchToken(db, found.token, now);
-    return { user: found.user, via: "token" };
+    return { user: found.user, via: "token", scopedTo: found.token.familyId };
   }
   const raw = cookieValue(req, SESSION_COOKIE);
   const found = raw ? findToken(db, raw, "session", now) : null;
   if (!found) return null;
   touchToken(db, found.token, now);
-  return { user: found.user, via: "cookie" };
+  return { user: found.user, via: "cookie", scopedTo: null };
 }
 
 export function errorResponse(err: unknown): Response {
@@ -123,7 +134,7 @@ export function createFamilyApi(routes: FamilyRoute[], options: FamilyApiOptions
     const token = parts[1];
     const rest = parts.slice(2);
     let principal: User | null = null;
-    const auth = authenticate(db, req, now);
+    const auth = authenticate(db, req, now, token);
     if (auth) {
       // A page of another site can't change anything with the visitor's cookie.
       if (auth.via === "cookie" && method !== "GET" && method !== "HEAD") assertSameOrigin(req);
@@ -170,11 +181,13 @@ export function createFamilyApi(routes: FamilyRoute[], options: FamilyApiOptions
       rest,
       publicBase: `${(options.appUrl ?? getAppUrl()).replace(/\/+$/, "")}/api/v1`,
       principal,
+      scopedTo: auth?.scopedTo ?? null,
       now,
       requireUser,
       load,
       loadWith,
     };
+    if (ctx.scopedTo && !agentMayChange(method, rest)) throw new HttpError(403, AGENT_HOLD);
     for (const r of routes) {
       const res = r(ctx);
       if (res) return await res;

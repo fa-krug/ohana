@@ -42,7 +42,7 @@ struct AssistantPanel: View {
     }
 }
 
-/// The pages a chat can belong to (the server's `PAGES`), their names and examples.
+/// The pages a chat can belong to (the server's `PAGES`) and their names.
 enum AssistantPages {
     /// The pages the server takes; any other is the overview.
     static let all = ["overview", "calendar", "finance", "meals", "appointments", "chores", "settings"]
@@ -62,33 +62,6 @@ enum AssistantPages {
         case "chores": String(localized: "Chores")
         case "settings": String(localized: "Settings")
         default: String(localized: "Overview")
-        }
-    }
-
-    /// Examples for a new chat, fitting the page it starts on, each with an icon for its card.
-    static func examples(_ page: String) -> [AssistantExample] {
-        let gaps = AssistantExample(icon: "calendar.badge.exclamationmark",
-                                    text: String(localized: "Which days this year still need cover, and who could take them?"))
-        let planWithout = AssistantExample(icon: "fork.knife", text: String(localized: "Plan next week’s meals without fish."))
-        switch page {
-        case "calendar":
-            return [gaps, .init(icon: "flag", text: String(localized: "Look up next year’s public holidays here and add them to the calendar."))]
-        case "finance":
-            return [.init(icon: "chart.bar", text: String(localized: "How much did we spend on groceries this year, per month?")),
-                    .init(icon: "tray.full", text: String(localized: "Sort our uncategorized transactions into categories."))]
-        case "meals":
-            return [planWithout, .init(icon: "cart", text: String(localized: "What do we need to buy for this week’s meals?"))]
-        case "appointments":
-            return [.init(icon: "stethoscope", text: String(localized: "Find a dermatologist appointment before June.")),
-                    .init(icon: "magnifyingglass", text: String(localized: "Which searches found something, and what is the earliest slot?"))]
-        case "chores":
-            return [.init(icon: "checklist", text: String(localized: "Which chores are overdue, and whose are they?")),
-                    .init(icon: "person.2", text: String(localized: "Share this week’s chores fairly between the children."))]
-        case "settings":
-            return [.init(icon: "list.bullet.rectangle", text: String(localized: "Set up this year’s entry types: day care closed, each parent’s vacation and public holidays.")),
-                    .init(icon: "folder.badge.plus", text: String(localized: "Suggest categories for our finances and add them."))]
-        default:
-            return [gaps, planWithout]
         }
     }
 }
