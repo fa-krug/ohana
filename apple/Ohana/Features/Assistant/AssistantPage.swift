@@ -86,9 +86,13 @@ private struct AssistantResizableColumns<Column: View, Detail: View>: View {
     var body: some View {
         HStack(spacing: 0) {
             if showsColumn {
+                // Over the chat: its backdrop ignores the safe area, which on the Mac reaches
+                // over the column, and drawn later it covered the list.
                 column
                     .frame(width: width)
+                    .zIndex(1)
                 divider
+                    .zIndex(1)
             }
             // Any width: the chat's own minimum (a long line) must not make the row wider than
             // the page, whose width decides the column.

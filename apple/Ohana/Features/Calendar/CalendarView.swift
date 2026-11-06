@@ -24,6 +24,10 @@ struct CalendarView: View {
             if store == nil {
                 store = CalendarStore(api: family.api, readOnly: !family.canEdit,
                                       queueFile: CalendarStore.queueFile(for: family.api))
+                #if os(macOS)
+                // The Mac opens on today, its details beside the grid (a route selects its own day).
+                if store?.year == Day.today.year { store?.select(.today) }
+                #endif
             }
         }
     }
