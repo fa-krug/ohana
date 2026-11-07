@@ -182,6 +182,8 @@ struct CalendarPlannerView: View {
             CalendarToast(store: store)
             CalendarSelectionBar(store: store, actions: actions, showDetails: showDetails)
         }
+        // The assistant's button (iPhone) floats above it, not over its right end.
+        .liftsAssistantButton()
     }
 
     // MARK: List of months (phones, narrow windows)

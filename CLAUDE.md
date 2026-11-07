@@ -696,10 +696,12 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   the bottom right of every page (`Features/Assistant/AssistantFloating.swift`,
   `AssistantFloatingButton`: the assistant's color, a still dot while a turn runs, an ✕ while open;
   not on the assistant's own page; on iPad and the Mac an overlay of each tab's page,
-  `.assistantFloatingButton`, hidden on iOS while the keyboard is up; on iPhone in each page's bottom
-  toolbar, so a page's search field (`pageSearchable`, pinned to the bottom bar there) sits beside it,
+  `.assistantFloatingButton`, hidden on iOS while the keyboard is up; on iPhone floating on each page,
   given by `shellPageItems()`, which module roots get from `shellToolbar()` and a page pushed onto a
-  module's stack adds itself) opening a panel floating over the page above it on iPad and the Mac
+  module's stack adds itself; never in a bottom toolbar, whose scroll edge effect dims a tall band of
+  the page, so iPhone pages have no `pageSearchable` field (the search page finds things); a bar or
+  banner at the page's bottom (the calendar's bar, the undo banners, Finance's toast) lifts it above
+  itself with `.liftsAssistantButton()`) opening a panel floating over the page above it on iPad and the Mac
   (`AssistantFloatingPanel`, an overlay of the shell, 400 pt, below the page's toolbar: it never
   resizes the page, opening only scales and fades it) and a `.sheet` on iPhone and a narrow iPad
   (`Module.notPages`; both presentations always attached, so a size class change doesn't rebuild the
@@ -717,8 +719,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `DesignSystem/` (solid content cards — Liquid Glass only on bars and floating controls —, `.readableWidth()` on every page's list or grouped form (a 760 pt column on wide windows; scroll pages cap their stack with `.frame(maxWidth:)` instead), error banner, `CancelButton`/`discardGuard`; the module sets `newItem`/`moduleMenu` focused values for File ▸ New and its menu; the Mac draws those menus in the menu bar, where views have no `AppModel` / `FamilyContext` in their environment: pass values in, never `@Environment` them there), `Features/<Module>/` (plus `Account/`, `Admin/`).
   On iPhone a page's toolbar stays small (the main action, perhaps a filter, one More menu in
   sections; the assistant is the round button at the bottom): what doesn't fit iOS moves into an overflow menu of its own, with the page's
-  More as a submenu, so a full page leaves something out instead (Finance has no search field
-  there, only a search button); segmented pickers go under the navigation bar there (`safeAreaBar`, as in
+  More as a submenu, so a full page leaves something out instead (no page's own search field
+  there); segmented pickers go under the navigation bar there (`safeAreaBar`, as in
   Meals and Finance), not in it (they can't shrink).
   Drag and drop (iPad, Mac) carries the payloads of `Core/Support/DragItems.swift` (own UTTypes,
   declared in `project.yml`, each naming its family): a recipe or a planned meal onto a day of the

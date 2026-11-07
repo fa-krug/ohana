@@ -112,8 +112,8 @@ private struct ToolbarSearchFieldChrome<Field: View>: View {
 extension View {
     /// A page's own search field, which filters what the page shows. On the Mac a field among the
     /// page's toolbar items, left of the search across the modules (`ShellSearchField`) at the
-    /// right end: the system's search field would go after them. On iPhone in the bottom toolbar,
-    /// beside the assistant's button there (with a bottom toolbar the system would move it up).
+    /// right end: the system's search field would go after them. None on iPhone: it would take a
+    /// bottom toolbar under the assistant's floating button (the search page finds recipes).
     @ViewBuilder
     func pageSearchable(text: Binding<String>, prompt: Text) -> some View {
         #if os(macOS)
@@ -123,10 +123,11 @@ extension View {
             ToolbarItem(placement: .primaryAction) { PageSearchField(text: text, prompt: prompt) }
         }
         #else
-        searchable(text: text, prompt: prompt)
-            .toolbar {
-                if Module.onPhone { DefaultToolbarItem(kind: .search, placement: .bottomBar) }
-            }
+        if Module.onPhone {
+            self
+        } else {
+            searchable(text: text, prompt: prompt)
+        }
         #endif
     }
 }

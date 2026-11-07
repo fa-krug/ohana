@@ -294,6 +294,7 @@ struct FinanceScreen: View {
             .padding(.horizontal)
             .padding(.bottom, 8)
             .frame(maxWidth: 640)
+            .liftsAssistantButton()
         }
     }
 

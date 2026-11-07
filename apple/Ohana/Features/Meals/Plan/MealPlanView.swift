@@ -113,6 +113,7 @@ struct MealPlanView: View {
             if let undo {
                 MealPlanUndoBar(undo: undo) { take(undo) } dismiss: { expire(undo) }
                     .padding(.bottom, 12)
+                    .liftsAssistantButton()
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }

@@ -67,12 +67,23 @@ struct AssistantFloatingButton: View {
 
 /// The button at the bottom right of what it's put on (`assistantFloatingButton`), while
 /// `enabled`; on iOS gone while the keyboard is up and the assistant closed (it would ride on it).
+/// On iPhone a page's own bar at the bottom (the calendar's) lifts it above that bar
+/// (`assistantButtonLift`); on iPad and the Mac the panel opens above the button where it is.
 private struct AssistantFloatingButtonHost: ViewModifier {
     @Binding var isOpen: Bool
     let enabled: Bool
+    @State private var lift: CGFloat = 0
     #if os(iOS)
     @State private var keyboardUp = false
     #endif
+
+    private var bottom: CGFloat {
+        #if os(iOS)
+        Module.onPhone && lift > 0 ? lift + AssistantFloating.gap / 2 : AssistantFloating.margin
+        #else
+        AssistantFloating.margin
+        #endif
+    }
 
     private var shown: Bool {
         #if os(iOS)
@@ -84,10 +95,13 @@ private struct AssistantFloatingButtonHost: ViewModifier {
 
     func body(content: Content) -> some View {
         content
+            .environment(\.assistantButtonLift, $lift)
             .overlay(alignment: .bottomTrailing) {
                 if shown {
                     AssistantFloatingButton(isOpen: $isOpen)
-                        .padding(AssistantFloating.margin)
+                        .padding([.top, .horizontal], AssistantFloating.margin)
+                        .padding(.bottom, bottom)
+                        .animation(.snappy, value: bottom)
                         .transition(.opacity)
                 }
             }
@@ -147,6 +161,22 @@ struct AssistantFloatingPanel: View {
     }
 }
 
+private struct LiftsAssistantButton: ViewModifier {
+    @Environment(\.assistantButtonLift) private var lift
+    @State private var height: CGFloat = 0
+
+    func body(content: Content) -> some View {
+        content
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
+                height = $0
+                lift?.wrappedValue = $0
+            }
+            // A banner that goes (or a page pushed over it) gives the room back.
+            .onAppear { lift?.wrappedValue = height }
+            .onDisappear { lift?.wrappedValue = 0 }
+    }
+}
+
 /// Counts the view as one showing the family's chat (`addViewer`): a turn started in the panel is
 /// then followed to its end after the panel closes, so what shows it stops when it does (and the
 /// screens reload what the assistant changed). The turn goes on on the server either way.
@@ -160,7 +190,19 @@ private struct FollowsAssistantTurn: ViewModifier {
     }
 }
 
+extension EnvironmentValues {
+    /// The height of a page's own bar at the bottom of its safe area, which the assistant's button
+    /// stays above on iPhone (nil outside a page with the button).
+    @Entry var assistantButtonLift: Binding<CGFloat>?
+}
+
 extension View {
+    /// Keeps the assistant's button above this view, a bar or banner at the bottom of the page's
+    /// safe area (a `safeAreaInset` or a bottom overlay): its height is the lift while it shows.
+    func liftsAssistantButton() -> some View {
+        modifier(LiftsAssistantButton())
+    }
+
     fileprivate func followsAssistantTurn(_ store: AssistantChatStore) -> some View {
         modifier(FollowsAssistantTurn(store: store))
     }

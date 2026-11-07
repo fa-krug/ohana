@@ -147,6 +147,7 @@ struct MealsUndoBanner: View {
             .frame(maxWidth: 440)
             .padding(.horizontal, 16)
             .padding(.bottom, 12)
+            .liftsAssistantButton()
             .transition(.move(edge: .bottom).combined(with: .opacity))
         }
     }

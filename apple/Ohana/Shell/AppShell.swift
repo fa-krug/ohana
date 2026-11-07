@@ -314,7 +314,7 @@ struct AppShell: View {
                 .demoBanner()
         }
         .environment(\.shellModule, selection)
-        // iPhone: in each page's bottom toolbar, beside a search field there (`ShellPageItems`).
+        // iPhone: on each page (`ShellPageItems`), so it stays above a page's own bottom bar.
         .environment(\.shellAssistant, assistantOn && Module.onPhone ? $showAssistant : nil)
         // Here, inside the tab, so a narrow iPad's tab bar stays clear. Not on the assistant's own
         // page.
@@ -366,8 +366,8 @@ extension Module {
 }
 
 extension EnvironmentValues {
-    /// iPhone: the shell's assistant sheet, for the button in every page's bottom toolbar (nil
-    /// elsewhere, and without the assistant).
+    /// iPhone: the shell's assistant sheet, for the button floating on every page (nil elsewhere,
+    /// and without the assistant).
     @Entry var shellAssistant: Binding<Bool>?
     /// The shell's page on screen, inside a module's navigation stack (nil elsewhere): on the Mac
     /// every page there gets the search field (`ShellSearchField`).
@@ -456,11 +456,11 @@ struct ShellToolbar: ViewModifier {
     }
 }
 
-/// What the shell adds to every page's toolbar: on the Mac the search across the modules at its end
+/// What the shell adds to every page: on the Mac the search across the modules at its toolbar's end
 /// (`ShellSearchField`), the page's own items left of it; on iPhone the assistant's round button
-/// at the bottom right (`AssistantFloatingButton`), in the bottom toolbar so a search field there
-/// sits beside it, not under it. The shell gives them to the module roots; a page pushed onto a
-/// module's stack adds them itself (a pushed page has its own toolbar).
+/// floating at the bottom right (`AssistantFloatingButton`; not in a bottom toolbar, whose scroll
+/// edge effect dimmed a tall band of the page). The shell gives them to the module roots; a page
+/// pushed onto a module's stack adds them itself (a pushed page has its own toolbar).
 struct ShellPageItems: ViewModifier {
     @Environment(\.shellModule) private var module
     @Environment(\.shellAssistant) private var showAssistant
@@ -479,15 +479,12 @@ struct ShellPageItems: ViewModifier {
                             ToolbarSpacer(.fixed, placement: .primaryAction)
                             ToolbarItem(placement: .primaryAction) { ShellSearchField(module: module) }
                         }
-                        #else
-                        if let showAssistant {
-                            ToolbarSpacer(.flexible, placement: .bottomBar)
-                            ToolbarItem(placement: .bottomBar) { AssistantFloatingButton(isOpen: showAssistant) }
-                                .sharedBackgroundVisibility(.hidden)
-                        }
                         #endif
                     }
             }
+            #if os(iOS)
+            .assistantFloatingButton(isOpen: showAssistant ?? .constant(false), enabled: showAssistant != nil)
+            #endif
     }
 }
 

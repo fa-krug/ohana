@@ -12,6 +12,7 @@ struct FamilySidebarHost: ViewModifier {
     /// The page on screen.
     let current: Module
     @Environment(AppModel.self) private var app
+    @Environment(\.displayScale) private var displayScale
     @State private var width: CGFloat = 400
     /// How far a swipe has moved, while one does.
     @State private var dragged: CGFloat?
@@ -29,7 +30,7 @@ struct FamilySidebarHost: ViewModifier {
             if active {
                 FamilySidebar(current: current, dragged: $dragged, width: width)
                     // Behind the tabs, a little to the side and darker, as a page under a pushed one.
-                    .offset(x: (progress - 1) * width * 0.3)
+                    .offset(x: pixels((progress - 1) * width * 0.3))
                     .overlay {
                         Color.black.opacity(0.2 * (1 - progress)).allowsHitTesting(false).ignoresSafeArea()
                     }
@@ -41,7 +42,7 @@ struct FamilySidebarHost: ViewModifier {
                 // first time) appeared in its place over the family page instead of sliding in. Not
                 // around the tab view (iPad): it laid out without end on the assistant's page.
                 .phoneGeometryGroup()
-                .offset(x: active ? progress * width : 0)
+                .offset(x: active ? pixels(progress * width) : 0)
                 .allowsHitTesting(!open)
                 .accessibilityHidden(active && open)
                 .gesture(LeadingEdgeSwipe(isEnabled: active && !open && app.moduleRootsOnScreen > 0) { x in
@@ -62,6 +63,14 @@ struct FamilySidebarHost: ViewModifier {
             guard app.showsFamilySidebar else { return }
             withAnimation(.snappy(duration: 0.35).delay(0.05)) { app.showsFamilySidebar = false }
         }
+    }
+
+    /// An offset on whole pixels of the screen, so nothing of a sliding page is drawn between them
+    /// (the family page moves at 0.3 of the finger's speed: on a slow swipe, by a fraction of a
+    /// pixel at a time).
+    private func pixels(_ x: CGFloat) -> CGFloat {
+        let scale = max(displayScale, 1)
+        return (x * scale).rounded() / scale
     }
 
     private func finish(opening: Bool) {
@@ -97,10 +106,13 @@ private struct LeadingEdgeSwipe: UIGestureRecognizerRepresentable {
     }
 
     func handleUIGestureRecognizerAction(_ recognizer: UIScreenEdgePanGestureRecognizer, context: Context) {
-        let x = recognizer.translation(in: recognizer.view).x
+        // In the window's coordinates: the view it's on may be the page it slides, and measured
+        // there the finger's way would shrink by the page's own move, frame after frame.
+        let window = recognizer.view?.window
+        let x = recognizer.translation(in: window).x
         switch recognizer.state {
         case .began, .changed: changed(x)
-        case .ended: ended(x, recognizer.velocity(in: recognizer.view).x)
+        case .ended: ended(x, recognizer.velocity(in: window).x)
         case .cancelled, .failed: ended(0, 0)
         default: break
         }
@@ -145,9 +157,11 @@ private struct FamilySidebar: View {
             .navigationTitle(Text(verbatim: "Ohana"))
             .navigationSubtitleCompat(app.selectedFamily?.name ?? "")
         }
-        // Swiping back to the tabs; vertical drags stay the list's.
+        // Swiping back to the tabs; vertical drags stay the list's. Measured on the screen, not
+        // on this page: it moves with the swipe (0.3 of it), which in its own coordinates took that
+        // back off the finger's way at every step, so the page shook as it followed.
         .simultaneousGesture(
-            DragGesture(minimumDistance: 16)
+            DragGesture(minimumDistance: 16, coordinateSpace: .global)
                 .onChanged { value in
                     guard value.translation.width < 0,
                           abs(value.translation.width) > abs(value.translation.height) || dragged != nil
