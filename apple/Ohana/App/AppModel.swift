@@ -281,6 +281,7 @@ final class AppModel {
             // Push: a new APNs token, a new relay token (while it's on for this device).
             let info = serverInfo
             Task { await PushNotifications.shared.renew(client: client, info: info) }
+            AppBadge.refresh(client)
             prefetch()
             AppleCalendarSync.shared.syncAllSoon()
         } catch is CancellationError {
@@ -319,6 +320,13 @@ final class AppModel {
         context.sendQueuedChanges(me: me?.id)
     }
 
+    /// The icon's number again (`AppBadge`): when the app is active again, the day may have
+    /// changed.
+    func refreshBadge() {
+        guard answered, phase == .ready else { return }
+        AppBadge.refresh(client)
+    }
+
     /// Reads the knowledge folders linked on this device into the server's index, for every family
     /// the account edits (`FamilyContext.indexKnowledge`): at launch, when the app is active again,
     /// the connection back, and every 15 minutes on the Mac. Each family's indexer runs at most
@@ -355,6 +363,7 @@ final class AppModel {
             if syncsWidgets { WidgetSync.reload() }
             // The server drops the device's push with its token.
             PushNotifications.shared.forget()
+            AppBadge.clear()
             connectDemo()
             if signingOut {
                 _ = try? await client.send(.delete, "/api/v1/me", as: JSONValue.self)
@@ -489,6 +498,7 @@ final class FamilyContext {
         for area in areas { revisions[area, default: 0] += 1 }
         if !api.client.isDemo { WidgetSync.reloadSoon() }
         if areas.contains(.events) || areas.contains(.calendar) { AppleCalendarSync.shared.ohanaChanged(self) }
+        if areas.contains(.chores) { AppBadge.refresh(api.client) }
     }
 
     fileprivate func adoptRevisions(from other: FamilyContext) {

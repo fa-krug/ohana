@@ -14,6 +14,10 @@ export interface PushPayload {
   familyId?: string;
   /** The notification event (`appointment_found`, …), when it is one. */
   event?: string;
+  /** The app icon's number for this device (lib/chores/badge.ts); left as it is when missing. */
+  badge?: number;
+  /** The number from the next midnight (the start of `day`) on; the app schedules the switch. */
+  badgeTomorrow?: { day: string; count: number };
 }
 
 const IV_BYTES = 12;

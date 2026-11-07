@@ -193,6 +193,8 @@ describe("background imports", () => {
         path: `/f/${t.familyId}/meals/recipes/${row.id}`,
         familyId: t.familyId,
         event: "recipe_imported",
+        badge: 0,
+        badgeTomorrow: { day: expect.any(String), count: 0 },
       },
     ]);
   });
@@ -228,6 +230,8 @@ describe("background imports", () => {
         path: `/f/${t.familyId}/meals/recipes`,
         familyId: t.familyId,
         event: "recipe_imported",
+        badge: 0,
+        badgeTomorrow: { day: expect.any(String), count: 0 },
       },
     ]);
     expect(received(2)).toEqual([]);

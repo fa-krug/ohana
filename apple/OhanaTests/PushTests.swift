@@ -34,6 +34,49 @@ struct PushTests {
         #expect(content.userInfo["o"] == nil)
     }
 
+    @Test func setsTheIconsNumberOnlyWhenThePayloadHasOne() {
+        let content = UNMutableNotificationContent()
+        content.badge = 5
+        PushPayload(v: 1, title: "T", body: "B").apply(to: content)
+        #expect(content.badge == 5)
+        PushPayload(v: 1, title: "T", body: "B", badge: 2).apply(to: content)
+        #expect(content.badge == 2)
+        PushPayload(v: 1, title: "T", body: "B", badge: 0).apply(to: content)
+        #expect(content.badge == 0)
+    }
+
+    @Test func readsTomorrowsNumber() throws {
+        let payload = try JSONDecoder().decode(PushPayload.self, from: Data(
+            #"{"v":1,"title":"T","body":"B","badge":2,"badgeTomorrow":{"day":"2026-11-08","count":3}}"#.utf8))
+        #expect(payload.badgeTomorrow == MidnightBadge.Next(day: "2026-11-08", count: 3))
+        let answer = try JSONDecoder().decode(BadgeCount.self, from: Data(#"{"count":1}"#.utf8))
+        #expect(answer.count == 1 && answer.tomorrow == nil)
+    }
+
+    @Test func switchesTheNumberAtTheNextMidnight() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Europe/Berlin")!
+        let evening = calendar.date(from: DateComponents(year: 2026, month: 11, day: 7, hour: 21))!
+        let request = try #require(MidnightBadge.request(.init(day: "2026-11-08", count: 4), now: evening, calendar: calendar))
+        #expect(request.identifier == MidnightBadge.identifier)
+        #expect(request.content.badge == 4)
+        #expect(request.content.title.isEmpty && request.content.body.isEmpty && request.content.sound == nil)
+        let trigger = try #require(request.trigger as? UNCalendarNotificationTrigger)
+        #expect(!trigger.repeats)
+        #expect(trigger.dateComponents.day == 8 && trigger.dateComponents.hour == 0 && trigger.dateComponents.minute == 0)
+        // A day already begun, or not a day: nothing.
+        #expect(MidnightBadge.request(.init(day: "2026-11-07", count: 1), now: evening, calendar: calendar) == nil)
+        #expect(MidnightBadge.request(.init(day: "tomorrow", count: 1), now: evening, calendar: calendar) == nil)
+    }
+
+    @Test func runsTheJobJustAfterMidnight() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Europe/Berlin")!
+        let evening = calendar.date(from: DateComponents(year: 2026, month: 11, day: 7, hour: 21))!
+        let start = AppBadge.jobStart(after: evening, calendar: calendar)
+        #expect(start == calendar.date(from: DateComponents(year: 2026, month: 11, day: 8, hour: 0, minute: 5)))
+    }
+
     @Test func knowsWhetherTheServerPushesThroughThisBuildsRelay() throws {
         let on = try JSONDecoder().decode(ServerInfo.self, from: Data("""
         {"name":"Ohana","version":"0.3.0","apiVersion":1,"modules":["calendar"],"push":{"relay":"https://ohana-push.fa-krug.de"}}

@@ -15,6 +15,10 @@ nonisolated struct PushPayload: Codable, Equatable, Sendable {
     var path: String?
     var familyId: String?
     var event: String?
+    /// The icon's number for this device (`AppBadge`); left as it is when missing.
+    var badge: Int?
+    /// The number from the next midnight on (`MidnightBadge`, scheduled by the extension).
+    var badgeTomorrow: MidnightBadge.Next?
 
     enum OpenError: Error { case malformed }
 
@@ -28,11 +32,12 @@ nonisolated struct PushPayload: Codable, Equatable, Sendable {
         return try JSONDecoder().decode(PushPayload.self, from: plain)
     }
 
-    /// Shows the payload instead of the fallback: title, body, grouped by family, and the path for
-    /// the tap (`userInfo["path"]`).
+    /// Shows the payload instead of the fallback: title, body, grouped by family, the icon's
+    /// number, and the path for the tap (`userInfo["path"]`).
     func apply(to content: UNMutableNotificationContent) {
         content.title = title
         content.body = body
+        if let badge { content.badge = NSNumber(value: max(0, badge)) }
         if let familyId { content.threadIdentifier = familyId }
         var info = content.userInfo
         info.removeValue(forKey: Self.userInfoKey)

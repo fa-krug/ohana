@@ -18,6 +18,8 @@ struct OhanaApp: App {
         // The notification center's delegate: every notification (a push, a cook timer's) shows
         // while the app is open too, and a push's tap opens its page.
         PushNotifications.shared.start(app)
+        // The icon's number: again when the day changes, and the job after midnight (iOS).
+        AppBadge.start(app)
         // Copies of knowledge originals a viewer left behind (the app quit while it was open).
         Task.detached(priority: .utility) { KnowledgeOriginal.sweepCopies() }
         // Apple Calendar syncs (Settings → Calendar), per device and family.
@@ -54,6 +56,12 @@ struct OhanaApp: App {
         .windowToolbarStyle(.unified)
         #endif
         .commands { ShellCommands() }
+        #if os(iOS)
+        // Soon after midnight: the icon's number for the new day (`AppBadge`).
+        .backgroundTask(.appRefresh(AppBadge.taskID)) {
+            await AppBadge.runJob()
+        }
+        #endif
         // Cook timers that finished while the app was away leave the Live Activity; what changed
         // while the app was open shows on the widgets.
         .onChange(of: scenePhase) { _, phase in
@@ -62,6 +70,7 @@ struct OhanaApp: App {
                 AppleCalendarSync.shared.syncAllSoon()
                 app.sendQueuedChanges()
                 app.indexKnowledge()
+                app.refreshBadge()
             }
             if phase == .background, !app.isDemo { WidgetSync.reload() }
         }

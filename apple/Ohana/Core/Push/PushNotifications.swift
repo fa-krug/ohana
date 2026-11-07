@@ -91,10 +91,11 @@ final class PushNotifications: NSObject {
         guard Self.isAvailable(info), let relay = Self.relay else { throw PushError.unavailable }
         busy = true
         defer { busy = false }
-        let granted = (try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])) ?? false
+        let granted = (try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])) ?? false
         guard granted else { throw PushError.denied }
         try await register(client: client, relay: relay, muted: device?.mutedFamilyIds)
         isOn = true
+        AppBadge.refresh(client)
     }
 
     /// Stops pushes to this device: the server forgets it, the key goes.
@@ -123,6 +124,8 @@ final class PushNotifications: NSObject {
         renewed = client
         let status = await Self.authorizationStatus()
         guard status == .authorized || status == .provisional else { return }
+        // Turned on before the app asked for badges: asking again shows nothing once answered.
+        _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])
         do {
             try await register(client: client, relay: relay, muted: nil)
         } catch {
@@ -155,6 +158,8 @@ final class PushNotifications: NSObject {
         ids.removeAll { $0 == familyID }
         if muted { ids.append(familyID) }
         device = try await client.send(.patch, "/api/v1/me/push", body: PushMuteInput(mutedFamilyIds: ids), as: PushDevice.self)
+        // A muted family's chores leave the icon's number.
+        AppBadge.refresh(client)
     }
 
     /// A test push to this device, right away.
@@ -248,11 +253,13 @@ final class PushNotifications: NSObject {
 }
 
 extension PushNotifications: nonisolated UNUserNotificationCenterDelegate {
-    /// In the foreground too: a banner, in the list, with its sound (pushes and the cook timers'
-    /// local notifications alike).
+    /// In the foreground too: a banner, in the list, with its sound and the icon's number
+    /// (pushes and the cook timers' local notifications alike).
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
                                             willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
-        [.banner, .list, .sound]
+        // The midnight switch of the icon's number shows nothing.
+        if notification.request.identifier == MidnightBadge.identifier { return [.badge] }
+        return [.banner, .list, .sound, .badge]
     }
 
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,

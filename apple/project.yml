@@ -89,6 +89,9 @@ targets:
         NSCalendarsFullAccessUsageDescription: "Ohana syncs your family’s calendar with the Apple Calendar calendar you pick, and the assistant reads and changes your calendars when you ask it to."
         # The cook view's timers on the Lock Screen and in the Dynamic Island.
         NSSupportsLiveActivities: true
+        # The icon's number for the new day, soon after midnight (Core/Push/AppBadge.swift).
+        UIBackgroundModes: [fetch]
+        BGTaskSchedulerPermittedIdentifiers: [de.fa-krug.Ohana.badge]
         # Photos and PDFs shared to Ohana go to the letter review (LetterScanInbox); Alternate:
         # never the default app for them.
         CFBundleDocumentTypes:
@@ -360,6 +363,7 @@ targets:
           - "*.entitlements"
           - "Info-*.plist"
       - Ohana/Core/Push/PushPayload.swift
+      - Ohana/Core/Push/MidnightBadge.swift
       - Shared/Keychain.swift
     info:
       path: OhanaNotificationService/Info-iOS.plist
@@ -389,6 +393,7 @@ targets:
           - "*.entitlements"
           - "Info-*.plist"
       - Ohana/Core/Push/PushPayload.swift
+      - Ohana/Core/Push/MidnightBadge.swift
       - Shared/Keychain.swift
     info:
       path: OhanaNotificationService/Info-macOS.plist

@@ -308,7 +308,10 @@ Decisions:
   `DELETE`; `POST /api/v1/me/push/test` (one push to this device, in the request with a 10 s
   timeout, like the channels' test).
 - `lib/push/`: `relay.ts` (the client, 10 s timeout, batches of 100), `payload.ts` (the
-  plaintext `{ v: 1, title, body, path, familyId, event? }` where `path` is the message's URL
+  plaintext `{ v: 1, title, body, path, familyId, event?, badge?, badgeTomorrow? }` (`badge`,
+  added later: the app icon's number for that device, its open and overdue chores, as
+  `GET /api/v1/me/badge?today=` counts it; `badgeTomorrow` `{day, count}`: the number from the
+  next midnight on, which the app schedules) where `path` is the message's URL
   without `APP_URL` (`/f/{id}/…`, which the app already routes); sealed with the device key:
   12-byte IV + ciphertext + 16-byte tag, base64, the layout CryptoKit's `AES.GCM.SealedBox
   (combined:)` reads; the body shortened until it fits 3 000 bytes), `deliver.ts`

@@ -392,17 +392,28 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   then `PUT /api/v1/me/push` (`lib/push/app-routes.ts`, on the account router) gives the server
   the relay token and a per-device AES-256 key; `push_devices` (one per API token, cascade: sign
   out removes it; both secrets sealed; `muted_family_ids`). `deliver.ts` `pushToFamily` seals
-  `payload.ts` `{v, title, body, path, familyId, event}` per device (12-byte IV + ciphertext +
+  `payload.ts` `{v, title, body, path, familyId, event, badge, badgeTomorrow}` per device (12-byte IV + ciphertext +
   tag, base64 = CryptoKit's combined box; shortened to 3000 bytes), opaque collapse ids
   (hash of key + `Message.collapseKey`), sends through `relay.ts` (`RelayClient`, injected in
   tests as `push`/`relay`); `gone` / `invalid` deletes the device (the app registers again at
   start). Prefs: `notification_prefs.app`, `appt_searches.notify_app` (both optional in input:
-  an older app keeps them). `relay/` is its own Hono service (stateless, AGPL, image
+  an older app keeps them). **Badge:** the app icon's number is the account's open chores due
+  today plus the overdue single ones, assigned to it or subscribed, in its families but those the
+  device muted (`lib/chores/badge.ts` `choreBadge`, 0 with chores off); `pushToDevices` puts it in
+  every payload (server-local day) with tomorrow's (`choreBadges`, `badgeTomorrow {day, count}`),
+  `GET /api/v1/me/badge?today=` → `{count, tomorrow: {day, count}}` (`lib/push/app-routes.ts`).
+  `relay/` is its own Hono service (stateless, AGPL, image
   `ghcr.io/fa-krug/ohana-relay`, `.github/workflows/relay.yml`, tests with a fake APNs client;
   `relay/README.md` has the protocol). App: `Core/Push/` (`PushNotifications`: enable / renew
   at start / mute / test, tap → `AppModel.open`; `PushPayload` + `PushKey`, shared with the
   `OhanaNotificationService(-macOS)` extension targets, which decrypt with the key from the
-  shared Keychain group), `App/AppDelegate.swift` (the APNs token), `Shell/PushSettingsSection`,
+  shared Keychain group, set `content.badge` and schedule `badgeTomorrow`), `AppBadge` (asks
+  `/me/badge` at launch, on becoming active, on `NSCalendarDayChanged`, after `didChange(.chores)`
+  and a mute; clears it in the demo / on sign out; only while `badgeSetting` is enabled; midnight:
+  `MidnightBadge` (shared with the extensions) schedules a badge-only local notification for the
+  next midnight with tomorrow's number, and on iOS an app refresh task (`OhanaApp`'s
+  `.backgroundTask(.appRefresh("de.fa-krug.Ohana.badge"))`, `UIBackgroundModes` fetch,
+  `BGTaskSchedulerPermittedIdentifiers`) from 00:05 asks the server again and schedules the next), `App/AppDelegate.swift` (the APNs token), `Shell/PushSettingsSection`,
   `OhanaPushRelay` in the Info.plists; `PUSH_FALLBACK` is the relay's visible fallback string.
 - **Appointments (`lib/appointments/`)**, port of findmyappointment: `doctolib/` (JSON client,
   profile cache), `jameda/` (HTML client, offline term list), `sources/` (fan-out, dedup,

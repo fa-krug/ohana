@@ -537,7 +537,12 @@ paths:
       relay (`GET /api/v1/server` → `push.relay`). The app registers with the relay, then gives
       the server the relay's token for it and a key for the payloads, which the server seals
       (AES-256-GCM: 12-byte IV + ciphertext + 16-byte tag, base64) so the relay sees only
-      ciphertext. Signing out (deleting the token) removes the device. 404 when push is off on
+      ciphertext. The plaintext is `{v: 1, title, body, path?, familyId?, event?, badge?,
+      badgeTomorrow?}`: `path` a path of this server (`/f/{id}/…`) a tap opens, `badge` the app
+      icon's number for that device (as `GET /api/v1/me/badge` counts it, on the server's day;
+      left as it is when missing), `badgeTomorrow` `{day, count}` the number from the start of
+      `day` on, which the app schedules for midnight. Signing out (deleting the token) removes
+      the device. 404 when push is off on
       this server (`PUSH_RELAY_URL` empty).
     get:
       tags: [Account]
@@ -641,6 +646,45 @@ paths:
         "401": {$ref: "#/components/responses/Unauthorized"}
         "404": {$ref: "#/components/responses/NotFound"}
         "502": {$ref: "#/components/responses/BadGateway"}
+  /api/v1/me/badge:
+    get:
+      tags: [Account]
+      operationId: getBadge
+      summary: The app icon's number for this device
+      description: >-
+        The account's open chores due today (single chores due that day, repeating ones' open
+        occurrences that day) plus single chores left open from earlier days, counting only
+        chores assigned to the account or that it subscribed to, in all its families except
+        those this device muted for push (`mutedFamilyIds` of `/api/v1/me/push`). Works whether
+        or not push is on. 0 when the chores module is turned off (`DISABLED_MODULES`). With
+        `tomorrow`, the number from the next midnight on (should nothing change), which the app
+        has the system switch to at midnight. Every push to the device carries the same counts
+        as `badge` and `badgeTomorrow`.
+      security: [{bearerAuth: []}]
+      x-ohana-role: token
+      parameters:
+        - name: today
+          in: query
+          description: The client's day (default the server's day).
+          schema: {type: string, format: date}
+      responses:
+        "200":
+          description: The count.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, tomorrow]
+                properties:
+                  count: {type: integer, minimum: 0}
+                  tomorrow:
+                    type: object
+                    required: [day, count]
+                    properties:
+                      day: {type: string, format: date}
+                      count: {type: integer, minimum: 0}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
 
   # ------------------------------------------------------------------ admin
   /api/v1/admin/users:
