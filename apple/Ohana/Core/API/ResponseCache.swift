@@ -1,13 +1,27 @@
 import CryptoKit
 import Foundation
+import Synchronization
 
 /// The last answers of the GETs the screens show, kept on the device per server: a cold start
 /// shows them at once, and they stay readable without a connection (`CachedGet`,
 /// `LoadState.saved`). Raw response bodies under Caches, `Ohana/Responses/<server>/<key>.json`:
 /// the system may purge them when space runs low, the server keeps the real state. Not for the
 /// demo; signing out and a new pairing remove the server's copies (`clear`).
+///
+/// The answers decoded last are also kept in memory for the launch (`remember` / `recall`, a few
+/// dozen): a page built again (on iPhone each page opened after another) shows its copy at once,
+/// without reading and decoding the file.
 nonisolated final class ResponseCache: Sendable {
     let directory: URL
+
+    private struct Remembered: Sendable {
+        let value: any Sendable
+        let date: Date
+        var used: Int
+    }
+
+    private static let remembers = 48
+    private let memory = Mutex<(entries: [String: Remembered], clock: Int)>(([:], 0))
 
     /// Writes go out one after the other, off the main thread; `clear` waits for them.
     private static let writes = DispatchQueue(label: "ohana.response-cache", qos: .utility)
@@ -39,6 +53,8 @@ nonisolated final class ResponseCache: Sendable {
     }
 
     func write(_ data: Data, for key: String) {
+        // The value in memory is older now (it's remembered again where it's decoded).
+        forget(key)
         let (url, directory) = (file(key), directory)
         Self.writes.async {
             do {
@@ -50,8 +66,36 @@ nonisolated final class ResponseCache: Sendable {
         }
     }
 
+    /// The value decoded for `key` last, if it's a `T`.
+    func recall<T: Sendable>(_ type: T.Type, _ key: String) -> Saved<T>? {
+        memory.withLock { memory in
+            guard let entry = memory.entries[key], let value = entry.value as? T else { return nil }
+            memory.clock += 1
+            memory.entries[key]?.used = memory.clock
+            return Saved(value: value, date: entry.date)
+        }
+    }
+
+    /// Keeps `value`, decoded for `key`, in memory; the least recently used goes when there are
+    /// too many.
+    func remember(_ value: some Sendable, date: Date, for key: String) {
+        memory.withLock { memory in
+            memory.clock += 1
+            memory.entries[key] = Remembered(value: value, date: date, used: memory.clock)
+            if memory.entries.count > Self.remembers,
+               let oldest = memory.entries.min(by: { $0.value.used < $1.value.used })?.key {
+                memory.entries[oldest] = nil
+            }
+        }
+    }
+
+    func forget(_ key: String) {
+        _ = memory.withLock { $0.entries.removeValue(forKey: key) }
+    }
+
     /// Removes every copy of the server, once the writes under way are done.
     func clear() {
+        memory.withLock { $0.entries = [:] }
         let directory = directory
         Self.writes.sync { try? FileManager.default.removeItem(at: directory) }
     }

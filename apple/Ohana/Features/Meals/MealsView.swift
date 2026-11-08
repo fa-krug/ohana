@@ -90,7 +90,7 @@ struct MealsView: View {
     @State private var creatingRecipe = false
     @State private var managingTags = false
     @State private var onScreen = false
-    /// False while the iPhone keeps the page hidden behind another (`shellPageVisible`).
+    /// False while the iPhone's family page covers the page (`shellPageVisible`).
     @Environment(\.shellPageVisible) private var pageVisible
     /// The page is wide enough for the segments in the toolbar.
     @State private var segmentsFit = true

@@ -7,7 +7,7 @@ import SwiftUI
 /// `tagColumnFrom`, else a menu in the bar), the left-out ones on request. (Searching them is
 /// the search page's: its `knowledge` hits.) A row opens the document
 /// (`KnowledgeDocumentView`). Editors only, not the demo (`FamilyContext.knowledgeAvailable`);
-/// inside the shell's navigation stack (a sheet from the family page on iPhone).
+/// inside the shell's navigation stack.
 struct KnowledgeView: View {
     @Environment(FamilyContext.self) private var family
 
@@ -57,7 +57,7 @@ struct KnowledgeMember: Identifiable, Hashable {
 private struct KnowledgeList: View {
     @Environment(FamilyContext.self) private var family
     @Environment(\.scenePhase) private var scenePhase
-    /// False while the iPhone keeps the page hidden behind another (`shellPageVisible`).
+    /// False while the iPhone's family page covers the page (`shellPageVisible`).
     @Environment(\.shellPageVisible) private var pageVisible
     let indexer: KnowledgeIndexer
 

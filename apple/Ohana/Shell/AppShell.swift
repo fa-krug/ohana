@@ -4,9 +4,9 @@ import SwiftUI
 /// sidebar in sections (iPad, Mac; a tab bar on a narrow iPad), the family switcher, the search
 /// across the modules (its own tab, ⌘K), and the assistant: a round button at the bottom right
 /// of every page opening it (⌘J) as a panel floating over the page, a sheet on iPhone
-/// (`AssistantFloating`). On iPhone there are no tabs: one page at a time, the last one opened
-/// (also after the app was closed), with the family page behind it listing every page
-/// (`FamilySidebarHost`).
+/// (`AssistantFloating`). On iPhone there are no tabs: a split view collapsed into one stack, the
+/// family page listing every page with the page on screen pushed over it, the last one opened
+/// (also after the app was closed; `PhoneShell`).
 struct AppShell: View {
     @Environment(AppModel.self) private var app
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -18,10 +18,7 @@ struct AppShell: View {
     /// iPhone: the page on screen, kept across launches (a scene's storage goes when the app is
     /// swiped away).
     @AppStorage("phoneModule") private var phoneModule: Module = .overview
-    /// iPhone: the pages opened in this family, kept while another shows, so each is where it was
-    /// left (scrolled, pushed), as tabs are.
-    @State private var openedPages: [Module] = []
-    /// At launch the loading screen stays over the shell while every page is built
+    /// At launch the loading screen stays over the shell while the pages are built
     /// (`prebuildPages`), so none has to be built when it's first opened.
     @State private var launchLoading = !AppShell.launchBuilt
     /// iPad, Mac: the tab a route or a tap asked for while the launch built the tabs.
@@ -29,7 +26,7 @@ struct AppShell: View {
     /// Mac: the window's toolbar while the launch builds the tabs (each tab's items would flash by).
     @State private var launchToolbarHidden = !AppShell.launchBuilt
     /// The pages were built at launch: later shells (another family, another server) build theirs
-    /// while the family page is open instead.
+    /// when opened.
     private static var launchBuilt = false
 
     /// The tab on screen; the overview while the server has its module off (and on iPhone for the
@@ -40,6 +37,8 @@ struct AppShell: View {
             return app.isEnabled(current) && !Module.notPages.contains(current) ? current : .overview
         } set: { show($0) }
     }
+    /// The pages' stores, kept while the shell shows the family (`ShellPageStores`).
+    @State private var pageStores = ShellPageStores()
     /// The assistant panel: each window opens it as the last one left it (on iPhone, where it
     /// is a sheet, closed).
     @State private var showAssistant = AppShell.assistantWasOpen
@@ -65,11 +64,6 @@ struct AppShell: View {
                     if Module.onPhone { phoneModule = module }
                 }
             .modifier(AssistantPresentation(isPresented: $showAssistant, enabled: assistantOn))
-            #if os(iOS)
-            // Where the tab view has no sidebar, and on iPhone: the family page behind the page.
-            .modifier(FamilySidebarHost(active: Module.onPhone || sizeClass == .compact,
-                                        current: selection.wrappedValue))
-            #endif
             // The launch's loading screen, until the pages are built.
             .overlay {
                 // There from the first frame (the root's own loading screen fades into the shell):
@@ -90,6 +84,7 @@ struct AppShell: View {
             // The shopping list in Reminders: at becoming active, on showing the family, after changes.
             .modifier(ShoppingRemindersUpdates())
             .environment(context)
+            .environment(\.pageStores, pageStores)
             .id(family.id)
             .focusedSceneValue(\.shell, ShellFocus(module: selection, assistant: $showAssistant,
                                                    modules: Module.allCases.filter { context.isEnabled($0) },
@@ -152,7 +147,7 @@ struct AppShell: View {
         }
     }
 
-    /// Switches to `target`'s tab, on iPhone its page (the family page sliding away), or there
+    /// Switches to `target`'s tab, on iPhone its page (pushed over the family page), or there
     /// opens the assistant's sheet.
     private func show(_ target: Module) {
         if Module.notPages.contains(target) {
@@ -161,57 +156,25 @@ struct AppShell: View {
         }
         // The launch is going through the tabs: this one once it's done.
         if launchLoading, !Module.onPhone { tabAfterLaunch = target }
-        guard Module.onPhone, app.showsFamilySidebar else {
-            module = target
-            return
-        }
-        let slide = { withAnimation(.snappy(duration: 0.3)) { app.showsFamilySidebar = false } }
-        if openedPages.contains(target) {
-            module = target
-            slide()
-        } else {
-            // Not built ahead (`prebuildPages`, the family page wasn't open long enough): built first,
-            // hidden behind the family page, then shown and slid in whole. Built while it slides,
-            // it held up the slide's first frames, which were skipped.
-            openedPages.append(target)
-            Task {
-                try? await Task.sleep(for: .milliseconds(50))
-                module = target
-                slide()
-            }
-        }
+        module = target
+        if Module.onPhone { app.showsFamilySidebar = false }
     }
 
-    /// The pages that weren't opened yet, built ahead (each takes a few hundred milliseconds, and
-    /// built when first opened it showed: a blank page or a spinner, the iPhone's slide held up).
-    /// At launch all of them, behind the loading screen (`launchLoading`): on iPhone hidden, one at a
-    /// time; on iPad and the Mac each tab picked for a moment (a tab view builds a tab only when it's
-    /// picked, and keeps it), then the one to show. Not the search page: it takes the keyboard on
-    /// appearing. Later (another family, another server) on iPhone while the family page is open,
-    /// stopping as soon as it closes (the task is cancelled); iPad and Mac build theirs when opened.
+    /// iPad, Mac: the tabs that weren't opened yet, built ahead behind the loading screen at launch
+    /// (each takes a few hundred milliseconds, and built when first opened it showed a blank page or
+    /// a spinner): each tab picked for a moment (a tab view builds a tab only when it's picked, and
+    /// keeps it), then the one to show. Not the search page or the assistant's: they take the keyboard
+    /// on appearing. Later shells (another family, another server) build theirs when opened. On
+    /// iPhone only the page on screen is built (the split view has one).
     private func prebuildPages(_ context: FamilyContext) async {
-        let atLaunch = launchLoading
-        if atLaunch {
-            AppShell.launchBuilt = true
-            // The loading screen drawn first.
-            try? await Task.sleep(for: .milliseconds(16))
-        } else {
-            guard Module.onPhone, app.showsFamilySidebar else { return }
-            // The family page's slide first.
-            try? await Task.sleep(for: .milliseconds(400))
-        }
-        let pages = ([.overview] + Module.modules + [.settings])
-            .filter { !Module.notPages.contains($0) && context.isEnabled($0) }
-        if Module.onPhone {
-            for page in pages where !openedPages.contains(page) {
-                guard !Task.isCancelled, atLaunch || app.showsFamilySidebar else { return }
-                openedPages.append(page)
-                // Each on its own (the loading screen's spinner turns in between), with a pause for a tap.
-                try? await Task.sleep(for: .milliseconds(atLaunch ? 16 : 100))
-            }
-        } else {
+        guard launchLoading else { return }
+        AppShell.launchBuilt = true
+        // The loading screen drawn first.
+        try? await Task.sleep(for: .milliseconds(16))
+        if !Module.onPhone {
+            let pages = ([.overview] + Module.modules + [.settings])
+                .filter { !Module.notPages.contains($0) && context.isEnabled($0) }
             let start = selection.wrappedValue
-            // Not the assistant's page either: it takes the keyboard on appearing.
             for page in pages where page != start && page != .assistant {
                 guard !Task.isCancelled else { break }
                 module = page
@@ -220,7 +183,6 @@ struct AppShell: View {
             module = tabAfterLaunch ?? start
             tabAfterLaunch = nil
         }
-        guard atLaunch else { return }
         // The last one drawn and the toolbar back (laid out under the loading screen), then the
         // pages show.
         launchToolbarHidden = false
@@ -228,28 +190,18 @@ struct AppShell: View {
         withAnimation(.smooth(duration: 0.3)) { launchLoading = false }
     }
 
-    /// The pages: on iPhone the one on screen (the assistant's button in its bottom toolbar,
-    /// `ShellPageItems`); elsewhere the tab view (a sidebar, or a tab bar on a narrow iPad), each
+    /// The pages: on iPhone the one on screen over the family page (the assistant's button floating
+    /// on it, `ShellPageItems`); elsewhere the tab view (a sidebar, or a tab bar on a narrow iPad), each
     /// page with the button over it.
     @ViewBuilder
     private func pages(_ context: FamilyContext, assistantOn: Bool) -> some View {
         if Module.onPhone {
-            let current = selection.wrappedValue
-            let kept = openedPages.filter { context.isEnabled($0) }
-            ZStack {
-                ForEach(kept.contains(current) ? kept : kept + [current]) { item in
-                    let visible = item == current
-                    page(item, assistantOn: assistantOn)
-                        .environment(\.shellPageVisible, visible)
-                        .opacity(visible ? 1 : 0)
-                        .allowsHitTesting(visible)
-                        .accessibilityHidden(!visible)
-                }
+            #if os(iOS)
+            PhoneShell(current: selection.wrappedValue, open: show) { item in
+                page(item, assistantOn: assistantOn)
             }
-            .onChange(of: current, initial: true) {
-                if !openedPages.contains(current) { openedPages.append(current) }
-            }
-            .task(id: app.showsFamilySidebar) { await prebuildPages(context) }
+            .task { await prebuildPages(context) }
+            #endif
         } else {
             TabView(selection: selection) {
                 tab(.overview, assistantOn: assistantOn)
@@ -372,8 +324,28 @@ extension EnvironmentValues {
     /// The shell's page on screen, inside a module's navigation stack (nil elsewhere): on the Mac
     /// every page there gets the search field (`ShellSearchField`).
     @Entry var shellModule: Binding<Module>?
-    /// False for a page the iPhone keeps while another shows (`AppShell.openedPages`).
+    /// False while the iPhone's family page covers the page (`PhoneShell`).
     @Entry var shellPageVisible = true
+    /// The shell's keeper of the pages' stores (nil outside a shell).
+    @Entry var pageStores: ShellPageStores?
+}
+
+/// The stores pages make for themselves (the calendar's, finance's), kept by the shell while it
+/// shows the family: a page built again (on iPhone each page opened after another; the split view
+/// has only the one on screen) finds what it showed, the year, the selection, the filters, and
+/// refreshes it quietly instead of starting empty. Per family context (a newer context of the family
+/// gets new ones); gone with the shell.
+final class ShellPageStores {
+    private var stores: [String: AnyObject] = [:]
+
+    /// The `S` kept for `family`, made with `make` the first time.
+    func store<S: AnyObject>(for family: FamilyContext, make: () -> S) -> S {
+        let key = "\(ObjectIdentifier(S.self).hashValue)-\(ObjectIdentifier(family).hashValue)"
+        if let store = stores[key] as? S { return store }
+        let store = make()
+        stores[key] = store
+        return store
+    }
 }
 
 /// The assistant over the modules: a panel floating at the right of the page (iPad, Mac), a sheet
@@ -413,46 +385,27 @@ private struct AssistantPresentation: ViewModifier {
     }
 }
 
-/// The toolbar every module page gets from the shell: the way to the family page (iPhone: back
-/// to it; a narrow iPad, where the tab view has no sidebar: its sidebar button) and on the Mac the
-/// search field at its end.
+/// The toolbar every module page gets from the shell: on a narrow iPad, where the tab view has no
+/// sidebar, the family menu (`FamilyPickerButton`, with the settings: the tab bar leaves them out);
+/// on the Mac the search field at its end. (On iPhone the split view's back button goes to the family
+/// page.)
 struct ShellToolbar: ViewModifier {
-    @Environment(AppModel.self) private var app
     @Environment(\.horizontalSizeClass) private var sizeClass
-    @Environment(\.shellPageVisible) private var visible
-    @State private var appeared = false
 
     func body(content: Content) -> some View {
         content
             .toolbar {
                 #if os(iOS)
-                if Module.onPhone {
+                if !Module.onPhone, sizeClass == .compact {
                     ToolbarItem(placement: .topBarLeading) {
-                        Button {
-                            withAnimation(.snappy(duration: 0.3)) { app.showsFamilySidebar = true }
-                        } label: {
-                            Label { Text(verbatim: "Ohana") } icon: { Image(systemName: "chevron.backward") }
-                        }
-                    }
-                } else if sizeClass == .compact {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button("Family", systemImage: "sidebar.leading") {
-                            withAnimation(.snappy(duration: 0.3)) { app.showsFamilySidebar = true }
+                        FamilyPickerButton(showsSettings: true) {
+                            Label("Family", systemImage: "sidebar.leading")
                         }
                     }
                 }
                 #endif
             }
             .shellPageItems()
-            #if os(iOS)
-            // The swipe to the family page waits while a page is pushed over a root (a kept page
-            // the iPhone hides doesn't count).
-            .onAppear { appeared = true }
-            .onDisappear { appeared = false }
-            .onChange(of: appeared && visible) { _, onScreen in
-                app.moduleRootsOnScreen = max(0, app.moduleRootsOnScreen + (onScreen ? 1 : -1))
-            }
-            #endif
     }
 }
 

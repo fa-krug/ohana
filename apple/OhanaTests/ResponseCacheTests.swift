@@ -55,6 +55,32 @@ struct ResponseCacheTests {
         #expect(tomorrow.saved()?.value == Plan(name: "Today"))
     }
 
+    @Test func remembersTheLastDecodedAnswerUntilANewCopyIsWritten() {
+        let cache = cache()
+        #expect(cache.recall(String.self, "plan") == nil)
+        cache.remember("Week 1", date: .distantPast, for: "plan")
+        #expect(cache.recall(String.self, "plan")?.value == "Week 1")
+        // Another type under the key is none.
+        #expect(cache.recall(Int.self, "plan") == nil)
+        // A newer copy on the device: the one in memory is older.
+        cache.write(Data(#""Week 2""#.utf8), for: "plan")
+        #expect(cache.recall(String.self, "plan") == nil)
+        cache.remember("Week 2", date: .now, for: "plan")
+        cache.clear()
+        #expect(cache.recall(String.self, "plan") == nil)
+    }
+
+    @Test func forgetsTheLeastRecentlyUsedAnswer() {
+        let cache = cache()
+        for n in 0..<48 { cache.remember(n, date: .now, for: "k\(n)") }
+        // Used again: kept when the 49th comes.
+        #expect(cache.recall(Int.self, "k0")?.value == 0)
+        cache.remember(48, date: .now, for: "k48")
+        #expect(cache.recall(Int.self, "k0")?.value == 0)
+        #expect(cache.recall(Int.self, "k1") == nil)
+        #expect(cache.recall(Int.self, "k48")?.value == 48)
+    }
+
     @Test func theDemoKeepsNothing() {
         let api = FamilyAPI(client: APIClient(demo: DemoServer()), familyID: "demo")
         #expect(api.cached("/meals/plan", as: Plan.self).saved() == nil)

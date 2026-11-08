@@ -649,7 +649,9 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `FamilyContext`: `FamilyAPI` + `didChange`/`revision` signals between modules),
   `Core/API/APIClient.swift` (errors `{error}` / `{message}` → `APIError`, 401 signs out),
   `Core/API/ResponseCache.swift` (offline: the last answer of each screen's GET kept under
-  Caches per server, `api.cached("/meals/plan")` → `CachedGet` `saved()` / `fetch()`;
+  Caches per server, `api.cached("/meals/plan")` → `CachedGet` `saved()` / `fetch()`; the
+  answers decoded last also in memory for the launch, `remember` / `recall`, ≤ 48, dropped when a
+  newer copy is written, so a page built again shows its copy without reading the file;
   `LoadState.run($state, api.cached(…))` shows the copy at once as `.saved(…, updating:)`,
   silently (no sync or save indicators anywhere: only errors show, in the error banner; with nothing
   to show yet `PageLoadingView`, empty for 0.4 s, then a spinner), and
@@ -674,25 +676,26 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   server's `ResponseCache` folder (`RemoteImageStore`). Offline
   writes, server wins (a refusal drops the change and reloads): the calendar's queue of entry /
   note ops is kept on disk (`CalendarStore.queueFile`, shown on top of what's loaded)),
-  `Shell/` (sidebar-adaptable `TabView` on iPad and Mac; on iPhone no tabs (`Module.onPhone`): one
-  page at a time in its own navigation stack, the last one opened (`@AppStorage("phoneModule")`, so
-  also after the app was closed), every other page picked on the family page behind it; the pages
-  opened are kept, hidden, while another shows (`openedPages`, `shellPageVisible`), so each is
-  where it was left, as tabs are (a hidden page still "appears": what polls, the calendar, the
-  knowledge base, the recipe imports, also waits for `shellPageVisible` and reloads on coming back); at launch every page is built hidden
-  behind the loading screen (`launchLoading`, `prebuildPages`, not the search), for a family opened
-  later while the family page is open, and one picked before that is built first, then slid in
-  (`AppShell.show`: the page rows leave the slide to it); on iPad and the Mac the launch picks each
-  tab once behind it (not the search or the assistant: they take the keyboard), the Mac's toolbar
-  hidden meanwhile; the pushed-aside pages are one `.geometryGroup()`, or a page shown while aside skips the slide); settings pinned at the sidebar's foot (`tabViewSidebarBottomBar`; on the Mac, which can't leave a tab out of the sidebar alone and draws nothing for a `.hidden` tab, the tab is hidden only while another page is on screen); family switcher: on iPad and Mac
-  a system `Menu` (`FamilyMenu`) at the top of the sidebar, on iPhone and where the tab view has no
-  sidebar (a narrow iPad window) a family page behind the page / the tabs as in Mail (`FamilySidebar.swift`:
-  `FamilySidebarHost` slides them away, `AppModel.showsFamilySidebar`; the toolbar's back button
-  (iPhone) / family button or a swipe from the leading edge, which a UIKit edge pan only takes while a module root is
-  on screen, `moduleRootsOnScreen`, so it stays "back" on pushed pages; the family on screen as the
-  title's subtitle, every page but the assistant with the one on screen highlighted (Search's ready
-  to type), scanning a letter, the settings; the families to switch to with one *Add Family* menu
-  (new / join) are in the settings there, `FamilyListSection`), the assistant ⌘J: a round button at
+  `Shell/` (sidebar-adaptable `TabView` on iPad and Mac; on iPhone no tabs (`Module.onPhone`): a
+  `NavigationSplitView` collapsed into one stack (`FamilySidebar.swift` `PhoneShell`, as Mail's
+  mailboxes): the family page is its root, the page on screen pushed over it, opening on the last one
+  (`@AppStorage("phoneModule")`, so also after the app was closed; `preferredCompactColumn` bound to
+  `AppModel.showsFamilySidebar`); the system's back button ("Ohana") and swipe go to the family page,
+  a row or a swipe to the left there back to a page. The detail column holds only the page on
+  screen (several pages' stacks in it merge their toolbars), but the same page stays the same view
+  while the family page shows, so it's kept as it was left; what polls (the calendar, the knowledge
+  base, the recipe imports) waits for `shellPageVisible` (false while the family page shows). A page
+  built again finds its data at once: the calendar's and finance's stores are kept by the shell per
+  family (`ShellPageStores`, `\.pageStores`), the `LoadState` pages read the cache's memory; on iPad
+  and the Mac the launch picks each tab once behind the loading screen (`launchLoading`,
+  `prebuildPages`; not the search or the assistant: they take the keyboard), the Mac's toolbar
+  hidden meanwhile); settings pinned at the sidebar's foot (`tabViewSidebarBottomBar`; on the Mac, which can't leave a tab out of the sidebar alone and draws nothing for a `.hidden` tab, the tab is hidden only while another page is on screen); family switcher: on iPad and Mac
+  a system `Menu` (`FamilyMenu`) at the top of the sidebar, where the tab view has no sidebar (a
+  narrow iPad window) the same menu from each page's toolbar with the settings in it
+  (`FamilyPickerButton(showsSettings:)`, `ShellToolbar`), on iPhone the family page (the family on
+  screen as the title's subtitle, every page but the assistant with the one on screen highlighted
+  (Search's ready to type), scanning a letter, the settings; the families to switch to with one
+  *Add Family* menu (new / join) are in the settings there, `FamilyListSection`), the assistant ⌘J: a round button at
   the bottom right of every page (`Features/Assistant/AssistantFloating.swift`,
   `AssistantFloatingButton`: the assistant's color, a still dot while a turn runs, an ✕ while open;
   not on the assistant's own page; on iPad and the Mac an overlay of each tab's page,

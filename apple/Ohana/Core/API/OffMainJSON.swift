@@ -106,9 +106,13 @@ extension FamilyAPI {
 }
 
 extension CachedGet where Value: OffMainDecodable {
-    /// `saved()`, read and decoded off the main thread.
+    /// `saved()`, read and decoded off the main thread; the value decoded last in this launch
+    /// when there is one (`ResponseCache.recall`), at once.
     func savedOffMain() async -> Saved<Value>? {
-        await OffMainJSON.saved(Value.self, cache: client.cache, key: key)
+        if let kept = client.cache?.recall(Value.self, key) { return kept }
+        let saved = await OffMainJSON.saved(Value.self, cache: client.cache, key: key)
+        if let saved { client.cache?.remember(saved.value, date: saved.date, for: key) }
+        return saved
     }
 
     /// `fetch()`, decoded off the main thread.
@@ -116,6 +120,7 @@ extension CachedGet where Value: OffMainDecodable {
         let (data, _) = try await client.data(for: client.request(.get, path, query: query))
         let value = try await client.decode(Value.self, from: data)
         client.cache?.write(data, for: key)
+        client.cache?.remember(value, date: .now, for: key)
         return value
     }
 

@@ -179,19 +179,10 @@ struct FamilySettingsLabel: View {
 private struct FamilySettingsForm: View {
     @Environment(FamilyContext.self) private var family
     @Environment(AppModel.self) private var app
-    #if os(iOS)
-    @Environment(\.horizontalSizeClass) private var sizeClass
-    #endif
     let model: FamilySettingsModel
 
-    /// Where there's no sidebar with the family menu: the families here.
-    private var listsFamilies: Bool {
-        #if os(iOS)
-        Module.onPhone || sizeClass == .compact
-        #else
-        false
-        #endif
-    }
+    /// iPhone, which has no family menu: the families here.
+    private var listsFamilies: Bool { Module.onPhone }
 
     var body: some View {
         Form {

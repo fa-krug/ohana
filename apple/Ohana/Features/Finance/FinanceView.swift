@@ -4,6 +4,7 @@ import SwiftUI
 /// transactions and the overview. Lives inside the shell's NavigationStack.
 struct FinanceView: View {
     @Environment(FamilyContext.self) private var family
+    @Environment(\.pageStores) private var pageStores
     @State private var store: FinanceStore?
 
     var body: some View {
@@ -16,9 +17,15 @@ struct FinanceView: View {
         }
         .ohanaBackground(ModuleTint.finance)
         .navigationTitle("Finance")
-        .task(id: ObjectIdentifier(family)) {
-            if store?.family !== family { store = FinanceStore(family: family) }
-        }
+        // Before the first frame: a kept store shows at once.
+        .onAppear(perform: takeStore)
+        .onChange(of: ObjectIdentifier(family), takeStore)
+    }
+
+    /// The shell's store of the family, so the page built again shows what it showed.
+    private func takeStore() {
+        guard store?.family !== family else { return }
+        store = pageStores?.store(for: family) { FinanceStore(family: family) } ?? FinanceStore(family: family)
     }
 }
 
@@ -53,10 +60,16 @@ struct FinanceScreen: View {
     @State private var readingReceipt = false
     @State private var findingTransfers = false
     @State private var dropping = false
-    @State private var query = ""
+    @State private var query: String
     #if os(iOS)
     @State private var editMode = EditMode.inactive
     #endif
+
+    init(store: FinanceStore) {
+        self.store = store
+        // A kept store's search (the page built again, `ShellPageStores`).
+        _query = State(initialValue: store.filter.q)
+    }
 
     private var selecting: Bool {
         #if os(iOS)

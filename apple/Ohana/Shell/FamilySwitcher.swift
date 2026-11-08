@@ -39,21 +39,23 @@ struct FamilySwitcher: View {
     }
 }
 
-/// Opens the family menu at the top of the sidebar (iPad, Mac; where there is no sidebar the
-/// shell has `FamilySidebarHost`): the families to switch to, creating or joining one (in the demo:
+/// Opens the family menu at the top of the sidebar (iPad, Mac; a narrow iPad's toolbar, iPhone has
+/// its family page, `PhoneShell`): the families to switch to, creating or joining one (in the demo:
 /// connecting a server) and scanning a letter. It shows invite links the app was opened with
 /// (`InviteInbox`).
 struct FamilyPickerButton<ButtonLabel: View>: View {
     @Environment(AppModel.self) private var app
     /// The family on screen (scanning a letter goes to its shell).
     @Environment(FamilyContext.self) private var family: FamilyContext?
+    /// Offers the settings too (a narrow iPad's tab bar leaves them out).
+    var showsSettings = false
     @ViewBuilder let label: ButtonLabel
     @State private var creating = false
     @State private var joining: InviteRequest?
 
     var body: some View {
         Menu {
-            FamilyMenu(scans: family != nil, choose: run)
+            FamilyMenu(scans: family != nil, settings: showsSettings, choose: run)
         } label: {
             label
         }
@@ -71,20 +73,23 @@ struct FamilyPickerButton<ButtonLabel: View>: View {
         case .join: joining = InviteRequest()
         case .connect: app.showsConnect = true
         case .scanLetter: family?.scanLetter()
+        case .settings: Module.settings.open()
         }
     }
 }
 
 private enum FamilyPickerAction {
-    case family(String), create, join, connect, scanLetter
+    case family(String), create, join, connect, scanLetter, settings
 }
 
 /// The family menu's items, a plain list: the families (the current one checked), creating or
-/// joining one, then scanning a letter.
+/// joining one, then scanning a letter (and the settings).
 private struct FamilyMenu: View {
     @Environment(AppModel.self) private var app
     /// Offers scanning a letter (inside a family's shell).
     let scans: Bool
+    /// Offers the settings.
+    let settings: Bool
     let choose: (FamilyPickerAction) -> Void
 
     var body: some View {
@@ -104,6 +109,10 @@ private struct FamilyMenu: View {
         if scans {
             Divider()
             Button("Scan letter", systemImage: "doc.text.viewfinder") { choose(.scanLetter) }
+        }
+        if settings {
+            Divider()
+            Button(Module.settings.title, systemImage: Module.settings.systemImage) { choose(.settings) }
         }
     }
 }
@@ -138,7 +147,7 @@ struct FamilyBadge: View {
     }
 }
 
-/// Settings → Families, on iPhone and a narrow iPad (elsewhere the sidebar's family menu): the
+/// Settings → Families, on iPhone (elsewhere the family menu): the
 /// families to switch to, with Add Family (new or join) below them; in the demo connecting a server.
 struct FamilyListSection: View {
     @Environment(AppModel.self) private var app

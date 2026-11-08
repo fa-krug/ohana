@@ -14,7 +14,7 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
     var id: String { rawValue }
 
     /// On iPhone the shell has no tabs: one page at a time, the last one opened, with the family
-    /// page behind it to pick another (`FamilySidebarHost`).
+    /// page under it to pick another (`PhoneShell`).
     static var onPhone: Bool {
         #if os(iOS)
         UIDevice.current.userInterfaceIdiom == .phone

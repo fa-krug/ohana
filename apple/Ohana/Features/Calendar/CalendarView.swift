@@ -8,6 +8,7 @@ import SwiftUI
 /// size the selection's actions and the type chips float in a glass bar at the bottom.
 struct CalendarView: View {
     @Environment(FamilyContext.self) private var family
+    @Environment(\.pageStores) private var pageStores
     @State private var store: CalendarStore?
 
     var body: some View {
@@ -21,14 +22,18 @@ struct CalendarView: View {
         .ohanaBackground(ModuleTint.calendar)
         .navigationTitle("Calendar")
         .onAppear {
-            if store == nil {
-                store = CalendarStore(api: family.api, readOnly: !family.canEdit,
-                                      queueFile: CalendarStore.queueFile(for: family.api))
+            guard store == nil else { return }
+            // The shell's, so the page built again shows what it showed.
+            let make = {
+                let store = CalendarStore(api: family.api, readOnly: !family.canEdit,
+                                          queueFile: CalendarStore.queueFile(for: family.api))
                 #if os(macOS)
                 // The Mac opens on today, its details beside the grid (a route selects its own day).
-                if store?.year == Day.today.year { store?.select(.today) }
+                if store.year == Day.today.year { store.select(.today) }
                 #endif
+                return store
             }
+            store = pageStores?.store(for: family, make: make) ?? make()
         }
     }
 }
@@ -41,7 +46,7 @@ struct CalendarPlannerView: View {
     @Environment(FamilyContext.self) private var family
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.undoManager) private var undoManager
-    /// False while the iPhone keeps the page hidden behind another (`shellPageVisible`).
+    /// False while the iPhone's family page covers the page (`shellPageVisible`).
     @Environment(\.shellPageVisible) private var pageVisible
     @Bindable var store: CalendarStore
     @State private var actions: CalendarActions
