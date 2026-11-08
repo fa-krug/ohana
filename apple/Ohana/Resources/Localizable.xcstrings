@@ -1,7 +1,6 @@
 {
   "sourceLanguage": "en",
   "strings": {
-    "%@ %@": {},
     "%@ (%@) becomes the booking, the others its parts": {
       "localizations": {
         "de": {
@@ -1294,6 +1293,16 @@
         }
       }
     },
+    "A memory has 1 to 300 characters.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Gedächtniseintrag hat 1 bis 300 Zeichen."
+          }
+        }
+      }
+    },
     "A name you’ll recognize, like the program that uses it. A token can do everything you can.": {
       "localizations": {
         "de": {
@@ -1650,6 +1659,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Maschinenschritte hinzufügen"
+          }
+        }
+      }
+    },
+    "Add Memory": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eintrag hinzufügen"
           }
         }
       }
@@ -3456,6 +3475,16 @@
         }
       }
     },
+    "By %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Von %@"
+          }
+        }
+      }
+    },
     "By Hand": {
       "localizations": {
         "de": {
@@ -3672,6 +3701,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kategorie %lld"
+          }
+        }
+      }
+    },
+    "Change": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ändern"
           }
         }
       }
@@ -6236,6 +6275,16 @@
         }
       }
     },
+    "E.g. Clothing from H&M goes to Kids’ clothing.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Z. B. Kleidung von H&M kommt in Kinderkleidung."
+          }
+        }
+      }
+    },
     "E.g. gpt-image-1 or dall-e-3 (OpenAI), gemini-2.5-flash-image (Google’s Gemini API). Empty: no AI photos.": {
       "localizations": {
         "de": {
@@ -6342,6 +6391,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aufgabe bearbeiten"
+          }
+        }
+      }
+    },
+    "Edit Memory": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eintrag bearbeiten"
           }
         }
       }
@@ -7522,6 +7581,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Für deine eigenen Programme und Skripte. Um Ohana zu nutzen, brauchst du das nicht."
+          }
+        }
+      }
+    },
+    "Forget": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vergessen"
           }
         }
       }
@@ -9820,6 +9889,16 @@
         }
       }
     },
+    "Memory": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gedächtnis"
+          }
+        }
+      }
+    },
     "Messages and what the assistant reads go to the AI API above.": {
       "localizations": {
         "de": {
@@ -9856,6 +9935,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Modell"
+          }
+        }
+      }
+    },
+    "Module": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bereich"
           }
         }
       }
@@ -10296,6 +10385,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Neue Liste „%@“"
+          }
+        }
+      }
+    },
+    "New Memory": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neuer Eintrag"
           }
         }
       }
@@ -11300,6 +11399,16 @@
         }
       }
     },
+    "Not Now": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jetzt nicht"
+          }
+        }
+      }
+    },
     "Not Yet": {
       "localizations": {
         "de": {
@@ -11568,6 +11677,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noch nichts gelesen"
+          }
+        }
+      }
+    },
+    "Nothing remembered yet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch nichts gemerkt"
+          }
+        }
+      }
+    },
+    "Nothing saved": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nichts gespeichert"
           }
         }
       }
@@ -13898,6 +14027,16 @@
         }
       }
     },
+    "Remember": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Merken"
+          }
+        }
+      }
+    },
     "Reminders": {
       "localizations": {
         "de": {
@@ -14658,6 +14797,16 @@
         }
       }
     },
+    "Save %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld speichern"
+          }
+        }
+      }
+    },
     "Save %lld recipes": {
       "localizations": {
         "de": {
@@ -14694,6 +14843,16 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "Save %lld: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld speichern: %@"
           }
         }
       }
@@ -14784,6 +14943,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Gespeichert"
+          }
+        }
+      }
+    },
+    "Saved %lld of %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld von %lld gespeichert"
           }
         }
       }
@@ -16842,6 +17011,16 @@
         }
       }
     },
+    "Suggesting what to remember": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schlägt vor, was sich der Assistent merken soll"
+          }
+        }
+      }
+    },
     "Suitcase": {
       "localizations": {
         "de": {
@@ -17218,6 +17397,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Teddybär"
+          }
+        }
+      }
+    },
+    "Tell the assistant e.g. “Always put … into …” and it remembers.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sag dem Assistenten z. B. „Buche … immer unter …“, und er merkt es sich."
           }
         }
       }
@@ -18462,6 +18651,16 @@
         }
       }
     },
+    "This version of Ohana can’t do this.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Version von Ohana kann das nicht."
+          }
+        }
+      }
+    },
     "This version of Ohana can’t make this change.": {
       "localizations": {
         "de": {
@@ -19608,6 +19807,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Was soll dabei sein"
+          }
+        }
+      }
+    },
+    "What to remember": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was sich der Assistent merken soll"
           }
         }
       }

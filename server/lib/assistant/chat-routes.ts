@@ -17,6 +17,8 @@
 //   POST   {chat}/calendar the same for the waiting edit of their device calendars
 //   POST   {chat}/notes    the same for the waiting edit of the family's notes
 //   POST   {chat}/suggestions  the same for the waiting suggestions (which the user added)
+//   POST   {chat}/memories the same for the waiting changes of the assistant's memory (which
+//                          the user confirmed and the app applied)
 //   POST   {chat}/stop     stops the running turn
 //   POST   {chat}/undone   a change of the chat was undone (the model hears it next time)
 //   POST   {chat}/page     moves the chat to another page
@@ -61,7 +63,7 @@ import type { StoredMessage } from "./context";
 import { MAX_PATH_LENGTH } from "@/lib/knowledge/input";
 import { withoutMarkers } from "./sources";
 import type { ChatMessage, ContentPart } from "./provider";
-import type { AppleCalendarOp, NoteOp, ReminderOp, SuggestionOp } from "./tools";
+import type { AppleCalendarOp, MemoryOp, NoteOp, ReminderOp, SuggestionOp } from "./tools";
 import type { AssistantStore, ChatRow } from "./store";
 
 /** How often followers look for news (the worker saves streaming text every 0.5 s). */
@@ -124,6 +126,8 @@ export function handleChats(
       return r.edit(id, "notes");
     case "POST :id/suggestions":
       return r.edit(id, "suggestions");
+    case "POST :id/memories":
+      return r.edit(id, "memories");
     case "POST :id/stop":
       return r.stop(id);
     case "POST :id/undone":
@@ -404,9 +408,9 @@ class ChatRoutes {
   }
 
   /** POST /ai/chats/{id}/reminders {id, applied, results?, reminders?, page, year, lang, today}
-   *  (and POST …/calendar with `appleCalendar`, POST …/notes, POST …/suggestions): the user
-   *  applied the waiting edit of their Reminders (calendars; notes; the suggestions they
-   *  picked) in the app (results: one per op, in order: {ok: true, id?}, {ok: false, error} or
+   *  (and POST …/calendar with `appleCalendar`, POST …/notes, POST …/suggestions, POST
+   *  …/memories): the user applied the waiting edit of their Reminders (calendars; notes; the
+   *  suggestions they picked; the memory changes they confirmed, applied through /ai/memories) in the app (results: one per op, in order: {ok: true, id?}, {ok: false, error} or
    *  {ok: false, declined: true}) or declined it (applied: false); the turn goes on with that as
    *  the tool's result. The context's snapshot is the fresh one after the change. */
   async edit(id: string, kind: EditKind) {
@@ -428,7 +432,7 @@ class ChatRoutes {
         messages.map((r) => r.message as unknown as StoredMessage),
       );
       if (!edit || edit.id !== body.id) throw new HttpError(409, "This change doesn't wait any more");
-      const ops: (ReminderOp | AppleCalendarOp | NoteOp | SuggestionOp)[] = edit.ops;
+      const ops: (ReminderOp | AppleCalendarOp | NoteOp | SuggestionOp | MemoryOp)[] = edit.ops;
       let answer: EditAnswer;
       let result: unknown;
       if (body.applied) {
@@ -438,8 +442,9 @@ class ChatRoutes {
         result = {
           applied: true,
           results: ops.map((op, i) => ({
-            op: op.op,
-            title: "itemTitle" in op ? op.itemTitle : "eventTitle" in op ? op.eventTitle : op.title,
+            ...("action" in op
+              ? { op: op.action, title: op.text }
+              : { op: op.op, title: "itemTitle" in op ? op.itemTitle : "eventTitle" in op ? op.eventTitle : op.title }),
             ...results[i],
           })),
         };
@@ -677,7 +682,8 @@ function cleanItems(raw: unknown): Item[] {
       case "reminders":
       case "calendar":
       case "notes":
-      case "suggestions": {
+      case "suggestions":
+      case "memories": {
         const ops = Array.isArray(o.ops) && JSON.stringify(o.ops).length < 100_000 ? o.ops.slice(0, 50) : [];
         const source = o.kind === "suggestions" && typeof o.source === "string" ? str(o.source, 200).trim() : "";
         const a = o.answer as { applied?: unknown; results?: unknown } | undefined;

@@ -1,0 +1,28 @@
+{
+  "memories": [
+    {
+      "id": "memory-mia",
+      "module": "general",
+      "text": "Mia is allergic to nuts: never suggest recipes or snacks with nuts.",
+      "createdAt": "{{time:-43200}}",
+      "updatedAt": "{{time:-43200}}",
+      "createdBy": { "id": "demo-anna", "name": "Anna Parker" }
+    },
+    {
+      "id": "memory-clothes",
+      "module": "finance",
+      "text": "Clothing purchases at H&M go to Kids.",
+      "createdAt": "{{time:-20160}}",
+      "updatedAt": "{{time:-20160}}",
+      "createdBy": { "id": "demo-anna", "name": "Anna Parker" }
+    },
+    {
+      "id": "memory-fish",
+      "module": "meals",
+      "text": "No fish on weekdays.",
+      "createdAt": "{{time:-4320}}",
+      "updatedAt": "{{time:-4320}}",
+      "createdBy": { "id": "demo-user", "name": "Ben Parker" }
+    }
+  ]
+}

@@ -43,6 +43,8 @@ enum AssistantToolLinks {
                 let page = a["page"]?.doubleValue.flatMap { $0 >= 1 ? Int($0) : nil }
                 return .knowledgeDocument(id: id, page: page)
             }
+        case "edit_memories":
+            return .settings(.assistantMemory)
         case "manage_categories":
             // Added or changed (a deleted one is gone).
             if r?["deleted"] == nil, let id = field("id") { return .financeTransactions(categoryID: id) }

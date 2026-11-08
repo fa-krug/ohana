@@ -15,6 +15,7 @@ import { eventTools } from "./events";
 import { generalTools } from "./general";
 import { knowledgeTools } from "./knowledge";
 import { mealTools } from "./meals";
+import { memoryTools } from "./memory";
 import { noteTools } from "./notes";
 import { reminderTools } from "./reminders";
 import { scheduleTools } from "./schedule";
@@ -32,6 +33,7 @@ export {
 export { type NoteOp, type NotesEdit } from "./notes";
 export { cleanReminders, type ReminderOp, type RemindersEdit, type RemindersSnapshot } from "./reminders";
 export { type SuggestionOp, type SuggestionsEdit } from "./suggestions";
+export { type MemoriesEdit, type MemoryOp } from "./memory";
 
 export const TOOLS: Record<string, Tool> = {
   ...calendarTools,
@@ -44,6 +46,7 @@ export const TOOLS: Record<string, Tool> = {
   ...knowledgeTools,
   ...noteTools,
   ...generalTools,
+  ...memoryTools,
   ...reminderTools,
   ...appleCalendarTools,
   ...suggestionTools,

@@ -4,7 +4,7 @@
 // password, email), the administration, invites, other families, new families or images.
 //
 // Inside the family it acts as the user, except for what `agentMayChange` holds back (members,
-// invites, notification channels, the assistant's settings, deleting the family).
+// invites, notification channels, the assistant's settings and memory, deleting the family).
 //
 // Enforced at one choke point, the /api middleware in http/api.ts (`refuseOutOfScope`, every
 // request carrying a Bearer token), and again where each kind of route resolves its user:
@@ -18,7 +18,7 @@ import type { AuthToken } from "./tokens";
 export const AGENT_TOKEN_NAME = "AI agent";
 export const AGENT_TOKEN_TTL_MS = 60 * 60 * 1000;
 export const OUT_OF_SCOPE = "This token only works for the family's API.";
-export const AGENT_HOLD = "An AI agent can't change this: members, invites, notification channels, the assistant's settings and deleting the family are done in the app.";
+export const AGENT_HOLD = "An AI agent can't change this: members, invites, notification channels, the assistant's settings, the assistant's memory and deleting the family are done in the app.";
 
 /** Whether a token may be used for the family `familyId` (null: anything outside a family). */
 export function tokenAllowsFamily(token: Pick<AuthToken, "familyId">, familyId: string | null): boolean {
@@ -49,9 +49,10 @@ export function pathInScope(pathname: string, familyId: string): boolean {
 /** Whether an agent token may make this request inside its family (`rest`: the path after the
  *  family's id). Reading is always allowed; what would outlast the token's hour or carry the
  *  family's data elsewhere is not changed by an agent: deleting the family, the members and
- *  people (a person can come with an invite), invites, notification channels and events, and the
+ *  people (a person can come with an invite), invites, notification channels and events, the
  *  assistant's settings (its endpoint would get every chat, and its model list and connection test
- *  call outside servers). */
+ *  call outside servers) and the assistant's memory (standing instructions it would follow in
+ *  every chat). */
 export function agentMayChange(method: string, rest: string[]): boolean {
   if (method === "GET" || method === "HEAD") return true;
   const [first, second] = rest;
@@ -59,6 +60,6 @@ export function agentMayChange(method: string, rest: string[]): boolean {
     if (rest.length === 1) return false;
     return !["members", "people", "invites", "notifications"].includes(second);
   }
-  if (first === "ai") return !["settings", "models", "test"].includes(second);
+  if (first === "ai") return !["settings", "models", "test", "memories"].includes(second);
   return true;
 }

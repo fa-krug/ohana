@@ -57,6 +57,7 @@ enum AssistantToolLabels {
         case "search_knowledge": return String(localized: "Searching the knowledge base")
         case "read_knowledge": return String(localized: "Reading a document")
         case "edit_knowledge_notes": return String(localized: "Suggesting notes for the knowledge folder")
+        case "edit_memories": return String(localized: "Suggesting what to remember")
         default: return tool.name
         }
     }
@@ -85,6 +86,7 @@ enum AssistantToolLabels {
             "stethoscope"
         case "search_knowledge", "read_knowledge": "books.vertical"
         case "edit_knowledge_notes": "note.text"
+        case "edit_memories": "brain"
         default: "sparkles"
         }
     }
@@ -332,6 +334,14 @@ enum AssistantToolLabels {
                 parts.append(String(AttributedString(localized: "^[\(n) change](inflect: true)").characters))
             }
             parts.append(list(names, max: 3))
+        case "edit_memories":
+            let texts = ops.map { str($0["text"]) }.filter { !$0.isEmpty }
+                .map { $0.count > 40 ? String($0.prefix(40)) + "…" : $0 }
+            if !ops.isEmpty {
+                let n = ops.count
+                parts.append(String(AttributedString(localized: "^[\(n) change](inflect: true)").characters))
+            }
+            parts.append(list(texts.map(quoted), max: 2))
         case "read_knowledge":
             if let page = a["page"]?.doubleValue, page >= 1 {
                 let n = Int(page)

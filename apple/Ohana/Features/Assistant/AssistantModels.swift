@@ -509,6 +509,9 @@ nonisolated enum AssistantItem: Decodable, Equatable, Sendable {
     case suggestions(AssistantSuggestions)
     /// Notes in the knowledge folder (edit_knowledge_notes) that wait for the user to write them here.
     case notes(AssistantNotesEdit)
+    /// What the assistant offers to remember, change or forget (edit_memories) that waits for the
+    /// user to pick what to save.
+    case memories(AssistantMemoriesEdit)
     /// From here on, the model gets the earlier part of the chat as a summary.
     case compacted
     case error(text: String)
@@ -583,6 +586,12 @@ nonisolated enum AssistantItem: Decodable, Equatable, Sendable {
             self = .notes(AssistantNotesEdit(
                 id: str(.id), summary: str(.summary), ops: ops ?? [], answer: answer, skipped: flag(.skipped)
             ))
+        case "memories":
+            let ops = try? c.decodeIfPresent([AssistantMemoryOp].self, forKey: .ops)
+            let answer = try? c.decodeIfPresent(AssistantMemoriesEdit.Answer.self, forKey: .answer)
+            self = .memories(AssistantMemoriesEdit(
+                id: str(.id), summary: str(.summary), ops: ops ?? [], answer: answer, skipped: flag(.skipped)
+            ))
         case "compacted":
             self = .compacted
         case "error":
@@ -607,7 +616,7 @@ nonisolated enum AssistantItem: Decodable, Equatable, Sendable {
     /// A question, an edit or suggestions: these wait for the user.
     var canWait: Bool {
         switch self {
-        case .question, .reminders, .calendar, .suggestions, .notes: true
+        case .question, .reminders, .calendar, .suggestions, .notes, .memories: true
         default: false
         }
     }

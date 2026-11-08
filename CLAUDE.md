@@ -87,7 +87,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   1 hour, minted by `POST /families/{id}/agent/token`) work only for `/api/health`,
   `/api/v1/server` and `/api/v1/families/{that id}[/…]`, else 403 (`OUT_OF_SCOPE`); inside it
   `agentMayChange` (checked by `createFamilyApi`) holds back writes to members, people, invites,
-  notification channels / events, `/ai/settings|models|test` and deleting the family (`AGENT_HOLD`); checked by
+  notification channels / events, `/ai/settings|models|test`, `/ai/memories` and deleting the family (`AGENT_HOLD`); checked by
   the `/api` middleware in `http/api.ts` (every Bearer request) and again where users are
   resolved: `apiAuth` (me / admin / invites: never), `getApiUser` / `requireFamilyApi` (the
   family asked for), the family API's `authenticate` (the path's; `Ctx.scopedTo`). A new route
@@ -351,7 +351,19 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   letter scan's sheet gets the same items without a chat: `letter.ts`, `POST /ai/letter {text,
   today?, lang?}` (editors; one completion with the family's model, items checked one by one with
   `resolveSuggestion`, wrong ones dropped, tasks' `list` null; body `tags`: the user's existing
-  tags) → `{ai, source?, items, filing}` (`filing`: title, date, whose it is, tags only of `tags`). `notify.ts` is the "assistant turn finished" notification (`RunnerEnv.turnEnded`
+  tags) → `{ai, source?, items, filing}` (`filing`: title, date, whose it is, tags only of `tags`). **Memory** (`memories.ts`, `tools/memory.ts`): the family's standing
+  instructions by module (`ai_memories`: `module` general | calendar | finance | meals |
+  appointments | chores | knowledge, `text` 1–300, ≤ 50 per module; only modules the server has on).
+  `GET /ai/memories[?module=]` (members), `POST` `{id?, module, text}` / `PATCH|DELETE
+  /ai/memories/{id}` (editors; agent tokens may only read). `prepareTurn` lists them in the system
+  prompt's "## Memory" (with ids), followed always; with the write tools the assistant offers new
+  ones on its own (lasting rules and preferences the user states or implies, only from the user's
+  own words) through `edit_memories` {ops: add | update | remove}, which writes nothing: a
+  `kind: "memories"` card (resolved ops with `old`), the app applies the ticked ones through the
+  REST routes and answers `POST /ai/chats/{id}/memories` (the suggestions' body). Categorize: with
+  finance memories every candidate goes to the model, its usual category (`matchSimilar`) as an
+  extra column, the memories first; rows it leaves open fall back to the similar match.
+  `notify.ts` is the "assistant turn finished" notification (`RunnerEnv.turnEnded`
   from the `ChatRunner`; `chats.seen_at`, set every 15 s by a follower, says someone looks).
   `net.ts` refuses private addresses (`AiEnv.modelNet` may allow them for the endpoint with
   `AI_ALLOW_PRIVATE_ENDPOINT`). `toolsFor` leaves out the tools of turned-off modules
@@ -800,6 +812,11 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   attaches the text to the chat instead. The assistant's `suggest_items` card (`AssistantSuggestions.swift`,
   `AssistantSuggestionsCard`) ticks each suggestion; Add creates the events (`POST /events`) and
   the reminders (`RemindersStore`), then answers `…/suggestions`.
+  The assistant's memory (`Features/Assistant/AssistantMemory*.swift`): Settings → Assistant →
+  Memory (`.settings(.assistantMemory)`) lists it by module, editors add / edit / delete
+  (`didChange(.memories)`); the `edit_memories` card (`AssistantMemories.swift`) ticks each op,
+  texts editable, Save applies them through `/ai/memories` (failed ones stay, Save retries only
+  those) before answering, Not Now declines.
   The assistant: `family.ask(prompt, send:, newChat:, attachments:)` opens it ready to type from anywhere (⇧⌘J, the overview's field, the Mac's menu bar item (`MenuBarItem`, an AppKit status item: SwiftUI's `MenuBarExtra` re-sets its icon on every window redraw and crashed the app), the
   `AskOhanaIntent` App Shortcut). The chat (`AssistantChatView`, the same in the panel, the iPhone's
   sheet and the page) has one header everywhere: Chats (the history, pushed; not on the page with its

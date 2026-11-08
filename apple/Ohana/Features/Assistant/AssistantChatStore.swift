@@ -90,6 +90,12 @@ final class AssistantChatStore {
     /// Which suggestions the user ticked, per suggestions item (until they're answered; kept here
     /// so a card rebuilt while scrolling keeps them).
     private(set) var suggestionPicks: [String: Set<Int>] = [:]
+    /// Which memory ops the user ticked, per memories item; the texts they changed; and how a
+    /// Save that didn't go through for every op went (the card stays open, and the next Save
+    /// tries only the rest). Kept until the item is answered.
+    private(set) var memoryPicks: [String: Set<Int>] = [:]
+    private(set) var memoryTexts: [String: [Int: String]] = [:]
+    private(set) var memoryResults: [String: [Int: AssistantReminderResult]] = [:]
     /// The options ticked on a question with several to pick, per question (until it's answered;
     /// the composer's Send answers with them too).
     private(set) var questionPicks: [String: [String]] = [:]
@@ -492,6 +498,9 @@ final class AssistantChatStore {
             case var .notes(edit):
                 edit.skipped = true
                 c.items[open] = .notes(edit)
+            case var .memories(edit):
+                edit.skipped = true
+                c.items[open] = .memories(edit)
             default:
                 break
             }
@@ -564,6 +573,7 @@ final class AssistantChatStore {
         case let .calendar(edit) where edit.answer == nil && !edit.skipped: return index
         case let .suggestions(edit) where edit.answer == nil && !edit.skipped: return index
         case let .notes(edit) where edit.answer == nil && !edit.skipped: return index
+        case let .memories(edit) where edit.answer == nil && !edit.skipped: return index
         default: return nil
         }
     }
@@ -598,6 +608,12 @@ final class AssistantChatStore {
     /// The open chat's notes edit that waits for the user to apply or decline it.
     func openNotesEdit() -> (index: Int, edit: AssistantNotesEdit)? {
         guard let index = openWaiting(), case let .notes(edit) = current?.items[index] else { return nil }
+        return (index, edit)
+    }
+
+    /// The open chat's memory changes that wait for the user to save (some of) them or none.
+    func openMemories() -> (index: Int, edit: AssistantMemoriesEdit)? {
+        guard let index = openWaiting(), case let .memories(edit) = current?.items[index] else { return nil }
         return (index, edit)
     }
 
@@ -890,6 +906,92 @@ final class AssistantChatStore {
             let reminders = await remindersContext()
             let calendar = await calendarContext()
             post(chatID, "suggestions", body: Self.remindersAnswer(
+                id: open.edit.id, answer: answer, page: page, year: here.year, lang: language,
+                today: AssistantDates.day(), reminders: reminders, appleCalendar: calendar,
+                knowledgeFolder: knowledgeFolder()
+            ))
+        }
+    }
+
+    // MARK: Memories
+
+    /// The memory ops of `edit` the user ticked (at first every one this app can apply).
+    func picks(_ edit: AssistantMemoriesEdit) -> Set<Int> {
+        memoryPicks[edit.id] ?? edit.initialPicks
+    }
+
+    /// Ticks or unticks memory op `index` of `edit`.
+    func togglePick(_ edit: AssistantMemoriesEdit, _ index: Int) {
+        var picks = picks(edit)
+        if picks.contains(index) { picks.remove(index) } else { picks.insert(index) }
+        memoryPicks[edit.id] = picks
+    }
+
+    /// Op `index`'s text as the card shows it: the user's, else the assistant's.
+    func memoryText(_ edit: AssistantMemoriesEdit, _ index: Int) -> String {
+        memoryTexts[edit.id]?[index] ?? (index < edit.ops.count ? edit.ops[index].text : "")
+    }
+
+    func setMemoryText(_ edit: AssistantMemoriesEdit, _ index: Int, _ text: String) {
+        memoryTexts[edit.id, default: [:]][index] = text
+    }
+
+    /// Saves the picked ops of the open memories `id` (those that went through before aren't
+    /// repeated). When every one went through, answers with each op's result (the others
+    /// declined); otherwise the card stays open with the errors, for another Save or Not Now.
+    func applyMemories(_ id: String, writer: (any AssistantMemoryWriting)? = nil) async {
+        guard let open = openMemories(), open.edit.id == id, let chatID = current?.id, !chatID.isEmpty else { return }
+        applying = true
+        defer { applying = false }
+        let picks = picks(open.edit)
+        let previous = memoryResults[id] ?? [:]
+        let results = await AssistantMemoriesApply.perform(
+            open.edit.ops, picks: picks, texts: memoryTexts[id] ?? [:], previous: previous,
+            writer: writer ?? FamilyMemoryWriter(api: api)
+        )
+        if results.indices.contains(where: { results[$0].ok && previous[$0]?.ok != true }) { onChange([.memories]) }
+        if results.contains(where: \.failed) {
+            memoryResults[id] = Dictionary(uniqueKeysWithValues: results.enumerated().filter { !$0.element.isDeclined }
+                .map { ($0.offset, $0.element) })
+            return
+        }
+        // Saving took a while: the item may have moved (a reload), so it's looked up again.
+        guard current?.id == chatID, let again = openMemories(), again.edit.id == id else { return }
+        sending = true
+        answerMemories(again, chatID: chatID, answer: .init(applied: true, results: results))
+    }
+
+    /// Saves none of the open memories `id` (but what an earlier Save got through), and the
+    /// assistant hears so.
+    func declineMemories(_ id: String) {
+        guard let open = openMemories(), open.edit.id == id, let chatID = current?.id, !chatID.isEmpty else { return }
+        sending = true
+        answerMemories(open, chatID: chatID, answer: Self.memoriesDeclined(open.edit, tried: memoryResults[id] ?? [:]))
+    }
+
+    /// Not Now's answer: all declined, or with what an earlier Save got through (the rest declined).
+    static func memoriesDeclined(_ edit: AssistantMemoriesEdit,
+                                 tried: [Int: AssistantReminderResult]) -> AssistantMemoriesEdit.Answer {
+        guard tried.values.contains(where: \.ok) else { return .init(applied: false, results: nil) }
+        return .init(applied: true, results: edit.ops.indices.map { tried[$0].flatMap { $0.ok ? $0 : nil } ?? .declined })
+    }
+
+    private func answerMemories(_ open: (index: Int, edit: AssistantMemoriesEdit), chatID: String,
+                                answer: AssistantMemoriesEdit.Answer) {
+        if current?.id == chatID, let items = current?.items, open.index < items.count, case .memories = items[open.index] {
+            var answered = open.edit
+            answered.answer = answer
+            current?.items[open.index] = .memories(answered)
+        }
+        memoryPicks[open.edit.id] = nil
+        memoryTexts[open.edit.id] = nil
+        memoryResults[open.edit.id] = nil
+        let here = context()
+        let page = current?.page ?? here.page
+        Task {
+            let reminders = await remindersContext()
+            let calendar = await calendarContext()
+            post(chatID, "memories", body: Self.remindersAnswer(
                 id: open.edit.id, answer: answer, page: page, year: here.year, lang: language,
                 today: AssistantDates.day(), reminders: reminders, appleCalendar: calendar,
                 knowledgeFolder: knowledgeFolder()

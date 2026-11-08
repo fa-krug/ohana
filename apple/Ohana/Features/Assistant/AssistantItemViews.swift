@@ -46,6 +46,8 @@ struct AssistantItemView: View, Equatable {
             AssistantSuggestionsCard(edit: edit, store: store, isOpen: waiting, busy: busy)
         case let .notes(edit):
             AssistantNotesCard(edit: edit, store: store, isOpen: waiting, busy: busy)
+        case let .memories(edit):
+            AssistantMemoriesCard(edit: edit, store: store, isOpen: waiting, busy: busy)
         case .compacted:
             HStack(spacing: 8) {
                 VStack { Divider() }

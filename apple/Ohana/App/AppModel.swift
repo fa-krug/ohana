@@ -691,4 +691,6 @@ enum DataArea: String, CaseIterable, Hashable {
     case knowledge
     /// The week ahead's dismissed issues.
     case digest
+    /// The assistant's memory (its standing instructions).
+    case memories
 }

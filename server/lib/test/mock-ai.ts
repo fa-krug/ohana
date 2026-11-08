@@ -52,6 +52,8 @@
 //   "read document <id> [page N] [part M]" -> read_knowledge; then "Read <name>, page <page> of
 //                                            <pages>: <n> passages [[<first ref>]]."
 //   "cite k:<id>[, k:<id> …]"             -> answers "Said here [[k:<id>]]." per ref, no tool
+//   "remember <module>: <text>"           -> edit_memories: add <text> to the memory of <module>
+//   "forget <id>"                         -> edit_memories: remove the memory <id>
 // Asked for recipes (the meals generator's prompt) it answers with that many recipes as JSON in
 // a Markdown block; POST /images/generations answers with a small PNG (b64_json).
 // Asked to import a web page's recipe (the import prompt), it answers with one recipe titled
@@ -71,14 +73,15 @@
 // "Invent: <x>" (a quote the text doesn't have). A text saying "garbage" gets an answer that
 // isn't JSON. (Quotes count with 3 words and 15 characters: write facts long enough.)
 // Asked to sort transactions into categories (the categorize prompt), it picks the category
-// whose id or name occurs in a row's payee or description, searching the web once for a payee
-// it can't place.
+// whose id or name occurs in a standing instruction that names a word of the row's payee (4
+// letters or more), else in the row's payee or description, searching the web once for a payee
+// it can't place (it never takes a row's usual category: the server falls back to it).
 // After a tool result it says what happened; anything else is echoed. A message with images
 // (content parts) gets "I see 2 images." before the echo.
 // Asked to condense a conversation, it says how often it looked so far ("Looked 12 times.").
 // It reports the tokens used (a token is 4 characters) when asked to (stream_options). The model
 // "mock-large" has a context window of 64,000 tokens (in the model list), "mock-tiny" one of
-// 12,000 that only its errors tell. Under .../v1/strict it refuses options it doesn't know
+// 13,000 that only its errors tell. Under .../v1/strict it refuses options it doesn't know
 // (stream_options), like Mistral.
 
 type Part = { type: string; text?: string };
@@ -138,13 +141,21 @@ function reply(stream: boolean, content: string, call?: Call | Call[]) {
   return new Response(body, { headers: { "content-type": "text/event-stream" } });
 }
 
-/** The categorize prompt: a category whose id or name occurs in a row's payee or description,
- *  else in what a web search for its payee found; unknown payees are searched once. */
+/** The categorize prompt: a category whose id or name occurs in a standing instruction naming
+ *  the row's payee, else in its payee or description, else in what a web search for its payee
+ *  found; unknown payees are searched once. */
 function categorize(stream: boolean, system: string, messages: Msg[], canSearch: boolean) {
-  const categories = [...system.matchAll(/^- ([a-z0-9-]+): (?:[^\w\s]\S* )?([^(\n]+?) \(/gmu)];
+  const [head, standing = ""] = system.split("The family's standing instructions (they come first):\n");
+  const categories = [...head.matchAll(/^- ([a-z0-9-]+): (?:[^\w\s]\S* )?([^(\n]+?) \(/gmu)];
+  const instructions = [...standing.matchAll(/^- (.+)$/gm)].map((m) => m[1].toLowerCase());
   const match = (text: string) =>
     categories.find(([, id, name]) => text.includes(id) || text.includes(name.toLowerCase()))
       ?.[1] ?? null;
+  const ruled = (payee: string) => {
+    const words = payee.toLowerCase().split(/\W+/u).filter((w) => w.length >= 4);
+    const rule = instructions.find((i) => words.some((w) => i.includes(w)));
+    return rule ? match(rule) : null;
+  };
   const found = new Map<string, string>();
   for (const m of messages.filter((m) => m.role === "tool")) {
     const result = JSON.parse(textOf(m.content));
@@ -154,7 +165,7 @@ function categorize(stream: boolean, system: string, messages: Msg[], canSearch:
   const unknown: string[] = [];
   for (const line of textOf(messages[1].content).split("\n")) {
     const [n, , , payee = "", description = ""] = line.split(" | ");
-    answer[n] = match(`${payee} ${description}`.toLowerCase()) ??
+    answer[n] = ruled(payee) ?? match(`${payee} ${description}`.toLowerCase()) ??
       match(found.get(payee) ?? "");
     if (!answer[n] && payee && !found.has(payee)) unknown.push(payee);
   }
@@ -178,7 +189,7 @@ function wait(ms: number, signal: AbortSignal) {
 /** How often a "then fail N times" message failed so far. */
 const failed = new Map<string, number>();
 
-const TINY_WINDOW = 12_000;
+const TINY_WINDOW = 13_000;
 
 /** A 16×16 orange PNG: the mock's "photo". */
 export const MOCK_PNG =
@@ -447,6 +458,8 @@ async function respond(req: Request, body: any): Promise<Response> {
       ? { changes: "calendar", left: "calendars" }
       : called?.function.name === "edit_knowledge_notes"
       ? { changes: "note", left: "notes" }
+      : called?.function.name === "edit_memories"
+      ? { changes: "memory", left: "memories" }
       : { changes: "reminder", left: "Reminders" };
     const suggested = called?.function.name === "suggest_items";
     if (called?.function.name === "search_knowledge") {
@@ -531,6 +544,17 @@ async function respond(req: Request, body: any): Promise<Response> {
   }
   const cite = /^cite (k:\d+(?:,\s*k:\d+)*)$/i.exec(text);
   if (cite) return reply(stream, cite[1].split(",").map((r) => `Said here [[${r.trim()}]].`).join(" "));
+  const remember = /^remember (\w+): (.+)$/i.exec(text);
+  if (remember && tools.has("edit_memories")) {
+    return reply(stream, "", {
+      name: "edit_memories",
+      args: { ops: [{ action: "add", module: remember[1].toLowerCase(), text: remember[2] }] },
+    });
+  }
+  const forget = /^forget (\S+)$/i.exec(text);
+  if (forget && tools.has("edit_memories")) {
+    return reply(stream, "", { name: "edit_memories", args: { ops: [{ action: "remove", id: forget[1] }] } });
+  }
   if (/vacation|urlaub/.test(lower) && dates.length && tools.has("change_entries")) {
     const type = /- ([a-z0-9-]+): “[^”]*” \(covers\)/.exec(system)?.[1] ?? "vacation";
     return reply(stream, "I'll add that.", {

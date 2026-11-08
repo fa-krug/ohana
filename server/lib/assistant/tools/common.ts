@@ -16,6 +16,7 @@ import type { AppleCalendarEdit, AppleCalendarSnapshot } from "./apple-calendar"
 import type { NotesEdit } from "./notes";
 import type { RemindersEdit, RemindersSnapshot } from "./reminders";
 import type { SuggestionsEdit } from "./suggestions";
+import type { MemoriesEdit } from "./memory";
 
 export interface UndoStep {
   method: "POST" | "PATCH" | "DELETE";
@@ -52,6 +53,9 @@ export interface ToolResult {
   /** A change of the family's notes in the knowledge folder (edit_knowledge_notes), the same
    *  way: the app writes the files. */
   notes?: NotesEdit;
+  /** Changes of the assistant's memory (edit_memories), the same way: the user confirms them,
+   *  the app applies them through /ai/memories. */
+  memories?: MemoriesEdit;
   /** The knowledge base's chunk ids the result gives as refs ("k:<id>"): the only ones the
    *  chat's answers may cite (recorded by the runner as the tool runs). */
   refs?: number[];

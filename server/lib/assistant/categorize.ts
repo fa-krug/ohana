@@ -3,6 +3,9 @@
 // model in batches, with the categories and how the family sorted payees before; it may look up
 // payees it doesn't know on the web (when search is set up). Its answer is a JSON object of row
 // number -> category id. Only categories that fit (income / expense) count.
+// With standing instructions (the assistant's finance memories, memories.ts) every row goes to
+// the model, with the category the first step found as its usual one: the instructions come
+// first, so they can override how the family sorted a payee before.
 
 import { HttpError } from "@/lib/api/http";
 import type { Lang } from "@/lib/i18n/config";
@@ -70,10 +73,12 @@ function oneLine(s: string, max: number) {
   return s.replace(/[\s|]+/g, " ").trim().slice(0, max);
 }
 
-function rowLine(n: number, t: TransactionRow) {
+/** A row for the model; `usual` (with standing instructions only): the category similar rows
+ *  have, "-" for none. */
+function rowLine(n: number, t: TransactionRow, usual?: Map<string, string>) {
   return `${n} | ${t.day} | ${(t.amount_cents / 100).toFixed(2)} | ${oneLine(t.payee, 80)} | ${
     oneLine(t.description, 160)
-  }`;
+  }${usual ? ` | ${usual.get(t.id) ?? "-"}` : ""}`;
 }
 
 /** The newest category per payee, from rows that have one: how this family sorts. */
@@ -92,18 +97,23 @@ function examples(sorted: TransactionRow[], categories: CategoryRow[]): string[]
   return out;
 }
 
+/** The instructions; `instructions`: the family's standing ones (finance memories), which add
+ *  the rows' usual category and put themselves first. */
 export function categorizePrompt(
   categories: CategoryRow[],
   sorted: TransactionRow[],
   lang: Lang,
   search = false,
+  instructions: string[] = [],
 ): string {
   const ex = examples(sorted, categories);
   const tree = categoryTree(categories);
+  const standing = instructions.length > 0;
   return [
     MARKER,
     `The statements are probably ${LANGUAGES[lang]}. Each row is: number | date | amount ` +
-    "(negative = money going out) | payee | description.",
+    "(negative = money going out) | payee | description" +
+    (standing ? " | usual category id (how the family sorted such rows so far; - for none)." : "."),
     'Categories (id: name after its parent categories, as in "Food > Groceries"; for which ' +
     "amounts):",
     ...tree.ordered.map((c) =>
@@ -112,6 +122,14 @@ export function categorizePrompt(
       })`
     ),
     ...(ex.length ? ["How the family sorted earlier transactions (payee -> id):", ...ex] : []),
+    ...(standing
+      ? [
+        "The family's standing instructions (they come first):",
+        ...instructions.map((t) => `- ${oneLine(t, 300)}`),
+        "For each row apply the standing instructions first; where none of them fits, take the " +
+        "usual category when the row has one; else decide.",
+      ]
+      : []),
     ...(search
       ? [
         "If you don't know what a payee is (a company, shop or service), look it up with " +
@@ -140,6 +158,8 @@ export type Search = { provider: Exclude<SearchProvider, "none">; key: string };
 
 interface AskOptions {
   provider: Provider;
+  /** The rows' usual categories, sent along (with standing instructions only). */
+  usual?: Map<string, string>;
   net: NetOptions;
   system: string;
   /** Web search for the model; null without. */
@@ -155,7 +175,7 @@ interface AskOptions {
 async function ask(o: AskOptions, rows: TransactionRow[]): Promise<Record<string, unknown>> {
   const messages: ChatMessage[] = [
     { role: "system", content: o.system },
-    { role: "user", content: rows.map((t, i) => rowLine(i + 1, t)).join("\n") },
+    { role: "user", content: rows.map((t, i) => rowLine(i + 1, t, o.usual)).join("\n") },
   ];
   const tools = o.search
     ? toolsFor({ writes: false, search: true }).filter((t) => t.function.name === "web_search")
@@ -199,7 +219,8 @@ async function ask(o: AskOptions, rows: TransactionRow[]): Promise<Record<string
 
 /**
  * The category the model picked for each row (rows it left open are missing). `sorted` are the
- * family's transactions that already have a category, newest first, as examples.
+ * family's transactions that already have a category, newest first, as examples. With
+ * `instructions` (the family's standing ones) each row is sent with its `usual` category.
  */
 export async function suggestCategories(opts: {
   provider: Provider;
@@ -211,13 +232,17 @@ export async function suggestCategories(opts: {
   search: Search | null;
   tools: Pick<ToolContext, "calendar" | "finance" | "db" | "familyId">;
   signal?: AbortSignal;
+  instructions?: string[];
+  usual?: Map<string, string>;
 }): Promise<Map<string, string>> {
   const { provider, categories, rows } = opts;
   if (!provider.model) throw new HttpError(400, "Pick a model first");
   if (!categories.length) throw new HttpError(400, "There are no categories yet");
+  const instructions = opts.instructions ?? [];
   const askOptions: AskOptions = {
     ...opts,
-    system: categorizePrompt(categories, opts.sorted, opts.lang, !!opts.search),
+    usual: instructions.length ? (opts.usual ?? new Map()) : undefined,
+    system: categorizePrompt(categories, opts.sorted, opts.lang, !!opts.search, instructions),
     deadline: Date.now() + SEARCH_BUDGET_MS,
   };
   const byId = new Map(categories.map((c) => [c.id, c]));

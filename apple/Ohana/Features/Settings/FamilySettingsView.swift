@@ -54,6 +54,7 @@ struct FamilySettingsPageView: View {
         case .finance: FinanceSettingsView()
         case .shopping: ShoppingRemindersView()
         case .assistant: AssistantSettingsView()
+        case .assistantMemory: AssistantMemoryView()
         case .knowledge: KnowledgeSettingsView()
         case .data: FamilyDataView(familyName: model.household?.name ?? family.family.name, canEdit: family.canEdit)
         case .device: DeviceSettingsView()

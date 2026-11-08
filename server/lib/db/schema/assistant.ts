@@ -104,3 +104,23 @@ export const chatMessages = sqliteTable(
   },
   (t) => ({ pk: primaryKey({ columns: [t.chatId, t.seq] }) }),
 );
+
+/** The assistant's memory: the family's standing instructions, by module ("general", the
+ *  calendar, finance …; lib/assistant/memories.ts). The chat's instructions list them, the
+ *  categorizer follows the finance ones. */
+export const aiMemories = sqliteTable(
+  "ai_memories",
+  {
+    id: text("id").primaryKey(),
+    familyId: text("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    /** general | calendar | finance | meals | appointments | chores | knowledge */
+    module: text("module").notNull(),
+    text: text("text").notNull(),
+    createdById: text("created_by_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => ({ aiMemoriesModuleIdx: index("ai_memories_module_idx").on(t.familyId, t.module) }),
+);

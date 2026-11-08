@@ -298,7 +298,7 @@ export function buildAgentPrompt(input: AgentPromptInput): string {
   const access = readOnly
     ? "**read-only**: the user is a viewer of this family, so every change is refused (403). Only read and answer questions; an editor of the family can make them an editor."
     : "**read and write**, as the user (an editor of this family), except members, people, invites, " +
-      "notification channels, the assistant's settings and deleting the family: those stay with the app (403).";
+      "notification channels, the assistant's settings and memory, and deleting the family: those stay with the app (403).";
 
   return `# Ohana: access to the family “${family.name}”
 

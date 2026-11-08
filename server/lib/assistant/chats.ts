@@ -21,7 +21,7 @@ import type { AssistantStore, ChatRow } from "./store";
 import type { NetOptions } from "./net";
 import type { CitedChunk } from "@/lib/knowledge/sources";
 import { checkSources, citedIds, type Source } from "./sources";
-import type { AppleCalendarOp, NoteOp, ReminderOp, SuggestionOp, ToolContext } from "./tools";
+import type { AppleCalendarOp, MemoryOp, NoteOp, ReminderOp, SuggestionOp, ToolContext } from "./tools";
 
 /** What a turn needs from the family's AI settings. */
 export interface Turn {
@@ -132,6 +132,16 @@ export type Item =
       answer?: EditAnswer;
       skipped?: boolean;
     }
+  /** Changes of the assistant's memory (edit_memories): the user confirms which in the app,
+   *  which applies them (/ai/memories) and answers (POST …/memories), the same way. */
+  | {
+      kind: "memories";
+      id: string;
+      summary: string;
+      ops: MemoryOp[];
+      answer?: EditAnswer;
+      skipped?: boolean;
+    }
   /** The older part of the chat was condensed for the model from here on. */
   | { kind: "compacted" }
   | { kind: "error"; text: string };
@@ -161,19 +171,22 @@ export type RemindersItem = Item & { kind: "reminders" };
 export type CalendarItem = Item & { kind: "calendar" };
 export type SuggestionsItem = Item & { kind: "suggestions" };
 export type NotesItem = Item & { kind: "notes" };
-/** An edit of the device's data (or suggestions to add) that waits for the user's OK. */
-export type EditItem = RemindersItem | CalendarItem | NotesItem | SuggestionsItem;
+export type MemoriesItem = Item & { kind: "memories" };
+/** An edit of the device's data (or suggestions to add, changes of the memory) that waits for
+ *  the user's OK. */
+export type EditItem = RemindersItem | CalendarItem | NotesItem | SuggestionsItem | MemoriesItem;
 export type EditKind = EditItem["kind"];
 /** What waits for the user: a question, an edit of their Reminders, calendars or notes, or
  *  suggestions to add. */
 export type WaitingItem = QuestionItem | EditItem;
-const WAITING_KINDS = new Set<string>(["question", "reminders", "calendar", "notes", "suggestions"] satisfies WaitingItem["kind"][]);
+const WAITING_KINDS = new Set<string>(["question", "reminders", "calendar", "notes", "suggestions", "memories"] satisfies WaitingItem["kind"][]);
 /** Where the changes of an edit would have gone, for what the model hears about it. */
 export const EDIT_PLACE: Record<EditKind, string> = {
   reminders: "their Reminders",
   calendar: "their calendars",
   notes: "their knowledge folder",
   suggestions: "their calendar or Reminders",
+  memories: "the family's memory",
 };
 
 /** What a running turn does right now. */
@@ -646,6 +659,7 @@ export class Runner {
         case "calendar":
         case "notes":
         case "suggestions":
+        case "memories":
           this.answer = null;
           this.add({
             kind: event,

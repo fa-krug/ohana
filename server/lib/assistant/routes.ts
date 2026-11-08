@@ -1,7 +1,8 @@
 // The assistant's routes under /api/v1/families/{id}/ai (family-planner's _shared/ai.ts):
 // settings (keys stored sealed, never returned), the endpoint's model list, a connection test,
-// the chats (chat-routes.ts; their turns run in the worker, see runner.ts), sorting
-// transactions into categories and reading a scanned letter (letter.ts). Settings, models,
+// the chats (chat-routes.ts; their turns run in the worker, see runner.ts), the assistant's
+// memory (memories.ts), sorting transactions into categories and reading a scanned letter
+// (letter.ts). Settings, models,
 // test, categorize and letter are for editors; viewers
 // see whether the assistant is set up, and chat with the tools that only read.
 //
@@ -35,6 +36,7 @@ import { retryFailedCards } from "@/lib/knowledge/documents";
 import { getFolder } from "@/lib/knowledge/folders";
 import { knowledgeForUser } from "@/lib/knowledge/sources";
 import { letterInput, readLetter } from "./letter";
+import { handleMemories, listMemories, memoriesForPrompt } from "./memories";
 import { checkUrl, type NetOptions } from "./net";
 import { contextWindow, listModels, type Provider, streamChat } from "./provider";
 import { type AiSettingsRow, type AssistantStore, type ChatRow, DrizzleAssistantStore, SEARCH_PROVIDERS, type SearchProvider } from "./store";
@@ -170,6 +172,7 @@ export function handleAi(env: AiEnv): FamilyRoute {
         if (!row?.base_url || !row.model) throw new HttpError(400, "The AI assistant isn't set up yet");
       });
     }
+    if (ctx.rest[1] === "memories") return handleMemories(ctx);
     if (ctx.rest.length !== 2) return null;
     switch (`${ctx.method} ${ctx.rest[1]}`) {
       case "GET settings":
@@ -366,6 +369,7 @@ export async function prepareTurn(
     mealTags: mealTagNames(env.db, family.id, context.lang),
     home: homeAddressOf(env.db, family.id),
     people: familyNames(env.db, family.id),
+    memories: memoriesForPrompt(env.db, family.id),
   });
   return {
     provider: p,
@@ -394,7 +398,9 @@ export async function prepareTurn(
 /** POST /ai/categorize {ids?, from?, to?, skip?, lang?}: sorts uncategorized transactions (the
  *  given ones, or those in the range after the first `skip`, at most 200 per request) into
  *  categories: like similar earlier transactions where those agree (`matched`, no AI needed),
- *  the rest by the model, which may search the web for unknown payees. Without AI settings only
+ *  the rest by the model, which may search the web for unknown payees. With the family's
+ *  finance memories (standing instructions) every row goes to the model, which follows them
+ *  first, then the usual category; the similar match fills in only what it leaves open. Without AI settings only
  *  the first step runs (`ai`: false). Returns `inverse` (ops for /finance/transactions that undo
  *  it) and `remaining`, the uncategorized rows in the range it didn't look at yet. The app
  *  waits for it (a batch of 200 at most, the web search limited to a minute). */
@@ -433,7 +439,10 @@ async function categorize({ req, load, finance }: Ctx, env: AiEnv) {
   ]);
   const sorted = all.filter((t) => t.category_id);
   const similar = matchSimilar(candidates, sorted, categories);
-  const rest = candidates.filter((t) => !similar.has(t.id));
+  // The family's standing instructions come first: with them every row goes to the model (with
+  // its usual category), and the similar match only fills in what it leaves open.
+  const instructions = ai ? listMemories(env.db, family.id, "finance").map((m) => m.text) : [];
+  const rest = instructions.length ? candidates : candidates.filter((t) => !similar.has(t.id));
   const byAi =
     ai && rest.length && categories.length
       ? await suggestCategories({
@@ -446,15 +455,18 @@ async function categorize({ req, load, finance }: Ctx, env: AiEnv) {
           search: searchOf(row, env),
           tools: storesOf(env, family.id),
           signal: req.signal,
+          instructions,
+          usual: similar,
         })
       : new Map<string, string>();
+  const fallback = [...similar].filter(([id]) => !byAi.has(id));
   const assignments = [
-    ...[...similar].map(([id, categoryId]) => ({ id, categoryId, source: "similar" })),
+    ...fallback.map(([id, categoryId]) => ({ id, categoryId, source: "similar" })),
     ...[...byAi].map(([id, categoryId]) => ({ id, categoryId, source: "ai" })),
   ];
   const ops = assignments.map(({ id, categoryId }) => ({ action: "update", id, categoryId }));
   const { inverse } = ops.length ? await applyTransactionOps(finance, family.id, ops) : { inverse: [] };
-  return json({ changed: ops.length, matched: similar.size, considered: candidates.length, remaining, ai, inverse, assignments });
+  return json({ changed: ops.length, matched: fallback.length, considered: candidates.length, remaining, ai, inverse, assignments });
 }
 
 /** POST /ai/letter {text, today?, lang?, tags?}: the events, tasks and deadlines in a letter's

@@ -65,6 +65,7 @@ private struct AssistantSettingsViewerView: View {
             } footer: {
                 Text("Only editors of the family can set up the assistant. You can chat with it once it is set up; it only reads for you.")
             }
+            Section { AssistantMemoryLink() }
         }
         .formStyle(.grouped)
         .readableWidth()
@@ -133,6 +134,7 @@ private struct AssistantSettingsForm: View {
             endpointSection
             advancedSection
             searchSection
+            Section { AssistantMemoryLink() }
             permissionsSection
             if !saveInToolbar {
                 Section {

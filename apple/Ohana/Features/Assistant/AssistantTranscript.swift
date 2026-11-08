@@ -75,6 +75,16 @@ enum AssistantTranscript {
                 }
                 if let outcome = edit.outcome { lines.append("(\(outcome))") }
                 out.append(lines.joined(separator: "\n"))
+            case let .memories(edit):
+                var lines = ["**🧠 \(edit.summary)**"]
+                for (index, op) in edit.ops.enumerated() {
+                    let result = edit.answer?.results.flatMap { index < $0.count ? $0[index] : nil }
+                    let text = op.action == .update ? "\(op.old?.text ?? "") → \(op.text)" : op.text
+                    let prefix = op.action == .remove ? "~~\(text)~~" : text
+                    lines.append("- " + prefix + (result.map(Self.mark) ?? ""))
+                }
+                if let outcome = edit.outcome { lines.append("(\(outcome))") }
+                out.append(lines.joined(separator: "\n"))
             case .compacted:
                 out.append("*\(String(localized: "Earlier messages condensed for the model"))*")
             case let .error(text):

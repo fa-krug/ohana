@@ -22,9 +22,9 @@ info:
       outside AI agent that expire after one hour and are scoped to one family (`familyId` in
       the token list). They work only for `GET /api/health`, `GET /api/v1/server` and
       `/api/v1/families/{familyId}[/…]` of their family, with the user's role there, except
-      that they can't change members, people, invites, notification channels or the
-      assistant's settings (`/household/members|people|invites|notifications…`,
-      `/ai/settings|models|test`) or delete the family (403); every other route (the account, the administration, invites, other families, new families,
+      that they can't change members, people, invites, notification channels, the
+      assistant's settings or the assistant's memory (`/household/members|people|invites|notifications…`,
+      `/ai/settings|models|test|memories`) or delete the family (403); every other route (the account, the administration, invites, other families, new families,
       images) answers 403 "This token only works for the family's API.", and they can't
       create tokens.
     * **Session cookie** (`cookieAuth`): `ohana_session`, set by the server's sign-in pages.
@@ -5037,7 +5037,10 @@ paths:
         Takes the given `ids`, or the uncategorized transactions in the range after the first
         `skip` (at most 200 per request; `remaining` says how many are left). First like
         similar earlier transactions (`matched`, no AI needed), then by the model (which may
-        search the web). Without AI settings only the first step runs (`ai: false`).
+        search the web). With `finance` memories (`…/ai/memories`, the family's standing
+        instructions) every row goes to the model, which follows them first, then the row's
+        usual category; only rows it leaves open are sorted like similar ones (`matched`).
+        Without AI settings only the first step runs (`ai: false`).
         `inverse` are ops for `POST …/finance/transactions` that undo it. Under `/ai`, so it
         answers 404 when the server turned the `assistant` module off (even the similarity step).
       x-ohana-role: editor
@@ -5140,6 +5143,112 @@ paths:
         "403": {$ref: "#/components/responses/Forbidden"}
         "404": {$ref: "#/components/responses/NotFound"}
         "502": {$ref: "#/components/responses/BadGateway"}
+  /api/v1/families/{familyId}/ai/memories:
+    parameters:
+      - $ref: "#/components/parameters/FamilyId"
+    get:
+      tags: [AI settings]
+      operationId: listMemories
+      summary: The assistant's memory
+      description: >-
+        The family's standing instructions for the assistant, by module: the chat's instructions
+        list them and the assistant follows them; `POST …/ai/categorize` follows the `finance`
+        ones. Ordered by module (general, calendar, finance, meals, appointments, chores,
+        knowledge), then oldest first; only modules the server has on (`general` and `calendar`
+        always).
+      x-ohana-role: viewer
+      parameters:
+        - name: module
+          in: query
+          description: Only this module's (a module the server has off gives an empty list).
+          schema: {$ref: "#/components/schemas/MemoryModule"}
+      responses:
+        "200":
+          description: The memories.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [memories]
+                properties:
+                  memories:
+                    type: array
+                    items: {$ref: "#/components/schemas/Memory"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    post:
+      tags: [AI settings]
+      operationId: createMemory
+      summary: Add a memory
+      description: >-
+        At most 50 per module (400 when full). `id` brings a removed memory back under its id
+        (undo; 409 when it is taken). An agent token can't change the memory (403).
+      x-ohana-role: editor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [module, text]
+              properties:
+                id: {type: string, format: uuid}
+                module: {$ref: "#/components/schemas/MemoryModule"}
+                text: {type: string, minLength: 1, maxLength: 300, description: "Trimmed."}
+      responses:
+        "201":
+          description: The new memory.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Memory"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /api/v1/families/{familyId}/ai/memories/{memoryId}:
+    parameters:
+      - $ref: "#/components/parameters/FamilyId"
+      - name: memoryId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    patch:
+      tags: [AI settings]
+      operationId: updateMemory
+      summary: Change a memory
+      description: Only the fields given change; moving it to a full module is refused (400).
+      x-ohana-role: editor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text: {type: string, minLength: 1, maxLength: 300}
+                module: {$ref: "#/components/schemas/MemoryModule"}
+      responses:
+        "200":
+          description: The memory.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Memory"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    delete:
+      tags: [AI settings]
+      operationId: deleteMemory
+      summary: Remove a memory
+      x-ohana-role: editor
+      responses:
+        "200": {$ref: "#/components/responses/DeletedString"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
   /api/v1/families/{familyId}/ai/chats:
     parameters:
       - $ref: "#/components/parameters/FamilyId"
@@ -5511,6 +5620,47 @@ paths:
         declined: true}` for one the user didn't pick, `{ok: false, error}` for one that failed.
         `applied: false` means the user added none. The turn goes on with this as the tool's
         result. 409 when those suggestions don't wait any more.
+      x-ohana-role: viewer
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+        - $ref: "#/components/parameters/ChatId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/ChatContextInput"
+                - type: object
+                  required: [id, applied]
+                  properties:
+                    id: {type: string}
+                    applied: {type: boolean}
+                    results:
+                      type: array
+                      description: >-
+                        Required when `applied` is true: one per op, in order (a missing one
+                        counts as failed, extra ones are ignored).
+                      items: {$ref: "#/components/schemas/RemindersResult"}
+      responses:
+        "200": {$ref: "#/components/responses/ChatStream"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /api/v1/families/{familyId}/ai/chats/{chatId}/memories:
+    post:
+      tags: [Assistant]
+      operationId: answerMemories
+      summary: Report which of the assistant's memory changes the user confirmed (streams the rest of the turn)
+      description: >-
+        Like `POST …/suggestions`, for a `memories` item: `id` is its id. With `applied: true`
+        the client has applied the changes the user confirmed (`POST`, `PATCH` or `DELETE
+        …/ai/memories`) and sends `results`, one per op in order: `{ok: true, id?}` for an
+        applied one (`id`: the new memory's), `{ok: false, declined: true}` for one the user
+        didn't confirm, `{ok: false, error}` for one that failed. `applied: false` means the
+        user confirmed none. The turn goes on with this as the tool's result. 409 when those
+        changes don't wait any more.
       x-ohana-role: viewer
       parameters:
         - $ref: "#/components/parameters/FamilyId"
@@ -8577,6 +8727,37 @@ components:
                     applied: {type: boolean, const: false}
             skipped: {type: boolean}
         - type: object
+          title: memories
+          description: >-
+            Changes of the assistant's memory it offers (`edit_memories`). The turn waits for
+            the user, as for `suggestions`: the app shows the changes to confirm, applies the
+            confirmed ones with `POST`, `PATCH` or `DELETE …/ai/memories` and answers with `POST
+            …/memories`. A new message instead marks it `skipped`.
+          required: [kind, id, summary, ops]
+          properties:
+            kind: {type: string, const: memories}
+            id: {type: string}
+            summary: {type: string, example: "Remember “Clothing from Kidstore goes to Kids”"}
+            ops:
+              type: array
+              maxItems: 20
+              items: {$ref: "#/components/schemas/MemoryOp"}
+            answer:
+              oneOf:
+                - type: object
+                  required: [applied, results]
+                  properties:
+                    applied: {type: boolean, const: true}
+                    results:
+                      type: array
+                      description: One per op, in order.
+                      items: {$ref: "#/components/schemas/RemindersResult"}
+                - type: object
+                  required: [applied]
+                  properties:
+                    applied: {type: boolean, const: false}
+            skipped: {type: boolean}
+        - type: object
           title: compacted
           required: [kind]
           properties:
@@ -8586,6 +8767,48 @@ components:
           required: [kind, text]
           properties:
             kind: {type: string, const: error}
+            text: {type: string}
+    MemoryModule:
+      type: string
+      enum: [general, calendar, finance, meals, appointments, chores, knowledge]
+      description: What a memory is about; only modules the server has on (`general` and `calendar` always).
+    Memory:
+      type: object
+      description: A standing instruction of the family for the assistant.
+      required: [id, module, text, createdAt, updatedAt, createdBy]
+      properties:
+        id: {type: string, format: uuid}
+        module: {$ref: "#/components/schemas/MemoryModule"}
+        text: {type: string, maxLength: 300, example: "Clothing from Kidstore goes to Kids."}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+        createdBy:
+          description: Who added it (null once the account is gone).
+          oneOf:
+            - type: object
+              required: [id, name]
+              properties:
+                id: {type: string}
+                name: {type: string}
+            - type: "null"
+    MemoryOp:
+      type: object
+      description: >-
+        One change of an `edit_memories` item, resolved: `add` (apply with `POST …/ai/memories
+        {module, text}`), `update` (`PATCH …/ai/memories/{id} {module, text}`) or `remove`
+        (`DELETE …/ai/memories/{id}`). `module` and `text` are what it is afterwards (a removed
+        one: what it was), `old` what is stored now.
+      required: [action, module, text]
+      properties:
+        action: {type: string, enum: [add, update, remove]}
+        id: {type: string, format: uuid, description: "The memory's (update, remove)."}
+        module: {$ref: "#/components/schemas/MemoryModule"}
+        text: {type: string}
+        old:
+          type: object
+          required: [module, text]
+          properties:
+            module: {$ref: "#/components/schemas/MemoryModule"}
             text: {type: string}
     ChatItemsEvent:
       type: object
