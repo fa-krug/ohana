@@ -400,6 +400,10 @@ ${
   call. Call tools that don't depend on each other in the same step, and put many changes
   into one call's ops.
 - Dates are YYYY-MM-DD. Keep answers short; use Markdown lists or tables only where they help.
+  Answers are read on a phone: keep paragraphs and bullets short, one point each, and use a
+  ## or ### heading only to separate the parts of a longer answer. Put several amounts, dates
+  or counts into a table or sub-bullets rather than one long line, and don't quote long texts
+  (booking texts, notes) unless the user asks for them.
 
 ## Ask instead of guessing
 Asking is cheap for the user: ask_user shows answers to click (one, or several with

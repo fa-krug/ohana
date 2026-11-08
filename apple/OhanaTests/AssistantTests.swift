@@ -365,11 +365,36 @@ struct AssistantRenderingTests {
         #expect(blocks == [
             .heading("Plan"),
             .paragraph("Line one\nline two"),
-            .list(ordered: false, items: ["a", "b"]),
-            .list(ordered: true, items: ["first"]),
+            .list([.init(text: "a"), .init(text: "b")]),
+            .list([.init(text: "first", number: 1)]),
             .table(header: ["Day", "Amount"], alignments: [], rows: [["Mon", "3"]]),
             .code("code"),
         ])
+    }
+
+    @Test func parsesNestedAndLooseLists() {
+        let blocks = AssistantMarkdownBlock.parse("""
+        1. one
+           - detail
+             - deeper
+        - sloppy
+
+        2. two
+
+        3. three
+        """)
+        #expect(blocks == [
+            .list([
+                .init(text: "one", number: 1),
+                .init(text: "detail", level: 1),
+                .init(text: "deeper", level: 2),
+                .init(text: "sloppy"),
+                .init(text: "two", number: 2),
+                .init(text: "three", number: 3),
+            ]),
+        ])
+        // A bullet list after a blank line isn't the numbered list's.
+        #expect(AssistantMarkdownBlock.parse("1. a\n\n- b").count == 2)
     }
 
     @Test func keepsWhatItRead() {

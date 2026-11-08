@@ -116,7 +116,9 @@ struct AssistantChatView: View {
                     composerFocused = true
                 }
             }
-            .background { OhanaBackground(tint: ModuleTint.assistant) }
+            // Plain, without the module's tinted gradient: long answers read best on a neutral page
+            // (the assistant's color stays on the user's bubbles and the buttons).
+            .background { Color.pageBackground.ignoresSafeArea() }
             .environment(\.openURL, OpenURLAction { url in openLink(url) })
             .task(id: family.revision(.settings)) { await store.loadSettings() }
             .task(id: visible) {
