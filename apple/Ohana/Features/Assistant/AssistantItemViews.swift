@@ -253,8 +253,11 @@ struct AssistantChangeRow: View {
                 .strikethrough(change.undone)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .fixedSize(horizontal: false, vertical: true)
+            // The summary wraps, never the button or the note beside it.
             if change.undone {
                 Text("Undone").font(.caption).foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .fixedSize()
             } else if !change.undo.isEmpty {
                 Button {
                     Task {
@@ -264,9 +267,11 @@ struct AssistantChangeRow: View {
                     }
                 } label: {
                     Label("Undo", systemImage: "arrow.uturn.backward")
+                        .lineLimit(1)
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
+                .fixedSize()
                 .disabled(undoing || !canUndo)
                 .accessibilityLabel(Text("Undo: \(change.summary)"))
             }

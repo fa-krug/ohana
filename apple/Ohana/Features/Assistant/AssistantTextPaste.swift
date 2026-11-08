@@ -7,9 +7,11 @@ import UniformTypeIdentifiers
 /// (`AssistantAttachments.isLongPaste`), and pictures before iOS 27, where SwiftUI has no
 /// `pasteDestination` (`takesImages`): put as the text field's background, it finds the field's
 /// UIKit text view and becomes its paste delegate (`UITextPasteDelegate`). Shorter text goes into
-/// the field (through the field's own delegate, if it has one).
+/// the field (through the field's own delegate, if it has one). It also scrolls the emptied field
+/// back to its top (`empty`).
 struct AssistantTextPaste: UIViewRepresentable {
     let enabled: Bool
+    let empty: Bool
     let takesImages: Bool
     let images: ([Data]) -> Void
     let text: (String) -> Void
@@ -31,6 +33,7 @@ struct AssistantTextPaste: UIViewRepresentable {
         context.coordinator.text = text
         context.coordinator.offerPaste()
         view.attach()
+        if empty { context.coordinator.scrollToTop() }
     }
 
     static func dismantleUIView(_ view: Finder, coordinator: Coordinator) {
@@ -122,6 +125,17 @@ struct AssistantTextPaste: UIViewRepresentable {
             textView.pasteConfiguration = originalConfiguration
             textView.allowsEditingTextAttributes = originalAttributes
             self.textView = nil
+        }
+
+        /// Sending a long message empties the field, but its text view stays scrolled to where the
+        /// message ended: the cursor then shows above the placeholder. Back to the top once SwiftUI
+        /// has put the empty text in.
+        func scrollToTop() {
+            DispatchQueue.main.async { [weak self] in
+                guard let textView = self?.textView, textView.text.isEmpty else { return }
+                let top = CGPoint(x: -textView.adjustedContentInset.left, y: -textView.adjustedContentInset.top)
+                if textView.contentOffset != top { textView.setContentOffset(top, animated: false) }
+            }
         }
 
         /// A plain text view offers Paste only for text: while the clipboard holds a picture and

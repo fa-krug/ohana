@@ -902,7 +902,7 @@ struct AssistantChatView: View {
             #if os(macOS)
             .onSubmit { send() }
             #else
-            .modifier(AssistantPaste(enabled: store.ready, images: { attach(pasted: $0) },
+            .modifier(AssistantPaste(enabled: store.ready, empty: text.isEmpty, images: { attach(pasted: $0) },
                                      text: { attach(pastedText: $0) }))
             #endif
             .disabled(!store.ready)
@@ -1000,6 +1000,7 @@ struct AssistantChatView: View {
               canSend else { return }
         let files = attachments
         text = ""
+        selection = nil
         attachments = []
         // Scrolled to the top once it is in the chat (a waiting message: once its turn comes).
         sentPending = true
@@ -1153,6 +1154,7 @@ private struct AssistantPageCommands: ViewModifier {
 /// which takes the text on every version.
 private struct AssistantPaste: ViewModifier {
     let enabled: Bool
+    let empty: Bool
     let images: ([Data]) -> Void
     let text: (String) -> Void
 
@@ -1162,17 +1164,17 @@ private struct AssistantPaste: ViewModifier {
         #if os(iOS) && compiler(>=6.4)
         if #available(iOS 27, *) {
             content
-                .background(AssistantTextPaste(enabled: enabled, takesImages: false, images: images, text: text))
+                .background(AssistantTextPaste(enabled: enabled, empty: empty, takesImages: false, images: images, text: text))
                 .pasteDestination(for: AssistantPastedImage.self) { pasted in
                     images(pasted.map(\.data))
                 } validator: { pasted in
                     enabled ? pasted : []
                 }
         } else {
-            content.background(AssistantTextPaste(enabled: enabled, takesImages: true, images: images, text: text))
+            content.background(AssistantTextPaste(enabled: enabled, empty: empty, takesImages: true, images: images, text: text))
         }
         #elseif os(iOS)
-        content.background(AssistantTextPaste(enabled: enabled, takesImages: true, images: images, text: text))
+        content.background(AssistantTextPaste(enabled: enabled, empty: empty, takesImages: true, images: images, text: text))
         #else
         content
         #endif
