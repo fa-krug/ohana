@@ -193,6 +193,25 @@ struct FinanceComparison: Hashable {
         return (income, expense)
     }
 
+    /// What the statistic average compares: income, expenses and per top-level category, per
+    /// month. `net`: within each top-level category (not uncategorized money) what came in and
+    /// what went out cancel out, so a refund lowers its spending; the overlap leaves both sides
+    /// and both totals, so the balance stays the same.
+    func benchmarkValues(_ tree: FinanceCategoryTree, net: Bool)
+        -> (incomeCents: Int, expenseCents: Int, income: [String: Int], expense: [String: Int]) {
+        var (income, expense) = byTop(tree)
+        guard net else { return (incomeCents, expenseCents, income, expense) }
+        var overlapTotal = 0
+        for (top, inCents) in income where !top.isEmpty {
+            let overlap = min(inCents, expense[top] ?? 0)
+            guard overlap > 0 else { continue }
+            income[top] = inCents - overlap
+            expense[top]! -= overlap
+            overlapTotal += overlap
+        }
+        return (incomeCents - overlapTotal, expenseCents - overlapTotal, income, expense)
+    }
+
     /// "Ø Jan – Sep 2026 · 9 months", or the month; nil when there is nothing yet.
     var detail: String? {
         guard months > 0, let first, let last else { return nil }

@@ -146,7 +146,7 @@ describe("finance categories and settings", () => {
   });
 
   it("stores a statistic average to compare with", async () => {
-    const { call, s, f } = financeFamily();
+    const { call, db, s, f } = financeFamily();
     expect((await call("GET", f)).data.benchmark).toBeNull();
     const set = await call("PATCH", `${f}/settings`, {
       benchmark: {
@@ -168,6 +168,7 @@ describe("finance categories and settings", () => {
         { categoryId: "groceries", lowCents: 60000, highCents: 80000 },
         { categoryId: "salary", lowCents: 1, highCents: 1 },
       ],
+      net: true, // by default refunds count against their category's spending
     });
     // Other settings leave it alone; a deleted category drops out of it.
     await call("PATCH", `${f}/settings`, { currency: "CHF" });
@@ -186,11 +187,18 @@ describe("finance categories and settings", () => {
       { label: 3, income: 1 },
       { categories: [{ categoryId: "nope", cents: 1 }] },
       { categories: "groceries" },
+      { income: 1, net: "no" },
       "x",
     ]) {
       const res = await call("PATCH", `${f}/settings`, { benchmark: bad });
       expect([400, 404], JSON.stringify(bad)).toContain(res.status);
     }
+    // Comparing gross amounts is kept; an average stored before the option is net.
+    const gross = await call("PATCH", `${f}/settings`, { benchmark: { income: 1, net: false } });
+    expect(gross.data.benchmark.net).toBe(false);
+    const old = { label: "", income: { lowCents: 1, highCents: 1 }, expense: null, categories: [] };
+    db.update(finSettings).set({ benchmark: JSON.stringify(old) }).where(eq(finSettings.familyId, s.id)).run();
+    expect((await call("GET", f)).data.benchmark.net).toBe(true);
     // Without any amount (or null) it is gone.
     const empty = await call("PATCH", `${f}/settings`, { benchmark: { label: "Only a label" } });
     expect(empty.data.benchmark).toBeNull();

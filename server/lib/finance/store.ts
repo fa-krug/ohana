@@ -92,6 +92,9 @@ export interface Benchmark {
   income: CentsRange | null;
   expense: CentsRange | null;
   categories: ({ categoryId: string } & CentsRange)[];
+  /** Within each top-level category, money in and out cancel out (a refund lowers its
+   *  spending) before comparing. Not stored (older averages): true. */
+  net?: boolean;
 }
 
 export interface FinanceSettingsRow {

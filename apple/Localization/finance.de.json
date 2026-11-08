@@ -368,5 +368,7 @@
   "File format": "Dateiformat",
   "Bank accounts, cash or cards; a balance is the opening balance plus the account’s transactions.": "Bankkonten, Bargeld oder Karten; der Kontostand ist der Anfangsstand plus die Buchungen des Kontos.",
   "To sort the transactions; a category’s totals include its subcategories.": "Zum Einordnen der Buchungen; die Summen einer Kategorie enthalten ihre Unterkategorien.",
-  "Leave all amounts empty to remove it.": "Alle Beträge leer lassen, um ihn zu entfernen."
+  "Leave all amounts empty to remove it.": "Alle Beträge leer lassen, um ihn zu entfernen.",
+  "Count refunds against spending": "Erstattungen mit Ausgaben verrechnen",
+  "Money coming back within a category (a return, a reimbursement) lowers its spending instead of counting as income.": "Geld, das innerhalb einer Kategorie zurückkommt (eine Rücksendung, eine Erstattung), senkt ihre Ausgaben, statt als Einnahme zu zählen."
 }

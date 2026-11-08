@@ -7516,7 +7516,7 @@ components:
     Benchmark:
       type: object
       description: A statistic average (per month) the overview compares the months with.
-      required: [label, income, expense, categories]
+      required: [label, income, expense, categories, net]
       properties:
         label: {type: string, maxLength: 120}
         income:
@@ -7536,6 +7536,12 @@ components:
                 required: [categoryId]
                 properties:
                   categoryId: {type: string}
+        net:
+          type: boolean
+          description: >-
+            Within each top-level category money in and out cancel out before comparing (a
+            refund lowers its spending; both totals drop by the same). False compares spending
+            and income as they are.
     BenchmarkInput:
       type: object
       description: Amounts per month, each a number or `{lowCents, highCents}` (one is enough).
@@ -7561,6 +7567,7 @@ components:
               cents: {type: integer}
               lowCents: {type: [integer, "null"]}
               highCents: {type: [integer, "null"]}
+        net: {type: boolean, default: true, description: "See Benchmark.net."}
     CentsRangeInput:
       type: object
       properties:

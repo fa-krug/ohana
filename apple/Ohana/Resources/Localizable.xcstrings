@@ -4936,6 +4936,16 @@
         }
       }
     },
+    "Count refunds against spending": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erstattungen mit Ausgaben verrechnen"
+          }
+        }
+      }
+    },
     "Counting calendar days": {
       "localizations": {
         "de": {
@@ -9866,6 +9876,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Geld"
+          }
+        }
+      }
+    },
+    "Money coming back within a category (a return, a reimbursement) lowers its spending instead of counting as income.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geld, das innerhalb einer Kategorie zurückkommt (eine Rücksendung, eine Erstattung), senkt ihre Ausgaben, statt als Einnahme zu zählen."
           }
         }
       }

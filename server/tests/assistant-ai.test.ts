@@ -576,6 +576,7 @@ describe("a turn of the assistant", () => {
       income: null,
       expense: { lowCents: 300000, highCents: 450000 },
       categories: [{ categoryId: "groceries", lowCents: 60000, highCents: 80050 }],
+      net: true,
     });
 
     const second = await set({ income: { lowCents: 500000, highCents: 500000 } });
@@ -590,6 +591,16 @@ describe("a turn of the assistant", () => {
     expect((await benchmark()).label).toBe("Destatis 2024");
     await undo(first.change!.undo);
     expect(await benchmark()).toBeNull();
+
+    // Comparing gross is kept when the average is set again without saying.
+    await set({ expense: { low: 3000, high: 3000 }, net: false });
+    await set({ income: { low: 5000, high: 5000 } });
+    expect((await benchmark()).net).toBe(false);
+
+    // Comparing gross is kept when the average is set again without saying.
+    await set({ expense: { low: 3000, high: 3000 }, net: false });
+    await set({ income: { low: 5000, high: 5000 } });
+    expect((await benchmark()).net).toBe(false);
 
     expect((await set({ categories: [{ category: "Nope", low: 1 }] })).ok).toBe(false);
     expect((await set({ expense: { low: -5 } })).ok).toBe(false);

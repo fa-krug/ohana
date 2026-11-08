@@ -418,7 +418,8 @@ function cleanCentsRange(v: unknown, field: string): CentsRange | null {
  * A statistic average from {label, income, expense, categories: [{categoryId (id, name or
  * path), lowCents, highCents}]}: amounts per month, each a range {lowCents, highCents} or a
  * single value (a number, or a category's `cents`). Null (or one without any amount) clears it.
- * A category given twice keeps its last range.
+ * A category given twice keeps its last range. `net` (default true): refunds count against the
+ * spending of their category (see Benchmark.net).
  */
 export function cleanBenchmark(raw: unknown, categories: CategoryRow[]): Benchmark | null {
   if (raw === null) return null;
@@ -428,6 +429,9 @@ export function cleanBenchmark(raw: unknown, categories: CategoryRow[]): Benchma
   }
   if (b.categories !== undefined && b.categories !== null && !Array.isArray(b.categories)) {
     throw new HttpError(400, "benchmark.categories must be an array");
+  }
+  if (b.net !== undefined && b.net !== null && typeof b.net !== "boolean") {
+    throw new HttpError(400, "benchmark.net must be true or false");
   }
   const byCategory = new Map<string, CentsRange>();
   for (const raw of (b.categories ?? []) as unknown[]) {
@@ -445,6 +449,7 @@ export function cleanBenchmark(raw: unknown, categories: CategoryRow[]): Benchma
     income: cleanCentsRange(b.income, "benchmark.income"),
     expense: cleanCentsRange(b.expense, "benchmark.expense"),
     categories: [...byCategory].map(([categoryId, range]) => ({ categoryId, ...range })),
+    net: (b.net as boolean | null | undefined) ?? true,
   };
   return out.income || out.expense || out.categories.length ? out : null;
 }
@@ -454,7 +459,11 @@ export function benchmarkOf(settings: FinanceSettingsRow | null, categories: Cat
   const b = settings?.benchmark;
   if (!b) return null;
   const ids = new Set(categories.map((c) => c.id));
-  return { ...b, categories: b.categories.filter((c) => ids.has(c.categoryId)) };
+  return {
+    ...b,
+    categories: b.categories.filter((c) => ids.has(c.categoryId)),
+    net: b.net ?? true,
+  };
 }
 
 // ------------------------------------------------------------------ export / import

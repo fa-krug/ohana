@@ -29,6 +29,7 @@ struct FinanceDecodingTests {
         #expect(overview.accounts[0].balanceCents == -5000)
         #expect(overview.benchmark?.expense == FinanceCentsRange(lowCents: 250000, highCents: 320000))
         #expect(overview.benchmark?.categories.first?.categoryId == "groceries")
+        #expect(overview.benchmark?.net == true) // not sent by an older server
         // The mapping the app can't read is kept as JSON but not offered.
         #expect(overview.csvMappings.count == 2)
         #expect(overview.mappings.count == 1)
@@ -291,6 +292,31 @@ struct FinancePeriodTests {
         #expect(column.first == "2026-07" && column.months == 3)
         #expect(column.incomeCents == 1000 && column.expenseCents == 334)
         #expect(column.categories[""]?.expense == 334)
+    }
+
+    @Test func netsRefundsForTheBenchmark() {
+        func cat(_ id: String, _ kind: FinanceCategoryKind, parent: String? = nil) -> FinanceCategory {
+            FinanceCategory(id: id, name: id, color: "#000000", icon: "", kind: kind, position: 0, parentId: parent)
+        }
+        let categories = [cat("clothes", .expense), cat("shoes", .expense, parent: "clothes"), cat("salary", .income)]
+        let tree = FinanceCategoryTree(categories)
+        let summary = FinanceSummary(currency: "EUR", incomeCents: 400_000 + 8_000 + 2_000 + 500, expenseCents: 30_000 + 1_000 + 700, count: 6,
+                                     months: [FinanceSummaryMonth(month: "2026-07", incomeCents: 410_500, expenseCents: 31_700)],
+                                     categories: [
+                                         FinanceSummaryCategory(categoryId: "clothes", incomeCents: 8_000, expenseCents: 30_000, count: 2),
+                                         FinanceSummaryCategory(categoryId: "shoes", incomeCents: 2_000, expenseCents: 0, count: 1),
+                                         FinanceSummaryCategory(categoryId: "salary", incomeCents: 400_000, expenseCents: 1_000, count: 2),
+                                         FinanceSummaryCategory(categoryId: nil, incomeCents: 500, expenseCents: 700, count: 2),
+                                     ])
+        let column = FinanceComparison.from(summary, range: FinanceComparisonRange(key: .month, average: false, from: "2026-07-01", to: "2026-07-31"))
+        let gross = column.benchmarkValues(tree, net: false)
+        #expect(gross.expense["clothes"] == 30_000 && gross.income["clothes"] == 10_000 && gross.expenseCents == 31_700)
+        let net = column.benchmarkValues(tree, net: true)
+        // Refunds (also a subcategory's) lower the spending; uncategorized money stays as it is.
+        #expect(net.expense["clothes"] == 20_000 && net.income["clothes"] == 0)
+        #expect(net.income["salary"] == 399_000 && net.expense["salary"] == 0)
+        #expect(net.expense[""] == 700 && net.income[""] == 500)
+        #expect(net.expenseCents == 31_700 - 11_000 && net.incomeCents == 410_500 - 11_000)
     }
 
     @Test func measuresAgainstTheBenchmark() {

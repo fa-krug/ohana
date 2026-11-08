@@ -217,7 +217,8 @@ struct FinanceComparisonCard: View {
 
 /// Where the period is within the statistic average the family set (benchmark-view.tsx):
 /// income, expenses and the top-level categories that have a range, each as a band with the
-/// period's value per month on it. Hidden while none is set.
+/// period's value per month on it (refunds netted unless the average says otherwise). Hidden
+/// while none is set.
 struct FinanceBenchmarkCard: View {
     @Bindable var store: FinanceStore
 
@@ -257,15 +258,15 @@ struct FinanceBenchmarkCard: View {
     }
 
     private func rows(_ benchmark: FinanceBenchmark, _ column: FinanceComparison) -> [Row] {
-        let values = column.months > 0 ? column.byTop(store.tree) : nil
+        let values = column.months > 0 ? column.benchmarkValues(store.tree, net: benchmark.net) : nil
         var rows: [Row] = []
         if let income = benchmark.income {
             rows.append(Row(id: "income", label: String(localized: "Income"), range: income,
-                            cents: values == nil ? nil : column.incomeCents, higherIsGood: true))
+                            cents: values?.incomeCents, higherIsGood: true))
         }
         if let expense = benchmark.expense {
             rows.append(Row(id: "expense", label: String(localized: "Expenses"), range: expense,
-                            cents: values == nil ? nil : column.expenseCents, higherIsGood: false))
+                            cents: values?.expenseCents, higherIsGood: false))
         }
         let own = Dictionary(benchmark.categories.map { ($0.categoryId, $0.range) }) { _, b in b }
         for node in store.tree.children(of: nil) {

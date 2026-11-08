@@ -430,7 +430,7 @@ export const financeTools: Record<string, Tool> = {
     spec: {
       name: "set_statistic_average",
       description:
-        "Sets the statistic average that the finance overview compares the family's months with, e.g. a statistics office's figures on household income and spending for a household like this one (search the web for current figures and name the source and year in label). Every amount is a range per month in the currency (e.g. 3500.50), not negative: {low, high}, e.g. the typical span between lower and upper households, or the same twice for a single average. income, expense, and categories: [{category (id, name or path), low, high}] for the family's categories (top-level ones show in the overview; one without its own range sums up those of its subcategories). Leave out what isn't known. It replaces the whole average; clear: true removes it (the overview then doesn't show it).",
+        "Sets the statistic average that the finance overview compares the family's months with, e.g. a statistics office's figures on household income and spending for a household like this one (search the web for current figures and name the source and year in label). Every amount is a range per month in the currency (e.g. 3500.50), not negative: {low, high}, e.g. the typical span between lower and upper households, or the same twice for a single average. income, expense, and categories: [{category (id, name or path), low, high}] for the family's categories (top-level ones show in the overview; one without its own range sums up those of its subcategories). Leave out what isn't known. net (default: as before, at first true): within each top-level category money in and out cancel out before comparing, so a refund lowers the category's spending (and the expense total); false compares spending and income as they are. It replaces the whole average; clear: true removes it (the overview then doesn't show it).",
       parameters: {
         type: "object",
         properties: {
@@ -445,6 +445,7 @@ export const financeTools: Record<string, Tool> = {
               required: ["category"],
             },
           },
+          net: { type: "boolean" },
           clear: { type: "boolean" },
         },
       },
@@ -464,6 +465,7 @@ export const financeTools: Record<string, Tool> = {
           income: range(args.income),
           expense: range(args.expense),
           categories: Array.isArray(args.categories) ? args.categories.map(range) : args.categories,
+          net: args.net ?? settings?.benchmark?.net,
         },
         categories,
       );

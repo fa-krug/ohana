@@ -203,7 +203,9 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   export file's import is all or nothing), `finance.ts` (routes under
   `/api/v1/families/{id}/finance/...`, `applyTransactionOps` with `inverse` undo ops, transfer
   groups and split bookings with net counting `netItems`, `matchSplits` / `matchTransfers` /
-  `autoCombine`, import hashes, `financeSummary`, benchmark, `exportFinance` /
+  `autoCombine`, import hashes, `financeSummary`, the statistic average (benchmark; `net`, default on: within a top-level
+  category money in and out cancel out, so a refund lowers its spending; the app's
+  `benchmarkValues`), `exportFinance` /
   `parseFinanceImport` / `copyFinance`), `category-tree.ts`, `csv.ts` and `money.ts`
   (shared with the client) are ported with few changes; `summary.ts` is the overview card,
   `presets.ts` the default categories `createFamily` adds (creator's language). Tables

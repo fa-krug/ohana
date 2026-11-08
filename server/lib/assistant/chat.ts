@@ -257,7 +257,7 @@ export function systemPrompt(input: {
   const benchmark = b
     ? `${b.label ? `“${b.label}”: ` : ""}${
       JSON.stringify(inCurrency({ income: b.income, expense: b.expense, categories: b.categories }))
-    }`
+    }${b.net === false ? " (spending and income as they are)" : " (net: refunds lower their category's spending)"}`
     : "not set";
   return `You are the assistant inside Ohana, the family app of the family “${family.name}”.
 Today is ${today} (${weekday}). This chat belongs to the ${input.page} page; the calendar

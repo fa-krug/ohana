@@ -739,6 +739,7 @@ struct FinanceBenchmarkEditor: View {
     @State private var income = FinanceRangeDraft()
     @State private var expense = FinanceRangeDraft()
     @State private var categories: [String: FinanceRangeDraft] = [:]
+    @State private var net = true
     @State private var busy = false
     @State private var loaded: FinanceBenchmark??
 
@@ -763,6 +764,11 @@ struct FinanceBenchmarkEditor: View {
                                  caption: node.category.kind == .income ? String(localized: "Income") : nil)
                     }
                 }
+            }
+            Section {
+                Toggle("Count refunds against spending", isOn: $net)
+            } footer: {
+                Text("Money coming back within a category (a return, a reimbursement) lowers its spending instead of counting as income.")
             }
             if store.canEdit {
                 Section {
@@ -798,6 +804,7 @@ struct FinanceBenchmarkEditor: View {
         income = FinanceRangeDraft(saved?.income)
         expense = FinanceRangeDraft(saved?.expense)
         categories = Dictionary((saved?.categories ?? []).map { ($0.categoryId, FinanceRangeDraft($0.range)) }) { _, b in b }
+        net = saved?.net ?? true
     }
 
     private struct Made {
@@ -814,7 +821,7 @@ struct FinanceBenchmarkEditor: View {
             if let range { list.append(FinanceBenchmarkCategory(categoryId: id, lowCents: range.lowCents, highCents: range.highCents)) }
         }
         return Made(benchmark: FinanceBenchmark(label: label.trimmingCharacters(in: .whitespaces), income: income,
-                                                expense: expense, categories: list))
+                                                expense: expense, categories: list, net: net))
     }
 
     /// What a top-level category without its own range shows: its subcategories' sum.

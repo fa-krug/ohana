@@ -349,6 +349,27 @@ nonisolated struct FinanceBenchmark: Codable, Hashable, Sendable {
     var income: FinanceCentsRange?
     var expense: FinanceCentsRange?
     var categories: [FinanceBenchmarkCategory]
+    /// Within each top-level category money in and out cancel out before comparing (a refund
+    /// lowers its spending); an older server sends none: true.
+    var net = true
+
+    init(label: String, income: FinanceCentsRange?, expense: FinanceCentsRange?,
+         categories: [FinanceBenchmarkCategory], net: Bool = true) {
+        self.label = label
+        self.income = income
+        self.expense = expense
+        self.categories = categories
+        self.net = net
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        label = try c.decode(String.self, forKey: .label)
+        income = try c.decodeIfPresent(FinanceCentsRange.self, forKey: .income)
+        expense = try c.decodeIfPresent(FinanceCentsRange.self, forKey: .expense)
+        categories = try c.decode([FinanceBenchmarkCategory].self, forKey: .categories)
+        net = try c.decodeIfPresent(Bool.self, forKey: .net) ?? true
+    }
 }
 
 /// GET /finance (overviewData), also the answer of PATCH /finance/settings and DELETE /finance.
