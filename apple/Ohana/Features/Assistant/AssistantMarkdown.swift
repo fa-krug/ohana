@@ -1,5 +1,13 @@
 import SwiftUI
 
+/// An item of a list in an answer: its depth (0: the list's own items, 1: under one of them, …)
+/// and, in a numbered list, its number as written.
+nonisolated struct AssistantListItem: Equatable, Sendable {
+    var text: String
+    var level = 0
+    var number: Int? = nil
+}
+
 /// A block of an answer in Markdown (web: components/assistant/markdown.tsx): paragraphs,
 /// headings, lists, tables and code; the inline parts (bold, italics, code, links) go through
 /// `AttributedString(markdown:)`. Pure, so answers can be read off the main thread
@@ -7,21 +15,21 @@ import SwiftUI
 nonisolated enum AssistantMarkdownBlock: Equatable, Sendable {
     case paragraph(String)
     case heading(String)
-    case list(ordered: Bool, items: [String])
+    case list([AssistantListItem])
     case code(String)
     case table(header: [String], alignments: [HorizontalAlignment?], rows: [[String]])
 
     static func == (a: Self, b: Self) -> Bool {
         switch (a, b) {
         case let (.paragraph(x), .paragraph(y)), let (.heading(x), .heading(y)), let (.code(x), .code(y)): x == y
-        case let (.list(o1, i1), .list(o2, i2)): o1 == o2 && i1 == i2
+        case let (.list(x), .list(y)): x == y
         case let (.table(h1, _, r1), .table(h2, _, r2)): h1 == h2 && r1 == r2
         default: false
         }
     }
 
     // Not `Sendable` (its output type could be anything), but matching is safe from any thread.
-    private nonisolated(unsafe) static let listItem = /^\s*([-*•+]|\d+[.)])\s+/
+    private nonisolated(unsafe) static let listItem = /^\s*([-*•+]|(\d+)[.)])\s+/
     private nonisolated(unsafe) static let headingLine = /^(#{1,6})\s+(.*)$/
     private nonisolated(unsafe) static let tableRule = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/
 
@@ -60,6 +68,48 @@ nonisolated enum AssistantMarkdownBlock: Equatable, Sendable {
         return left && right ? .center : right ? .trailing : left ? .leading : nil
     }
 
+    /// The width of a line's indentation (a tab counts 4).
+    private static func indent(_ line: String) -> Int {
+        var width = 0
+        for c in line {
+            if c == " " { width += 1 } else if c == "\t" { width += 4 } else { break }
+        }
+        return width
+    }
+
+    /// The list starting at `start`: its items with their depth (from their indentation: two
+    /// spaces more than the item above go one deeper) and number, and the line after it. Blank
+    /// lines between items (a "loose" list) don't end it while the next item is nested or of the
+    /// first item's kind, so its numbers and spacing stay one list's.
+    private static func listItems(_ lines: [String], from start: Int) -> ([AssistantListItem], Int) {
+        var items: [AssistantListItem] = []
+        var indents: [Int] = []  // the indentation of each open depth
+        var i = start
+        while i < lines.count {
+            var line = lines[i]
+            if line.trimmingCharacters(in: .whitespaces).isEmpty {
+                var j = i
+                while j < lines.count, lines[j].trimmingCharacters(in: .whitespaces).isEmpty { j += 1 }
+                guard j < lines.count, isListItem(lines[j]), let first = items.first,
+                      indent(lines[j]) >= (indents.first ?? 0) + 2
+                        || (lines[j].prefixMatch(of: listItem)?.2 != nil) == (first.number != nil) else { break }
+                i = j
+                line = lines[i]
+            }
+            guard let match = line.prefixMatch(of: listItem) else { break }
+            let width = indent(line)
+            while let last = indents.last, width < last { indents.removeLast() }
+            if let last = indents.last, width < last + 2 {} else { indents.append(width) }
+            items.append(AssistantListItem(
+                text: String(line[match.range.upperBound...]),
+                level: max(indents.count - 1, 0),
+                number: match.2.flatMap { Int($0) }
+            ))
+            i += 1
+        }
+        return (items, i)
+    }
+
     static func parse(_ text: String) -> [AssistantMarkdownBlock] {
         let lines = text.replacingOccurrences(of: "\r", with: "").components(separatedBy: "\n")
         var blocks: [AssistantMarkdownBlock] = []
@@ -87,13 +137,9 @@ nonisolated enum AssistantMarkdownBlock: Equatable, Sendable {
                 continue
             }
             if isListItem(line) {
-                let ordered = line.trimmingCharacters(in: .whitespaces).first?.isNumber == true
-                var items: [String] = []
-                while i < lines.count, isListItem(lines[i]) {
-                    items.append(lines[i].replacing(listItem, maxReplacements: 1) { _ in "" })
-                    i += 1
-                }
-                blocks.append(.list(ordered: ordered, items: items))
+                let (items, next) = listItems(lines, from: i)
+                blocks.append(.list(items))
+                i = next
                 continue
             }
             if isTableStart(lines, i) {
@@ -204,7 +250,7 @@ nonisolated enum AssistantMarkdownCache {
     static func inlineParts(_ block: AssistantMarkdownBlock) -> [String] {
         switch block {
         case let .paragraph(text), let .heading(text): [text]
-        case let .list(_, items): items
+        case let .list(items): items.map(\.text)
         case .code: []
         case let .table(header, _, rows):
             header + rows.flatMap { row in header.indices.map { row.indices.contains($0) ? row[$0] : "" } }
@@ -218,12 +264,23 @@ struct AssistantMarkdownView: View {
     let text: String
     var sources: [AssistantSource] = []
 
+    // Room to read: paragraphs, list items and headings apart, lines a little further apart than
+    // the system's, nested items indented. All grow with the text size.
+    @ScaledMetric(relativeTo: .body) private var blockSpacing: CGFloat = 14
+    @ScaledMetric(relativeTo: .body) private var itemSpacing: CGFloat = 8
+    @ScaledMetric(relativeTo: .body) private var headingSpacing: CGFloat = 8
+    @ScaledMetric(relativeTo: .body) private var markerWidth: CGFloat = 16
+    @ScaledMetric(relativeTo: .body) private var levelIndent: CGFloat = 22
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ForEach(Array(AssistantMarkdownCache.blocks(text, sources: sources).enumerated()), id: \.offset) { _, block in
+        VStack(alignment: .leading, spacing: blockSpacing) {
+            ForEach(Array(AssistantMarkdownCache.blocks(text, sources: sources).enumerated()), id: \.offset) { index, block in
                 blockView(block)
+                    // A heading after something belongs to what follows it.
+                    .padding(.top, index > 0 && block.isHeading ? headingSpacing : 0)
             }
         }
+        .lineHeight(.multiple(factor: 1.2))
         // On the Mac only: on iOS the answer's menu offers "Select Text" instead.
         #if os(macOS)
         .textSelection(.enabled)
@@ -237,17 +294,20 @@ struct AssistantMarkdownView: View {
             Text(AssistantMarkdownCache.inline(text))
                 .fixedSize(horizontal: false, vertical: true)
         case let .heading(text):
-            Text(AssistantMarkdownCache.inline(text)).font(.headline)
-        case let .list(ordered, items):
-            VStack(alignment: .leading, spacing: 4) {
-                ForEach(Array(items.enumerated()), id: \.offset) { index, item in
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        Text(verbatim: ordered ? "\(index + 1)." : "•")
+            Text(AssistantMarkdownCache.inline(text))
+                .font(.title3.bold())
+                .fixedSize(horizontal: false, vertical: true)
+        case let .list(items):
+            VStack(alignment: .leading, spacing: itemSpacing) {
+                ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(verbatim: Self.marker(item))
                             .monospacedDigit()
-                            .foregroundStyle(.secondary)
-                        Text(AssistantMarkdownCache.inline(item))
+                            .frame(minWidth: markerWidth, alignment: item.number == nil ? .center : .trailing)
+                        Text(AssistantMarkdownCache.inline(item.text))
                             .fixedSize(horizontal: false, vertical: true)
                     }
+                    .padding(.leading, CGFloat(min(item.level, 3)) * levelIndent)
                 }
             }
         case let .code(code):
@@ -282,5 +342,17 @@ struct AssistantMarkdownView: View {
             }
             .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
         }
+    }
+
+    /// A numbered item's number, else a bullet by depth.
+    private static func marker(_ item: AssistantListItem) -> String {
+        if let number = item.number { return "\(number)." }
+        return ["•", "◦", "▪︎"][min(item.level, 2)]
+    }
+}
+
+private extension AssistantMarkdownBlock {
+    var isHeading: Bool {
+        if case .heading = self { true } else { false }
     }
 }
