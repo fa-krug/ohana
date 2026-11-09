@@ -40,17 +40,50 @@ nonisolated struct ScanFilingSettings: @unchecked Sendable {
         defaults.set(on, forKey: Self.savesPDFKey(kind))
     }
 
-    /// Every tag saved with a scan on this device, the latest first.
-    var knownTags: [String] { defaults.stringArray(forKey: Self.recentTagsKey) ?? [] }
+    /// Every tag saved with a scan on this device, the latest first (not the hidden ones).
+    var knownTags: [String] { suggestable(defaults.stringArray(forKey: Self.recentTagsKey) ?? []) }
 
     /// The tags used last, the latest first.
     var recentTags: [String] { Array(knownTags.prefix(Self.maxRecentTags)) }
 
     /// Puts `tags` in front of the known ones (no duplicates, case ignored), keeping `maxKnownTags`.
+    /// A hidden tag saved with a scan (typed in by the user) is suggested again.
     func remember(tags: [String]) {
+        let used = Set(tags.map { $0.lowercased() })
+        let hidden = hiddenTags
+        if hidden.contains(where: { used.contains($0.lowercased()) }) {
+            defaults.set(hidden.filter { !used.contains($0.lowercased()) }, forKey: Self.hiddenTagsKey)
+        }
         var seen = Set<String>()
         let unique = (tags + knownTags).filter { seen.insert($0.lowercased()).inserted }
         defaults.set(Array(unique.prefix(Self.maxKnownTags)), forKey: Self.recentTagsKey)
+    }
+
+    // MARK: Hidden tags
+
+    static let hiddenTagsKey = "scanHiddenTags"
+
+    /// The tags the user asked not to be suggested ("Don't Suggest"): left out of every
+    /// suggestion, wherever it comes from (this device, the folder's files, the server).
+    var hiddenTags: [String] { defaults.stringArray(forKey: Self.hiddenTagsKey) ?? [] }
+
+    /// Stops suggesting `tag` (case ignored).
+    func hide(tag: String) {
+        let tag = tag.trimmingCharacters(in: .whitespaces)
+        guard !tag.isEmpty, !isHidden(tag) else { return }
+        defaults.set(hiddenTags + [tag], forKey: Self.hiddenTagsKey)
+    }
+
+    func isHidden(_ tag: String) -> Bool {
+        let tag = tag.trimmingCharacters(in: .whitespaces).lowercased()
+        return hiddenTags.contains { $0.lowercased() == tag }
+    }
+
+    /// `tags` without the hidden ones.
+    func suggestable(_ tags: [String]) -> [String] {
+        let hidden = Set(hiddenTags.map { $0.lowercased() })
+        guard !hidden.isEmpty else { return tags }
+        return tags.filter { !hidden.contains($0.trimmingCharacters(in: .whitespaces).lowercased()) }
     }
 
     // MARK: The folder

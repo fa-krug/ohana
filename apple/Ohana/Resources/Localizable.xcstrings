@@ -6115,6 +6115,16 @@
         }
       }
     },
+    "Don’t Suggest": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht mehr vorschlagen"
+          }
+        }
+      }
+    },
     "Double-click": {
       "localizations": {
         "de": {

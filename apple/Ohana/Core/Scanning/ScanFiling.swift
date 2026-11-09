@@ -40,7 +40,7 @@ final class ScanFiling {
     /// Fills in what the user hasn't edited yet.
     func suggest(name: String? = nil, tags: [String]? = nil) {
         if let name, !nameEdited { self.name = name }
-        if let tags, !tagsEdited { self.tags = ScanTags.cleaned(tags) }
+        if let tags, !tagsEdited { self.tags = ScanTags.cleaned(settings.suggestable(tags)) }
     }
 
     func editName(_ value: String) {
@@ -61,15 +61,27 @@ final class ScanFiling {
         tagsEdited = true
     }
 
+    /// "Don't Suggest": takes `tag` off this scan and never suggests it again on this device (a
+    /// scan saved with it typed in brings it back: `ScanFilingSettings.remember`).
+    func dontSuggest(_ tag: String) {
+        settings.hide(tag: tag)
+        if tags.contains(tag) { removeTag(tag) }
+        hiddenRevision += 1
+    }
+
+    /// Bumped by `dontSuggest`: `recentTags` reads the settings, which aren't observed.
+    private var hiddenRevision = 0
+
     /// The tags a scan may be suggested: those saved with a scan on this device, then those on the
     /// files in the folder (Finder / Files tags), then, in the knowledge folder, those of the
-    /// family's documents on the server (its subfolders' too, other devices' files too).
+    /// family's documents on the server (its subfolders' too, other devices' files too); never
+    /// the hidden ones.
     func existingTags() async -> [String] {
         let saved = settings.knownTags
         guard let folderURL = folder.url else { return saved }
         async let server = knowledgeTags()
         let inFolder = await Task.detached(priority: .userInitiated) { FolderTags.read(folderURL) }.value
-        return ScanTags.cleaned(saved + inFolder + (await server), limit: .max)
+        return ScanTags.cleaned(settings.suggestable(saved + inFolder + (await server)), limit: .max)
     }
 
     private func knowledgeTags() async -> [String] {
@@ -79,6 +91,7 @@ final class ScanFiling {
 
     /// The tags used before that this scan hasn't got.
     var recentTags: [String] {
+        _ = hiddenRevision
         let current = Set(tags.map { $0.lowercased() })
         return settings.recentTags.filter { !current.contains($0.lowercased()) }
     }
@@ -336,6 +349,8 @@ struct ScanFilingSection: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(Text("Remove \(tag)"))
+                    .contextMenu { dontSuggestButton(tag) }
+                    .accessibilityAction(named: Text("Don’t Suggest")) { filing.dontSuggest(tag) }
                 }
             }
         }
@@ -372,9 +387,19 @@ struct ScanFilingSection: View {
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel(Text("Add \(tag)"))
+                        .contextMenu { dontSuggestButton(tag) }
+                        .accessibilityAction(named: Text("Don’t Suggest")) { filing.dontSuggest(tag) }
                     }
                 }
             }
+        }
+    }
+
+    /// A chip's menu: the tag is taken off and never suggested again (a spelling the user doesn't
+    /// want, e.g. a second way of writing a name in the folder's tags).
+    private func dontSuggestButton(_ tag: String) -> some View {
+        Button("Don’t Suggest", systemImage: "eye.slash") {
+            filing.dontSuggest(tag)
         }
     }
 

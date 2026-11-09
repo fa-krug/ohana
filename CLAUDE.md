@@ -802,7 +802,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   once read) skip the scanner and reach the same review as picked pages (`letterScanFlow(shared:)`) (name, date
   and tags suggested by `LetterSuggestions`: Apple's on-device model, else rules; tags only existing ones:
   saved with a scan on this device, or on the files in the folder, `FolderTags`, as neither Finder nor
-  Files has an API for its tag list; a family member named in the letter brings the tag of their name or its
+  Files has an API for its tag list; never one hidden with a tag chip's *Don't Suggest*
+  (`ScanFilingSettings.hiddenTags`, this device; saving a scan with it typed in brings it back); a family member named in the letter brings the tag of their name or its
   short form, `NameMatch`: "Michi" for Michael; whose letter it is (`person`, not necessarily who scans it) names the file
   "date_Person_Title" with that person's tag; the server's `filing` (from `POST …/ai/letter`, sent the
   existing tags) beats Apple's model, which beats the rules, field by field (`LetterReview.merged`); never over the user's edits). From the shell (assistant on, editor, not the demo) the sheet also sends only the

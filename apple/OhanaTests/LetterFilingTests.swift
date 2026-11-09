@@ -361,6 +361,39 @@ struct LetterFilingTests {
         #expect(FolderTags.read(folder, maxDepth: 1) == ["Schule", "Mia"])
     }
 
+    @Test func hiddenTagsAreNeverSuggested() async throws {
+        let settings = Self.settings()
+        settings.remember(tags: ["Michi", "Michael", "Schule"])
+        let folder = try Self.temporaryFolder()
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let file = folder.appendingPathComponent("a.pdf")
+        try Data().write(to: file)
+        try FinderTags.write(["Michael", "Arzt"], to: file)
+        try settings.rememberFolder(folder)
+
+        let filing = ScanFiling(kind: .letter, settings: settings)
+        filing.suggest(tags: ["michael", "Schule"])
+        #expect(filing.tags == ["michael", "Schule"])
+        filing.dontSuggest("michael")
+        #expect(filing.tags == ["Schule"])
+        #expect(settings.isHidden("Michael"))
+        settings.hide(tag: " MICHAEL ")
+        #expect(settings.hiddenTags == ["michael"])
+
+        // Not from this device, the folder's files or a suggestion.
+        #expect(settings.knownTags == ["Michi", "Schule"])
+        #expect(filing.recentTags == ["Michi"])
+        #expect(await filing.existingTags() == ["Michi", "Schule", "Arzt"])
+        let next = ScanFiling(kind: .letter, settings: settings)
+        next.suggest(tags: ["Michael", "Schule"])
+        #expect(next.tags == ["Schule"])
+
+        // Typed in and saved with a scan: suggested again.
+        settings.remember(tags: ["Michael"])
+        #expect(!settings.isHidden("michael"))
+        #expect(settings.knownTags == ["Michael", "Michi", "Schule"])
+    }
+
     @Test func remembersTheFolder() throws {
         let settings = Self.settings()
         #expect(settings.folder() == .none)
