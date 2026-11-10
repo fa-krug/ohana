@@ -1001,7 +1001,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   (`/calendar/{YYYY-MM-DD}` is a day of the calendar in `AppRoute.parse`). German strings: per-module
   `apple/Localization/*.de.json`, merged into `Resources/Localizable.xcstrings` by
   `apple/scripts/merge-localizations.py` (`--check` in CI). Build/test: `apple/README.md`; CI:
-  `.github/workflows/apple.yml` (macOS unit tests, iOS build, strings; only on `apple/**` changes).
+  `.github/workflows/apple.yml` (on `apple/**` changes only the strings check on Linux; the macOS
+  unit tests and the iOS build only when run by hand, as macOS runners cost ten times as much).
   Release: App Store Connect / TestFlight, one bundle id `de.fa-krug.Ohana` for both platforms;
   built and uploaded by Xcode Cloud (`apple/ci_scripts/ci_post_clone.sh` runs XcodeGen); version
   from `MARKETING_VERSION` (the plists say `$(MARKETING_VERSION)`), build numbers Xcode Cloud's;

@@ -1,7 +1,10 @@
 name: Apple app
 
-# The native app in apple/: unit tests on macOS, a build for iOS, and the German strings.
-# Only the server deploys (ci.yml); the app is released by Xcode Cloud (apple/README.md, Releasing).
+# The native app in apple/. Automatically only the cheap check: the String Catalog is in step with
+# the German translations (Linux, seconds). The macOS unit tests and the iOS build run on a macOS
+# runner, ten times the price of Linux, so only when started by hand (Actions → Apple app → Run
+# workflow); run them in Xcode before pushing. Only the server deploys (ci.yml); the app is
+# released by Xcode Cloud (apple/README.md, Releasing).
 on:
   push:
     branches: [main]
@@ -9,10 +12,24 @@ on:
   pull_request:
     branches: [main]
     paths: ['apple/**', '.github/workflows/apple.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: apple-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  strings:
+    name: Strings
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Catalog up to date with the translations
+        run: python3 apple/scripts/merge-localizations.py --check
+
   test:
     name: Build & Test
+    if: github.event_name == 'workflow_dispatch'
     runs-on: macos-26
     timeout-minutes: 45
     defaults:
