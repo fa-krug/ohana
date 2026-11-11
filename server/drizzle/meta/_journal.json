@@ -218,6 +218,13 @@
       "when": 1794162856849,
       "tag": "0030_ai_memories",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "6",
+      "when": 1794417265427,
+      "tag": "0031_chore_day_parts",
+      "breakpoints": true
     }
   ]
 }

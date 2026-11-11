@@ -3,8 +3,10 @@
 // chore's notification. `today` (YYYY-MM-DD, default: the server's day) is the day `next` and
 // the overdue chores are worked out for.
 //
-// GET    /chores?today=                    {chores, people, canEdit}
+// GET    /chores?today=                    {chores, people, canEdit, dayParts}
 // GET    /chores/agenda?from=&to=&today=   {days: [{date, items}], overdue} (at most 62 days)
+// GET    /chores/day-parts                 {dayParts: {morning, day, evening}} (when each starts)
+// PATCH  /chores/day-parts                 {morning?, day?, evening?} → {dayParts} (editors)
 // POST   /chores?today=                    ChoreInput (+ id: a chore put back) → 201 {chore}
 // GET    /chores/{id}?today=               {chore}
 // PATCH  /chores/{id}?today=               the fields to change → {chore}
@@ -27,6 +29,7 @@ import {
   setChoreSubscribed,
   updateChore,
 } from "./chores";
+import { getDayParts, setDayParts } from "./day-parts";
 
 /** Routes /families/{id}/chores[/agenda | /{choreId}[/done | /subscribe]]; null for anything else. */
 export function handleChores(ctx: Ctx): Promise<Response> | null {
@@ -44,6 +47,11 @@ export function handleChores(ctx: Ctx): Promise<Response> | null {
     return notAllowed();
   }
   if (id === "agenda") return method === "GET" ? agendaRoute(ctx) : notAllowed();
+  if (id === "day-parts") {
+    if (method === "GET") return dayPartsRoute(ctx);
+    if (method === "PATCH") return setDayPartsRoute(ctx);
+    return notAllowed();
+  }
   if (method === "GET") return getRoute(ctx, id);
   if (method === "PATCH") return updateRoute(ctx, id);
   if (method === "DELETE") return deleteRoute(ctx, id);
@@ -76,7 +84,19 @@ async function listRoute(ctx: Ctx): Promise<Response> {
     chores: listChores(ctx.db, family.id, today, callerId(ctx)),
     people: chorePeople(ctx.db, family.id),
     canEdit: access === "edit",
+    dayParts: getDayParts(ctx.db, family.id),
   });
+}
+
+async function dayPartsRoute(ctx: Ctx): Promise<Response> {
+  const { family } = await ctx.load("view");
+  return json({ dayParts: getDayParts(ctx.db, family.id) });
+}
+
+async function setDayPartsRoute(ctx: Ctx): Promise<Response> {
+  const { family } = await ctx.load("edit");
+  const body = await readBody(ctx.req);
+  return json({ dayParts: setDayParts(ctx.db, family.id, body, ctx.now) });
 }
 
 async function agendaRoute(ctx: Ctx): Promise<Response> {

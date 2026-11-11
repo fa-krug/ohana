@@ -6,7 +6,8 @@
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createToken } from "@/lib/auth/tokens";
-import { PART_DUE, createChore, setChoreDone, updateChore } from "@/lib/chores/chores";
+import { createChore, setChoreDone, updateChore } from "@/lib/chores/chores";
+import { DEFAULT_DAY_PARTS, setDayParts } from "@/lib/chores/day-parts";
 import { DUE_WINDOW_MS, choreNotifications, dueMoment } from "@/lib/chores/notify";
 import type { Db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
@@ -87,12 +88,22 @@ describe("dueMoment", () => {
     expect(dueMoment({ time: null, part: "morning" }, TODAY)).toEqual(at(TODAY, "07:00"));
     expect(dueMoment({ time: null, part: "day" }, TODAY)).toEqual(at(TODAY, "12:00"));
     expect(dueMoment({ time: null, part: "evening" }, TODAY)).toEqual(at(TODAY, "18:00"));
-    expect(PART_DUE).toEqual({ morning: "07:00", day: "12:00", evening: "18:00" });
+    expect(DEFAULT_DAY_PARTS).toEqual({ morning: "07:00", day: "12:00", evening: "18:00" });
+    const parts = { morning: "06:30", day: "11:00", evening: "19:15" };
+    expect(dueMoment({ time: null, part: "morning" }, TODAY, parts)).toEqual(at(TODAY, "06:30"));
+    expect(dueMoment({ time: null, part: "evening" }, TODAY, parts)).toEqual(at(TODAY, "19:15"));
     expect(DUE_WINDOW_MS).toBe(3 * 60 * 60 * 1000);
   });
 });
 
 describe("choreNotifications", () => {
+  it("tells a chore without a time when its part starts in the family", async () => {
+    setDayParts(db, familyId, { morning: "06:00", day: "11:00", evening: "19:30" }, NOW);
+    chore({ part: "evening" });
+    expect(await run(TODAY, "19:29")).toEqual([]);
+    expect(await run(TODAY, "19:30")).toHaveLength(1);
+  });
+
   it("tells the subscribers once its time has come, once", async () => {
     const c = chore({ time: "18:00" });
     expect(await run(TODAY, "17:59")).toEqual([]);

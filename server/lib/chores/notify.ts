@@ -1,6 +1,6 @@
 // "A chore is due" (the worker, every WORKER_TICK_SECONDS): every chore with subscribers, each
 // of its days due today or yesterday (server-local, like lib/notifications/daily.ts), once its
-// due moment (its time, else its part of the day's, PART_DUE) has passed but not more than
+// due moment (its time, else when its part of the day starts, the family's day parts) has passed but not more than
 // DUE_WINDOW_MS ago, while it isn't done and wasn't told before (`chore_notified`): a push to
 // the subscribers' app devices only (no channels), in the family's language, with a link to the
 // chore's day.
@@ -15,16 +15,18 @@ import { localDay } from "@/lib/notifications/daily";
 import { familyLocale, translator } from "@/lib/notifications/locale";
 import type { RelayClient } from "@/lib/push/relay";
 import { moduleEnabled } from "@/lib/server-info";
-import { type ChoreRow, PART_DUE, type Part, choreDays, chorePeople, occurrenceDone } from "./chores";
+import { type ChoreRow, choreDays, chorePeople, occurrenceDone } from "./chores";
+import { DEFAULT_DAY_PARTS, type DayParts, type Part, getDayParts } from "./day-parts";
 
 /** A day is told about until this long after its due moment (a worker that was down for longer
  *  doesn't tell about it late). */
 export const DUE_WINDOW_MS = 3 * 60 * 60 * 1000;
 
-/** The server-local moment a chore is due on `day`: its time, else its part of the day's. */
-export function dueMoment(row: Pick<ChoreRow, "time" | "part">, day: string): Date {
+/** The server-local moment a chore is due on `day`: its time, else when its part of the day
+ *  starts. */
+export function dueMoment(row: Pick<ChoreRow, "time" | "part">, day: string, parts: DayParts = DEFAULT_DAY_PARTS): Date {
   const [y, m, d] = day.split("-").map(Number);
-  const [hh, mm] = (row.time ?? PART_DUE[row.part as Part] ?? PART_DUE.day).split(":").map(Number);
+  const [hh, mm] = (row.time ?? parts[row.part as Part] ?? parts.day).split(":").map(Number);
   return new Date(y, m - 1, d, hh, mm);
 }
 
@@ -50,10 +52,12 @@ export async function choreNotifications(
   if (!subscribed.size) return [];
   const rows = db.select().from(chores).where(inArray(chores.id, [...subscribed.keys()])).all();
   const told: ChoreNotice[] = [];
+  const partsOf = new Map<string, DayParts>();
   for (const row of rows) {
     if (!row.rrule && row.doneAt) continue;
     for (const day of choreDays(row, yesterday, today)) {
-      const due = dueMoment(row, day);
+      if (!partsOf.has(row.familyId)) partsOf.set(row.familyId, getDayParts(db, row.familyId));
+      const due = dueMoment(row, day, partsOf.get(row.familyId));
       const late = now.getTime() - due.getTime();
       if (late < 0 || late > DUE_WINDOW_MS) continue;
       if (row.rrule && occurrenceDone(db, row.id, day)) continue;

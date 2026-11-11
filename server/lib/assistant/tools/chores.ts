@@ -2,7 +2,7 @@
 // chore, or one occurrence of a repeating one). Undo goes through the family API's /chores
 // routes: an addition is undone by a DELETE, a change by a PATCH with the chore's previous
 // fields, a removal by POSTing the chore back with its id and subscribers; a lost done state
-// comes back with POST /chores/{id}/done.
+// comes back with POST /chores/{id}/done; the day parts with a PATCH of the previous ones.
 
 import { HttpError } from "@/lib/api/http";
 import { addDays } from "@/lib/calendar/dates";
@@ -22,6 +22,7 @@ import {
   setChoreDone,
   updateChore,
 } from "@/lib/chores/chores";
+import { getDayParts, setDayParts } from "@/lib/chores/day-parts";
 import { fitting, type Tool, type ToolContext, type UndoStep } from "./common";
 
 const PHRASES = {
@@ -31,6 +32,7 @@ const PHRASES = {
     removed: (t: string) => `Removed the chore “${t}”`,
     done: (t: string) => `Marked “${t}” as done`,
     open: (t: string) => `Marked “${t}” as not done`,
+    dayParts: "Changed when the parts of the day start",
   },
   de: {
     added: (t: string) => `Aufgabe „${t}“ hinzugefügt`,
@@ -38,6 +40,7 @@ const PHRASES = {
     removed: (t: string) => `Aufgabe „${t}“ entfernt`,
     done: (t: string) => `„${t}“ als erledigt markiert`,
     open: (t: string) => `„${t}“ als nicht erledigt markiert`,
+    dayParts: "Beginn der Tageszeiten geändert",
   },
 };
 
@@ -47,7 +50,7 @@ const choreProps = {
   assignee: { type: ["string", "null"], description: "Who does it: a family member's name or id (null: nobody)" },
   day: { type: "string", description: "YYYY-MM-DD: when it is due (a repeating chore's first time)" },
   time: { type: ["string", "null"], description: "HH:MM (none: any time that day; sets the part of the day)" },
-  part: { type: "string", enum: ["morning", "day", "evening"], description: "Part of the day, for a chore without a time (default day)" },
+  part: { type: "string", enum: ["morning", "day", "evening"], description: "Part of the day, for a chore without a time (default day); due when the part starts" },
   rrule: { type: ["string", "null"], description: "RRULE value, e.g. FREQ=WEEKLY;BYDAY=SA (none: once)" },
 };
 
@@ -104,7 +107,7 @@ export const choreTools: Record<string, Tool> = {
     spec: {
       name: "get_chores",
       description:
-        "Lists the family's chores (who does them, part of the day, when they are due next, whether a single one is done, the days a repeating one was done in the last two weeks, who gets a notification) and the people they can be assigned to.",
+        "Lists the family's chores (who does them, part of the day, when they are due next, whether a single one is done, the days a repeating one was done in the last two weeks, who gets a notification), the people they can be assigned to and when the family's parts of the day start (dayParts).",
       parameters: { type: "object", properties: {} },
     },
     async run(_args, ctx) {
@@ -113,9 +116,10 @@ export const choreTools: Record<string, Tool> = {
       const all = listChores(ctx.db, ctx.familyId, day, ctx.userId ?? null);
       const done = completedDays(ctx.db, all.filter((c) => c.rrule).map((c) => c.id), addDays(day, -DONE_DAYS), day);
       const chores = all.map((c) => compact(c, done.get(c.id), people));
-      const shown = fitting({ people }, chores);
+      const dayParts = getDayParts(ctx.db, ctx.familyId);
+      const shown = fitting({ people, dayParts }, chores);
       return {
-        result: { chores: shown, people, ...(shown.length < chores.length ? { more: chores.length - shown.length } : {}) },
+        result: { chores: shown, people, dayParts, ...(shown.length < chores.length ? { more: chores.length - shown.length } : {}) },
         summary: `${chores.length} chores`,
       };
     },
@@ -217,6 +221,36 @@ export const choreTools: Record<string, Tool> = {
           kind: "chores",
           summary: PHRASES[ctx.lang][args.done ? "done" : "open"](before.rrule ? `${chore.title}, ${String(day)}` : chore.title),
           undo: [{ method: "POST", path: `/chores/${enc(id)}/done`, body: { done: was, ...(before.rrule ? { day } : {}) } }],
+        },
+      };
+    },
+  },
+
+  set_day_parts: {
+    write: true,
+    spec: {
+      name: "set_day_parts",
+      description:
+        "Changes when the family's parts of the day start (HH:MM, morning before day before evening; only those given). A chore's time puts it in the part it falls in (before the day's start: morning), and a chore without a time is due when its part starts.",
+      parameters: {
+        type: "object",
+        properties: {
+          morning: { type: "string", description: "HH:MM: when the morning starts" },
+          day: { type: "string", description: "HH:MM: when the day starts (the morning ends)" },
+          evening: { type: "string", description: "HH:MM: when the evening starts" },
+        },
+      },
+    },
+    async run(args, ctx) {
+      const before = getDayParts(ctx.db, ctx.familyId);
+      const dayParts = setDayParts(ctx.db, ctx.familyId, args, ctx.now?.() ?? new Date());
+      return {
+        result: { dayParts },
+        summary: `${dayParts.morning} · ${dayParts.day} · ${dayParts.evening}`,
+        change: {
+          kind: "chores",
+          summary: PHRASES[ctx.lang].dayParts,
+          undo: [{ method: "PATCH", path: "/chores/day-parts", body: before }],
         },
       };
     },

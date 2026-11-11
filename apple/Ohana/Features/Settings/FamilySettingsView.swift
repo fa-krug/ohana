@@ -53,6 +53,7 @@ struct FamilySettingsPageView: View {
         case .calendar: CalendarSettingsView()
         case .finance: FinanceSettingsView()
         case .shopping: ShoppingRemindersView()
+        case .chores: ChoreSettingsView()
         case .assistant: AssistantSettingsView()
         case .assistantMemory: AssistantMemoryView()
         case .knowledge: KnowledgeSettingsView()
@@ -228,6 +229,11 @@ private struct FamilySettingsForm: View {
                 if family.isEnabled(.meals), !app.isDemo {
                     link(.shopping) {
                         FamilySettingsLabel(title: "Shopping List", systemImage: "checklist", tint: ModuleTint.meals)
+                    }
+                }
+                if family.isEnabled(.chores) {
+                    link(.chores) {
+                        FamilySettingsLabel(title: "Chores", systemImage: Module.chores.systemImage, tint: ModuleTint.chores)
                     }
                 }
                 if family.isEnabled(.assistant) {

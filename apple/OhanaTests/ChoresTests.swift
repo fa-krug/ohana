@@ -106,22 +106,40 @@ struct ChoreModelTests {
         #expect(ChorePart.of(time: "00:00") == .morning)
         #expect(ChorePart.of(time: "11:59") == .morning)
         #expect(ChorePart.of(time: "12:00") == .day)
-        #expect(ChorePart.of(time: "16:59") == .day)
-        #expect(ChorePart.of(time: "17:00") == .evening)
+        #expect(ChorePart.of(time: "17:59") == .day)
+        #expect(ChorePart.of(time: "18:00") == .evening)
+        #expect(ChorePart.of(time: "7:30") == .morning)
         #expect(ChorePart.of(time: "23:30") == .evening)
         #expect(ChorePart.of(time: "soon") == nil)
         var draft = ChoreDraft.new(on: Day("2026-11-01")!)
         draft.input.part = .evening
         draft.setTimed(true)
-        #expect(draft.input.time == "18:00" && draft.input.effectivePart == .evening)
+        #expect(draft.input.time == "18:00" && draft.input.effectivePart() == .evening)
         draft.setTime("08:15")
-        #expect(draft.input.part == .morning && draft.input.effectivePart == .morning)
+        #expect(draft.input.part == .morning && draft.input.effectivePart() == .morning)
         // A part chosen while there's a time doesn't count; without the time the part stays.
         draft.input.part = .evening
-        #expect(draft.input.effectivePart == .morning)
+        #expect(draft.input.effectivePart() == .morning)
         draft.setTimed(false)
         draft.input.part = .day
-        #expect(draft.input.time == nil && draft.input.effectivePart == .day)
+        #expect(draft.input.time == nil && draft.input.effectivePart() == .day)
+    }
+
+    @Test func theFamilysDayPartsDecideThePartAndTheUsualTime() throws {
+        let parts = ChoreDayParts(morning: "06:00", day: "10:00", evening: "17:00")
+        #expect(ChorePart.of(time: "05:00", in: parts) == .morning)
+        #expect(ChorePart.of(time: "10:00", in: parts) == .day)
+        #expect(ChorePart.of(time: "17:00", in: parts) == .evening)
+        #expect(parts.isOrdered && !ChoreDayParts(morning: "12:00", day: "12:00", evening: "18:00").isOrdered)
+        var draft = ChoreDraft.new(on: Day("2026-11-01")!, dayParts: parts)
+        draft.when = .part(.evening)
+        draft.when = .atTime
+        #expect(draft.input.time == "17:00" && draft.input.part == .evening)
+        draft.setTime("09:30")
+        #expect(draft.input.part == .morning)
+        // GET /chores: an older server sends none.
+        let page = try APIClient.decoder.decode(ChoresPage.self, from: Data(Self.json.utf8))
+        #expect(page.dayParts == nil || page.dayParts == .standard)
     }
 
     @Test func theEditorsWhenPicksAPartOrATime() {
@@ -137,7 +155,7 @@ struct ChoreModelTests {
         #expect(draft.input.time == "08:15" && draft.input.part == .morning)
         // A part drops the time.
         draft.when = .part(.day)
-        #expect(draft.when == .part(.day) && draft.input.time == nil && draft.input.effectivePart == .day)
+        #expect(draft.when == .part(.day) && draft.input.time == nil && draft.input.effectivePart() == .day)
     }
 
     @Test func encodesTheInputWithNulls() throws {

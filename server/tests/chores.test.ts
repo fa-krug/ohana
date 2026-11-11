@@ -84,6 +84,7 @@ describe("chores", () => {
         { id: viewerId, name: "Ben", account: true },
       ],
       canEdit: true,
+      dayParts: { morning: "07:00", day: "12:00", evening: "18:00" },
     });
     expect((await edit("GET", `/chores/${chore.id}`)).data).toEqual({ chore });
 
@@ -200,8 +201,8 @@ describe("chores", () => {
     expect((await add({ part: "morning" })).part).toBe("morning");
     expect((await add({ time: "11:59" })).part).toBe("morning");
     expect((await add({ time: "12:00" })).part).toBe("day");
-    expect((await add({ time: "16:59" })).part).toBe("day");
-    expect((await add({ time: "17:00" })).part).toBe("evening");
+    expect((await add({ time: "17:59" })).part).toBe("day");
+    expect((await add({ time: "18:00" })).part).toBe("evening");
     // A time wins over a given part.
     expect((await add({ time: "07:30", part: "evening" })).part).toBe("morning");
     expect((await edit("POST", "/chores", { title: "x", day: "2026-11-02", part: "night" })).status).toBe(400);
@@ -211,6 +212,36 @@ describe("chores", () => {
     expect((await edit("PATCH", `/chores/${c.id}`, { part: "evening" })).data.chore.part).toBe("morning");
     expect((await edit("PATCH", `/chores/${c.id}`, { time: null })).data.chore.part).toBe("morning");
     expect((await edit("PATCH", `/chores/${c.id}`, { part: "evening" })).data.chore.part).toBe("evening");
+  });
+
+  it("take the family's day parts: editors set when each part starts", async () => {
+    const edit = call(editorId);
+    const view = call(viewerId);
+    const defaults = { morning: "07:00", day: "12:00", evening: "18:00" };
+    expect((await view("GET", "/chores/day-parts")).data).toEqual({ dayParts: defaults });
+    expect((await view("GET", "/chores")).data.dayParts).toEqual(defaults);
+    const add = async (time: string) => (await edit("POST", "/chores", { title: time, day: "2026-11-02", time })).data.chore;
+    const early = await add("05:00");
+    const half = await add("10:30");
+    const late = await add("17:30");
+    expect([early.part, half.part, late.part]).toEqual(["morning", "morning", "day"]);
+
+    const parts = { morning: "06:00", day: "10:00", evening: "17:00" };
+    expect((await view("PATCH", "/chores/day-parts", parts)).status).toBe(403);
+    expect((await edit("PATCH", "/chores/day-parts", { ...parts, day: "05:00" })).status).toBe(400);
+    expect((await edit("PATCH", "/chores/day-parts", { ...parts, evening: "25:00" })).status).toBe(400);
+    expect((await edit("PATCH", "/chores/day-parts", { morning: "12:00" })).status).toBe(400);
+    expect((await edit("PATCH", "/chores/day-parts", { morning: null })).status).toBe(400);
+    expect((await edit("PATCH", "/chores/day-parts", { evening: "19:00" })).data.dayParts).toEqual({ ...defaults, evening: "19:00" });
+    expect((await edit("PATCH", "/chores/day-parts", parts)).data).toEqual({ dayParts: parts });
+    expect((await view("GET", "/chores")).data.dayParts).toEqual(parts);
+    // The chores with a time move along (before the morning is still the morning).
+    const part = async (id: string) => (await view("GET", `/chores/${id}`)).data.chore.part;
+    expect([await part(early.id), await part(half.id), await part(late.id)]).toEqual(["morning", "day", "evening"]);
+    expect((await add("16:59")).part).toBe("day");
+    // The routes' words aren't chore ids.
+    expect((await edit("POST", "/chores", { id: "day-parts", title: "x", day: "2026-11-02" })).status).toBe(400);
+    expect((await edit("DELETE", "/chores/day-parts")).status).toBe(405);
   });
 
   it("are subscribed by their creator, or by whom the editor picks", async () => {

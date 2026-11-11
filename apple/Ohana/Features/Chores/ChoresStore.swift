@@ -61,7 +61,8 @@ struct ChoresSnapshot: Equatable {
         switch change {
         case let .create(_, input), let .update(_, input):
             if case .update = change, index == nil { return }
-            let chore = Chore(local: id, input, old: index.map { page.chores[$0] }, people: page.people, me: me,
+            let chore = Chore(local: id, input, old: index.map { page.chores[$0] }, people: page.people,
+                              dayParts: page.dayParts ?? .standard, me: me,
                               today: today, stamp: stamp)
             if let index { page.chores[index] = chore } else { page.chores.append(chore) }
             place(chore)
@@ -158,7 +159,8 @@ extension ChoreItem {
 extension Chore {
     /// The chore `input` makes, before the server answers; an edit keeps from `old` what the input
     /// doesn't hold (whether it's done, when it was made). One that starts repeating isn't done.
-    init(local id: String, _ input: ChoreInput, old: Chore?, people: [ChorePerson], me: String?, today: Day, stamp: String) {
+    init(local id: String, _ input: ChoreInput, old: Chore?, people: [ChorePerson], dayParts: ChoreDayParts = .standard,
+         me: String?, today: Day, stamp: String) {
         let assignee = input.assigneeId.flatMap { assignee in
             people.first { $0.id == assignee } ?? (old?.assignee?.id == assignee ? old?.assignee : nil)
         }
@@ -171,7 +173,7 @@ extension Chore {
             done ? nil : input.day
         }
         self.init(id: id, title: input.title, note: input.note, assignee: assignee, day: input.day, time: input.time,
-                  part: input.effectivePart, rrule: rrule, done: done, doneAt: done ? old?.doneAt : nil,
+                  part: input.effectivePart(dayParts), rrule: rrule, done: done, doneAt: done ? old?.doneAt : nil,
                   doneBy: done ? old?.doneBy : nil, next: next, subscriberIds: input.subscriberIds,
                   subscribed: me.map { input.subscriberIds.contains($0) } ?? false,
                   createdAt: old?.createdAt ?? stamp, updatedAt: stamp)
@@ -267,6 +269,8 @@ final class ChoresStore {
 
     var page: ChoresPage? { shown?.page }
     var canEdit: Bool { page?.canEdit ?? familyCanEdit }
+    /// When the family's parts of the day start.
+    var dayParts: ChoreDayParts { page?.dayParts ?? .standard }
     /// Changes wait to be sent (or are being sent).
     var pending: Bool { !queue.isEmpty || flushing }
 

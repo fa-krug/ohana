@@ -1,6 +1,7 @@
 // The family's chores: once (due on a day) or repeating (an RRULE, as calendar events have),
 // assigned to one person of the family (an account or a member without one) or to nobody, in a
-// part of the day (morning, day, evening; from the time when there is one). The server stores
+// part of the day (morning, day, evening; from the time when there is one, by the family's
+// day parts: lib/chores/day-parts.ts). The server stores
 // them, works out what is due next (`next`) and lists them by day (`choreAgenda`). A single
 // chore is done as a whole, a repeating one per occurrence (`chore_completions`). Accounts
 // subscribe to a chore to get a push notification when it is due (lib/chores/notify.ts).
@@ -14,19 +15,11 @@ import { HttpError } from "@/lib/api/http";
 import { addDays, dateRange, diffDays, isValidDate } from "@/lib/calendar/dates";
 import { expandRule, isRuleOccurrence, normalizeRrule, parseRrule } from "@/lib/calendar/rrule";
 import { familyNames } from "@/lib/families/people";
+import { PARTS, type Part, getDayParts, partOfTime } from "./day-parts";
 
 export type ChoreRow = typeof chores.$inferSelect;
 
-export const PARTS = ["morning", "day", "evening"] as const;
-export type Part = (typeof PARTS)[number];
-
-/** When a chore without a time is due in its part of the day (server-local; its notification). */
-export const PART_DUE: Record<Part, string> = { morning: "07:00", day: "12:00", evening: "18:00" };
-
-/** The part of the day a time falls in: before 12:00 morning, before 17:00 day, else evening. */
-export function partOfTime(time: string): Part {
-  return time < "12:00" ? "morning" : time < "17:00" ? "day" : "evening";
-}
+export { PARTS, type Part, partOfTime } from "./day-parts";
 
 /** Someone a chore can be assigned to (familyNames). */
 export interface ChorePerson {
@@ -78,8 +71,9 @@ export interface ChoreItem {
 }
 
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
-/** Ids a restored chore (the assistant's undo) may bring along. */
+/** Ids a restored chore (the assistant's undo) may bring along (not the routes' own words). */
 const ID_RE = /^[A-Za-z0-9-]{1,64}$/;
+const RESERVED_IDS = new Set(["agenda", "day-parts"]);
 
 /** A chore's fields as POST /chores takes them (PATCH: merged into the stored ones first). */
 const inputSchema = z.object({
@@ -149,7 +143,7 @@ function cleanFields(db: Db, familyId: string, body: Record<string, unknown>, ba
       ? { assigneeUserId: base.assigneeUserId, assigneePersonId: base.assigneePersonId }
       : assigneeColumns(db, familyId, c.assigneeId);
   const time = c.time ?? null;
-  const part: Part = time ? partOfTime(time) : (c.part ?? (base?.part as Part | undefined) ?? "day");
+  const part: Part = time ? partOfTime(time, getDayParts(db, familyId)) : (c.part ?? (base?.part as Part | undefined) ?? "day");
   return { title: c.title, note: c.note, day: c.day, time, part, rrule: cleanRrule(c.rrule), ...assignee };
 }
 
@@ -293,7 +287,7 @@ export function createChore(
         : [];
   let id: string = randomUUID();
   if (body.id !== undefined && body.id !== null) {
-    if (typeof body.id !== "string" || !ID_RE.test(body.id)) throw new HttpError(400, "id must be a chore id");
+    if (typeof body.id !== "string" || !ID_RE.test(body.id) || RESERVED_IDS.has(body.id)) throw new HttpError(400, "id must be a chore id");
     if (db.select({ id: chores.id }).from(chores).where(eq(chores.id, body.id)).get()) {
       throw new HttpError(409, "There is already a chore with this id");
     }

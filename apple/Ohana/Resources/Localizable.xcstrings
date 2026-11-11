@@ -4135,6 +4135,16 @@
         }
       }
     },
+    "Chore Settings": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufgaben-Einstellungen"
+          }
+        }
+      }
+    },
     "Chores": {
       "localizations": {
         "de": {
@@ -12777,6 +12787,16 @@
         }
       }
     },
+    "Parts of the Day": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tageszeiten"
+          }
+        }
+      }
+    },
     "Party": {
       "localizations": {
         "de": {
@@ -17971,6 +17991,16 @@
         }
       }
     },
+    "The morning must start before the day, and the day before the evening.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Morgen muss vor dem Tag beginnen und der Tag vor dem Abend."
+          }
+        }
+      }
+    },
     "The name is too long (max. 100).": {
       "localizations": {
         "de": {
@@ -19887,6 +19917,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wenn eine Suche einen neuen oder früheren Termin findet. Jede Suche wählt ihre Kanäle selbst."
+          }
+        }
+      }
+    },
+    "When each part starts. Chores without a time are due then.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wann jede Tageszeit beginnt. Aufgaben ohne Uhrzeit sind dann fällig."
           }
         }
       }

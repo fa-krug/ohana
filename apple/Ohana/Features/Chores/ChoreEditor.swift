@@ -4,10 +4,14 @@ import SwiftUI
 /// `RepeatEditing`'s, as an event's.
 struct ChoreDraft: Equatable, RepeatEditing {
     var input: ChoreInput
+    /// When the family's parts of the day start: a time's part, a part's usual time.
+    var dayParts: ChoreDayParts = .standard
 
     /// A new chore: the signed-in account (`me`) is notified, nobody else.
-    static func new(on day: Day, for assigneeID: String? = nil, me: String? = nil) -> ChoreDraft {
-        ChoreDraft(input: ChoreInput(title: "", assigneeId: assigneeID, day: day, subscriberIds: me.map { [$0] } ?? []))
+    static func new(on day: Day, for assigneeID: String? = nil, me: String? = nil,
+                    dayParts: ChoreDayParts = .standard) -> ChoreDraft {
+        ChoreDraft(input: ChoreInput(title: "", assigneeId: assigneeID, day: day, subscriberIds: me.map { [$0] } ?? []),
+                   dayParts: dayParts)
     }
 
     var repeatRRule: String? {
@@ -29,13 +33,13 @@ struct ChoreDraft: Equatable, RepeatEditing {
 
     /// At a time (first the part's usual one), or any time of its part of the day.
     mutating func setTimed(_ timed: Bool) {
-        setTime(timed ? Self.usualTime(input.effectivePart) : nil)
+        setTime(timed ? usualTime(input.effectivePart(dayParts)) : nil)
     }
 
     /// The time; the part follows it, and stays when the time goes.
     mutating func setTime(_ time: String?) {
         input.time = time
-        if let part = time.flatMap(ChorePart.of) { input.part = part }
+        if let part = time.flatMap({ ChorePart.of(time: $0, in: dayParts) }) { input.part = part }
     }
 
     /// The editor's When: a part of the day, or at a time. Picking a part drops the time; picking
@@ -53,14 +57,9 @@ struct ChoreDraft: Equatable, RepeatEditing {
         }
     }
 
-    /// When a part's chore without a time is due (the server's, for its notification).
-    static func usualTime(_ part: ChorePart) -> String {
-        switch part {
-        case .morning: "07:00"
-        case .day: "12:00"
-        case .evening: "18:00"
-        }
-    }
+    /// When a part's chore without a time is due: when the part starts (the server's, for its
+    /// notification).
+    func usualTime(_ part: ChorePart) -> String { dayParts[part] }
 
     /// The notification for `id` on or off.
     mutating func setNotified(_ id: String, _ on: Bool) {
@@ -112,9 +111,11 @@ struct ChoreEditorHost: View {
         case .new:
             // A filter on someone: the new chore is theirs.
             let assignee: String? = if case let .person(id) = filter { id } else { nil }
-            ChoreEditor(chore: nil, people: people, draft: .new(on: day, for: assignee, me: app.me?.id))
+            ChoreEditor(chore: nil, people: people,
+                        draft: .new(on: day, for: assignee, me: app.me?.id, dayParts: family.chores.dayParts))
         case let .chore(chore):
-            ChoreEditor(chore: chore, people: people, readOnly: !canEdit, draft: ChoreDraft(input: ChoreInput(chore)))
+            ChoreEditor(chore: chore, people: people, readOnly: !canEdit,
+                        draft: ChoreDraft(input: ChoreInput(chore), dayParts: family.chores.dayParts))
         }
     }
 }

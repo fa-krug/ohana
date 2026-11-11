@@ -97,7 +97,9 @@ top of today; move between days with the arrows or the date, or see *All Chores*
 to tick a chore off (a repeating one for that day) and the bell to choose whether it notifies
 you. New chores ask for whom, when (a part of the day, or a time), how they repeat and who gets
 the notification. Changes show at once and are sent in the background, offline too. A chore's
-notification opens its day.
+notification opens its day. *Settings → Chores* sets when the morning, the day and the evening
+start (07:00, 12:00 and 18:00 at first): a chore's time puts it in its part, and a chore without
+a time is due when its part starts.
 
 ## Syncing an account with its bank
 
