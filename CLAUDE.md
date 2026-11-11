@@ -452,22 +452,27 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
 - **Chores (`lib/chores/`):** table `chores` (`lib/db/schema/chores.ts`): title, note, assigned to
   one account (`assignee_user_id`) or person (`assignee_person_id`) of the family or nobody, `day`
   (the due day / a series' first), `time` ("HH:MM" or null), `part` (morning | day | evening; a
-  time decides it: <12 morning, <17 day), `rrule` (null = once; events' `lib/calendar/rrule.ts`),
+  time decides it by the family's day parts), `rrule` (null = once; events' `lib/calendar/rrule.ts`),
   `done_at` / `done_by_id` (single chores); `chore_completions` (a repeating chore's ticked
   occurrences), `chore_subscribers` (who gets its notification), `chore_notified` (occurrences
-  notified). `chores.ts` (CRUD, `nextDue`, `choreAgenda`), `routes.ts` `handleChores` (`GET/POST
-  /chores?today=`, `GET /chores/agenda?from=&to=&today=` (by day, items by part then time, plus
+  notified), `chore_day_parts` (per family, when morning / day / evening start, "HH:MM" in order,
+  no row: 07:00 / 12:00 / 18:00; `day-parts.ts`: `getDayParts`, `setDayParts` (re-parts the
+  family's chores with a time), `partOfTime`: before `day` morning, before `evening` day). `chores.ts`
+  (CRUD, `nextDue`, `choreAgenda`), `routes.ts` `handleChores` (`GET/POST
+  /chores?today=` (GET with `dayParts`), `GET / PATCH /chores/day-parts` (editors change; the
+  fields given), `GET /chores/agenda?from=&to=&today=` (by day, items by part then time, plus
   the open single chores before today as `overdue`; ≤ 62 days), `GET/PATCH/DELETE /chores/{id}`,
   `POST /chores/{id}/done {done, day}` (day: the occurrence of a repeating one), `POST
   /chores/{id}/subscribe {subscribed}`; members read and subscribe themselves, editors change
   (`subscriberIds`, default the creator), viewers may tick off their own; POST takes an optional
-  `id` so the assistant's undo brings a chore back under its id). `notify.ts`
-  `choreNotifications` (worker, every tick): an occurrence due (its time, else 07:00 / 12:00 /
-  18:00 by part, server-local) within the last 3 h, not done, not notified → push to its
+  `id` so the assistant's undo brings a chore back under its id, never `agenda` / `day-parts`). `notify.ts`
+  `choreNotifications` (worker, every tick): an occurrence due (its time, else when its part starts
+  in the family, server-local) within the last 3 h, not done, not notified → push to its
   subscribers' app devices only (`notifyFamily` with `channelIds: []`), path
   `/f/{id}/chores/{choreId}?day=`. Accepting a person's invite moves their chores to the account;
   removing a member unassigns theirs and drops their subscriptions. Assistant tools
-  `tools/chores.ts` (`get_chores`, `add_chore`, `update_chore`, `remove_chore`, `set_chore_done`);
+  `tools/chores.ts` (`get_chores` (with `dayParts`), `add_chore`, `update_chore`, `remove_chore`,
+  `set_chore_done`, `set_day_parts`, undone by a PATCH of the old ones);
   search kind `chore`.
 - **Knowledge base (`lib/knowledge/`, phase 12):** a derived index of the family's paperwork
   folder (an iCloud Drive folder the app reads; the server never holds a file). Tables
@@ -760,7 +765,10 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   and reloads, a network failure retries with backoff. `ChoresAllView` lists every chore by part;
   `ChoreEditor` (saves and closes at once; one *When* picker: a part of day or At a Time,
   `ChoreWhen`, repeat via `RepeatEditing`, Notify: the family's accounts, the signed-in
-  user ticked on a new chore; viewers get only "Notify me"). Kept lean: no explanatory footers.
+  user ticked on a new chore; viewers get only "Notify me"; a time's part and a part's usual time
+  by the family's `ChoreDayParts`, `ChoresStore.dayParts`). Kept lean: no explanatory footers.
+  Settings → Chores (`ChoreSettingsView`, `.settings(.chores)`, also the chores page's More):
+  when each part of the day starts, editors change them (PATCH once the pickers rest).
   A chore notification's `/f/{id}/chores/{choreId}?day=` opens that day and highlights it
   (`AppRoute.chore(id:day:)`).
   The shopping list is a Reminders list (`Core/Reminders/`: `RemindersStore` wraps one

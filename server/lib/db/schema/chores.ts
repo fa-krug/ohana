@@ -76,3 +76,16 @@ export const choreNotified = sqliteTable(
   },
   (t) => ({ pk: primaryKey({ columns: [t.choreId, t.day] }) }),
 );
+
+/** When the family's parts of the day start ("HH:MM", morning < day < evening; no row: the
+ *  defaults, lib/chores/day-parts.ts). A time before `day` is the morning's, before `evening`
+ *  the day's, else the evening's; a chore without a time is due when its part starts. */
+export const choreDayParts = sqliteTable("chore_day_parts", {
+  familyId: text("family_id")
+    .primaryKey()
+    .references(() => families.id, { onDelete: "cascade" }),
+  morning: text("morning").notNull(),
+  day: text("day").notNull(),
+  evening: text("evening").notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+});

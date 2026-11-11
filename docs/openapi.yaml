@@ -2317,7 +2317,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [chores, people, canEdit]
+                required: [chores, people, canEdit, dayParts]
                 properties:
                   chores:
                     type: array
@@ -2327,6 +2327,7 @@ paths:
                     description: Everyone a chore can be assigned to (accounts and people without one), by name.
                     items: {$ref: "#/components/schemas/ChorePerson"}
                   canEdit: {type: boolean, description: "Whether the caller is an editor."}
+                  dayParts: {$ref: "#/components/schemas/ChoreDayParts"}
         "400": {$ref: "#/components/responses/BadRequest"}
         "401": {$ref: "#/components/responses/Unauthorized"}
         "404": {$ref: "#/components/responses/NotFound"}
@@ -2419,6 +2420,59 @@ paths:
                     items: {$ref: "#/components/schemas/ChoreItem"}
         "400": {$ref: "#/components/responses/BadRequest"}
         "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/families/{familyId}/chores/day-parts:
+    parameters:
+      - $ref: "#/components/parameters/FamilyId"
+    get:
+      tags: [Chores]
+      operationId: getChoreDayParts
+      summary: When the family's parts of the day start
+      x-ohana-role: viewer
+      responses:
+        "200":
+          description: The day parts.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [dayParts]
+                properties:
+                  dayParts: {$ref: "#/components/schemas/ChoreDayParts"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    patch:
+      tags: [Chores]
+      operationId: setChoreDayParts
+      summary: Change when the parts of the day start
+      description: >-
+        The fields given change, the others stay; the three must stay in order (morning before
+        day before evening), else 400. The family's chores with a time move into the part their
+        time now falls in.
+      x-ohana-role: editor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                morning: {type: string, pattern: "^([01]\\d|2[0-3]):[0-5]\\d$"}
+                day: {type: string, pattern: "^([01]\\d|2[0-3]):[0-5]\\d$"}
+                evening: {type: string, pattern: "^([01]\\d|2[0-3]):[0-5]\\d$"}
+      responses:
+        "200":
+          description: The day parts now.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [dayParts]
+                properties:
+                  dayParts: {$ref: "#/components/schemas/ChoreDayParts"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
         "404": {$ref: "#/components/responses/NotFound"}
   /api/v1/families/{familyId}/chores/{choreId}:
     parameters:
@@ -6859,7 +6913,18 @@ components:
       type: string
       enum: [morning, day, evening]
       description: >-
-        The part of the day. With a time: before 12:00 morning, before 17:00 day, else evening.
+        The part of the day. With a time, the family's day parts decide it: before the day starts
+        morning, before the evening starts day, else evening.
+    ChoreDayParts:
+      type: object
+      description: >-
+        When the family's parts of the day start ("HH:MM", in order; default 07:00, 12:00,
+        18:00). A chore without a time is due (and notifies) when its part starts.
+      required: [morning, day, evening]
+      properties:
+        morning: {type: string, pattern: "^([01]\\d|2[0-3]):[0-5]\\d$"}
+        day: {type: string, pattern: "^([01]\\d|2[0-3]):[0-5]\\d$"}
+        evening: {type: string, pattern: "^([01]\\d|2[0-3]):[0-5]\\d$"}
     ChoreItem:
       type: object
       description: One chore on one day (the agenda).

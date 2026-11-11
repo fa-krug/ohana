@@ -51,6 +51,26 @@ function family() {
 }
 
 describe("chore tools", () => {
+  it("read and change the day parts, and undo puts them back", async () => {
+    const f = family();
+    const evening = await f.tool("add_chore", { title: "Dishes", day: "2026-11-03", time: "18:30" });
+    expect(evening.result.part).toBe("evening");
+    expect((await f.tool("get_chores", {})).result.dayParts).toEqual({ morning: "07:00", day: "12:00", evening: "18:00" });
+    expect((await f.tool("set_day_parts", { day: "06:00" })).ok).toBe(false);
+    const res = await f.tool("set_day_parts", { evening: "19:00" });
+    expect(res.ok, JSON.stringify(res.result)).toBe(true);
+    expect(res.result.dayParts).toEqual({ morning: "07:00", day: "12:00", evening: "19:00" });
+    expect(getChoreRow(f.t.db, f.t.familyId, evening.result.id)?.part).toBe("day");
+    expect(res.change).toEqual({
+      kind: "chores",
+      summary: "Changed when the parts of the day start",
+      undo: [{ method: "PATCH", path: "/chores/day-parts", body: { morning: "07:00", day: "12:00", evening: "18:00" } }],
+    });
+    await f.undo(res.change);
+    expect((await f.tool("get_chores", {})).result.dayParts.evening).toBe("18:00");
+    expect(getChoreRow(f.t.db, f.t.familyId, evening.result.id)?.part).toBe("evening");
+  });
+
   it("add a chore for a member by name, and undo removes it", async () => {
     const f = family();
     const res = await f.tool("add_chore", { title: "Feed the cat", assignee: "mia", day: "2026-11-03", rrule: "FREQ=DAILY" });

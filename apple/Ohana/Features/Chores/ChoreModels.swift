@@ -12,16 +12,15 @@ nonisolated struct ChorePerson: Codable, Hashable, Identifiable, Sendable {
     let account: Bool
 }
 
-/// The part of the day a chore is for. With a time the time decides (`of(time:)`).
+/// The part of the day a chore is for. With a time the time decides (`of(time:in:)`).
 nonisolated enum ChorePart: String, Codable, CaseIterable, Hashable, Sendable {
     case morning, day, evening
 
-    /// The part of a time "HH:MM": before 12:00 the morning, before 17:00 the day, else the evening.
-    static func of(time: String) -> ChorePart? {
-        let parts = time.split(separator: ":")
-        guard let hour = parts.first.flatMap({ Int($0) }) else { return nil }
-        if hour < 12 { return .morning }
-        return hour < 17 ? .day : .evening
+    /// The part of a time "HH:MM" by the family's day parts: before the day starts the morning,
+    /// before the evening starts the day, else the evening.
+    static func of(time: String, in parts: ChoreDayParts = .standard) -> ChorePart? {
+        guard let time = ChoreDayParts.normalized(time) else { return nil }
+        return parts.part(of: time)
     }
 
     /// Something else (a newer server's): the day.
@@ -45,6 +44,56 @@ nonisolated enum ChorePart: String, Codable, CaseIterable, Hashable, Sendable {
         case .evening: "moon.stars"
         }
     }
+}
+
+/// When the family's parts of the day start ("HH:MM", in order): GET /chores' `dayParts`, changed
+/// with PATCH /chores/day-parts (editors). A chore without a time is due when its part starts.
+nonisolated struct ChoreDayParts: Codable, Hashable, Sendable {
+    var morning: String
+    var day: String
+    var evening: String
+
+    /// The server's defaults (and an older server's, which doesn't send them).
+    static let standard = ChoreDayParts(morning: "07:00", day: "12:00", evening: "18:00")
+
+    /// The part a normalized "HH:MM" falls in (before the morning's start: still the morning).
+    func part(of time: String) -> ChorePart {
+        time < day ? .morning : time < evening ? .day : .evening
+    }
+
+    /// When `part` starts.
+    subscript(part: ChorePart) -> String {
+        get {
+            switch part {
+            case .morning: morning
+            case .day: day
+            case .evening: evening
+            }
+        }
+        set {
+            switch part {
+            case .morning: morning = newValue
+            case .day: day = newValue
+            case .evening: evening = newValue
+            }
+        }
+    }
+
+    /// The morning starts before the day, the day before the evening (else the server refuses).
+    var isOrdered: Bool { morning < day && day < evening }
+
+    /// "H:MM" or "HH:MM" as "HH:MM"; nil for anything else.
+    static func normalized(_ time: String) -> String? {
+        let parts = time.split(separator: ":").map { Int($0) }
+        guard parts.count == 2, let hour = parts[0], let minute = parts[1],
+              (0..<24).contains(hour), (0..<60).contains(minute) else { return nil }
+        return String(format: "%02d:%02d", hour, minute)
+    }
+}
+
+/// GET /chores/day-parts, PATCH /chores/day-parts.
+nonisolated struct ChoreDayPartsResponse: Codable, OffMainDecodable {
+    let dayParts: ChoreDayParts
 }
 
 /// One chore: once (due on `day`) or repeating (`rrule` from `day` on), maybe for someone.
@@ -109,7 +158,7 @@ nonisolated extension Chore {
                   note: try c.decodeIfPresent(String.self, forKey: .note) ?? "",
                   assignee: try c.decodeIfPresent(ChorePerson.self, forKey: .assignee),
                   day: try c.decode(Day.self, forKey: .day), time: time,
-                  part: try c.decodeIfPresent(ChorePart.self, forKey: .part) ?? time.flatMap(ChorePart.of) ?? .day,
+                  part: try c.decodeIfPresent(ChorePart.self, forKey: .part) ?? time.flatMap { ChorePart.of(time: $0) } ?? .day,
                   rrule: try c.decodeIfPresent(String.self, forKey: .rrule), done: try c.decode(Bool.self, forKey: .done),
                   doneAt: try c.decodeIfPresent(String.self, forKey: .doneAt),
                   doneBy: try c.decodeIfPresent(ChorePerson.self, forKey: .doneBy),
@@ -167,7 +216,7 @@ nonisolated struct ChoreItem: Codable, Hashable, Identifiable, Sendable {
                   title: try c.decode(String.self, forKey: .title),
                   note: try c.decodeIfPresent(String.self, forKey: .note) ?? "",
                   assignee: try c.decodeIfPresent(ChorePerson.self, forKey: .assignee),
-                  part: try c.decodeIfPresent(ChorePart.self, forKey: .part) ?? time.flatMap(ChorePart.of) ?? .day,
+                  part: try c.decodeIfPresent(ChorePart.self, forKey: .part) ?? time.flatMap { ChorePart.of(time: $0) } ?? .day,
                   time: time, repeating: try c.decodeIfPresent(Bool.self, forKey: .repeating) ?? false,
                   done: try c.decodeIfPresent(Bool.self, forKey: .done) ?? false,
                   doneAt: try c.decodeIfPresent(String.self, forKey: .doneAt),
@@ -228,6 +277,8 @@ nonisolated struct ChoresPage: Codable, Equatable, OffMainDecodable {
     var people: [ChorePerson]
     /// The account is an editor of the family.
     var canEdit: Bool
+    /// When the family's parts of the day start; nil from an older server (`.standard`).
+    var dayParts: ChoreDayParts? = nil
 }
 
 /// The answer of POST, PATCH, GET /chores/{id}, POST /chores/{id}/done and …/subscribe.
@@ -247,7 +298,7 @@ struct ChoreInput: Codable, Equatable {
     var assigneeId: String?
     var day: Day
     var time: String?
-    /// With a time, the time's (`effectivePart`).
+    /// With a time, the time's (`effectivePart(_:)`).
     var part: ChorePart = .day
     var rrule: String?
     /// The accounts notified when it's due.
@@ -271,8 +322,11 @@ struct ChoreInput: Codable, Equatable {
                   time: chore.time, part: chore.part, rrule: chore.rrule, subscriberIds: chore.subscriberIds)
     }
 
-    /// The part sent: the time's when there is one.
-    var effectivePart: ChorePart { time.flatMap(ChorePart.of) ?? part }
+    /// The part sent: the time's when there is one (the server works it out again by the
+    /// family's day parts).
+    func effectivePart(_ parts: ChoreDayParts = .standard) -> ChorePart {
+        time.flatMap { ChorePart.of(time: $0, in: parts) } ?? part
+    }
 
     private enum CodingKeys: String, CodingKey {
         case id, title, note, assigneeId, day, time, part, rrule, subscriberIds
@@ -297,7 +351,7 @@ struct ChoreInput: Codable, Equatable {
         try c.encode(assigneeId, forKey: .assigneeId)
         try c.encode(day, forKey: .day)
         try c.encode(time, forKey: .time)
-        try c.encode(effectivePart, forKey: .part)
+        try c.encode(effectivePart(), forKey: .part)
         try c.encode(rrule, forKey: .rrule)
         try c.encode(subscriberIds, forKey: .subscriberIds)
     }

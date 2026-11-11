@@ -75,7 +75,8 @@ Ready to try it? Go to the [quick start](/quickstart).
 - **Chores** for anyone in the family, with or without an account: once, due on a day (and a
   time, if you like), or **repeating** (daily, weekly, every second Saturday, …).
 - Each chore belongs to a part of the day: **morning, day or evening** (from its time, if it has
-  one). The app shows them that way, day by day, with what's overdue.
+  one; the family chooses when each starts). The app shows them that way, day by day, with what's
+  overdue.
 - Tick a chore off in the app; a repeating chore each time it comes round.
 - **Notifications on your devices** when a chore is due, for the chores you choose: the ones you
   add are ticked for you, and anyone in the family with an account can tick the others.

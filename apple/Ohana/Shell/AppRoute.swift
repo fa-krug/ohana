@@ -72,7 +72,7 @@ enum AppRoute: Hashable {
 
 /// The pages of the family's settings a route can open.
 enum SettingsPage: String, Hashable, CaseIterable {
-    case general, members, home, notifications, calendar, finance, shopping, assistant, knowledge, data, device
+    case general, members, home, notifications, calendar, finance, shopping, chores, assistant, knowledge, data, device
     /// The assistant's memory (Settings → Assistant → Memory).
     case assistantMemory
 
@@ -82,6 +82,7 @@ enum SettingsPage: String, Hashable, CaseIterable {
         case .calendar: .calendar
         case .finance: .finance
         case .shopping: .meals
+        case .chores: .chores
         case .assistant, .assistantMemory: .assistant
         case .knowledge: .knowledge
         case .general, .members, .home, .notifications, .data, .device: nil
@@ -130,6 +131,7 @@ extension AppRoute {
         case "household": .members
         case "calendar", "feed": .calendar
         case "finance": .finance
+        case "chores": .chores
         case "ai": .assistant
         case "memory": .assistantMemory
         case "knowledge": .knowledge

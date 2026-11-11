@@ -156,6 +156,7 @@ struct ChoresView: View {
                     .pickerStyle(.inline)
                 Divider()
                 Button("All Chores", systemImage: "list.bullet") { showAll = true }
+                Button("Chore Settings", systemImage: "gearshape") { family.open(.settings(.chores)) }
             } label: {
                 Label("Filter", systemImage: filter == .everyone
                       ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
@@ -174,6 +175,7 @@ struct ChoresView: View {
         Button("Today") { go(to: today) }
         Divider()
         Button("All Chores") { showAll = true }
+        Button("Chore Settings") { family.open(.settings(.chores)) }
     }
 
     // MARK: Content
