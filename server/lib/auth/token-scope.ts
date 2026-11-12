@@ -19,7 +19,7 @@ import type { AuthToken } from "./tokens";
 export const AGENT_TOKEN_NAME = "AI agent";
 export const AGENT_TOKEN_TTL_MS = 60 * 60 * 1000;
 export const OUT_OF_SCOPE = "This token only works for the family's API.";
-export const AGENT_HOLD = "An AI agent can't change this: members, invites, notification channels, the assistant's settings, the assistant's memory, reading scans with the assistant and deleting the family are done in the app.";
+export const AGENT_HOLD = "An AI agent can't change this: members, invites, notification channels, the assistant's settings, the assistant's memory, reading scans with the assistant, rewriting all summaries and deleting the family are done in the app.";
 
 /** Whether a token may be used for the family `familyId` (null: anything outside a family). */
 export function tokenAllowsFamily(token: Pick<AuthToken, "familyId">, familyId: string | null): boolean {
@@ -55,7 +55,8 @@ export function pathInScope(pathname: string, familyId: string): boolean {
  *  call outside servers), the assistant's memory (standing instructions it would follow in
  *  every chat) and the knowledge base's page scans: the family's setting whether pages go to the
  *  AI provider (PATCH /knowledge/folder) and the pages themselves (PUT …/pages/{page}/scan, which
- *  may be forced past that setting). */
+ *  may be forced past that setting), and rewriting all the cards (POST /knowledge/cards: an AI
+ *  request per document, on the family's bill). */
 export function agentMayChange(method: string, rest: string[]): boolean {
   if (method === "GET" || method === "HEAD") return true;
   const [first, second] = rest;
@@ -67,6 +68,7 @@ export function agentMayChange(method: string, rest: string[]): boolean {
   if (first === "knowledge") {
     if (second === "folder" && method === "PATCH") return false;
     if (second === "documents" && rest[3] === "pages") return false;
+    if (second === "cards") return false;
   }
   return true;
 }

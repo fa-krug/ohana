@@ -266,6 +266,8 @@ describe("scans: the family's setting", () => {
     expect(patched.data.error).toMatch(/AI agent/);
     const q = `hash=${doc(id).hash}&force=1`;
     expect((await agent.send("PUT", `/knowledge/documents/${id}/pages/1/scan?${q}`, { body: new Uint8Array(jpeg), type: "image/jpeg" })).status).toBe(403);
+    // Nor rewrite every card (an AI request per document).
+    expect((await agent.call("POST", "/knowledge/cards", { all: true })).status).toBe(403);
     // Reading is fine.
     expect((await agent.call("GET", "/knowledge/status")).status).toBe(200);
     expect(t.db.select().from(kbFolders).get()!.aiScans).toBe(false);

@@ -409,6 +409,55 @@ describe("cards: the worker", () => {
     expect(net.aiBody.messages[0].content).toContain('"keywords"');
   });
 
+  it("rewrites the older and failed cards, or all, keeping each until its new one is written; new documents first", async () => {
+    const { edit, upload } = await setup();
+    const old = await upload("old.pdf", ["Altes Dokument mit Text"]);
+    const kept = await upload("kept.pdf", ["Dokument mit Stichwörtern"]);
+    const failed = await upload("failed.pdf", ["Dokument ohne Karte"]);
+    await index();
+    const set = (id: string, v: Partial<typeof kbDocuments.$inferInsert>) => t.db.update(kbDocuments).set(v).where(eq(kbDocuments.id, id)).run();
+    set(old, { cardStatus: "ready", summary: "Die alte Karte.", facts: "[]", keywords: null });
+    set(kept, { cardStatus: "ready", summary: "Mit Stichwörtern.", facts: "[]", keywords: '["Brief"]' });
+    set(failed, { cardStatus: "failed", cardError: "Broken", cardRetries: 4 });
+    const counts = async () => (await edit("GET", "/knowledge/status")).data.cardCounts;
+    expect(await counts()).toEqual({ ready: 2, outdated: 1, pending: 0, rewriting: 0, failed: 1 });
+
+    // Without the family's AI nothing would write them.
+    expect((await edit("POST", "/knowledge/cards", {})).status).toBe(409);
+    await configure(t);
+    // (Saving the AI settings retried the failed card; it failed again.)
+    set(failed, { cardStatus: "failed", cardError: "Broken", cardRetries: 4 });
+    expect((await edit("POST", "/knowledge/cards", { all: "yes" })).status).toBe(400);
+    expect((await knowledgeApi(t.viewer.id)("POST", "/knowledge/cards", {})).status).toBe(404);
+
+    // Indexed a second after the others: by age alone it would come last.
+    now = new Date(NOW.getTime() + 1000);
+    const fresh = await upload("fresh.pdf", ["Ein neues Dokument"]);
+    await index();
+    const res = await edit("POST", "/knowledge/cards", {});
+    expect(res).toEqual({ status: 202, data: { queued: 2, cardCounts: { ready: 1, outdated: 0, pending: 3, rewriting: 1, failed: 0 } } });
+    expect(doc(old)).toMatchObject({ cardStatus: "pending", summary: "Die alte Karte.", cardError: null });
+    expect(doc(failed)).toMatchObject({ cardStatus: "pending", cardError: null, cardRetries: 0 });
+    expect(doc(kept)).toMatchObject({ cardStatus: "ready", summary: "Mit Stichwörtern." });
+
+    // The cards without a summary first, oldest first (the failed one, then the new document),
+    // then the rewrite, though it is older than the new document.
+    const order: string[] = [];
+    const fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const name = /^Name: (.*)$/m.exec(JSON.parse(String(init?.body)).messages?.[1]?.content ?? "")?.[1];
+      if (name) order.push(name);
+      return fakeFetch(input, init);
+    }) as typeof globalThis.fetch;
+    await cards(cardRunner({ ...t.env, modelNet: { ...t.env.modelNet, fetch } }));
+    expect(order).toEqual(["failed.pdf", "fresh.pdf", "old.pdf"]);
+    expect(doc(fresh).cardStatus).toBe("ready");
+    expect(doc(old)).toMatchObject({ cardStatus: "ready", summary: "A document named old.pdf.", keywords: "[]" });
+    expect(await counts()).toEqual({ ready: 4, outdated: 0, pending: 0, rewriting: 0, failed: 0 });
+
+    // Everything: all ready documents' cards.
+    expect((await edit("POST", "/knowledge/cards", { all: true })).data).toMatchObject({ queued: 4, cardCounts: { pending: 4, rewriting: 4 } });
+  });
+
   it("makes the card again after new text, a reindex or letting the document back in", async () => {
     await configure(t);
     const { edit, upload } = await setup();
