@@ -558,9 +558,15 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `scans_checked` (migration `0033`; the upload's `scansChecked`, kept once set for the same file).
   Read-then-write transactions
   here are `{ behavior: "immediate" }` (WAL with the worker writing). `search.ts`
-  `searchKnowledge(db, familyId, query, {limit, tags, folder})`: each word a quoted prefix term,
-  all words, else any, bm25 order, chunks of ready and pending (a reindex keeps them findable)
-  documents → `{chunkId, documentId, name, path, page, text, snippet}`. `cleanup.ts` deletes
+  `searchKnowledge(db, familyId, query, {limit, tags, folder})`: each word matches a word's
+  beginning, in a chunk's text (FTS, quoted prefix terms) or its document's description (path,
+  tags, card summary, folded in JS: a scanned timetable is found as "Stundenplan" by its name);
+  passages covering every word, else the most; then documents whose path / tags hold more words
+  first, of those the newest (`doc_date`, else `mtime`), then bm25; a document found by its
+  description gives its passage with the missing words, else any, else its first; chunks of ready
+  and pending (a reindex keeps them findable) documents → `{chunkId, documentId, name, path, page,
+  text, snippet, date}` (`search_knowledge` passes `date` on; its description and the prompt say to
+  go by the newest version). `cleanup.ts` deletes
   documents gone for 30 days. `sources.ts`: `knowledgeForUser` (who gets the assistant's
   knowledge tools), `chunkSources` (the cited chunks with their card facts) and `excerptOf` (see
   Assistant). The

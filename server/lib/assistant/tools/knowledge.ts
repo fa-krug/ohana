@@ -1,8 +1,8 @@
-// The assistant's tools for the family's knowledge base (lib/knowledge/): search the documents'
-// text, read a document (its card and its text, a page at a time when it is long). Read-only, and
-// only for editors with the module on (ToolContext.knowledge): viewers never get them. Every
-// piece of text comes with its `ref` ("k:<chunkId>"), which the answer cites as `[[k:<chunkId>]]`;
-// the chat keeps only refs these tools returned (lib/assistant/sources.ts).
+// The assistant's tools for the family's knowledge base (lib/knowledge/): search the documents
+// (their text, names, folders, tags and summaries), read a document (its card and its text, a
+// page at a time when it is long). Read-only, and only for editors with the module on
+// (ToolContext.knowledge): viewers never get them. Every piece of text comes with its `ref`
+// ("k:<chunkId>"), which the answer cites as `[[k:<chunkId>]]`; the chat keeps only refs these tools returned (lib/assistant/sources.ts).
 
 import { asc, eq } from "drizzle-orm";
 import { HttpError } from "@/lib/api/http";
@@ -56,7 +56,7 @@ export const knowledgeTools: Record<string, Tool> = {
     spec: {
       name: "search_knowledge",
       description:
-        "Searches the text of the family's documents (contracts, insurance policies, letters, medical reports, manuals …) for words; the best passages first, each with its ref for the source marker. All words first, any of them when that finds nothing; word beginnings match (\"versich\" finds \"Versicherung\"), case and accents don't matter. Search again with other words (synonyms, the documents' language) when it finds nothing fitting.",
+        "Searches the family's documents (contracts, insurance policies, letters, timetables, medical reports, manuals …) for words: their text and their file names, folders, tags and summaries. The best passages first, each with its ref for the source marker and the document's date; documents whose name holds the words come first, the newest first. Passages with all words first, else those with the most; word beginnings match (\"versich\" finds \"Versicherung\"), case and accents don't matter. Use a few words in the documents' language (\"Stundenplan\", not a sentence); search again with other words (synonyms) when it finds nothing fitting. When several versions of a document fit (an old and a new timetable or contract), go by the newest unless asked about another.",
       parameters: {
         type: "object",
         properties: {
@@ -84,6 +84,7 @@ export const knowledgeTools: Record<string, Tool> = {
         name: h.name,
         path: h.path,
         page: h.page,
+        ...(h.date ? { date: h.date } : {}),
         text: h.text,
       }));
       const shown = fitting({}, hits);

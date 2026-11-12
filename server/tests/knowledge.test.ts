@@ -729,7 +729,12 @@ describe("knowledge: writes", () => {
 
 describe("knowledge: search", () => {
   /** A ready document of `family` with one chunk per text. */
-  function doc(family: string, path: string, texts: string[], opts: { tags?: string[]; status?: string } = {}) {
+  function doc(
+    family: string,
+    path: string,
+    texts: string[],
+    opts: { tags?: string[]; status?: string; summary?: string; docDate?: string; mtime?: number } = {},
+  ) {
     const folderId = ensureFolder(db, family, null, NOW).folder.id;
     const id = `doc-${path}-${family.slice(0, 6)}`;
     db.insert(kbDocuments)
@@ -737,6 +742,8 @@ describe("knowledge: search", () => {
       .run();
     index(id, texts.map((text, i) => ({ page: i + 1, text })));
     if (opts.status) db.update(kbDocuments).set({ status: opts.status }).where(eq(kbDocuments.id, id)).run();
+    const { summary, docDate, mtime } = opts;
+    if (summary || docDate || mtime) db.update(kbDocuments).set({ summary, docDate, mtime }).where(eq(kbDocuments.id, id)).run();
     return id;
   }
 
@@ -760,6 +767,7 @@ describe("knowledge: search", () => {
       page: 1,
       text: "Hiermit bestätigen wir die Kündigung Ihres Stromvertrags zum 31.12.",
       snippet: expect.stringContaining("**Stromvertrags**"),
+      date: null,
     });
     expect(searchKnowledge(db, familyId, "Gaszähler")).toEqual([]);
     expect(searchKnowledge(db, familyId, "")).toEqual([]);
@@ -786,6 +794,37 @@ describe("knowledge: search", () => {
     expect(searchKnowledge(db, familyId, "zahnarzt", { folder: "Auto" })).toHaveLength(1);
     expect(searchKnowledge(db, familyId, "zahnarzt", { folder: "Haus" })).toHaveLength(0);
     expect(searchKnowledge(db, otherFamily, "zahnarzt").map((h) => h.name)).toEqual(["other.pdf"]);
+  });
+
+  it("finds a document by its name, folder, tags and summary, not only its text", () => {
+    // A scanned timetable whose text is only the table: "Stundenplan" is only in its name.
+    const plan = doc(familyId, "2026:27_Stundenplan.pdf", ["Klasse: 2b | Zeit | Montag | Freitag | GU | Sport"]);
+    const letter = doc(familyId, "Schule/Brief.pdf", ["Der neue Plan gilt ab September"], { tags: ["Hort"], summary: "Elternbrief zur Buchungszeit" });
+    const [hit] = searchKnowledge(db, familyId, "stundenplan");
+    expect(hit).toMatchObject({ documentId: plan, page: 1, text: "Klasse: 2b | Zeit | Montag | Freitag | GU | Sport" });
+    expect(hit.snippet).toBe("Klasse: 2b | Zeit | Montag | Freitag | GU | Sport");
+    // Name and text together hold every word; folder, tags and summary count too.
+    expect(searchKnowledge(db, familyId, "Stundenplan 2026/27 Klasse 2b").map((h) => h.documentId)).toEqual([plan]);
+    expect(searchKnowledge(db, familyId, "stundenplan freitag").map((h) => h.documentId)).toEqual([plan]);
+    expect(searchKnowledge(db, familyId, "schule plan").map((h) => h.documentId)).toEqual([letter]);
+    expect(searchKnowledge(db, familyId, "hort september").map((h) => h.documentId)).toEqual([letter]);
+    expect(searchKnowledge(db, familyId, "buchungszeit").map((h) => h.documentId)).toEqual([letter]);
+    expect(searchKnowledge(db, familyId, "buchungszeit", { folder: "Haus" })).toEqual([]);
+    expect(searchKnowledge(db, familyId, "stundenplan", { tags: ["Hort"] })).toEqual([]);
+  });
+
+  it("puts the documents named by the words first, the newest first, with their dates", () => {
+    const mention = doc(familyId, "Kinderhaus.pdf", ["Den Stundenplan Ihres Kindes tragen wir im September ein"], { mtime: Date.UTC(2026, 6, 1) });
+    const old = doc(familyId, "2025:26 Stundenplan.pdf", ["# Stundenplan | Montag | GU"], { docDate: "2025-09-10" });
+    const current = doc(familyId, "2026:27_Stundenplan.pdf", ["Klasse: 2b | Montag | GU"], { docDate: "2026-09-14" });
+    const hits = searchKnowledge(db, familyId, "Stundenplan");
+    expect(hits.map((h) => [h.documentId, h.date])).toEqual([
+      [current, "2026-09-14"],
+      [old, "2025-09-10"],
+      [mention, "2026-07-01"],
+    ]);
+    // Without every word anywhere, those with the most come first.
+    expect(searchKnowledge(db, familyId, "Freitag Unterrichtsende Stundenplan Montag")[0].documentId).toBe(current);
   });
 
   it("still finds a document while its reindex waits", async () => {

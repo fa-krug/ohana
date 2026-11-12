@@ -180,6 +180,7 @@ describe("knowledge tools", () => {
         name: "Police.pdf",
         path: "Versicherungen/Hausrat/Police.pdf",
         page: 1,
+        date: "2023-11-14",
         text: POLICY[0],
       },
     ]);
