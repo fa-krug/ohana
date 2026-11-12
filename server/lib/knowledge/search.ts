@@ -35,6 +35,8 @@ export interface KnowledgeHit {
   snippet: string;
   /** "YYYY-MM-DD": the document's date (its card's), else the file's last change; null unknown. */
   date: string | null;
+  /** The document's card summary (2–4 sentences by the assistant); null before its card. */
+  summary: string | null;
 }
 
 export interface SearchOptions {
@@ -75,6 +77,7 @@ interface Described {
   title: boolean[];
   described: boolean[];
   date: string | null;
+  summary: string | null;
 }
 
 /** The family's chunks matching `query`, best first (see the top of the file). */
@@ -103,6 +106,7 @@ export function searchKnowledge(db: Db, familyId: string, query: string, opts: S
       title,
       described: title.map((t, i) => t || inSummary[i]),
       date: d.docDate ?? (d.mtime > 0 ? new Date(d.mtime).toISOString().slice(0, 10) : null),
+      summary: d.summary,
     });
   }
   if (docs.size === 0) return [];
@@ -201,6 +205,7 @@ export function searchKnowledge(db: Db, familyId: string, query: string, opts: S
     ...row,
     snippet: snippets.get(row.chunkId) ?? plainSnippet(row.text),
     date: doc.date,
+    summary: doc.summary,
   }));
 }
 

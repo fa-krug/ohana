@@ -56,7 +56,7 @@ export const knowledgeTools: Record<string, Tool> = {
     spec: {
       name: "search_knowledge",
       description:
-        "Searches the family's documents (contracts, insurance policies, letters, timetables, medical reports, manuals …) for words: their text and their file names, folders, tags and summaries. The best passages first, each with its ref for the source marker and the document's date; documents whose name holds the words come first, the newest first. Passages with all words first, else those with the most; word beginnings match (\"versich\" finds \"Versicherung\"), case and accents don't matter. Use a few words in the documents' language (\"Stundenplan\", not a sentence); search again with other words (synonyms) when it finds nothing fitting. When several versions of a document fit (an old and a new timetable or contract), go by the newest unless asked about another.",
+        "Searches the family's documents (contracts, insurance policies, letters, timetables, medical reports, manuals …) for words: their text and their file names, folders, tags and summaries. The best passages first, each with its ref for the source marker and the document's date (its first passage also with the document's summary, written by the assistant: cite only the passages' text); documents whose name holds the words come first, the newest first. Passages with all words first, else those with the most; word beginnings match (\"versich\" finds \"Versicherung\"), case and accents don't matter. Use a few words in the documents' language (\"Stundenplan\", not a sentence); search again with other words (synonyms) when it finds nothing fitting. When several versions of a document fit (an old and a new timetable or contract), go by the newest unless asked about another.",
       parameters: {
         type: "object",
         properties: {
@@ -78,15 +78,22 @@ export const knowledgeTools: Record<string, Tool> = {
       }
       const folder = typeof args.folder === "string" ? args.folder.trim().replace(/^\/+|\/+$/g, "") : "";
       const found = searchKnowledge(ctx.db, ctx.familyId, query, { limit, tags: strings(args.tags, "tags"), folder: folder || null });
-      const hits = found.map((h) => ({
-        ref: refOf(h.chunkId),
-        documentId: h.documentId,
-        name: h.name,
-        path: h.path,
-        page: h.page,
-        ...(h.date ? { date: h.date } : {}),
-        text: h.text,
-      }));
+      // A document's summary comes once, with its first passage.
+      const summarized = new Set<string>();
+      const hits = found.map((h) => {
+        const summary = h.summary && !summarized.has(h.documentId) ? h.summary : null;
+        summarized.add(h.documentId);
+        return {
+          ref: refOf(h.chunkId),
+          documentId: h.documentId,
+          name: h.name,
+          path: h.path,
+          page: h.page,
+          ...(h.date ? { date: h.date } : {}),
+          ...(summary ? { summary } : {}),
+          text: h.text,
+        };
+      });
       const shown = fitting({}, hits);
       return {
         result: {

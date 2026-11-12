@@ -768,6 +768,7 @@ describe("knowledge: search", () => {
       text: "Hiermit bestätigen wir die Kündigung Ihres Stromvertrags zum 31.12.",
       snippet: expect.stringContaining("**Stromvertrags**"),
       date: null,
+      summary: null,
     });
     expect(searchKnowledge(db, familyId, "Gaszähler")).toEqual([]);
     expect(searchKnowledge(db, familyId, "")).toEqual([]);

@@ -565,7 +565,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   first, of those the newest (`doc_date`, else `mtime`), then bm25; a document found by its
   description gives its passage with the missing words, else any, else its first; chunks of ready
   and pending (a reindex keeps them findable) documents → `{chunkId, documentId, name, path, page,
-  text, snippet, date}` (`search_knowledge` passes `date` on; its description and the prompt say to
+  text, snippet, date, summary}` (`search_knowledge` passes `date` on, and a document's `summary`
+  with its first passage; its description and the prompt say to
   go by the newest version). `cleanup.ts` deletes
   documents gone for 30 days. `sources.ts`: `knowledgeForUser` (who gets the assistant's
   knowledge tools), `chunkSources` (the cited chunks with their card facts) and `excerptOf` (see
