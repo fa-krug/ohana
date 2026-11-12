@@ -1,7 +1,8 @@
 // Search over the knowledge base. A document is found by the text of its chunks (SQLite FTS5,
 // `kb_chunks_fts`: case and diacritics ignored, so "kundigung" finds "Kündigung") and by what
-// describes it: its path (name and folders), tags and card summary. A scanned timetable whose
-// text is only its table is still found as "Stundenplan" by its file name. Free text becomes
+// describes it: its path (name and folders), tags, card summary and card keywords. A scanned timetable whose
+// text is only its table is still found as "Stundenplan" by its file name, and by its card's
+// keywords ("Unterrichtszeiten", "Schulschluss") as well. Free text becomes
 // words, each matching a word's beginning ("künd" finds "Kündigung"); passages covering every
 // word (in their text or their document's description) come first, else those covering most.
 // Among them, documents whose path or tags hold more of the words come first, of those the newest
@@ -72,7 +73,7 @@ function covered(query: string[], words: string[]): boolean[] {
 const count = (flags: boolean[]) => flags.filter(Boolean).length;
 
 /** What describes a document: which query words its path or tags hold (`title`), and which its
- *  path, tags or summary (`described`). */
+ *  path, tags, summary or keywords (`described`). */
 interface Described {
   title: boolean[];
   described: boolean[];
@@ -96,12 +97,21 @@ export function searchKnowledge(db: Db, familyId: string, query: string, opts: S
   // The documents that may be found, and what of the query describes each.
   const docs = new Map<string, Described>();
   for (const d of db
-    .select({ id: kbDocuments.id, path: kbDocuments.path, tags: kbDocuments.tags, summary: kbDocuments.summary, docDate: kbDocuments.docDate, mtime: kbDocuments.mtime })
+    .select({
+      id: kbDocuments.id,
+      path: kbDocuments.path,
+      tags: kbDocuments.tags,
+      summary: kbDocuments.summary,
+      keywords: kbDocuments.keywords,
+      docDate: kbDocuments.docDate,
+      mtime: kbDocuments.mtime,
+    })
     .from(kbDocuments)
     .where(and(...docFilters))
     .all()) {
     const title = covered(folded, foldedWords([d.path, ...(parseJsonArray<string>(d.tags) ?? [])].join(" ")));
-    const inSummary = d.summary ? covered(folded, foldedWords(d.summary)) : folded.map(() => false);
+    const card = [d.summary ?? "", ...(parseJsonArray<string>(d.keywords) ?? [])].join(" ");
+    const inSummary = covered(folded, foldedWords(card));
     docs.set(d.id, {
       title,
       described: title.map((t, i) => t || inSummary[i]),

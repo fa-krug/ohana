@@ -1,0 +1,1 @@
+ALTER TABLE `kb_documents` ADD `keywords` text;

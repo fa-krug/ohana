@@ -1,5 +1,7 @@
 // A document's card (phase 12): a summary, the document's own date, whose it is (one of the
-// family) and facts, each with a verbatim quote from the text. One completion with the family's
+// family), facts, each with a verbatim quote from the text, and keywords: the words someone would
+// search it by (what it is, synonyms, the family's and the document's language), matched by
+// search.ts like the summary. One completion with the family's
 // model (lib/assistant/routes.ts familyModel, as the meals' generator and the letter): the
 // instructions name the family's language and members, the user message is the document's name,
 // path, tags and text by page (the first MAX_CARD_TEXT characters). The answer is checked with
@@ -41,6 +43,9 @@ export const SCRAP_QUOTE_CHARS = 25;
 /** A fact's statement and the summary are cut there. */
 const MAX_FACT_TEXT = 400;
 const MAX_SUMMARY = 1500;
+/** Keywords kept at most, and a keyword's most characters. */
+export const MAX_KEYWORDS = 12;
+const MAX_KEYWORD = 60;
 export const CARD_TIMEOUT_MS = 3 * 60_000;
 
 /** A failure that may pass (the AI busy, down or unreachable, a timeout): the card is tried
@@ -82,6 +87,8 @@ export interface Card {
   docDate: string | null;
   person: CardPerson | null;
   facts: KnowledgeFact[];
+  /** Search words: what the document is called, synonyms, in both languages. */
+  keywords: string[];
   /** Facts left out: their quote isn't in the text (or the fact was malformed). */
   dropped: number;
 }
@@ -126,10 +133,11 @@ export function cardPrompt({ lang, people }: { lang: Locale; people: { name: str
       : "The family's members aren't known.",
     "",
     "Answer only with JSON, no other text:",
-    '{"summary": "…", "date": "YYYY-MM-DD", "person": "…", "facts": [{"text": "…", "quote": "…"}]}',
+    '{"summary": "…", "date": "YYYY-MM-DD", "person": "…", "keywords": ["…"], "facts": [{"text": "…", "quote": "…"}]}',
     '- "summary": 2 to 4 sentences: what the document is, from whom, about what, and what follows from it (an amount, a deadline, what is covered …).',
     '- "date": the document\'s own date (the day it was written, issued or signed), YYYY-MM-DD; null when it shows none. Not a deadline or a period it mentions.',
     '- "person": whose document it is (the policyholder, the patient, the pupil, the addressee), written exactly as one of the members listed above; null when it concerns the whole family, someone else, or it is unclear.',
+    `- "keywords": 5 to 10 words or short phrases someone would search for to find this document: what kind of document it is and its synonyms (e.g. "Stundenplan", "Unterrichtszeiten", "Schulschluss" for a timetable), who sent it, its subject, the period it is for (e.g. "2026/27"); in ${language}, and also in the document's language when that differs. Not the people's names, not the facts' numbers.`,
     `- "facts": at most ${MAX_FACTS} of the most useful facts (amounts, dates and deadlines, contract, policy and customer numbers, terms, what is covered, contacts), each a short statement in "text", and in "quote" the words of the document it rests on, copied character for character: one passage of at most ${MAX_QUOTE} characters from one place, not paraphrased, not joined from several places, without "…". No fact without a quote. Nothing worth noting: [].`,
     "Don't invent anything the document doesn't say.",
   ].join("\n");
@@ -254,6 +262,7 @@ const answerSchema = z.object({
   date: z.unknown().optional(),
   person: z.unknown().optional(),
   facts: z.array(z.unknown()).nullish(),
+  keywords: z.unknown().optional(),
 });
 
 const factSchema = z.object({
@@ -287,7 +296,7 @@ export function parseCard(content: string, { chunks, people }: Pick<CardInput, "
   }
   const parsed = answerSchema.safeParse(data);
   if (!parsed.success) throw new HttpError(502, "The AI model's answer had no summary");
-  const { summary, date, person, facts: rawFacts } = parsed.data;
+  const { summary, date, person, facts: rawFacts, keywords } = parsed.data;
   const facts: KnowledgeFact[] = [];
   let dropped = 0;
   for (const raw of rawFacts ?? []) {
@@ -308,8 +317,25 @@ export function parseCard(content: string, { chunks, people }: Pick<CardInput, "
     docDate: isValidDate(date) ? date : null,
     person: matchPerson(person, people),
     facts,
+    keywords: cleanKeywords(keywords),
     dropped,
   };
+}
+
+/** The answer's keywords: strings, tidied, each once (case ignored), at most MAX_KEYWORDS. */
+export function cleanKeywords(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const k of raw) {
+    if (typeof k !== "string") continue;
+    const word = k.replace(/\s+/g, " ").trim();
+    if (!word || word.length > MAX_KEYWORD || seen.has(word.toLowerCase())) continue;
+    seen.add(word.toLowerCase());
+    out.push(word);
+    if (out.length >= MAX_KEYWORDS) break;
+  }
+  return out;
 }
 
 /** One completion with the family's model for the card; aborted with `signal` or after

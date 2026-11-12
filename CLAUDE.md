@@ -485,7 +485,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   marker file), `kb_documents` (folder + `path` unique: NFC, "/"-separated, no hidden or ".."
   parts; `name`, `tags` JSON, `size`, `mtime` ms, `hash` SHA-256, `pages`, `text` the uploaded
   pages as JSON, `status` pending | ready | failed | missing | excluded, `error`, the card
-  `summary` / `facts` / `doc_date` / `person_*` (invite acceptance and member removal handle it as
+  `summary` / `facts` / `keywords` / `doc_date` / `person_*` (invite acceptance and member removal handle it as
   chores' assignee) / `card_status` pending | ready | failed | none / `card_error`, `indexed_at`,
   `missing_since`, the worker's leases `run_token` / `run_until` / `attempts` and `card_run_token`
   / `card_run_until` / `card_attempts` / `card_retries`), `kb_chunks` (integer id = FTS rowid and the source ref `k:<id>`, `seq`, `page`,
@@ -525,7 +525,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   document first; it runs `card.ts` `makeCard` (one completion with `familyModel`, the family's
   language and `familyNames`; name, path, tags and the text by page "[Page n]", cut at 30 000
   characters, between `<document>` delimiters escaped inside, the prompt saying it is data; zod-checked
-  JSON summary / date / person / ≤ 12 facts; `findQuote`: each quote ≥ 3 words and ≥ 15 characters,
+  JSON summary / date / person / ≤ 12 keywords (search words: what it is, synonyms, the family's
+  and the document's language; `cleanKeywords`; migration `0034`, older cards have none) / ≤ 12 facts; `findQuote`: each quote ≥ 3 words and ≥ 15 characters,
   at word boundaries, in a chunk or across two consecutive ones (NFC, whitespace runs, case,
   typographic quotes ignored); a quote under ¼ of its fact and under 25 characters is a scrap;
   dropped facts are logged; the stored quote is the document's wording); the write checks status
@@ -534,7 +535,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   network) wait 5 min / 30 min / 2 h (`card_run_until` without token = not before, `card_retries`),
   the 5th fails. Saving the AI settings (`PUT /ai/settings`) resets the family's failed cards
   (`retryFailedCards`). The mock AI answers the card prompt from "Date: / For: / Fact: / Shout: /
-  Invent:" lines.
+  Invent: / Keyword:" lines.
   **Reader version and scans** (migration `0032`): `kb_documents.reader` (the app's
   `KnowledgeText.readerVersion` for PDFs / images, else 1; manifest entries and uploads carry
   `reader`): a manifest entry with the same hash and a newer reader is asked for again; an upload
@@ -560,7 +561,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   here are `{ behavior: "immediate" }` (WAL with the worker writing). `search.ts`
   `searchKnowledge(db, familyId, query, {limit, tags, folder})`: each word matches a word's
   beginning, in a chunk's text (FTS, quoted prefix terms) or its document's description (path,
-  tags, card summary, folded in JS: a scanned timetable is found as "Stundenplan" by its name);
+  tags, card summary and keywords, folded in JS: a scanned timetable is found as "Stundenplan" by its name);
   passages covering every word, else the most; then documents whose path / tags hold more words
   first, of those the newest (`doc_date`, else `mtime`), then bm25; a document found by its
   description gives its passage with the missing words, else any, else its first; chunks of ready

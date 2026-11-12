@@ -733,7 +733,7 @@ describe("knowledge: search", () => {
     family: string,
     path: string,
     texts: string[],
-    opts: { tags?: string[]; status?: string; summary?: string; docDate?: string; mtime?: number } = {},
+    opts: { tags?: string[]; status?: string; summary?: string; keywords?: string[]; docDate?: string; mtime?: number } = {},
   ) {
     const folderId = ensureFolder(db, family, null, NOW).folder.id;
     const id = `doc-${path}-${family.slice(0, 6)}`;
@@ -743,7 +743,8 @@ describe("knowledge: search", () => {
     index(id, texts.map((text, i) => ({ page: i + 1, text })));
     if (opts.status) db.update(kbDocuments).set({ status: opts.status }).where(eq(kbDocuments.id, id)).run();
     const { summary, docDate, mtime } = opts;
-    if (summary || docDate || mtime) db.update(kbDocuments).set({ summary, docDate, mtime }).where(eq(kbDocuments.id, id)).run();
+    const keywords = opts.keywords ? JSON.stringify(opts.keywords) : undefined;
+    if (summary || keywords || docDate || mtime) db.update(kbDocuments).set({ summary, keywords, docDate, mtime }).where(eq(kbDocuments.id, id)).run();
     return id;
   }
 
@@ -812,6 +813,14 @@ describe("knowledge: search", () => {
     expect(searchKnowledge(db, familyId, "buchungszeit").map((h) => h.documentId)).toEqual([letter]);
     expect(searchKnowledge(db, familyId, "buchungszeit", { folder: "Haus" })).toEqual([]);
     expect(searchKnowledge(db, familyId, "stundenplan", { tags: ["Hort"] })).toEqual([]);
+  });
+
+  it("finds a document by its card's keywords", () => {
+    const plan = doc(familyId, "Scan 0042.pdf", ["Klasse: 2b | Montag | GU"], { keywords: ["Stundenplan", "Unterrichtszeiten", "Schulschluss"] });
+    doc(familyId, "Brief.pdf", ["Der Schulschluss ist um 11.30 Uhr"]);
+    expect(searchKnowledge(db, familyId, "Unterrichtszeiten").map((h) => h.documentId)).toEqual([plan]);
+    expect(searchKnowledge(db, familyId, "unterrichtszeiten montag").map((h) => h.documentId)).toEqual([plan]);
+    expect(searchKnowledge(db, familyId, "schulschluss")).toHaveLength(2);
   });
 
   it("puts the documents named by the words first, the newest first, with their dates", () => {

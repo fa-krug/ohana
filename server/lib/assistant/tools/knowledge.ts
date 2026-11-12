@@ -56,7 +56,7 @@ export const knowledgeTools: Record<string, Tool> = {
     spec: {
       name: "search_knowledge",
       description:
-        "Searches the family's documents (contracts, insurance policies, letters, timetables, medical reports, manuals …) for words: their text and their file names, folders, tags and summaries. The best passages first, each with its ref for the source marker and the document's date (its first passage also with the document's summary, written by the assistant: cite only the passages' text); documents whose name holds the words come first, the newest first. Passages with all words first, else those with the most; word beginnings match (\"versich\" finds \"Versicherung\"), case and accents don't matter. Use a few words in the documents' language (\"Stundenplan\", not a sentence); search again with other words (synonyms) when it finds nothing fitting. When several versions of a document fit (an old and a new timetable or contract), go by the newest unless asked about another.",
+        "Searches the family's documents (contracts, insurance policies, letters, timetables, medical reports, manuals …) for words: their text and their file names, folders, tags, summaries and keywords. The best passages first, each with its ref for the source marker and the document's date (its first passage also with the document's summary, written by the assistant: cite only the passages' text); documents whose name holds the words come first, the newest first. Passages with all words first, else those with the most; word beginnings match (\"versich\" finds \"Versicherung\"), case and accents don't matter. Use a few words in the documents' language (\"Stundenplan\", not a sentence); search again with other words (synonyms) when it finds nothing fitting. When several versions of a document fit (an old and a new timetable or contract), go by the newest unless asked about another.",
       parameters: {
         type: "object",
         properties: {
@@ -148,6 +148,7 @@ export const knowledgeTools: Record<string, Tool> = {
         tags: parseJsonArray<string>(row.tags) ?? [],
         docDate: row.docDate,
         summary: row.summary,
+        ...(row.keywords ? { keywords: parseJsonArray<string>(row.keywords) ?? [] } : {}),
         facts,
         ...(row.status === "ready" ? {} : { status: row.status }),
       };

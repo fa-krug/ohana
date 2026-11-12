@@ -70,7 +70,7 @@
 // "A document named <name>." ("Ein Dokument namens …" in German), the date of a line "Date: <x>"
 // (as written, valid or not), the person of a line "For: <name>", and a fact per line
 // "Fact: <x>" (quoting x), "Shout: <x>" (quoting x in capitals, its spaces as line breaks) or
-// "Invent: <x>" (a quote the text doesn't have). A text saying "garbage" gets an answer that
+// "Invent: <x>" (a quote the text doesn't have), and a keyword per line "Keyword: <x>". A text saying "garbage" gets an answer that
 // isn't JSON. (Quotes count with 3 words and 15 characters: write facts long enough.)
 // Asked to transcribe a knowledge document's page scan (the transcription prompt), it answers
 // with a Markdown timetable in a ``` fence, or with what follows a line "Transcribe: <x>" in the
@@ -324,6 +324,7 @@ function card(stream: boolean, system: string, message: string) {
     summary: de ? `Ein Dokument namens ${name}.` : `A document named ${name}.`,
     date: value("Date"),
     person: value("For"),
+    keywords: lines.filter((l) => l.startsWith("Keyword: ")).map((l) => l.slice("Keyword: ".length)),
     facts,
   };
   return reply(stream, "```json\n" + JSON.stringify(answer, null, 1) + "\n```");

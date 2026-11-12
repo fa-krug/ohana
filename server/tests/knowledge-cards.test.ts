@@ -17,6 +17,7 @@ import { addPerson } from "@/lib/families/people";
 import {
   type CardChunk,
   MAX_FACTS,
+  MAX_KEYWORDS,
   MIN_QUOTE_CHARS,
   MIN_QUOTE_WORDS,
   SCRAP_QUOTE_CHARS,
@@ -95,6 +96,7 @@ describe("cards: the answer", () => {
       docDate: "2026-03-03",
       person: people[0],
       facts: [{ text: "Betrag", quote: "Betrag: 89,00 €", chunkId: 7, page: 1 }],
+      keywords: [],
       dropped: 0,
     });
     expect(parseCard(answer({ person: "LEO" }), { chunks, people }).person).toEqual(people[1]);
@@ -122,6 +124,14 @@ describe("cards: the answer", () => {
     const longer = [chunk(8, "Bitte überweisen Sie den Betrag bis zum 17. März.")];
     const card = parseCard(answer({ facts: [{ text: long.repeat(2), quote: "den Betrag bis zum 17. März." }] }), { chunks: longer, people });
     expect(card.facts).toHaveLength(1);
+  });
+
+  it(`keeps the keywords that are words, tidied, each once, at most ${MAX_KEYWORDS}`, () => {
+    const keywords = ["Rechnung", " Waschmaschine\n Reparatur ", "rechnung", 7, "", "x".repeat(61), null, "Invoice"];
+    expect(parseCard(answer({ keywords }), { chunks, people }).keywords).toEqual(["Rechnung", "Waschmaschine Reparatur", "Invoice"]);
+    expect(parseCard(answer({ keywords: "Rechnung" }), { chunks, people }).keywords).toEqual([]);
+    const many = Array.from({ length: 20 }, (_, i) => `Wort ${i}`);
+    expect(parseCard(answer({ keywords: many }), { chunks, people }).keywords).toEqual(many.slice(0, MAX_KEYWORDS));
   });
 
   it(`keeps at most ${MAX_FACTS} facts`, () => {
@@ -389,13 +399,23 @@ describe("cards: the worker", () => {
     expect((await edit("GET", `/knowledge/documents/${id}`)).data.document).toMatchObject({ cardStatus: "none", facts: null });
   });
 
+  it("keeps the card's keywords", async () => {
+    await configure(t);
+    const { upload } = await setup();
+    const id = await upload("2026-27.pdf", ["Klasse: 2b | Montag | GU\nKeyword: Stundenplan\nKeyword: Unterrichtszeiten"]);
+    await index();
+    await cards();
+    expect(JSON.parse(doc(id).keywords!)).toEqual(["Stundenplan", "Unterrichtszeiten"]);
+    expect(net.aiBody.messages[0].content).toContain('"keywords"');
+  });
+
   it("makes the card again after new text, a reindex or letting the document back in", async () => {
     await configure(t);
     const { edit, upload } = await setup();
     const id = await upload("Police.pdf", [POLICY]);
     await index();
     await cards();
-    const reset = { cardStatus: "pending", summary: null, facts: null, docDate: null, personUserId: null, personPersonId: null, cardAttempts: 0 };
+    const reset = { cardStatus: "pending", summary: null, facts: null, keywords: null, docDate: null, personUserId: null, personPersonId: null, cardAttempts: 0 };
     expect(doc(id).cardStatus).toBe("ready");
     await edit("POST", `/knowledge/documents/${id}/reindex`);
     expect(doc(id)).toMatchObject(reset);
