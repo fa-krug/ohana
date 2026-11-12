@@ -11911,12 +11911,12 @@
         }
       }
     },
-    "Off, the documents are read on this device only. On, the family’s AI provider gets each document’s text and writes a summary and search words (other words for what it is), and pages this device reads poorly go to it as images. Read Now reads what’s new or changed, Read All everything again.": {
+    "Off, the documents are read on this device only. On, the family’s AI provider gets each document’s text and writes a summary and search words (other words for what it is), and every page of PDFs and pictures goes to it as an image. Read Now reads what’s new or changed, Read All everything again.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aus werden die Dokumente nur auf diesem Gerät gelesen. Ein bekommt der KI-Anbieter der Familie den Text jedes Dokuments und schreibt eine Zusammenfassung und Suchwörter (andere Wörter dafür, was es ist), und Seiten, die dieses Gerät schlecht liest, gehen als Bilder an ihn. „Jetzt lesen“ liest Neues und Geändertes, „Alles lesen“ alles noch einmal."
+            "value": "Aus werden die Dokumente nur auf diesem Gerät gelesen. Ein bekommt der KI-Anbieter der Familie den Text jedes Dokuments und schreibt eine Zusammenfassung und Suchwörter (andere Wörter dafür, was es ist), und jede Seite von PDFs und Bildern geht als Bild an ihn. „Jetzt lesen“ liest Neues und Geändertes, „Alles lesen“ alles noch einmal."
           }
         }
       }

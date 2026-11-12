@@ -18,7 +18,7 @@ export interface KnowledgeFolder {
   /** The last non-empty manifest (any device's) and the name the device gave; null before one. */
   lastManifestAt: string | null;
   lastManifestDevice: string | null;
-  /** Whether the app sends pages its own OCR read poorly to the family's AI (scans.ts). */
+  /** Whether the assistant reads the knowledge base: cards written, every page of PDFs and images sent to the family's AI (scans.ts). */
   aiScans: boolean;
 }
 
@@ -69,7 +69,7 @@ export function replaceFolder(db: Db, familyId: string, userId: string | null, n
   return folder;
 }
 
-/** Turns the family's AI reading of poor scans on or off (PATCH /knowledge/folder); 404 without
+/** Turns the family's AI reading of the knowledge base on or off (PATCH /knowledge/folder); 404 without
  *  a folder. Off, the scans the app sent on its own and still waiting go (rows and files); those
  *  an editor asked for (forced) and those being read stay. */
 export function setAiScans(db: Db, familyId: string, on: boolean): FolderRow {

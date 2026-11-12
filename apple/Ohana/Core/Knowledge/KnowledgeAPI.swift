@@ -88,7 +88,7 @@ nonisolated struct KnowledgeScanStatus: OffMainDecodable {
 extension KnowledgeStatusInfo {
     /// The family's AI can transcribe page images (*Read Again with the Assistant*, the setting).
     var readsScans: Bool { scans == true }
-    /// Poor pages go to the AI by themselves.
+    /// Every page of a scan goes to the AI by itself.
     var sendsScans: Bool { scans == true && aiScans == true }
 }
 
@@ -163,8 +163,8 @@ nonisolated struct KnowledgeUploadBody: Encodable, Sendable {
     /// The user asked for the file to be read again: the server takes new text even from the same
     /// reader.
     var reread = false
-    /// The file was judged with the family's AI scans available (`ScanCapture` `.poor` or `.all`),
-    /// whatever the verdict: the server's manifest stops asking for it again.
+    /// The file was read with its pages sent to the family's AI (`ScanCapture.all`): the server's
+    /// manifest stops asking for it again.
     var scansChecked = false
 
     private enum CodingKeys: String, CodingKey {

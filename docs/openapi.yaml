@@ -148,7 +148,7 @@ tags:
       for the search, then, with the family's AI set up, makes a card per document (a summary,
       the document's date, whose it is, facts each with a verbatim quote checked against the
       text). The files never reach the server, except, when the family turns it on (`aiScans`) or
-      an editor asks for it, pictures of pages the device's OCR read poorly, which the worker has
+      an editor asks for it, pictures of the pages of PDFs and images, which the worker has
       the family's AI transcribe and deletes once read. **Editors only**: for viewers every
       knowledge route answers 404.
   - name: Assistant
@@ -2669,7 +2669,7 @@ paths:
       description: >-
         `aiScans`: whether the assistant reads the family's knowledge base (off by default: the
         documents are only read on the device): the worker writes each document's card (summary,
-        keywords, facts) and the app sends pictures of pages its own OCR read poorly to the family's
+        keywords, facts) and the app sends pictures of every page of PDFs and images to the family's
         AI provider for a transcription. Turned on, the cards waiting are written; turned off,
         no more are (the written ones stay), and the scans the app sent on
         its own that still wait are deleted (forced ones and those being read stay). 404 without a
@@ -7125,7 +7125,7 @@ components:
         createdAt: {type: string, format: date-time}
         lastManifestAt: {type: [string, "null"], format: date-time, description: "The last non-empty manifest (null before one)."}
         lastManifestDevice: {type: [string, "null"], description: "The `device` that sent it."}
-        aiScans: {type: boolean, description: "Whether the assistant reads the knowledge base: cards written, pages the app's OCR read poorly sent to the family's AI (PATCH; default false; kept when the folder is replaced)."}
+        aiScans: {type: boolean, description: "Whether the assistant reads the knowledge base: cards written, every page of PDFs and images sent to the family's AI (PATCH; default false; kept when the folder is replaced)."}
     KnowledgeStatus:
       type: string
       description: >-

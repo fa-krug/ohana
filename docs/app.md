@@ -203,8 +203,8 @@ sends only the text to your server, never the files. Scans without text are read
 too: a page lying on its side is turned first, and tables (a timetable, say) keep their rows and
 columns. By default that's all: the documents are read on the device only. With the assistant set
 up, *Read with the assistant* in Settings → Knowledge has the family's AI read them too: it writes
-each document's summary and search words (other words for what it is), and the pages the device
-couldn't read well go to it as images, which it writes out (handwriting too). Turned on, it checks
+each document's summary and search words (other words for what it is), and every page of the PDFs
+and pictures goes to it as an image, which it writes out (handwriting and tables too). Turned on, it checks
 every scan in the folder once, the ones read before too. *Read Now* reads what's new or changed,
 *Read All* (it asks first) everything again.
 

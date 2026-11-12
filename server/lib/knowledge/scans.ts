@@ -1,7 +1,7 @@
 // Page scans: a page of a document the app sends as a picture (PUT
 // /knowledge/documents/{id}/pages/{page}/scan?hash=…[&force=1]) for the family's AI to transcribe
-// (scan-runner.ts), because the device's own OCR read it poorly (a table, a sideways or faint
-// scan). The family turns this on (`kb_folders.ai_scans`, PATCH /knowledge/folder): the pages go
+// (scan-runner.ts): every page of a PDF or image while the family's AI reads the knowledge base
+// (tables, sideways or faint scans and handwriting come out better than the device's OCR). The family turns this on (`kb_folders.ai_scans`, PATCH /knowledge/folder): the pages go
 // to its AI provider. An editor may ask for one document anyway (`force`, "Read Again with the
 // Assistant"); both need the family's AI set up and the assistant on (`scansEnabled`, what the
 // status calls `scans`).

@@ -822,15 +822,15 @@ final class KnowledgeIndexer {
     }
 
     /// Which pages' images to keep while reading `upload` (`KnowledgeText.ScanCapture`): none for
-    /// a file read without OCR or a scan's own text; the poor ones while the family's setting is on
-    /// (`KnowledgeStatusInfo.sendsScans`); every page for *Read Again with the Assistant* while the
-    /// family's AI can read them at all.
+    /// a file read without OCR or a scan's own text; every page of a PDF or image while the family's
+    /// *Read with the assistant* is on (`KnowledgeStatusInfo.sendsScans`), and for *Read Again with
+    /// the Assistant* while the family's AI can read them at all.
     private func scanCapture(for upload: KnowledgeUpload) async -> KnowledgeText.ScanCapture {
         guard upload.textFile == nil, KnowledgeText.reader(forPath: upload.file.path) > 1 else { return .none }
         let forced = upload.force == true
         guard let status = await scanStatus(fresh: forced) else { return .none }
         if forced { return status.scans == true ? .all : .none }
-        return status.scans == true && status.aiScans == true ? .poor : .none
+        return status.scans == true && status.aiScans == true ? .all : .none
     }
 
     /// Whether the server takes page images (GET /knowledge/status), asked at most every

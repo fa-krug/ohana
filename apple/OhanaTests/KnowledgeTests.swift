@@ -952,11 +952,11 @@ struct KnowledgeIndexerTests {
     private static let statusPath = "GET /api/v1/families/f1/knowledge/status"
 
     /// A PDF without a text layer: a letter, turned a quarter clockwise as phones photograph it,
-    /// and with `poorPage` a page of ink nothing reads (a black bar: handwriting Vision misses).
-    private func scannedPDF(poorPage: Bool) -> Data {
+    /// and with `twoPages` a page of ink nothing reads (a black bar: handwriting Vision misses).
+    private func scannedPDF(twoPages: Bool) -> Data {
         var pages = [ScanPage(image: KnowledgeOCR.turned(KnowledgeOCRReadingTests.page(KnowledgeOCRReadingTests.letter), .right)!,
                               lines: [])]
-        if poorPage {
+        if twoPages {
             pages.append(ScanPage(image: LetterFilingTests.image(width: 1240, height: 1754,
                                                                  rect: CGRect(x: 100, y: 800, width: 1000, height: 80), fill: 0),
                                   lines: []))
@@ -1084,7 +1084,7 @@ struct KnowledgeIndexerTests {
     @Test func readAgainWithTheAssistantSendsEveryPage() async throws {
         let s = try setup()
         defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
-        try scannedPDF(poorPage: false).write(to: s.root.appending(path: "Brief.pdf"))
+        try scannedPDF(twoPages: false).write(to: s.root.appending(path: "Brief.pdf"))
         // The family's setting off: an editor's explicit request sends the pages anyway.
         KnowledgeStubProtocol.set { $0.status = #"{"scans": true, "aiScans": false}"# }
         #expect(try await s.indexer.reread(path: "Brief.pdf", assistant: true) == .sent)
@@ -1106,42 +1106,29 @@ struct KnowledgeIndexerTests {
         #expect(try #require(KnowledgeStubProtocol.bodies("PUT").first)["scansChecked"] == nil)
     }
 
-    @Test func poorPagesGoToTheAssistantWhileTheSettingIsOn() async throws {
+    @Test func everyPageGoesToTheAssistantWhileTheSettingIsOn() async throws {
         let s = try setup()
         defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
-        try scannedPDF(poorPage: true).write(to: s.root.appending(path: "Brief.pdf"))
+        try scannedPDF(twoPages: true).write(to: s.root.appending(path: "Brief.pdf"))
         KnowledgeStubProtocol.set {
             $0.upload = ["Brief.pdf"]
             $0.status = #"{"scans": true, "aiScans": true}"#
         }
         await s.indexer.run()
         #expect(try manifestFiles()["Brief.pdf"]?["reader"] as? Int == 2)
-        // Only the page that reads poorly, without force.
+        // Every page, the one the device reads well too, without force.
         #expect(KnowledgeStubProtocol.requests == [Self.manifestPath, Self.statusPath, Self.putPath,
+                                                   "PUT /api/v1/families/f1/knowledge/documents/d1/pages/1/scan",
                                                    "PUT /api/v1/families/f1/knowledge/documents/d1/pages/2/scan"])
-        #expect(KnowledgeStubProtocol.scans.first.map { !$0.query.contains("force") } == true)
+        #expect(KnowledgeStubProtocol.scans.allSatisfy { !$0.query.contains("force") })
         #expect(try #require(KnowledgeStubProtocol.bodies("PUT").first)["scansChecked"] as? Bool == true)
         #expect(s.indexer.waiting == 0)
-    }
-
-    @Test func aScanJudgedWithTheSettingOnIsCheckedWhateverTheVerdict() async throws {
-        let s = try setup()
-        defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
-        try scannedPDF(poorPage: false).write(to: s.root.appending(path: "Brief.pdf"))
-        KnowledgeStubProtocol.set {
-            $0.upload = ["Brief.pdf"]
-            $0.status = #"{"scans": true, "aiScans": true}"#
-        }
-        await s.indexer.run()
-        // No page reads poorly: nothing goes to the AI, but the file counts as checked.
-        #expect(KnowledgeStubProtocol.requests == [Self.manifestPath, Self.statusPath, Self.putPath])
-        #expect(try #require(KnowledgeStubProtocol.bodies("PUT").first)["scansChecked"] as? Bool == true)
     }
 
     @Test func noPageScansWhileTheSettingIsOffOrRefused() async throws {
         let s = try setup()
         defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
-        try scannedPDF(poorPage: true).write(to: s.root.appending(path: "Brief.pdf"))
+        try scannedPDF(twoPages: true).write(to: s.root.appending(path: "Brief.pdf"))
         KnowledgeStubProtocol.set {
             $0.upload = ["Brief.pdf"]
             $0.status = #"{"scans": true, "aiScans": false}"#
@@ -1164,7 +1151,7 @@ struct KnowledgeIndexerTests {
     @Test func aPageScanOutageWaitsWithTheUpload() async throws {
         let s = try setup()
         defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
-        try scannedPDF(poorPage: false).write(to: s.root.appending(path: "Brief.pdf"))
+        try scannedPDF(twoPages: false).write(to: s.root.appending(path: "Brief.pdf"))
         KnowledgeStubProtocol.set {
             $0.status = #"{"scans": true}"#
             $0.scan = 503

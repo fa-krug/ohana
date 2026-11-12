@@ -136,7 +136,7 @@ async function createFolderRoute(ctx: Ctx, familyId: string): Promise<Response> 
 }
 
 /** The family's settings of the folder: `aiScans` (the assistant reads the knowledge base: the
- *  documents' summaries and keywords are written, pages the device read poorly go to the family's
+ *  documents' summaries and keywords are written, every page of PDFs and images goes to the family's
  *  AI). */
 async function patchFolderRoute(ctx: Ctx, familyId: string): Promise<Response> {
   const body = await readLimitedBody(ctx.req, 10_000);

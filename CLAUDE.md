@@ -979,13 +979,10 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   cache's read failures keyed by it). Scanned pages (`KnowledgeOCR.swift`): an upright
   `RecognizeTextRequest` first, its baselines voted by characters (−90° → `.left`, +90° →
   `.right`, 180° → `.down`), then `RecognizeDocumentsRequest` in that orientation: tables as
-  Markdown tables in reading order (`KnowledgeOCRQuality.swift`, pure); `KnowledgeOCRQuality`
-  judges the page good or poor, eagerly (only what reads like clean print stays on the device: a
-  middling confidence with a few weak lines, one garbled table cell are poor) (the document reader's line confidences, words the spell checker
-  knows in de / en, fragments, non-Latin letters, empty / garbled table cells, little text on an
-  inked page; thresholds as constants, tested on a real timetable's readings). After an upload the
-  indexer sends poor pages as upright JPEGs (≤ 2000 px, ≤ 20) to `…/pages/{page}/scan` when status
-  `scans && aiScans` (asked lazily, kept 5 min), all pages with `force` for *Read Again with the
+  Markdown tables in reading order (`KnowledgeOCRLayout.swift`, pure; the page isn't judged: with
+  the family's switch on every page goes to the AI). After an upload of a PDF or image the
+  indexer sends every page as an upright JPEG (≤ 2000 px, ≤ 20) to `…/pages/{page}/scan` when status
+  `scans && aiScans` (asked lazily, kept 5 min), with `force` for *Read Again with the
   Assistant* (`KnowledgeIndexer.reread(path:assistant:)`, `reread: true`; *Read Again* without the
   assistant); a 4xx stops that document's scans, an outage retries (`sentScans`). The scanner's own
   `enqueue` sends no images. `KnowledgeUploadQueue` keeps the uploads on disk (by path; removed by
@@ -1011,7 +1008,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   unread; the documents list doesn't poll for a card rewritten while its earlier summary shows), with
   status `scans` the family's one switch *Read with the assistant* (`PATCH /knowledge/folder
   {aiScans}`, in the Index section, its footer naming the AI provider; off by default: read on the
-  device only; on: cards written and poor pages sent).
+  device only; on: cards written and every page of PDFs / images sent as an image).
   The knowledge base page (`Module.knowledge`, ⌘9; shown where `FamilyContext.isEnabled(.knowledge)` /
   `AppModel.isEnabled` say `knowledgeAvailable`, `ServerInfo.isEnabled` only says the server has it;
   the demo hides it for now): `Features/Knowledge/KnowledgeView.swift`, `GET /knowledge/documents`

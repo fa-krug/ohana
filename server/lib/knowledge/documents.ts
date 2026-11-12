@@ -315,8 +315,8 @@ export function countDocuments(db: Db, familyId: string): { counts: Record<Docum
 
 /** What an upload carries: the file's details and its text by page; `reread`: the user asked
  *  for the file to be read again (its text replaces the stored one whenever it differs);
- *  `scansChecked`: the device judged the pages with the family's AI scans on (it sends the poor
- *  ones as page scans), so the manifest needn't ask for the file again for that. */
+ *  `scansChecked`: the device read the file with the family's AI scans on (it sends its pages
+ *  as page scans), so the manifest needn't ask for the file again for that. */
 export interface UploadInput extends FileInfo {
   pages: string[];
   reread?: boolean;

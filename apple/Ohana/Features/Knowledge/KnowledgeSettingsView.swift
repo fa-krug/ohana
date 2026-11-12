@@ -5,7 +5,7 @@ import SwiftUI
 /// in it (GET /knowledge/status with the indexer's own state: running, waiting uploads, files this
 /// device can't read, *Read All*'s progress, the summaries being written), the family's one switch
 /// *Read with the assistant* (`aiScans`, shown where its AI can read, `readsScans`; off: read on the
-/// device only; on: summaries and keywords written, poor pages sent as images), *Read Now* (what's
+/// device only; on: summaries and keywords written, every page of PDFs and images sent), *Read Now* (what's
 /// new or changed) and *Read All* (confirmed; `KnowledgeIndexer.readAll`: every file read again,
 /// then, with the switch on, every summary written anew; resumed after a lost connection).
 /// Only where `FamilyContext.knowledgeAvailable` (module on, an editor, not the demo).
@@ -284,7 +284,7 @@ private struct KnowledgeSettingsForm: View {
             Text("Index")
         } footer: {
             if offersAssistant {
-                Text("Off, the documents are read on this device only. On, the family’s AI provider gets each document’s text and writes a summary and search words (other words for what it is), and pages this device reads poorly go to it as images. Read Now reads what’s new or changed, Read All everything again.")
+                Text("Off, the documents are read on this device only. On, the family’s AI provider gets each document’s text and writes a summary and search words (other words for what it is), and every page of PDFs and pictures goes to it as an image. Read Now reads what’s new or changed, Read All everything again.")
             } else {
                 Text("Read Now reads what’s new or changed, Read All everything again.")
             }

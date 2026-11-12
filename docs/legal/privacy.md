@@ -233,8 +233,8 @@ your family), the app reads the files in it on your device (Apple's PDF and text
 and sends your server, for each file, its **text**, its name and place in the folder, its size,
 date, Finder tags and a checksum (SHA-256), so the family's editors can search it; **the files
 themselves are never sent**. One exception, only if the family set up the assistant: when an
-editor turns on *Read with the assistant* (off by default), pages of scanned documents whose text
-the app couldn't read well are sent to your server as **images**, and from there to the AI provider
+editor turns on *Read with the assistant* (off by default), the pages of PDFs and pictures in the
+folder are sent to your server as **images**, and from there to the AI provider
 your family set up, which writes out their text; *Read Again with the Assistant* on a document does
 the same for every page of that document. Your server deletes each image as soon as its text is
 written (or reading it failed), at the latest after 7 days. Each time it reads the folder it also sends your device's name (as
