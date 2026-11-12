@@ -87,7 +87,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   1 hour, minted by `POST /families/{id}/agent/token`) work only for `/api/health`,
   `/api/v1/server` and `/api/v1/families/{that id}[/…]`, else 403 (`OUT_OF_SCOPE`); inside it
   `agentMayChange` (checked by `createFamilyApi`) holds back writes to members, people, invites,
-  notification channels / events, `/ai/settings|models|test`, `/ai/memories` and deleting the family (`AGENT_HOLD`); checked by
+  notification channels / events, `/ai/settings|models|test`, `/ai/memories`, the knowledge base's
+  page scans and `POST /knowledge/cards` and deleting the family (`AGENT_HOLD`); checked by
   the `/api` middleware in `http/api.ts` (every Bearer request) and again where users are
   resolved: `apiAuth` (me / admin / invites: never), `getApiUser` / `requireFamilyApi` (the
   family asked for), the family API's `authenticate` (the path's; `Ctx.scopedTo`). A new route
@@ -495,7 +496,11 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   /knowledge/folder` (created on first use; `{replace: true}`: a new id, the old folder's documents
   deleted; `last_manifest_at` / `_device`: the last non-empty manifest, the device name cut to 100),
   `GET /knowledge/status` (folder, `counts` by status, `chunks`, `cards`: the family's AI set up and
-  the assistant on), `POST
+  the assistant on, `cardCounts` {ready, outdated (no keywords), pending, rewriting (pending with
+  the earlier card still shown), failed}: `countCards`), `POST /knowledge/cards {all?}` (202
+  `{queued, cardCounts}`, `rewriteCards`: the outdated and failed cards, or all, back to pending
+  keeping their summary / facts / keywords until the new card is written; 409 without the family's
+  AI; agent tokens 403), `POST
   /knowledge/manifest {folderId, device?, files: [{path, size, mtime, hash | null, tags}]}` → `{upload: [path]}`, `PUT /knowledge/documents {folderId, path,
   hash, size, mtime, tags, pages}` → 202 `{id, status}` (≤ 2000 pages, ≤ 2 MB of text, else 413),
   `GET /knowledge/documents?q=&tag=&folder=&person=&status=&cursor=&limit=` (newest `mtime` first,
@@ -521,8 +526,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   reindex, un-exclude: `CARD_RESET`) empty the card, `card_status` pending (none without chunks).
   `card-runner.ts` `KnowledgeCardRunner` (same pattern, `KNOWLEDGE_CARD_CONCURRENT`, 1; off without
   the assistant) claims ready documents with a pending card only of families whose AI is set up
-  (the others wait), round-robin: one per family at a time, the family with the oldest waiting
-  document first; it runs `card.ts` `makeCard` (one completion with `familyModel`, the family's
+  (the others wait), round-robin: one per family at a time, new cards (no summary yet) before
+  rewrites, then the family with the oldest waiting document first; it runs `card.ts` `makeCard` (one completion with `familyModel`, the family's
   language and `familyNames`; name, path, tags and the text by page "[Page n]", cut at 30 000
   characters, between `<document>` delimiters escaped inside, the prompt saying it is data; zod-checked
   JSON summary / date / person / ≤ 12 keywords (search words: what it is, synonyms, the family's
@@ -995,9 +1000,12 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   text (see Scanning). Settings → Knowledge (`Features/Knowledge/KnowledgeSettingsView.swift`, `.settings(.knowledge)`):
   the folder (`.fileImporter`, the conflict as an alert offering to use it anyway), the index
   (`GET /knowledge/status` through `api.cached`, with the indexer's progress, waiting and unreadable
-  files, the last manifest's time and device), *Read Now*, and with status `scans` the toggle *Read
+  files, the last manifest's time and device), *Read Now*, with status `scans` the toggle *Read
   difficult scans with the assistant* (`PATCH /knowledge/folder {aiScans}`, a footer naming the AI
-  provider).
+  provider), and with status `cards` a Summaries section (being rewritten, without keywords,
+  *Rewrite Summaries…*: older and failed ones or all, `POST /knowledge/cards`; the status reloads
+  every 15 s while some are rewritten; the documents list doesn't poll for a card rewritten while
+  its earlier summary shows).
   The knowledge base page (`Module.knowledge`, ⌘9; shown where `FamilyContext.isEnabled(.knowledge)` /
   `AppModel.isEnabled` say `knowledgeAvailable`, `ServerInfo.isEnabled` only says the server has it;
   the demo hides it for now): `Features/Knowledge/KnowledgeView.swift`, `GET /knowledge/documents`

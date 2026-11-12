@@ -5,7 +5,8 @@
 // GET   /knowledge/folder                      {folder: {id, createdAt, lastManifestAt, lastManifestDevice, aiScans} | null}
 // POST  /knowledge/folder                      {replace?} → {folder} (201 when this made it; replace: a new one, the old one's documents gone)
 // PATCH /knowledge/folder                      {aiScans} → {folder} (404 without one; off: the waiting scans not asked for go)
-// GET  /knowledge/status                       {folder | null, counts: {pending, ready, failed, missing, excluded}, chunks, cards, scans, aiScans}
+// GET  /knowledge/status                       {folder | null, counts: {pending, ready, failed, missing, excluded}, chunks, cards, cardCounts, scans, aiScans}
+// POST /knowledge/cards                        {all?} → 202 {queued, cardCounts} (cards written again: the older ones and failed, or all; 409 without the family's AI)
 // POST /knowledge/manifest                     {folderId, device?, files: [{path, size, mtime, hash | null, tags, reader?}]} → {upload: [path]}
 // PUT  /knowledge/documents                    {folderId, path, hash, size, mtime, tags, reader?, reread?, scansChecked?, pages: [text]} → 202 {id, status}
 // PUT  /knowledge/documents/{id}/pages/{page}/scan?hash=&force=   (image/jpeg) → 202 {page, status} (scans.ts)
@@ -19,7 +20,21 @@
 import type { Ctx, Loaded } from "@/lib/api/family-api";
 import { HttpError, json } from "@/lib/api/http";
 import { cardsEnabled } from "./card";
-import { STATUSES, type DocumentStatus, cleanPages, countDocuments, getDocument, listDocuments, listTags, reindexDocument, remakeCard, setExcluded, uploadDocument } from "./documents";
+import {
+  STATUSES,
+  type DocumentStatus,
+  cleanPages,
+  countCards,
+  countDocuments,
+  getDocument,
+  listDocuments,
+  listTags,
+  reindexDocument,
+  remakeCard,
+  rewriteCards,
+  setExcluded,
+  uploadDocument,
+} from "./documents";
 import { ensureFolder, folderDto, getFolder, replaceFolder, requireFolder, setAiScans } from "./folders";
 import { cleanFileInfo, cleanFolderFilter, readLimitedBody } from "./input";
 import { applyManifest, cleanDevice, cleanManifestFiles } from "./manifest";
@@ -64,6 +79,10 @@ function route(ctx: Ctx, { family }: Loaded): Promise<Response> {
     case "status":
       if (id !== undefined) throw notFound();
       if (method === "GET") return statusRoute(ctx, familyId);
+      throw notAllowed();
+    case "cards":
+      if (id !== undefined) throw notFound();
+      if (method === "POST") return rewriteCardsRoute(ctx, familyId);
       throw notAllowed();
     case "manifest":
       if (id !== undefined) throw notFound();
@@ -125,7 +144,7 @@ async function patchFolderRoute(ctx: Ctx, familyId: string): Promise<Response> {
 }
 
 /** The settings screen's view: the folder (with the last manifest), documents by status, chunks,
- *  whether cards are made and scans can be read (both: the family's AI set up, the assistant on)
+ *  the cards by status (`cardCounts`, countCards), whether cards are made and scans can be read (both: the family's AI set up, the assistant on)
  *  and whether the family has its AI read poor scans (`aiScans`). */
 async function statusRoute(ctx: Ctx, familyId: string): Promise<Response> {
   const folder = getFolder(ctx.db, familyId);
@@ -135,9 +154,20 @@ async function statusRoute(ctx: Ctx, familyId: string): Promise<Response> {
     counts,
     chunks,
     cards: cardsEnabled(ctx.db, familyId),
+    cardCounts: countCards(ctx.db, familyId),
     scans: scansEnabled(ctx.db, familyId),
     aiScans: folder?.aiScans ?? false,
   });
+}
+
+/** Settings → Knowledge's *Rewrite Summaries*: the cards made before keywords and the failed
+ *  ones, or with `{all: true}` every card, wait for the worker again (one AI request each). */
+async function rewriteCardsRoute(ctx: Ctx, familyId: string): Promise<Response> {
+  const body = await readLimitedBody(ctx.req, 10_000);
+  if (body.all !== undefined && typeof body.all !== "boolean") throw new HttpError(400, "all must be true or false");
+  if (!cardsEnabled(ctx.db, familyId)) throw new HttpError(409, "The family's AI isn't set up, so no summaries are written");
+  const queued = rewriteCards(ctx.db, familyId, { all: body.all === true }, ctx.now);
+  return json({ queued, cardCounts: countCards(ctx.db, familyId) }, 202);
 }
 
 async function scanRoute(ctx: Ctx, familyId: string, id: string, page: string): Promise<Response> {

@@ -46,16 +46,35 @@ nonisolated struct KnowledgeStatusInfo: Codable, Equatable, OffMainDecodable {
         var excluded = 0
     }
 
+    /// The cards of the family's ready documents.
+    nonisolated struct CardCounts: Codable, Equatable, Sendable {
+        var ready = 0
+        /// Of `ready`: made before cards had keywords.
+        var outdated = 0
+        var pending = 0
+        /// Of `pending`: written again, still showing the earlier card.
+        var rewriting = 0
+        var failed = 0
+    }
+
     var folder: KnowledgeFolderInfo?
     var counts: Counts
     var chunks: Int
     /// Cards are made (the family's AI is set up); nil from a server from before them.
     var cards: Bool?
+    /// The cards by status; nil from a server from before *Rewrite Summaries*.
+    var cardCounts: CardCounts?
     /// Page images can be transcribed by the family's AI (set up, the assistant on); nil from a
     /// server from before page scans.
     var scans: Bool?
     /// The family's setting: difficult scans go to the AI by themselves.
     var aiScans: Bool?
+}
+
+/// POST /knowledge/cards: how many cards wait for the worker now, and the counts.
+nonisolated struct KnowledgeCardsRewritten: Codable, OffMainDecodable {
+    var queued: Int
+    var cardCounts: KnowledgeStatusInfo.CardCounts
 }
 
 /// What the indexer reads of GET /knowledge/status: whether page images may go to the family's AI.
@@ -230,6 +249,13 @@ extension FamilyAPI {
         let request = client.request(.put, path("/knowledge/documents/\(documentID)/pages/\(page)/scan"), query: query,
                                      body: jpeg, contentType: "image/jpeg")
         _ = try await client.data(for: request)
+    }
+
+    /// Has the server write the family's cards again (POST /knowledge/cards, 202): those made before
+    /// keywords and the failed ones, or `all`. Each keeps showing until its new one is written.
+    @discardableResult
+    func rewriteKnowledgeCards(all: Bool) async throws -> KnowledgeCardsRewritten {
+        try await send(.post, "/knowledge/cards", body: ["all": all])
     }
 
     /// Turns the family's setting on or off: difficult scans go to the family's AI by themselves.

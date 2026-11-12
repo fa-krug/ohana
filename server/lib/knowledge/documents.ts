@@ -13,7 +13,7 @@
 //   gone (`missingSince` set) and comes back, and is deleted 30 days after it went.
 
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, inArray, isNotNull, lt, ne, or, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, lt, ne, or, sql, type SQL } from "drizzle-orm";
 import type { Db } from "@/lib/db";
 import { kbChunks, kbDocuments, kbPageScans } from "@/lib/db/schema";
 import { HttpError } from "@/lib/api/http";
@@ -515,6 +515,47 @@ export function remakeCard(db: Db, familyId: string, id: string, now: Date): Kno
     { behavior: "immediate" },
   );
   return summaryDto(requireDocument(db, familyId, id), peopleOf(db, familyId));
+}
+
+/** The family's cards: made (`ready`; `outdated` of them made before cards had keywords), waiting
+ *  for the worker (`pending`; `rewriting` of them still showing their earlier card) and failed;
+ *  of ready documents only (the others' cards don't count). */
+export interface CardCounts {
+  ready: number;
+  outdated: number;
+  pending: number;
+  rewriting: number;
+  failed: number;
+}
+
+export function countCards(db: Pick<Db, "select">, familyId: string): CardCounts {
+  const row = db
+    .select({
+      ready: sql<number>`coalesce(sum(${kbDocuments.cardStatus} = 'ready'), 0)`,
+      outdated: sql<number>`coalesce(sum(${kbDocuments.cardStatus} = 'ready' and ${kbDocuments.keywords} is null), 0)`,
+      pending: sql<number>`coalesce(sum(${kbDocuments.cardStatus} = 'pending'), 0)`,
+      rewriting: sql<number>`coalesce(sum(${kbDocuments.cardStatus} = 'pending' and ${kbDocuments.summary} is not null), 0)`,
+      failed: sql<number>`coalesce(sum(${kbDocuments.cardStatus} = 'failed'), 0)`,
+    })
+    .from(kbDocuments)
+    .where(and(eq(kbDocuments.familyId, familyId), eq(kbDocuments.status, "ready")))
+    .get();
+  return row ?? { ready: 0, outdated: 0, pending: 0, rewriting: 0, failed: 0 };
+}
+
+/** Has the worker write the family's cards again (POST /knowledge/cards): those made before cards
+ *  had keywords and the failed ones, or with `all` every one of a ready document. A card keeps
+ *  showing until its new one is written (the worker takes new documents' cards first). The number
+ *  of cards waiting for it. */
+export function rewriteCards(db: Db, familyId: string, { all }: { all: boolean }, now: Date): number {
+  const which = all
+    ? inArray(kbDocuments.cardStatus, ["ready", "failed"])
+    : or(and(eq(kbDocuments.cardStatus, "ready"), isNull(kbDocuments.keywords)), eq(kbDocuments.cardStatus, "failed"));
+  return db
+    .update(kbDocuments)
+    .set({ cardStatus: "pending", cardError: null, cardAttempts: 0, cardRetries: 0, cardRunToken: null, cardRunUntil: null, updatedAt: now })
+    .where(and(eq(kbDocuments.familyId, familyId), eq(kbDocuments.status, "ready"), which))
+    .run().changes;
 }
 
 /** The family's failed cards wait for the worker again (its AI settings changed: maybe fixed). */

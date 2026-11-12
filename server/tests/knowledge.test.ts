@@ -380,7 +380,7 @@ describe("knowledge: status", () => {
   it("is empty without a folder", async () => {
     expect(await call(editorId)("GET", "/knowledge/status")).toEqual({
       status: 200,
-      data: { folder: null, counts: { pending: 0, ready: 0, failed: 0, missing: 0, excluded: 0 }, chunks: 0, cards: false, scans: false, aiScans: false },
+      data: { folder: null, counts: { pending: 0, ready: 0, failed: 0, missing: 0, excluded: 0 }, chunks: 0, cards: false, cardCounts: { ready: 0, outdated: 0, pending: 0, rewriting: 0, failed: 0 }, scans: false, aiScans: false },
     });
   });
 
@@ -444,6 +444,7 @@ describe("knowledge: status", () => {
         counts: { pending: 1, ready: 2, failed: 1, missing: 1, excluded: 1 },
         chunks: 3,
         cards: false,
+        cardCounts: { ready: 0, outdated: 0, pending: 2, rewriting: 0, failed: 0 },
         scans: false,
         aiScans: false,
       },

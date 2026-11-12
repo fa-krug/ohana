@@ -19,7 +19,9 @@
 //
 // Fair between families: at most one card per family at a time, and a free slot goes to the
 // family whose oldest waiting document is the oldest (so one family's thousand documents don't
-// hold up another's few).
+// hold up another's few). New cards come before rewrites (a card waiting while it still shows its
+// earlier summary, POST /knowledge/cards): a family with a new document waiting goes first, and in
+// a family its new documents do.
 
 import { and, asc, eq, inArray, isNull, lte, ne, notInArray, or, sql } from "drizzle-orm";
 import { HttpError, randomToken } from "@/lib/api/http";
@@ -153,6 +155,7 @@ export class KnowledgeCardRunner {
       // The families with a card due and none running, the longest waiting first.
       const busy = [...new Set([...this.running.values()].map((r) => r.familyId))];
       const oldest = sql`min(${kbDocuments.indexedAt})`;
+      const rewrite = sql`(${kbDocuments.summary} is not null)`;
       const families = this.db
         .select({ familyId: kbDocuments.familyId })
         .from(kbDocuments)
@@ -166,7 +169,7 @@ export class KnowledgeCardRunner {
           ),
         )
         .groupBy(kbDocuments.familyId)
-        .orderBy(oldest, kbDocuments.familyId)
+        .orderBy(sql`min${rewrite}`, oldest, kbDocuments.familyId)
         .limit(free)
         .all();
       for (const { familyId } of families) {
@@ -182,7 +185,7 @@ export class KnowledgeCardRunner {
           })
           .from(kbDocuments)
           .where(and(eq(kbDocuments.familyId, familyId), waiting))
-          .orderBy(asc(kbDocuments.indexedAt), asc(kbDocuments.id))
+          .orderBy(rewrite, asc(kbDocuments.indexedAt), asc(kbDocuments.id))
           .limit(1)
           .get();
         if (!doc || this.running.has(doc.id)) continue;

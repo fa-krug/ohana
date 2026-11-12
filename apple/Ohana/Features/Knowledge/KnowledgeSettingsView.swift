@@ -3,9 +3,10 @@ import SwiftUI
 /// Settings → Knowledge: the family's knowledge folder on this device (choose, change, remove;
 /// a marker of another family or a folder other than the family's asks first) and what's in the
 /// index (GET /knowledge/status with the indexer's own state: running, waiting uploads, files this
-/// device can't read), *Read Now*, and the family's setting whether difficult scans go to its AI
-/// (shown where the server can transcribe them, `KnowledgeStatusInfo.readsScans`). Only where `FamilyContext.knowledgeAvailable` (module on, an
-/// editor, not the demo).
+/// device can't read), *Read Now*, the family's setting whether difficult scans go to its AI
+/// (shown where the server can transcribe them, `KnowledgeStatusInfo.readsScans`) and *Rewrite
+/// Summaries* (POST /knowledge/cards: the older and failed cards, or all; where cards are made).
+/// Only where `FamilyContext.knowledgeAvailable` (module on, an editor, not the demo).
 struct KnowledgeSettingsView: View {
     @Environment(FamilyContext.self) private var family
 
@@ -42,6 +43,9 @@ private struct KnowledgeSettingsForm: View {
     /// The setting as just chosen, until the server's status says it.
     @State private var aiScans: Bool?
     @State private var savingAIScans = false
+    /// *Rewrite Summaries* asks with these counts.
+    @State private var rewriteCounts: KnowledgeStatusInfo.CardCounts?
+    @State private var rewritingCards = false
 
     private var running: Bool {
         switch indexer.phase {
@@ -57,6 +61,10 @@ private struct KnowledgeSettingsForm: View {
                 indexSection
                 if let info = status.value, info.folder != nil, info.readsScans {
                     scansSection(info)
+                }
+                if let info = status.value, info.cards == true, let counts = info.cardCounts,
+                   counts.ready + counts.failed + counts.pending > 0 {
+                    summariesSection(counts)
                 }
             }
         }
@@ -91,6 +99,27 @@ private struct KnowledgeSettingsForm: View {
         .confirmationDialog("Stop reading this folder on this device?", isPresented: $removing,
                             titleVisibility: .visible) {
             Button("Remove from This Device", role: .destructive, action: unlink)
+        }
+        .confirmationDialog("Rewrite the summaries?",
+                            isPresented: Binding(get: { rewriteCounts != nil }, set: { if !$0 { rewriteCounts = nil } }),
+                            titleVisibility: .visible, presenting: rewriteCounts) { counts in
+            let older = counts.outdated + counts.failed
+            if older > 0 {
+                Button("Older and Failed Ones (\(older))") { rewriteCards(all: false) }
+            }
+            Button("All (\(counts.ready + counts.failed))") { rewriteCards(all: true) }
+            Button("Cancel", role: .cancel) {}
+        } message: { _ in
+            Text("Each one is a request to the family’s AI provider. The summaries stay until their new ones are written.")
+        }
+        .task(id: (status.value?.cardCounts?.rewriting ?? 0) > 0) {
+            // While summaries are rewritten, their count goes down by itself.
+            guard (status.value?.cardCounts?.rewriting ?? 0) > 0 else { return }
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(15))
+                if Task.isCancelled { return }
+                await loadStatus()
+            }
         }
     }
 
@@ -272,6 +301,39 @@ private struct KnowledgeSettingsForm: View {
                 ErrorBanner.shared.show(error)
             }
             aiScans = nil
+        }
+    }
+
+    // MARK: Summaries
+
+    private func summariesSection(_ counts: KnowledgeStatusInfo.CardCounts) -> some View {
+        Section {
+            if counts.rewriting > 0 {
+                LabeledContent("Being rewritten") { Text(counts.rewriting, format: .number) }
+            }
+            if counts.outdated > 0 {
+                LabeledContent("Without keywords") { Text(counts.outdated, format: .number) }
+            }
+            Button("Rewrite Summaries…", systemImage: "sparkles") { rewriteCounts = counts }
+                .disabled(rewritingCards || counts.ready + counts.failed == 0)
+        } header: {
+            Text("Summaries")
+        } footer: {
+            Text("Older summaries have no keywords, so the search finds their documents less well.")
+        }
+    }
+
+    private func rewriteCards(all: Bool) {
+        rewritingCards = true
+        Task {
+            defer { rewritingCards = false }
+            do {
+                try await family.api.rewriteKnowledgeCards(all: all)
+                family.didChange(.knowledge)
+                await loadStatus()
+            } catch {
+                ErrorBanner.shared.show(error)
+            }
         }
     }
 

@@ -86,10 +86,12 @@ private struct KnowledgeList: View {
         }
     }
 
-    /// Something shown waits for the server's worker (its text, or its card where cards are made).
+    /// Something shown waits for the server's worker (its text, or its first card where cards are
+    /// made; one written again keeps showing its earlier card, so it's no reason to poll).
     private var waiting: Bool {
         documents.contains {
-            $0.status == .pending || ($0.status == .ready && $0.cardStatus == .pending && status?.makesCards == true)
+            $0.status == .pending
+                || ($0.status == .ready && $0.cardStatus == .pending && $0.summary == nil && status?.makesCards == true)
         }
     }
 

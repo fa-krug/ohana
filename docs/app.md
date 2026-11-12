@@ -214,6 +214,11 @@ page of the fact you tapped, with its passage marked. A device without the folde
 it. *Read Again* reads the file on this device once more, *Read Again with the Assistant* also has
 the family's AI read every page (pages it wrote out are marked), *Leave Out* keeps it out of the
 knowledge base (*Show Left Out* lists those), and on the Mac *Show in Finder* finds the file.
+Each summary also comes with keywords (what the document is and other words for it) that the
+search uses, so a timetable is found as "Stundenplan" or "Schulschluss" even when its text is only
+the table. *Rewrite Summaries* in Settings → Knowledge has the assistant write again the summaries
+from before keywords existed and the failed ones, or all of them: one request to your AI provider
+each, and every summary stays until its new one is written.
 
 The assistant answers from the knowledge base too, and names its sources: a small number after a
 statement, and a list of the documents below the answer. Tap one to read the passage, open the
