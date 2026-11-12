@@ -430,6 +430,8 @@ describe("cards: the worker", () => {
     expect((await edit("POST", "/knowledge/cards", { all: "yes" })).status).toBe(400);
     expect((await knowledgeApi(t.viewer.id)("POST", "/knowledge/cards", {})).status).toBe(404);
 
+    // Indexed a second after the others: by age alone it would come last.
+    now = new Date(NOW.getTime() + 1000);
     const fresh = await upload("fresh.pdf", ["Ein neues Dokument"]);
     await index();
     const res = await edit("POST", "/knowledge/cards", {});
@@ -438,7 +440,8 @@ describe("cards: the worker", () => {
     expect(doc(failed)).toMatchObject({ cardStatus: "pending", cardError: null, cardRetries: 0 });
     expect(doc(kept)).toMatchObject({ cardStatus: "ready", summary: "Mit Stichwörtern." });
 
-    // The new document's card first, then the one without any, then the rewrite.
+    // The cards without a summary first, oldest first (the failed one, then the new document),
+    // then the rewrite, though it is older than the new document.
     const order: string[] = [];
     const fetch = (async (input: string | URL | Request, init?: RequestInit) => {
       const name = /^Name: (.*)$/m.exec(JSON.parse(String(init?.body)).messages?.[1]?.content ?? "")?.[1];
@@ -446,7 +449,7 @@ describe("cards: the worker", () => {
       return fakeFetch(input, init);
     }) as typeof globalThis.fetch;
     await cards(cardRunner({ ...t.env, modelNet: { ...t.env.modelNet, fetch } }));
-    expect(order).toEqual(["fresh.pdf", "failed.pdf", "old.pdf"]);
+    expect(order).toEqual(["failed.pdf", "fresh.pdf", "old.pdf"]);
     expect(doc(fresh).cardStatus).toBe("ready");
     expect(doc(old)).toMatchObject({ cardStatus: "ready", summary: "A document named old.pdf.", keywords: "[]" });
     expect(await counts()).toEqual({ ready: 4, outdated: 0, pending: 0, rewriting: 0, failed: 0 });
