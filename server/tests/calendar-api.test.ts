@@ -243,6 +243,7 @@ describe("calendar API", () => {
       position: 3,
       away: false,
       appleSync: true,
+      coverOnly: false,
     });
     const nobody = await s.call("POST", `/families/${f.id}/types?year=2026`, { name: "School trip", memberId: null });
     expect(nobody.data).toMatchObject({ memberId: null, color: "#8e8e93" });
@@ -292,6 +293,38 @@ describe("calendar API", () => {
     expect(copied.data.map((t: any) => [t.id, t.appleSync])).toEqual([
       ["sick", false], ["holiday", true], ["vacation", true], ["private", false],
     ]);
+  });
+
+  it("shows a cover-only type only on the days it covers", async () => {
+    const s = setup();
+    const f = newFamily(s);
+    const on = await s.call("PATCH", `/families/${f.id}/types/vacation?year=2026`, { coverOnly: true });
+    expect(on.data.coverOnly).toBe(true);
+    expect((await s.call("PATCH", `/families/${f.id}/types/vacation?year=2026`, { coverOnly: "yes" })).status).toBe(400);
+    const created = await s.call("POST", `/families/${f.id}/types?year=2026`, { name: "Grandma", role: "covers", coverOnly: true });
+    expect(created.data).toMatchObject({ role: "covers", coverOnly: true });
+    expect((await s.call("POST", `/families/${f.id}/types?year=2026`, { name: "Kita closed", role: "needs_cover" })).data.coverOnly).toBe(false);
+    // Copies and the export file keep it.
+    const copied = await s.call("POST", `/families/${f.id}/types/copy`, { from: 2026, to: 2027 });
+    expect(copied.data.filter((t: any) => t.coverOnly).map((t: any) => t.id)).toEqual(["vacation", "grandma"]);
+    const file = (await s.call("GET", `/families/${f.id}/export`)).data;
+    expect(file.types.find((t: any) => t.year === 2026 && t.id === "grandma").coverOnly).toBe(true);
+    const target = newFamily(s);
+    await s.call("POST", `/families/${target.id}/import`, file);
+    const imported = (await s.call("GET", `/families/${target.id}/types?year=2026`)).data;
+    expect(imported.find((t: any) => t.id === "grandma").coverOnly).toBe(true);
+
+    // The API keeps every day; the overview's upcoming runs only the days it covers.
+    await s.call("POST", `/families/${f.id}/entries`, {
+      ops: [
+        { type: "grandma", from: "2026-03-02", to: "2026-03-06" },
+        { type: "kita-closed", dates: ["2026-03-04", "2026-03-05"] },
+      ],
+    });
+    expect((await s.call("GET", `/families/${f.id}/entries?year=2026`)).data["2026-03-02"]).toEqual(["grandma"]);
+    const summary = await calendarSummary(s.db, f.id, "2026-03-01");
+    expect(summary.nextGap).toBeNull();
+    expect(summary.upcoming.filter((u) => u.name === "Grandma").map((u) => [u.from, u.to])).toEqual([["2026-03-04", "2026-03-05"]]);
   });
 
   it("gives entry types an icon: their own or their role's", async () => {

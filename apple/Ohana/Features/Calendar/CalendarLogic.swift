@@ -111,6 +111,14 @@ nonisolated enum CalendarMath {
         return needs
     }
 
+    /// A "cover only" type's entry (`showsOnlyCovering`) on a day without a "needs cover" entry
+    /// (`ids`: all of the day's types): stored and counted, listed in the day's details, but not
+    /// drawn in its cell (`CalendarStore.cellTypes`) nor sent to Apple Calendar. The server's
+    /// `hiddenEntry` (server/lib/calendar/gaps.ts, the overview's upcoming runs) is the same rule.
+    static func isHidden(_ type: CalendarEntryType, on ids: [String], roles: [String: CalendarRole]) -> Bool {
+        type.showsOnlyCovering && !ids.contains { roles[$0] == .needsCover }
+    }
+
     static func gapDays(_ entries: CalendarEntries, types: [CalendarEntryType], year: Int? = nil) -> [Day] {
         let roles = roles(types)
         return entries

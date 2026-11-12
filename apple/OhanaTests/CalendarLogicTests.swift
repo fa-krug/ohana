@@ -67,6 +67,19 @@ struct CalendarMathTests {
         #expect(CalendarMath.gapDays(entries, types: types, year: 2026) == [d("2026-01-05"), d("2026-01-06")])
     }
 
+    @Test func hidesACoverOnlyTypeWhereItCoversNothing() {
+        let roles = CalendarMath.roles(types)
+        let grandma = CalendarEntryType(id: "grandma", year: 2026, name: "Grandma", color: "#00f", role: .covers, coverOnly: true)
+        #expect(grandma.showsOnlyCovering)
+        #expect(CalendarMath.isHidden(grandma, on: ["grandma"], roles: roles))
+        #expect(CalendarMath.isHidden(grandma, on: ["grandma", "holiday"], roles: roles))
+        #expect(!CalendarMath.isHidden(grandma, on: ["grandma", "kita"], roles: roles))
+        // Only a "covers" type, and only with the flag on.
+        let other = CalendarEntryType(id: "x", year: 2026, name: "X", color: "#00f", role: .none, coverOnly: true)
+        #expect(!other.showsOnlyCovering && !CalendarMath.isHidden(other, on: ["x"], roles: roles))
+        #expect(!CalendarMath.isHidden(types[1], on: ["vacation"], roles: roles))
+    }
+
     @Test func togglesATypeOnTheSelection() {
         let entries: CalendarEntries = [d("2026-01-05"): ["vacation"], d("2026-01-06"): []]
         let days = [d("2026-01-05"), d("2026-01-06")]

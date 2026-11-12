@@ -267,7 +267,7 @@ describe("the assistant's manage_entry_types", () => {
     const changed = await run(s, { action: "update", type: "kita", member: null });
     expect(changed.result).toMatchObject({ memberId: null, member: null, color: NEUTRAL_COLOR });
     expect(changed.change!.undo).toEqual([
-      { method: "PATCH", path: "/types/kita?year=2026", body: { name: "Kita", memberId: s.editor.id, colorKey: null, role: "none", icon: null, appleSync: true } },
+      { method: "PATCH", path: "/types/kita?year=2026", body: { name: "Kita", memberId: s.editor.id, colorKey: null, role: "none", icon: null, appleSync: true, coverOnly: false } },
     ]);
     const teal = await run(s, { action: "update", type: "kita", color: "teal" });
     expect(teal.result).toMatchObject({ colorKey: "teal", color: memberColorHex("teal") });
@@ -280,7 +280,7 @@ describe("the assistant's manage_entry_types", () => {
     await expect(run(s, { action: "add", name: "Y", icon: "✈️" })).rejects.toThrow(/SF Symbol/);
     const reset = await run(s, { action: "update", type: "trip", icon: null, role: "covers" });
     expect(reset.result).toMatchObject({ icon: "checkmark.shield" });
-    expect(reset.change!.undo[0].body).toEqual({ name: "Trip", memberId: s.editor.id, colorKey: null, role: "none", icon: "airplane", appleSync: true });
+    expect(reset.change!.undo[0].body).toEqual({ name: "Trip", memberId: s.editor.id, colorKey: null, role: "none", icon: "airplane", appleSync: true, coverOnly: false });
   });
 
   it("keeps a type out of Apple Calendar and reorders the year's types", async () => {
@@ -290,6 +290,12 @@ describe("the assistant's manage_entry_types", () => {
     const on = await run(s, { action: "update", type: "private", appleSync: true });
     expect(on.result).toMatchObject({ appleSync: true });
     expect(on.change!.undo[0].body).toMatchObject({ appleSync: false });
+
+    const grandma = await run(s, { action: "add", name: "Grandma", role: "covers", coverOnly: true });
+    expect(grandma.result).toMatchObject({ role: "covers", coverOnly: true });
+    const shown = await run(s, { action: "update", type: "grandma", coverOnly: false });
+    expect(shown.result).toMatchObject({ coverOnly: false });
+    expect(shown.change!.undo[0].body).toMatchObject({ coverOnly: true });
 
     const before = (await new DrizzleCalendarStore(s.db).listTypes(s.family.id)).filter((t) => t.year === 2026).map((t) => t.id);
     const reversed = [...before].reverse();
