@@ -530,6 +530,8 @@
   "Copy from…": "Übernehmen aus …",
   "These types belong to %@ – every year has its own. The switch decides whether a type’s days go to Apple Calendar.": "Diese Arten gehören zu %@ – jedes Jahr hat eigene. Der Schalter legt fest, ob die Tage einer Art in Apple Kalender übertragen werden.",
   "Sync with Apple Calendar": "Mit Apple Kalender synchronisieren",
+  "Only when covering": "Nur bei Betreuungsbedarf",
+  "Only when covering: the calendar, the overview and Apple Calendar show its days only where they cover a day that needs cover. A selected day still lists it.": "Nur bei Betreuungsbedarf: Kalender, Übersicht und Apple Kalender zeigen die Tage nur, wo sie einen Tag abdecken, der Betreuung braucht. Ein ausgewählter Tag führt die Art weiterhin auf.",
   "Weekdays": "Wochentage",
   "Automatic": "Automatisch",
   "Always": "Immer",

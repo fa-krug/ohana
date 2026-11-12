@@ -1741,6 +1741,7 @@ paths:
                   description: "The type's own icon; `null` or left out: its role's (`EntryType.icon`)."
                 away: {type: boolean, default: false}
                 appleSync: {type: boolean, default: true}
+                coverOnly: {type: boolean, default: false}
       responses:
         "201":
           description: The type.
@@ -1851,6 +1852,7 @@ paths:
                   description: "The type's own icon; `null`: back to its role's; left out: kept."
                 away: {type: boolean}
                 appleSync: {type: boolean}
+                coverOnly: {type: boolean}
                 position: {type: integer}
       responses:
         "200":
@@ -6763,7 +6765,7 @@ components:
         `covers` (covers a day), `day_off` (no cover needed, e.g. a holiday), `none`.
     EntryType:
       type: object
-      required: [id, year, name, memberId, color, colorKey, role, icon, position, away, appleSync]
+      required: [id, year, name, memberId, color, colorKey, role, icon, position, away, appleSync, coverOnly]
       properties:
         id: {type: string, pattern: "^[a-z0-9][a-z0-9-]{0,47}$", description: "Unique within the year (made from the name)."}
         year: {type: integer}
@@ -6789,6 +6791,13 @@ components:
         position: {type: integer}
         away: {type: boolean, description: "The whole family is away on its days (the meal plan skips them)."}
         appleSync: {type: boolean, description: "Its days go to Apple Calendar on devices that sync the family's calendar there."}
+        coverOnly:
+          type: boolean
+          description: >-
+            Meant for `covers` types: its days show only where the day also has a `needs_cover`
+            entry (the app's calendar cells and Apple Calendar sync, the overview's upcoming
+            runs). The others stay stored, are listed by the entries routes and in the app's
+            details of a selected day, and still count.
     EntriesByDay:
       type: object
       description: Day (YYYY-MM-DD) → ids of the entry types on that day.

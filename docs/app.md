@@ -41,6 +41,16 @@ server refuses one (say, a type was deleted meanwhile), the server wins: the cha
 a message says so, and the screen shows the server's state. Other changes need the server. Signing out removes the copy and the
 changes not sent yet.
 
+## Covering days
+
+A type with the role *Needs cover* (e.g. "Day care closed") marks weekdays someone has to look
+after the children; a *Covers* type (e.g. "Vacation Dad", "Grandma") covers them. A covering type
+can be set to *Only when covering* (Settings → Calendar → the type): its days then show only where
+they cover a day that needs cover. You can enter a whole stretch when someone is available, and the
+calendar's days show them only where they're needed. The other days stay saved and counted, they
+just aren't shown in the calendar, the overview or Apple Calendar; select such a day and the type
+is listed there as usual.
+
 ## Apple Calendar
 
 Settings → Calendar → *Sync with Apple Calendar* links the family's calendar with a calendar of

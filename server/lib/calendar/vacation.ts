@@ -133,6 +133,7 @@ export function publicType(t: TypeRow) {
     position: t.position,
     away: t.away ?? false,
     appleSync: t.apple_sync ?? true,
+    coverOnly: t.cover_only ?? false,
   };
 }
 
@@ -150,6 +151,7 @@ export function exportType(t: TypeRow, names: Map<string, string>) {
     position: t.position,
     away: t.away ?? false,
     appleSync: t.apple_sync ?? true,
+    coverOnly: t.cover_only ?? false,
   };
 }
 
@@ -157,6 +159,13 @@ export function exportType(t: TypeRow, names: Map<string, string>) {
 export function cleanAppleSync(v: unknown): boolean {
   if (v === undefined || v === null) return true;
   if (typeof v !== "boolean") throw new HttpError(400, "appleSync must be true or false");
+  return v;
+}
+
+/** Whether a type's days show only where they cover a "needs cover" day (optional: false). */
+export function cleanCoverOnly(v: unknown): boolean {
+  if (v === undefined || v === null) return false;
+  if (typeof v !== "boolean") throw new HttpError(400, "coverOnly must be true or false");
   return v;
 }
 
@@ -246,6 +255,7 @@ export function parseVacationImport(body: Record<string, unknown>) {
       position: Number.isInteger(t.position) ? (t.position as number) : i,
       away: cleanAway(t.away),
       apple_sync: cleanAppleSync(t.appleSync),
+      cover_only: cleanCoverOnly(t.coverOnly),
     });
   }
   if (perYear.size > MAX_IMPORT_YEARS) throw new HttpError(400, "Too many years");
@@ -469,6 +479,7 @@ async function types({ db, store, req, url, method, rest, loadWith, now, require
       position: types.reduce((m, t) => Math.max(m, t.position + 1), 0),
       away: cleanAway(body.away),
       apple_sync: cleanAppleSync(body.appleSync),
+      cover_only: cleanCoverOnly(body.coverOnly),
     };
     await store.upsertTypes([type]);
     return json(publicType(await typeIn(year, type.id)), 201);
@@ -485,6 +496,7 @@ async function types({ db, store, req, url, method, rest, loadWith, now, require
       if (body.icon !== undefined) next.icon = cleanTypeIcon(body.icon);
       if (body.away !== undefined) next.away = cleanAway(body.away);
       if (body.appleSync !== undefined) next.apple_sync = cleanAppleSync(body.appleSync);
+      if (body.coverOnly !== undefined) next.cover_only = cleanCoverOnly(body.coverOnly);
       if (body.position !== undefined) {
         if (!Number.isInteger(body.position)) {
           throw new HttpError(400, "position must be an integer");

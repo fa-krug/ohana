@@ -45,6 +45,10 @@ export interface TypeRow {
   away?: boolean;
   /** Its days go to Apple Calendar (the app's sync). Optional: true when left out. */
   apple_sync?: boolean;
+  /** A "covers" type whose days the app's calendar cells, its Apple Calendar sync and the
+   *  overview's upcoming runs show only where the day also has a "needs cover" entry (`gaps.ts`
+   *  `hiddenEntry`, the app's `CalendarMath.isHidden`). Optional: false when left out. */
+  cover_only?: boolean;
 }
 
 /** A type to write: its color comes from the member (or `color_key`), so a given one is ignored. */
@@ -140,6 +144,7 @@ function withColors(
       position: t.position,
       away: t.away,
       apple_sync: t.appleSync,
+      cover_only: t.coverOnly,
     };
   });
 }
@@ -224,6 +229,7 @@ export class DrizzleCalendarStore implements CalendarStore {
           position: t.position,
           away: t.away ?? false,
           appleSync: t.apple_sync ?? true,
+          coverOnly: t.cover_only ?? false,
         };
         tx.insert(calEntryTypes)
           .values({ familyId: t.family_id, year: t.year, id: t.id, ...set })
@@ -350,6 +356,7 @@ export class DrizzleCalendarStore implements CalendarStore {
               position: t.position,
               away: t.away ?? false,
               appleSync: t.apple_sync ?? true,
+              coverOnly: t.cover_only ?? false,
             })),
           )
           .run();

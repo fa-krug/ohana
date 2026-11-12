@@ -157,6 +157,22 @@ struct AppleSyncMappingTests {
         #expect(spans.map(\.typeID) == ["sick", "vac"])
     }
 
+    @Test func leavesOutTheDaysACoverOnlyTypeDoesntCover() {
+        let types: [Int: [CalendarEntryType]] = [2026: [
+            CalendarEntryType(id: "grandma", year: 2026, name: "Grandma", color: "#0f0", role: .covers, coverOnly: true),
+            CalendarEntryType(id: "kita", year: 2026, name: "Kita closed", color: "#8b8d98", role: .needsCover),
+        ]]
+        let entries: [Day: [String]] = [
+            d("2026-11-02"): ["grandma"], d("2026-11-03"): ["grandma", "kita"], d("2026-11-04"): ["grandma", "kita"],
+            d("2026-11-05"): ["grandma"],
+        ]
+        let spans = AppleSyncMapping.spans(entries: entries, types: types, window: window)
+        #expect(spans == [
+            AppleSyncSpan(typeID: "grandma", title: "Grandma", first: d("2026-11-03"), last: d("2026-11-04")),
+            AppleSyncSpan(typeID: "kita", title: "Kita closed", first: d("2026-11-03"), last: d("2026-11-04")),
+        ])
+    }
+
     @Test func namesTheMemberOfARunsType() {
         let types: [Int: [CalendarEntryType]] = [2026: [
             CalendarEntryType(id: "vac", year: 2026, name: "Vacation", memberId: "p1", color: "#30a46c", role: .covers),
