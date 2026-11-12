@@ -1000,12 +1000,12 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   text (see Scanning). Settings → Knowledge (`Features/Knowledge/KnowledgeSettingsView.swift`, `.settings(.knowledge)`):
   the folder (`.fileImporter`, the conflict as an alert offering to use it anyway), the index
   (`GET /knowledge/status` through `api.cached`, with the indexer's progress, waiting and unreadable
-  files, the last manifest's time and device), *Read Now*, with status `scans` the toggle *Read
-  difficult scans with the assistant* (`PATCH /knowledge/folder {aiScans}`, a footer naming the AI
-  provider), and with status `cards` a Summaries section (being rewritten, without keywords,
-  *Rewrite Summaries…*: older and failed ones or all, `POST /knowledge/cards`; the status reloads
-  every 15 s while some are rewritten; the documents list doesn't poll for a card rewritten while
-  its earlier summary shows).
+  files, the last manifest's time and device; with status `cards` the summaries still to write,
+  reloaded every 15 s while there are some), *Read Now*, *Read All…* (confirmed: `KnowledgeIndexer.readAll`,
+  a run that queues every hashed file with `reread`, failed reads included, then with status `cards`
+  `POST /knowledge/cards {all: true}`; the documents list doesn't poll for a card rewritten while its
+  earlier summary shows), with status `scans` the toggle *Read difficult scans with the assistant*
+  (`PATCH /knowledge/folder {aiScans}`, a footer naming the AI provider).
   The knowledge base page (`Module.knowledge`, ⌘9; shown where `FamilyContext.isEnabled(.knowledge)` /
   `AppModel.isEnabled` say `knowledgeAvailable`, `ServerInfo.isEnabled` only says the server has it;
   the demo hides it for now): `Features/Knowledge/KnowledgeView.swift`, `GET /knowledge/documents`

@@ -983,6 +983,30 @@ struct KnowledgeIndexerTests {
         }
     }
 
+    @Test func readAllSendsEveryFileAgain() async throws {
+        let s = try setup()
+        defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
+        _ = try write("Kündigung zum 31. März", "Verträge/Ku\u{0308}ndigung.txt", in: s.root)
+        _ = try write("Rechnung", "rechnung.txt", in: s.root)
+        _ = try write("x", "Brief.pages", in: s.root)
+        await s.indexer.run()
+        #expect(KnowledgeStubProtocol.requests == [Self.manifestPath])
+
+        // The server asks for nothing, yet every file is read and sent again, with `reread`.
+        KnowledgeStubProtocol.reset()
+        await s.indexer.readAll()
+        let puts = KnowledgeStubProtocol.bodies("PUT")
+        #expect(Set(puts.compactMap { $0["path"] as? String }) == ["Verträge/Kündigung.txt", "rechnung.txt"])
+        #expect(puts.allSatisfy { $0["reread"] as? Bool == true })
+        #expect(s.indexer.unreadable == ["Brief.pages": .format])
+        #expect(s.indexer.lastRun?.uploaded == 2 && s.indexer.phase == .idle)
+
+        // Once: the next run is an ordinary one again.
+        KnowledgeStubProtocol.reset()
+        await s.indexer.run()
+        #expect(KnowledgeStubProtocol.requests == [Self.manifestPath])
+    }
+
     @Test func readAgainTriesAFileThatFailedAndSaysWhy() async throws {
         let s = try setup()
         defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }

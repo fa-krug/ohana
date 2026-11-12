@@ -82,6 +82,8 @@ final class KnowledgeIndexer {
     @ObservationIgnored private var runTask: Task<Void, Never>?
     @ObservationIgnored private var runID: UUID?
     @ObservationIgnored private var runAgain = false
+    /// *Read All*: the next run whose manifest goes through reads and sends every file again.
+    @ObservationIgnored private var readAllRequested = false
     /// The scans queued (`enqueue`) since the running run started its walk, by path: listed in its
     /// manifest even when the walk missed them. nil while no run walks.
     @ObservationIgnored private var scansDuringRun: [String: Hashed]?
@@ -178,6 +180,14 @@ final class KnowledgeIndexer {
         await task.value
     }
 
+    /// *Read All*: a run that reads every file of the folder again on this device and sends it with
+    /// `reread` (the server takes its text anew where it changed), not only those the server asks
+    /// for; a file's failed reads count no more. Queued after a run under way, like `run()`.
+    func readAll() async {
+        readAllRequested = true
+        await run()
+    }
+
     private func runOnce() async {
         let generation = gate.current
         guard isCurrent(generation) else { return }
@@ -256,12 +266,16 @@ final class KnowledgeIndexer {
             await KnowledgeICloud.evict(loaded)
             return
         }
-        let asked = Set(wanted.map(\.precomposedStringWithCanonicalMapping))
+        // *Read All*: every file with a hash, read again; else what the server asks for.
+        let everything = readAllRequested
+        readAllRequested = false
+        let paths = everything ? files.compactMap { $0.hash == nil ? nil : $0.local.path } : wanted
+        let asked = Set(paths.map(\.precomposedStringWithCanonicalMapping))
         if !unreadable.isEmpty { unreadable = unreadable.filter { asked.contains($0.key) } }
         // Most runs are asked for nothing: then no look-ups over every file (on the main actor).
-        let byPath = wanted.isEmpty ? [:] : Dictionary(files.map { ($0.local.path, $0) }, uniquingKeysWith: { first, _ in first })
+        let byPath = paths.isEmpty ? [:] : Dictionary(files.map { ($0.local.path, $0) }, uniquingKeysWith: { first, _ in first })
         var queued = Set<String>()
-        for match in wanted.isEmpty ? [] : Self.match(wanted, in: files.filter { $0.hash != nil }.map(\.local)) {
+        for match in paths.isEmpty ? [] : Self.match(paths, in: files.filter { $0.hash != nil }.map(\.local)) {
             guard let file = byPath[match.path], let info = file.info else { continue }
             // A scan waiting with the text read already, or one the user asked to read again: kept.
             if let waiting = queue.upload(for: info.path), waiting.textFile != nil || waiting.reread == true,
@@ -269,7 +283,7 @@ final class KnowledgeIndexer {
                 continue
             }
             let upload = KnowledgeUpload(folderId: folderID, file: info, diskPath: match.diskPath,
-                                         evict: file.evict ? true : nil)
+                                         evict: file.evict ? true : nil, reread: everything ? true : nil)
             if let old = queue.add(upload) { removeText(old) }
             queued.insert(match.path)
         }

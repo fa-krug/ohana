@@ -3,9 +3,10 @@ import SwiftUI
 /// Settings → Knowledge: the family's knowledge folder on this device (choose, change, remove;
 /// a marker of another family or a folder other than the family's asks first) and what's in the
 /// index (GET /knowledge/status with the indexer's own state: running, waiting uploads, files this
-/// device can't read), *Read Now*, the family's setting whether difficult scans go to its AI
-/// (shown where the server can transcribe them, `KnowledgeStatusInfo.readsScans`) and *Rewrite
-/// Summaries* (POST /knowledge/cards: the older and failed cards, or all; where cards are made).
+/// device can't read, summaries still to be written), *Read Now*, *Read All* (every file read
+/// again on this device, then every summary written anew: POST /knowledge/cards {all}) and the
+/// family's setting whether difficult scans go to its AI (shown where the server can transcribe
+/// them, `KnowledgeStatusInfo.readsScans`).
 /// Only where `FamilyContext.knowledgeAvailable` (module on, an editor, not the demo).
 struct KnowledgeSettingsView: View {
     @Environment(FamilyContext.self) private var family
@@ -43,9 +44,8 @@ private struct KnowledgeSettingsForm: View {
     /// The setting as just chosen, until the server's status says it.
     @State private var aiScans: Bool?
     @State private var savingAIScans = false
-    /// *Rewrite Summaries* asks with these counts.
-    @State private var rewriteCounts: KnowledgeStatusInfo.CardCounts?
-    @State private var rewritingCards = false
+    @State private var askingReadAll = false
+    @State private var readingAll = false
 
     private var running: Bool {
         switch indexer.phase {
@@ -61,10 +61,6 @@ private struct KnowledgeSettingsForm: View {
                 indexSection
                 if let info = status.value, info.folder != nil, info.readsScans {
                     scansSection(info)
-                }
-                if let info = status.value, info.cards == true, let counts = info.cardCounts,
-                   counts.ready + counts.failed + counts.pending > 0 {
-                    summariesSection(counts)
                 }
             }
         }
@@ -100,21 +96,19 @@ private struct KnowledgeSettingsForm: View {
                             titleVisibility: .visible) {
             Button("Remove from This Device", role: .destructive, action: unlink)
         }
-        .confirmationDialog("Rewrite the summaries?",
-                            isPresented: Binding(get: { rewriteCounts != nil }, set: { if !$0 { rewriteCounts = nil } }),
-                            titleVisibility: .visible, presenting: rewriteCounts) { counts in
-            let older = counts.outdated + counts.failed
-            if older > 0 {
-                Button("Older and Failed Ones (\(older))") { rewriteCards(all: false) }
-            }
-            Button("All (\(counts.ready + counts.failed))") { rewriteCards(all: true) }
+        .confirmationDialog("Read every file again?", isPresented: $askingReadAll, titleVisibility: .visible) {
+            Button("Read All", action: readAll)
             Button("Cancel", role: .cancel) {}
-        } message: { _ in
-            Text("Each one is a request to the family’s AI provider. The summaries stay until their new ones are written.")
+        } message: {
+            if writesCards {
+                Text("Every file is read again from scratch and every summary written anew: one request to the family’s AI provider each. The summaries stay until their new ones are written.")
+            } else {
+                Text("Every file is read again from scratch.")
+            }
         }
-        .task(id: (status.value?.cardCounts?.rewriting ?? 0) > 0) {
-            // While summaries are rewritten, their count goes down by itself.
-            guard (status.value?.cardCounts?.rewriting ?? 0) > 0 else { return }
+        .task(id: summariesWaiting > 0) {
+            // While summaries are written, their count goes down by itself.
+            guard summariesWaiting > 0 else { return }
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(15))
                 if Task.isCancelled { return }
@@ -266,7 +260,9 @@ private struct KnowledgeSettingsForm: View {
             }
             if folder.url != nil {
                 Button("Read Now", systemImage: "arrow.clockwise") { family.indexKnowledge(force: true) }
-                    .disabled(running)
+                    .disabled(running || readingAll)
+                Button("Read All…", systemImage: "arrow.triangle.2.circlepath") { askingReadAll = true }
+                    .disabled(running || readingAll)
             }
         }
     }
@@ -304,36 +300,31 @@ private struct KnowledgeSettingsForm: View {
         }
     }
 
-    // MARK: Summaries
+    // MARK: Reading everything
 
-    private func summariesSection(_ counts: KnowledgeStatusInfo.CardCounts) -> some View {
-        Section {
-            if counts.rewriting > 0 {
-                LabeledContent("Being rewritten") { Text(counts.rewriting, format: .number) }
-            }
-            if counts.outdated > 0 {
-                LabeledContent("Without keywords") { Text(counts.outdated, format: .number) }
-            }
-            Button("Rewrite Summaries…", systemImage: "sparkles") { rewriteCounts = counts }
-                .disabled(rewritingCards || counts.ready + counts.failed == 0)
-        } header: {
-            Text("Summaries")
-        } footer: {
-            Text("Older summaries have no keywords, so the search finds their documents less well.")
-        }
+    /// The server writes summaries (the family's AI set up, the assistant on).
+    private var writesCards: Bool { status.value?.cards == true }
+
+    /// Summaries the worker has yet to write (new or rewritten), where it writes them.
+    private var summariesWaiting: Int {
+        writesCards ? status.value?.cardCounts?.pending ?? 0 : 0
     }
 
-    private func rewriteCards(all: Bool) {
-        rewritingCards = true
+    /// *Read All*: every file read again on this device, then every summary written anew.
+    private func readAll() {
+        readingAll = true
         Task {
-            defer { rewritingCards = false }
-            do {
-                try await family.api.rewriteKnowledgeCards(all: all)
-                family.didChange(.knowledge)
-                await loadStatus()
-            } catch {
-                ErrorBanner.shared.show(error)
+            defer { readingAll = false }
+            await indexer.readAll()
+            if writesCards {
+                do {
+                    _ = try await family.api.rewriteKnowledgeCards(all: true)
+                    family.didChange(.knowledge)
+                } catch {
+                    ErrorBanner.shared.show(error)
+                }
             }
+            await loadStatus()
         }
     }
 
@@ -372,6 +363,9 @@ private struct KnowledgeSettingsForm: View {
         }
         if info.counts.failed > 0 {
             LabeledContent("Failed") { Text(info.counts.failed, format: .number) }
+        }
+        if summariesWaiting > 0 {
+            LabeledContent("Summaries to write") { Text(summariesWaiting, format: .number) }
         }
         if info.counts.missing > 0 {
             LabeledContent("Missing") { Text(info.counts.missing, format: .number) }

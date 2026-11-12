@@ -62,7 +62,7 @@ nonisolated struct KnowledgeStatusInfo: Codable, Equatable, OffMainDecodable {
     var chunks: Int
     /// Cards are made (the family's AI is set up); nil from a server from before them.
     var cards: Bool?
-    /// The cards by status; nil from a server from before *Rewrite Summaries*.
+    /// The cards by status; nil from a server from before card counts.
     var cardCounts: CardCounts?
     /// Page images can be transcribed by the family's AI (set up, the assistant on); nil from a
     /// server from before page scans.

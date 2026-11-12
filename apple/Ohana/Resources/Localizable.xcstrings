@@ -2273,16 +2273,6 @@
         }
       }
     },
-    "All (%lld)": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alle (%lld)"
-          }
-        }
-      }
-    },
     "All Chores": {
       "localizations": {
         "de": {
@@ -3211,16 +3201,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Als Administrator siehst du keine Familie von selbst: Füge dich dafür als Mitglied hinzu."
-          }
-        }
-      }
-    },
-    "Being rewritten": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Werden neu geschrieben"
           }
         }
       }
@@ -6385,16 +6365,6 @@
         }
       }
     },
-    "Each one is a request to the family’s AI provider. The summaries stay until their new ones are written.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jede ist eine Anfrage an den KI-Anbieter der Familie. Die Zusammenfassungen bleiben, bis die neuen geschrieben sind."
-          }
-        }
-      }
-    },
     "Earlier messages condensed for the model": {
       "localizations": {
         "de": {
@@ -7071,6 +7041,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Jeder Browser, der bei deinem Konto angemeldet ist, wird abgemeldet. Die oben aufgeführten Apps bleiben angemeldet."
+          }
+        }
+      }
+    },
+    "Every file is read again from scratch and every summary written anew: one request to the family’s AI provider each. The summaries stay until their new ones are written.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jede Datei wird von Grund auf neu gelesen und jede Zusammenfassung neu geschrieben: je eine Anfrage an den KI-Anbieter der Familie. Die Zusammenfassungen bleiben, bis die neuen geschrieben sind."
+          }
+        }
+      }
+    },
+    "Every file is read again from scratch.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jede Datei wird von Grund auf neu gelesen."
           }
         }
       }
@@ -12101,26 +12091,6 @@
         }
       }
     },
-    "Older and Failed Ones (%lld)": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ältere und fehlgeschlagene (%lld)"
-          }
-        }
-      }
-    },
-    "Older summaries have no keywords, so the search finds their documents less well.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ältere Zusammenfassungen haben keine Stichwörter, die Suche findet ihre Dokumente deshalb schlechter."
-          }
-        }
-      }
-    },
     "On": {
       "localizations": {
         "de": {
@@ -13767,6 +13737,26 @@
         }
       }
     },
+    "Read All": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alles lesen"
+          }
+        }
+      }
+    },
+    "Read All…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alles lesen …"
+          }
+        }
+      }
+    },
     "Read Now": {
       "localizations": {
         "de": {
@@ -13823,6 +13813,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Schwierige Scans mit dem Assistenten lesen"
+          }
+        }
+      }
+    },
+    "Read every file again?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Dateien neu lesen?"
           }
         }
       }
@@ -14763,26 +14763,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Diesen Einladungslink widerrufen?"
-          }
-        }
-      }
-    },
-    "Rewrite Summaries…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zusammenfassungen neu schreiben …"
-          }
-        }
-      }
-    },
-    "Rewrite the summaries?": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zusammenfassungen neu schreiben?"
           }
         }
       }
@@ -17227,6 +17207,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zusammenfassungen"
+          }
+        }
+      }
+    },
+    "Summaries to write": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zusammenfassungen ausstehend"
           }
         }
       }
@@ -20347,16 +20337,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ohne Konto"
-          }
-        }
-      }
-    },
-    "Without keywords": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ohne Stichwörter"
           }
         }
       }
