@@ -68,13 +68,23 @@ export function cleanTags(v: unknown, field = "tags"): string[] {
   return tags;
 }
 
-/** The fields every file carries (a manifest's entry, an upload). */
+/** The version of the app's reader a file's text comes from (optional, default 1): a whole
+ *  number ≥ 1. */
+export function cleanReader(v: unknown): number {
+  if (v === undefined || v === null) return 1;
+  if (typeof v !== "number" || !Number.isSafeInteger(v) || v < 1) throw new HttpError(400, "reader must be a whole number ≥ 1");
+  return v;
+}
+
+/** The fields every file carries (a manifest's entry, an upload). `reader`: the version of the
+ *  app's reader that reads (or read) it, 1 when not given. */
 export interface FileInfo {
   path: string;
   size: number;
   mtime: number;
   hash: string;
   tags: string[];
+  reader: number;
 }
 
 /** A manifest's entry: `hash` null for a file the device sees but couldn't hash (an iCloud file
@@ -92,6 +102,7 @@ export function cleanFileInfo(raw: unknown, what = "file", opts: { nullHash?: bo
     mtime: cleanCount(f.mtime, "mtime"),
     hash: opts.nullHash && f.hash === null ? null : cleanHash(f.hash),
     tags: cleanTags(f.tags),
+    reader: cleanReader(f.reader),
   };
 }
 

@@ -51,7 +51,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   every `WORKER_TICK_SECONDS` (60) `lib/maintenance/cleanup.ts`, the nightly
   `lib/maintenance/backup.ts` and `lib/notifications/daily.ts`; the loop itself ticks every
   `ASSISTANT_TICK_MS` (1000) for the assistant's `ChatRunner`, the meals' `ImportRunner` and the
-  calendar's `HolidayRunner` and the knowledge base's `KnowledgeRunner` and `KnowledgeCardRunner`;
+  calendar's `HolidayRunner` and the knowledge base's `KnowledgeRunner`, `KnowledgeCardRunner` and `KnowledgeScanRunner`;
   turned-off modules' runners don't run; the same tick runs finance's `BankSyncRunner`). `docker-entrypoint.sh setup-link <email>` prints a setup link. Long-running jobs
   (appointment searches, assistant turns, notifications) belong in the worker, never in a
   request.
@@ -535,6 +535,27 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   the 5th fails. Saving the AI settings (`PUT /ai/settings`) resets the family's failed cards
   (`retryFailedCards`). The mock AI answers the card prompt from "Date: / For: / Fact: / Shout: /
   Invent:" lines.
+  **Reader version and scans** (migration `0032`): `kb_documents.reader` (the app's
+  `KnowledgeText.readerVersion` for PDFs / images, else 1; manifest entries and uploads carry
+  `reader`): a manifest entry with the same hash and a newer reader is asked for again; an upload
+  with the same hash and identical pages only bumps it (card kept), different text with a newer
+  reader or `reread: true` (the app's *Read Again*) replaces it. Any text replaced deletes the page
+  scans and `ai_pages`. **Page scans** (opt-in, `kb_folders.ai_scans`, `PATCH /knowledge/folder
+  {aiScans}`; status `scans` = the AI set up and the assistant on, `aiScans` = the setting): `PUT
+  /knowledge/documents/{id}/pages/{page}/scan?hash=[&force=1]` (a JPEG ≤ 4 MiB, ≤ 20 open per
+  document; 409 stale hash / excluded / missing / scans off / setting off without `force`; agent
+  tokens 403 here and on the PATCH) stores the picture under `MEDIA_ROOT/knowledge/<familyId>/`
+  and a `kb_page_scans` row (`scans.ts`, `scan-files.ts`); the worker's `KnowledgeScanRunner`
+  (`scan-runner.ts`, `KNOWLEDGE_SCAN_CONCURRENT` 1, the card runner's pattern and backoff; not
+  forced ones only while the setting is on) sends it with the device's OCR text as a hint to the
+  family's model (`transcribe.ts`: the page as Markdown, tables as tables, `[?]`, the page and hint
+  are data) and replaces that page's text: `ai_pages` gets the page, the document pending again with
+  `CARD_RESET`; the picture is deleted when done, failed (the OCR text stays), its text replaced or
+  after 7 days (`pruneScans`). The card runner waits while a document has open scans. DTOs:
+  `aiPages`, detail `scans` [{page, status, error}]. The mock AI answers the transcription prompt
+  (a "Transcribe: <x>" line in the hint, else a fixed table). While the scans are on and can run,
+  the manifest asks once more for a same-hash entry with `reader` ≥ 2 whose document isn't
+  `scans_checked` (migration `0033`; the upload's `scansChecked`, kept once set for the same file).
   Read-then-write transactions
   here are `{ behavior: "immediate" }` (WAL with the worker writing). `search.ts`
   `searchKnowledge(db, familyId, query, {limit, tags, folder})`: each word a quoted prefix term,
@@ -940,7 +961,20 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   iOS only off Low Data Mode and expensive networks, up to 300 MB a run (`KnowledgeDownloads`), and
   they're evicted again once read, `KnowledgeText` reads the text by page
   (PDFKit, Vision OCR, images, txt / md / rtf / html, `NSAttributedString`'s formats; nil: this
-  device can't, another may), `KnowledgeUploadQueue` keeps the uploads on disk (by path; removed by
+  device can't, another may; `readerVersion` 2 for PDFs / images, sent as `reader`, the hash
+  cache's read failures keyed by it). Scanned pages (`KnowledgeOCR.swift`): an upright
+  `RecognizeTextRequest` first, its baselines voted by characters (−90° → `.left`, +90° →
+  `.right`, 180° → `.down`), then `RecognizeDocumentsRequest` in that orientation: tables as
+  Markdown tables in reading order (`KnowledgeOCRQuality.swift`, pure); `KnowledgeOCRQuality`
+  judges the page good or poor, eagerly (only what reads like clean print stays on the device: a
+  middling confidence with a few weak lines, one garbled table cell are poor) (the document reader's line confidences, words the spell checker
+  knows in de / en, fragments, non-Latin letters, empty / garbled table cells, little text on an
+  inked page; thresholds as constants, tested on a real timetable's readings). After an upload the
+  indexer sends poor pages as upright JPEGs (≤ 2000 px, ≤ 20) to `…/pages/{page}/scan` when status
+  `scans && aiScans` (asked lazily, kept 5 min), all pages with `force` for *Read Again with the
+  Assistant* (`KnowledgeIndexer.reread(path:assistant:)`, `reread: true`; *Read Again* without the
+  assistant); a 4xx stops that document's scans, an outage retries (`sentScans`). The scanner's own
+  `enqueue` sends no images. `KnowledgeUploadQueue` keeps the uploads on disk (by path; removed by
   path + hash; a refusal drops, an outage waits with backoff; a file changed since it was hashed
   waits for the next run, never a run at once), all in Application Support `Ohana/Knowledge/<server>/<family>/`
   (written off the main actor, in order, nothing after *Change…* / *Remove* / sign out; removed on
@@ -953,7 +987,9 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   text (see Scanning). Settings → Knowledge (`Features/Knowledge/KnowledgeSettingsView.swift`, `.settings(.knowledge)`):
   the folder (`.fileImporter`, the conflict as an alert offering to use it anyway), the index
   (`GET /knowledge/status` through `api.cached`, with the indexer's progress, waiting and unreadable
-  files, the last manifest's time and device), *Read Now*.
+  files, the last manifest's time and device), *Read Now*, and with status `scans` the toggle *Read
+  difficult scans with the assistant* (`PATCH /knowledge/folder {aiScans}`, a footer naming the AI
+  provider).
   The knowledge base page (`Module.knowledge`, ⌘9; shown where `FamilyContext.isEnabled(.knowledge)` /
   `AppModel.isEnabled` say `knowledgeAvailable`, `ServerInfo.isEnabled` only says the server has it;
   the demo hides it for now): `Features/Knowledge/KnowledgeView.swift`, `GET /knowledge/documents`
@@ -971,8 +1007,10 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   status (failed: `error`; "Summary is being written" while `/knowledge/status` `cards`; a failed
   card: `cardError` quietly and *Write Summary Again*, `POST …/{id}/card`), summary and facts
   ("Summary" with sparkles, "By the assistant"; each fact keeps its quote and page) (a tap opens the original at the fact's page and quote), the text by page (collapsed;
-  a route's page open, its quote marked); *Open Original*, More: *Show in Finder* (Mac), *Read
-  Again*, *Leave Out* (confirmed) / *Include Again*. Routes `AppRoute.knowledgeDocument(id:page:quote:)`,
+  a route's page open, its quote marked; pages in `aiPages` marked "Read by the assistant", open /
+  failed `scans` noted quietly); *Open Original*, More: *Show in Finder* (Mac), *Read Again* (this
+  device reads the file again; needs the folder here) / *Read Again with the Assistant* (with
+  `scans`; every page to the AI), *Leave Out* (confirmed) / *Include Again*. Routes `AppRoute.knowledgeDocument(id:page:quote:)`,
   `/f/{id}/knowledge[/{documentId}[?page=]]`; links in the assistant's answers and tool results keep
   their query (`AppRoute.parse(url:)` / `parse(link:)`). *Open original* (`Core/Knowledge/KnowledgeOriginal.swift`,
   `Features/Knowledge/KnowledgeOriginalView.swift`: `KnowledgeOriginalOpener` + `.knowledgeOriginal(_:)`):

@@ -15,10 +15,11 @@
 import { randomUUID } from "node:crypto";
 import { and, desc, eq, inArray, isNotNull, lt, ne, or, sql, type SQL } from "drizzle-orm";
 import type { Db } from "@/lib/db";
-import { kbChunks, kbDocuments } from "@/lib/db/schema";
+import { kbChunks, kbDocuments, kbPageScans } from "@/lib/db/schema";
 import { HttpError } from "@/lib/api/http";
 import { familyNames } from "@/lib/families/people";
 import { type FileInfo, nameOf } from "./input";
+import { deleteScanFiles, scanPaths, takeScans } from "./scan-files";
 
 export type DocumentRow = typeof kbDocuments.$inferSelect;
 
@@ -64,6 +65,8 @@ export interface KnowledgeDocumentSummary {
   mtime: number;
   hash: string;
   pages: number;
+  /** The pages (1-based) whose text the family's AI transcribed from a scan of the page. */
+  aiPages: number[];
   status: DocumentStatus;
   error: string | null;
   cardStatus: CardStatus;
@@ -86,10 +89,19 @@ export interface KnowledgeChunk {
   text: string;
 }
 
-/** A document with its card's facts and its chunks. */
+/** A page scan that isn't done yet (waiting for the family's AI, being read, or failed). */
+export interface KnowledgePageScan {
+  page: number;
+  status: "waiting" | "running" | "failed";
+  /** Why it failed (with status failed). */
+  error: string | null;
+}
+
+/** A document with its card's facts, its chunks and its page scans that aren't done. */
 export interface KnowledgeDocument extends KnowledgeDocumentSummary {
   facts: KnowledgeFact[] | null;
   chunks: KnowledgeChunk[];
+  scans: KnowledgePageScan[];
 }
 
 /** The status a document goes back to when its file is listed again (see the top). */
@@ -137,6 +149,7 @@ function summaryDto(row: DocumentRow, people: People): KnowledgeDocumentSummary 
     mtime: row.mtime,
     hash: row.hash,
     pages: row.pages,
+    aiPages: (parseJsonArray<unknown>(row.aiPages) ?? []).filter((p): p is number => Number.isSafeInteger(p)),
     status: row.status as DocumentStatus,
     error: row.error,
     cardStatus: (CARD_STATUSES as readonly string[]).includes(row.cardStatus) ? (row.cardStatus as CardStatus) : "pending",
@@ -175,7 +188,14 @@ export function getDocument(db: Db, familyId: string, id: string): KnowledgeDocu
     .where(eq(kbChunks.documentId, id))
     .orderBy(kbChunks.seq)
     .all();
-  return { ...summaryDto(row, peopleOf(db, familyId)), facts: parseJsonArray<KnowledgeFact>(row.facts), chunks };
+  const scans = db
+    .select({ page: kbPageScans.page, status: kbPageScans.status, error: kbPageScans.error })
+    .from(kbPageScans)
+    .where(and(eq(kbPageScans.documentId, id), ne(kbPageScans.status, "done")))
+    .orderBy(kbPageScans.page)
+    .all()
+    .map((s) => ({ page: s.page, status: s.status as KnowledgePageScan["status"], error: s.status === "failed" ? s.error : null }));
+  return { ...summaryDto(row, peopleOf(db, familyId)), facts: parseJsonArray<KnowledgeFact>(row.facts), chunks, scans };
 }
 
 // ---- the list ----
@@ -293,9 +313,14 @@ export function countDocuments(db: Db, familyId: string): { counts: Record<Docum
 
 // ---- changes ----
 
-/** What an upload carries: the file's details and its text by page. */
+/** What an upload carries: the file's details and its text by page; `reread`: the user asked
+ *  for the file to be read again (its text replaces the stored one whenever it differs);
+ *  `scansChecked`: the device judged the pages with the family's AI scans on (it sends the poor
+ *  ones as page scans), so the manifest needn't ask for the file again for that. */
 export interface UploadInput extends FileInfo {
   pages: string[];
+  reread?: boolean;
+  scansChecked?: boolean;
 }
 
 /** Pages of text: a list of strings, NFC, at most MAX_PAGES and MAX_TEXT_BYTES in all (413). */
@@ -342,6 +367,9 @@ function freshText(input: UploadInput) {
     tags: JSON.stringify(input.tags),
     pages: input.pages.length,
     text: JSON.stringify(input.pages),
+    reader: input.reader,
+    aiPages: "[]",
+    scansChecked: input.scansChecked === true,
     error: null,
     ...CARD_RESET,
     indexedAt: null,
@@ -354,12 +382,14 @@ function freshText(input: UploadInput) {
 /**
  * Stores the text the app read from a file (PUT /knowledge/documents), by folder + path.
  * The same file again (same hash) changes nothing but its tags, size and time while it is
- * pending, ready or excluded: an upload is idempotent. A missing one is back (its status as it
- * was, see the top). New text (another hash, a failed document, or text for a document stored
- * without any: a device that reads more than the one before) replaces the old: the chunks go at
- * once (a changed file must not be found by its old words), the card too, and the document waits
- * for the worker. An excluded document keeps its status (its new text is there for when it is
- * let back in).
+ * pending, ready or excluded: an upload is idempotent. With the very text stored, a newer
+ * `reader` is noted too (the card stays), and `scansChecked` once given stays. A missing one is back (its status as it was, see the
+ * top). New text (another hash, a failed document, text for a document stored without any: a
+ * device that reads more than the one before, or other text from a newer reader or read again on
+ * request, `reread`) replaces the old: the chunks go at once (a changed file must not be found by
+ * its old words), the card too, the page scans and the pages the AI transcribed, and the document
+ * waits for the worker. An excluded document keeps its status (its new text is there for when it
+ * is let back in).
  */
 export function uploadDocument(
   db: Db,
@@ -368,8 +398,9 @@ export function uploadDocument(
   input: UploadInput,
   now: Date,
 ): { id: string; status: DocumentStatus; created: boolean } {
+  let dropped: string[] = [];
   // Immediate: read, then written (see applyManifest).
-  return db.transaction(
+  const result = db.transaction(
     (tx) => {
       const row = tx
         .select()
@@ -385,16 +416,29 @@ export function uploadDocument(
       }
       const status = row.status as DocumentStatus;
       const moreText = hasText(input.pages) && !hasText(parseJsonArray(row.text));
-      if (row.hash === input.hash && !moreText && status !== "failed") {
+      const sameFile = row.hash === input.hash && status !== "failed";
+      const sameText = sameFile && samePages(parseJsonArray(row.text), input.pages);
+      const betterText = moreText || input.reader > row.reader || input.reread === true;
+      if (sameFile && (sameText || !betterText)) {
         const restored = status === "missing" ? restoredColumns(row) : { missingSince: null };
         tx.update(kbDocuments)
-          .set({ tags: JSON.stringify(input.tags), size: input.size, mtime: input.mtime, ...restored, updatedAt: now })
+          .set({
+            tags: JSON.stringify(input.tags),
+            size: input.size,
+            mtime: input.mtime,
+            ...(sameText ? { reader: Math.max(row.reader, input.reader) } : {}),
+            // Judged once, judged: a device without the AI scans doesn't undo it.
+            scansChecked: row.scansChecked || input.scansChecked === true,
+            ...restored,
+            updatedAt: now,
+          })
           .where(eq(kbDocuments.id, row.id))
           .run();
         return { id: row.id, status: "status" in restored ? restored.status : status, created: false };
       }
       const next: DocumentStatus = status === "excluded" ? "excluded" : "pending";
       deleteChunks(tx, row.id);
+      dropped = takeScans(tx, eq(kbPageScans.documentId, row.id));
       tx.update(kbDocuments)
         .set({ ...freshText(input), status: next, missingSince: null, updatedAt: now })
         .where(eq(kbDocuments.id, row.id))
@@ -403,6 +447,13 @@ export function uploadDocument(
     },
     { behavior: "immediate" },
   );
+  deleteScanFiles(dropped);
+  return result;
+}
+
+/** Whether stored pages are exactly these pages. */
+function samePages(stored: unknown[] | null, pages: string[]): boolean {
+  return !!stored && stored.length === pages.length && stored.every((p, i) => p === pages[i]);
 }
 
 /** Asks the worker to read the document's text again. Its chunks stay until it has, and so it
@@ -477,14 +528,20 @@ export function retryFailedCards(db: Pick<Db, "update">, familyId: string): numb
 /** Deletes the documents whose file has been gone for MISSING_KEEP_MS (maintenance). */
 export function pruneMissingDocuments(db: Db, now: Date): number {
   const before = new Date(now.getTime() - MISSING_KEEP_MS);
-  return db
-    .delete(kbDocuments)
-    .where(
-      and(
-        inArray(kbDocuments.status, ["missing", "excluded"]),
-        isNotNull(kbDocuments.missingSince),
-        lt(kbDocuments.missingSince, before),
-      ),
-    )
-    .run().changes;
+  const gone = and(
+    inArray(kbDocuments.status, ["missing", "excluded"]),
+    isNotNull(kbDocuments.missingSince),
+    lt(kbDocuments.missingSince, before),
+  );
+  const { paths, changes } = db.transaction(
+    (tx) => {
+      // Their page scans go by the cascade; their files after.
+      const ids = tx.select({ id: kbDocuments.id }).from(kbDocuments).where(gone);
+      const paths = scanPaths(tx, inArray(kbPageScans.documentId, ids));
+      return { paths, changes: tx.delete(kbDocuments).where(gone).run().changes };
+    },
+    { behavior: "immediate" },
+  );
+  deleteScanFiles(paths);
+  return changes;
 }

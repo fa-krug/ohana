@@ -1,0 +1,1 @@
+ALTER TABLE `kb_documents` ADD `scans_checked` integer DEFAULT false NOT NULL;

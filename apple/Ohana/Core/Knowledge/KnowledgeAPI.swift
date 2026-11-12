@@ -26,6 +26,9 @@ nonisolated struct KnowledgeFolderInfo: Codable, Equatable, Sendable {
     /// The last manifest any device sent, and the name of that device; nil before one.
     var lastManifestAt: String?
     var lastManifestDevice: String?
+    /// Difficult scans go to the family's AI as images (the family's setting); nil from a server
+    /// from before it.
+    var aiScans: Bool?
 }
 
 nonisolated struct KnowledgeFolderResponse: Codable, OffMainDecodable {
@@ -48,6 +51,25 @@ nonisolated struct KnowledgeStatusInfo: Codable, Equatable, OffMainDecodable {
     var chunks: Int
     /// Cards are made (the family's AI is set up); nil from a server from before them.
     var cards: Bool?
+    /// Page images can be transcribed by the family's AI (set up, the assistant on); nil from a
+    /// server from before page scans.
+    var scans: Bool?
+    /// The family's setting: difficult scans go to the AI by themselves.
+    var aiScans: Bool?
+}
+
+/// What the indexer reads of GET /knowledge/status: whether page images may go to the family's AI.
+/// Both nil from a server from before page scans.
+nonisolated struct KnowledgeScanStatus: OffMainDecodable {
+    var scans: Bool?
+    var aiScans: Bool?
+}
+
+extension KnowledgeStatusInfo {
+    /// The family's AI can transcribe page images (*Read Again with the Assistant*, the setting).
+    var readsScans: Bool { scans == true }
+    /// Poor pages go to the AI by themselves.
+    var sendsScans: Bool { scans == true && aiScans == true }
 }
 
 /// GET /knowledge/tags: the tags of the family's documents (every subfolder's), the most used first.
@@ -80,8 +102,11 @@ nonisolated struct KnowledgeManifestFile: Encodable, Equatable, Sendable {
     var mtime: Int64
     var hash: String?
     var tags: [String]
+    /// The version of the reader this device reads the file with (`KnowledgeText.reader(forPath:)`):
+    /// the server asks again for a document read by an older one.
+    var reader = 1
 
-    private enum CodingKeys: String, CodingKey { case path, size, mtime, hash, tags }
+    private enum CodingKeys: String, CodingKey { case path, size, mtime, hash, tags, reader }
 
     func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
@@ -91,6 +116,7 @@ nonisolated struct KnowledgeManifestFile: Encodable, Equatable, Sendable {
         // Explicitly null, not left out.
         try c.encode(hash, forKey: .hash)
         try c.encode(tags, forKey: .tags)
+        try c.encode(reader, forKey: .reader)
     }
 }
 
@@ -112,9 +138,17 @@ nonisolated struct KnowledgeUploadBody: Encodable, Sendable {
     var folderId: String
     var file: KnowledgeFileInfo
     var pages: [String]
+    /// The reader version the text was read with.
+    var reader = 1
+    /// The user asked for the file to be read again: the server takes new text even from the same
+    /// reader.
+    var reread = false
+    /// The file was judged with the family's AI scans available (`ScanCapture` `.poor` or `.all`),
+    /// whatever the verdict: the server's manifest stops asking for it again.
+    var scansChecked = false
 
     private enum CodingKeys: String, CodingKey {
-        case folderId, path, hash, size, mtime, tags, pages
+        case folderId, path, hash, size, mtime, tags, pages, reader, reread, scansChecked
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -126,7 +160,16 @@ nonisolated struct KnowledgeUploadBody: Encodable, Sendable {
         try c.encode(file.mtime, forKey: .mtime)
         try c.encode(file.tags, forKey: .tags)
         try c.encode(pages, forKey: .pages)
+        try c.encode(reader, forKey: .reader)
+        if reread { try c.encode(true, forKey: .reread) }
+        if scansChecked { try c.encode(true, forKey: .scansChecked) }
     }
+}
+
+/// PUT /knowledge/documents answers 202 `{id, status}` (an older server may answer less).
+nonisolated struct KnowledgeUploadAnswer: Decodable, Sendable {
+    var id: String?
+    var status: String?
 }
 
 extension FamilyAPI {
@@ -170,10 +213,30 @@ extension FamilyAPI {
     }
 
     /// Uploads a file's text (202: the server's worker indexes it); its JSON (up to 2 MB of text)
-    /// is made off the main thread.
-    func uploadKnowledgeDocument(_ body: KnowledgeUploadBody) async throws {
+    /// is made off the main thread. The document's id, when the server says it.
+    @discardableResult
+    func uploadKnowledgeDocument(_ body: KnowledgeUploadBody) async throws -> String? {
         let encoded = try await KnowledgeJSON.encode(body)
-        _ = try await client.data(for: client.request(.put, path("/knowledge/documents"), body: encoded))
+        let (data, _) = try await client.data(for: client.request(.put, path("/knowledge/documents"), body: encoded))
+        return (try? JSONDecoder().decode(KnowledgeUploadAnswer.self, from: data))?.id
+    }
+
+    /// Sends a page's image for the family's AI to transcribe (202); `hash` is the document's, so
+    /// a page of an older version is refused (409). `force`: an editor asked (*Read Again with the
+    /// Assistant*), so the family's setting doesn't matter.
+    func sendKnowledgePageScan(documentID: String, page: Int, hash: String, jpeg: Data, force: Bool) async throws {
+        var query: [String: String?] = ["hash": hash]
+        if force { query["force"] = "1" }
+        let request = client.request(.put, path("/knowledge/documents/\(documentID)/pages/\(page)/scan"), query: query,
+                                     body: jpeg, contentType: "image/jpeg")
+        _ = try await client.data(for: request)
+    }
+
+    /// Turns the family's setting on or off: difficult scans go to the family's AI by themselves.
+    @discardableResult
+    func setKnowledgeAIScans(_ on: Bool) async throws -> KnowledgeFolderInfo? {
+        let response: KnowledgeFolderResponse = try await send(.patch, "/knowledge/folder", body: ["aiScans": on])
+        return response.folder
     }
 }
 

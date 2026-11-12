@@ -46,7 +46,7 @@ describe("cleanup", () => {
     createInvite(db, { id: u.id }, f.id, "viewer", NOW);
     const later = new Date(NOW.getTime() + INVITE_TTL_MS + 60_000);
     expect(cleanup(db, later)).toEqual({
-      tokens: 1, invites: 1, rateLimits: 0, dismissals: 0, imports: 0, bankSyncs: 0, documents: 0,
+      tokens: 1, invites: 1, rateLimits: 0, dismissals: 0, imports: 0, bankSyncs: 0, documents: 0, scans: 0,
     });
   });
 });
