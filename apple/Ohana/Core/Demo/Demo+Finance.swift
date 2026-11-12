@@ -15,6 +15,7 @@ extension DemoServer {
         case "/finance/accounts": return encoded(data.accountsAt(request.query["at"]))
         case "/finance/transactions": return encoded(data.list(request.query))
         case "/finance/summary": return encoded(data.summary(from: request.query["from"], to: request.query["to"]))
+        case "/finance/payees": return encoded(data.payees(request.query))
         case "/finance/transfers/suggestions":
             return encoded(data.suggestions(from: request.query["from"], to: request.query["to"]))
         default: return nil
@@ -38,6 +39,8 @@ private struct DemoFinance {
         var date: String
         var amountCents: Int
         var categoryId: String?
+        var payee = ""
+        var description = ""
     }
 
     let base: FinanceOverview
@@ -79,8 +82,56 @@ private struct DemoFinance {
         FinanceAccountsAt(at: at, accounts: accounts(at: at))
     }
 
-    /// GET /finance/transactions?from&to&account&category&q&kind&source&limit&offset (findTransactions).
+    /// GET /finance/transactions?from&to&account&category&payee&q&kind&source&limit&offset (findTransactions).
     func list(_ query: [String: String]) -> FinanceTransactionList {
+        let rows = filtered(query)
+        let (income, expense) = totals(netItems(rows))
+        let limit = min(1000, max(1, query["limit"].flatMap { Int($0) } ?? 200))
+        let offset = max(0, query["offset"].flatMap { Int($0) } ?? 0)
+        let page = offset < rows.count ? Array(rows[offset..<min(rows.count, offset + limit)]) : []
+        return FinanceTransactionList(transactions: page.map(linked), total: rows.count,
+                                      incomeCents: income, expenseCents: expense)
+    }
+
+    /// GET /finance/payees?…the list's filters…&limit (payeeTotals): by payee key, largest first.
+    func payees(_ query: [String: String]) -> FinancePayeeList {
+        var byKey: [String: (payee: FinancePayee, date: String)] = [:]
+        for item in netItems(filtered(query)) {
+            let key = Self.payeeKey(payee: item.payee, description: item.description)
+            var entry = byKey[key] ?? (FinancePayee(key: key, name: "", count: 0, incomeCents: 0, expenseCents: 0), "")
+            entry.payee.count += 1
+            if item.amountCents > 0 { entry.payee.incomeCents += item.amountCents } else { entry.payee.expenseCents -= item.amountCents }
+            if item.date >= entry.date {
+                entry.date = item.date
+                let name = item.payee.trimmingCharacters(in: .whitespaces)
+                entry.payee.name = name.isEmpty ? item.description.trimmingCharacters(in: .whitespaces) : name
+            }
+            byKey[key] = entry
+        }
+        let income = query["kind"] == "income"
+        let all = byKey.values.map(\.payee).sorted { a, b in
+            let (x, y) = income ? (a.incomeCents, b.incomeCents) : (a.expenseCents, b.expenseCents)
+            return x != y ? x > y : a.key < b.key
+        }
+        let limit = min(100, max(1, query["limit"].flatMap { Int($0) } ?? 20))
+        return FinancePayeeList(payees: Array(all.prefix(limit)), more: max(0, all.count - limit))
+    }
+
+    /// server/lib/finance/finance.ts similarKey: the first three words (two letters or more) of
+    /// the payee, else of the description, lower case, without numbers and punctuation.
+    static func payeeKey(payee: String, description: String) -> String {
+        func words(_ s: String) -> [String] {
+            let kept = s.lowercased().unicodeScalars.map { c -> Character in
+                CharacterSet.letters.contains(c) || CharacterSet.whitespacesAndNewlines.contains(c) ? Character(c) : " "
+            }
+            return String(kept).split(whereSeparator: \.isWhitespace).map(String.init).filter { $0.count > 1 }
+        }
+        let own = words(payee)
+        return (own.isEmpty ? words(description) : own).prefix(3).joined(separator: " ")
+    }
+
+    /// The transactions matching the list's filters, newest first.
+    private func filtered(_ query: [String: String]) -> [FinanceTransaction] {
         var rows = inRange(query["from"], query["to"])
         if let account = query["account"], !account.isEmpty {
             rows = rows.filter { account == "none" ? $0.accountId == nil : $0.accountId == account }
@@ -92,6 +143,9 @@ private struct DemoFinance {
                 let ids = subtree(category)
                 rows = rows.filter { t in t.categoryId.map { ids.contains($0) } ?? false }
             }
+        }
+        if let payee = query["payee"]?.trimmingCharacters(in: .whitespaces), !payee.isEmpty {
+            rows = rows.filter { Self.payeeKey(payee: $0.payee, description: $0.description) == payee }
         }
         if let q = query["q"]?.trimmingCharacters(in: .whitespaces).lowercased(), !q.isEmpty {
             rows = rows.filter {
@@ -109,12 +163,7 @@ private struct DemoFinance {
         case "expense": rows = rows.filter { net(of: $0) < 0 }
         default: break
         }
-        let (income, expense) = totals(netItems(rows))
-        let limit = min(1000, max(1, query["limit"].flatMap { Int($0) } ?? 200))
-        let offset = max(0, query["offset"].flatMap { Int($0) } ?? 0)
-        let page = offset < rows.count ? Array(rows[offset..<min(rows.count, offset + limit)]) : []
-        return FinanceTransactionList(transactions: page.map(linked), total: rows.count,
-                                      incomeCents: income, expenseCents: expense)
+        return rows
     }
 
     /// GET /finance/summary?from&to (financeSummary).
@@ -225,10 +274,14 @@ private struct DemoFinance {
     /// Net counting: a transfer counts once, on its lead leg, with its net (nothing when 0).
     private func netItems(_ rows: [FinanceTransaction]) -> [NetItem] {
         rows.compactMap { t in
-            guard let legs = group(of: t) else { return NetItem(date: t.date, amountCents: t.amountCents, categoryId: t.categoryId) }
+            guard let legs = group(of: t) else {
+                return NetItem(date: t.date, amountCents: t.amountCents, categoryId: t.categoryId,
+                               payee: t.payee, description: t.description)
+            }
             let net = net(of: t)
             guard legs.first?.id == t.id, net != 0 else { return nil }
-            return NetItem(date: t.date, amountCents: net, categoryId: legs.first { $0.categoryId != nil }?.categoryId)
+            return NetItem(date: t.date, amountCents: net, categoryId: legs.first { $0.categoryId != nil }?.categoryId,
+                           payee: t.payee, description: t.description)
         }
     }
 

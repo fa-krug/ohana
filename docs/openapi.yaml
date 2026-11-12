@@ -3584,6 +3584,12 @@ paths:
           in: query
           description: Category (with its subcategories) by id, name or path, or `none`.
           schema: {type: string}
+        - name: payee
+          in: query
+          description: >-
+            A payee's key (the `key` of GET /finance/payees, the insights' `payee`): similar
+            spellings together ("REWE Markt 1234" = "Rewe Markt 5678").
+          schema: {type: string}
         - name: q
           in: query
           description: Text in payee, description or note.
@@ -3801,6 +3807,118 @@ paths:
               schema: {$ref: "#/components/schemas/FinanceSummary"}
         "400": {$ref: "#/components/responses/BadRequest"}
         "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+
+  /api/v1/families/{familyId}/finance/payees:
+    get:
+      tags: [Finance]
+      operationId: financePayees
+      summary: The payees of the matching transactions (net counting), largest first
+      description: >-
+        Takes the filters of GET /finance/transactions (from, to, account, category, kind, source,
+        q). Payees are grouped by a key (the payee's first words without numbers, punctuation and
+        case); `name` is the text of the newest one. Sorted by expenses, by income with
+        `kind=income`.
+      x-ohana-role: viewer
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+        - $ref: "#/components/parameters/RangeFrom"
+        - $ref: "#/components/parameters/RangeTo"
+        - {name: category, in: query, description: "With its subcategories, or `none`.", schema: {type: string}}
+        - {name: kind, in: query, schema: {type: string, enum: [income, expense, transfer]}}
+        - {name: account, in: query, schema: {type: string}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 20}}
+      responses:
+        "200":
+          description: The payees.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [payees, more]
+                properties:
+                  payees:
+                    type: array
+                    items:
+                      type: object
+                      required: [key, name, count, incomeCents, expenseCents]
+                      properties:
+                        key: {type: string, description: "For GET /finance/transactions?payee=."}
+                        name: {type: string}
+                        count: {type: integer}
+                        incomeCents: {type: integer}
+                        expenseCents: {type: integer}
+                  more: {type: integer, description: "Payees left out by the limit."}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+
+  /api/v1/families/{familyId}/finance/insights:
+    get:
+      tags: [Finance]
+      operationId: financeInsights
+      summary: What the finance overview points out for a period
+      description: >-
+        Where spending grew against the family's usual month (the up to 12 completed months before
+        `from`), regular payments (found up to `today`, whatever the period), small amounts that
+        add up, and what looks wrong in the period's data: likely duplicates, transfers missing
+        their other leg, amounts far above a payee's usual one, transactions outside a payee's
+        usual category; the uncategorized share, transfer pairs not combined yet and linked
+        accounts whose bank balance differs. Counted like the summary (net counting). Findings an
+        editor dismissed are left out.
+      x-ohana-role: viewer
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+        - $ref: "#/components/parameters/RangeFrom"
+        - $ref: "#/components/parameters/RangeTo"
+        - {name: today, in: query, description: "The client's day (default the server's UTC day).", schema: {type: string, format: date}}
+      responses:
+        "200":
+          description: The insights.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/FinanceInsights"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+
+  /api/v1/families/{familyId}/finance/insights/dismiss:
+    post:
+      tags: [Finance]
+      operationId: dismissFinanceInsight
+      summary: Hide a finding for good ("Looks fine")
+      x-ohana-role: editor
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key]
+              properties:
+                key: {type: string, maxLength: 300, description: "An issue's or a regular payment's `key`."}
+      responses:
+        "204": {description: Dismissed.}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+
+  /api/v1/families/{familyId}/finance/insights/dismiss/{key}:
+    delete:
+      tags: [Finance]
+      operationId: restoreFinanceInsight
+      summary: Show a dismissed finding again
+      x-ohana-role: editor
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+        - {name: key, in: path, required: true, description: "The `key` (URL-encoded).", schema: {type: string}}
+      responses:
+        "204": {description: Restored (also when it wasn't dismissed).}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
         "404": {$ref: "#/components/responses/NotFound"}
 
   # ------------------------------------------------------------------ meals
@@ -8044,6 +8162,135 @@ components:
               incomeCents: {type: integer}
               expenseCents: {type: integer}
               count: {type: integer}
+    FinanceInsights:
+      type: object
+      required: [currency, from, to, today, partial, baseline, months, changes, recurring, recurringYearlyCents,
+                 frequent, issues, uncategorized, transferSuggestions, balanceDrift, dismissed]
+      properties:
+        currency: {type: string}
+        from: {type: [string, "null"], format: date}
+        to: {type: [string, "null"], format: date}
+        today: {type: string, format: date}
+        partial: {type: boolean, description: "The period still runs: its numbers are so far."}
+        baseline:
+          description: The months the changes compare with; null without earlier data or for all time.
+          oneOf:
+            - type: "null"
+            - type: object
+              required: [from, to, months]
+              properties:
+                from: {type: string, format: date}
+                to: {type: string, format: date}
+                months: {type: integer}
+        months: {type: integer, description: "The period's months up to today."}
+        changes:
+          type: array
+          description: Categories (null = uncategorized) whose expenses per month grew most; all amounts per month.
+          items:
+            type: object
+            required: [categoryId, currentCents, usualCents, deltaCents, payees]
+            properties:
+              categoryId: {type: [string, "null"]}
+              currentCents: {type: integer}
+              usualCents: {type: integer}
+              deltaCents: {type: integer}
+              payees:
+                type: array
+                items:
+                  type: object
+                  required: [key, name, count, currentCents, usualCents, deltaCents]
+                  properties:
+                    key: {type: string}
+                    name: {type: string}
+                    count: {type: integer}
+                    currentCents: {type: integer}
+                    usualCents: {type: integer}
+                    deltaCents: {type: integer}
+        recurring:
+          type: array
+          description: Regular payments (positive amounts), active ones by yearly cost first, then stopped ones.
+          items:
+            type: object
+            required: [key, payee, name, categoryId, accountId, interval, count, amountCents, yearlyCents,
+                       firstDay, lastDay, nextDay, status, change]
+            properties:
+              key: {type: string, description: "For dismissing."}
+              payee: {type: string, description: "For GET /finance/transactions?payee=."}
+              name: {type: string}
+              categoryId: {type: [string, "null"]}
+              accountId: {type: [string, "null"]}
+              interval: {type: string, enum: [week, month, quarter, half, year]}
+              count: {type: integer}
+              amountCents: {type: integer, description: "The latest amount."}
+              yearlyCents: {type: integer}
+              firstDay: {type: string, format: date}
+              lastDay: {type: string, format: date}
+              nextDay: {type: string, format: date}
+              status: {type: string, enum: [active, new, stopped]}
+              change:
+                description: The amount changed within the last year.
+                oneOf:
+                  - type: "null"
+                  - type: object
+                    required: [previousCents, since]
+                    properties:
+                      previousCents: {type: integer}
+                      since: {type: string, format: date}
+        recurringYearlyCents: {type: integer, description: "The active regular payments per year."}
+        frequent:
+          type: array
+          description: Payees with many small expenses in the period, the largest totals first.
+          items:
+            type: object
+            required: [payee, name, categoryId, count, totalCents, averageCents, perMonthCents]
+            properties:
+              payee: {type: string}
+              name: {type: string}
+              categoryId: {type: [string, "null"]}
+              count: {type: integer}
+              totalCents: {type: integer}
+              averageCents: {type: integer}
+              perMonthCents: {type: integer}
+        issues:
+          type: array
+          items:
+            type: object
+            required: [key, kind, day, transactions]
+            properties:
+              key: {type: string, description: "For dismissing."}
+              kind:
+                type: string
+                enum: [duplicate, unpaired, amount, category]
+                description: >-
+                  duplicate: two transactions that are likely one booking twice; unpaired: looks
+                  like a transfer between the family's accounts without its other leg; amount: far
+                  above the payee's usual amount (`usualCents`); category: not the payee's usual
+                  category (`usualCategoryId`).
+              day: {type: string, format: date}
+              transactions:
+                type: array
+                items: {$ref: "#/components/schemas/Transaction"}
+              usualCategoryId: {type: string}
+              usualCents: {type: integer}
+        uncategorized:
+          type: object
+          required: [count, incomeCents, expenseCents]
+          properties:
+            count: {type: integer}
+            incomeCents: {type: integer}
+            expenseCents: {type: integer}
+        transferSuggestions: {type: integer, description: "Pairs that look like transfers, not combined yet."}
+        balanceDrift:
+          type: array
+          items:
+            type: object
+            required: [accountId, bankCents, ohanaCents, at]
+            properties:
+              accountId: {type: string}
+              bankCents: {type: integer}
+              ohanaCents: {type: integer}
+              at: {type: [string, "null"]}
+        dismissed: {type: integer, description: "Findings hidden by a dismissal."}
     CategorizeResult:
       type: object
       required: [changed, matched, considered, remaining, ai, inverse, assignments]

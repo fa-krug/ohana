@@ -8,6 +8,9 @@ struct FinanceSummaryView: View {
     @Bindable var store: FinanceStore
     /// iPhone: the period scrolls with the overview instead of floating above it.
     var showsPeriod = false
+    var actions = FinanceOverviewActions()
+    /// The category whose payees the sheet shows.
+    @State private var detail: FinanceCategoryPick?
 
     var body: some View {
         ScrollView {
@@ -27,6 +30,12 @@ struct FinanceSummaryView: View {
             .animation(.snappy, value: store.comparisons)
         }
         .task { await store.loadSummary() }
+        .sheet(item: $detail) { pick in
+            FinanceCategoryDetailSheet(store: store, pick: pick) { filter in
+                detail = nil
+                actions.showTransactions(filter, nil)
+            }
+        }
     }
 
     @ViewBuilder
@@ -35,31 +44,53 @@ struct FinanceSummaryView: View {
             // Nothing in the period, but maybe in those it is compared with.
             VStack(spacing: 16) {
                 ContentUnavailableView("No transactions in this period yet.", systemImage: "chart.bar")
-                FinanceComparisonCard(store: store)
-                FinanceBenchmarkCard(store: store)
+                FinanceComparisonCard(store: store, actions: cardActions)
+                FinanceBenchmarkCard(store: store, actions: cardActions)
             }
         } else {
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .top, spacing: 16) {
                     VStack(spacing: 16) {
-                        FinanceStatTiles(income: summary.incomeCents, expense: summary.expenseCents, currency: summary.currency)
-                        FinanceComparisonCard(store: store)
-                        FinanceBenchmarkCard(store: store)
+                        tiles(summary)
+                        FinanceWorthALookCard(store: store, actions: cardActions)
+                        FinanceChangesCard(store: store, actions: cardActions)
+                        FinanceComparisonCard(store: store, actions: cardActions)
+                        FinanceBenchmarkCard(store: store, actions: cardActions)
                     }
                     VStack(spacing: 16) {
-                        if store.period.mode != .month { FinanceMonthlyChart(store: store, summary: summary) }
-                        FinanceCategoryBreakdown(store: store, summary: summary)
+                        if store.period.mode != .month { FinanceMonthlyChart(store: store, summary: summary, actions: cardActions) }
+                        FinanceCategoryBreakdown(store: store, summary: summary, actions: cardActions)
+                        FinanceRecurringCard(store: store, actions: cardActions)
+                        FinanceFrequentCard(store: store, actions: cardActions)
                     }
                 }
                 .frame(minWidth: 860)
                 VStack(spacing: 16) {
-                    FinanceStatTiles(income: summary.incomeCents, expense: summary.expenseCents, currency: summary.currency)
-                    FinanceComparisonCard(store: store)
-                    FinanceBenchmarkCard(store: store)
-                    if store.period.mode != .month { FinanceMonthlyChart(store: store, summary: summary) }
-                    FinanceCategoryBreakdown(store: store, summary: summary)
+                    tiles(summary)
+                    FinanceWorthALookCard(store: store, actions: cardActions)
+                    FinanceChangesCard(store: store, actions: cardActions)
+                    FinanceComparisonCard(store: store, actions: cardActions)
+                    FinanceBenchmarkCard(store: store, actions: cardActions)
+                    if store.period.mode != .month { FinanceMonthlyChart(store: store, summary: summary, actions: cardActions) }
+                    FinanceCategoryBreakdown(store: store, summary: summary, actions: cardActions)
+                    FinanceRecurringCard(store: store, actions: cardActions)
+                    FinanceFrequentCard(store: store, actions: cardActions)
                 }
             }
+        }
+    }
+}
+
+extension FinanceSummaryView {
+    /// What the cards' numbers open: the screen's actions, and a category's payees here.
+    private var cardActions: FinanceOverviewActions {
+        actions.with(category: { detail = $0 })
+    }
+
+    /// The headline numbers; each opens the period's transactions of its kind.
+    private func tiles(_ summary: FinanceSummary) -> some View {
+        FinanceStatTiles(income: summary.incomeCents, expense: summary.expenseCents, currency: summary.currency) { kind in
+            actions.showTransactions(FinanceFilter(kind: kind), nil)
         }
     }
 }
@@ -70,6 +101,7 @@ struct FinanceSummaryView: View {
 /// before, a year's average completed month with the year before's, all time's average month.
 struct FinanceComparisonCard: View {
     @Bindable var store: FinanceStore
+    var actions = FinanceOverviewActions()
 
     private struct Row: Identifiable {
         var id: String
@@ -159,9 +191,7 @@ struct FinanceComparisonCard: View {
                     }
                     ForEach(group.1) { row in
                         GridRow(alignment: .top) {
-                            Text(row.label)
-                                .font(row.strong ? .subheadline.weight(.semibold) : .subheadline)
-                                .lineLimit(1)
+                            rowLabel(row)
                                 .frame(maxWidth: 180, alignment: .leading)
                                 .gridColumnAlignment(.leading)
                             ForEach(Array(columns.enumerated()), id: \.offset) { i, v in
@@ -179,6 +209,33 @@ struct FinanceComparisonCard: View {
             Text("Ø = average of the completed months. The percentages show how “\(comparisons[0].key.title)” differs from each column.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    /// The row's name; a category's opens its payees, income and expenses their transactions.
+    @ViewBuilder
+    private func rowLabel(_ row: Row) -> some View {
+        let text = Text(row.label)
+            .font(row.strong ? .subheadline.weight(.semibold) : .subheadline)
+            .lineLimit(1)
+        if let open = open(row) {
+            Button(action: open) { text.contentShape(.rect) }
+                .buttonStyle(.plain)
+                .accessibilityHint(Text("Shows what's behind it"))
+        } else {
+            text
+        }
+    }
+
+    private func open(_ row: Row) -> (() -> Void)? {
+        switch row.id {
+        case "income": return { actions.showTransactions(FinanceFilter(kind: .income), nil) }
+        case "expense": return { actions.showTransactions(FinanceFilter(kind: .expense), nil) }
+        case "net": return nil
+        default:
+            let income = row.id.hasPrefix("income:")
+            let id = String(row.id.drop(while: { $0 != ":" }).dropFirst())
+            return { actions.category(FinanceCategoryPick(categoryId: id.isEmpty ? nil : id, income: income)) }
         }
     }
 
@@ -221,6 +278,7 @@ struct FinanceComparisonCard: View {
 /// while none is set.
 struct FinanceBenchmarkCard: View {
     @Bindable var store: FinanceStore
+    var actions = FinanceOverviewActions()
 
     private struct Row: Identifiable {
         var id: String
@@ -292,6 +350,19 @@ struct FinanceBenchmarkCard: View {
     }
 
     private func rowView(_ row: Row) -> some View {
+        Button {
+            switch row.id {
+            case "income": actions.showTransactions(FinanceFilter(kind: .income), nil)
+            case "expense": actions.showTransactions(FinanceFilter(kind: .expense), nil)
+            default: actions.category(FinanceCategoryPick(categoryId: row.id, income: row.higherIsGood))
+            }
+        } label: {
+            rowContent(row).contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func rowContent(_ row: Row) -> some View {
         let standing = row.cents.map { FinanceStanding.of($0, range: row.range) }
         return VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .firstTextBaseline) {
@@ -352,6 +423,7 @@ struct FinanceRangeBar: View {
 struct FinanceMonthlyChart: View {
     @Bindable var store: FinanceStore
     let summary: FinanceSummary
+    var actions = FinanceOverviewActions()
     @State private var selected: Date?
     /// The same numbers as a table (screen readers, exact amounts); remembered per device.
     @AppStorage("finance.monthlyTable") private var asTable = false
@@ -398,8 +470,16 @@ struct FinanceMonthlyChart: View {
                 Divider().gridCellUnsizedAxes(.horizontal)
                 let net = m.incomeCents - m.expenseCents
                 GridRow {
-                    Text(FinanceDates.monthDate(m.month).formatted(.dateTime.month(.abbreviated).year()))
-                        .lineLimit(1)
+                    Button {
+                        let day = Day(FinanceDates.monthDate(m.month))
+                        actions.showTransactions(FinanceFilter(), FinancePeriod(mode: .month, year: day.year, month: day.month))
+                    } label: {
+                        Text(FinanceDates.monthDate(m.month).formatted(.dateTime.month(.abbreviated).year()))
+                            .underline()
+                            .lineLimit(1)
+                    }
+                    .buttonStyle(.plain)
+                    .help(Text("Show the transactions"))
                     Text(store.money(m.incomeCents))
                     Text(store.money(m.expenseCents))
                     Text(store.money(net, sign: true)).foregroundStyle(net < 0 ? .red : .primary)
@@ -491,6 +571,7 @@ struct FinanceMonthlyChart: View {
 struct FinanceCategoryBreakdown: View {
     @Bindable var store: FinanceStore
     let summary: FinanceSummary
+    var actions = FinanceOverviewActions()
     @State private var income = false
 
     struct Row: Identifiable, Hashable {
@@ -589,7 +670,7 @@ struct FinanceCategoryBreakdown: View {
         let max = rows.first?.cents ?? 1
         return VStack(alignment: .leading, spacing: 8) {
             ForEach(rows) { row in
-                FinanceBreakdownRowView(store: store, row: row, total: total, max: max)
+                FinanceBreakdownRowView(store: store, row: row, total: total, max: max, income: income, actions: actions)
             }
         }
     }
@@ -601,21 +682,45 @@ struct FinanceBreakdownRowView: View {
     let row: FinanceCategoryBreakdown.Row
     let total: Int
     let max: Int
+    var income = false
+    var actions = FinanceOverviewActions()
     @State private var open = false
+
+    /// The category the row opens (its payees); none for a category's own share ("Directly in").
+    private var pick: FinanceCategoryPick? {
+        row.direct ? nil : FinanceCategoryPick(categoryId: row.id == "none" ? nil : row.id, income: income)
+    }
 
     var body: some View {
         if row.children.isEmpty {
-            line
+            if let pick {
+                Button { actions.category(pick) } label: { line.contentShape(.rect) }
+                    .buttonStyle(.plain)
+                    .accessibilityHint(Text("Shows its payees"))
+            } else {
+                line
+            }
         } else {
             DisclosureGroup(isExpanded: $open) {
                 VStack(alignment: .leading, spacing: 8) {
                     ForEach(row.children) { child in
-                        FinanceBreakdownRowView(store: store, row: child, total: total, max: max)
+                        FinanceBreakdownRowView(store: store, row: child, total: total, max: max, income: income, actions: actions)
                     }
                 }
                 .padding(.top, 6)
             } label: {
-                line
+                HStack(spacing: 6) {
+                    line
+                    // The label opens the subcategories; the category's payees from here.
+                    if let pick {
+                        Button { actions.category(pick) } label: {
+                            Label("Payees", systemImage: "chevron.forward.circle").labelStyle(.iconOnly)
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.borderless)
+                        .help(Text("Show its payees"))
+                    }
+                }
             }
         }
     }

@@ -251,8 +251,24 @@ struct FinanceScreen: View {
         case .transactions:
             FinanceTransactionsView(store: store, selecting: selecting) { editing = .existing($0) }
         case .overview:
-            FinanceSummaryView(store: store, showsPeriod: compact)
+            FinanceSummaryView(store: store, showsPeriod: compact, actions: overviewActions)
         }
+    }
+
+    /// What the overview's numbers and findings open: the transactions behind them, a
+    /// transaction's editor, the suggested transfers.
+    private var overviewActions: FinanceOverviewActions {
+        var actions = FinanceOverviewActions(
+            showTransactions: { filter, period in
+                tab = .transactions
+                editing = nil
+                query = ""
+                Task { await store.showTransactions(filter, period: period) }
+            },
+            edit: { editing = .existing($0) }
+        )
+        if store.canEdit { actions.findTransfers = { findingTransfers = true } }
+        return actions
     }
 
     /// Shown while a file is dragged over the page.

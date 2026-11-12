@@ -40,10 +40,16 @@ struct FinanceFilter: Hashable {
     var account = ""
     var kind = Kind.all
     var source = Source.all
+    /// "" = all, else a payee's key (GET /finance/payees, the insights): similar spellings together.
+    var payee = ""
+    /// What the filter shows for `payee` (the text of its newest transaction).
+    var payeeName = ""
 
     var isActive: Bool { activeCount > 0 }
-    /// How many of account, category, kind and source narrow the list (the filter menu's badge).
-    var activeCount: Int { [!category.isEmpty, !account.isEmpty, kind != .all, source != .all].filter { $0 }.count }
+    /// How many of account, category, kind, source and payee narrow the list (the filter menu's badge).
+    var activeCount: Int {
+        [!category.isEmpty, !account.isEmpty, kind != .all, source != .all, !payee.isEmpty].filter { $0 }.count
+    }
 }
 
 /// The accounts' balances (by id) at the end of the day `at`.
@@ -57,6 +63,8 @@ struct FinanceToast: Identifiable, Equatable {
     let id = UUID()
     var message: String
     var undo: [JSONValue]?
+    /// Undo shows a finding marked as fine again (its key).
+    var restoreInsight: String?
     /// Its entry in the window's undo manager (Edit → Undo), removed when the toast undoes it.
     var undoToken: FinanceUndoToken?
 }
@@ -194,6 +202,8 @@ final class FinanceStore {
     var summary: FinanceSummary?
     /// The columns the overview compares, for the period of `summary`.
     var comparisons: [FinanceComparison]?
+    /// What the overview points out for the period (nil until loaded, and from an older server).
+    var insights: FinanceInsights?
     var balances: FinanceBalances?
     /// Whether the assistant is set up: auto-categorize uses the AI too.
     var aiConfigured = false
@@ -228,6 +238,9 @@ final class FinanceStore {
     private var summaryWanted = false
     private var listSeq = 0
     private var summarySeq = 0
+    private var insightsSeq = 0
+    /// The period `insights` are for.
+    private var insightsPeriod: FinancePeriod?
     private var balancesSeq = 0
     private var categorizeQueue: Task<Void, Never>?
     private var toastTask: Task<Void, Never>?
@@ -427,9 +440,15 @@ final class FinanceStore {
         FinanceBalances(at: res.at ?? at, cents: Dictionary(res.accounts.map { ($0.id, $0.balanceCents) }) { a, _ in a })
     }
 
-    /// The summary of the period and the comparison columns.
+    /// The summary of the period, the comparison columns and the insights.
     func loadSummary() async {
         summaryWanted = true
+        async let insights: Void = loadInsights()
+        async let summary: Void = loadSummaryAndComparisons()
+        _ = await (insights, summary)
+    }
+
+    private func loadSummaryAndComparisons() async {
         summarySeq += 1
         let seq = summarySeq
         let period = self.period
@@ -467,6 +486,69 @@ final class FinanceStore {
                 ErrorBanner.shared.show(error)
             }
         }
+    }
+
+    /// The period's insights: the copy on the device first, then the server's. Nice to have, so
+    /// failures stay quiet (an older server has none).
+    func loadInsights() async {
+        insightsSeq += 1
+        let seq = insightsSeq
+        let period = self.period
+        let get = Self.insightsRequest(api, period)
+        if period != insightsPeriod {
+            let copy = await get.savedOffMain()
+            guard seq == insightsSeq else { return }
+            insights = copy?.value
+            insightsPeriod = copy == nil ? nil : period
+        }
+        do {
+            let fresh = try await get.fetch()
+            guard seq == insightsSeq else { return }
+            insights = fresh
+            insightsPeriod = period
+        } catch {
+            guard seq == insightsSeq, insightsPeriod != period else { return }
+            insights = nil
+        }
+    }
+
+    /// The payees of one category (nil: uncategorized) in the period, largest first.
+    func payees(category: String?, income: Bool) async throws -> FinancePayeeList {
+        var query = period.query
+        query["category"] = category ?? "none"
+        query["kind"] = income ? "income" : "expense"
+        query["limit"] = "50"
+        return try await api.get("/finance/payees", query: query, as: FinancePayeeList.self)
+    }
+
+    private struct DismissBody: Encodable { let key: String }
+
+    /// "Looks fine": hides a finding (an issue or a regular payment) for good; the toast's Undo
+    /// shows it again.
+    func dismissInsight(_ key: String) async {
+        insights?.issues.removeAll { $0.key == key }
+        insights?.recurring.removeAll { $0.key == key }
+        do {
+            let _: Empty = try await api.send(.post, "/finance/insights/dismiss", body: DismissBody(key: key))
+            var toast = FinanceToast(message: String(localized: "Marked as fine"))
+            toast.restoreInsight = key
+            show(toast)
+        } catch {
+            ErrorBanner.shared.show(error)
+        }
+        await loadInsights()
+    }
+
+    /// Shows a finding marked as fine again.
+    func restoreInsight(_ key: String) async {
+        var request = api.client.request(.delete, api.path("/finance/insights/dismiss"))
+        request.url = WeekAheadActions.restoreURL(request.url!, key: key)
+        do {
+            _ = try await api.client.data(for: request)
+        } catch {
+            ErrorBanner.shared.show(error)
+        }
+        await loadInsights()
     }
 
     private func summaryGet(_ query: [String: String?]) -> CachedGet<FinanceSummary> {
@@ -547,6 +629,7 @@ final class FinanceStore {
         if !filter.account.isEmpty { query["account"] = filter.account }
         if filter.kind != .all { query["kind"] = filter.kind.rawValue }
         if filter.source != .all { query["source"] = filter.source.rawValue }
+        if !filter.payee.isEmpty { query["payee"] = filter.payee }
         return query
     }
 
@@ -563,6 +646,14 @@ final class FinanceStore {
 
     static func summaryRequest(_ api: FamilyAPI, _ query: [String: String?]) -> CachedGet<FinanceSummary> {
         api.cached("/finance/summary", query: query)
+    }
+
+    /// The insights of a period, from the device's day; kept per period (not per day).
+    static func insightsRequest(_ api: FamilyAPI, _ period: FinancePeriod) -> CachedGet<FinanceInsights> {
+        var query = period.query
+        query["today"] = Day.today.description
+        let (from, to) = period.range
+        return api.cached("/finance/insights", query: query, key: "/finance/insights?from=\(from ?? "")&to=\(to ?? "")")
     }
 
     static func summaryQuery(_ range: FinanceComparisonRange) -> [String: String?] {
@@ -602,6 +693,8 @@ final class FinanceStore {
         guard period != self.period else { return }
         self.period = period
         comparisons = nil // they belong to the period before
+        insights = nil
+        insightsPeriod = nil
         limit = Self.page
         selected = []
         await reload()
@@ -616,7 +709,7 @@ final class FinanceStore {
     }
 
     func clearFilters() async {
-        await setFilter { $0.category = ""; $0.account = ""; $0.kind = .all; $0.source = .all }
+        await setFilter { $0.category = ""; $0.account = ""; $0.kind = .all; $0.source = .all; $0.payee = ""; $0.payeeName = "" }
     }
 
     func setFilter(_ change: (inout FinanceFilter) -> Void) async {
@@ -627,6 +720,13 @@ final class FinanceStore {
         limit = Self.page
         selected = []
         await loadList()
+    }
+
+    /// The transactions behind a number of the overview: `filter` (its search kept), in `period`
+    /// when given.
+    func showTransactions(_ filter: FinanceFilter, period: FinancePeriod? = nil) async {
+        if let period { await setPeriod(period) }
+        await setFilter { $0 = filter }
     }
 
     /// The period's transactions of one category (with its subcategories) or all of them,
@@ -660,6 +760,11 @@ final class FinanceStore {
     func show(_ message: String, undo: [JSONValue]? = nil) {
         var toast = FinanceToast(message: message, undo: undo)
         if let undo, !undo.isEmpty { toast.undoToken = undoRegistry.register(undo) }
+        show(toast)
+    }
+
+    private func show(_ toast: FinanceToast) {
+        let undo = toast.undo ?? (toast.restoreInsight != nil ? [] : nil)
         self.toast = toast
         toastTask?.cancel()
         toastTask = Task { [weak self] in
@@ -672,6 +777,11 @@ final class FinanceStore {
 
     /// Runs the toast's undo ops; its entry leaves the undo manager.
     func undoToast() async {
+        if let key = toast?.restoreInsight {
+            toast = nil
+            await restoreInsight(key)
+            return
+        }
         guard let toast, let inverse = toast.undo else { return }
         self.toast = nil
         if let token = toast.undoToken { undoRegistry.forget(token) }

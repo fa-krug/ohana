@@ -109,6 +109,7 @@ struct FinanceTransactionsView: View {
         VStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 12) {
                 if !store.accounts.isEmpty { FinanceAccountCards(store: store) }
+                FinanceActiveFilters(store: store)
                 FinanceStatTiles(income: list.incomeCents, expense: list.expenseCents, currency: store.currency)
             }
             .padding(.horizontal, 20)
@@ -157,6 +158,13 @@ struct FinanceTransactionsView: View {
                         .listRowSeparator(.hidden)
                         .selectionDisabled()
                 }
+            }
+            if store.filter.isActive {
+                FinanceActiveFilters(store: store)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .selectionDisabled()
             }
             Section {
                 FinanceStatTiles(income: list.incomeCents, expense: list.expenseCents, currency: store.currency, inline: true)

@@ -85,7 +85,7 @@
 // Asked to condense a conversation, it says how often it looked so far ("Looked 12 times.").
 // It reports the tokens used (a token is 4 characters) when asked to (stream_options). The model
 // "mock-large" has a context window of 64,000 tokens (in the model list), "mock-tiny" one of
-// 13,000 that only its errors tell. Under .../v1/strict it refuses options it doesn't know
+// 16,000 that only its errors tell. Under .../v1/strict it refuses options it doesn't know
 // (stream_options), like Mistral.
 
 type Part = { type: string; text?: string };
@@ -193,7 +193,7 @@ function wait(ms: number, signal: AbortSignal) {
 /** How often a "then fail N times" message failed so far. */
 const failed = new Map<string, number>();
 
-const TINY_WINDOW = 13_000;
+const TINY_WINDOW = 16_000;
 
 /** A 16×16 orange PNG: the mock's "photo". */
 export const MOCK_PNG =

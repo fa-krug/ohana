@@ -231,6 +231,34 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   the app only (`apple/…/Finance/ReceiptScanner.swift`: VisionKit's document camera, Vision
   text recognition, `ReceiptParser`; optionally also a PDF, see Scanning); it saves a plain
   transaction, then sorts it with `…/ai/categorize` (`ids`).
+  **Insights** (`lib/finance/insights.ts`, `GET /finance/insights?from&to&today`, members): counted
+  like the summary (`netItems`), payees told apart by `similarKey` (also the list's `payee` filter
+  and `GET /finance/payees?…the list's filters…&limit`, `payeeTotals`: a category's payees);
+  `changes` (expenses per month by category against the up to 12 completed months before `from`,
+  `baseline`, increases ≥ 20 €/month and ≥ 15 %, with the payees that grew), `recurring` (by payee,
+  then amount series within ×1.4, gaps keeping to week | month | quarter | half | year, ≥ 75 %
+  regular; up to `today` whatever the period; status active | new | stopped, `change` = price
+  change within a year), `frequent` (≤ 30 € expenses, ≥ 2 a month, not regular ones), `issues` of
+  the period's transactions that aren't transfer legs or in a split: duplicate (same amount, ≤ 2
+  days, same payee folded; two of one account and origin only when typed for the same day),
+  unpaired (transfer words or another account's name, not among the suggested pairs, ≥ 2
+  accounts), amount (≥ 3× the payee's median of ≥ 5 earlier ones and ≥ 50 € above), category (not
+  the payee's usual one: ≥ 4 categorized, ≥ 75 %, nor above / below it in the tree);
+  `uncategorized`, `transferSuggestions`, `balanceDrift`. Thresholds are constants there. "Looks
+  fine": `fin_insight_dismissals` (family + `key` "<kind>:<ids>" / "recurring:<payee>:<interval>",
+  migration `0036`; cleared with the finances, never exported), `POST /finance/insights/dismiss
+  {key}`, `DELETE …/dismiss/{key}` (editors). Assistant: `finance_insights`, `dismiss_finance_insights`
+  (undo: the DELETE / POST), `list_transactions` `payee`. App (`FinanceInsightsView.swift`): the
+  overview's cards *Worth a look* (drift → the account's "Not from the bank" rows, transfers → the
+  transfer sheet, issues → the editor or `FinanceDuplicateSheet`, uncategorized), *What changed*,
+  *Regular payments* (a tap: the payee over all time), *Small amounts that add up*; every number
+  opens what's behind it (`FinanceOverviewActions`, given by `FinanceScreen`, passed to each card):
+  tiles and totals the period's transactions of their kind, a month row its month, a category
+  (breakdown, comparison, statistic average, changes) `FinanceCategoryDetailSheet` with its payees
+  (`FinanceStore.payees`) → `FinanceFilter.payee`; `FinanceActiveFilters` shows what the list is
+  narrowed to; `FinanceStore.insights` loads with the summary (quietly, cached per period,
+  prefetched), `dismissInsight` with Undo in the toast (`restoreInsight`). The demo answers
+  `/finance/payees` and `?payee=`, not the insights.
   **Bank sync** (`lib/finance/bank/`): an account can be linked to a bank (`fin_bank_links`,
   PK family + account, composite FK to `fin_accounts` ON DELETE CASCADE: deleting / clearing /
   importing a family file drops it; never exported): `provider`, `credentials` (sealed JSON, never

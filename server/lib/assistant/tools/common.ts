@@ -131,6 +131,8 @@ export const PHRASES = {
     splits: (n: number) => `${n} split ${n === 1 ? "booking" : "bookings"} combined`,
     benchmarkSet: "Set the statistic average",
     benchmarkCleared: "Removed the statistic average",
+    insightsDismissed: (n: number) => `Marked ${n} ${n === 1 ? "finding" : "findings"} as fine`,
+    insightsRestored: (n: number) => `Showing ${n} ${n === 1 ? "finding" : "findings"} again`,
   },
   de: {
     days: (n: number) => `${n} ${n === 1 ? "Tag" : "Tage"} geändert`,
@@ -147,6 +149,8 @@ export const PHRASES = {
     splits: (n: number) => `${n} ${n === 1 ? "Aufteilung" : "Aufteilungen"} zusammengefasst`,
     benchmarkSet: "Statistischen Durchschnitt festgelegt",
     benchmarkCleared: "Statistischen Durchschnitt entfernt",
+    insightsDismissed: (n: number) => `${n} ${n === 1 ? "Hinweis" : "Hinweise"} als in Ordnung markiert`,
+    insightsRestored: (n: number) => `${n} ${n === 1 ? "Hinweis" : "Hinweise"} wieder angezeigt`,
   },
 };
 

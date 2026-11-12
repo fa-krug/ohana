@@ -388,7 +388,7 @@ describe("a turn of the assistant", () => {
   });
 
   it("condenses a conversation too long for the context instead of cutting it off", async () => {
-    const t = await configured({}, { contextWindow: 18000 });
+    const t = await configured({}, { contextWindow: 21000 });
     const user = { role: "user", content: "keep looking 40 times" };
     const ev = await chat(t, user.content);
     // It looked 40 times in all: the summary keeps count of the looks it condensed.
@@ -407,11 +407,11 @@ describe("a turn of the assistant", () => {
     expect(next.role).toBe("assistant");
     // The context never got full.
     const usage = ev.filter((e) => e.event === "usage").map((e) => e.data);
-    expect(usage.every((u) => u.max === 18000 && u.used < 18000), JSON.stringify(usage)).toBe(true);
+    expect(usage.every((u) => u.max === 21000 && u.used < 21000), JSON.stringify(usage)).toBe(true);
   });
 
   it("condenses the conversation when the endpoint says the context is full", async () => {
-    // The model list doesn't tell this model's window (13,000): only its error does.
+    // The model list doesn't tell this model's window (16,000): only its error does.
     const t = await configured({}, { model: "mock-tiny" });
     const ev = await chat(t, "keep looking 50 times");
     expect(addedOf(ev).at(-1)).toEqual({ role: "assistant", content: "Done looking: 50 times." });
@@ -419,7 +419,7 @@ describe("a turn of the assistant", () => {
     expect(ev.some((e) => e.event === "continue")).toBe(false);
     const usage = ev.filter((e) => e.event === "usage").map((e) => e.data);
     expect(usage[0].max).toBe(128000);
-    expect(usage.at(-1).max).toBe(13000);
+    expect(usage.at(-1).max).toBe(16000);
   });
 
   it("hands a turn on when its time is up (family-planner's limit; the worker passes none)", async () => {

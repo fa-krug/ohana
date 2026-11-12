@@ -595,3 +595,135 @@ enum FinanceDates {
         Day(month + "-01")?.date ?? Date()
     }
 }
+
+// MARK: Payees and insights
+
+/// One payee of GET /finance/payees: its key (GET /finance/transactions?payee=), the text of its
+/// newest transaction, and its totals.
+nonisolated struct FinancePayee: Codable, Hashable, Identifiable, Sendable {
+    var key: String
+    var name: String
+    var count: Int
+    var incomeCents: Int
+    var expenseCents: Int
+
+    var id: String { key }
+}
+
+/// GET /finance/payees
+nonisolated struct FinancePayeeList: Codable, Hashable, OffMainDecodable {
+    var payees: [FinancePayee]
+    /// Payees left out by the limit.
+    var more: Int
+}
+
+/// GET /finance/insights (server/lib/finance/insights.ts): what the overview points out.
+nonisolated struct FinanceInsights: Codable, Hashable, OffMainDecodable {
+    nonisolated struct Baseline: Codable, Hashable, Sendable {
+        var from: String
+        var to: String
+        var months: Int
+    }
+
+    /// A category whose expenses per month grew against the usual month.
+    nonisolated struct Change: Codable, Hashable, Identifiable, Sendable {
+        nonisolated struct Payee: Codable, Hashable, Identifiable, Sendable {
+            var key: String
+            var name: String
+            var count: Int
+            var currentCents: Int
+            var usualCents: Int
+            var deltaCents: Int
+            var id: String { key }
+        }
+
+        var categoryId: String?
+        var currentCents: Int
+        var usualCents: Int
+        var deltaCents: Int
+        var payees: [Payee]
+        var id: String { categoryId ?? "none" }
+    }
+
+    /// A payment that comes back regularly (amounts positive).
+    nonisolated struct Recurring: Codable, Hashable, Identifiable, Sendable {
+        nonisolated struct PriceChange: Codable, Hashable, Sendable {
+            var previousCents: Int
+            var since: String
+        }
+
+        var key: String
+        var payee: String
+        var name: String
+        var categoryId: String?
+        var accountId: String?
+        /// week, month, quarter, half, year
+        var interval: String
+        var count: Int
+        var amountCents: Int
+        var yearlyCents: Int
+        var firstDay: String
+        var lastDay: String
+        var nextDay: String
+        /// active, new, stopped
+        var status: String
+        var change: PriceChange?
+        var id: String { key + ":" + String(amountCents) + ":" + firstDay }
+    }
+
+    /// A payee with many small expenses.
+    nonisolated struct Frequent: Codable, Hashable, Identifiable, Sendable {
+        var payee: String
+        var name: String
+        var categoryId: String?
+        var count: Int
+        var totalCents: Int
+        var averageCents: Int
+        var perMonthCents: Int
+        var id: String { payee }
+    }
+
+    /// Something that looks wrong in the data.
+    nonisolated struct Issue: Codable, Hashable, Identifiable, Sendable {
+        var key: String
+        /// duplicate, unpaired, amount, category
+        var kind: String
+        var day: String
+        var transactions: [FinanceTransaction]
+        var usualCategoryId: String?
+        var usualCents: Int?
+        var id: String { key }
+    }
+
+    nonisolated struct Uncategorized: Codable, Hashable, Sendable {
+        var count: Int
+        var incomeCents: Int
+        var expenseCents: Int
+    }
+
+    nonisolated struct Drift: Codable, Hashable, Identifiable, Sendable {
+        var accountId: String
+        var bankCents: Int
+        var ohanaCents: Int
+        var at: String?
+        var id: String { accountId }
+    }
+
+    var currency: String
+    var from: String?
+    var to: String?
+    var today: String
+    /// The period still runs: its numbers are "so far".
+    var partial: Bool
+    var baseline: Baseline?
+    var months: Int
+    var changes: [Change]
+    var recurring: [Recurring]
+    var recurringYearlyCents: Int
+    var frequent: [Frequent]
+    var issues: [Issue]
+    var uncategorized: Uncategorized
+    var transferSuggestions: Int
+    var balanceDrift: [Drift]
+    var dismissed: Int
+}
