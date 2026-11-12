@@ -12321,6 +12321,26 @@
         }
       }
     },
+    "Only when covering": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur bei Betreuungsbedarf"
+          }
+        }
+      }
+    },
+    "Only when covering: its days show only where they cover a day that needs cover. The others stay saved and counted, but are hidden.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur bei Betreuungsbedarf: Die Tage werden nur angezeigt, wo sie einen Tag abdecken, der Betreuung braucht. Die anderen bleiben gespeichert und gezählt, sind aber ausgeblendet."
+          }
+        }
+      }
+    },
     "Open": {
       "localizations": {
         "de": {

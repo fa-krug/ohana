@@ -254,13 +254,20 @@ final class CalendarStore {
     /// Whom a type belongs to; nil: nobody (or a member who's gone).
     func member(of type: CalendarEntryType) -> CalendarMember? { member(type.memberId) }
 
-    /// A day's entry types, in the order of the types.
+    /// A day's entry types as they show, in the order of the types: without a "cover only" type
+    /// on a day it doesn't cover (`CalendarMath.isHidden`; `entries` still has it, so the selection
+    /// chips show it on and take it off).
     func types(on day: Day) -> [CalendarEntryType] {
         let types = types
         guard let ids = entries[day], !ids.isEmpty else { return [] }
-        if ids.count == 1 { return typeIndex[ids[0]].map { [types[$0]] } ?? [] }
+        if ids.count == 1 {
+            return typeIndex[ids[0]].map { [types[$0]] }?.filter { !$0.showsOnlyCovering } ?? []
+        }
         // In the order of the types, each once (as filtering the types would give them).
-        return Set(ids.compactMap { typeIndex[$0] }).sorted().map { types[$0] }
+        let found = Set(ids.compactMap { typeIndex[$0] }).sorted().map { types[$0] }
+        guard found.contains(where: \.showsOnlyCovering) else { return found }
+        let roles = typeRoles
+        return found.filter { !CalendarMath.isHidden($0, on: ids, roles: roles) }
     }
 
     func isGap(_ day: Day) -> Bool {
@@ -988,6 +995,7 @@ final class CalendarStore {
             if let icon = patch.icon { types[i].icon = icon ?? types[i].role.defaultIcon }
             if let away = patch.away { types[i].away = away }
             if let appleSync = patch.appleSync { types[i].appleSync = appleSync }
+            if let coverOnly = patch.coverOnly { types[i].coverOnly = coverOnly }
             if let position = patch.position { types[i].position = position }
         }
         version += 1

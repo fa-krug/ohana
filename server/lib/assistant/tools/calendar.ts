@@ -13,6 +13,7 @@ import {
   applyNoteOps,
   cleanAppleSync,
   cleanColorKey,
+  cleanCoverOnly,
   cleanRole,
   MAX_TYPES,
   parseEntryOps,
@@ -91,7 +92,7 @@ export const calendarTools: Record<string, Tool> = {
     spec: {
       name: "get_calendar",
       description:
-        "Reads the vacation calendar between two days: the entry types of those years, the entries per day (type ids), day notes, and gaps (weekdays that need cover but have none).",
+        "Reads the vacation calendar between two days: the entry types of those years, the entries per day (type ids; a coverOnly type's entries on days without a \"needs cover\" entry are stored but hidden in the app), day notes, and gaps (weekdays that need cover but have none).",
       parameters: {
         type: "object",
         properties: {
@@ -292,7 +293,7 @@ export const calendarTools: Record<string, Tool> = {
     spec: {
       name: "manage_entry_types",
       description:
-        `Adds, changes, deletes or copies entry types. Every year has its own types. Each type belongs to a family member (or nobody: member null) and takes its color from theirs; nobody's may have a color of its own (null: gray); icon: an SF Symbol name (null: its role default); appleSync: whether its days go to Apple Calendar on devices that sync the family's calendar there (default true). "add": name, role, member (name; default: the user), color, icon, appleSync. "update": type (id or name) and any of name, role, member, color, icon, appleSync. "order": types (ids or names, all of the year's, first to last). "delete": type (also deletes its entries in that year; needs confirmed). "copy_year": from and to (years).`,
+        `Adds, changes, deletes or copies entry types. Every year has its own types. Each type belongs to a family member (or nobody: member null) and takes its color from theirs; nobody's may have a color of its own (null: gray); icon: an SF Symbol name (null: its role default); appleSync: whether its days go to Apple Calendar on devices that sync the family's calendar there (default true); coverOnly (for "covers" types, e.g. a grandparent who is available): its days show only where they cover a "needs cover" day, the others are hidden in the app (they stay stored and still count; default false). "add": name, role, member (name; default: the user), color, icon, appleSync, coverOnly. "update": type (id or name) and any of name, role, member, color, icon, appleSync, coverOnly. "order": types (ids or names, all of the year's, first to last). "delete": type (also deletes its entries in that year; needs confirmed). "copy_year": from and to (years).`,
       parameters: {
         type: "object",
         properties: {
@@ -305,6 +306,7 @@ export const calendarTools: Record<string, Tool> = {
           role: { type: "string", enum: ["none", "needs_cover", "covers", "day_off"] },
           icon: { type: ["string", "null"] },
           appleSync: { type: "boolean" },
+          coverOnly: { type: "boolean" },
           types: { type: "array", items: { type: "string" } },
           from: { type: "integer" },
           to: { type: "integer" },
@@ -340,6 +342,7 @@ export const calendarTools: Record<string, Tool> = {
             icon: cleanTypeIcon(args.icon),
             position: types.reduce((m, t) => Math.max(m, t.position + 1), 0),
             apple_sync: cleanAppleSync(args.appleSync),
+            cover_only: cleanCoverOnly(args.coverOnly),
           };
           await store.upsertTypes([type]);
           return {
@@ -361,6 +364,7 @@ export const calendarTools: Record<string, Tool> = {
           if (args.role !== undefined) next.role = cleanRole(args.role);
           if (args.icon !== undefined) next.icon = cleanTypeIcon(args.icon);
           if (args.appleSync !== undefined) next.apple_sync = cleanAppleSync(args.appleSync);
+          if (args.coverOnly !== undefined) next.cover_only = cleanCoverOnly(args.coverOnly);
           await store.upsertTypes([next]);
           return {
             result: typeOut(await typeIn(year, next.id), members),
@@ -378,6 +382,7 @@ export const calendarTools: Record<string, Tool> = {
                   role: type.role,
                   icon: type.icon,
                   appleSync: type.apple_sync ?? true,
+                  coverOnly: type.cover_only ?? false,
                 },
               }],
             },

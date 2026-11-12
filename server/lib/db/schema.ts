@@ -216,6 +216,9 @@ export const calEntryTypes = sqliteTable(
     away: integer("away", { mode: "boolean" }).notNull().default(false),
     /** Its days go to Apple Calendar when a device syncs the family's calendar there. */
     appleSync: integer("apple_sync", { mode: "boolean" }).notNull().default(true),
+    /** A "covers" type's days show only where they cover a "needs cover" day (the app hides
+     *  the others; they stay stored and still count). */
+    coverOnly: integer("cover_only", { mode: "boolean" }).notNull().default(false),
   },
   (t) => ({ pk: primaryKey({ columns: [t.familyId, t.year, t.id] }) }),
 );

@@ -224,13 +224,21 @@ private struct CalendarSettingsContent: View {
         .help("Sync with Apple Calendar")
     }
 
+    /// The role, then "Away" and "Only when covering" when they're on.
+    private func typeSubtitle(_ type: CalendarEntryType) -> String {
+        var parts = [type.role.title]
+        if type.isAway { parts.append(String(localized: "Away")) }
+        if type.showsOnlyCovering { parts.append(String(localized: "Only when covering")) }
+        return parts.joined(separator: " · ")
+    }
+
     private func typeLabel(_ type: CalendarEntryType, stats: CalendarTypeStats) -> some View {
         HStack(spacing: 12) {
             CalendarTypeBadge(type: type, member: store.member(of: type), size: 22)
             VStack(alignment: .leading, spacing: 2) {
                 // The badge reads the name (with the member's).
                 Text(type.name).foregroundStyle(.primary).accessibilityHidden(true)
-                Text(type.isAway ? "\(type.role.title) · \(String(localized: "Away"))" : type.role.title)
+                Text(typeSubtitle(type))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -339,6 +347,8 @@ struct CalendarTypeEditor: View {
     /// the new name's best suggestion.
     @State private var iconTouched = false
     @State private var away = false
+    /// Its days show only where they cover a "needs cover" day (a "covers" type's).
+    @State private var coverOnly = false
     @State private var confirmDelete = false
     /// The fields hold the type's values (only once: coming back to the page would reset them).
     @State private var loaded = false
@@ -378,8 +388,12 @@ struct CalendarTypeEditor: View {
                         ForEach(CalendarRole.allCases) { Text($0.title).tag($0) }
                     }
                     Toggle("Away", isOn: $away)
+                    // Only from a server that knows it.
+                    if role == .covers && type.coverOnly != nil {
+                        Toggle("Only when covering", isOn: $coverOnly)
+                    }
                 } footer: {
-                    Text(role.help + "\n" + String(localized: "Away: the whole family is away from home on these days, the meal plan plans no meals for them."))
+                    Text(roleFooter)
                 }
                 Section {
                     LabeledContent("Preview") {
@@ -439,6 +453,7 @@ struct CalendarTypeEditor: View {
             colorKey = type.colorKey
             role = type.role
             away = type.isAway
+            coverOnly = type.coverOnly ?? false
         }
     }
 
@@ -494,9 +509,21 @@ struct CalendarTypeEditor: View {
         pickedIcon = CalendarSymbol.suggestions(for: value).first
     }
 
+    private var roleFooter: String {
+        var lines = [role.help, String(localized: "Away: the whole family is away from home on these days, the meal plan plans no meals for them.")]
+        if role == .covers && type.coverOnly != nil {
+            lines.append(String(localized: "Only when covering: its days show only where they cover a day that needs cover. The others stay saved and counted, but are hidden."))
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    /// The flag to save: only a "covers" type keeps it.
+    private var keptCoverOnly: Bool { role == .covers && coverOnly }
+
     private var hasChanges: Bool {
         loaded && (name.trimmingCharacters(in: .whitespaces) != type.name || memberId != type.memberId
-            || keptColorKey != type.colorKey || role != type.role || icon != keptIcon || away != type.isAway)
+            || keptColorKey != type.colorKey || role != type.role || icon != keptIcon || away != type.isAway
+            || keptCoverOnly != (type.coverOnly ?? false))
     }
 
     private func save() {
@@ -508,6 +535,7 @@ struct CalendarTypeEditor: View {
         if role != type.role { patch.role = role }
         if let pickedIcon, pickedIcon != keptIcon { patch.icon = .some(pickedIcon) }
         if away != type.isAway { patch.away = away }
+        if type.coverOnly != nil && keptCoverOnly != type.coverOnly { patch.coverOnly = keptCoverOnly }
         dismiss()
         guard !patch.isEmpty else { return }
         perform { try await store.updateType(type.id, patch) }

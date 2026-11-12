@@ -164,6 +164,12 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `apple_sync` (API `appleSync`, default true, family-wide; exported, copied with the year): whether
   the type's days go to Apple Calendar (`AppleSyncMapping.spans` leaves the others out, so turning
   it off removes their runs there); a switch on each row of Settings → Calendar's types.
+  `cover_only` (API `coverOnly`, default false; exported, copied with the year; the type editor's
+  *Only when covering*, for `covers` types): its days show only where the day also has a
+  `needs_cover` entry (`gaps.ts` `hiddenEntry`, the app's `CalendarMath.isHidden`); the others stay
+  stored and counted (entries routes, stats, gaps) but the app's grids, day details and Apple
+  Calendar sync (`CalendarStore.types(on:)`, `AppleSyncMapping.spans`) and the overview's upcoming
+  runs leave them out.
   Icons are SF Symbol names the app draws (`icons.ts`): a type's `icon` (null: its role's,
   `ROLE_ICONS`; the API always answers one) and a note's `icon` ("" or a symbol; an import's
   emoji moves into the comment).

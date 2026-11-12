@@ -74,12 +74,18 @@ nonisolated struct CalendarEntryType: Codable, Hashable, Identifiable, Sendable 
     /// Its days go to Apple Calendar on devices that sync the family's calendar there; nil: a
     /// server that doesn't know it (they all go).
     var appleSync: Bool?
+    /// A "covers" type whose days show only where they cover a "needs cover" day
+    /// (`CalendarMath.isHidden`); nil: a server that doesn't know it (they all show).
+    var coverOnly: Bool?
 
     var isAway: Bool { away ?? false }
     var syncsToApple: Bool { appleSync ?? true }
+    /// Its days show only where they cover a "needs cover" day.
+    var showsOnlyCovering: Bool { role == .covers && (coverOnly ?? false) }
 
     init(id: String, year: Int? = nil, name: String, memberId: String? = nil, color: String, colorKey: String? = nil,
-         role: CalendarRole, icon: String? = nil, position: Int? = nil, away: Bool? = nil, appleSync: Bool? = nil) {
+         role: CalendarRole, icon: String? = nil, position: Int? = nil, away: Bool? = nil, appleSync: Bool? = nil,
+         coverOnly: Bool? = nil) {
         self.id = id
         self.year = year
         self.name = name
@@ -91,6 +97,7 @@ nonisolated struct CalendarEntryType: Codable, Hashable, Identifiable, Sendable 
         self.position = position
         self.away = away
         self.appleSync = appleSync
+        self.coverOnly = coverOnly
     }
 
     init(from decoder: any Decoder) throws {
@@ -107,6 +114,7 @@ nonisolated struct CalendarEntryType: Codable, Hashable, Identifiable, Sendable 
         position = try c.decodeIfPresent(Int.self, forKey: .position)
         away = try c.decodeIfPresent(Bool.self, forKey: .away)
         appleSync = try c.decodeIfPresent(Bool.self, forKey: .appleSync)
+        coverOnly = try c.decodeIfPresent(Bool.self, forKey: .coverOnly)
     }
 }
 
@@ -468,9 +476,10 @@ struct CalendarTypePatch: Encodable {
     var icon: String??
     var away: Bool?
     var appleSync: Bool?
+    var coverOnly: Bool?
     var position: Int?
 
-    private enum CodingKeys: String, CodingKey { case name, memberId, colorKey, role, icon, away, appleSync, position }
+    private enum CodingKeys: String, CodingKey { case name, memberId, colorKey, role, icon, away, appleSync, coverOnly, position }
 
     func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
@@ -481,11 +490,13 @@ struct CalendarTypePatch: Encodable {
         if let icon { try c.encode(icon, forKey: .icon) }
         try c.encodeIfPresent(away, forKey: .away)
         try c.encodeIfPresent(appleSync, forKey: .appleSync)
+        try c.encodeIfPresent(coverOnly, forKey: .coverOnly)
         try c.encodeIfPresent(position, forKey: .position)
     }
 
     var isEmpty: Bool {
-        name == nil && memberId == nil && colorKey == nil && role == nil && icon == nil && away == nil && appleSync == nil && position == nil
+        name == nil && memberId == nil && colorKey == nil && role == nil && icon == nil && away == nil && appleSync == nil && coverOnly == nil
+            && position == nil
     }
 }
 

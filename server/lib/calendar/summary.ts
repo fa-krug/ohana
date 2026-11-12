@@ -3,7 +3,7 @@
 
 import type { Db } from "@/lib/db";
 import { addDays, consecutiveRuns } from "./dates";
-import { gapDays } from "./gaps";
+import { gapDays, hiddenEntry } from "./gaps";
 import { typeIcon } from "./icons";
 import { DrizzleCalendarStore } from "./store";
 import { familyNames } from "@/lib/families/people";
@@ -38,9 +38,15 @@ export async function calendarSummary(
   const nextGap = gapDays(types, entries).find((d) => d >= today) ?? null;
   const members = new Map(familyNames(db, familyId).map((m) => [m.id, { id: m.id, name: m.name, color: m.color, photo: m.photo }]));
 
+  const role = new Map(types.map((t) => [`${t.year}|${t.id}`, t.role]));
+  const dayRoles = (day: string) => (entries.get(day) ?? []).map((id) => role.get(`${day.slice(0, 4)}|${id}`));
+
   const upcoming: CalendarSummary["upcoming"] = [];
   for (const type of types) {
-    const days = rows.filter((r) => r.type_id === type.id && r.day.startsWith(`${type.year}-`)).map((r) => r.day);
+    // A "cover only" type shows only on the days it covers.
+    const days = rows
+      .filter((r) => r.type_id === type.id && r.day.startsWith(`${type.year}-`) && !hiddenEntry(type, dayRoles(r.day)))
+      .map((r) => r.day);
     for (const run of consecutiveRuns(days)) {
       const to = run[run.length - 1];
       if (to < today || run[0] > until) continue;
