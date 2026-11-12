@@ -8,6 +8,7 @@ import { seedDefaultTags } from "@/lib/meals/recipes/tags";
 import { insertDefaultCategories } from "@/lib/finance/presets";
 import { pickMemberColor } from "./colors";
 import { deleteFamilyPhotos } from "./photos";
+import { deleteFamilyScanFiles } from "@/lib/knowledge/scan-files";
 import { type Actor, type Role, isRole, requireRole } from "./roles";
 
 export type Family = typeof families.$inferSelect;
@@ -108,6 +109,7 @@ export function deleteFamily(db: Db, actor: Actor, familyId: string): void {
   }
   db.delete(families).where(eq(families.id, familyId)).run(); // cascades members, people, invites
   deleteFamilyPhotos(familyId);
+  deleteFamilyScanFiles(familyId);
 }
 
 /** The family "/" opens for the user: the last one opened, else the first by name. */

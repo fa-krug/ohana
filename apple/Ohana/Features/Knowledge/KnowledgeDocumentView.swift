@@ -3,8 +3,11 @@ import SwiftUI
 /// One document of the knowledge base: where it is in the folder, its date, whose it is and its
 /// tags; its card (the summary and the facts, each with the quote it rests on: a tap opens the
 /// original at that quote); where it stands when it isn't simply there; and its text page by page
-/// (collapsed; a route's page open, its quote marked). *Open Original* in the toolbar, the rest in
-/// its More menu: *Show in Finder* (Mac), *Read Again*, *Leave Out* / *Include Again*.
+/// (collapsed; a route's page open, its quote marked; pages the family's AI transcribed from their
+/// image marked "Read by the assistant"). *Open Original* in the toolbar, the rest in its More menu:
+/// *Show in Finder* (Mac), *Read Again* and *Read Again with the Assistant* (this device reads the
+/// file now and sends it, `KnowledgeIndexer.reread`; the latter sends every page's image to the
+/// family's AI too), *Leave Out* / *Include Again*.
 struct KnowledgeDocumentView: View {
     let target: KnowledgeDocumentTarget
     @Environment(FamilyContext.self) private var family
@@ -12,6 +15,12 @@ struct KnowledgeDocumentView: View {
     @State private var members: [KnowledgeMember] = []
     /// The server makes cards (the family's AI is set up): a missing summary is on its way.
     @State private var makesCards = false
+    /// The family's AI can transcribe page images (*Read Again with the Assistant*).
+    @State private var readsScans = false
+    /// *Read Again* runs.
+    @State private var rereading = false
+    /// What the last *Read Again* came to, said quietly.
+    @State private var rereadNote: String?
     @State private var opener = KnowledgeOriginalOpener()
     /// The pages whose text is open.
     @State private var expanded: Set<Int> = []
@@ -43,17 +52,21 @@ struct KnowledgeDocumentView: View {
     /// The document, whether cards are made (the status' copy on the device, else the server's)
     /// and the members, side by side.
     private func load() async {
-        async let cards = cardsMade()
+        async let status = statusInfo()
         async let found = loadMembers()
         await LoadState.run($state, family.api.knowledgeDocument(target.id)) { $0.document }
-        if let cards = await cards { makesCards = cards }
+        if let status = await status {
+            makesCards = status.makesCards
+            readsScans = status.readsScans
+        }
         if let found = await found { members = found }
     }
 
-    private func cardsMade() async -> Bool? {
+    /// The index's status: the copy on the device, else the server's.
+    private func statusInfo() async -> KnowledgeStatusInfo? {
         let status = family.api.knowledgeStatus()
-        if let saved = await status.savedOffMain() { return saved.value.makesCards }
-        return (try? await status.fetchOrSaved())?.makesCards
+        if let saved = await status.savedOffMain() { return saved.value }
+        return try? await status.fetchOrSaved()
     }
 
     private func loadMembers() async -> [KnowledgeMember]? {
@@ -68,6 +81,8 @@ struct KnowledgeDocumentView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     header(detail.document)
                     statusNote(detail.document)
+                    rereadStatus
+                    scansNote(detail)
                     card(detail)
                     text(detail)
                 }
@@ -167,6 +182,56 @@ struct KnowledgeDocumentView: View {
         }
     }
 
+    /// *Read Again* under way, or what it came to.
+    @ViewBuilder
+    private var rereadStatus: some View {
+        if rereading {
+            HStack(spacing: 10) {
+                ProgressView().controlSize(.small)
+                Text("Reading the file again…")
+            }
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 4)
+        } else if let rereadNote {
+            Label(rereadNote, systemImage: "arrow.clockwise")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 4)
+        }
+    }
+
+    /// The pages' images the family's AI hasn't transcribed yet, or couldn't: said quietly.
+    @ViewBuilder
+    private func scansNote(_ detail: KnowledgeDocumentDetail) -> some View {
+        let waiting = detail.scans.filter { $0.status == .waiting || $0.status == .running }.map(\.page).sorted()
+        let failed = detail.scans.filter { $0.status == .failed }.sorted { $0.page < $1.page }
+        if !waiting.isEmpty || !failed.isEmpty {
+            VStack(alignment: .leading, spacing: 4) {
+                if !waiting.isEmpty {
+                    Label("Pages waiting for the assistant: \(Self.pageList(waiting))", systemImage: "sparkles")
+                }
+                ForEach(failed, id: \.page) { scan in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("The assistant couldn’t read page \(scan.page).")
+                        if let error = scan.error, !error.isEmpty {
+                            Text(verbatim: error)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                }
+            }
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 4)
+        }
+    }
+
+    /// "1, 3, 4".
+    private static func pageList(_ pages: [Int]) -> String {
+        pages.map { $0.formatted() }.joined(separator: ", ")
+    }
+
     /// The summary and the facts.
     @ViewBuilder
     private func card(_ detail: KnowledgeDocumentDetail) -> some View {
@@ -240,7 +305,14 @@ struct KnowledgeDocumentView: View {
                                 .padding(.top, 6)
                         }
                     } label: {
-                        Text("Page \(page.page)")
+                        HStack(spacing: 8) {
+                            Text("Page \(page.page)")
+                            if detail.document.aiPages.contains(page.page) {
+                                Label("Read by the assistant", systemImage: "sparkles")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
                     }
                     .id(page.page)
                 }
@@ -281,8 +353,12 @@ struct KnowledgeDocumentView: View {
                 Button("Show in Finder", systemImage: "folder") { showInFinder(document) }
                 #endif
                 if document.status != .excluded, document.status != .missing {
-                    Button("Read Again", systemImage: "arrow.clockwise") { reindex() }
-                        .disabled(state.isSaved)
+                    Button("Read Again", systemImage: "arrow.clockwise") { reread(document, assistant: false) }
+                        .disabled(state.isSaved || rereading)
+                    if readsScans {
+                        Button("Read Again with the Assistant", systemImage: "sparkles") { reread(document, assistant: true) }
+                            .disabled(state.isSaved || rereading)
+                    }
                 }
                 if document.status == .ready, makesCards {
                     Button("Write Summary Again", systemImage: "sparkles") { rewriteCard() }
@@ -313,10 +389,31 @@ struct KnowledgeDocumentView: View {
     }
     #endif
 
-    private func reindex() {
-        perform {
-            try await family.api.reindexKnowledgeDocument(target.id)
-            family.didChange(.knowledge)
+    /// Reads the file again on this device now and sends it (`assistant`: every page's image to the
+    /// family's AI too). Without this device's folder or the file in it: the original's alert, which
+    /// offers Settings → Knowledge.
+    private func reread(_ document: KnowledgeDocumentSummary, assistant: Bool) {
+        guard !rereading else { return }
+        rereading = true
+        rereadNote = nil
+        Task {
+            defer { rereading = false }
+            do {
+                switch try await family.knowledge.reread(path: document.path, assistant: assistant) {
+                case .sent:
+                    rereadNote = assistant ? String(localized: "Read again. The assistant reads its pages next.")
+                        : String(localized: "Read again on this device.")
+                    family.didChange(.knowledge)
+                case .waiting:
+                    rereadNote = String(localized: "Read again. It’s sent once there’s a connection.")
+                case let .unreadable(reason):
+                    rereadNote = reason.reason
+                }
+            } catch let error as KnowledgeOriginalError {
+                opener.failure = error
+            } catch {
+                ErrorBanner.shared.show(error)
+            }
         }
     }
 

@@ -145,8 +145,10 @@ tags:
       the folder's files and the text of those the server asks for; the worker cuts it into chunks
       for the search, then, with the family's AI set up, makes a card per document (a summary,
       the document's date, whose it is, facts each with a verbatim quote checked against the
-      text). The files never reach the server. **Editors only**: for viewers every knowledge route
-      answers 404.
+      text). The files never reach the server, except, when the family turns it on (`aiScans`) or
+      an editor asks for it, pictures of pages the device's OCR read poorly, which the worker has
+      the family's AI transcribe and deletes once read. **Editors only**: for viewers every
+      knowledge route answers 404.
   - name: Assistant
     description: The AI assistant's chats and agent instructions (module `assistant`).
   - name: AI settings
@@ -2658,6 +2660,31 @@ paths:
         "400": {$ref: "#/components/responses/BadRequest"}
         "401": {$ref: "#/components/responses/Unauthorized"}
         "404": {$ref: "#/components/responses/NotFound"}
+    patch:
+      tags: [Knowledge base]
+      operationId: updateKnowledgeFolder
+      summary: The family's settings of the folder
+      description: >-
+        `aiScans`: whether the app sends pictures of pages its own OCR read poorly to the family's
+        AI provider for a transcription (off by default). Turned off, the scans the app sent on
+        its own that still wait are deleted (forced ones and those being read stay). 404 without a
+        folder. An agent token can't change it (403).
+      x-ohana-role: editor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [aiScans]
+              properties:
+                aiScans: {type: boolean}
+      responses:
+        "200": {$ref: "#/components/responses/KnowledgeFolderResult"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
   /api/v1/families/{familyId}/knowledge/status:
     parameters:
       - $ref: "#/components/parameters/FamilyId"
@@ -2674,7 +2701,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [folder, counts, chunks, cards]
+                required: [folder, counts, chunks, cards, scans, aiScans]
                 properties:
                   folder:
                     oneOf:
@@ -2695,6 +2722,13 @@ paths:
                     description: >-
                       Whether the worker makes cards: the family's AI is set up and the server has
                       the assistant on. Without, documents wait with `cardStatus` pending.
+                  scans:
+                    type: boolean
+                    description: >-
+                      Whether page scans can be read by the family's AI at all (as `cards`). The
+                      app sends scans on its own only with `scans` and `aiScans`, forced ones with
+                      `scans`.
+                  aiScans: {type: boolean, description: "The family's setting (the folder's `aiScans`; false without a folder)."}
         "401": {$ref: "#/components/responses/Unauthorized"}
         "404": {$ref: "#/components/responses/NotFound"}
   /api/v1/families/{familyId}/knowledge/manifest:
@@ -2712,7 +2746,8 @@ paths:
         their status back); excluded ones are never asked for and stay excluded. A file with `hash:
         null` (seen but not hashed, e.g. an iCloud file the device couldn't download): a known path
         counts as present (tags updated, nothing else; never asked for, never moved), an unknown
-        one is ignored. An empty `files`
+        one is ignored. A known path with the same hash whose text came from an older `reader`
+        than the entry's: its text is needed again. An empty `files`
         changes nothing (a folder the device can't read must not empty the index). At most 20 000
         files (else 413); a path listed twice (after NFC) is a 400.
       x-ohana-role: editor
@@ -2804,9 +2839,11 @@ paths:
       summary: The text the app read from a file, by folder + path
       description: >-
         Idempotent: the same hash changes only tags, size and time (a missing document comes
-        back), unless the stored text is empty and this one isn't. New text replaces the old: its
-        chunks and card go at once and the document waits for the worker (`pending`; an excluded
-        one stays excluded). At most 2000 pages and 2 MB of text (else 413).
+        back; the very same text also notes a newer `reader`, the card stays), unless the stored
+        text is empty and this one isn't, or the text differs and comes from a newer `reader` or
+        with `reread`. New text replaces the old: its chunks, card, page scans and `aiPages` go at
+        once and the document waits for the worker (`pending`; an excluded one stays excluded).
+        At most 2000 pages and 2 MB of text (else 413).
       x-ohana-role: editor
       requestBody:
         required: true
@@ -2819,6 +2856,9 @@ paths:
                   required: [folderId, pages]
                   properties:
                     folderId: {type: string}
+                    reread:
+                      type: boolean
+                      description: "The user asked for the file to be read again: text that differs from the stored one replaces it (default false)."
                     pages:
                       type: array
                       maxItems: 2000
@@ -2852,6 +2892,69 @@ paths:
         "200": {$ref: "#/components/responses/KnowledgeDocumentResult"}
         "401": {$ref: "#/components/responses/Unauthorized"}
         "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/families/{familyId}/knowledge/documents/{documentId}/pages/{page}/scan:
+    parameters:
+      - $ref: "#/components/parameters/FamilyId"
+      - $ref: "#/components/parameters/KnowledgeDocumentId"
+      - name: page
+        in: path
+        required: true
+        description: The page, from 1, at most the document's `pages` (else 400).
+        schema: {type: integer, minimum: 1}
+    put:
+      tags: [Knowledge base]
+      operationId: putKnowledgePageScan
+      summary: A picture of a page for the family's AI to transcribe
+      description: >-
+        The page as a JPEG, upright, at most 4 MB (else 413). The worker has the family's AI
+        transcribe it (Markdown, tables as tables) with the page's current text as a hint; the
+        transcription replaces the page's text, the page joins `aiPages` and the document is
+        chunked and summarised anew (the card waits while scans of it wait). Temporary failures
+        are tried again after 5 min, 30 min, 2 h; the fifth, and any other failure, leave the page's
+        text as it was (the scan `failed`). The picture is deleted once read, failed, when the
+        document's text is replaced, and after 7 days at most. A scan of the same page replaces the
+        earlier one. 409 when `hash` isn't the document's current hash, the document is excluded or
+        its file missing, the family's AI can't read scans (`scans` of the status), or, without
+        `force`, the family has `aiScans` off; 413 when 20 other pages of the document still wait.
+        An agent token can't send pages (403).
+      x-ohana-role: editor
+      parameters:
+        - name: hash
+          in: query
+          required: true
+          description: The document's hash as the app knows it.
+          schema: {type: string, pattern: "^[0-9a-fA-F]{64}$"}
+        - name: force
+          in: query
+          description: "`1`: an editor asked for it (Read Again with the Assistant); sent whatever `aiScans` says."
+          schema: {type: string, enum: ["1", "true"]}
+      requestBody:
+        required: true
+        content:
+          image/jpeg:
+            schema: {type: string, format: binary}
+      responses:
+        "202":
+          description: Waiting for the worker.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [page, status]
+                properties:
+                  page: {type: integer}
+                  status: {type: string, enum: [waiting]}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+        "413": {$ref: "#/components/responses/PayloadTooLarge"}
+        "415":
+          description: The body isn't `image/jpeg`.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
   /api/v1/families/{familyId}/knowledge/documents/{documentId}/reindex:
     parameters:
       - $ref: "#/components/parameters/FamilyId"
@@ -4977,8 +5080,9 @@ paths:
         Creates an agent token for the caller: an API token named "AI agent" that expires after
         one hour and works only for this family's API (`/api/v1/families/{familyId}[/…]`, plus
         `GET /api/v1/server` and `/api/health`), with the caller's role (a viewer's agent only
-        reads; an editor's can't change members, people, invites, notification channels or the
-        assistant's settings, or delete the family: 403). It is listed with the account's API tokens (`familyId`, `expiresAt`) and can be
+        reads; an editor's can't change members, people, invites, notification channels, the
+        assistant's settings or memory, the knowledge base's `aiScans` or page scans, or delete
+        the family: 403). It is listed with the account's API tokens (`familyId`, `expiresAt`) and can be
         revoked there. `prompt` is Markdown (English) to paste into the agent: the API base, the
         family, the token and its expiry, the conventions, where the OpenAPI schema is and the
         family's instructions (`GET …/agent`). The app's assistant offers it as *Copy Prompt for
@@ -6968,12 +7072,13 @@ components:
         subscribed: {type: boolean, description: "Whether the caller gets its notification."}
     KnowledgeFolder:
       type: object
-      required: [id, createdAt, lastManifestAt, lastManifestDevice]
+      required: [id, createdAt, lastManifestAt, lastManifestDevice, aiScans]
       properties:
         id: {type: string, format: uuid}
         createdAt: {type: string, format: date-time}
         lastManifestAt: {type: [string, "null"], format: date-time, description: "The last non-empty manifest (null before one)."}
         lastManifestDevice: {type: [string, "null"], description: "The `device` that sent it."}
+        aiScans: {type: boolean, description: "Whether the app sends pages its OCR read poorly to the family's AI (PATCH; default false; kept when the folder is replaced)."}
     KnowledgeStatus:
       type: string
       description: >-
@@ -7022,6 +7127,11 @@ components:
           maxItems: 50
           description: Finder tags (trimmed, duplicates dropped).
           items: {type: string, maxLength: 100}
+        reader:
+          type: integer
+          minimum: 1
+          default: 1
+          description: The version of the app's reader the text comes from (newer ones read scans better).
     KnowledgeManifestFile:
       type: object
       description: A file of the folder as a manifest lists it; `hash` may be null.
@@ -7035,9 +7145,10 @@ components:
           pattern: "^[0-9a-fA-F]{64}$"
           description: SHA-256 of the file; null when the device couldn't hash it (an iCloud file it couldn't download).
         tags: {$ref: "#/components/schemas/KnowledgeFile/properties/tags"}
+        reader: {$ref: "#/components/schemas/KnowledgeFile/properties/reader"}
     KnowledgeDocumentSummary:
       type: object
-      required: [id, folderId, path, name, tags, size, mtime, hash, pages, status, error, cardStatus, cardError, summary, docDate, person, indexedAt, missingSince, createdAt, updatedAt]
+      required: [id, folderId, path, name, tags, size, mtime, hash, pages, aiPages, status, error, cardStatus, cardError, summary, docDate, person, indexedAt, missingSince, createdAt, updatedAt]
       properties:
         id: {type: string, format: uuid}
         folderId: {type: string}
@@ -7050,6 +7161,10 @@ components:
         mtime: {type: integer, description: "ms since 1970."}
         hash: {type: string}
         pages: {type: integer}
+        aiPages:
+          type: array
+          description: The pages (from 1) whose text the family's AI transcribed from a page scan.
+          items: {type: integer}
         status: {$ref: "#/components/schemas/KnowledgeStatus"}
         error: {type: [string, "null"], description: "Why it failed."}
         cardStatus: {$ref: "#/components/schemas/KnowledgeCardStatus"}
@@ -7069,8 +7184,18 @@ components:
       allOf:
         - $ref: "#/components/schemas/KnowledgeDocumentSummary"
         - type: object
-          required: [facts, chunks]
+          required: [facts, chunks, scans]
           properties:
+            scans:
+              type: array
+              description: The page scans not done yet (waiting, being read, or failed), by page.
+              items:
+                type: object
+                required: [page, status, error]
+                properties:
+                  page: {type: integer}
+                  status: {type: string, enum: [waiting, running, failed]}
+                  error: {type: [string, "null"], description: "Why it failed (only with status failed)."}
             facts:
               type: [array, "null"]
               description: The card's facts (at most 12), each with its verbatim quote; null without a card.

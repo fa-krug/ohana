@@ -3,7 +3,8 @@ import SwiftUI
 /// Settings → Knowledge: the family's knowledge folder on this device (choose, change, remove;
 /// a marker of another family or a folder other than the family's asks first) and what's in the
 /// index (GET /knowledge/status with the indexer's own state: running, waiting uploads, files this
-/// device can't read), *Read Now*. Only where `FamilyContext.knowledgeAvailable` (module on, an
+/// device can't read), *Read Now*, and the family's setting whether difficult scans go to its AI
+/// (shown where the server can transcribe them, `KnowledgeStatusInfo.readsScans`). Only where `FamilyContext.knowledgeAvailable` (module on, an
 /// editor, not the demo).
 struct KnowledgeSettingsView: View {
     @Environment(FamilyContext.self) private var family
@@ -38,6 +39,9 @@ private struct KnowledgeSettingsForm: View {
     @State private var linking = false
     @State private var conflict: KnowledgeLinkConflict?
     @State private var removing = false
+    /// The setting as just chosen, until the server's status says it.
+    @State private var aiScans: Bool?
+    @State private var savingAIScans = false
 
     private var running: Bool {
         switch indexer.phase {
@@ -51,6 +55,9 @@ private struct KnowledgeSettingsForm: View {
             folderSection
             if folder != .none || status.value?.folder != nil {
                 indexSection
+                if let info = status.value, info.folder != nil, info.readsScans {
+                    scansSection(info)
+                }
             }
         }
         .formStyle(.grouped)
@@ -232,6 +239,37 @@ private struct KnowledgeSettingsForm: View {
                 Button("Read Now", systemImage: "arrow.clockwise") { family.indexKnowledge(force: true) }
                     .disabled(running)
             }
+        }
+    }
+
+    // MARK: Difficult scans
+
+    private func scansSection(_ info: KnowledgeStatusInfo) -> some View {
+        Section {
+            Toggle("Read difficult scans with the assistant", isOn: Binding {
+                aiScans ?? (info.aiScans == true)
+            } set: { on in
+                setAIScans(on)
+            })
+            .disabled(savingAIScans)
+        } footer: {
+            Text("Pages this device reads poorly then go to the family’s AI provider as images.")
+        }
+    }
+
+    private func setAIScans(_ on: Bool) {
+        aiScans = on
+        savingAIScans = true
+        Task {
+            defer { savingAIScans = false }
+            do {
+                try await family.api.setKnowledgeAIScans(on)
+                indexer.scanSettingChanged()
+                await loadStatus()
+            } catch {
+                ErrorBanner.shared.show(error)
+            }
+            aiScans = nil
         }
     }
 

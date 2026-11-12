@@ -166,15 +166,17 @@ nonisolated enum KnowledgeTags {
 /// unchanged isn't read again (one iCloud keeps off the device: its size alone, the date of its
 /// placeholder isn't the file's). The tags are kept too, for files iCloud has taken off the device,
 /// and whether the text of a file with that hash couldn't be read (a locked PDF, OCR failing), so
-/// it isn't read again until it changes.
+/// it isn't read again until it changes or a newer reader (`KnowledgeText.readerVersion`) comes.
 nonisolated struct KnowledgeHashCache: Codable, Equatable, Sendable {
     struct Entry: Codable, Equatable, Sendable {
         var size: Int64
         var mtime: Int64
         var hash: String
         var tags: [String] = []
-        /// Reading this hash's text failed on this device.
+        /// Reading this hash's text failed on this device…
         var readFailed: Bool?
+        /// … with this reader version (nil: 1).
+        var readFailedReader: Int?
     }
 
     var entries: [String: Entry] = [:]
@@ -206,20 +208,23 @@ nonisolated struct KnowledgeHashCache: Codable, Equatable, Sendable {
 
     mutating func set(_ file: KnowledgeLocalFile, hash: String) {
         // A failed read stays known while the content is the same.
-        let failed = entries[file.path].flatMap { $0.hash == hash ? $0.readFailed : nil }
-        entries[file.path] = Entry(size: file.size, mtime: file.mtime, hash: hash, tags: file.tags, readFailed: failed)
+        let old = entries[file.path].flatMap { $0.hash == hash ? $0 : nil }
+        entries[file.path] = Entry(size: file.size, mtime: file.mtime, hash: hash, tags: file.tags,
+                                   readFailed: old?.readFailed, readFailedReader: old?.readFailedReader)
     }
 
-    /// Whether reading the text of `path` with `hash` failed before.
-    func readFailed(path: String, hash: String) -> Bool {
-        guard let entry = entries[path], entry.hash == hash else { return false }
-        return entry.readFailed == true
+    /// Whether reading the text of `path` with `hash` failed before with `reader` (or a newer one).
+    func readFailed(path: String, hash: String, reader: Int = KnowledgeText.readerVersion) -> Bool {
+        guard let entry = entries[path], entry.hash == hash, entry.readFailed == true else { return false }
+        return (entry.readFailedReader ?? 1) >= reader
     }
 
-    /// Notes that reading `path` with `hash` failed (or, `failed` false, worked).
-    mutating func setReadFailed(path: String, hash: String, _ failed: Bool = true) {
+    /// Notes that reading `path` with `hash` by `reader` failed (or, `failed` false, worked).
+    mutating func setReadFailed(path: String, hash: String, reader: Int = KnowledgeText.readerVersion,
+                                _ failed: Bool = true) {
         guard var entry = entries[path], entry.hash == hash else { return }
         entry.readFailed = failed ? true : nil
+        entry.readFailedReader = failed ? reader : nil
         entries[path] = entry
     }
 

@@ -51,6 +51,7 @@ const MANIFEST_COLUMNS = {
   size: kbDocuments.size,
   mtime: kbDocuments.mtime,
   hash: kbDocuments.hash,
+  reader: kbDocuments.reader,
   status: kbDocuments.status,
   error: kbDocuments.error,
   indexedAt: kbDocuments.indexedAt,
@@ -92,6 +93,8 @@ function changed(row: Row, changes: Changes): Changes {
  * Applies a manifest of the folder (the complete list of its files as one device sees them):
  * - a known path with the same hash: tags, size and time updated in place;
  * - a known path with another hash: its text is needed (tags updated);
+ * - a known path with the same hash read by an older reader than the entry's `reader` (the app's
+ *   reader got better, e.g. at scans): its text is needed again;
  * - a known path with hash null (the device sees the file but couldn't hash it, e.g. an iCloud
  *   file it couldn't download): present, tags updated, nothing else; never asked for, never moved;
  * - a new path with hash null: ignored (nothing to compare or ask for yet);
@@ -141,7 +144,8 @@ export function applyManifest(db: Db, folderId: string, files: ManifestFile[], n
         const row = byPath.get(f.path);
         if (row) {
           save(row, seenAgain(row, f));
-          if (f.hash !== null && row.hash !== f.hash && row.status !== "excluded") upload.push(f.path);
+          const newer = f.hash !== null && (row.hash !== f.hash || row.reader < f.reader);
+          if (newer && row.status !== "excluded") upload.push(f.path);
           continue;
         }
         if (f.hash === null) continue;

@@ -72,6 +72,10 @@
 // "Fact: <x>" (quoting x), "Shout: <x>" (quoting x in capitals, its spaces as line breaks) or
 // "Invent: <x>" (a quote the text doesn't have). A text saying "garbage" gets an answer that
 // isn't JSON. (Quotes count with 3 words and 15 characters: write facts long enough.)
+// Asked to transcribe a knowledge document's page scan (the transcription prompt), it answers
+// with a Markdown timetable in a ``` fence, or with what follows a line "Transcribe: <x>" in the
+// OCR hint (as written, "\n" a line break; "Transcribe: nothing" an empty answer). Without a
+// picture in the message it refuses (400: a model that takes no images).
 // Asked to sort transactions into categories (the categorize prompt), it picks the category
 // whose id or name occurs in a standing instruction that names a word of the row's payee (4
 // letters or more), else in the row's payee or description, searching the web once for a payee
@@ -325,6 +329,20 @@ function card(stream: boolean, system: string, message: string) {
   return reply(stream, "```json\n" + JSON.stringify(answer, null, 1) + "\n```");
 }
 
+/** The answer to a page scan (see the top). */
+export const MOCK_TRANSCRIPTION = "| Stunde | Montag | Dienstag |\n| --- | --- | --- |\n| 1 | Mathe | Deutsch |\n| 2 | Englisch | Sport |";
+
+/** The transcription prompt: the page as Markdown (see the top). */
+function transcription(stream: boolean, message: Msg) {
+  const parts = Array.isArray(message.content) ? message.content : [];
+  if (!parts.some((p) => p.type === "image_url")) {
+    return Response.json({ error: { message: "This model does not support image input" } }, { status: 400 });
+  }
+  const line = /^Transcribe: (.*)$/m.exec(textOf(message.content))?.[1];
+  if (line === undefined) return reply(stream, "```markdown\n" + MOCK_TRANSCRIPTION + "\n```");
+  return reply(stream, line === "nothing" ? "" : line.replace(/\\n/g, "\n"));
+}
+
 /** How often the conversation looked at the calendar: in the summary, and after it. */
 function looks(messages: Msg[]) {
   const before = messages.map((m) => /Looked (\d+) times/.exec(textOf(m.content))?.[1])
@@ -406,6 +424,7 @@ async function respond(req: Request, body: any): Promise<Response> {
     return letter(stream, system, textOf(last.content));
   }
   if (system.startsWith("You write a card for a document")) return card(stream, system, textOf(last.content));
+  if (system.startsWith("You transcribe one scanned page")) return transcription(stream, last);
   if (system.startsWith("You sort bank transactions into categories.")) {
     return categorize(
       stream,

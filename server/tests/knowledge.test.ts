@@ -96,7 +96,7 @@ describe("knowledge: access", () => {
     const first = await edit("POST", "/knowledge/folder");
     expect(first).toEqual({
       status: 201,
-      data: { folder: { id: expect.any(String), createdAt: NOW.toISOString(), lastManifestAt: null, lastManifestDevice: null } },
+      data: { folder: { id: expect.any(String), createdAt: NOW.toISOString(), lastManifestAt: null, lastManifestDevice: null, aiScans: false } },
     });
     const again = await edit("POST", "/knowledge/folder");
     expect(again).toEqual({ status: 200, data: first.data });
@@ -117,7 +117,7 @@ describe("knowledge: access", () => {
     const replaced = await edit("POST", "/knowledge/folder", { replace: true });
     expect(replaced).toEqual({
       status: 201,
-      data: { folder: { id: expect.any(String), createdAt: now.toISOString(), lastManifestAt: null, lastManifestDevice: null } },
+      data: { folder: { id: expect.any(String), createdAt: now.toISOString(), lastManifestAt: null, lastManifestDevice: null, aiScans: false } },
     });
     const newId = replaced.data.folder.id;
     expect(newId).not.toBe(folderId);
@@ -380,7 +380,7 @@ describe("knowledge: status", () => {
   it("is empty without a folder", async () => {
     expect(await call(editorId)("GET", "/knowledge/status")).toEqual({
       status: 200,
-      data: { folder: null, counts: { pending: 0, ready: 0, failed: 0, missing: 0, excluded: 0 }, chunks: 0, cards: false },
+      data: { folder: null, counts: { pending: 0, ready: 0, failed: 0, missing: 0, excluded: 0 }, chunks: 0, cards: false, scans: false, aiScans: false },
     });
   });
 
@@ -440,10 +440,12 @@ describe("knowledge: status", () => {
     expect(await edit("GET", "/knowledge/status")).toEqual({
       status: 200,
       data: {
-        folder: { id: folderId, createdAt: NOW.toISOString(), lastManifestAt: now.toISOString(), lastManifestDevice: "iPad" },
+        folder: { id: folderId, createdAt: NOW.toISOString(), lastManifestAt: now.toISOString(), lastManifestDevice: "iPad", aiScans: false },
         counts: { pending: 1, ready: 2, failed: 1, missing: 1, excluded: 1 },
         chunks: 3,
         cards: false,
+        scans: false,
+        aiScans: false,
       },
     });
   });
@@ -566,6 +568,7 @@ describe("knowledge: documents", () => {
       mtime: 3000,
       hash: sha("1"),
       pages: 1,
+      aiPages: [],
       status: "pending",
       error: null,
       cardStatus: "pending",

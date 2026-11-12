@@ -89,6 +89,8 @@ final class KnowledgeIndexer {
     /// The generation a flush is under way for.
     @ObservationIgnored private var flushingGeneration: Int?
     @ObservationIgnored private var retryDelay: Double = 2
+    /// The server's word on page images (`scanStatus`), and when it was asked.
+    @ObservationIgnored private var scanStatusCache: (status: KnowledgeScanStatus, at: Date)?
     @ObservationIgnored private var retryWait: Task<Void, Never>?
     @ObservationIgnored private var queueSave: Task<Void, Never>?
     /// The disk work, one after the other.
@@ -106,6 +108,8 @@ final class KnowledgeIndexer {
     static let maxRetryDelay: Double = 120
     /// The queue is written at most this often while it changes (and when a flush ends).
     static var queueSaveDelay = Duration.seconds(2)
+    /// Whether the server takes page images is asked again after this long.
+    static var scanStatusAge: TimeInterval = 5 * 60
 
     init(api: FamilyAPI, folder: KnowledgeFolder, directory: URL, deviceName: String = AppModel.deviceName) {
         self.api = api
@@ -259,9 +263,9 @@ final class KnowledgeIndexer {
         var queued = Set<String>()
         for match in wanted.isEmpty ? [] : Self.match(wanted, in: files.filter { $0.hash != nil }.map(\.local)) {
             guard let file = byPath[match.path], let info = file.info else { continue }
-            // A scan waiting with the text read already: kept, not read again.
-            if let waiting = queue.upload(for: info.path), waiting.textFile != nil, waiting.folderId == folderID,
-               waiting.file.hash == info.hash {
+            // A scan waiting with the text read already, or one the user asked to read again: kept.
+            if let waiting = queue.upload(for: info.path), waiting.textFile != nil || waiting.reread == true,
+               waiting.folderId == folderID, waiting.file.hash == info.hash {
                 continue
             }
             let upload = KnowledgeUpload(folderId: folderID, file: info, diskPath: match.diskPath,
@@ -294,7 +298,8 @@ final class KnowledgeIndexer {
         var evict: Bool
 
         var entry: KnowledgeManifestFile {
-            KnowledgeManifestFile(path: local.path, size: local.size, mtime: local.mtime, hash: hash, tags: local.tags)
+            KnowledgeManifestFile(path: local.path, size: local.size, mtime: local.mtime, hash: hash, tags: local.tags,
+                                  reader: KnowledgeText.reader(forPath: local.path))
         }
 
         var info: KnowledgeFileInfo? {
@@ -512,6 +517,69 @@ final class KnowledgeIndexer {
         return parts.dropFirst(base.count).joined(separator: "/")
     }
 
+    // MARK: Reading a file again
+
+    /// What *Read Again* came to.
+    enum RereadOutcome: Equatable {
+        /// Read and sent (the server reads it anew if its text changed).
+        case sent
+        /// Waits on the device for the connection.
+        case waiting
+        /// This device couldn't read it.
+        case unreadable(Unreadable)
+    }
+
+    /// Reads the document at `path` again on this device now, with the current reader, and uploads
+    /// it with `reread` (the server takes new text even from the same reader); `assistant`: every
+    /// page's image goes to the family's AI too (*Read Again with the Assistant*). Needs this
+    /// device's folder with the file in it: throws `KnowledgeOriginalError` otherwise. Returns once
+    /// it's sent (or waits for the connection).
+    func reread(path: String, assistant: Bool) async throws -> RereadOutcome {
+        let generation = gate.current
+        guard isCurrent(generation) else { return .waiting }
+        let state = folder.state()
+        let root = try KnowledgeOriginal.linkedRoot(state)
+        guard let folderID = state.folderID else { throw KnowledgeOriginalError.noFolder }
+        let access = root.startAccessingSecurityScopedResource()
+        defer { if access { root.stopAccessingSecurityScopedResource() } }
+        guard let url = await Self.locate(path, in: root) else { throw KnowledgeOriginalError.notFound }
+        guard KnowledgeText.canRead(url) else { return .unreadable(.format) }
+        let onDevice = await Self.inspect(url).onDevice
+        // Loaded from iCloud first when it isn't on the device.
+        guard let hashed = await Self.hash(url) else { throw KnowledgeOriginalError.unreadable }
+        guard let diskPath = Self.relativePath(of: url, in: root) else { throw KnowledgeOriginalError.notFound }
+        let nfc = diskPath.precomposedStringWithCanonicalMapping
+        let tags = KnowledgeTags.cleaned(FinderTags.read(url))
+        await ensureCache()
+        await ensureQueue()
+        guard isCurrent(generation) else { return .waiting }
+        let local = KnowledgeLocalFile(path: nfc, url: url, size: hashed.size, mtime: hashed.mtime, tags: tags)
+        cache.set(local, hash: hashed.hash)
+        persistCache()
+        let info = KnowledgeFileInfo(path: nfc, size: hashed.size, mtime: hashed.mtime, hash: hashed.hash, tags: tags)
+        let upload = KnowledgeUpload(folderId: folderID, file: info, diskPath: diskPath, evict: onDevice ? nil : true,
+                                     reread: true, force: assistant ? true : nil)
+        if let old = queue.add(upload) { removeText(old) }
+        persistQueue()
+        unreadable[nfc] = nil
+        if flushingGeneration == nil { await flush() }
+        // A flush under way (a run's) sends it: waited for, while it goes on.
+        func pending() -> Bool { queue.upload(for: nfc)?.isSame(as: upload) == true }
+        var waited = 0
+        while isCurrent(generation), pending(), retryWait == nil, flushingGeneration != nil, waited < 2400 {
+            try? await Task.sleep(for: .milliseconds(250))
+            waited += 1
+        }
+        if let reason = unreadable[nfc] { return .unreadable(reason) }
+        return pending() ? .waiting : .sent
+    }
+
+    /// The file of `path` in `root` as the disk has it (off the main actor: iCloud may be slow).
+    @concurrent
+    private static func locate(_ path: String, in root: URL) async -> URL? {
+        KnowledgeOriginal.locate(path, in: root)
+    }
+
     // MARK: Uploading
 
     /// The connection is back, or the app active again: what waits is sent now, not after the
@@ -561,22 +629,30 @@ final class KnowledgeIndexer {
                     continue
                 }
                 let path = upload.file.path
-                if upload.textFile == nil, cache.readFailed(path: path, hash: upload.file.hash) {
+                let reader = KnowledgeText.reader(forPath: path)
+                if upload.textFile == nil, upload.reread != true,
+                   cache.readFailed(path: path, hash: upload.file.hash, reader: reader) {
                     unreadableNow[path] = .failed
                     drop(upload)
                     done += 1
                     continue
                 }
-                let read = await text(of: upload, root: root, downloads: downloads)
+                let capture = await scanCapture(for: upload)
                 guard isCurrent(generation) else { break }
-                let pages: [String]
+                let read = await text(of: upload, root: root, downloads: downloads, capture: capture)
+                guard isCurrent(generation) else { break }
+                let pages: [String], scans: [KnowledgeText.PageScan]
                 switch read {
-                case let .pages(text):
-                    pages = text
+                case let .pages(text, images):
+                    (pages, scans) = (text, images)
+                    if upload.textFile == nil, cache.readFailed(path: path, hash: upload.file.hash, reader: reader) {
+                        cache.setReadFailed(path: path, hash: upload.file.hash, reader: reader, false)
+                        cacheChanged = true
+                    }
                 case let .unreadable(reason):
                     unreadableNow[path] = reason
                     if reason == .failed, upload.textFile == nil {
-                        cache.setReadFailed(path: path, hash: upload.file.hash)
+                        cache.setReadFailed(path: path, hash: upload.file.hash, reader: reader)
                         cacheChanged = true
                     }
                     drop(upload)
@@ -589,10 +665,25 @@ final class KnowledgeIndexer {
                     continue
                 }
                 do {
-                    try await api.uploadKnowledgeDocument(KnowledgeUploadBody(folderId: folderID, file: upload.file,
-                                                                              pages: pages))
+                    let id = try await api.uploadKnowledgeDocument(KnowledgeUploadBody(
+                        folderId: folderID, file: upload.file, pages: pages, reader: reader, reread: upload.reread == true))
                     guard isCurrent(generation) else { break }
                     unreadableNow[path] = nil
+                    if let id, !scans.isEmpty {
+                        let (outage, sentScans) = await send(scans, of: upload, documentID: id, generation: generation)
+                        guard isCurrent(generation) else { break }
+                        if let outage {
+                            // The text is in; the pages' images wait (those sent already aren't sent again).
+                            var kept = upload
+                            kept.sentScans = sentScans
+                            queue.add(kept)
+                            queueChanged()
+                            phase = .failed(outage.localizedDescription)
+                            scheduleRetry()
+                            waits = true
+                            break
+                        }
+                    }
                     drop(upload)
                     sent += 1
                     done += 1
@@ -621,8 +712,63 @@ final class KnowledgeIndexer {
         return sent
     }
 
+    /// Sends the pages' images of the document `documentID` (just uploaded) for the family's AI,
+    /// those not sent before; a refusal (an older server, the setting turned off meanwhile, a newer
+    /// version of the file) ends it quietly. The outage that stopped it, if one did, and the pages
+    /// sent so far.
+    private func send(_ scans: [KnowledgeText.PageScan], of upload: KnowledgeUpload, documentID: String,
+                      generation: Int) async -> (outage: (any Error)?, sent: [Int]) {
+        var sent = Set(upload.sentScans ?? [])
+        for scan in scans where !sent.contains(scan.page) {
+            do {
+                try await api.sendKnowledgePageScan(documentID: documentID, page: scan.page, hash: upload.file.hash,
+                                                    jpeg: scan.jpeg, force: upload.force == true)
+                sent.insert(scan.page)
+            } catch {
+                if KnowledgeUploadQueue.disposition(of: error) == .retry { return (error, sent.sorted()) }
+                KnowledgeFolder.log.info("Page scan refused: \(error.localizedDescription, privacy: .public)")
+                break
+            }
+            guard isCurrent(generation) else { break }
+        }
+        return (nil, sent.sorted())
+    }
+
+    /// Which pages' images to keep while reading `upload` (`KnowledgeText.ScanCapture`): none for
+    /// a file read without OCR or a scan's own text; the poor ones while the family's setting is on
+    /// (`KnowledgeStatusInfo.sendsScans`); every page for *Read Again with the Assistant* while the
+    /// family's AI can read them at all.
+    private func scanCapture(for upload: KnowledgeUpload) async -> KnowledgeText.ScanCapture {
+        guard upload.textFile == nil, KnowledgeText.reader(forPath: upload.file.path) > 1 else { return .none }
+        let forced = upload.force == true
+        guard let status = await scanStatus(fresh: forced) else { return .none }
+        if forced { return status.scans == true ? .all : .none }
+        return status.scans == true && status.aiScans == true ? .poor : .none
+    }
+
+    /// Whether the server takes page images (GET /knowledge/status), asked at most every
+    /// `scanStatusAge` (unless `fresh`); nil when it can't be asked.
+    private func scanStatus(fresh: Bool) async -> KnowledgeScanStatus? {
+        if !fresh, let cached = scanStatusCache, Date().timeIntervalSince(cached.at) < Self.scanStatusAge {
+            return cached.status
+        }
+        do {
+            let status: KnowledgeScanStatus = try await api.get("/knowledge/status")
+            scanStatusCache = (status, Date())
+            return status
+        } catch {
+            return nil
+        }
+    }
+
+    /// The family's setting changed (Settings → Knowledge): asked again before the next scan.
+    func scanSettingChanged() {
+        scanStatusCache = nil
+    }
+
     private enum UploadText {
-        case pages([String])
+        /// The text, and the pages' images the capture asked for.
+        case pages([String], [KnowledgeText.PageScan])
         /// This device didn't read the file.
         case unreadable(Unreadable)
         /// Not now: it changed since it was hashed, isn't on the device and may not be loaded now,
@@ -631,14 +777,16 @@ final class KnowledgeIndexer {
     }
 
     /// The upload's pages: its queued text, else read from the file (loaded from iCloud when it
-    /// isn't on the device and `downloads` allow; taken off again once read).
-    private func text(of upload: KnowledgeUpload, root: URL, downloads: KnowledgeDownloads) async -> UploadText {
+    /// isn't on the device and `downloads` allow; taken off again once read), with the pages'
+    /// images `capture` asks for.
+    private func text(of upload: KnowledgeUpload, root: URL, downloads: KnowledgeDownloads,
+                      capture: KnowledgeText.ScanCapture) async -> UploadText {
         if let name = upload.textFile {
             let file = textsFolder.appending(path: name)
             let pages = await Task.detached(priority: .utility) {
                 (try? Data(contentsOf: file)).flatMap { try? JSONDecoder().decode([String].self, from: $0) }
             }.value
-            return pages.map { .pages($0) } ?? .unreadable(.failed)
+            return pages.map { .pages($0, []) } ?? .unreadable(.failed)
         }
         let url = upload.diskPath.split(separator: "/").reduce(root) {
             $0.appending(path: String($1), directoryHint: .notDirectory)
@@ -648,10 +796,10 @@ final class KnowledgeIndexer {
         if !state.onDevice, !downloads.allowed { return .later }
         if let size = state.size, size != upload.file.size { return .later }
         if state.onDevice, let mtime = state.mtime, mtime != upload.file.mtime { return .later }
-        let outcome = await KnowledgeText.read(url)
+        let reading = await KnowledgeText.read(url, capture: capture)
         if upload.evict == true || !state.onDevice { await KnowledgeICloud.evict([url]) }
-        switch outcome {
-        case let .pages(pages): return .pages(pages)
+        switch reading.outcome {
+        case let .pages(pages): return .pages(pages, reading.scans)
         case .unsupported: return .unreadable(.format)
         case .failed: return .unreadable(.failed)
         case .unavailable: return .later

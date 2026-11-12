@@ -1,7 +1,7 @@
 import Foundation
 
 // The knowledge base's documents as the app shows them (server/lib/knowledge/documents.ts, routes
-// GET /knowledge/documents[/{id}], …/reindex, …/exclude). Decoded leniently: a server from before a
+// GET /knowledge/documents[/{id}], …/card, …/exclude). Decoded leniently: a server from before a
 // field (the card's status, the person, the facts) still shows its documents.
 
 /// A document's state in the index.
@@ -70,10 +70,12 @@ nonisolated struct KnowledgeDocumentSummary: Decodable, Hashable, Identifiable, 
     var cardStatus: KnowledgeCardStatus?
     /// Why the card failed (`cardStatus` failed).
     var cardError: String?
+    /// The pages the family's AI transcribed from their image (from 1); empty from an older server.
+    var aiPages: [Int]
 
     private enum CodingKeys: String, CodingKey {
         case id, folderId, path, name, tags, size, mtime, hash, pages, status, error, summary, docDate, person,
-             missingSince, cardStatus, cardError
+             missingSince, cardStatus, cardError, aiPages
     }
 
     init(from decoder: any Decoder) throws {
@@ -96,6 +98,7 @@ nonisolated struct KnowledgeDocumentSummary: Decodable, Hashable, Identifiable, 
         missingSince = try? c.decodeIfPresent(String.self, forKey: .missingSince)
         cardStatus = try? c.decodeIfPresent(KnowledgeCardStatus.self, forKey: .cardStatus)
         cardError = try? c.decodeIfPresent(String.self, forKey: .cardError)
+        aiPages = (try? c.decodeIfPresent([Int].self, forKey: .aiPages)) ?? []
     }
 
     /// The folders the file is in (relative to the knowledge folder; empty at its top).
@@ -134,6 +137,23 @@ nonisolated struct KnowledgeFact: Decodable, Hashable, Sendable {
     }
 }
 
+/// A page image waiting for the family's AI, or one it couldn't transcribe (done ones aren't listed).
+nonisolated struct KnowledgePageScanState: Decodable, Hashable, Sendable {
+    nonisolated enum Status: String, Decodable, Hashable, Sendable {
+        case waiting, running, done, failed
+
+        init(from decoder: any Decoder) throws {
+            let raw = try decoder.singleValueContainer().decode(String.self)
+            self = Self(rawValue: raw) ?? .waiting
+        }
+    }
+
+    /// From 1.
+    var page: Int
+    var status: Status
+    var error: String?
+}
+
 /// A piece of a document's text (about 1 000 characters, never across pages).
 nonisolated struct KnowledgeChunk: Decodable, Hashable, Identifiable, Sendable {
     var id: Int
@@ -155,11 +175,13 @@ nonisolated struct KnowledgeDocumentDetail: Decodable, Hashable, Sendable {
     /// Nil without a card.
     var facts: [KnowledgeFact]?
     var chunks: [KnowledgeChunk]
+    /// The page images not transcribed yet, or that failed; empty from an older server.
+    var scans: [KnowledgePageScanState]
     /// The text page by page (chunks joined in order), pages without text left out. Worked out
     /// once, while decoding (off the main thread), not on every redraw of the page.
     let textByPage: [PageText]
 
-    private enum CodingKeys: String, CodingKey { case facts, chunks }
+    private enum CodingKeys: String, CodingKey { case facts, chunks, scans }
 
     init(from decoder: any Decoder) throws {
         document = try KnowledgeDocumentSummary(from: decoder)
@@ -168,6 +190,8 @@ nonisolated struct KnowledgeDocumentDetail: Decodable, Hashable, Sendable {
         facts = (try? c.decodeIfPresent([KnowledgeFact].self, forKey: .facts))?
             .map { $0.filter { !$0.text.isEmpty } }
         chunks = (try? c.decodeIfPresent([KnowledgeChunk].self, forKey: .chunks)) ?? []
+        scans = ((try? c.decodeIfPresent([KnowledgePageScanState].self, forKey: .scans)) ?? [])
+            .filter { $0.status != .done }
         textByPage = Self.pages(chunks)
     }
 
@@ -189,7 +213,7 @@ nonisolated struct KnowledgeDocumentResponse: OffMainDecodable {
     var document: KnowledgeDocumentDetail
 }
 
-/// POST …/reindex and …/exclude answer the document without facts or chunks.
+/// POST …/card and …/exclude answer the document without facts or chunks.
 nonisolated struct KnowledgeDocumentSummaryResponse: OffMainDecodable {
     var document: KnowledgeDocumentSummary
 }
@@ -345,14 +369,6 @@ extension FamilyAPI {
     /// A document with its card and text, kept on the device.
     func knowledgeDocument(_ id: String) -> CachedGet<KnowledgeDocumentResponse> {
         cached("/knowledge/documents/\(id)")
-    }
-
-    /// Asks the server to read the document's text again (and make its card again).
-    @discardableResult
-    func reindexKnowledgeDocument(_ id: String) async throws -> KnowledgeDocumentSummary {
-        let answer: KnowledgeDocumentSummaryResponse = try await send(.post, "/knowledge/documents/\(id)/reindex",
-                                                                      body: [String: String]())
-        return answer.document
     }
 
     /// Asks the server to write the document's card (summary, facts) again (202; 409 where it can't).

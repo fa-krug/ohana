@@ -2,15 +2,15 @@ import CoreGraphics
 import Foundation
 import ImageIO
 import PDFKit
-import Vision
 #if canImport(AppKit)
 import AppKit
 #else
 import UIKit
 #endif
 
-/// Reads a knowledge file's text on the device, page by page: a PDF's text layer (Vision OCR for a
-/// page without one: a scan), an image's text (Vision), plain text, Markdown and CSV, RTF, HTML,
+/// Reads a knowledge file's text on the device, page by page: a PDF's text layer (`KnowledgeOCR` for
+/// a page without one: a scan, turned upright, tables as Markdown), an image's text (the same),
+/// plain text, Markdown and CSV, RTF, HTML,
 /// and on the Mac Word and OpenDocument files (what `NSAttributedString` reads there). nil for a
 /// format this device can't read (Pages, a spreadsheet, a Word file on iOS) or a file that can't
 /// be read (a locked PDF, OCR failing): the indexer skips it, the server keeps asking, and another
@@ -21,6 +21,13 @@ nonisolated enum KnowledgeText {
     /// The long side of a PDF page rendered for OCR, in pixels (about 2× its size in points).
     static let ocrScale: CGFloat = 2
     static let maxOCRPixels: CGFloat = 4000
+
+    /// The reader's version for files whose text may come from OCR (PDFs, images); other files are
+    /// read as by version 1. A newer one makes the server ask for those files again (the manifest's
+    /// `reader`), and a file the device couldn't read before is tried again.
+    static let readerVersion = 2
+    /// At most this many page images go to the family's AI per document (the server's limit).
+    static let maxScans = 20
 
     static let textExtensions: Set<String> = ["txt", "text", "md", "markdown", "csv"]
     static let imageExtensions: Set<String> = ["jpg", "jpeg", "png", "heic", "heif", "tif", "tiff"]
@@ -33,6 +40,27 @@ nonisolated enum KnowledgeText {
         #else
         ["rtf": .rtf]
         #endif
+    }
+
+    /// The reader version a file at `path` is read with: `readerVersion` for PDFs and images, else 1.
+    static func reader(forPath path: String) -> Int {
+        let ext = (path as NSString).pathExtension.lowercased()
+        return ext == "pdf" || imageExtensions.contains(ext) ? readerVersion : 1
+    }
+
+    /// Which pages' images to keep for the family's AI while reading.
+    enum ScanCapture: Equatable, Sendable {
+        case none
+        /// The scanned pages whose text looks poor (`KnowledgeOCRQuality`).
+        case poor
+        /// Every page (*Read Again with the Assistant*).
+        case all
+    }
+
+    /// A page's image for the family's AI: upright JPEG; `page` from 1.
+    struct PageScan: Equatable, Sendable {
+        var page: Int
+        var jpeg: Data
     }
 
     /// Whether this device reads files like `url` at all.
@@ -55,27 +83,37 @@ nonisolated enum KnowledgeText {
         case failed
     }
 
+    /// What reading a file came to, with the page images `capture` asked for (at most `maxScans`;
+    /// only with `.pages`).
+    struct Reading: Sendable {
+        var outcome: Outcome
+        var scans: [PageScan] = []
+    }
+
     /// The file's text by page, within the server's limits (`limited`); nil when this device can't
     /// read it.
     @concurrent
     static func pages(of url: URL) async -> [String]? {
-        if case let .pages(pages) = await read(url) { pages } else { nil }
+        if case let .pages(pages) = await read(url).outcome { pages } else { nil }
     }
 
-    /// Reads the file (off the main actor: loading it from iCloud may take a while).
+    /// Reads the file (off the main actor: loading it from iCloud and OCR may take a while).
     @concurrent
-    static func read(_ url: URL) async -> Outcome {
-        guard canRead(url) else { return .unsupported }
-        guard let data = coordinatedData(url) else { return .unavailable }
-        return await read(data, ext: url.pathExtension.lowercased()).map { .pages($0) } ?? .failed
+    static func read(_ url: URL, capture: ScanCapture = .none) async -> Reading {
+        guard canRead(url) else { return Reading(outcome: .unsupported) }
+        guard let data = coordinatedData(url) else { return Reading(outcome: .unavailable) }
+        guard let read = await read(data, ext: url.pathExtension.lowercased(), capture: capture) else {
+            return Reading(outcome: .failed)
+        }
+        return Reading(outcome: .pages(limited(read.pages)), scans: read.scans)
     }
 
-    private static func read(_ data: Data, ext: String) async -> [String]? {
+    private static func read(_ data: Data, ext: String, capture: ScanCapture) async -> (pages: [String], scans: [PageScan])? {
         let pages: [String]?
         if ext == "pdf" {
-            pages = await pdfPages(data)
+            return await pdfPages(data, capture: capture)
         } else if imageExtensions.contains(ext) {
-            pages = await imageText(data).map { [$0] }
+            return await imagePages(data, capture: capture)
         } else if textExtensions.contains(ext) {
             pages = [plainText(data)]
         } else if htmlExtensions.contains(ext) {
@@ -85,7 +123,7 @@ nonisolated enum KnowledgeText {
         } else {
             pages = nil
         }
-        return pages.map { limited($0) }
+        return pages.map { ($0, []) }
     }
 
     /// The file's content, read coordinated: iCloud loads a file that isn't on the device first.
@@ -100,28 +138,41 @@ nonisolated enum KnowledgeText {
 
     // MARK: Formats
 
-    /// A PDF's pages: the text layer, OCR where a page has (almost) none.
-    static func pdfPages(_ data: Data) async -> [String]? {
+    /// A PDF's pages: the text layer, OCR where a page has (almost) none; with the images of the
+    /// pages `capture` asks for.
+    static func pdfPages(_ data: Data, capture: ScanCapture = .none) async -> (pages: [String], scans: [PageScan])? {
         guard let document = PDFDocument(data: data), !document.isLocked else { return nil }
         var pages: [String] = []
+        var scans: [PageScan] = []
         for index in 0..<min(document.pageCount, KnowledgeLimits.maxPages) {
             guard let page = document.page(at: index) else {
                 pages.append("")
                 continue
             }
             let text = page.string ?? ""
+            let room = scans.count < maxScans
             if letterCount(text) >= ocrThreshold {
                 pages.append(text)
+                if capture == .all, room, let image = render(page), let jpeg = KnowledgeOCR.scanJPEG(image, orientation: .up) {
+                    scans.append(PageScan(page: index + 1, jpeg: jpeg))
+                }
                 continue
             }
             guard let image = render(page) else {
                 pages.append(text)
                 continue
             }
-            guard let read = await recognize(image) else { return nil }
-            pages.append(letterCount(read) > letterCount(text) ? read : text)
+            guard let read = await KnowledgeOCR.read(image) else { return nil }
+            pages.append(letterCount(read.text) > letterCount(text) ? read.text : text)
+            if read.verdict.isPoor {
+                KnowledgeFolder.log.info("Page \(index + 1, privacy: .public) reads poorly: \(String(describing: read.verdict), privacy: .public)")
+            }
+            if room, capture == .all || (capture == .poor && read.verdict.isPoor),
+               let jpeg = KnowledgeOCR.scanJPEG(image, orientation: read.orientation) {
+                scans.append(PageScan(page: index + 1, jpeg: jpeg))
+            }
         }
-        return pages
+        return (pages, scans)
     }
 
     static func letterCount(_ text: String) -> Int {
@@ -144,28 +195,17 @@ nonisolated enum KnowledgeText {
         #endif
     }
 
-    /// The text of a photo or scanned image (its orientation applied).
-    static func imageText(_ data: Data) async -> String? {
-        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
-              let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else { return nil }
-        let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
-        let raw = (properties?[kCGImagePropertyOrientation] as? NSNumber)?.uint32Value ?? 1
-        return await recognize(image, orientation: CGImagePropertyOrientation(rawValue: raw) ?? .up)
-    }
-
-    /// Vision's text on `image`, line by line in reading order; nil when Vision fails.
-    static func recognize(_ image: CGImage, orientation: CGImagePropertyOrientation = .up) async -> String? {
-        var request = RecognizeTextRequest()
-        request.recognitionLevel = .accurate
-        request.usesLanguageCorrection = true
-        request.recognitionLanguages = [Locale.Language(identifier: "de-DE"), Locale.Language(identifier: "en-US")]
-        do {
-            let observations = try await request.perform(on: image, orientation: orientation)
-            return observations.compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
-        } catch {
-            KnowledgeFolder.log.error("OCR failed: \(error.localizedDescription, privacy: .public)")
-            return nil
+    /// The text of a photo or scanned image (its EXIF orientation applied, then turned the way its
+    /// text runs), as one page; with its image when `capture` asks for it.
+    static func imagePages(_ data: Data, capture: ScanCapture = .none) async -> (pages: [String], scans: [PageScan])? {
+        guard let image = KnowledgeOCR.uprightImage(data, maxSide: maxOCRPixels),
+              let read = await KnowledgeOCR.read(image) else { return nil }
+        var scans: [PageScan] = []
+        if capture == .all || (capture == .poor && read.verdict.isPoor),
+           let jpeg = KnowledgeOCR.scanJPEG(image, orientation: read.orientation) {
+            scans.append(PageScan(page: 1, jpeg: jpeg))
         }
+        return ([read.text], scans)
     }
 
     /// Text as UTF-8 (a byte order mark dropped), else Windows-1252 / Latin-1.

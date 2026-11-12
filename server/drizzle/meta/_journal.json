@@ -225,6 +225,13 @@
       "when": 1794417265427,
       "tag": "0031_chore_day_parts",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "6",
+      "when": 1794494577472,
+      "tag": "0032_knowledge_scans",
+      "breakpoints": true
     }
   ]
 }

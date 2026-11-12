@@ -13,10 +13,30 @@ nonisolated struct KnowledgeUpload: Codable, Equatable, Sendable {
     var textFile: String?
     /// iCloud loaded the file for this run (it wasn't on the device): taken off again once read.
     var evict: Bool?
+    /// The user asked for it to be read again (*Read Again*): sent with `reread`, read even if
+    /// reading it failed before.
+    var reread: Bool?
+    /// *Read Again with the Assistant*: every page's image goes to the family's AI (`force`).
+    var force: Bool?
+    /// The pages whose image the server took already (an outage stopped the rest).
+    var sentScans: [Int]?
 
-    /// Which upload it is: a newer one for the same path with another hash is another.
+    init(folderId: String, file: KnowledgeFileInfo, diskPath: String, textFile: String? = nil, evict: Bool? = nil,
+         reread: Bool? = nil, force: Bool? = nil) {
+        self.folderId = folderId
+        self.file = file
+        self.diskPath = diskPath
+        self.textFile = textFile
+        self.evict = evict
+        self.reread = reread
+        self.force = force
+    }
+
+    /// Which upload it is: a newer one for the same path with another hash is another, and so is
+    /// one the user asked for (*Read Again*) after it.
     func isSame(as other: KnowledgeUpload) -> Bool {
         file.path == other.file.path && file.hash == other.file.hash
+            && (reread ?? false) == (other.reread ?? false) && (force ?? false) == (other.force ?? false)
     }
 }
 

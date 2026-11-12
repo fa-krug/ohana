@@ -12727,6 +12727,26 @@
         }
       }
     },
+    "Pages this device reads poorly then go to the family’s AI provider as images.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seiten, die dieses Gerät schlecht liest, gehen dann als Bilder an den KI-Anbieter der Familie."
+          }
+        }
+      }
+    },
+    "Pages waiting for the assistant: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seiten, die der Assistent noch lesen wird: %@"
+          }
+        }
+      }
+    },
     "Parent": {
       "localizations": {
         "de": {
@@ -13687,12 +13707,72 @@
         }
       }
     },
+    "Read Again with the Assistant": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit dem Assistenten erneut lesen"
+          }
+        }
+      }
+    },
     "Read Now": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Jetzt lesen"
+          }
+        }
+      }
+    },
+    "Read again on this device.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf diesem Gerät erneut gelesen."
+          }
+        }
+      }
+    },
+    "Read again. It’s sent once there’s a connection.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erneut gelesen. Es wird gesendet, sobald eine Verbindung besteht."
+          }
+        }
+      }
+    },
+    "Read again. The assistant reads its pages next.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erneut gelesen. Als Nächstes liest der Assistent die Seiten."
+          }
+        }
+      }
+    },
+    "Read by the assistant": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vom Assistenten gelesen"
+          }
+        }
+      }
+    },
+    "Read difficult scans with the assistant": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schwierige Scans mit dem Assistenten lesen"
           }
         }
       }
@@ -13803,6 +13883,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Liest den Kalender"
+          }
+        }
+      }
+    },
+    "Reading the file again…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Datei wird erneut gelesen…"
           }
         }
       }
@@ -17607,6 +17697,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Die Adresse, unter der du Ohana im Browser öffnest, z. B. ohana.example.com. Ein Link aus Ohana geht auch, etwa eine Einladung."
+          }
+        }
+      }
+    },
+    "The assistant couldn’t read page %lld.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Assistent konnte Seite %lld nicht lesen."
           }
         }
       }

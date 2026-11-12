@@ -292,9 +292,7 @@ private struct KnowledgeList: View {
         } else {
             List {
                 ForEach(documents) { document in
-                    NavigationLink(value: KnowledgeDocumentTarget(id: document.id)) {
-                        KnowledgeDocumentRow(document: document, members: members)
-                    }
+                    documentLink(document)
                 }
                 if let cursor {
                     ProgressView()
@@ -311,6 +309,23 @@ private struct KnowledgeList: View {
             .readableWidth(Self.columnWidth)
             .refreshable { await refresh(full: true) }
         }
+    }
+
+    /// A row opening its document. On the Mac a `NavigationLink` in a `List` only follows the
+    /// list's selection, and this one has none: a click did nothing. A button pushes it there.
+    @ViewBuilder
+    private func documentLink(_ document: KnowledgeDocumentSummary) -> some View {
+        let target = KnowledgeDocumentTarget(id: document.id)
+        #if os(macOS)
+        Button { pushed = target } label: {
+            KnowledgeDocumentRow(document: document, members: members)
+        }
+        .buttonStyle(.plain)
+        #else
+        NavigationLink(value: target) {
+            KnowledgeDocumentRow(document: document, members: members)
+        }
+        #endif
     }
 
     @ViewBuilder

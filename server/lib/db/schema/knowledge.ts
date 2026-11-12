@@ -1,4 +1,4 @@
-import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { families, familyPeople, users } from "../schema";
 
 // ---- the knowledge base (phase 12) ----
@@ -9,7 +9,9 @@ import { families, familyPeople, users } from "../schema";
 
 /** The family's knowledge folder (one per family for now): the id the app writes into the
  *  folder's marker file so a second device recognises it. `lastManifestAt` / `lastManifestDevice`:
- *  the last non-empty manifest and the device that sent it (the app's settings show them). */
+ *  the last non-empty manifest and the device that sent it (the app's settings show them).
+ *  `aiScans`: whether the app sends pages its own OCR read poorly to the family's AI
+ *  (lib/knowledge/scans.ts); off by default, as it sends the family's papers to the AI provider. */
 export const kbFolders = sqliteTable(
   "kb_folders",
   {
@@ -21,6 +23,7 @@ export const kbFolders = sqliteTable(
     createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
     lastManifestAt: integer("last_manifest_at", { mode: "timestamp_ms" }),
     lastManifestDevice: text("last_manifest_device"),
+    aiScans: integer("ai_scans", { mode: "boolean" }).notNull().default(false),
   },
   (t) => ({ kbFoldersFamilyUniq: uniqueIndex("kb_folders_family_uniq").on(t.familyId) }),
 );
@@ -57,6 +60,12 @@ export const kbDocuments = sqliteTable(
     pages: integer("pages").notNull().default(0),
     /** JSON array of page texts. */
     text: text("text").notNull().default("[]"),
+    /** The version of the app's reader the text came from (newer readers read scans better: the
+     *  manifest asks again for documents an older one read). */
+    reader: integer("reader").notNull().default(1),
+    /** JSON array of the page numbers whose text the family's AI transcribed from a page scan
+     *  (lib/knowledge/scan-runner.ts); emptied whenever the text is replaced. */
+    aiPages: text("ai_pages").notNull().default("[]"),
     status: text("status").notNull().default("pending"),
     error: text("error"),
     summary: text("summary"),
@@ -118,4 +127,42 @@ export const kbChunks = sqliteTable(
     text: text("text").notNull(),
   },
   (t) => ({ kbChunksDocumentIdx: index("kb_chunks_document_idx").on(t.documentId, t.seq) }),
+);
+
+/** A page of a document the app sent as a picture (a JPEG under MEDIA_ROOT, `path`) for the
+ *  family's AI to transcribe (lib/knowledge/scans.ts, scan-runner.ts): waiting | running | done |
+ *  failed (`error`). `forced`: an editor asked for it (sent whatever the family's setting says).
+ *  `hash`: the document's hash the scan was made for. The file is deleted once the scan is done or
+ *  failed; the row goes with the document's text (replaced) and after 7 days. `runToken` /
+ *  `runUntil` are the worker's lease (without a token `runUntil` is "not before": a scan that
+ *  failed for the time being); `attempts` its claims, `retries` its temporary failures. */
+export const kbPageScans = sqliteTable(
+  "kb_page_scans",
+  {
+    documentId: text("document_id")
+      .notNull()
+      .references(() => kbDocuments.id, { onDelete: "cascade" }),
+    familyId: text("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    /** 1-based page of the document. */
+    page: integer("page").notNull(),
+    hash: text("hash").notNull(),
+    path: text("path").notNull(),
+    forced: integer("forced", { mode: "boolean" }).notNull().default(false),
+    status: text("status").notNull().default("waiting"),
+    error: text("error"),
+    runToken: text("run_token"),
+    runUntil: integer("run_until", { mode: "timestamp" }),
+    attempts: integer("attempts").notNull().default(0),
+    retries: integer("retries").notNull().default(0),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.documentId, t.page] }),
+    /** The scan runner's queue. */
+    kbPageScansQueueIdx: index("kb_page_scans_queue_idx").on(t.status, t.runUntil),
+    kbPageScansFamilyIdx: index("kb_page_scans_family_idx").on(t.familyId, t.status),
+  }),
 );

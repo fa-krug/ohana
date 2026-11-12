@@ -14,6 +14,9 @@
 // fails it the MAX_CARD_RETRIES-th time. A worker that died leaves a lease that runs out: run
 // once more, then failed.
 //
+// A document with page scans still waiting or running (scan-runner.ts) waits too: its text is about
+// to change, and the transcription resets the card anyway.
+//
 // Fair between families: at most one card per family at a time, and a free slot goes to the
 // family whose oldest waiting document is the oldest (so one family's thousand documents don't
 // hold up another's few).
@@ -22,7 +25,7 @@ import { and, asc, eq, inArray, isNull, lte, ne, notInArray, or, sql } from "dri
 import { HttpError, randomToken } from "@/lib/api/http";
 import { type AiEnv, familyModel } from "@/lib/assistant/routes";
 import type { Db } from "@/lib/db";
-import { aiSettings, kbChunks, kbDocuments } from "@/lib/db/schema";
+import { aiSettings, kbChunks, kbDocuments, kbPageScans } from "@/lib/db/schema";
 import { familyNames } from "@/lib/families/people";
 import { familyLocale } from "@/lib/notifications/locale";
 import { moduleEnabled } from "@/lib/server-info";
@@ -144,6 +147,8 @@ export class KnowledgeCardRunner {
         eq(kbDocuments.cardStatus, "pending"),
         eq(kbDocuments.status, "ready"),
         or(isNull(kbDocuments.cardRunUntil), lte(kbDocuments.cardRunUntil, now)),
+        // Not while page scans of it wait to be read: its text is about to change.
+        sql`not exists (select 1 from ${kbPageScans} where ${kbPageScans.documentId} = ${kbDocuments.id} and ${kbPageScans.status} in ('waiting', 'running'))`,
       );
       // The families with a card due and none running, the longest waiting first.
       const busy = [...new Set([...this.running.values()].map((r) => r.familyId))];

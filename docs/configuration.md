@@ -80,6 +80,7 @@ Only `APP_URL` and `AUTH_SECRET` are required. Developers running from source us
 | --- | --- | --- |
 | `KNOWLEDGE_MAX_CONCURRENT` | `2` | Uploaded documents the worker chunks for the search at once. |
 | `KNOWLEDGE_CARD_CONCURRENT` | `1` | Document cards (summary, facts) the worker has the family's AI write at once. Only for families that set up the assistant. |
+| `KNOWLEDGE_SCAN_CONCURRENT` | `1` | Scanned pages the worker has the family's AI write out at once (*Read difficult scans with the assistant*, *Read Again with the Assistant*). Only for families that set up the assistant. |
 
 ## Appointment searches
 
