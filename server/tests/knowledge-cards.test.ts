@@ -183,9 +183,11 @@ function knowledgeApi(userId = t.editor.id, familyId = t.familyId) {
   };
 }
 
-async function setup(familyId = t.familyId) {
+async function setup(familyId = t.familyId, { ai = true } = {}) {
   const edit = knowledgeApi(t.editor.id, familyId);
   const folderId = (await edit("POST", "/knowledge/folder")).data.folder.id as string;
+  // The assistant reads the knowledge base (the app's switch): cards are made.
+  if (ai) expect((await edit("PATCH", "/knowledge/folder", { aiScans: true })).status).toBe(200);
   const upload = async (path: string, pages: string[]) => {
     const res = await edit("PUT", "/knowledge/documents", { folderId, path, size: 1, mtime: 1_700_000_000_000, hash: sha(JSON.stringify(pages)), tags: ["Versicherung"], pages });
     expect(res.status).toBe(202);
@@ -327,6 +329,23 @@ describe("cards: the worker", () => {
     expect(aiCalls()).toBe(0);
     delete process.env.DISABLED_MODULES;
     expect(await cards()).toBe(1);
+  });
+
+  it("waits while the family doesn't have the assistant read its knowledge base (the switch, off by default)", async () => {
+    await configure(t);
+    const { edit, upload } = await setup(t.familyId, { ai: false });
+    const id = await upload("Police.pdf", [POLICY]);
+    await index();
+    expect((await edit("GET", "/knowledge/status")).data).toMatchObject({ cards: false, scans: true, aiScans: false });
+    expect(await cards()).toBe(0);
+    expect(doc(id)).toMatchObject({ status: "ready", cardStatus: "pending", cardAttempts: 0 });
+    expect(aiCalls()).toBe(0);
+    expect(await edit("POST", "/knowledge/cards", { all: true })).toMatchObject({ status: 409 });
+    // Turned on: the waiting cards are written.
+    await edit("PATCH", "/knowledge/folder", { aiScans: true });
+    expect((await edit("GET", "/knowledge/status")).data.cards).toBe(true);
+    expect(await cards()).toBe(1);
+    expect(doc(id).cardStatus).toBe("ready");
   });
 
   it("doesn't write a card made of text that was replaced meanwhile; the new text gets its own", async () => {

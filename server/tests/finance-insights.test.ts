@@ -229,7 +229,8 @@ it("GET /finance/insights points out changes, regular payments and issues", asyn
   const netflix = res.recurring.find((r: any) => r.payee === "netflix com");
   expect(netflix).toMatchObject({ interval: "month", amountCents: 1599, change: { previousCents: 1299 } });
 
-  const kinds = res.issues.map((i: any) => [i.kind, i.transactions.map((t: any) => t.payee).join(" + ")]);
+  // A pair of one day goes by id: its order is the uuids'.
+  const kinds = res.issues.map((i: any) => [i.kind, i.transactions.map((t: any) => t.payee).sort().join(" + ")]);
   expect(kinds).toEqual([
     ["duplicate", "SHELL 1234 + Shell"],
     ["unpaired", "Umbuchung auf Tagesgeld"],

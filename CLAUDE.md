@@ -164,6 +164,12 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `apple_sync` (API `appleSync`, default true, family-wide; exported, copied with the year): whether
   the type's days go to Apple Calendar (`AppleSyncMapping.spans` leaves the others out, so turning
   it off removes their runs there); a switch on each row of Settings → Calendar's types.
+  `cover_only` (API `coverOnly`, default false; exported, copied with the year; the type editor's
+  *Only when covering*, for `covers` types): its days without a `needs_cover` entry aren't shown:
+  the app's calendar cells and its Apple Calendar sync (`CalendarMath.isHidden`,
+  `CalendarStore.cellTypes` / `AppleSyncMapping.spans`) and the overview's upcoming runs (`gaps.ts`
+  `hiddenEntry` in `summary.ts`, so the widgets too) leave them out; a selected day's details and
+  selection chips, stats, gaps and the API still have them.
   Icons are SF Symbol names the app draws (`icons.ts`): a type's `icon` (null: its role's,
   `ROLE_ICONS`; the API always answers one) and a note's `icon` ("" or a symbol; an import's
   emoji moves into the comment).
@@ -240,7 +246,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   the payee's usual one: ≥ 4 categorized, ≥ 75 %, nor above / below it in the tree);
   `uncategorized`, `transferSuggestions`, `balanceDrift`. Thresholds are constants there. "Looks
   fine": `fin_insight_dismissals` (family + `key` "<kind>:<ids>" / "recurring:<payee>:<interval>",
-  migration `0035`; cleared with the finances, never exported), `POST /finance/insights/dismiss
+  migration `0036`; cleared with the finances, never exported), `POST /finance/insights/dismiss
   {key}`, `DELETE …/dismiss/{key}` (editors). Assistant: `finance_insights`, `dismiss_finance_insights`
   (undo: the DELETE / POST), `list_transactions` `payee`. App (`FinanceInsightsView.swift`): the
   overview's cards *Worth a look* (drift → the account's "Not from the bank" rows, transfers → the
@@ -554,7 +560,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   reindex, un-exclude: `CARD_RESET`) empty the card, `card_status` pending (none without chunks).
   `card-runner.ts` `KnowledgeCardRunner` (same pattern, `KNOWLEDGE_CARD_CONCURRENT`, 1; off without
   the assistant) claims ready documents with a pending card only of families whose AI is set up
-  (the others wait), round-robin: one per family at a time, new cards (no summary yet) before
+  and whose folder has `ai_scans` on (`card.ts` `cardsOn`, status `cards`: the app's one switch
+  *Read with the assistant*, off by default; the others wait), round-robin: one per family at a time, new cards (no summary yet) before
   rewrites, then the family with the oldest waiting document first; it runs `card.ts` `makeCard` (one completion with `familyModel`, the family's
   language and `familyNames`; name, path, tags and the text by page "[Page n]", cut at 30 000
   characters, between `<document>` delimiters escaped inside, the prompt saying it is data; zod-checked
@@ -1006,13 +1013,10 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   cache's read failures keyed by it). Scanned pages (`KnowledgeOCR.swift`): an upright
   `RecognizeTextRequest` first, its baselines voted by characters (−90° → `.left`, +90° →
   `.right`, 180° → `.down`), then `RecognizeDocumentsRequest` in that orientation: tables as
-  Markdown tables in reading order (`KnowledgeOCRQuality.swift`, pure); `KnowledgeOCRQuality`
-  judges the page good or poor, eagerly (only what reads like clean print stays on the device: a
-  middling confidence with a few weak lines, one garbled table cell are poor) (the document reader's line confidences, words the spell checker
-  knows in de / en, fragments, non-Latin letters, empty / garbled table cells, little text on an
-  inked page; thresholds as constants, tested on a real timetable's readings). After an upload the
-  indexer sends poor pages as upright JPEGs (≤ 2000 px, ≤ 20) to `…/pages/{page}/scan` when status
-  `scans && aiScans` (asked lazily, kept 5 min), all pages with `force` for *Read Again with the
+  Markdown tables in reading order (`KnowledgeOCRLayout.swift`, pure; the page isn't judged: with
+  the family's switch on every page goes to the AI). After an upload of a PDF or image the
+  indexer sends every page as an upright JPEG (≤ 2000 px, ≤ 20) to `…/pages/{page}/scan` when status
+  `scans && aiScans` (asked lazily, kept 5 min), with `force` for *Read Again with the
   Assistant* (`KnowledgeIndexer.reread(path:assistant:)`, `reread: true`; *Read Again* without the
   assistant); a 4xx stops that document's scans, an outage retries (`sentScans`). The scanner's own
   `enqueue` sends no images. `KnowledgeUploadQueue` keeps the uploads on disk (by path; removed by
@@ -1028,12 +1032,17 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   text (see Scanning). Settings → Knowledge (`Features/Knowledge/KnowledgeSettingsView.swift`, `.settings(.knowledge)`):
   the folder (`.fileImporter`, the conflict as an alert offering to use it anyway), the index
   (`GET /knowledge/status` through `api.cached`, with the indexer's progress, waiting and unreadable
-  files, the last manifest's time and device), *Read Now*, with status `scans` the toggle *Read
-  difficult scans with the assistant* (`PATCH /knowledge/folder {aiScans}`, a footer naming the AI
-  provider), and with status `cards` a Summaries section (being rewritten, without keywords,
-  *Rewrite Summaries…*: older and failed ones or all, `POST /knowledge/cards`; the status reloads
-  every 15 s while some are rewritten; the documents list doesn't poll for a card rewritten while
-  its earlier summary shows).
+  files, the last manifest's time and device; *Read All*'s bar; with status `cards` a bar of the
+  summaries written, reloaded every 15 s while some wait), *Read Now*, *Read All…* (confirmed:
+  `KnowledgeIndexer.readAll(summaries:)`, a job `KnowledgeReadAll` kept in `read-all.json` beside the
+  queue until done: a run that queues every hashed file with `reread`, failed reads included (its
+  `total` the bar's), then once the queue is empty `POST /knowledge/cards {all: true}` (a refusal ends
+  it); a lost connection retries with the uploads' backoff (`resume`, also `retryNow` on reconnecting),
+  a restart's first run picks it up, `runIfDue` doesn't wait for the interval while its files are
+  unread; the documents list doesn't poll for a card rewritten while its earlier summary shows), with
+  status `scans` the family's one switch *Read with the assistant* (`PATCH /knowledge/folder
+  {aiScans}`, in the Index section, its footer naming the AI provider; off by default: read on the
+  device only; on: cards written and every page of PDFs / images sent as an image).
   The knowledge base page (`Module.knowledge`, ⌘9; shown where `FamilyContext.isEnabled(.knowledge)` /
   `AppModel.isEnabled` say `knowledgeAvailable`, `ServerInfo.isEnabled` only says the server has it;
   the demo hides it for now): `Features/Knowledge/KnowledgeView.swift`, `GET /knowledge/documents`

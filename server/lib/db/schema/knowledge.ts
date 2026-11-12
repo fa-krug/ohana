@@ -10,8 +10,8 @@ import { families, familyPeople, users } from "../schema";
 /** The family's knowledge folder (one per family for now): the id the app writes into the
  *  folder's marker file so a second device recognises it. `lastManifestAt` / `lastManifestDevice`:
  *  the last non-empty manifest and the device that sent it (the app's settings show them).
- *  `aiScans`: whether the app sends pages its own OCR read poorly to the family's AI
- *  (lib/knowledge/scans.ts); off by default, as it sends the family's papers to the AI provider. */
+ *  `aiScans`: whether the assistant reads the knowledge base: the cards are written and the app
+ *  sends every page of PDFs and images to the family's AI (lib/knowledge/scans.ts); off by default, as it sends the family's papers to the AI provider. */
 export const kbFolders = sqliteTable(
   "kb_folders",
   {
@@ -66,8 +66,8 @@ export const kbDocuments = sqliteTable(
     /** JSON array of the page numbers whose text the family's AI transcribed from a page scan
      *  (lib/knowledge/scan-runner.ts); emptied whenever the text is replaced. */
     aiPages: text("ai_pages").notNull().default("[]"),
-    /** Whether a device judged the file's pages (the scans its OCR read poorly go to the family's
-     *  AI) while the family's AI scans were on; the manifest asks once more for PDFs / images
+    /** Whether a device read the file (its pages sent to the family's AI) while the family's AI
+     *  scans were on; the manifest asks once more for PDFs / images
      *  without it while they are (manifest.ts). */
     scansChecked: integer("scans_checked", { mode: "boolean" }).notNull().default(false),
     status: text("status").notNull().default("pending"),

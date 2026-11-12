@@ -250,8 +250,15 @@
     {
       "idx": 35,
       "version": "6",
-      "when": 1794520417633,
-      "tag": "0035_finance_insights",
+      "when": 1794506580633,
+      "tag": "0035_type_cover_only",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "6",
+      "when": 1794521615820,
+      "tag": "0036_finance_insights",
       "breakpoints": true
     }
   ]

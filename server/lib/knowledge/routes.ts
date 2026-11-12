@@ -6,7 +6,7 @@
 // POST  /knowledge/folder                      {replace?} → {folder} (201 when this made it; replace: a new one, the old one's documents gone)
 // PATCH /knowledge/folder                      {aiScans} → {folder} (404 without one; off: the waiting scans not asked for go)
 // GET  /knowledge/status                       {folder | null, counts: {pending, ready, failed, missing, excluded}, chunks, cards, cardCounts, scans, aiScans}
-// POST /knowledge/cards                        {all?} → 202 {queued, cardCounts} (cards written again: the older ones and failed, or all; 409 without the family's AI)
+// POST /knowledge/cards                        {all?} → 202 {queued, cardCounts} (cards written again: the older ones and failed, or all; 409 while none are made: without the family's AI or with `aiScans` off)
 // POST /knowledge/manifest                     {folderId, device?, files: [{path, size, mtime, hash | null, tags, reader?}]} → {upload: [path]}
 // PUT  /knowledge/documents                    {folderId, path, hash, size, mtime, tags, reader?, reread?, scansChecked?, pages: [text]} → 202 {id, status}
 // PUT  /knowledge/documents/{id}/pages/{page}/scan?hash=&force=   (image/jpeg) → 202 {page, status} (scans.ts)
@@ -19,7 +19,7 @@
 
 import type { Ctx, Loaded } from "@/lib/api/family-api";
 import { HttpError, json } from "@/lib/api/http";
-import { cardsEnabled } from "./card";
+import { cardsEnabled, cardsOn } from "./card";
 import {
   STATUSES,
   type DocumentStatus,
@@ -135,8 +135,9 @@ async function createFolderRoute(ctx: Ctx, familyId: string): Promise<Response> 
   return json({ folder: folderDto(folder) }, created ? 201 : 200);
 }
 
-/** The family's settings of the folder: `aiScans` (pages the device read poorly go to the
- *  family's AI). */
+/** The family's settings of the folder: `aiScans` (the assistant reads the knowledge base: the
+ *  documents' summaries and keywords are written, every page of PDFs and images goes to the family's
+ *  AI). */
 async function patchFolderRoute(ctx: Ctx, familyId: string): Promise<Response> {
   const body = await readLimitedBody(ctx.req, 10_000);
   if (typeof body.aiScans !== "boolean") throw new HttpError(400, "aiScans must be true or false");
@@ -144,8 +145,8 @@ async function patchFolderRoute(ctx: Ctx, familyId: string): Promise<Response> {
 }
 
 /** The settings screen's view: the folder (with the last manifest), documents by status, chunks,
- *  the cards by status (`cardCounts`, countCards), whether cards are made and scans can be read (both: the family's AI set up, the assistant on)
- *  and whether the family has its AI read poor scans (`aiScans`). */
+ *  the cards by status (`cardCounts`, countCards), whether scans can be read (`scans`: the family's AI set up, the assistant on),
+ *  whether the family has its AI read the knowledge base (`aiScans`) and so whether cards are made (`cards`: both). */
 async function statusRoute(ctx: Ctx, familyId: string): Promise<Response> {
   const folder = getFolder(ctx.db, familyId);
   const { counts, chunks } = countDocuments(ctx.db, familyId);
@@ -153,19 +154,21 @@ async function statusRoute(ctx: Ctx, familyId: string): Promise<Response> {
     folder: folder ? folderDto(folder) : null,
     counts,
     chunks,
-    cards: cardsEnabled(ctx.db, familyId),
+    cards: cardsOn(ctx.db, familyId),
     cardCounts: countCards(ctx.db, familyId),
     scans: scansEnabled(ctx.db, familyId),
     aiScans: folder?.aiScans ?? false,
   });
 }
 
-/** Settings → Knowledge's *Rewrite Summaries*: the cards made before keywords and the failed
- *  ones, or with `{all: true}` every card, wait for the worker again (one AI request each). */
+/** Settings → Knowledge's *Read All* (with the assistant on): the cards made before keywords and
+ *  the failed ones, or with `{all: true}` every card, wait for the worker again (one AI request
+ *  each). 409 while no cards are made. */
 async function rewriteCardsRoute(ctx: Ctx, familyId: string): Promise<Response> {
   const body = await readLimitedBody(ctx.req, 10_000);
   if (body.all !== undefined && typeof body.all !== "boolean") throw new HttpError(400, "all must be true or false");
   if (!cardsEnabled(ctx.db, familyId)) throw new HttpError(409, "The family's AI isn't set up, so no summaries are written");
+  if (!cardsOn(ctx.db, familyId)) throw new HttpError(409, "The assistant doesn't read the knowledge base, so no summaries are written");
   const queued = rewriteCards(ctx.db, familyId, { all: body.all === true }, ctx.now);
   return json({ queued, cardCounts: countCards(ctx.db, familyId) }, 202);
 }

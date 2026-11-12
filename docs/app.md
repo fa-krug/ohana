@@ -41,6 +41,16 @@ server refuses one (say, a type was deleted meanwhile), the server wins: the cha
 a message says so, and the screen shows the server's state. Other changes need the server. Signing out removes the copy and the
 changes not sent yet.
 
+## Covering days
+
+A type with the role *Needs cover* (e.g. "Day care closed") marks weekdays someone has to look
+after the children; a *Covers* type (e.g. "Vacation Dad", "Grandma") covers them. A covering type
+can be set to *Only when covering* (Settings → Calendar → the type): its days then show only where
+they cover a day that needs cover. You can enter a whole stretch when someone is available, and the
+calendar's days show them only where they're needed. The other days stay saved and counted, they
+just aren't shown in the calendar, the overview or Apple Calendar; select such a day and the type
+is listed there as usual.
+
 ## Apple Calendar
 
 Settings → Calendar → *Sync with Apple Calendar* links the family's calendar with a calendar of
@@ -201,13 +211,15 @@ family's paperwork, read from one folder, usually an iCloud Drive folder the par
 it once on each device in Settings → Knowledge; the app reads the files' text on the device and
 sends only the text to your server, never the files. Scans without text are read on the device
 too: a page lying on its side is turned first, and tables (a timetable, say) keep their rows and
-columns. With the assistant set up, *Read difficult scans with the assistant* in Settings →
-Knowledge sends the pages the device couldn't read well to the family's AI as images, which writes
-out their text (handwriting too). Turned on, it checks every scan in the folder once, the ones read
-before too.
+columns. By default that's all: the documents are read on the device only. With the assistant set
+up, *Read with the assistant* in Settings → Knowledge has the family's AI read them too: it writes
+each document's summary and search words (other words for what it is), and every page of the PDFs
+and pictures goes to it as an image, which it writes out (handwriting and tables too). Turned on, it checks
+every scan in the folder once, the ones read before too. *Read Now* reads what's new or changed,
+*Read All* (it asks first) everything again.
 
 The page lists the documents newest first with their date, whose they are, their tags and a short
-summary (when the assistant is set up). Search them, or narrow the list by folder, person or tag. A
+summary (with *Read with the assistant* on). Search them, or narrow the list by folder, person or tag. A
 document shows its summary and the facts in it, each with the passage it comes from, and its text
 page by page. **Open Original** opens the file itself from the folder on your device: a PDF at the
 page of the fact you tapped, with its passage marked. A device without the folder offers to choose
@@ -216,9 +228,11 @@ the family's AI read every page (pages it wrote out are marked), *Leave Out* kee
 knowledge base (*Show Left Out* lists those), and on the Mac *Show in Finder* finds the file.
 Each summary also comes with keywords (what the document is and other words for it) that the
 search uses, so a timetable is found as "Stundenplan" or "Schulschluss" even when its text is only
-the table. *Rewrite Summaries* in Settings → Knowledge has the assistant write again the summaries
-from before keywords existed and the failed ones, or all of them: one request to your AI provider
-each, and every summary stays until its new one is written.
+the table. *Read All* in Settings → Knowledge (it asks first) reads every file in the folder again
+from scratch and, with *Read with the assistant* on, has it write every summary anew (summaries
+from before keywords existed get them): one request to your AI provider each, and every summary stays until its new one is
+written. Progress bars show the files and the summaries; a lost connection or closing the app only
+pauses it, and it goes on by itself.
 
 The assistant answers from the knowledge base too, and names its sources: a small number after a
 statement, and a list of the documents below the answer. Tap one to read the passage, open the

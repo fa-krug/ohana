@@ -254,13 +254,22 @@ final class CalendarStore {
     /// Whom a type belongs to; nil: nobody (or a member who's gone).
     func member(of type: CalendarEntryType) -> CalendarMember? { member(type.memberId) }
 
-    /// A day's entry types, in the order of the types.
+    /// A day's entry types, in the order of the types (all of them: the day's details list them).
     func types(on day: Day) -> [CalendarEntryType] {
         let types = types
         guard let ids = entries[day], !ids.isEmpty else { return [] }
         if ids.count == 1 { return typeIndex[ids[0]].map { [types[$0]] } ?? [] }
         // In the order of the types, each once (as filtering the types would give them).
         return Set(ids.compactMap { typeIndex[$0] }).sorted().map { types[$0] }
+    }
+
+    /// The types a day's cell draws: without a "cover only" type on a day it doesn't cover
+    /// (`CalendarMath.isHidden`). The day's details and the selection chips still have it.
+    func cellTypes(on day: Day) -> [CalendarEntryType] {
+        let found = types(on: day)
+        guard found.contains(where: \.showsOnlyCovering), let ids = entries[day] else { return found }
+        let roles = typeRoles
+        return found.filter { !CalendarMath.isHidden($0, on: ids, roles: roles) }
     }
 
     func isGap(_ day: Day) -> Bool {
@@ -332,7 +341,7 @@ final class CalendarStore {
     /// A day's cell without what the selection, the fill, drops and the focus add (`cell`): what
     /// the year grid's days draw. Reads none of those, so a view building it isn't redrawn by them.
     func contentCell(_ day: Day, _ context: CalendarCellContext) -> CalendarDayCell.Info {
-        let dayTypes = types(on: day)
+        let dayTypes = cellTypes(on: day)
         return CalendarDayCell.Info(
             types: dayTypes, note: notes[day], events: events[day] ?? [], holidays: holidays[day] ?? [],
             birthdays: birthdays[day] ?? [],
@@ -988,6 +997,7 @@ final class CalendarStore {
             if let icon = patch.icon { types[i].icon = icon ?? types[i].role.defaultIcon }
             if let away = patch.away { types[i].away = away }
             if let appleSync = patch.appleSync { types[i].appleSync = appleSync }
+            if let coverOnly = patch.coverOnly { types[i].coverOnly = coverOnly }
             if let position = patch.position { types[i].position = position }
         }
         version += 1

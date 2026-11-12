@@ -101,7 +101,7 @@ function changed(row: Row, changes: Changes): Changes {
  * - a known path with the same hash, a PDF or image (`reader` ≥ 2: the app's OCR reads it) whose
  *   pages no device has judged with the family's AI scans on (`scansChecked` false), while the
  *   scans can run (`scansEnabled`) and are on (the folder's `aiScans`): its text is needed once
- *   more, so the device sends the pages its OCR read poorly (and `scansChecked` with the upload);
+ *   more, so the device sends its pages as pictures (and `scansChecked` with the upload);
  * - a known path with hash null (the device sees the file but couldn't hash it, e.g. an iCloud
  *   file it couldn't download): present, tags updated, nothing else; never asked for, never moved;
  * - a new path with hash null: ignored (nothing to compare or ask for yet);

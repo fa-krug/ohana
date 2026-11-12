@@ -148,7 +148,7 @@ tags:
       for the search, then, with the family's AI set up, makes a card per document (a summary,
       the document's date, whose it is, facts each with a verbatim quote checked against the
       text). The files never reach the server, except, when the family turns it on (`aiScans`) or
-      an editor asks for it, pictures of pages the device's OCR read poorly, which the worker has
+      an editor asks for it, pictures of the pages of PDFs and images, which the worker has
       the family's AI transcribe and deletes once read. **Editors only**: for viewers every
       knowledge route answers 404.
   - name: Assistant
@@ -1741,6 +1741,7 @@ paths:
                   description: "The type's own icon; `null` or left out: its role's (`EntryType.icon`)."
                 away: {type: boolean, default: false}
                 appleSync: {type: boolean, default: true}
+                coverOnly: {type: boolean, default: false}
       responses:
         "201":
           description: The type.
@@ -1851,6 +1852,7 @@ paths:
                   description: "The type's own icon; `null`: back to its role's; left out: kept."
                 away: {type: boolean}
                 appleSync: {type: boolean}
+                coverOnly: {type: boolean}
                 position: {type: integer}
       responses:
         "200":
@@ -2667,8 +2669,11 @@ paths:
       operationId: updateKnowledgeFolder
       summary: The family's settings of the folder
       description: >-
-        `aiScans`: whether the app sends pictures of pages its own OCR read poorly to the family's
-        AI provider for a transcription (off by default). Turned off, the scans the app sent on
+        `aiScans`: whether the assistant reads the family's knowledge base (off by default: the
+        documents are only read on the device): the worker writes each document's card (summary,
+        keywords, facts) and the app sends pictures of every page of PDFs and images to the family's
+        AI provider for a transcription. Turned on, the cards waiting are written; turned off,
+        no more are (the written ones stay), and the scans the app sent on
         its own that still wait are deleted (forced ones and those being read stay). 404 without a
         folder. An agent token can't change it (403).
       x-ohana-role: editor
@@ -2722,8 +2727,9 @@ paths:
                   cards:
                     type: boolean
                     description: >-
-                      Whether the worker makes cards: the family's AI is set up and the server has
-                      the assistant on. Without, documents wait with `cardStatus` pending.
+                      Whether the worker makes cards: the family's AI is set up, the server has
+                      the assistant on (as `scans`) and the family has it read the knowledge base
+                      (`aiScans`). Without, documents wait with `cardStatus` pending.
                   cardCounts: {$ref: "#/components/schemas/KnowledgeCardCounts"}
                   scans:
                     type: boolean
@@ -2742,11 +2748,11 @@ paths:
       operationId: rewriteKnowledgeCards
       summary: Write the family's cards again
       description: >-
-        The app's *Rewrite Summaries*: the cards of ready documents made before cards had
+        The app's *Read All* (with `aiScans` on): the cards of ready documents made before cards had
         keywords (`cardCounts.outdated`) and the failed ones, or with `all` every one, wait for
         the worker again (one AI request each). A card keeps its summary, facts and keywords until
-        the new one is written; the worker writes new documents' cards first. 409 when the family's
-        AI isn't set up (status `cards` false). An agent token can't (403).
+        the new one is written; the worker writes new documents' cards first. 409 while no cards
+        are made (status `cards` false: the family's AI not set up, or `aiScans` off). An agent token can't (403).
       x-ohana-role: editor
       requestBody:
         content:
@@ -6881,7 +6887,7 @@ components:
         `covers` (covers a day), `day_off` (no cover needed, e.g. a holiday), `none`.
     EntryType:
       type: object
-      required: [id, year, name, memberId, color, colorKey, role, icon, position, away, appleSync]
+      required: [id, year, name, memberId, color, colorKey, role, icon, position, away, appleSync, coverOnly]
       properties:
         id: {type: string, pattern: "^[a-z0-9][a-z0-9-]{0,47}$", description: "Unique within the year (made from the name)."}
         year: {type: integer}
@@ -6907,6 +6913,13 @@ components:
         position: {type: integer}
         away: {type: boolean, description: "The whole family is away on its days (the meal plan skips them)."}
         appleSync: {type: boolean, description: "Its days go to Apple Calendar on devices that sync the family's calendar there."}
+        coverOnly:
+          type: boolean
+          description: >-
+            Meant for `covers` types: its days show only where the day also has a `needs_cover`
+            entry (the app's calendar cells and Apple Calendar sync, the overview's upcoming
+            runs). The others stay stored, are listed by the entries routes and in the app's
+            details of a selected day, and still count.
     EntriesByDay:
       type: object
       description: Day (YYYY-MM-DD) → ids of the entry types on that day.
@@ -7239,7 +7252,7 @@ components:
         createdAt: {type: string, format: date-time}
         lastManifestAt: {type: [string, "null"], format: date-time, description: "The last non-empty manifest (null before one)."}
         lastManifestDevice: {type: [string, "null"], description: "The `device` that sent it."}
-        aiScans: {type: boolean, description: "Whether the app sends pages its OCR read poorly to the family's AI (PATCH; default false; kept when the folder is replaced)."}
+        aiScans: {type: boolean, description: "Whether the assistant reads the knowledge base: cards written, every page of PDFs and images sent to the family's AI (PATCH; default false; kept when the folder is replaced)."}
     KnowledgeStatus:
       type: string
       description: >-

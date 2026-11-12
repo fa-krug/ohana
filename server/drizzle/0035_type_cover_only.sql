@@ -1,0 +1,1 @@
+ALTER TABLE `cal_entry_types` ADD `cover_only` integer DEFAULT false NOT NULL;

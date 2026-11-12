@@ -673,6 +673,9 @@ nonisolated final class KnowledgeStubProtocol: URLProtocol {
             status = method == "POST" ? 201 : 200
             let folder = method == "POST" ? state.created ?? state.folder : state.folder
             answer = Data(#"{"folder": \#(folder)}"#.utf8)
+        } else if path.hasSuffix("/knowledge/cards") {
+            status = 202
+            answer = Data(#"{"queued":2,"cardCounts":{"ready":0,"outdated":0,"pending":2,"rewriting":2,"failed":0}}"#.utf8)
         } else if path.hasSuffix("/knowledge/tags") {
             answer = Data(state.tags.utf8)
         } else if path.hasSuffix("/knowledge/status") {
@@ -949,11 +952,11 @@ struct KnowledgeIndexerTests {
     private static let statusPath = "GET /api/v1/families/f1/knowledge/status"
 
     /// A PDF without a text layer: a letter, turned a quarter clockwise as phones photograph it,
-    /// and with `poorPage` a page of ink nothing reads (a black bar: handwriting Vision misses).
-    private func scannedPDF(poorPage: Bool) -> Data {
+    /// and with `twoPages` a page of ink nothing reads (a black bar: handwriting Vision misses).
+    private func scannedPDF(twoPages: Bool) -> Data {
         var pages = [ScanPage(image: KnowledgeOCR.turned(KnowledgeOCRReadingTests.page(KnowledgeOCRReadingTests.letter), .right)!,
                               lines: [])]
-        if poorPage {
+        if twoPages {
             pages.append(ScanPage(image: LetterFilingTests.image(width: 1240, height: 1754,
                                                                  rect: CGRect(x: 100, y: 800, width: 1000, height: 80), fill: 0),
                                   lines: []))
@@ -983,6 +986,87 @@ struct KnowledgeIndexerTests {
         }
     }
 
+    @Test func readAllSendsEveryFileAgain() async throws {
+        let s = try setup()
+        defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
+        _ = try write("Kündigung zum 31. März", "Verträge/Ku\u{0308}ndigung.txt", in: s.root)
+        _ = try write("Rechnung", "rechnung.txt", in: s.root)
+        _ = try write("x", "Brief.pages", in: s.root)
+        await s.indexer.run()
+        #expect(KnowledgeStubProtocol.requests == [Self.manifestPath])
+
+        // The server asks for nothing, yet every file is read and sent again, with `reread`.
+        KnowledgeStubProtocol.reset()
+        await s.indexer.readAll(summaries: false)
+        let puts = KnowledgeStubProtocol.bodies("PUT")
+        #expect(Set(puts.compactMap { $0["path"] as? String }) == ["Verträge/Kündigung.txt", "rechnung.txt"])
+        #expect(puts.allSatisfy { $0["reread"] as? Bool == true })
+        #expect(!KnowledgeStubProtocol.requests.contains(Self.cardsPath))
+        #expect(s.indexer.unreadable == ["Brief.pages": .format])
+        #expect(s.indexer.lastRun?.uploaded == 2 && s.indexer.phase == .idle)
+        #expect(s.indexer.readingAll == nil)
+        #expect(!FileManager.default.fileExists(atPath: s.data.appending(path: "read-all.json").path))
+
+        // Once: the next run is an ordinary one again.
+        KnowledgeStubProtocol.reset()
+        await s.indexer.run()
+        #expect(KnowledgeStubProtocol.requests == [Self.manifestPath])
+    }
+
+    private static let cardsPath = "POST /api/v1/families/f1/knowledge/cards"
+
+    @Test func readAllGoesOnAfterALostConnectionAndARestart() async throws {
+        let s = try setup()
+        defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
+        _ = try write("Rechnung", "rechnung.txt", in: s.root)
+        let jobFile = s.data.appending(path: "read-all.json")
+
+        // Offline: the manifest fails, the job is kept on the disk.
+        KnowledgeStubProtocol.offline = true
+        await s.indexer.readAll(summaries: true)
+        #expect(s.indexer.readingAll?.files == true && s.indexer.readingAll?.summaries == true)
+        if case .failed = s.indexer.phase {} else { Issue.record("phase \(s.indexer.phase)") }
+        #expect(await until { FileManager.default.fileExists(atPath: jobFile.path) })
+
+        // The connection is back: every file read again, then every summary asked for.
+        KnowledgeStubProtocol.reset()
+        s.indexer.retryNow()
+        #expect(await until { s.indexer.readingAll == nil })
+        let put = try #require(KnowledgeStubProtocol.bodies("PUT").first)
+        #expect(put["path"] as? String == "rechnung.txt" && put["reread"] as? Bool == true)
+        #expect(KnowledgeStubProtocol.requests.last == Self.cardsPath)
+        #expect(KnowledgeStubProtocol.bodies(Self.cardsPath).first?["all"] as? Bool == true)
+        #expect(s.indexer.phase == .idle)
+        #expect(await until { !FileManager.default.fileExists(atPath: jobFile.path) })
+
+        // The app quit before the job was done: the next one picks it up at its first run.
+        try KnowledgeReadAll.save(KnowledgeReadAll(summaries: false), to: jobFile)
+        KnowledgeStubProtocol.reset()
+        let next = KnowledgeIndexer(api: s.indexer.api, folder: s.indexer.folder, directory: s.data, deviceName: "Test Mac")
+        await next.runIfDue()
+        #expect(KnowledgeStubProtocol.bodies("PUT").first?["reread"] as? Bool == true)
+        #expect(!KnowledgeStubProtocol.requests.contains(Self.cardsPath))
+        #expect(next.readingAll == nil)
+    }
+
+    @Test func readAllAsksForTheSummariesOnceTheUploadsAreThrough() async throws {
+        let s = try setup()
+        defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
+        _ = try write("Rechnung", "rechnung.txt", in: s.root)
+        // The upload fails for want of the server: no summaries yet, the bar's total kept.
+        KnowledgeStubProtocol.putStatus = 503
+        await s.indexer.readAll(summaries: true)
+        #expect(s.indexer.readingAll == KnowledgeReadAll(files: false, summaries: true, total: 1))
+        #expect(s.indexer.waiting == 1)
+        #expect(!KnowledgeStubProtocol.requests.contains(Self.cardsPath))
+
+        KnowledgeStubProtocol.putStatus = 202
+        s.indexer.retryNow()
+        #expect(await until { s.indexer.readingAll == nil })
+        #expect(s.indexer.waiting == 0 && KnowledgeStubProtocol.requests.last == Self.cardsPath)
+        #expect(s.indexer.phase == .idle)
+    }
+
     @Test func readAgainTriesAFileThatFailedAndSaysWhy() async throws {
         let s = try setup()
         defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
@@ -1000,7 +1084,7 @@ struct KnowledgeIndexerTests {
     @Test func readAgainWithTheAssistantSendsEveryPage() async throws {
         let s = try setup()
         defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
-        try scannedPDF(poorPage: false).write(to: s.root.appending(path: "Brief.pdf"))
+        try scannedPDF(twoPages: false).write(to: s.root.appending(path: "Brief.pdf"))
         // The family's setting off: an editor's explicit request sends the pages anyway.
         KnowledgeStubProtocol.set { $0.status = #"{"scans": true, "aiScans": false}"# }
         #expect(try await s.indexer.reread(path: "Brief.pdf", assistant: true) == .sent)
@@ -1022,42 +1106,29 @@ struct KnowledgeIndexerTests {
         #expect(try #require(KnowledgeStubProtocol.bodies("PUT").first)["scansChecked"] == nil)
     }
 
-    @Test func poorPagesGoToTheAssistantWhileTheSettingIsOn() async throws {
+    @Test func everyPageGoesToTheAssistantWhileTheSettingIsOn() async throws {
         let s = try setup()
         defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
-        try scannedPDF(poorPage: true).write(to: s.root.appending(path: "Brief.pdf"))
+        try scannedPDF(twoPages: true).write(to: s.root.appending(path: "Brief.pdf"))
         KnowledgeStubProtocol.set {
             $0.upload = ["Brief.pdf"]
             $0.status = #"{"scans": true, "aiScans": true}"#
         }
         await s.indexer.run()
         #expect(try manifestFiles()["Brief.pdf"]?["reader"] as? Int == 2)
-        // Only the page that reads poorly, without force.
+        // Every page, the one the device reads well too, without force.
         #expect(KnowledgeStubProtocol.requests == [Self.manifestPath, Self.statusPath, Self.putPath,
+                                                   "PUT /api/v1/families/f1/knowledge/documents/d1/pages/1/scan",
                                                    "PUT /api/v1/families/f1/knowledge/documents/d1/pages/2/scan"])
-        #expect(KnowledgeStubProtocol.scans.first.map { !$0.query.contains("force") } == true)
+        #expect(KnowledgeStubProtocol.scans.allSatisfy { !$0.query.contains("force") })
         #expect(try #require(KnowledgeStubProtocol.bodies("PUT").first)["scansChecked"] as? Bool == true)
         #expect(s.indexer.waiting == 0)
-    }
-
-    @Test func aScanJudgedWithTheSettingOnIsCheckedWhateverTheVerdict() async throws {
-        let s = try setup()
-        defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
-        try scannedPDF(poorPage: false).write(to: s.root.appending(path: "Brief.pdf"))
-        KnowledgeStubProtocol.set {
-            $0.upload = ["Brief.pdf"]
-            $0.status = #"{"scans": true, "aiScans": true}"#
-        }
-        await s.indexer.run()
-        // No page reads poorly: nothing goes to the AI, but the file counts as checked.
-        #expect(KnowledgeStubProtocol.requests == [Self.manifestPath, Self.statusPath, Self.putPath])
-        #expect(try #require(KnowledgeStubProtocol.bodies("PUT").first)["scansChecked"] as? Bool == true)
     }
 
     @Test func noPageScansWhileTheSettingIsOffOrRefused() async throws {
         let s = try setup()
         defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
-        try scannedPDF(poorPage: true).write(to: s.root.appending(path: "Brief.pdf"))
+        try scannedPDF(twoPages: true).write(to: s.root.appending(path: "Brief.pdf"))
         KnowledgeStubProtocol.set {
             $0.upload = ["Brief.pdf"]
             $0.status = #"{"scans": true, "aiScans": false}"#
@@ -1080,7 +1151,7 @@ struct KnowledgeIndexerTests {
     @Test func aPageScanOutageWaitsWithTheUpload() async throws {
         let s = try setup()
         defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
-        try scannedPDF(poorPage: false).write(to: s.root.appending(path: "Brief.pdf"))
+        try scannedPDF(twoPages: false).write(to: s.root.appending(path: "Brief.pdf"))
         KnowledgeStubProtocol.set {
             $0.status = #"{"scans": true}"#
             $0.scan = 503

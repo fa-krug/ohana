@@ -236,14 +236,20 @@ enum AppleSyncMapping {
     }
 
     /// The runs of days with the same type, in `window` (types are per year: a run ends with it);
-    /// none of a type kept out of Apple Calendar (`syncsToApple`).
+    /// none of a type kept out of Apple Calendar (`syncsToApple`), nor a "cover only" type's days
+    /// it doesn't cover (`CalendarMath.isHidden`: Ohana's cells don't draw them either).
     /// A run is titled "Type (Member)" for a type that belongs to someone (`members`: names by id),
     /// like an event's person in brackets; a new member makes it a new run.
     static func spans(entries: [Day: [String]], types: [Int: [CalendarEntryType]], members: [String: String] = [:],
                       window: ClosedRange<Day>) -> [AppleSyncSpan] {
         var days: [String: [Day]] = [:]
+        let roles = types.mapValues { CalendarMath.roles($0) }
+        let coverOnly = types.mapValues { Dictionary($0.filter(\.showsOnlyCovering).map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a }) }
         for (day, ids) in entries where window.contains(day) {
-            for id in ids { days["\(day.year)/\(id)", default: []].append(day) }
+            for id in ids {
+                if let type = coverOnly[day.year]?[id], CalendarMath.isHidden(type, on: ids, roles: roles[day.year] ?? [:]) { continue }
+                days["\(day.year)/\(id)", default: []].append(day)
+            }
         }
         var out: [AppleSyncSpan] = []
         for (key, list) in days {
