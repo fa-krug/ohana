@@ -253,7 +253,7 @@ private struct KnowledgeSettingsForm: View {
             })
             .disabled(savingAIScans)
         } footer: {
-            Text("Pages this device reads poorly then go to the family’s AI provider as images.")
+            Text("Pages this device reads poorly then go to the family’s AI provider as images. Turning it on checks every scan in the folder once.")
         }
     }
 
@@ -265,6 +265,8 @@ private struct KnowledgeSettingsForm: View {
             do {
                 try await family.api.setKnowledgeAIScans(on)
                 indexer.scanSettingChanged()
+                // Every scan in the folder is checked once now, not at the next read.
+                if on { family.indexKnowledge(force: true) }
                 await loadStatus()
             } catch {
                 ErrorBanner.shared.show(error)

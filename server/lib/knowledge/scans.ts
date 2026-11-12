@@ -28,7 +28,7 @@ export type ScanStatus = "waiting" | "running" | "done" | "failed";
 
 /** Whether the family's page scans can be read at all: the assistant on and the family's AI set
  *  up (as for the cards). */
-export function scansEnabled(db: Db, familyId: string): boolean {
+export function scansEnabled(db: Pick<Db, "select">, familyId: string): boolean {
   return cardsEnabled(db, familyId);
 }
 

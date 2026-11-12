@@ -203,7 +203,8 @@ sends only the text to your server, never the files. Scans without text are read
 too: a page lying on its side is turned first, and tables (a timetable, say) keep their rows and
 columns. With the assistant set up, *Read difficult scans with the assistant* in Settings →
 Knowledge sends the pages the device couldn't read well to the family's AI as images, which writes
-out their text (handwriting too).
+out their text (handwriting too). Turned on, it checks every scan in the folder once, the ones read
+before too.
 
 The page lists the documents newest first with their date, whose they are, their tags and a short
 summary (when the assistant is set up). Search them, or narrow the list by folder, person or tag. A

@@ -66,6 +66,10 @@ export const kbDocuments = sqliteTable(
     /** JSON array of the page numbers whose text the family's AI transcribed from a page scan
      *  (lib/knowledge/scan-runner.ts); emptied whenever the text is replaced. */
     aiPages: text("ai_pages").notNull().default("[]"),
+    /** Whether a device judged the file's pages (the scans its OCR read poorly go to the family's
+     *  AI) while the family's AI scans were on; the manifest asks once more for PDFs / images
+     *  without it while they are (manifest.ts). */
+    scansChecked: integer("scans_checked", { mode: "boolean" }).notNull().default(false),
     status: text("status").notNull().default("pending"),
     error: text("error"),
     summary: text("summary"),

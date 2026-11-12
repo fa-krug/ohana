@@ -2859,6 +2859,9 @@ paths:
                     reread:
                       type: boolean
                       description: "The user asked for the file to be read again: text that differs from the stored one replaces it (default false)."
+                    scansChecked:
+                      type: boolean
+                      description: "The device judged the pages with the family's AI scans on (default false): stored with new text, kept once given for the same file. Without it, the manifest asks once more for a PDF / image (`reader` ≥ 2) while the scans are on and can run."
                     pages:
                       type: array
                       maxItems: 2000

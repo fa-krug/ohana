@@ -314,10 +314,13 @@ export function countDocuments(db: Db, familyId: string): { counts: Record<Docum
 // ---- changes ----
 
 /** What an upload carries: the file's details and its text by page; `reread`: the user asked
- *  for the file to be read again (its text replaces the stored one whenever it differs). */
+ *  for the file to be read again (its text replaces the stored one whenever it differs);
+ *  `scansChecked`: the device judged the pages with the family's AI scans on (it sends the poor
+ *  ones as page scans), so the manifest needn't ask for the file again for that. */
 export interface UploadInput extends FileInfo {
   pages: string[];
   reread?: boolean;
+  scansChecked?: boolean;
 }
 
 /** Pages of text: a list of strings, NFC, at most MAX_PAGES and MAX_TEXT_BYTES in all (413). */
@@ -366,6 +369,7 @@ function freshText(input: UploadInput) {
     text: JSON.stringify(input.pages),
     reader: input.reader,
     aiPages: "[]",
+    scansChecked: input.scansChecked === true,
     error: null,
     ...CARD_RESET,
     indexedAt: null,
@@ -379,7 +383,7 @@ function freshText(input: UploadInput) {
  * Stores the text the app read from a file (PUT /knowledge/documents), by folder + path.
  * The same file again (same hash) changes nothing but its tags, size and time while it is
  * pending, ready or excluded: an upload is idempotent. With the very text stored, a newer
- * `reader` is noted too (the card stays). A missing one is back (its status as it was, see the
+ * `reader` is noted too (the card stays), and `scansChecked` once given stays. A missing one is back (its status as it was, see the
  * top). New text (another hash, a failed document, text for a document stored without any: a
  * device that reads more than the one before, or other text from a newer reader or read again on
  * request, `reread`) replaces the old: the chunks go at once (a changed file must not be found by
@@ -423,6 +427,8 @@ export function uploadDocument(
             size: input.size,
             mtime: input.mtime,
             ...(sameText ? { reader: Math.max(row.reader, input.reader) } : {}),
+            // Judged once, judged: a device without the AI scans doesn't undo it.
+            scansChecked: row.scansChecked || input.scansChecked === true,
             ...restored,
             updatedAt: now,
           })

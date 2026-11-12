@@ -553,7 +553,9 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `CARD_RESET`; the picture is deleted when done, failed (the OCR text stays), its text replaced or
   after 7 days (`pruneScans`). The card runner waits while a document has open scans. DTOs:
   `aiPages`, detail `scans` [{page, status, error}]. The mock AI answers the transcription prompt
-  (a "Transcribe: <x>" line in the hint, else a fixed table).
+  (a "Transcribe: <x>" line in the hint, else a fixed table). While the scans are on and can run,
+  the manifest asks once more for a same-hash entry with `reader` ≥ 2 whose document isn't
+  `scans_checked` (migration `0033`; the upload's `scansChecked`, kept once set for the same file).
   Read-then-write transactions
   here are `{ behavior: "immediate" }` (WAL with the worker writing). `search.ts`
   `searchKnowledge(db, familyId, query, {limit, tags, folder})`: each word a quoted prefix term,

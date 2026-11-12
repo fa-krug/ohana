@@ -666,7 +666,8 @@ final class KnowledgeIndexer {
                 }
                 do {
                     let id = try await api.uploadKnowledgeDocument(KnowledgeUploadBody(
-                        folderId: folderID, file: upload.file, pages: pages, reader: reader, reread: upload.reread == true))
+                        folderId: folderID, file: upload.file, pages: pages, reader: reader, reread: upload.reread == true,
+                        scansChecked: capture != .none))
                     guard isCurrent(generation) else { break }
                     unreadableNow[path] = nil
                     if let id, !scans.isEmpty {

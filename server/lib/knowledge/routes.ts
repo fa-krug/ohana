@@ -7,7 +7,7 @@
 // PATCH /knowledge/folder                      {aiScans} → {folder} (404 without one; off: the waiting scans not asked for go)
 // GET  /knowledge/status                       {folder | null, counts: {pending, ready, failed, missing, excluded}, chunks, cards, scans, aiScans}
 // POST /knowledge/manifest                     {folderId, device?, files: [{path, size, mtime, hash | null, tags, reader?}]} → {upload: [path]}
-// PUT  /knowledge/documents                    {folderId, path, hash, size, mtime, tags, reader?, reread?, pages: [text]} → 202 {id, status}
+// PUT  /knowledge/documents                    {folderId, path, hash, size, mtime, tags, reader?, reread?, scansChecked?, pages: [text]} → 202 {id, status}
 // PUT  /knowledge/documents/{id}/pages/{page}/scan?hash=&force=   (image/jpeg) → 202 {page, status} (scans.ts)
 // GET  /knowledge/documents?q=&tag=&folder=&person=&status=&cursor=&limit=   {documents, nextCursor}
 // GET  /knowledge/documents/{id}               {document} (with the card's facts and the chunks)
@@ -149,14 +149,15 @@ async function manifestRoute(ctx: Ctx, familyId: string): Promise<Response> {
   const folder = requireFolder(ctx.db, familyId, body.folderId);
   const device = cleanDevice(body.device);
   const files = cleanManifestFiles(body.files);
-  return json(applyManifest(ctx.db, folder.id, files, ctx.now, device));
+  return json(applyManifest(ctx.db, folder, files, ctx.now, device));
 }
 
 async function uploadRoute(ctx: Ctx, familyId: string): Promise<Response> {
   const body = await readLimitedBody(ctx.req, MAX_UPLOAD_BODY);
   const folder = requireFolder(ctx.db, familyId, body.folderId);
   if (body.reread !== undefined && typeof body.reread !== "boolean") throw new HttpError(400, "reread must be true or false");
-  const input = { ...cleanFileInfo(body, "body"), pages: cleanPages(body.pages), reread: body.reread === true };
+  if (body.scansChecked !== undefined && typeof body.scansChecked !== "boolean") throw new HttpError(400, "scansChecked must be true or false");
+  const input = { ...cleanFileInfo(body, "body"), pages: cleanPages(body.pages), reread: body.reread === true, scansChecked: body.scansChecked === true };
   const { id, status } = uploadDocument(ctx.db, familyId, folder.id, input, ctx.now);
   return json({ id, status }, 202);
 }

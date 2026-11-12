@@ -7,7 +7,9 @@ import type { Db } from "@/lib/db";
 import { kbDocuments, kbFolders } from "@/lib/db/schema";
 import { HttpError } from "@/lib/api/http";
 import { type DocumentRow, type DocumentStatus, restoredColumns } from "./documents";
+import type { FolderRow } from "./folders";
 import { type ManifestFile, cleanFileInfo, nameOf } from "./input";
+import { scansEnabled } from "./scans";
 
 export const MAX_MANIFEST_FILES = 20_000;
 export const MAX_DEVICE_LENGTH = 100;
@@ -52,6 +54,7 @@ const MANIFEST_COLUMNS = {
   mtime: kbDocuments.mtime,
   hash: kbDocuments.hash,
   reader: kbDocuments.reader,
+  scansChecked: kbDocuments.scansChecked,
   status: kbDocuments.status,
   error: kbDocuments.error,
   indexedAt: kbDocuments.indexedAt,
@@ -95,6 +98,10 @@ function changed(row: Row, changes: Changes): Changes {
  * - a known path with another hash: its text is needed (tags updated);
  * - a known path with the same hash read by an older reader than the entry's `reader` (the app's
  *   reader got better, e.g. at scans): its text is needed again;
+ * - a known path with the same hash, a PDF or image (`reader` ≥ 2: the app's OCR reads it) whose
+ *   pages no device has judged with the family's AI scans on (`scansChecked` false), while the
+ *   scans can run (`scansEnabled`) and are on (the folder's `aiScans`): its text is needed once
+ *   more, so the device sends the pages its OCR read poorly (and `scansChecked` with the upload);
  * - a known path with hash null (the device sees the file but couldn't hash it, e.g. an iCloud
  *   file it couldn't download): present, tags updated, nothing else; never asked for, never moved;
  * - a new path with hash null: ignored (nothing to compare or ask for yet);
@@ -114,12 +121,21 @@ function changed(row: Row, changes: Changes): Changes {
  * A non-empty manifest is noted on the folder: when, and from which `device` (the app's settings
  * show it).
  */
-export function applyManifest(db: Db, folderId: string, files: ManifestFile[], now: Date, device: string | null = null): { upload: string[] } {
+export function applyManifest(
+  db: Db,
+  folder: Pick<FolderRow, "id" | "familyId">,
+  files: ManifestFile[],
+  now: Date,
+  device: string | null = null,
+): { upload: string[] } {
   if (files.length === 0) return { upload: [] };
+  const folderId = folder.id;
   // Immediate: the rows are read, then written; under WAL a deferred transaction whose snapshot
   // the worker wrote past in between fails with SQLITE_BUSY_SNAPSHOT.
   return db.transaction(
     (tx) => {
+      const aiScans = tx.select({ on: kbFolders.aiScans }).from(kbFolders).where(eq(kbFolders.id, folderId)).get()?.on ?? false;
+      const judgeScans = aiScans && scansEnabled(tx, folder.familyId);
       const rows = tx.select(MANIFEST_COLUMNS).from(kbDocuments).where(eq(kbDocuments.folderId, folderId)).all();
       const byPath = new Map(rows.map((r) => [r.path, r]));
       const listed = new Set(files.map((f) => f.path));
@@ -145,7 +161,8 @@ export function applyManifest(db: Db, folderId: string, files: ManifestFile[], n
         if (row) {
           save(row, seenAgain(row, f));
           const newer = f.hash !== null && (row.hash !== f.hash || row.reader < f.reader);
-          if (newer && row.status !== "excluded") upload.push(f.path);
+          const unjudged = judgeScans && f.hash === row.hash && f.reader >= 2 && !row.scansChecked;
+          if ((newer || unjudged) && row.status !== "excluded") upload.push(f.path);
           continue;
         }
         if (f.hash === null) continue;

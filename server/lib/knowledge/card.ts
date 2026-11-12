@@ -87,7 +87,7 @@ export interface Card {
 }
 
 /** Whether the family's cards are made: the assistant is on and the family set up its AI. */
-export function cardsEnabled(db: Db, familyId: string): boolean {
+export function cardsEnabled(db: Pick<Db, "select">, familyId: string): boolean {
   if (!moduleEnabled("assistant")) return false;
   return !!db
     .select({ id: aiSettings.familyId })

@@ -286,6 +286,70 @@ describe("scans: the family's setting", () => {
   });
 });
 
+// ---- documents judged before the AI scans were on ----
+
+describe("scans: documents not yet judged with the AI scans on", () => {
+  const entry = (path: string, reader = 2, hash = sha(path)) => ({ path, size: 1, mtime: 1_700_000_000_000, hash, tags: [], reader });
+
+  it("has the manifest ask once more for unjudged PDFs / images while the scans are on and can run", async () => {
+    const { call, upload, manifest } = await setup();
+    await upload("a.pdf", ["A"], { reader: 2 });
+    await upload("b.jpg", ["B"], { reader: 2, scansChecked: true });
+    await upload("c.txt", ["C"]);
+    const ex = (await upload("ex.pdf", ["X"], { reader: 2 })).data.id;
+    await call("POST", `/knowledge/documents/${ex}/exclude`, { excluded: true });
+    const files = [entry("a.pdf"), entry("b.jpg"), entry("c.txt", 1), entry("ex.pdf")];
+    // Neither the setting nor the family's AI: nothing.
+    expect((await manifest(files)).data).toEqual({ upload: [] });
+    // The setting without the AI: nothing.
+    await call("PATCH", "/knowledge/folder", { aiScans: true });
+    expect((await manifest(files)).data).toEqual({ upload: [] });
+    // Both: the unjudged PDF only (not the judged one, a text file, an excluded one).
+    await configure(t);
+    expect((await manifest(files)).data).toEqual({ upload: ["a.pdf"] });
+    // Without the assistant the scans can't run.
+    process.env.DISABLED_MODULES = "assistant";
+    expect((await manifest(files)).data).toEqual({ upload: [] });
+    delete process.env.DISABLED_MODULES;
+    // An older device's entry (reader 1) isn't asked for.
+    expect((await manifest([entry("a.pdf", 1)])).data).toEqual({ upload: [] });
+    // Listed once when it's also needed for another reason (another hash).
+    expect((await manifest([entry("a.pdf", 2, sha("other"))])).data).toEqual({ upload: ["a.pdf"] });
+    // Judged: not asked for again.
+    await upload("a.pdf", ["A"], { reader: 2, scansChecked: true });
+    expect((await manifest(files)).data).toEqual({ upload: [] });
+    // Turning the scans off keeps what was judged.
+    await call("PATCH", "/knowledge/folder", { aiScans: false });
+    expect(t.db.select({ path: kbDocuments.path, checked: kbDocuments.scansChecked }).from(kbDocuments).all()).toEqual(
+      expect.arrayContaining([{ path: "a.pdf", checked: true }, { path: "b.jpg", checked: true }]),
+    );
+  });
+
+  it("stores scansChecked with an upload: given with new text, kept once given for the same text", async () => {
+    await configure(t);
+    const { upload } = await setup();
+    const id = (await upload("a.pdf", ["A"], { reader: 2, scansChecked: true })).data.id;
+    expect(doc(id).scansChecked).toBe(true);
+    expect((await upload("a.pdf", ["A"], { scansChecked: "yes" })).status).toBe(400);
+    // The very text again, by a device without the scans: still judged.
+    await upload("a.pdf", ["A"], { reader: 2 });
+    expect(doc(id).scansChecked).toBe(true);
+    // The same text without it, then with it: judged.
+    const b = (await upload("b.pdf", ["B"], { reader: 2 })).data.id;
+    expect(doc(b).scansChecked).toBe(false);
+    await upload("b.pdf", ["B"], { reader: 2, scansChecked: true });
+    expect(doc(b).scansChecked).toBe(true);
+    // New text replaces it with what the upload says.
+    await upload("a.pdf", ["A2"], { reader: 2, reread: true });
+    expect(doc(id)).toMatchObject({ text: JSON.stringify(["A2"]), scansChecked: false });
+    // The AI's transcription of a page leaves it as it is.
+    await upload("a.pdf", ["A3"], { reader: 2, reread: true, scansChecked: true });
+    fakeScan(id, 1, { forced: true });
+    expect(await scans()).toBe(1);
+    expect(doc(id)).toMatchObject({ aiPages: "[1]", scansChecked: true });
+  });
+});
+
 // ---- the scan route ----
 
 describe("scans: the route", () => {

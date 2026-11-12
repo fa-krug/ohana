@@ -121,6 +121,17 @@ struct KnowledgeWalkerTests {
         #expect(!KnowledgeWalker.isValidPath(String(repeating: "a", count: 1025)))
     }
 
+    @Test func uploadBodySaysWhetherScansWereChecked() throws {
+        let file = KnowledgeFileInfo(path: "a.pdf", size: 1, mtime: 1, hash: "h", tags: [])
+        func json(_ body: KnowledgeUploadBody) throws -> [String: Any] {
+            try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(body)) as? [String: Any])
+        }
+        let checked = try json(KnowledgeUploadBody(folderId: "k1", file: file, pages: ["x"], reader: 2, scansChecked: true))
+        #expect(checked["scansChecked"] as? Bool == true && checked["reread"] == nil)
+        let unchecked = try json(KnowledgeUploadBody(folderId: "k1", file: file, pages: ["x"], reader: 2))
+        #expect(unchecked["scansChecked"] == nil)
+    }
+
     @Test func tagsAsTheServerTakesThem() {
         let many = (1...60).map { "t\($0)" }
         #expect(KnowledgeTags.cleaned([" Auto ", "", "Auto", "auto", String(repeating: "x", count: 101)]) == ["Auto", "auto"])
@@ -753,7 +764,7 @@ struct KnowledgeIndexerTests {
         #expect(files.allSatisfy { $0["reader"] as? Int == 1 })
         let put = try #require(KnowledgeStubProtocol.bodies("PUT").first)
         #expect(put["path"] as? String == "Verträge/Kündigung.txt")
-        #expect(put["reader"] as? Int == 1 && put["reread"] == nil)
+        #expect(put["reader"] as? Int == 1 && put["reread"] == nil && put["scansChecked"] == nil)
         #expect(put["pages"] as? [String] == ["Kündigung zum 31. März"])
         #expect(s.indexer.unreadable == ["Brief.pages": .format])
         #expect(s.indexer.lastRun?.files == 3 && s.indexer.lastRun?.uploaded == 1 && s.indexer.phase == .idle)
@@ -959,7 +970,7 @@ struct KnowledgeIndexerTests {
         #expect(KnowledgeStubProtocol.requests == [Self.putPath])
         let put = try #require(KnowledgeStubProtocol.bodies("PUT").first)
         #expect(put["path"] as? String == "Verträge/Kündigung.txt" && put["pages"] as? [String] == ["Kündigung zum 31. März"])
-        #expect(put["reread"] as? Bool == true && put["reader"] as? Int == 1)
+        #expect(put["reread"] as? Bool == true && put["reader"] as? Int == 1 && put["scansChecked"] == nil)
         #expect(s.indexer.waiting == 0)
 
         // Not in the folder, no folder on this device: the original's errors (they offer Settings).
@@ -997,6 +1008,7 @@ struct KnowledgeIndexerTests {
                                                    "PUT /api/v1/families/f1/knowledge/documents/d1/pages/1/scan"])
         let put = try #require(KnowledgeStubProtocol.bodies("PUT").first)
         #expect(put["reread"] as? Bool == true && put["reader"] as? Int == 2)
+        #expect(put["scansChecked"] as? Bool == true)
         #expect((put["pages"] as? [String])?.first?.contains("Abschlag") == true)
         let scan = try #require(KnowledgeStubProtocol.scans.first)
         #expect(scan.contentType == "image/jpeg" && scan.body.starts(with: [0xFF, 0xD8]))
@@ -1007,6 +1019,7 @@ struct KnowledgeIndexerTests {
         KnowledgeStubProtocol.set { $0.status = #"{"scans": false, "aiScans": true}"# }
         #expect(try await s.indexer.reread(path: "Brief.pdf", assistant: true) == .sent)
         #expect(KnowledgeStubProtocol.requests == [Self.statusPath, Self.putPath])
+        #expect(try #require(KnowledgeStubProtocol.bodies("PUT").first)["scansChecked"] == nil)
     }
 
     @Test func poorPagesGoToTheAssistantWhileTheSettingIsOn() async throws {
@@ -1023,7 +1036,22 @@ struct KnowledgeIndexerTests {
         #expect(KnowledgeStubProtocol.requests == [Self.manifestPath, Self.statusPath, Self.putPath,
                                                    "PUT /api/v1/families/f1/knowledge/documents/d1/pages/2/scan"])
         #expect(KnowledgeStubProtocol.scans.first.map { !$0.query.contains("force") } == true)
+        #expect(try #require(KnowledgeStubProtocol.bodies("PUT").first)["scansChecked"] as? Bool == true)
         #expect(s.indexer.waiting == 0)
+    }
+
+    @Test func aScanJudgedWithTheSettingOnIsCheckedWhateverTheVerdict() async throws {
+        let s = try setup()
+        defer { try? FileManager.default.removeItem(at: s.root); try? FileManager.default.removeItem(at: s.data) }
+        try scannedPDF(poorPage: false).write(to: s.root.appending(path: "Brief.pdf"))
+        KnowledgeStubProtocol.set {
+            $0.upload = ["Brief.pdf"]
+            $0.status = #"{"scans": true, "aiScans": true}"#
+        }
+        await s.indexer.run()
+        // No page reads poorly: nothing goes to the AI, but the file counts as checked.
+        #expect(KnowledgeStubProtocol.requests == [Self.manifestPath, Self.statusPath, Self.putPath])
+        #expect(try #require(KnowledgeStubProtocol.bodies("PUT").first)["scansChecked"] as? Bool == true)
     }
 
     @Test func noPageScansWhileTheSettingIsOffOrRefused() async throws {
@@ -1036,6 +1064,7 @@ struct KnowledgeIndexerTests {
         }
         await s.indexer.run()
         #expect(KnowledgeStubProtocol.requests == [Self.manifestPath, Self.statusPath, Self.putPath])
+        #expect(try #require(KnowledgeStubProtocol.bodies("PUT").first)["scansChecked"] == nil)
 
         // On, but the server refuses the page (an older server): dropped quietly.
         KnowledgeStubProtocol.reset()

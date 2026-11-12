@@ -143,9 +143,12 @@ nonisolated struct KnowledgeUploadBody: Encodable, Sendable {
     /// The user asked for the file to be read again: the server takes new text even from the same
     /// reader.
     var reread = false
+    /// The file was judged with the family's AI scans available (`ScanCapture` `.poor` or `.all`),
+    /// whatever the verdict: the server's manifest stops asking for it again.
+    var scansChecked = false
 
     private enum CodingKeys: String, CodingKey {
-        case folderId, path, hash, size, mtime, tags, pages, reader, reread
+        case folderId, path, hash, size, mtime, tags, pages, reader, reread, scansChecked
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -159,6 +162,7 @@ nonisolated struct KnowledgeUploadBody: Encodable, Sendable {
         try c.encode(pages, forKey: .pages)
         try c.encode(reader, forKey: .reader)
         if reread { try c.encode(true, forKey: .reread) }
+        if scansChecked { try c.encode(true, forKey: .scansChecked) }
     }
 }
 
