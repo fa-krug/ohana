@@ -17,3 +17,11 @@ export function gapDays(types: TypeRow[], entries: Map<string, string[]>): strin
   }
   return out.sort();
 }
+
+/** Whether a "cover only" type's entry is left out of the overview on a day: a "covers" type
+ *  that shows only where it covers (`cover_only`), on a day (`roles`: the roles of all its
+ *  types) without a "needs cover" entry. The entry stays stored and counted; the app's
+ *  `CalendarMath.isHidden` is the same rule (its cells and Apple Calendar sync). */
+export function hiddenEntry(type: Pick<TypeRow, "role" | "cover_only">, roles: readonly (string | undefined)[]): boolean {
+  return type.role === "covers" && (type.cover_only ?? false) && !roles.includes("needs_cover");
+}

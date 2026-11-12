@@ -48,8 +48,8 @@ after the children; a *Covers* type (e.g. "Vacation Dad", "Grandma") covers them
 can be set to *Only when covering* (Settings → Calendar → the type): its days then show only where
 they cover a day that needs cover. You can enter a whole stretch when someone is available, and the
 calendar's days show them only where they're needed. The other days stay saved and counted, they
-just aren't drawn in the calendar or sent to Apple Calendar; select such a day and the type is
-listed there as usual.
+just aren't shown in the calendar, the overview or Apple Calendar; select such a day and the type
+is listed there as usual.
 
 ## Apple Calendar
 

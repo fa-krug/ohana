@@ -6794,9 +6794,10 @@ components:
         coverOnly:
           type: boolean
           description: >-
-            Meant for `covers` types: the app's calendar cells and its Apple Calendar sync show its
-            days only where the day also has a `needs_cover` entry. The others stay stored, are
-            listed by the entries routes and in the day's details, and still count.
+            Meant for `covers` types: its days show only where the day also has a `needs_cover`
+            entry (the app's calendar cells and Apple Calendar sync, the overview's upcoming
+            runs). The others stay stored, are listed by the entries routes and in the app's
+            details of a selected day, and still count.
     EntriesByDay:
       type: object
       description: Day (YYYY-MM-DD) → ids of the entry types on that day.

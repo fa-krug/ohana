@@ -512,7 +512,7 @@ struct CalendarTypeEditor: View {
     private var roleFooter: String {
         var lines = [role.help, String(localized: "Away: the whole family is away from home on these days, the meal plan plans no meals for them.")]
         if role == .covers && type.coverOnly != nil {
-            lines.append(String(localized: "Only when covering: the calendar and Apple Calendar show its days only where they cover a day that needs cover. A selected day still lists it."))
+            lines.append(String(localized: "Only when covering: the calendar, the overview and Apple Calendar show its days only where they cover a day that needs cover. A selected day still lists it."))
         }
         return lines.joined(separator: "\n")
     }
