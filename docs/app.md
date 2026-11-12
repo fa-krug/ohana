@@ -47,9 +47,9 @@ A type with the role *Needs cover* (e.g. "Day care closed") marks weekdays someo
 after the children; a *Covers* type (e.g. "Vacation Dad", "Grandma") covers them. A covering type
 can be set to *Only when covering* (Settings → Calendar → the type): its days then show only where
 they cover a day that needs cover. You can enter a whole stretch when someone is available, and the
-calendar shows them only on the days they're needed. The other days stay saved and counted, they're
-just hidden (also from Apple Calendar and the overview); select such a day to see the type ticked
-and take it off.
+calendar's days show them only where they're needed. The other days stay saved and counted, they
+just aren't drawn in the calendar or sent to Apple Calendar; select such a day and the type is
+listed there as usual.
 
 ## Apple Calendar
 

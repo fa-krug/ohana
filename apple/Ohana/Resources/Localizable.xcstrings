@@ -12331,12 +12331,12 @@
         }
       }
     },
-    "Only when covering: its days show only where they cover a day that needs cover. The others stay saved and counted, but are hidden.": {
+    "Only when covering: the calendar and Apple Calendar show its days only where they cover a day that needs cover. A selected day still lists it.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nur bei Betreuungsbedarf: Die Tage werden nur angezeigt, wo sie einen Tag abdecken, der Betreuung braucht. Die anderen bleiben gespeichert und gezählt, sind aber ausgeblendet."
+            "value": "Nur bei Betreuungsbedarf: Kalender und Apple Kalender zeigen die Tage nur, wo sie einen Tag abdecken, der Betreuung braucht. Ein ausgewählter Tag führt die Art weiterhin auf."
           }
         }
       }

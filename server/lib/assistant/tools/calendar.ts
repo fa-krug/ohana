@@ -92,7 +92,7 @@ export const calendarTools: Record<string, Tool> = {
     spec: {
       name: "get_calendar",
       description:
-        "Reads the vacation calendar between two days: the entry types of those years, the entries per day (type ids; a coverOnly type's entries on days without a \"needs cover\" entry are stored but hidden in the app), day notes, and gaps (weekdays that need cover but have none).",
+        "Reads the vacation calendar between two days: the entry types of those years, the entries per day (type ids; a coverOnly type's entries on days without a \"needs cover\" entry aren't drawn in the app's calendar cells), day notes, and gaps (weekdays that need cover but have none).",
       parameters: {
         type: "object",
         properties: {
@@ -293,7 +293,7 @@ export const calendarTools: Record<string, Tool> = {
     spec: {
       name: "manage_entry_types",
       description:
-        `Adds, changes, deletes or copies entry types. Every year has its own types. Each type belongs to a family member (or nobody: member null) and takes its color from theirs; nobody's may have a color of its own (null: gray); icon: an SF Symbol name (null: its role default); appleSync: whether its days go to Apple Calendar on devices that sync the family's calendar there (default true); coverOnly (for "covers" types, e.g. a grandparent who is available): its days show only where they cover a "needs cover" day, the others are hidden in the app (they stay stored and still count; default false). "add": name, role, member (name; default: the user), color, icon, appleSync, coverOnly. "update": type (id or name) and any of name, role, member, color, icon, appleSync, coverOnly. "order": types (ids or names, all of the year's, first to last). "delete": type (also deletes its entries in that year; needs confirmed). "copy_year": from and to (years).`,
+        `Adds, changes, deletes or copies entry types. Every year has its own types. Each type belongs to a family member (or nobody: member null) and takes its color from theirs; nobody's may have a color of its own (null: gray); icon: an SF Symbol name (null: its role default); appleSync: whether its days go to Apple Calendar on devices that sync the family's calendar there (default true); coverOnly (for "covers" types, e.g. a grandparent who is available): the app's calendar cells and Apple Calendar show its days only where they cover a "needs cover" day; the others stay stored, count and show in the day's details (default false). "add": name, role, member (name; default: the user), color, icon, appleSync, coverOnly. "update": type (id or name) and any of name, role, member, color, icon, appleSync, coverOnly. "order": types (ids or names, all of the year's, first to last). "delete": type (also deletes its entries in that year; needs confirmed). "copy_year": from and to (years).`,
       parameters: {
         type: "object",
         properties: {

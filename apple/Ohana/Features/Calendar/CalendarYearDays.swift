@@ -478,7 +478,7 @@ struct CalendarYearPointer: View {
     }
 
     private func tooltip(_ day: Day) -> String {
-        CalendarDayCell.tooltip(day: day, types: store.types(on: day), note: store.notes[day],
+        CalendarDayCell.tooltip(day: day, types: store.cellTypes(on: day), note: store.notes[day],
                                 events: store.events[day] ?? [], holidays: store.holidays[day] ?? [],
                                 birthdays: store.birthdays[day] ?? [])
     }

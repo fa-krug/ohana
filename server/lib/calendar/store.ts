@@ -45,8 +45,9 @@ export interface TypeRow {
   away?: boolean;
   /** Its days go to Apple Calendar (the app's sync). Optional: true when left out. */
   apple_sync?: boolean;
-  /** Its days show only where the day also has a "needs cover" entry (`gaps.ts`
-   *  `hiddenEntry`). Optional: false when left out. */
+  /** A "covers" type whose days the app's calendar cells and Apple Calendar sync show only where
+   *  the day also has a "needs cover" entry (the app's `CalendarMath.isHidden`). Optional: false
+   *  when left out. */
   cover_only?: boolean;
 }
 

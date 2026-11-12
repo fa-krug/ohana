@@ -314,7 +314,7 @@ describe("calendar API", () => {
     const imported = (await s.call("GET", `/families/${target.id}/types?year=2026`)).data;
     expect(imported.find((t: any) => t.id === "grandma").coverOnly).toBe(true);
 
-    // The entries stay stored; the overview's upcoming runs leave out the days it doesn't cover.
+    // Only the app's cells hide the days it doesn't cover: the API and the overview keep them.
     await s.call("POST", `/families/${f.id}/entries`, {
       ops: [
         { type: "grandma", from: "2026-03-02", to: "2026-03-06" },
@@ -324,7 +324,7 @@ describe("calendar API", () => {
     expect((await s.call("GET", `/families/${f.id}/entries?year=2026`)).data["2026-03-02"]).toEqual(["grandma"]);
     const summary = await calendarSummary(s.db, f.id, "2026-03-01");
     expect(summary.nextGap).toBeNull();
-    expect(summary.upcoming.filter((u) => u.name === "Grandma").map((u) => [u.from, u.to])).toEqual([["2026-03-04", "2026-03-05"]]);
+    expect(summary.upcoming.filter((u) => u.name === "Grandma").map((u) => [u.from, u.to])).toEqual([["2026-03-02", "2026-03-06"]]);
   });
 
   it("gives entry types an icon: their own or their role's", async () => {

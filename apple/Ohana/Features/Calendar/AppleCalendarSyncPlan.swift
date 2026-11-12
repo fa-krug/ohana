@@ -237,7 +237,7 @@ enum AppleSyncMapping {
 
     /// The runs of days with the same type, in `window` (types are per year: a run ends with it);
     /// none of a type kept out of Apple Calendar (`syncsToApple`), nor a "cover only" type's days
-    /// it doesn't cover (`CalendarMath.isHidden`: they don't show in Ohana either).
+    /// it doesn't cover (`CalendarMath.isHidden`: Ohana's cells don't draw them either).
     /// A run is titled "Type (Member)" for a type that belongs to someone (`members`: names by id),
     /// like an event's person in brackets; a new member makes it a new run.
     static func spans(entries: [Day: [String]], types: [Int: [CalendarEntryType]], members: [String: String] = [:],
