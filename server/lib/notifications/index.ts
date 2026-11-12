@@ -33,6 +33,8 @@ export interface NotifyOptions {
   event?: string;
   /** Replaces the push relay client (tests). */
   push?: RelayClient;
+  /** The moment it's sent at (the icon's number is counted then); default the clock's. */
+  now?: Date;
 }
 
 /**
@@ -52,7 +54,7 @@ export async function notifyFamily(
       db,
       familyId,
       { title: message.title, body: message.body, url: message.url, collapseKey: message.collapseKey, event: opts.event },
-      { userIds: opts.app === true ? undefined : opts.app.userIds, relay: opts.push },
+      { userIds: opts.app === true ? undefined : opts.app.userIds, relay: opts.push, now: opts.now },
     );
     result.sent += pushed.sent;
     result.failed += pushed.failed;

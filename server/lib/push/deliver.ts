@@ -3,11 +3,11 @@
 // assistant's chat is one person's). Sealed per device, sent through the relay in one go.
 // A device the relay says is gone (or whose token it doesn't know) is forgotten: the app
 // registers again at its next start. Each push carries the device's icon badge (its account's
-// open chores today, lib/chores/badge.ts) and tomorrow's, for midnight. Never throws; call it
-// from the worker.
+// open chores due by now, lib/chores/badge.ts) and the moments it changes until the end of
+// tomorrow, which the app schedules. Never throws; call it from the worker.
 
 import { eq, inArray } from "drizzle-orm";
-import { type ChoreBadges, choreBadges } from "@/lib/chores/badge";
+import { type ChoreBadges, choreBadges, localMoment } from "@/lib/chores/badge";
 import type { Db } from "@/lib/db";
 import { familyMembers, pushDevices } from "@/lib/db/schema";
 import { pushRelayUrl } from "./config";
@@ -78,17 +78,15 @@ export async function pushToDevices(
     ...(message.event ? { event: message.event } : {}),
   };
 
-  // Server-local "today", as the chores' notifications have it (lib/notifications/daily.ts
-  // localDay; not imported: it imports the notifications, which import this).
-  const p2 = (n: number) => String(n).padStart(2, "0");
-  const today = `${now.getFullYear()}-${p2(now.getMonth() + 1)}-${p2(now.getDate())}`;
+  // The server's wall clock, as the chores' notifications have it.
+  const at = localMoment(now);
   const badges = new Map<string, ChoreBadges | undefined>();
   const badgeOf = (device: PushDeviceRow): ChoreBadges | undefined => {
     const muted = mutedOf(device);
     const key = `${device.userId}|${muted.join(",")}`;
     if (!badges.has(key)) {
       try {
-        badges.set(key, choreBadges(db, device.userId, today, muted));
+        badges.set(key, choreBadges(db, device.userId, at, muted));
       } catch (e) {
         console.warn("[push] badge failed:", e instanceof Error ? e.message : e);
         badges.set(key, undefined);
@@ -146,7 +144,9 @@ export async function pushToDevices(
 }
 
 function withBadge(payload: PushPayload, badges: ChoreBadges | undefined): PushPayload {
-  return badges ? { ...payload, badge: badges.count, badgeTomorrow: badges.tomorrow } : payload;
+  return badges
+    ? { ...payload, badge: badges.count, badgeTomorrow: badges.tomorrow, badgeSteps: badges.steps }
+    : payload;
 }
 
 /** Pushes `message` to the devices of the family's members (or of `userIds` among them). */

@@ -69,7 +69,7 @@ export async function choreNotifications(
       if (notified) continue;
       const userIds = subscribed.get(row.id) ?? [];
       try {
-        await notifyChore(db, row, day, userIds, opts);
+        await notifyChore(db, row, day, userIds, { ...opts, now });
       } catch (e) {
         console.error(`[chores] notification of chore ${row.id} failed:`, e);
       }
@@ -81,7 +81,13 @@ export async function choreNotifications(
   return told;
 }
 
-async function notifyChore(db: Db, row: ChoreRow, day: string, userIds: string[], opts: { push?: RelayClient }) {
+async function notifyChore(
+  db: Db,
+  row: ChoreRow,
+  day: string,
+  userIds: string[],
+  opts: { push?: RelayClient; now: Date },
+) {
   const t = translator(familyLocale(db, row.familyId));
   const assigneeId = row.assigneeUserId ?? row.assigneePersonId;
   const assignee = assigneeId ? chorePeople(db, row.familyId).find((p) => p.id === assigneeId) : undefined;
@@ -97,6 +103,6 @@ async function notifyChore(db: Db, row: ChoreRow, day: string, userIds: string[]
       url: `${getAppUrl()}/f/${row.familyId}/chores/${row.id}?day=${day}`,
       collapseKey: `chore:${row.id}:${day}`,
     },
-    { channelIds: [], app: { userIds }, event: "chore_due", push: opts.push },
+    { channelIds: [], app: { userIds }, event: "chore_due", push: opts.push, now: opts.now },
   );
 }

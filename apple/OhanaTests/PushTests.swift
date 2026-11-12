@@ -45,28 +45,60 @@ struct PushTests {
         #expect(content.badge == 0)
     }
 
-    @Test func readsTomorrowsNumber() throws {
+    @Test func readsTheNumbersAhead() throws {
         let payload = try JSONDecoder().decode(PushPayload.self, from: Data(
-            #"{"v":1,"title":"T","body":"B","badge":2,"badgeTomorrow":{"day":"2026-11-08","count":3}}"#.utf8))
-        #expect(payload.badgeTomorrow == MidnightBadge.Next(day: "2026-11-08", count: 3))
+            #"{"v":1,"title":"T","body":"B","badge":2,"badgeTomorrow":{"day":"2026-11-08","count":3},"badgeSteps":[{"at":"2026-11-07T18:00","count":4}]}"#.utf8))
+        #expect(payload.badgeTomorrow == BadgeSchedule.Next(day: "2026-11-08", count: 3))
+        #expect(payload.badgeSteps == [BadgeSchedule.Step(at: "2026-11-07T18:00", count: 4)])
         let answer = try JSONDecoder().decode(BadgeCount.self, from: Data(#"{"count":1}"#.utf8))
-        #expect(answer.count == 1 && answer.tomorrow == nil)
+        #expect(answer.count == 1 && answer.tomorrow == nil && answer.steps == nil)
     }
 
-    @Test func switchesTheNumberAtTheNextMidnight() throws {
+    @Test func switchesTheNumberAtTheNextMidnightForOlderServers() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Europe/Berlin")!
         let evening = calendar.date(from: DateComponents(year: 2026, month: 11, day: 7, hour: 21))!
-        let request = try #require(MidnightBadge.request(.init(day: "2026-11-08", count: 4), now: evening, calendar: calendar))
-        #expect(request.identifier == MidnightBadge.identifier)
+        let requests = BadgeSchedule.requests(steps: nil, tomorrow: .init(day: "2026-11-08", count: 4), now: evening, calendar: calendar)
+        let request = try #require(requests.first)
+        #expect(requests.count == 1)
+        #expect(request.identifier == BadgeSchedule.midnightIdentifier)
+        #expect(BadgeSchedule.isBadgeOnly(request.identifier))
         #expect(request.content.badge == 4)
         #expect(request.content.title.isEmpty && request.content.body.isEmpty && request.content.sound == nil)
         let trigger = try #require(request.trigger as? UNCalendarNotificationTrigger)
         #expect(!trigger.repeats)
         #expect(trigger.dateComponents.day == 8 && trigger.dateComponents.hour == 0 && trigger.dateComponents.minute == 0)
         // A day already begun, or not a day: nothing.
-        #expect(MidnightBadge.request(.init(day: "2026-11-07", count: 1), now: evening, calendar: calendar) == nil)
-        #expect(MidnightBadge.request(.init(day: "tomorrow", count: 1), now: evening, calendar: calendar) == nil)
+        #expect(BadgeSchedule.requests(steps: nil, tomorrow: .init(day: "2026-11-07", count: 1), now: evening, calendar: calendar).isEmpty)
+        #expect(BadgeSchedule.requests(steps: nil, tomorrow: .init(day: "tomorrow", count: 1), now: evening, calendar: calendar).isEmpty)
+    }
+
+    @Test func switchesTheNumberWhenChoresBecomeDue() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Europe/Berlin")!
+        let early = calendar.date(from: DateComponents(year: 2026, month: 11, day: 7, hour: 6, minute: 30))!
+        let steps: [BadgeSchedule.Step] = [
+            .init(at: "2026-11-07T06:00", count: 1), // passed
+            .init(at: "2026-11-07T07:00", count: 2),
+            .init(at: "2026-11-08T00:00", count: 1),
+            .init(at: "soon", count: 9),
+        ]
+        // With steps, the midnight number isn't scheduled on its own.
+        let requests = BadgeSchedule.requests(steps: steps, tomorrow: .init(day: "2026-11-08", count: 1), now: early, calendar: calendar)
+        #expect(requests.map { $0.content.badge?.intValue } == [2, 1])
+        #expect(Set(requests.map(\.identifier)).count == 2)
+        #expect(requests.allSatisfy { BadgeSchedule.isBadgeOnly($0.identifier) && BadgeSchedule.identifiers.contains($0.identifier) })
+        let morning = try #require(requests.first?.trigger as? UNCalendarNotificationTrigger)
+        #expect(morning.dateComponents.day == 7 && morning.dateComponents.hour == 7 && morning.dateComponents.minute == 0)
+        #expect(BadgeSchedule.requests(steps: [], tomorrow: .init(day: "2026-11-08", count: 1), now: early, calendar: calendar).isEmpty)
+        #expect(!BadgeSchedule.isBadgeOnly("de.fa-krug.Ohana.cook-timer.1"))
+    }
+
+    @Test func tellsTheServerTheDevicesClock() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Europe/Berlin")!
+        let now = calendar.date(from: DateComponents(year: 2026, month: 11, day: 7, hour: 6, minute: 5))!
+        #expect(AppBadge.clock(now, calendar: calendar) == ["today": "2026-11-07", "time": "06:05"])
     }
 
     @Test func runsTheJobJustAfterMidnight() {

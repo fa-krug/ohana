@@ -122,8 +122,9 @@ describe("choreNotifications", () => {
         event: "chore_due",
         // The icon's number: this chore, open and Anna's (lib/chores/badge.ts).
         badge: 1,
-        // Still open tomorrow, then overdue (the day: the real clock's, notifyFamily passes none).
-        badgeTomorrow: { day: expect.any(String), count: 1 },
+        // Still open tomorrow, then overdue; no change until the end of tomorrow.
+        badgeTomorrow: { day: "2026-11-03", count: 1 },
+        badgeSteps: [],
       },
     ]);
     expect(relay.messages[0].collapseId).toEqual(expect.any(String));

@@ -16,8 +16,11 @@ export interface PushPayload {
   event?: string;
   /** The app icon's number for this device (lib/chores/badge.ts); left as it is when missing. */
   badge?: number;
-  /** The number from the next midnight (the start of `day`) on; the app schedules the switch. */
+  /** The number from the next midnight (the start of `day`) on; for apps without `badgeSteps`. */
   badgeTomorrow?: { day: string; count: number };
+  /** The number from each wall-clock moment (`at`, "YYYY-MM-DDTHH:MM") on, until the end of
+   *  tomorrow: when chores become due, and midnight; the app schedules the switches. */
+  badgeSteps?: { at: string; count: number }[];
 }
 
 const IV_BYTES = 12;

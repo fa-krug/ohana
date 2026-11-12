@@ -363,7 +363,7 @@ targets:
           - "*.entitlements"
           - "Info-*.plist"
       - Ohana/Core/Push/PushPayload.swift
-      - Ohana/Core/Push/MidnightBadge.swift
+      - Ohana/Core/Push/BadgeSchedule.swift
       - Shared/Keychain.swift
     info:
       path: OhanaNotificationService/Info-iOS.plist
@@ -393,7 +393,7 @@ targets:
           - "*.entitlements"
           - "Info-*.plist"
       - Ohana/Core/Push/PushPayload.swift
-      - Ohana/Core/Push/MidnightBadge.swift
+      - Ohana/Core/Push/BadgeSchedule.swift
       - Shared/Keychain.swift
     info:
       path: OhanaNotificationService/Info-macOS.plist
