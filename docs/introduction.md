@@ -53,7 +53,12 @@ Ready to try it? Go to the [quick start](/quickstart).
   ([how](/app#syncing-an-account-with-its-bank)).
 - **Scan a receipt** in the app: amount, date and shop are read on the device, the category
   filled in; keep the scan as a PDF if you like.
-- Monthly overviews, comparisons and a benchmark.
+- Monthly overviews, comparisons and a benchmark; every number opens the transactions behind it,
+  a category its payees.
+- **Insights**: which categories grew against your usual month and which payees caused it,
+  **regular payments** (subscriptions, price changes, ones that stopped), small amounts that add
+  up, and what looks wrong in the data: likely duplicates, transfers missing their other leg,
+  unusual amounts or categories. Editors mark what's fine as such.
 - Categorizing with the assistant.
 
 ## Meals

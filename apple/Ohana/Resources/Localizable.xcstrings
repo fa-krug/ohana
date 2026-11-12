@@ -31,6 +31,16 @@
         }
       }
     },
+    "%@ a year": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ im Jahr"
+          }
+        }
+      }
+    },
     "%@ and %@ overlap": {
       "localizations": {
         "de": {
@@ -153,6 +163,16 @@
         }
       }
     },
+    "%@ out, %@ in": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ausgegeben, %@ eingenommen"
+          }
+        }
+      }
+    },
     "%@ planned for %@": {
       "localizations": {
         "de": {
@@ -201,6 +221,36 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "%@ · counted as an expense": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · zählt als Ausgabe"
+          }
+        }
+      }
+    },
+    "%@ · counted as income": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · zählt als Einnahme"
+          }
+        }
+      }
+    },
+    "%@ · usually %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · sonst %@"
           }
         }
       }
@@ -1057,6 +1107,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld T"
+          }
+        }
+      }
+    },
+    "%lld× · Ø %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld× · Ø %@"
+          }
+        }
+      }
+    },
+    "%lld× · Ø %@ · %@ a month": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld× · Ø %@ · %@ im Monat"
           }
         }
       }
@@ -2553,6 +2623,28 @@
         }
       }
     },
+    "And ^[%lld more payee](inflect: true)": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Und %lld weiterer Empfänger"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Und %lld weitere Empfänger"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Another device now reads a different folder.": {
       "localizations": {
         "de": {
@@ -3105,6 +3197,16 @@
         }
       }
     },
+    "Balance differs: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kontostand weicht ab: %@"
+          }
+        }
+      }
+    },
     "Balances on %@": {
       "localizations": {
         "de": {
@@ -3141,6 +3243,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bank"
+          }
+        }
+      }
+    },
+    "Bank %@ · Ohana %@. Look for transactions not from the bank.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bank %@ · Ohana %@. Sieh dir die Buchungen an, die nicht von der Bank kommen."
           }
         }
       }
@@ -3431,6 +3543,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Beides"
+          }
+        }
+      }
+    },
+    "Both stay, and Ohana doesn't point them out again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beide bleiben, und Ohana weist nicht mehr darauf hin."
           }
         }
       }
@@ -4545,6 +4667,38 @@
         }
       }
     },
+    "Compare": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vergleichen"
+          }
+        }
+      }
+    },
+    "Compared with the average of ^[%lld month](inflect: true) before (%@ – %@)": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Verglichen mit dem Durchschnitt von %lld Monat davor (%@ – %@)"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Verglichen mit dem Durchschnitt der %lld Monate davor (%@ – %@)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Comparison": {
       "localizations": {
         "de": {
@@ -5575,6 +5729,16 @@
         }
       }
     },
+    "Delete This One": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese löschen"
+          }
+        }
+      }
+    },
     "Delete all finance data": {
       "localizations": {
         "de": {
@@ -6425,6 +6589,16 @@
         }
       }
     },
+    "Edit %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ bearbeiten"
+          }
+        }
+      }
+    },
     "Edit (⌘E)": {
       "localizations": {
         "de": {
@@ -7171,6 +7345,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ausgaben nach Kategorie"
+          }
+        }
+      }
+    },
+    "Expenses by payee": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgaben nach Empfänger"
           }
         }
       }
@@ -8677,6 +8861,16 @@
         }
       }
     },
+    "In “%@”, usually “%@”": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In „%@“, sonst „%@“"
+          }
+        }
+      }
+    },
     "Include Again": {
       "localizations": {
         "de": {
@@ -8713,6 +8907,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Einnahmen nach Kategorie"
+          }
+        }
+      }
+    },
+    "Income by payee": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einnahmen nach Empfänger"
           }
         }
       }
@@ -9649,6 +9853,16 @@
         }
       }
     },
+    "Looks Fine": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Ordnung"
+          }
+        }
+      }
+    },
     "Looks fine": {
       "localizations": {
         "de": {
@@ -9795,6 +10009,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Als gebucht eintragen (⌘B)"
+          }
+        }
+      }
+    },
+    "Marked as fine": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Als in Ordnung markiert"
           }
         }
       }
@@ -10939,6 +11163,16 @@
         }
       }
     },
+    "No category grew noticeably.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Kategorie ist merklich gestiegen."
+          }
+        }
+      }
+    },
     "No chats yet": {
       "localizations": {
         "de": {
@@ -11145,6 +11379,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noch keine Passkeys."
+          }
+        }
+      }
+    },
+    "No payee": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Empfänger"
           }
         }
       }
@@ -11465,6 +11709,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noch nicht"
+          }
+        }
+      }
+    },
+    "Not a Duplicate": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Duplikat"
+          }
+        }
+      }
+    },
+    "Not a Regular Payment": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine regelmäßige Zahlung"
           }
         }
       }
@@ -12997,6 +13261,16 @@
         }
       }
     },
+    "Payees": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empfänger"
+          }
+        }
+      }
+    },
     "Payment": {
       "localizations": {
         "de": {
@@ -13373,6 +13647,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Portionen"
+          }
+        }
+      }
+    },
+    "Possibly Booked Twice": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vielleicht doppelt gebucht"
+          }
+        }
+      }
+    },
+    "Possibly booked twice: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vielleicht doppelt gebucht: %@"
           }
         }
       }
@@ -14187,6 +14481,16 @@
         }
       }
     },
+    "Regular payments": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Regelmäßige Zahlungen"
+          }
+        }
+      }
+    },
     "Reload": {
       "localizations": {
         "de": {
@@ -14303,6 +14607,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Alle Einträge der ausgewählten Tage entfernen (Entf)"
+          }
+        }
+      }
+    },
+    "Remove filter %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filter „%@“ entfernen"
           }
         }
       }
@@ -14973,6 +15287,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Safari konnte die Seite nicht übergeben. Lade sie neu und teile sie noch einmal."
+          }
+        }
+      }
+    },
+    "Same amount, a day or two apart and the same payee. If it's one booking, delete the copy; the bank's row is usually the one to keep.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gleicher Betrag, ein, zwei Tage auseinander und derselbe Empfänger. Ist es eine Buchung, lösche die Kopie; behalten solltest du meist die Zeile der Bank."
           }
         }
       }
@@ -16107,6 +16431,16 @@
         }
       }
     },
+    "Show All Transactions": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Buchungen zeigen"
+          }
+        }
+      }
+    },
     "Show Everyone’s": {
       "localizations": {
         "de": {
@@ -16157,6 +16491,16 @@
         }
       }
     },
+    "Show all %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle %lld zeigen"
+          }
+        }
+      }
+    },
     "Show all accounts": {
       "localizations": {
         "de": {
@@ -16183,6 +16527,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Frühere Nachrichten anzeigen"
+          }
+        }
+      }
+    },
+    "Show fewer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weniger zeigen"
           }
         }
       }
@@ -16227,6 +16581,16 @@
         }
       }
     },
+    "Show its payees": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empfänger zeigen"
+          }
+        }
+      }
+    },
     "Show more (%lld left)": {
       "localizations": {
         "de": {
@@ -16263,6 +16627,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Die Details der ausgewählten Tage zeigen"
+          }
+        }
+      }
+    },
+    "Show the transactions": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buchungen zeigen"
           }
         }
       }
@@ -16307,6 +16681,16 @@
         }
       }
     },
+    "Shows its payees": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeigt die Empfänger"
+          }
+        }
+      }
+    },
     "Shows the day in the calendar": {
       "localizations": {
         "de": {
@@ -16333,6 +16717,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zeigt den Schritt"
+          }
+        }
+      }
+    },
+    "Shows the transactions": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeigt die Buchungen"
+          }
+        }
+      }
+    },
+    "Shows what's behind it": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeigt, was dahintersteckt"
           }
         }
       }
@@ -16563,6 +16967,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Schmoren"
+          }
+        }
+      }
+    },
+    "Small amounts that add up": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kleinbeträge, die sich summieren"
           }
         }
       }
@@ -19251,6 +19665,16 @@
         }
       }
     },
+    "Transfer without its other side: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umbuchung ohne Gegenbuchung: %@"
+          }
+        }
+      }
+    },
     "Transfers": {
       "localizations": {
         "de": {
@@ -19571,12 +19995,42 @@
         }
       }
     },
+    "Until then, money moved between your accounts counts as spent and earned.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bis dahin zählt Geld, das zwischen deinen Konten bewegt wurde, als ausgegeben und eingenommen."
+          }
+        }
+      }
+    },
     "Until you connect your server, Ohana shows a demo family. It can’t be changed.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Bis du deinen Server verbindest, zeigt Ohana eine Demo-Familie. Sie lässt sich nicht ändern."
+          }
+        }
+      }
+    },
+    "Unusual category: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ungewöhnliche Kategorie: %@"
+          }
+        }
+      }
+    },
+    "Unusually high: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ungewöhnlich hoch: %@"
           }
         }
       }
@@ -19977,6 +20431,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Worüber Ohana dich informiert"
+          }
+        }
+      }
+    },
+    "What changed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was sich geändert hat"
           }
         }
       }
@@ -20931,6 +21395,28 @@
         }
       }
     },
+    "^[%lld finding](inflect: true) marked as fine": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Hinweis als in Ordnung markiert"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Hinweise als in Ordnung markiert"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "^[%lld month](inflect: true)": {
       "localizations": {
         "de": {
@@ -21217,6 +21703,28 @@
         }
       }
     },
+    "^[%lld transaction](inflect: true) without a category": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Buchung ohne Kategorie"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Buchungen ohne Kategorie"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "^[%lld transfer](inflect: true)": {
       "localizations": {
         "de": {
@@ -21254,6 +21762,28 @@
                 "stringUnit": {
                   "state": "translated",
                   "value": "%lld Umbuchungen zusammengefasst"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "^[%lld transfer](inflect: true) not combined yet": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Umbuchung noch nicht zusammengefasst"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Umbuchungen noch nicht zusammengefasst"
                 }
               }
             }
@@ -21645,6 +22175,16 @@
         }
       }
     },
+    "every six months": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "halbjährlich"
+          }
+        }
+      }
+    },
     "fifth": {
       "localizations": {
         "de": {
@@ -21805,6 +22345,16 @@
         }
       }
     },
+    "last on %@: stopped?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "zuletzt am %@: beendet?"
+          }
+        }
+      }
+    },
     "last run %@": {
       "localizations": {
         "de": {
@@ -21835,6 +22385,16 @@
         }
       }
     },
+    "monthly": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "monatlich"
+          }
+        }
+      }
+    },
     "move to %@": {
       "localizations": {
         "de": {
@@ -21861,6 +22421,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "nie benutzt"
+          }
+        }
+      }
+    },
+    "new since %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "neu seit %@"
           }
         }
       }
@@ -22135,12 +22705,32 @@
         }
       }
     },
+    "per month": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pro Monat"
+          }
+        }
+      }
+    },
     "photoTAN graphic": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "photoTAN-Grafik"
+          }
+        }
+      }
+    },
+    "quarterly": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vierteljährlich"
           }
         }
       }
@@ -22295,6 +22885,16 @@
         }
       }
     },
+    "this period so far": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "bisher in diesem Zeitraum"
+          }
+        }
+      }
+    },
     "to": {
       "localizations": {
         "de": {
@@ -22335,6 +22935,16 @@
         }
       }
     },
+    "was %@ until %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vorher %@ bis %@"
+          }
+        }
+      }
+    },
     "weekday": {
       "localizations": {
         "de": {
@@ -22355,6 +22965,16 @@
         }
       }
     },
+    "weekly": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "wöchentlich"
+          }
+        }
+      }
+    },
     "without %@": {
       "localizations": {
         "de": {
@@ -22371,6 +22991,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "schlechter"
+          }
+        }
+      }
+    },
+    "yearly": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "jährlich"
           }
         }
       }

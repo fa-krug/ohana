@@ -21,6 +21,7 @@ import {
   publicTransaction,
   transferPairs,
 } from "@/lib/finance/finance";
+import { buildInsights, dismissInsight, restoreInsight, validInsightKey } from "@/lib/finance/insights";
 import type { AccountRow, CategoryRow, FinanceStore as Store } from "@/lib/finance/store";
 import { analyzeTransactions, TX_DIMENSIONS, TX_SORTS, TX_STATS } from "../analytics";
 import {
@@ -169,7 +170,7 @@ export const financeTools: Record<string, Tool> = {
     spec: {
       name: "list_transactions",
       description:
-        'Lists transactions (newest first) with totals, as rows of `columns`: as many as fit, long descriptions shortened. If `nextOffset` is set there are more: call again with that offset. For totals per month or category use finance_summary instead. Amounts are in the currency (-45.99), negative = money out. Legs of a transfer between the family\'s accounts share a transferId; totals count a transfer once by its net (500 moved between two accounts counts 0). A part of a split booking (e.g. an order line of an Amazon "Splitbuchung") has the booking\'s id as splitOf; totals count the parts and only what is left of the booking. Filters: from/to (YYYY-MM-DD), account (id, name or "none"), category (id, name, path like "Food > Groceries", or "none"; includes its subcategories), kind (income | expense | transfer: legs of transfers), source (manual | csv | bank, comma-separated; after a full bank import "manual,csv" of that account are what the bank doesn\'t list), q (text in payee, description, note).',
+        'Lists transactions (newest first) with totals, as rows of `columns`: as many as fit, long descriptions shortened. If `nextOffset` is set there are more: call again with that offset. For totals per month or category use finance_summary instead. Amounts are in the currency (-45.99), negative = money out. Legs of a transfer between the family\'s accounts share a transferId; totals count a transfer once by its net (500 moved between two accounts counts 0). A part of a split booking (e.g. an order line of an Amazon "Splitbuchung") has the booking\'s id as splitOf; totals count the parts and only what is left of the booking. Filters: from/to (YYYY-MM-DD), account (id, name or "none"), category (id, name, path like "Food > Groceries", or "none"; includes its subcategories), kind (income | expense | transfer: legs of transfers), source (manual | csv | bank, comma-separated; after a full bank import "manual,csv" of that account are what the bank doesn\'t list), payee (a key from finance_insights), q (text in payee, description, note).',
       parameters: {
         type: "object",
         properties: {
@@ -179,6 +180,7 @@ export const financeTools: Record<string, Tool> = {
           category: { type: "string" },
           kind: { type: "string", enum: ["income", "expense", "transfer"] },
           source: { type: "string", description: "manual, csv or bank; several comma-separated" },
+          payee: { type: "string", description: "A payee key from finance_insights" },
           q: { type: "string" },
           offset: { type: "integer", description: "Rows to skip, from nextOffset" },
           limit: { type: "integer", description: "Rows at most; leave out to get as many as fit" },
@@ -187,7 +189,7 @@ export const financeTools: Record<string, Tool> = {
     },
     async run(args, { finance: store, familyId }) {
       const query = new URLSearchParams();
-      for (const k of ["from", "to", "account", "category", "kind", "source", "q"]) {
+      for (const k of ["from", "to", "account", "category", "kind", "source", "payee", "q"]) {
         if (typeof args[k] === "string" && args[k]) query.set(k, args[k] as string);
       }
       const { rows, links, incomeCents, expenseCents } = await findTransactions(
@@ -272,6 +274,107 @@ export const financeTools: Record<string, Tool> = {
           accounts: withAtTo,
         }),
         summary: `${from} – ${to}`,
+      };
+    },
+  },
+
+  finance_insights: {
+    spec: {
+      name: "finance_insights",
+      description:
+        "What the finance overview points out (amounts in the currency, expenses positive). changes: categories whose spending per month grew most against the usual month (baseline: up to 12 months before from), with the payees behind it; recurring: regular payments (interval, latest amount, yearly, status active | new | stopped, change = price change), up to today; frequent: small expenses that add up; issues: duplicate (likely booked twice), unpaired (a transfer missing its other leg, so counted as income or expense), amount (far above the payee's usual), category (not the payee's usual, usualCategoryId); uncategorized; transferSuggestions (combine_transfers); balanceDrift (bank balance differs). Payee keys work as list_transactions' payee. Leaves out what the family marked as fine.",
+      parameters: {
+        type: "object",
+        properties: {
+          from: { type: "string", description: "Without from and to: all time" },
+          to: { type: "string" },
+        },
+      },
+    },
+    async run(args, { finance: store, familyId, db, today, now }) {
+      const from = typeof args.from === "string" && isValidDate(args.from) ? args.from : undefined;
+      const to = typeof args.to === "string" && isValidDate(args.to) ? args.to : undefined;
+      const day = today ?? (now?.() ?? new Date()).toISOString().slice(0, 10);
+      const [insights, categories] = await Promise.all([
+        buildInsights(db, store, familyId, { from, to, today: day }),
+        store.listCategories(familyId),
+      ]);
+      const tree = categoryTree(categories);
+      const issues = insights.issues.map(({ transactions, ...i }) => ({
+        ...i,
+        transactions: transactions.map((t) => ({
+          id: t.id,
+          date: t.date,
+          amountCents: t.amountCents,
+          payee: t.payee,
+          description: t.description.slice(0, MAX_TX_DESCRIPTION),
+          categoryId: t.categoryId,
+          accountId: t.accountId,
+          source: t.source,
+        })),
+      }));
+      const used = new Set([
+        ...insights.changes.map((c) => c.categoryId),
+        ...insights.recurring.map((r) => r.categoryId),
+        ...insights.frequent.map((f) => f.categoryId),
+        ...insights.issues.flatMap((i) => [i.usualCategoryId, ...i.transactions.map((t) => t.categoryId)]),
+      ].filter((id): id is string => !!id && tree.byId.has(id)));
+      const { issues: _issues, ...rest } = insights;
+      const head = inCurrency({
+        ...rest,
+        categoryPaths: Object.fromEntries([...used].map((id) => [id, tree.path(id)])),
+      });
+      // As many issues as fit; the rest counted.
+      const shown = fitting(head, inCurrency(issues));
+      return {
+        result: {
+          ...head,
+          issues: shown,
+          ...(shown.length < issues.length ? { moreIssues: issues.length - shown.length } : {}),
+        },
+        summary: `${insights.changes.length} changes, ${insights.recurring.length} regular payments, ` +
+          `${insights.issues.length} issues`,
+      };
+    },
+  },
+
+  dismiss_finance_insights: {
+    write: true,
+    spec: {
+      name: "dismiss_finance_insights",
+      description:
+        "Marks findings of finance_insights as fine by key (two equal bookings that really were two, a transfer that is income, a payment that isn't regular), so the overview hides them; only when the user says so. restore: true shows them again.",
+      parameters: {
+        type: "object",
+        properties: {
+          keys: { type: "array", items: { type: "string" } },
+          restore: { type: "boolean" },
+        },
+        required: ["keys"],
+      },
+    },
+    async run(args, { familyId, db, userId, now, lang }) {
+      const keys = Array.isArray(args.keys) ? [...new Set(args.keys)] : [];
+      if (!keys.length || keys.length > 100 || !keys.every(validInsightKey)) {
+        throw new HttpError(400, "keys must be 1 to 100 keys of finance_insights");
+      }
+      const restore = args.restore === true;
+      const at = now?.() ?? new Date();
+      for (const key of keys) {
+        if (restore) restoreInsight(db, familyId, key);
+        else dismissInsight(db, familyId, key, userId ?? null, at);
+      }
+      const path = (key: string) => `/finance/insights/dismiss/${encodeURIComponent(key)}`;
+      return {
+        result: { ok: true, [restore ? "restored" : "dismissed"]: keys.length },
+        summary: `${keys.length} ${restore ? "shown again" : "marked as fine"}`,
+        change: {
+          kind: "finance_insights",
+          summary: PHRASES[lang][restore ? "insightsRestored" : "insightsDismissed"](keys.length),
+          undo: restore
+            ? keys.map((key) => ({ method: "POST" as const, path: "/finance/insights/dismiss", body: { key } }))
+            : keys.map((key) => ({ method: "DELETE" as const, path: path(key) })),
+        },
       };
     },
   },

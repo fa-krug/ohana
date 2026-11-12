@@ -6,7 +6,14 @@
 
 import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lte, sql } from "drizzle-orm";
 import type { Db } from "@/lib/db";
-import { finAccounts, finBankLinks, finCategories, finSettings, finTransactions } from "@/lib/db/schema";
+import {
+  finAccounts,
+  finBankLinks,
+  finCategories,
+  finInsightDismissals,
+  finSettings,
+  finTransactions,
+} from "@/lib/db/schema";
 import { categoryTree } from "./category-tree";
 
 export type CategoryKind = "income" | "expense" | "both";
@@ -586,6 +593,7 @@ export class DrizzleFinanceStore implements FinanceStore {
     this.db.transaction((tx) => {
       deleteAll(tx, familyId);
       tx.delete(finSettings).where(eq(finSettings.familyId, familyId)).run();
+      tx.delete(finInsightDismissals).where(eq(finInsightDismissals.familyId, familyId)).run();
     });
   }
 

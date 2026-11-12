@@ -8,10 +8,11 @@
 // netItems). Viewers and editors read, editors change.
 
 import type { Ctx } from "@/lib/api/family-api";
-import { cleanName, HttpError, json, objectOf, readBody, slug } from "@/lib/api/http";
+import { cleanName, CORS, HttpError, json, objectOf, readBody, slug } from "@/lib/api/http";
 import { addDays, diffDays, isValidDate } from "@/lib/calendar/dates";
 import type { Lang } from "@/lib/i18n/config";
 import { bankRoute } from "./bank/routes";
+import { buildInsights, dismissInsight, restoreInsight, validInsightKey } from "./insights";
 import { categoryTree, PATH_SEPARATOR } from "./category-tree";
 import {
   type AccountRow,
@@ -739,7 +740,7 @@ export async function loadLinks(
 }
 
 /** The legs of the transaction's transfer group, if it is a leg of one. */
-function groupOf(t: TransactionRow, groups: Groups): TransactionRow[] | undefined {
+export function groupOf(t: TransactionRow, groups: Groups): TransactionRow[] | undefined {
   return t.transfer_id ? groups.get(t.transfer_id) : undefined;
 }
 
@@ -830,7 +831,7 @@ type SplitMatch = { booking: TransactionRow; parts: TransactionRow[] };
 
 /** The merchant a transaction is with, roughly: the first word of its payee (or description,
  *  without the split mark), so "AMAZON PAYMENTS EUROPE" and "Amazon.de" are both "amazon". */
-function merchantOf(t: TransactionRow): string {
+export function merchantOf(t: Pick<TransactionRow, "payee" | "description">): string {
   for (const text of [t.payee, t.description]) {
     const words = text.replace(SPLIT_RE, " ").toLowerCase().match(/[\p{L}\p{N}]{2,}/gu) ?? [];
     const word = words.find((w) => w !== "www");
@@ -1150,6 +1151,8 @@ export function handleFinance(ctx: Ctx): Promise<Response> | null {
   if (sub === "transfers" && id === "auto" && method === "POST") return autoTransfersRoute(ctx);
   if (sub === "import" && id === undefined && method === "POST") return importRoute(ctx);
   if (sub === "summary" && id === undefined && method === "GET") return summaryRoute(ctx);
+  if (sub === "payees" && id === undefined && method === "GET") return payeesRoute(ctx);
+  if (sub === "insights") return insightsRoute(ctx);
   return Promise.reject(new HttpError(404, "Not found"));
 }
 
@@ -1323,7 +1326,7 @@ function rangeOf(query: URLSearchParams) {
 }
 
 /**
- * Transactions matching ?from&to&account&category&q&kind (newest first), their links
+ * Transactions matching ?from&to&account&category&payee&q&kind (newest first), their links
  * (transfer groups and splits), and the income and expense totals of the rows (net counting).
  */
 export async function findTransactions(store: Store, familyId: string, query: URLSearchParams) {
@@ -1350,6 +1353,9 @@ export async function findTransactions(store: Store, familyId: string, query: UR
     if (wanted.some((s) => !txSource(s))) throw new HttpError(400, "source must be manual, csv or bank");
     rows = rows.filter((t) => wanted.includes(t.source));
   }
+  const payee = query.get("payee")?.trim();
+  // A payee as similarKey gives it (GET /finance/payees, the insights).
+  if (payee) rows = rows.filter((t) => similarKey(t) === payee);
   const q = query.get("q")?.trim().toLowerCase();
   if (q) {
     rows = rows.filter((t) =>
@@ -1367,7 +1373,7 @@ export async function findTransactions(store: Store, familyId: string, query: UR
   return { rows, links, ...netTotals(netItems(rows, links)) };
 }
 
-/** GET /finance/transactions?from&to&account=<id|none>&category=<id|none>&q
+/** GET /finance/transactions?from&to&account=<id|none>&category=<id|none>&payee&q
  *  &kind=income|expense|transfer&source=manual|csv|bank[,…]&limit&offset */
 async function listRoute({ finance: store, url, load }: Ctx): Promise<Response> {
   const { family } = await load("view");
@@ -1831,4 +1837,79 @@ async function summaryRoute({ finance: store, url, load }: Ctx): Promise<Respons
   const { family } = await load("view");
   const { from, to } = rangeOf(url.searchParams);
   return json(await financeSummary(store, family.id, from, to));
+}
+
+/** The payees of the transactions matching the list's filters (?from&to&category&kind&account
+ *  …), by similarKey, counted like the summary (net counting): each with the name of its newest
+ *  transaction, largest expenses (or income with kind=income) first. */
+export async function payeeTotals(store: Store, familyId: string, query: URLSearchParams, limit = 20) {
+  const { rows, links } = await findTransactions(store, familyId, query);
+  const byKey = new Map<
+    string,
+    { key: string; name: string; day: string; count: number; incomeCents: number; expenseCents: number }
+  >();
+  for (const t of netItems(rows, links)) {
+    const key = similarKey(t);
+    const p = byKey.get(key) ??
+      { key, name: "", day: "", count: 0, incomeCents: 0, expenseCents: 0 };
+    p.count++;
+    if (t.amountCents > 0) p.incomeCents += t.amountCents;
+    else p.expenseCents -= t.amountCents;
+    if (t.day >= p.day) {
+      p.day = t.day;
+      p.name = (t.payee.trim() || t.description.trim()).replace(/\s+/g, " ").slice(0, 80);
+    }
+    byKey.set(key, p);
+  }
+  const income = query.get("kind") === "income";
+  const all = [...byKey.values()]
+    .sort((a, b) => income ? b.incomeCents - a.incomeCents : b.expenseCents - a.expenseCents)
+    .map(({ day: _day, ...p }) => p);
+  return { payees: all.slice(0, limit), more: Math.max(0, all.length - limit) };
+}
+
+/** GET /finance/payees?from&to&category&kind&account&source&limit (≤ 100, default 20) */
+async function payeesRoute({ finance: store, url, load }: Ctx): Promise<Response> {
+  const { family } = await load("view");
+  const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit")) || 20));
+  return json(await payeeTotals(store, family.id, url.searchParams, limit));
+}
+
+/** The app's day: `today` when it is a date, else the server's (UTC) day. */
+function todayOf(ctx: Ctx, raw: unknown): string {
+  return isValidDate(raw) ? raw : ctx.now.toISOString().slice(0, 10);
+}
+
+/**
+ * GET    /finance/insights?from&to&today  what the overview points out (members; insights.ts)
+ * POST   /finance/insights/dismiss {key}   "Looks fine": hides it for good (editors) → 204
+ * DELETE /finance/insights/dismiss/{key}   shows it again (editors) → 204
+ */
+async function insightsRoute(ctx: Ctx): Promise<Response> {
+  const { rest, method, url } = ctx;
+  if (rest.length === 2) {
+    if (method !== "GET") throw new HttpError(405, "Method not allowed");
+    const { family } = await ctx.load("view");
+    const { from, to } = rangeOf(url.searchParams);
+    return json(
+      await buildInsights(ctx.db, ctx.finance, family.id, {
+        from,
+        to,
+        today: todayOf(ctx, url.searchParams.get("today")),
+      }),
+    );
+  }
+  if (rest[2] !== "dismiss" || rest.length > 4) throw new HttpError(404, "Not found");
+  const { family } = await ctx.load("edit");
+  const noContent = () => new Response(null, { status: 204, headers: CORS });
+  if (rest.length === 3) {
+    if (method !== "POST") throw new HttpError(405, "Method not allowed");
+    const body = await readBody(ctx.req);
+    if (!validInsightKey(body.key)) throw new HttpError(400, "key must name an insight");
+    dismissInsight(ctx.db, family.id, body.key, ctx.principal?.id ?? null, ctx.now);
+    return noContent();
+  }
+  if (method !== "DELETE") throw new HttpError(405, "Method not allowed");
+  restoreInsight(ctx.db, family.id, rest[3]);
+  return noContent();
 }

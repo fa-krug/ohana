@@ -172,6 +172,8 @@ struct FinanceStatTiles: View {
     let expense: Int
     let currency: String
     var inline = false
+    /// A tap on a tile shows its transactions (the overview); nil: the tiles only show.
+    var open: ((FinanceFilter.Kind) -> Void)? = nil
     @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
@@ -180,16 +182,17 @@ struct FinanceStatTiles: View {
             ? AnyLayout(VStackLayout(alignment: .leading, spacing: 10))
             : AnyLayout(HStackLayout(alignment: .top, spacing: 10))
         layout {
-            tile("Income", FinanceMoney.format(income, currency: currency), dot: .green)
-            tile("Expenses", FinanceMoney.format(expense, currency: currency), dot: .orange)
+            tile("Income", FinanceMoney.format(income, currency: currency), dot: .green, kind: .income)
+            tile("Expenses", FinanceMoney.format(expense, currency: currency), dot: .orange, kind: .expense)
             tile("Net", FinanceMoney.format(net, currency: currency, sign: true), color: net < 0 ? .red : .primary,
-                 hint: income > 0 ? String(localized: "\(Int((Double(net) / Double(income) * 100).rounded())) % left") : nil)
+                 hint: income > 0 ? String(localized: "\(Int((Double(net) / Double(income) * 100).rounded())) % left") : nil,
+                 kind: .all)
         }
     }
 
     @ViewBuilder
     private func tile(_ title: LocalizedStringKey, _ value: String, dot: Color? = nil, color: Color = .primary,
-                      hint: String? = nil) -> some View {
+                      hint: String? = nil, kind: FinanceFilter.Kind) -> some View {
         let content = VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 5) {
                 if let dot { RoundedRectangle(cornerRadius: 2).fill(dot).frame(width: 9, height: 9) }
@@ -210,7 +213,17 @@ struct FinanceStatTiles: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
-        if inline { content } else { content.contentCard(cornerRadius: 18, padding: 12) }
+        let card = Group {
+            if inline { content } else { content.contentCard(cornerRadius: 18, padding: 12) }
+        }
+        if let open {
+            Button { open(kind) } label: { card.contentShape(.rect) }
+                .buttonStyle(.plain)
+                .help(Text("Show the transactions"))
+                .accessibilityHint(Text("Shows the transactions"))
+        } else {
+            card
+        }
     }
 }
 
@@ -377,6 +390,15 @@ struct FinanceFilterMenu: View {
             }
             FinanceKindFilterPicker(store: store).pickerStyle(.menu)
             FinanceSourceFilterPicker(store: store).pickerStyle(.menu)
+            if !store.filter.payee.isEmpty {
+                // Set from the overview (a payee of a category, a regular payment): only off here.
+                Button {
+                    Task { await store.setFilter { $0.payee = ""; $0.payeeName = "" } }
+                } label: {
+                    Label("Payee", systemImage: "xmark.circle")
+                    Text(store.filter.payeeName)
+                }
+            }
             if store.filter.isActive {
                 Divider()
                 Button("Clear filters", systemImage: "xmark") { Task { await store.clearFilters() } }
@@ -386,6 +408,86 @@ struct FinanceFilterMenu: View {
         }
         .badge(count)
         .accessibilityValue(count > 0 ? Text(FinanceText.inflected("^[\(count) filter](inflect: true) on")) : Text(verbatim: ""))
+    }
+}
+
+/// The filters on, as chips above the list (each with its ✕) and Clear: what the overview's
+/// numbers open shows what it is narrowed to.
+struct FinanceActiveFilters: View {
+    @Bindable var store: FinanceStore
+
+    private struct Chip: Identifiable {
+        var id: String
+        var icon: String
+        var text: String
+    }
+
+    private var chips: [Chip] {
+        let f = store.filter
+        var chips: [Chip] = []
+        if !f.category.isEmpty {
+            chips.append(Chip(id: "category", icon: "tag", text: FinanceFilterTitles.category(store)))
+        }
+        if !f.payee.isEmpty {
+            chips.append(Chip(id: "payee", icon: "person.crop.rectangle", text: f.payeeName.isEmpty ? f.payee : f.payeeName))
+        }
+        if !f.account.isEmpty {
+            let name = f.account == "none" ? String(localized: "Without account") : store.account(f.account)?.label ?? f.account
+            chips.append(Chip(id: "account", icon: "building.columns", text: name))
+        }
+        if f.kind != .all { chips.append(Chip(id: "kind", icon: "arrow.up.arrow.down", text: f.kind.title)) }
+        if f.source != .all { chips.append(Chip(id: "source", icon: "tray.and.arrow.down", text: f.source.title)) }
+        return chips
+    }
+
+    /// Takes one filter off.
+    private func clear(_ id: String) {
+        Task {
+            await store.setFilter { f in
+                switch id {
+                case "category": f.category = ""
+                case "payee":
+                    f.payee = ""
+                    f.payeeName = ""
+                case "account": f.account = ""
+                case "kind": f.kind = .all
+                default: f.source = .all
+                }
+            }
+        }
+    }
+
+    var body: some View {
+        let chips = chips
+        if !chips.isEmpty {
+            ScrollView(.horizontal) {
+                HStack(spacing: 6) {
+                    ForEach(chips) { chip in
+                        Button {
+                            clear(chip.id)
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: chip.icon).imageScale(.small)
+                                Text(chip.text).lineLimit(1)
+                                Image(systemName: "xmark").imageScale(.small).foregroundStyle(.secondary)
+                            }
+                            .font(.callout)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(ModuleTint.finance.opacity(0.15), in: .capsule)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(Text("Remove filter \(chip.text)"))
+                    }
+                    if chips.count > 1 {
+                        Button("Clear filters") { Task { await store.clearFilters() } }
+                            .font(.callout)
+                            .buttonStyle(.borderless)
+                    }
+                }
+            }
+            .scrollIndicators(.hidden)
+        }
     }
 }
 
@@ -473,7 +575,7 @@ struct FinanceToastView: View {
             Text(toast.message)
                 .font(.callout)
                 .fixedSize(horizontal: false, vertical: true)
-            if toast.undo != nil {
+            if toast.undo != nil || toast.restoreInsight != nil {
                 // ⌘Z is Edit → Undo, which undoes the same change (the store registers it).
                 Button("Undo") { Task { await store.undoToast() } }
                     .font(.callout.weight(.semibold))

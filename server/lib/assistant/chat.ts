@@ -334,7 +334,8 @@ Categories nest to any depth (“Food > Groceries”): a transaction can be on a
 category's totals and filters include its subcategories.
 The overview compares the chosen month, year or all time (per month) with others, and shows
 where it is within the ranges of a statistic average per month the family sets
-(set_statistic_average), currently: ${benchmark}.
+(set_statistic_average), currently: ${benchmark}. finance_insights: where spending grew,
+regular payments, likely duplicates and other data issues.
 Transactions on different accounts that are one transfer between the family's own accounts
 (500 out of checking, 500 into savings) are linked as a transfer (same transferId); totals count
 a transfer once by its net, so moving money between accounts counts nothing.

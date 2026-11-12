@@ -133,7 +133,7 @@ enum Prefetch {
     }
 
     /// What the finance page starts with (`FinanceStore.reloadAll`): this month, no filter, the
-    /// first page, the balances and the summary with its comparisons.
+    /// first page, the balances and the summary with its comparisons and insights.
     private static func finance(_ api: FamilyAPI) -> [Job] {
         let period = FinancePeriod.current()
         var jobs = [
@@ -142,6 +142,7 @@ enum Prefetch {
         ]
         if let at = period.balanceDay() { jobs.append(fetch(FinanceStore.balancesRequest(api, at: at))) }
         jobs += FinanceStore.summaryQueries(period).map { fetch(FinanceStore.summaryRequest(api, $0)) }
+        jobs.append(fetch(FinanceStore.insightsRequest(api, period)))
         return jobs
     }
 }

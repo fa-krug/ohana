@@ -201,3 +201,21 @@ export const finBankSyncs = sqliteTable(
     finBankSyncsAccountIdx: index("fin_bank_syncs_account_idx").on(t.familyId, t.accountId, t.createdAt),
   }),
 );
+
+// ---- the overview's insights (lib/finance/insights.ts)
+
+/** Insights an editor marked "Looks fine" (a duplicate that isn't one, a transfer that is
+ *  income, a payment that isn't regular): hidden for good. The key names the check and what it
+ *  is about (e.g. "duplicate:<id>,<id>"); keys of transactions deleted since stay harmless. */
+export const finInsightDismissals = sqliteTable(
+  "fin_insight_dismissals",
+  {
+    familyId: text("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    key: text("key").notNull(),
+    createdById: text("created_by_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  },
+  (t) => ({ pk: primaryKey({ columns: [t.familyId, t.key] }) }),
+);
