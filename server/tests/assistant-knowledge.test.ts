@@ -180,6 +180,7 @@ describe("knowledge tools", () => {
         name: "Police.pdf",
         path: "Versicherungen/Hausrat/Police.pdf",
         page: 1,
+        date: "2023-11-14",
         text: POLICY[0],
       },
     ]);
@@ -192,6 +193,19 @@ describe("knowledge tools", () => {
     expect((await tool(toolCtx(t), "search_knowledge", { query: "die", limit: 21 })).ok).toBe(false);
     const none = await tool(toolCtx(t), "search_knowledge", { query: "zebra" });
     expect(none.result).toMatchObject({ hits: [], note: expect.stringMatching(/Nothing found/) });
+  });
+
+  it("search_knowledge gives a document's summary and date once, with its first passage", async () => {
+    const { t, policy } = setup();
+    t.db.update(kbDocuments).set({ summary: "Die Hausratpolice der Familie.", docDate: "2026-03-03" }).where(eq(kbDocuments.id, policy.id)).run();
+    const res = await tool(toolCtx(t), "search_knowledge", { query: "die" });
+    expect(res.result.hits.map((h: { summary?: string; date?: string }) => [h.summary, h.date])).toEqual([
+      ["Die Hausratpolice der Familie.", "2026-03-03"],
+      [undefined, "2026-03-03"],
+    ]);
+    // The summary finds the document too: "Familie" is only there.
+    const bySummary = await tool(toolCtx(t), "search_knowledge", { query: "familie" });
+    expect(bySummary.result.hits).toMatchObject([{ documentId: policy.id, summary: "Die Hausratpolice der Familie.", text: POLICY[0] }]);
   });
 
   it("read_knowledge: a short document whole, with the card's facts as refs", async () => {

@@ -274,6 +274,7 @@ export class KnowledgeCardRunner {
       cardStatus: "ready",
       summary: card.summary,
       facts: JSON.stringify(card.facts),
+      keywords: JSON.stringify(card.keywords),
       docDate: card.docDate,
       personUserId: card.person?.account ? card.person.id : null,
       personPersonId: card.person && !card.person.account ? card.person.id : null,

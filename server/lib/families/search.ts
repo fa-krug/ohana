@@ -326,7 +326,7 @@ function chatHits(db: Db, familyId: string, userId: string) {
 
 /** The knowledge base's documents (not the excluded), each with its best passage when its text
  *  matches (FTS, one per document); `ranked` keeps those holding every word in their name, path,
- *  tags or that passage. */
+ *  tags, card summary and keywords or that passage. */
 function knowledgeHits(db: Db, familyId: string, query: string) {
   const best = new Map<string, { page: number; text: string; snippet: string }>();
   for (const h of searchKnowledge(db, familyId, query, { limit: KNOWLEDGE_MAX_HITS })) {
@@ -338,6 +338,8 @@ function knowledgeHits(db: Db, familyId: string, query: string) {
       name: kbDocuments.name,
       path: kbDocuments.path,
       tags: kbDocuments.tags,
+      summary: kbDocuments.summary,
+      keywords: kbDocuments.keywords,
       docDate: kbDocuments.docDate,
       mtime: kbDocuments.mtime,
     })
@@ -357,7 +359,7 @@ function knowledgeHits(db: Db, familyId: string, query: string) {
           day: d.docDate ?? (d.mtime > 0 ? new Date(d.mtime).toISOString().slice(0, 10) : null),
           ...(hit ? { page: hit.page, snippet: hit.snippet.replace(/\*\*/g, "") } : {}),
         },
-        text: [d.path, ...tags, hit?.text ?? ""],
+        text: [d.path, ...tags, d.summary ?? "", ...(parseJsonArray<string>(d.keywords) ?? []), hit?.text ?? ""],
       };
     });
 }

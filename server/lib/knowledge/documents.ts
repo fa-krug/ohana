@@ -346,6 +346,7 @@ export function deleteChunks(db: Tx, documentId: string): void {
 export const CARD_RESET = {
   summary: null,
   facts: null,
+  keywords: null,
   docDate: null,
   personUserId: null,
   personPersonId: null,

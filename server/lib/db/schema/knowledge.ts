@@ -75,6 +75,9 @@ export const kbDocuments = sqliteTable(
     summary: text("summary"),
     /** JSON array of facts (each with its verbatim quote); null: no card yet. */
     facts: text("facts"),
+    /** JSON array of the card's search words (what the document is called and synonyms, in the
+     *  family's and the document's language); null: no card yet, or one made before them. */
+    keywords: text("keywords"),
     docDate: text("doc_date"), // YYYY-MM-DD
     personUserId: text("person_user_id").references(() => users.id, { onDelete: "set null" }),
     personPersonId: text("person_person_id").references(() => familyPeople.id, { onDelete: "set null" }),

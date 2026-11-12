@@ -239,6 +239,13 @@
       "when": 1794497332692,
       "tag": "0033_knowledge_scans_checked",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "6",
+      "when": 1794504359620,
+      "tag": "0034_knowledge_keywords",
+      "breakpoints": true
     }
   ]
 }
