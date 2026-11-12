@@ -2823,6 +2823,16 @@
         }
       }
     },
+    "Asking for new summaries": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Zusammenfassungen werden angefordert"
+          }
+        }
+      }
+    },
     "Asks the family assistant in Ohana.": {
       "localizations": {
         "de": {
@@ -8717,6 +8727,16 @@
         }
       }
     },
+    "Index everything again?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alles neu indexieren?"
+          }
+        }
+      }
+    },
     "Indigo": {
       "localizations": {
         "de": {
@@ -13747,6 +13767,16 @@
         }
       }
     },
+    "Read All goes on by itself, once the connection is back too.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alles lesen geht von selbst weiter, auch sobald die Verbindung wieder da ist."
+          }
+        }
+      }
+    },
     "Read All…": {
       "localizations": {
         "de": {
@@ -13813,16 +13843,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Schwierige Scans mit dem Assistenten lesen"
-          }
-        }
-      }
-    },
-    "Read every file again?": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alle Dateien neu lesen?"
           }
         }
       }
@@ -13913,6 +13933,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Liest Termine im Kalender"
+          }
+        }
+      }
+    },
+    "Reading every file again": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Dateien werden neu gelesen"
           }
         }
       }
@@ -17211,16 +17241,6 @@
         }
       }
     },
-    "Summaries to write": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zusammenfassungen ausstehend"
-          }
-        }
-      }
-    },
     "Summary": {
       "localizations": {
         "de": {
@@ -20387,6 +20407,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Schreiben"
+          }
+        }
+      }
+    },
+    "Writing summaries": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zusammenfassungen werden geschrieben"
           }
         }
       }

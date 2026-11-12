@@ -1000,11 +1000,15 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   text (see Scanning). Settings → Knowledge (`Features/Knowledge/KnowledgeSettingsView.swift`, `.settings(.knowledge)`):
   the folder (`.fileImporter`, the conflict as an alert offering to use it anyway), the index
   (`GET /knowledge/status` through `api.cached`, with the indexer's progress, waiting and unreadable
-  files, the last manifest's time and device; with status `cards` the summaries still to write,
-  reloaded every 15 s while there are some), *Read Now*, *Read All…* (confirmed: `KnowledgeIndexer.readAll`,
-  a run that queues every hashed file with `reread`, failed reads included, then with status `cards`
-  `POST /knowledge/cards {all: true}`; the documents list doesn't poll for a card rewritten while its
-  earlier summary shows), with status `scans` the toggle *Read difficult scans with the assistant*
+  files, the last manifest's time and device; *Read All*'s bar; with status `cards` a bar of the
+  summaries written, reloaded every 15 s while some wait), *Read Now*, *Read All…* (confirmed:
+  `KnowledgeIndexer.readAll(summaries:)`, a job `KnowledgeReadAll` kept in `read-all.json` beside the
+  queue until done: a run that queues every hashed file with `reread`, failed reads included (its
+  `total` the bar's), then once the queue is empty `POST /knowledge/cards {all: true}` (a refusal ends
+  it); a lost connection retries with the uploads' backoff (`resume`, also `retryNow` on reconnecting),
+  a restart's first run picks it up, `runIfDue` doesn't wait for the interval while its files are
+  unread; the documents list doesn't poll for a card rewritten while its earlier summary shows), with
+  status `scans` the toggle *Read difficult scans with the assistant*
   (`PATCH /knowledge/folder {aiScans}`, a footer naming the AI provider).
   The knowledge base page (`Module.knowledge`, ⌘9; shown where `FamilyContext.isEnabled(.knowledge)` /
   `AppModel.isEnabled` say `knowledgeAvailable`, `ServerInfo.isEnabled` only says the server has it;

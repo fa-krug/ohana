@@ -184,3 +184,31 @@ nonisolated struct KnowledgeUploadQueue: Codable, Equatable, Sendable {
         return .drop
     }
 }
+
+/// *Read All* while it isn't done (`KnowledgeIndexer.readAll`), kept on the disk beside the queue:
+/// a lost connection or the app quitting resumes it instead of losing it.
+nonisolated struct KnowledgeReadAll: Codable, Equatable, Sendable {
+    /// The run that reads every file again is still to come (its manifest hasn't gone through).
+    var files = true
+    /// Every summary is still to be asked for anew (POST /knowledge/cards {all}), once the files
+    /// are sent.
+    var summaries: Bool
+    /// How many files the run queued (the progress bar's total); nil before it.
+    var total: Int?
+
+    /// What `file` holds; nil without one (or one that can't be read).
+    static func load(_ file: URL) -> KnowledgeReadAll? {
+        guard let data = try? Data(contentsOf: file) else { return nil }
+        return try? JSONDecoder().decode(KnowledgeReadAll.self, from: data)
+    }
+
+    /// Writes `job` to `file`, or removes the file once it's done.
+    static func save(_ job: KnowledgeReadAll?, to file: URL) throws {
+        guard let job else {
+            try? FileManager.default.removeItem(at: file)
+            return
+        }
+        try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try JSONEncoder().encode(job).write(to: file, options: .atomic)
+    }
+}

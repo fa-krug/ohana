@@ -3,8 +3,9 @@ import SwiftUI
 /// Settings → Knowledge: the family's knowledge folder on this device (choose, change, remove;
 /// a marker of another family or a folder other than the family's asks first) and what's in the
 /// index (GET /knowledge/status with the indexer's own state: running, waiting uploads, files this
-/// device can't read, summaries still to be written), *Read Now*, *Read All* (every file read
-/// again on this device, then every summary written anew: POST /knowledge/cards {all}) and the
+/// device can't read, *Read All*'s progress, the summaries being written), *Read Now*, *Read All*
+/// (confirmed; `KnowledgeIndexer.readAll`: every file read again on this device, then every
+/// summary written anew, resumed after a lost connection) and the
 /// family's setting whether difficult scans go to its AI (shown where the server can transcribe
 /// them, `KnowledgeStatusInfo.readsScans`).
 /// Only where `FamilyContext.knowledgeAvailable` (module on, an editor, not the demo).
@@ -45,7 +46,6 @@ private struct KnowledgeSettingsForm: View {
     @State private var aiScans: Bool?
     @State private var savingAIScans = false
     @State private var askingReadAll = false
-    @State private var readingAll = false
 
     private var running: Bool {
         switch indexer.phase {
@@ -70,6 +70,10 @@ private struct KnowledgeSettingsForm: View {
         .refreshable { await loadStatus() }
         .task { await loadStatus() }
         .onAppear { folder = indexer.folder.state() }
+        .onChange(of: indexer.readingAll == nil) { _, done in
+            // *Read All* asked for the summaries: their progress.
+            if done { Task { await loadStatus() } }
+        }
         .onChange(of: indexer.phase) { _, phase in
             // A run (or the uploads after it) finished: the server's counts changed.
             switch phase {
@@ -96,7 +100,7 @@ private struct KnowledgeSettingsForm: View {
                             titleVisibility: .visible) {
             Button("Remove from This Device", role: .destructive, action: unlink)
         }
-        .confirmationDialog("Read every file again?", isPresented: $askingReadAll, titleVisibility: .visible) {
+        .confirmationDialog("Index everything again?", isPresented: $askingReadAll, titleVisibility: .visible) {
             Button("Read All", action: readAll)
             Button("Cancel", role: .cancel) {}
         } message: {
@@ -216,6 +220,7 @@ private struct KnowledgeSettingsForm: View {
                 Label(message, systemImage: "exclamationmark.triangle")
                     .foregroundStyle(.orange)
             }
+            readAllProgress
             if !running, let run = indexer.lastRun {
                 if run.files == 0 {
                     Label("The folder looks empty.", systemImage: "tray")
@@ -260,9 +265,9 @@ private struct KnowledgeSettingsForm: View {
             }
             if folder.url != nil {
                 Button("Read Now", systemImage: "arrow.clockwise") { family.indexKnowledge(force: true) }
-                    .disabled(running || readingAll)
+                    .disabled(running)
                 Button("Read All…", systemImage: "arrow.triangle.2.circlepath") { askingReadAll = true }
-                    .disabled(running || readingAll)
+                    .disabled(running)
             }
         }
     }
@@ -310,21 +315,42 @@ private struct KnowledgeSettingsForm: View {
         writesCards ? status.value?.cardCounts?.pending ?? 0 : 0
     }
 
-    /// *Read All*: every file read again on this device, then every summary written anew.
+    /// *Read All*: every file read again on this device, then every summary written anew (the
+    /// indexer keeps at it until done, after a lost connection too).
     private func readAll() {
-        readingAll = true
         Task {
-            defer { readingAll = false }
-            await indexer.readAll()
-            if writesCards {
-                do {
-                    _ = try await family.api.rewriteKnowledgeCards(all: true)
-                    family.didChange(.knowledge)
-                } catch {
-                    ErrorBanner.shared.show(error)
+            await indexer.readAll(summaries: true)
+            family.didChange(.knowledge)
+            await loadStatus()
+        }
+    }
+
+    /// How far *Read All* is, while it isn't done.
+    @ViewBuilder
+    private var readAllProgress: some View {
+        if let job = indexer.readingAll {
+            if !job.files, let total = job.total, total > 0, indexer.waiting > 0 {
+                let done = total - min(indexer.waiting, total)
+                ProgressView(value: Double(done), total: Double(total)) {
+                    Text("Reading every file again")
+                } currentValueLabel: {
+                    Text("\(done) of \(total)")
+                }
+            } else if !running {
+                HStack(spacing: 10) {
+                    ProgressView().controlSize(.small)
+                    if job.files {
+                        Text("Reading every file again")
+                    } else {
+                        Text("Asking for new summaries")
+                    }
                 }
             }
-            await loadStatus()
+            if case .failed = indexer.phase {
+                Text("Read All goes on by itself, once the connection is back too.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
@@ -344,10 +370,13 @@ private struct KnowledgeSettingsForm: View {
                 Text("\(done) of \(total)")
             }
         case let .uploading(done, total):
-            ProgressView(value: Double(done), total: Double(max(total, 1))) {
-                Text("Reading and sending")
-            } currentValueLabel: {
-                Text("\(done) of \(total)")
+            // *Read All*'s uploads: its own bar (`readAllProgress`).
+            if indexer.readingAll?.total == nil {
+                ProgressView(value: Double(done), total: Double(max(total, 1))) {
+                    Text("Reading and sending")
+                } currentValueLabel: {
+                    Text("\(done) of \(total)")
+                }
             }
         case .idle, .failed:
             EmptyView()
@@ -364,8 +393,14 @@ private struct KnowledgeSettingsForm: View {
         if info.counts.failed > 0 {
             LabeledContent("Failed") { Text(info.counts.failed, format: .number) }
         }
-        if summariesWaiting > 0 {
-            LabeledContent("Summaries to write") { Text(summariesWaiting, format: .number) }
+        if summariesWaiting > 0, let cards = info.cardCounts {
+            let total = cards.ready + cards.pending + cards.failed
+            let done = total - cards.pending
+            ProgressView(value: Double(done), total: Double(max(total, 1))) {
+                Text("Writing summaries")
+            } currentValueLabel: {
+                Text("\(done) of \(total)")
+            }
         }
         if info.counts.missing > 0 {
             LabeledContent("Missing") { Text(info.counts.missing, format: .number) }
