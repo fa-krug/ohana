@@ -74,9 +74,14 @@ final class KnowledgeIndexer {
     private(set) var unreadable: [String: Unreadable] = [:]
     /// Uploads waiting (or being sent).
     private(set) var waiting = 0
+    /// *Read All* until it's done (`readAll`): its files still to read, its summaries still to ask
+    /// for. Kept on the disk; resumed by the next run, a retry or the connection coming back.
+    private(set) var readingAll: KnowledgeReadAll?
 
     @ObservationIgnored private var queue = KnowledgeUploadQueue()
     @ObservationIgnored private var queueLoaded = false
+    /// `finishReadAll` is asking for the summaries.
+    @ObservationIgnored private var finishingReadAll = false
     @ObservationIgnored private var cache = KnowledgeHashCache()
     @ObservationIgnored private var cacheLoaded = false
     @ObservationIgnored private var runTask: Task<Void, Never>?
@@ -131,6 +136,7 @@ final class KnowledgeIndexer {
 
     private var hashesFile: URL { directory.appending(path: "hashes.json") }
     private var queueFile: URL { directory.appending(path: "queue.json") }
+    private var readAllFile: URL { directory.appending(path: "read-all.json") }
     private var textsFolder: URL { directory.appending(path: "texts", directoryHint: .isDirectory) }
     private var closed: Bool { signOuts != KnowledgeDiskGate.signOuts.current }
 
@@ -143,7 +149,9 @@ final class KnowledgeIndexer {
 
     /// A run unless one started within `minimumInterval` (launch, active again, the Mac's timer).
     func runIfDue(now: Date = Date()) async {
-        if let lastStart, now.timeIntervalSince(lastStart) < Self.minimumInterval {
+        await ensureQueue()
+        // *Read All* hasn't read the files yet: no waiting for the interval.
+        if let lastStart, now.timeIntervalSince(lastStart) < Self.minimumInterval, readingAll?.files != true {
             retryNow()
             return
         }
@@ -176,6 +184,19 @@ final class KnowledgeIndexer {
         runTask = task
         runID = id
         await task.value
+    }
+
+    /// *Read All*: a run that reads every file of the folder again on this device and sends it with
+    /// `reread` (the server takes its text anew where it changed), not only those the server asks
+    /// for; a file's failed reads count no more. Then, with `summaries`, every summary is written
+    /// anew (POST /knowledge/cards {all}; a server that writes none refuses, which ends it). Queued
+    /// after a run under way, like `run()`. Kept on the disk until done: a lost connection retries
+    /// with the uploads' backoff and when it's back, a restart picks it up.
+    func readAll(summaries: Bool) async {
+        await ensureQueue()
+        guard !closed else { return }
+        setReadingAll(KnowledgeReadAll(summaries: summaries || readingAll?.summaries == true))
+        await run()
     }
 
     private func runOnce() async {
@@ -216,6 +237,13 @@ final class KnowledgeIndexer {
         guard !listing.files.isEmpty else {
             lastRun = Run(finished: Date(), files: 0, tooLarge: listing.tooLarge)
             phase = .idle
+            // *Read All* has no files to read: on to its summaries.
+            if var job = readingAll, job.files {
+                job.files = false
+                job.total = 0
+                setReadingAll(job)
+                await finishReadAll()
+            }
             return
         }
 
@@ -250,37 +278,95 @@ final class KnowledgeIndexer {
             if Self.isFolderGone(error), await folderReplaced(folderID, generation: generation) { return }
             KnowledgeFolder.log.error("Manifest: \(error.localizedDescription, privacy: .public)")
             phase = .failed(error.localizedDescription)
+            // *Read All* tries again by itself (an ordinary run waits for the next trigger).
+            if readingAll?.files == true, KnowledgeUploadQueue.disposition(of: error) == .retry { scheduleRetry() }
             return
         }
         guard isCurrent(generation) else {
             await KnowledgeICloud.evict(loaded)
             return
         }
-        let asked = Set(wanted.map(\.precomposedStringWithCanonicalMapping))
+        // *Read All*: every file with a hash, read again; else what the server asks for.
+        let everything = readingAll?.files == true
+        let paths = everything ? files.compactMap { $0.hash == nil ? nil : $0.local.path } : wanted
+        let asked = Set(paths.map(\.precomposedStringWithCanonicalMapping))
         if !unreadable.isEmpty { unreadable = unreadable.filter { asked.contains($0.key) } }
         // Most runs are asked for nothing: then no look-ups over every file (on the main actor).
-        let byPath = wanted.isEmpty ? [:] : Dictionary(files.map { ($0.local.path, $0) }, uniquingKeysWith: { first, _ in first })
+        let byPath = paths.isEmpty ? [:] : Dictionary(files.map { ($0.local.path, $0) }, uniquingKeysWith: { first, _ in first })
         var queued = Set<String>()
-        for match in wanted.isEmpty ? [] : Self.match(wanted, in: files.filter { $0.hash != nil }.map(\.local)) {
+        var matched = 0
+        for match in paths.isEmpty ? [] : Self.match(paths, in: files.filter { $0.hash != nil }.map(\.local)) {
             guard let file = byPath[match.path], let info = file.info else { continue }
+            matched += 1
             // A scan waiting with the text read already, or one the user asked to read again: kept.
             if let waiting = queue.upload(for: info.path), waiting.textFile != nil || waiting.reread == true,
                waiting.folderId == folderID, waiting.file.hash == info.hash {
                 continue
             }
             let upload = KnowledgeUpload(folderId: folderID, file: info, diskPath: match.diskPath,
-                                         evict: file.evict ? true : nil)
+                                         evict: file.evict ? true : nil, reread: everything ? true : nil)
             if let old = queue.add(upload) { removeText(old) }
             queued.insert(match.path)
         }
         queueChanged()
+        if everything, var job = readingAll {
+            job.files = false
+            job.total = matched
+            setReadingAll(job)
+        }
         // Loaded only to be hashed: off the device again (the queued ones once they're read).
         await KnowledgeICloud.evict(result.files.filter { $0.evict && !queued.contains($0.local.path) }.map(\.local.url))
         let uploaded = await flush()
         guard isCurrent(generation) else { return }
         lastRun = Run(finished: Date(), files: files.count, uploaded: uploaded, tooLarge: listing.tooLarge,
                       unhashable: result.unhashable, deferred: result.deferred)
+        await finishReadAll()
+        guard isCurrent(generation) else { return }
         if case .failed = phase {} else { phase = .idle }
+    }
+
+    /// *Read All* once its files are all sent: every summary asked for anew, then done. A lost
+    /// connection keeps it for a retry; a refusal (a server that writes no summaries) ends it.
+    private func finishReadAll() async {
+        guard let job = readingAll, !job.files, queue.isEmpty, flushingGeneration == nil,
+              !finishingReadAll, !closed else { return }
+        let generation = gate.current
+        if job.summaries {
+            finishingReadAll = true
+            defer { finishingReadAll = false }
+            do {
+                _ = try await api.rewriteKnowledgeCards(all: true)
+            } catch {
+                guard isCurrent(generation) else { return }
+                if KnowledgeUploadQueue.disposition(of: error) == .retry {
+                    phase = .failed(error.localizedDescription)
+                    scheduleRetry()
+                    return
+                }
+                KnowledgeFolder.log.error("Summaries: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+        guard isCurrent(generation) else { return }
+        setReadingAll(nil)
+        if case .failed = phase { phase = .idle }
+    }
+
+    /// What *Read All* still has to do, kept on the disk.
+    private func setReadingAll(_ job: KnowledgeReadAll?) {
+        readingAll = job
+        let file = readAllFile
+        onDisk { try? KnowledgeReadAll.save(job, to: file) }
+    }
+
+    /// Goes on with what waits after a lost connection: *Read All*'s run, else the uploads, then
+    /// its summaries.
+    private func resume() async {
+        if readingAll?.files == true {
+            if runTask == nil { await run() }
+            return
+        }
+        await flushInFolder()
+        await finishReadAll()
     }
 
     @concurrent
@@ -588,7 +674,7 @@ final class KnowledgeIndexer {
         retryDelay = 2
         retryWait?.cancel()
         retryWait = nil
-        if flushingGeneration == nil, !queue.isEmpty, runTask == nil { Task { await flushInFolder() } }
+        if flushingGeneration == nil, !queue.isEmpty || readingAll != nil, runTask == nil { Task { await resume() } }
     }
 
     /// `flush` with the folder's security scope (not from a run, which holds it).
@@ -736,15 +822,15 @@ final class KnowledgeIndexer {
     }
 
     /// Which pages' images to keep while reading `upload` (`KnowledgeText.ScanCapture`): none for
-    /// a file read without OCR or a scan's own text; the poor ones while the family's setting is on
-    /// (`KnowledgeStatusInfo.sendsScans`); every page for *Read Again with the Assistant* while the
-    /// family's AI can read them at all.
+    /// a file read without OCR or a scan's own text; every page of a PDF or image while the family's
+    /// *Read with the assistant* is on (`KnowledgeStatusInfo.sendsScans`), and for *Read Again with
+    /// the Assistant* while the family's AI can read them at all.
     private func scanCapture(for upload: KnowledgeUpload) async -> KnowledgeText.ScanCapture {
         guard upload.textFile == nil, KnowledgeText.reader(forPath: upload.file.path) > 1 else { return .none }
         let forced = upload.force == true
         guard let status = await scanStatus(fresh: forced) else { return .none }
         if forced { return status.scans == true ? .all : .none }
-        return status.scans == true && status.aiScans == true ? .poor : .none
+        return status.scans == true && status.aiScans == true ? .all : .none
     }
 
     /// Whether the server takes page images (GET /knowledge/status), asked at most every
@@ -830,7 +916,7 @@ final class KnowledgeIndexer {
             try? await Task.sleep(for: .seconds(delay))
             guard !Task.isCancelled, let self else { return }
             retryWait = nil
-            await flushInFolder()
+            await resume()
         }
     }
 
@@ -838,12 +924,15 @@ final class KnowledgeIndexer {
 
     private func ensureQueue() async {
         guard !queueLoaded else { return }
-        let file = queueFile
-        let loaded = await Task.detached(priority: .utility) { KnowledgeUploadQueue.load(file) }.value
+        let file = queueFile, jobFile = readAllFile
+        let (loaded, job) = await Task.detached(priority: .utility) {
+            (KnowledgeUploadQueue.load(file), KnowledgeReadAll.load(jobFile))
+        }.value
         guard !queueLoaded else { return }
         queue = loaded
         queueLoaded = true
         waiting = queue.count
+        if readingAll == nil { readingAll = job }
     }
 
     private func ensureCache() async {
@@ -946,9 +1035,10 @@ final class KnowledgeIndexer {
         cache = KnowledgeHashCache()
         cacheLoaded = true
         waiting = 0
+        readingAll = nil
         unreadable = [:]
         lastRun = nil
-        let files = [queueFile, hashesFile, textsFolder]
+        let files = [queueFile, hashesFile, textsFolder, readAllFile]
         onDisk { for file in files { try? FileManager.default.removeItem(at: file) } }
         await diskIdle()
     }

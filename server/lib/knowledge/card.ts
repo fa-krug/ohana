@@ -25,7 +25,7 @@ import type { NetOptions } from "@/lib/assistant/net";
 import { type Provider, UpstreamError, streamChat } from "@/lib/assistant/provider";
 import { isValidDate } from "@/lib/calendar/dates";
 import type { Db } from "@/lib/db";
-import { aiSettings } from "@/lib/db/schema";
+import { aiSettings, kbFolders } from "@/lib/db/schema";
 import type { Locale } from "@/lib/i18n/config";
 import { extractJson } from "@/lib/meals/ai/verify";
 import { moduleEnabled } from "@/lib/server-info";
@@ -94,6 +94,18 @@ export interface Card {
 }
 
 /** Whether the family's cards are made: the assistant is on and the family set up its AI. */
+/** Whether the family's cards are made: they can be (`cardsEnabled`) and the family has the
+ *  assistant read its knowledge base (`kb_folders.ai_scans`, the app's one switch for summaries,
+ *  keywords and difficult scans; off by default: the documents are only read on the device). */
+export function cardsOn(db: Pick<Db, "select">, familyId: string): boolean {
+  if (!cardsEnabled(db, familyId)) return false;
+  return !!db
+    .select({ id: kbFolders.id })
+    .from(kbFolders)
+    .where(and(eq(kbFolders.familyId, familyId), eq(kbFolders.aiScans, true)))
+    .get();
+}
+
 export function cardsEnabled(db: Pick<Db, "select">, familyId: string): boolean {
   if (!moduleEnabled("assistant")) return false;
   return !!db

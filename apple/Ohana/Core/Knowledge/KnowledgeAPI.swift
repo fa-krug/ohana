@@ -62,12 +62,13 @@ nonisolated struct KnowledgeStatusInfo: Codable, Equatable, OffMainDecodable {
     var chunks: Int
     /// Cards are made (the family's AI is set up); nil from a server from before them.
     var cards: Bool?
-    /// The cards by status; nil from a server from before *Rewrite Summaries*.
+    /// The cards by status; nil from a server from before card counts.
     var cardCounts: CardCounts?
     /// Page images can be transcribed by the family's AI (set up, the assistant on); nil from a
     /// server from before page scans.
     var scans: Bool?
-    /// The family's setting: difficult scans go to the AI by themselves.
+    /// The family's switch: the assistant reads the knowledge base (summaries, keywords, difficult
+    /// scans sent by themselves).
     var aiScans: Bool?
 }
 
@@ -87,7 +88,7 @@ nonisolated struct KnowledgeScanStatus: OffMainDecodable {
 extension KnowledgeStatusInfo {
     /// The family's AI can transcribe page images (*Read Again with the Assistant*, the setting).
     var readsScans: Bool { scans == true }
-    /// Poor pages go to the AI by themselves.
+    /// Every page of a scan goes to the AI by itself.
     var sendsScans: Bool { scans == true && aiScans == true }
 }
 
@@ -162,8 +163,8 @@ nonisolated struct KnowledgeUploadBody: Encodable, Sendable {
     /// The user asked for the file to be read again: the server takes new text even from the same
     /// reader.
     var reread = false
-    /// The file was judged with the family's AI scans available (`ScanCapture` `.poor` or `.all`),
-    /// whatever the verdict: the server's manifest stops asking for it again.
+    /// The file was read with its pages sent to the family's AI (`ScanCapture.all`): the server's
+    /// manifest stops asking for it again.
     var scansChecked = false
 
     private enum CodingKeys: String, CodingKey {
@@ -258,7 +259,8 @@ extension FamilyAPI {
         try await send(.post, "/knowledge/cards", body: ["all": all])
     }
 
-    /// Turns the family's setting on or off: difficult scans go to the family's AI by themselves.
+    /// Turns the family's switch on or off: the assistant reads the knowledge base (summaries,
+    /// keywords, difficult scans sent by themselves).
     @discardableResult
     func setKnowledgeAIScans(_ on: Bool) async throws -> KnowledgeFolderInfo? {
         let response: KnowledgeFolderResponse = try await send(.patch, "/knowledge/folder", body: ["aiScans": on])

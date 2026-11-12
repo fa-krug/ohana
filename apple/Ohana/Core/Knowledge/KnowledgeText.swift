@@ -51,9 +51,7 @@ nonisolated enum KnowledgeText {
     /// Which pages' images to keep for the family's AI while reading.
     enum ScanCapture: Equatable, Sendable {
         case none
-        /// The scanned pages whose text looks poor (`KnowledgeOCRQuality`).
-        case poor
-        /// Every page (*Read Again with the Assistant*).
+        /// Every page (the family's *Read with the assistant*, *Read Again with the Assistant*).
         case all
     }
 
@@ -164,10 +162,7 @@ nonisolated enum KnowledgeText {
             }
             guard let read = await KnowledgeOCR.read(image) else { return nil }
             pages.append(letterCount(read.text) > letterCount(text) ? read.text : text)
-            if read.verdict.isPoor {
-                KnowledgeFolder.log.info("Page \(index + 1, privacy: .public) reads poorly: \(String(describing: read.verdict), privacy: .public)")
-            }
-            if room, capture == .all || (capture == .poor && read.verdict.isPoor),
+            if room, capture == .all,
                let jpeg = KnowledgeOCR.scanJPEG(image, orientation: read.orientation) {
                 scans.append(PageScan(page: index + 1, jpeg: jpeg))
             }
@@ -201,7 +196,7 @@ nonisolated enum KnowledgeText {
         guard let image = KnowledgeOCR.uprightImage(data, maxSide: maxOCRPixels),
               let read = await KnowledgeOCR.read(image) else { return nil }
         var scans: [PageScan] = []
-        if capture == .all || (capture == .poor && read.verdict.isPoor),
+        if capture == .all,
            let jpeg = KnowledgeOCR.scanJPEG(image, orientation: read.orientation) {
             scans.append(PageScan(page: 1, jpeg: jpeg))
         }
