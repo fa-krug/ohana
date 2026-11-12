@@ -7,14 +7,15 @@
 // PATCH  /me/push {mutedFamilyIds}  the families this device doesn't want pushes for
 // DELETE /me/push                 stops pushes to this device
 // POST   /me/push/test            one push to this device right away (502 when it fails)
-// GET    /me/badge?today=         {count, tomorrow: {day, count}}: the app icon's number
-//        (lib/chores/badge.ts) and the one from the next midnight on, without the families this
-//        device muted; `today` YYYY-MM-DD, default the server's day
+// GET    /me/badge?today=&time=   {count, tomorrow: {day, count}, steps: [{at, count}]}: the app
+//        icon's number now (lib/chores/badge.ts), the one from the next midnight on and each
+//        change until the end of tomorrow, without the families this device muted; `today`
+//        YYYY-MM-DD and `time` HH:MM the device's clock, default the server's
 
 import type { AppRoutes } from "@/lib/api/app-router";
 import { HttpError } from "@/lib/api/http";
 import { isValidDate } from "@/lib/calendar/dates";
-import { choreBadges } from "@/lib/chores/badge";
+import { choreBadges, localMoment } from "@/lib/chores/badge";
 import { pickLocale } from "@/lib/i18n/locale";
 import { translator } from "@/lib/notifications/locale";
 import { pushToDevices } from "./deliver";
@@ -67,12 +68,21 @@ export function pushRoutes(opts: { relay?: RelayClient } = {}): AppRoutes {
       ["badge"],
       {
         GET: (c) => {
-          const asked = new URL(c.req.url).searchParams.get("today");
+          // The device's wall clock (`today`, `time`); the server's when not given. A day
+          // without a time: the server's time on the server's day, else that day's start or end.
+          const params = new URL(c.req.url).searchParams;
+          const asked = params.get("today");
+          const time = params.get("time");
           if (asked !== null && !isValidDate(asked)) throw new HttpError(400, "today must be YYYY-MM-DD");
-          const p = (n: number) => String(n).padStart(2, "0");
-          const today = asked ?? `${c.now.getFullYear()}-${p(c.now.getMonth() + 1)}-${p(c.now.getDate())}`;
+          if (time !== null && !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) throw new HttpError(400, "time must be HH:MM");
+          const server = localMoment(c.now);
+          const day = asked ?? server.day;
+          const at = {
+            day,
+            time: time ?? (day === server.day ? server.time : day > server.day ? "00:00" : "23:59"),
+          };
           const device = deviceOfToken(c.db, c.token.id);
-          return choreBadges(c.db, c.user.id, today, device ? mutedOf(device) : []);
+          return choreBadges(c.db, c.user.id, at, device ? mutedOf(device) : []);
         },
       },
     ],

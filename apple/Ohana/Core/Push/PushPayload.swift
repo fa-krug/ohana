@@ -17,8 +17,11 @@ nonisolated struct PushPayload: Codable, Equatable, Sendable {
     var event: String?
     /// The icon's number for this device (`AppBadge`); left as it is when missing.
     var badge: Int?
-    /// The number from the next midnight on (`MidnightBadge`, scheduled by the extension).
-    var badgeTomorrow: MidnightBadge.Next?
+    /// The number from the next midnight on (older servers; `BadgeSchedule`).
+    var badgeTomorrow: BadgeSchedule.Next?
+    /// The number from each moment it changes at until the end of tomorrow (`BadgeSchedule`,
+    /// scheduled by the extension).
+    var badgeSteps: [BadgeSchedule.Step]?
 
     enum OpenError: Error { case malformed }
 

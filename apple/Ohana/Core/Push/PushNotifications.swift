@@ -257,8 +257,8 @@ extension PushNotifications: nonisolated UNUserNotificationCenterDelegate {
     /// (pushes and the cook timers' local notifications alike).
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
                                             willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
-        // The midnight switch of the icon's number shows nothing.
-        if notification.request.identifier == MidnightBadge.identifier { return [.badge] }
+        // The scheduled switches of the icon's number show nothing.
+        if BadgeSchedule.isBadgeOnly(notification.request.identifier) { return [.badge] }
         return [.banner, .list, .sound, .badge]
     }
 

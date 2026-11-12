@@ -232,6 +232,7 @@ describe("delivery", () => {
       event: "coverage_gap",
       badge: 0,
       badgeTomorrow: { day: expect.any(String), count: 0 },
+      badgeSteps: [],
     });
     expect(byToken["r1.1"].collapseId).toBe(collapseIdFor(keyOf(1), "x"));
     const sent = db.select().from(schema.pushDevices).where(eq(schema.pushDevices.userId, editorId)).get()!;

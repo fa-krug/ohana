@@ -5,15 +5,17 @@ import UserNotifications
 import BackgroundTasks
 #endif
 
-/// The number on the app's icon: the account's open chores due today and the overdue ones,
-/// assigned to it or subscribed, in its families but those muted on this device
+/// The number on the app's icon: the account's open chores already due (from their time, else
+/// from when their part of the day starts) and the overdue ones, assigned to it or subscribed,
+/// in its families but those muted on this device
 /// (server/lib/chores/badge.ts). Every push brings it (`PushPayload.badge`, set by the
 /// Notification Service Extension); the app asks `GET /api/v1/me/badge` at launch, on becoming
 /// active, when the day changes while it runs and after chore changes, and clears it in the demo.
 /// Shown only while notifications may badge the icon.
 ///
-/// Midnight: each answer (and each push) brings tomorrow's number too, which `MidnightBadge`
-/// has the system switch to at 00:00; on iOS a background job (an app refresh task, `taskID`, run
+/// Later: each answer (and each push) brings the moments the number changes at until the end of
+/// tomorrow (a morning's chores in the morning, midnight), which `BadgeSchedule` has the system
+/// switch to; on iOS a background job (an app refresh task, `taskID`, run
 /// by `OhanaApp`'s `.backgroundTask`) asks the server again soon after, in case something changed
 /// meanwhile, and schedules the next one.
 enum AppBadge {
@@ -49,28 +51,41 @@ enum AppBadge {
     static func clear() {
         pending?.cancel()
         pending = nil
-        MidnightBadge.cancel()
+        BadgeSchedule.cancel()
         #if os(iOS)
         BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: taskID)
         #endif
         set(0)
     }
 
-    /// Asks the server and sets today's number and tomorrow's switch; false when it couldn't.
+    /// Asks the server and sets the number now and its switches ahead; false when it couldn't.
     @discardableResult
     private static func update(_ client: APIClient) async -> Bool {
         guard await badgesAllowed() else { return true }
         do {
-            let answer = try await client.get("/api/v1/me/badge", query: ["today": Day.today.description], as: BadgeCount.self)
+            let answer = try await client.get("/api/v1/me/badge", query: clock(), as: BadgeCount.self)
             guard !Task.isCancelled else { return false }
             set(answer.count)
-            if let tomorrow = answer.tomorrow { await MidnightBadge.schedule(tomorrow) }
+            await BadgeSchedule.schedule(steps: answer.steps, tomorrow: answer.tomorrow)
             scheduleJob()
             return true
         } catch {
             PushNotifications.log.error("Loading the badge failed: \(error.localizedDescription, privacy: .public)")
             return false
         }
+    }
+
+    /// The device's wall clock for the server: `today` and `time` ("HH:MM").
+    static func clock(_ now: Date = Date(), calendar: Calendar = .current) -> [String: String?] {
+        let c = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: now)
+        func pad(_ n: Int?, _ width: Int = 2) -> String {
+            let s = String(n ?? 0)
+            return String(repeating: "0", count: max(0, width - s.count)) + s
+        }
+        return [
+            "today": "\(pad(c.year, 4))-\(pad(c.month))-\(pad(c.day))",
+            "time": "\(pad(c.hour)):\(pad(c.minute))",
+        ]
     }
 
     private static func set(_ count: Int) {
@@ -89,7 +104,7 @@ enum AppBadge {
 
     // MARK: The midnight job (iOS)
 
-    /// Five minutes past the next midnight: after `MidnightBadge` switched, so the server's
+    /// Five minutes past the next midnight: after `BadgeSchedule` switched, so the server's
     /// answer is about the new day. The system runs it when it sees fit from then on.
     static func jobStart(after now: Date = Date(), calendar: Calendar = .current) -> Date {
         let midnight = calendar.nextDate(after: now, matching: DateComponents(hour: 0, minute: 0), matchingPolicy: .nextTime)
@@ -122,5 +137,7 @@ enum AppBadge {
 nonisolated struct BadgeCount: Decodable, Sendable {
     let count: Int
     /// The number from the next midnight on (older servers: none).
-    let tomorrow: MidnightBadge.Next?
+    let tomorrow: BadgeSchedule.Next?
+    /// The changes until the end of tomorrow (older servers: none).
+    let steps: [BadgeSchedule.Step]?
 }

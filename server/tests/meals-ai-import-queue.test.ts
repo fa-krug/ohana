@@ -195,6 +195,7 @@ describe("background imports", () => {
         event: "recipe_imported",
         badge: 0,
         badgeTomorrow: { day: expect.any(String), count: 0 },
+        badgeSteps: [],
       },
     ]);
   });
@@ -232,6 +233,7 @@ describe("background imports", () => {
         event: "recipe_imported",
         badge: 0,
         badgeTomorrow: { day: expect.any(String), count: 0 },
+        badgeSteps: [],
       },
     ]);
     expect(received(2)).toEqual([]);
