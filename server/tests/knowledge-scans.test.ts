@@ -140,6 +140,8 @@ async function scans(r = scanRunner()) {
 async function readyWithCard(upload: Awaited<ReturnType<typeof setup>>["upload"], path: string, pages: string[]) {
   const id = (await upload(path, pages)).data.id as string;
   await index();
+  // Cards are written only while the assistant reads the knowledge base.
+  t.db.update(kbFolders).set({ aiScans: true }).run();
   await cards();
   expect(doc(id)).toMatchObject({ status: "ready", cardStatus: "ready", reader: 1 });
   return id;

@@ -526,7 +526,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   reindex, un-exclude: `CARD_RESET`) empty the card, `card_status` pending (none without chunks).
   `card-runner.ts` `KnowledgeCardRunner` (same pattern, `KNOWLEDGE_CARD_CONCURRENT`, 1; off without
   the assistant) claims ready documents with a pending card only of families whose AI is set up
-  (the others wait), round-robin: one per family at a time, new cards (no summary yet) before
+  and whose folder has `ai_scans` on (`card.ts` `cardsOn`, status `cards`: the app's one switch
+  *Read with the assistant*, off by default; the others wait), round-robin: one per family at a time, new cards (no summary yet) before
   rewrites, then the family with the oldest waiting document first; it runs `card.ts` `makeCard` (one completion with `familyModel`, the family's
   language and `familyNames`; name, path, tags and the text by page "[Page n]", cut at 30 000
   characters, between `<document>` delimiters escaped inside, the prompt saying it is data; zod-checked
@@ -1008,8 +1009,9 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   it); a lost connection retries with the uploads' backoff (`resume`, also `retryNow` on reconnecting),
   a restart's first run picks it up, `runIfDue` doesn't wait for the interval while its files are
   unread; the documents list doesn't poll for a card rewritten while its earlier summary shows), with
-  status `scans` the toggle *Read difficult scans with the assistant*
-  (`PATCH /knowledge/folder {aiScans}`, a footer naming the AI provider).
+  status `scans` the family's one switch *Read with the assistant* (`PATCH /knowledge/folder
+  {aiScans}`, in the Index section, its footer naming the AI provider; off by default: read on the
+  device only; on: cards written and poor pages sent).
   The knowledge base page (`Module.knowledge`, ⌘9; shown where `FamilyContext.isEnabled(.knowledge)` /
   `AppModel.isEnabled` say `knowledgeAvailable`, `ServerInfo.isEnabled` only says the server has it;
   the demo hides it for now): `Features/Knowledge/KnowledgeView.swift`, `GET /knowledge/documents`

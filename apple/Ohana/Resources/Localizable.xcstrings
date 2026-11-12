@@ -11911,6 +11911,16 @@
         }
       }
     },
+    "Off, the documents are read on this device only. On, the family’s AI provider gets each document’s text and writes a summary and search words (other words for what it is), and pages this device reads poorly go to it as images. Read Now reads what’s new or changed, Read All everything again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus werden die Dokumente nur auf diesem Gerät gelesen. Ein bekommt der KI-Anbieter der Familie den Text jedes Dokuments und schreibt eine Zusammenfassung und Suchwörter (andere Wörter dafür, was es ist), und Seiten, die dieses Gerät schlecht liest, gehen als Bilder an ihn. „Jetzt lesen“ liest Neues und Geändertes, „Alles lesen“ alles noch einmal."
+          }
+        }
+      }
+    },
     "Office": {
       "localizations": {
         "de": {
@@ -12763,16 +12773,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bild auf / Bild ab, ⌘[ / ⌘]"
-          }
-        }
-      }
-    },
-    "Pages this device reads poorly then go to the family’s AI provider as images. Turning it on checks every scan in the folder once.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seiten, die dieses Gerät schlecht liest, gehen dann als Bilder an den KI-Anbieter der Familie. Beim Einschalten wird jeder Scan im Ordner einmal geprüft."
           }
         }
       }
@@ -13797,6 +13797,16 @@
         }
       }
     },
+    "Read Now reads what’s new or changed, Read All everything again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„Jetzt lesen“ liest Neues und Geändertes, „Alles lesen“ alles noch einmal."
+          }
+        }
+      }
+    },
     "Read again on this device.": {
       "localizations": {
         "de": {
@@ -13837,22 +13847,22 @@
         }
       }
     },
-    "Read difficult scans with the assistant": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Schwierige Scans mit dem Assistenten lesen"
-          }
-        }
-      }
-    },
     "Read on this device. Check the amount and the date before saving.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Auf diesem Gerät gelesen. Prüfe Betrag und Datum vor dem Speichern."
+          }
+        }
+      }
+    },
+    "Read with the assistant": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit dem Assistenten lesen"
           }
         }
       }

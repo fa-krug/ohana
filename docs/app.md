@@ -201,13 +201,15 @@ family's paperwork, read from one folder, usually an iCloud Drive folder the par
 it once on each device in Settings → Knowledge; the app reads the files' text on the device and
 sends only the text to your server, never the files. Scans without text are read on the device
 too: a page lying on its side is turned first, and tables (a timetable, say) keep their rows and
-columns. With the assistant set up, *Read difficult scans with the assistant* in Settings →
-Knowledge sends the pages the device couldn't read well to the family's AI as images, which writes
-out their text (handwriting too). Turned on, it checks every scan in the folder once, the ones read
-before too.
+columns. By default that's all: the documents are read on the device only. With the assistant set
+up, *Read with the assistant* in Settings → Knowledge has the family's AI read them too: it writes
+each document's summary and search words (other words for what it is), and the pages the device
+couldn't read well go to it as images, which it writes out (handwriting too). Turned on, it checks
+every scan in the folder once, the ones read before too. *Read Now* reads what's new or changed,
+*Read All* (it asks first) everything again.
 
 The page lists the documents newest first with their date, whose they are, their tags and a short
-summary (when the assistant is set up). Search them, or narrow the list by folder, person or tag. A
+summary (with *Read with the assistant* on). Search them, or narrow the list by folder, person or tag. A
 document shows its summary and the facts in it, each with the passage it comes from, and its text
 page by page. **Open Original** opens the file itself from the folder on your device: a PDF at the
 page of the fact you tapped, with its passage marked. A device without the folder offers to choose
@@ -217,8 +219,8 @@ knowledge base (*Show Left Out* lists those), and on the Mac *Show in Finder* fi
 Each summary also comes with keywords (what the document is and other words for it) that the
 search uses, so a timetable is found as "Stundenplan" or "Schulschluss" even when its text is only
 the table. *Read All* in Settings → Knowledge (it asks first) reads every file in the folder again
-from scratch and has the assistant write every summary anew (summaries from before keywords existed
-get them): one request to your AI provider each, and every summary stays until its new one is
+from scratch and, with *Read with the assistant* on, has it write every summary anew (summaries
+from before keywords existed get them): one request to your AI provider each, and every summary stays until its new one is
 written. Progress bars show the files and the summaries; a lost connection or closing the app only
 pauses it, and it goes on by itself.
 

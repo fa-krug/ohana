@@ -1,6 +1,7 @@
 // The worker's KnowledgeCardRunner: makes the card (card.ts) of every ready document whose card
 // is pending, after the KnowledgeRunner chunked it. Only for families whose AI is set up (and
-// with the assistant on): the others' documents wait, pending, until it is. The document stays
+// with the assistant on) and who have it read their knowledge base (`kb_folders.ai_scans`): the
+// others' documents wait, pending, until they do. The document stays
 // searchable whatever happens to its card.
 //
 // The same pattern as the KnowledgeRunner: a compare-and-swap UPDATE claims the card with a fresh
@@ -27,7 +28,7 @@ import { and, asc, eq, inArray, isNull, lte, ne, notInArray, or, sql } from "dri
 import { HttpError, randomToken } from "@/lib/api/http";
 import { type AiEnv, familyModel } from "@/lib/assistant/routes";
 import type { Db } from "@/lib/db";
-import { aiSettings, kbChunks, kbDocuments, kbPageScans } from "@/lib/db/schema";
+import { aiSettings, kbChunks, kbDocuments, kbFolders, kbPageScans } from "@/lib/db/schema";
 import { familyNames } from "@/lib/families/people";
 import { familyLocale } from "@/lib/notifications/locale";
 import { moduleEnabled } from "@/lib/server-info";
@@ -160,9 +161,11 @@ export class KnowledgeCardRunner {
         .select({ familyId: kbDocuments.familyId })
         .from(kbDocuments)
         .innerJoin(aiSettings, eq(aiSettings.familyId, kbDocuments.familyId))
+        .innerJoin(kbFolders, eq(kbFolders.id, kbDocuments.folderId))
         .where(
           and(
             waiting,
+            eq(kbFolders.aiScans, true),
             ne(aiSettings.baseUrl, ""),
             ne(aiSettings.model, ""),
             busy.length ? notInArray(kbDocuments.familyId, busy) : undefined,

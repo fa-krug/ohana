@@ -233,7 +233,7 @@ your family), the app reads the files in it on your device (Apple's PDF and text
 and sends your server, for each file, its **text**, its name and place in the folder, its size,
 date, Finder tags and a checksum (SHA-256), so the family's editors can search it; **the files
 themselves are never sent**. One exception, only if the family set up the assistant: when an
-editor turns on *Read difficult scans with the assistant*, pages of scanned documents whose text
+editor turns on *Read with the assistant* (off by default), pages of scanned documents whose text
 the app couldn't read well are sent to your server as **images**, and from there to the AI provider
 your family set up, which writes out their text; *Read Again with the Assistant* on a document does
 the same for every page of that document. Your server deletes each image as soon as its text is
@@ -243,7 +243,8 @@ read the folder last and shows it to the family's editors in *Settings → Knowl
 (your server's address and the family's and folder's ids), so another device recognises it. Your
 server keeps the text until the file is gone from the folder (then for at most 30 days more) or
 the family is deleted. If the family set up the assistant, the server may send a document's text
-to the AI provider your family set up, to summarise it and to answer questions about it. On the
+to the AI provider your family set up to answer questions about it, and, while *Read with the
+assistant* is on, to summarise it. On the
 device the app keeps the folder you chose, the checksums of the files it read and the texts
 waiting to be sent; choosing *Remove from This Device* or signing out deletes them. The folder
 itself syncs through iCloud as any of your files

@@ -2667,8 +2667,11 @@ paths:
       operationId: updateKnowledgeFolder
       summary: The family's settings of the folder
       description: >-
-        `aiScans`: whether the app sends pictures of pages its own OCR read poorly to the family's
-        AI provider for a transcription (off by default). Turned off, the scans the app sent on
+        `aiScans`: whether the assistant reads the family's knowledge base (off by default: the
+        documents are only read on the device): the worker writes each document's card (summary,
+        keywords, facts) and the app sends pictures of pages its own OCR read poorly to the family's
+        AI provider for a transcription. Turned on, the cards waiting are written; turned off,
+        no more are (the written ones stay), and the scans the app sent on
         its own that still wait are deleted (forced ones and those being read stay). 404 without a
         folder. An agent token can't change it (403).
       x-ohana-role: editor
@@ -2722,8 +2725,9 @@ paths:
                   cards:
                     type: boolean
                     description: >-
-                      Whether the worker makes cards: the family's AI is set up and the server has
-                      the assistant on. Without, documents wait with `cardStatus` pending.
+                      Whether the worker makes cards: the family's AI is set up, the server has
+                      the assistant on (as `scans`) and the family has it read the knowledge base
+                      (`aiScans`). Without, documents wait with `cardStatus` pending.
                   cardCounts: {$ref: "#/components/schemas/KnowledgeCardCounts"}
                   scans:
                     type: boolean
@@ -2742,11 +2746,11 @@ paths:
       operationId: rewriteKnowledgeCards
       summary: Write the family's cards again
       description: >-
-        The app's *Rewrite Summaries*: the cards of ready documents made before cards had
+        The app's *Read All* (with `aiScans` on): the cards of ready documents made before cards had
         keywords (`cardCounts.outdated`) and the failed ones, or with `all` every one, wait for
         the worker again (one AI request each). A card keeps its summary, facts and keywords until
-        the new one is written; the worker writes new documents' cards first. 409 when the family's
-        AI isn't set up (status `cards` false). An agent token can't (403).
+        the new one is written; the worker writes new documents' cards first. 409 while no cards
+        are made (status `cards` false: the family's AI not set up, or `aiScans` off). An agent token can't (403).
       x-ohana-role: editor
       requestBody:
         content:
@@ -7121,7 +7125,7 @@ components:
         createdAt: {type: string, format: date-time}
         lastManifestAt: {type: [string, "null"], format: date-time, description: "The last non-empty manifest (null before one)."}
         lastManifestDevice: {type: [string, "null"], description: "The `device` that sent it."}
-        aiScans: {type: boolean, description: "Whether the app sends pages its OCR read poorly to the family's AI (PATCH; default false; kept when the folder is replaced)."}
+        aiScans: {type: boolean, description: "Whether the assistant reads the knowledge base: cards written, pages the app's OCR read poorly sent to the family's AI (PATCH; default false; kept when the folder is replaced)."}
     KnowledgeStatus:
       type: string
       description: >-

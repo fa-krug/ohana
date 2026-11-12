@@ -1,13 +1,13 @@
 import SwiftUI
 
 /// Settings → Knowledge: the family's knowledge folder on this device (choose, change, remove;
-/// a marker of another family or a folder other than the family's asks first) and what's in the
-/// index (GET /knowledge/status with the indexer's own state: running, waiting uploads, files this
-/// device can't read, *Read All*'s progress, the summaries being written), *Read Now*, *Read All*
-/// (confirmed; `KnowledgeIndexer.readAll`: every file read again on this device, then every
-/// summary written anew, resumed after a lost connection) and the
-/// family's setting whether difficult scans go to its AI (shown where the server can transcribe
-/// them, `KnowledgeStatusInfo.readsScans`).
+/// a marker of another family or a folder other than the family's asks first) and its index: what's
+/// in it (GET /knowledge/status with the indexer's own state: running, waiting uploads, files this
+/// device can't read, *Read All*'s progress, the summaries being written), the family's one switch
+/// *Read with the assistant* (`aiScans`, shown where its AI can read, `readsScans`; off: read on the
+/// device only; on: summaries and keywords written, poor pages sent as images), *Read Now* (what's
+/// new or changed) and *Read All* (confirmed; `KnowledgeIndexer.readAll`: every file read again,
+/// then, with the switch on, every summary written anew; resumed after a lost connection).
 /// Only where `FamilyContext.knowledgeAvailable` (module on, an editor, not the demo).
 struct KnowledgeSettingsView: View {
     @Environment(FamilyContext.self) private var family
@@ -59,9 +59,6 @@ private struct KnowledgeSettingsForm: View {
             folderSection
             if folder != .none || status.value?.folder != nil {
                 indexSection
-                if let info = status.value, info.folder != nil, info.readsScans {
-                    scansSection(info)
-                }
             }
         }
         .formStyle(.grouped)
@@ -212,9 +209,15 @@ private struct KnowledgeSettingsForm: View {
 
     // MARK: The index
 
+    /// The family's switch is shown: its AI can read (`readsScans`) and there's a folder.
+    private var offersAssistant: Bool {
+        guard let info = status.value else { return false }
+        return info.folder != nil && info.readsScans
+    }
+
     @ViewBuilder
     private var indexSection: some View {
-        Section("Index") {
+        Section {
             progress
             if case let .failed(message) = indexer.phase {
                 Label(message, systemImage: "exclamationmark.triangle")
@@ -263,29 +266,32 @@ private struct KnowledgeSettingsForm: View {
                     Text("Files this device can’t read: \(indexer.unreadable.count)")
                 }
             }
+            if offersAssistant, let info = status.value {
+                Toggle("Read with the assistant", isOn: Binding {
+                    aiScans ?? (info.aiScans == true)
+                } set: { on in
+                    setAIScans(on)
+                })
+                .disabled(savingAIScans)
+            }
             if folder.url != nil {
                 Button("Read Now", systemImage: "arrow.clockwise") { family.indexKnowledge(force: true) }
                     .disabled(running)
                 Button("Read All…", systemImage: "arrow.triangle.2.circlepath") { askingReadAll = true }
                     .disabled(running)
             }
-        }
-    }
-
-    // MARK: Difficult scans
-
-    private func scansSection(_ info: KnowledgeStatusInfo) -> some View {
-        Section {
-            Toggle("Read difficult scans with the assistant", isOn: Binding {
-                aiScans ?? (info.aiScans == true)
-            } set: { on in
-                setAIScans(on)
-            })
-            .disabled(savingAIScans)
+        } header: {
+            Text("Index")
         } footer: {
-            Text("Pages this device reads poorly then go to the family’s AI provider as images. Turning it on checks every scan in the folder once.")
+            if offersAssistant {
+                Text("Off, the documents are read on this device only. On, the family’s AI provider gets each document’s text and writes a summary and search words (other words for what it is), and pages this device reads poorly go to it as images. Read Now reads what’s new or changed, Read All everything again.")
+            } else {
+                Text("Read Now reads what’s new or changed, Read All everything again.")
+            }
         }
     }
+
+    // MARK: The assistant
 
     private func setAIScans(_ on: Bool) {
         aiScans = on
@@ -307,7 +313,7 @@ private struct KnowledgeSettingsForm: View {
 
     // MARK: Reading everything
 
-    /// The server writes summaries (the family's AI set up, the assistant on).
+    /// The server writes summaries (the family's AI set up, the assistant on, the switch on).
     private var writesCards: Bool { status.value?.cards == true }
 
     /// Summaries the worker has yet to write (new or rewritten), where it writes them.
@@ -319,7 +325,8 @@ private struct KnowledgeSettingsForm: View {
     /// indexer keeps at it until done, after a lost connection too).
     private func readAll() {
         Task {
-            await indexer.readAll(summaries: true)
+            // The summaries anew only while the assistant reads the knowledge base.
+            await indexer.readAll(summaries: writesCards)
             family.didChange(.knowledge)
             await loadStatus()
         }

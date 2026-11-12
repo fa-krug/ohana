@@ -67,7 +67,8 @@ nonisolated struct KnowledgeStatusInfo: Codable, Equatable, OffMainDecodable {
     /// Page images can be transcribed by the family's AI (set up, the assistant on); nil from a
     /// server from before page scans.
     var scans: Bool?
-    /// The family's setting: difficult scans go to the AI by themselves.
+    /// The family's switch: the assistant reads the knowledge base (summaries, keywords, difficult
+    /// scans sent by themselves).
     var aiScans: Bool?
 }
 
@@ -258,7 +259,8 @@ extension FamilyAPI {
         try await send(.post, "/knowledge/cards", body: ["all": all])
     }
 
-    /// Turns the family's setting on or off: difficult scans go to the family's AI by themselves.
+    /// Turns the family's switch on or off: the assistant reads the knowledge base (summaries,
+    /// keywords, difficult scans sent by themselves).
     @discardableResult
     func setKnowledgeAIScans(_ on: Bool) async throws -> KnowledgeFolderInfo? {
         let response: KnowledgeFolderResponse = try await send(.patch, "/knowledge/folder", body: ["aiScans": on])
