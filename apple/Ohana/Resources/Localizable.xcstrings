@@ -19475,6 +19475,16 @@
         }
       }
     },
+    "Tools": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Werkzeuge"
+          }
+        }
+      }
+    },
     "Top level": {
       "localizations": {
         "de": {
