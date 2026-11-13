@@ -640,11 +640,22 @@ struct KnowledgeStatusBadge: View {
         }
     }
 
+    /// The size of the tags beside it. Icon and text by hand, never a `Label`: in the list's flow
+    /// layout iOS drew that as a tall capsule with the icon only.
     private func badge(_ title: LocalizedStringKey, systemImage: String, tint: Color) -> some View {
-        Label(title, systemImage: systemImage)
-            .font(.caption.weight(.medium))
-            .foregroundStyle(tint)
-            .chip(tint: tint)
+        HStack(spacing: 3) {
+            Image(systemName: systemImage)
+                .imageScale(.small)
+            Text(title)
+        }
+        .font(.caption2.weight(.medium))
+        .lineLimit(1)
+        .foregroundStyle(tint)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 2)
+        .background(tint.opacity(0.18), in: .capsule)
+        .fixedSize()
+        .accessibilityElement(children: .combine)
     }
 }
 
