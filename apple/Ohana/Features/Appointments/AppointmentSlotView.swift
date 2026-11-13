@@ -76,12 +76,13 @@ struct AppointmentSlotView: View {
             returnedFromProvider()
         }
         #endif
-        .confirmationDialog(Text("Remove the appointment with \(state.value?.slot.doctorName ?? "")?"),
-                            isPresented: $confirmRemove, titleVisibility: .visible) {
+        .alert(Text("Remove the appointment with \(state.value?.slot.doctorName ?? "")?"),
+               isPresented: $confirmRemove) {
             Button("Remove", role: .destructive) {
                 guard let eventID = state.value?.booking?.eventId else { return }
                 perform { try await AppointmentActions.removeBooking(family, eventID) }
             }
+            Button("Cancel", role: .cancel) {}
         } message: {
             Text("Remove this appointment from Ohana? This doesn’t cancel it with the practice.")
         }

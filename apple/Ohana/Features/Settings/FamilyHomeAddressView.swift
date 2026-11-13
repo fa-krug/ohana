@@ -94,10 +94,11 @@ struct FamilyHomeAddressView: View {
         .formStyle(.grouped)
         .readableWidth()
         .scrollContentBackground(.hidden)
-        .confirmationDialog("Remove the home address?", isPresented: $confirmClear, titleVisibility: .visible) {
+        .alert("Remove the home address?", isPresented: $confirmClear) {
             Button("Remove", role: .destructive) {
                 save(FamilyHomeInput(address: "", lat: nil, lng: nil))
             }
+            Button("Cancel", role: .cancel) {}
         }
     }
 

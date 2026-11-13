@@ -311,10 +311,9 @@ struct AccountConfirmation: Identifiable {
 extension View {
     /// Asks before an `AccountConfirmation`'s action.
     func accountConfirmation(_ item: Binding<AccountConfirmation?>) -> some View {
-        confirmationDialog(
+        alert(
             Text(item.wrappedValue?.title ?? ""),
             isPresented: Binding(get: { item.wrappedValue != nil }, set: { if !$0 { item.wrappedValue = nil } }),
-            titleVisibility: .visible,
             presenting: item.wrappedValue
         ) { confirmation in
             Button(confirmation.button, role: .destructive) { confirmation.action() }

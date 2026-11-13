@@ -278,10 +278,9 @@ struct FamilyConfirmation: Identifiable {
 extension View {
     /// Asks before a `FamilyConfirmation`'s action.
     func familyConfirmation(_ item: Binding<FamilyConfirmation?>) -> some View {
-        confirmationDialog(
+        alert(
             Text(item.wrappedValue?.title ?? ""),
             isPresented: Binding(get: { item.wrappedValue != nil }, set: { if !$0 { item.wrappedValue = nil } }),
-            titleVisibility: .visible,
             presenting: item.wrappedValue
         ) { confirmation in
             Button(confirmation.button, role: .destructive) { confirmation.action() }

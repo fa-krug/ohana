@@ -56,25 +56,25 @@ struct AppointmentsView: View {
         .sheet(item: $editing) { search in
             AppointmentSearchEditor(search: search) { _ in }
         }
-        .confirmationDialog(
-            Text("Delete “\(deleting?.name ?? "")”?"), isPresented: .init(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
-            titleVisibility: .visible, presenting: deleting
+        .alert(
+            Text("Delete “\(deleting?.name ?? "")”?"), isPresented: .init(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), presenting: deleting
         ) { search in
             Button("Delete Search", role: .destructive) {
                 perform {
                     try await AppointmentActions.delete(family, search.id)
                 }
             }
+            Button("Cancel", role: .cancel) {}
         } message: { search in
             Text("Delete the search “\(search.name)” with its history?")
         }
-        .confirmationDialog(
-            Text("Remove “\(removing?.title ?? "")”?"), isPresented: .init(get: { removing != nil }, set: { if !$0 { removing = nil } }),
-            titleVisibility: .visible, presenting: removing
+        .alert(
+            Text("Remove “\(removing?.title ?? "")”?"), isPresented: .init(get: { removing != nil }, set: { if !$0 { removing = nil } }), presenting: removing
         ) { event in
             Button("Remove", role: .destructive) {
                 perform { try await AppointmentActions.removeBooking(family, event.id) }
             }
+            Button("Cancel", role: .cancel) {}
         } message: { _ in
             Text("Remove this appointment from Ohana? This doesn’t cancel it with the practice.")
         }

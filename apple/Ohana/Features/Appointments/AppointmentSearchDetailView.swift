@@ -44,8 +44,7 @@ struct AppointmentSearchDetailView: View {
                 AppointmentSearchEditor(search: search) { _ in }
             }
         }
-        .confirmationDialog(Text("Delete “\(state.value?.search.name ?? "")”?"), isPresented: $confirmDelete,
-                            titleVisibility: .visible) {
+        .alert(Text("Delete “\(state.value?.search.name ?? "")”?"), isPresented: $confirmDelete) {
             Button("Delete Search", role: .destructive) {
                 perform {
                     deleted = true
@@ -58,6 +57,7 @@ struct AppointmentSearchDetailView: View {
                     dismiss()
                 }
             }
+            Button("Cancel", role: .cancel) {}
         } message: {
             Text("Delete the search “\(state.value?.search.name ?? "")” with its history?")
         }

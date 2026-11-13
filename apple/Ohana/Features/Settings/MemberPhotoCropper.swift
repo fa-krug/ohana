@@ -273,12 +273,12 @@ struct MemberPhotoCropper: View {
             guard let data = try? Data(contentsOf: url) else { return }
             replace { data }
         }
-        .confirmationDialog(Text("Remove the photo of \(name)?"), isPresented: $confirmingRemoval,
-                            titleVisibility: .visible) {
+        .alert(Text("Remove the photo of \(name)?"), isPresented: $confirmingRemoval) {
             Button("Remove", role: .destructive) {
                 remove()
                 dismiss()
             }
+            Button("Cancel", role: .cancel) {}
         }
     }
 

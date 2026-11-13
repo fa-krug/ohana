@@ -71,10 +71,10 @@ struct FinanceSettingsForm: View {
             case let .category(c): FinanceCategoryEditor(store: store, category: c, parent: nil)
             }
         }
-        .confirmationDialog(deletingCategory.map { String(localized: "Delete the category “\($0.name)”?") } ?? "",
-                            isPresented: Binding { deletingCategory != nil } set: { if !$0 { deletingCategory = nil } },
-                            titleVisibility: .visible, presenting: deletingCategory) { c in
+        .alert(deletingCategory.map { String(localized: "Delete the category “\($0.name)”?") } ?? "",
+               isPresented: Binding { deletingCategory != nil } set: { if !$0 { deletingCategory = nil } }, presenting: deletingCategory) { c in
             Button("Delete", role: .destructive) { Task { await store.deleteCategory(c.id) } }
+            Button("Cancel", role: .cancel) {}
         } message: { c in
             if let parent = store.tree.parent(of: c.id) {
                 Text("Its transactions and subcategories move to “\(parent.name)”.")
@@ -82,15 +82,16 @@ struct FinanceSettingsForm: View {
                 Text("Its transactions stay, without a category. Its subcategories move up to the top level.")
             }
         }
-        .confirmationDialog(deletingAccount.map { String(localized: "Delete the account “\($0.name)”?") } ?? "",
-                            isPresented: Binding { deletingAccount != nil } set: { if !$0 { deletingAccount = nil } },
-                            titleVisibility: .visible, presenting: deletingAccount) { a in
+        .alert(deletingAccount.map { String(localized: "Delete the account “\($0.name)”?") } ?? "",
+               isPresented: Binding { deletingAccount != nil } set: { if !$0 { deletingAccount = nil } }, presenting: deletingAccount) { a in
             Button("Delete", role: .destructive) { Task { await store.deleteAccount(a.id) } }
+            Button("Cancel", role: .cancel) {}
         } message: { _ in
             Text("All its transactions are deleted as well. This can’t be undone.")
         }
-        .confirmationDialog("Delete all finance data?", isPresented: $clearing, titleVisibility: .visible) {
+        .alert("Delete all finance data?", isPresented: $clearing) {
             Button("Delete all finance data", role: .destructive) { Task { await store.clearAll() } }
+            Button("Cancel", role: .cancel) {}
         } message: {
             Text("All transactions, accounts, categories and saved bank formats are deleted for everyone in this family. This can’t be undone.")
         }
@@ -324,10 +325,10 @@ struct FinanceMappingsView: View {
         .readableWidth()
         .ohanaBackground(ModuleTint.finance)
         .navigationTitle("Saved bank formats")
-        .confirmationDialog("Delete this bank format?",
-                            isPresented: Binding { deleting != nil } set: { if !$0 { deleting = nil } },
-                            titleVisibility: .visible, presenting: deleting) { signature in
+        .alert("Delete this bank format?",
+               isPresented: Binding { deleting != nil } set: { if !$0 { deleting = nil } }, presenting: deleting) { signature in
             Button("Delete", role: .destructive) { Task { await store.deleteMapping(signature) } }
+            Button("Cancel", role: .cancel) {}
         } message: { _ in
             Text("The next import of this bank’s files asks again how their columns map.")
         }

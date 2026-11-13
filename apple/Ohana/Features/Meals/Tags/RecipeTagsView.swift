@@ -38,14 +38,15 @@ struct RecipeTagsView: View {
         .sheet(item: $renaming) { tag in
             RecipeTagSheet(tag: tag) { await load() }
         }
-        .confirmationDialog("Delete tag?", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
-                            titleVisibility: .visible, presenting: deleting) { tag in
+        .alert("Delete tag?", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), presenting: deleting) { tag in
             Button("Delete", role: .destructive) { delete(tag) }
+            Button("Cancel", role: .cancel) {}
         } message: { _ in
             Text("Delete this tag?")
         }
-        .confirmationDialog("Reset to Defaults", isPresented: $confirmReset, titleVisibility: .visible) {
+        .alert("Reset to Defaults", isPresented: $confirmReset) {
             Button("Reset to Defaults", role: .destructive) { reset() }
+            Button("Cancel", role: .cancel) {}
         } message: {
             Text("This will delete all tags (including custom ones) and remove them from your recipes. Start fresh with the defaults?")
         }

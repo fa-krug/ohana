@@ -98,10 +98,11 @@ struct MealPlanView: View {
                 swap(entry, to: recipe)
             }
         }
-        .confirmationDialog("Plan these days again?", isPresented: Binding(
+        .alert("Plan these days again?", isPresented: Binding(
             get: { confirmRenew != nil }, set: { if !$0 { confirmRenew = nil } }
-        ), titleVisibility: .visible, presenting: confirmRenew) { iteration in
+        ), presenting: confirmRenew) { iteration in
             Button("Refresh") { renew(iteration) }
+            Button("Cancel", role: .cancel) {}
         } message: { _ in
             Text("The meals of these days are planned anew.")
         }

@@ -91,11 +91,11 @@ struct ChoresView: View {
         .sheet(item: $editing) { target in
             ChoreEditorHost(target: target, filter: filter, day: shown)
         }
-        .confirmationDialog(
-            Text("Delete “\(deleting?.title ?? "")”?"), isPresented: .init(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
-            titleVisibility: .visible, presenting: deleting
+        .alert(
+            Text("Delete “\(deleting?.title ?? "")”?"), isPresented: .init(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), presenting: deleting
         ) { item in
             Button("Delete", role: .destructive) { store.delete(item.choreId) }
+            Button("Cancel", role: .cancel) {}
         }
     }
 

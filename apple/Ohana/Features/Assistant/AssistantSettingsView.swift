@@ -160,7 +160,7 @@ private struct AssistantSettingsForm: View {
         .onAppear { apply(settings) }
         .onChange(of: settings) { apply(settings) }
         .onChange(of: dirty, initial: true) { hasChanges = dirty }
-        .confirmationDialog("Remove the API key?", isPresented: $confirmRemoveKey, titleVisibility: .visible) {
+        .alert("Remove the API key?", isPresented: $confirmRemoveKey) {
             Button("Remove Key", role: .destructive) {
                 Task { await save(.init(apiKey: "")) }
             }

@@ -198,11 +198,12 @@ struct CalendarEventSheet: View {
                         .keyboardShortcut(.defaultAction)
                 }
             }
-            .confirmationDialog("This is a repeating event.", isPresented: $askSpan, titleVisibility: .visible) {
+            .alert("This is a repeating event.", isPresented: $askSpan) {
                 if !draft.ruleChanged {
                     Button("Save for this event only") { save(span: .this) }
                 }
                 Button("Save for future events") { save(span: .future) }
+                Button("Cancel", role: .cancel) {}
             } message: {
                 if draft.ruleChanged {
                     Text("A change to how it repeats applies to this event and the ones after it.")
@@ -298,9 +299,8 @@ private struct CalendarDeleteEventDialog: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .confirmationDialog(String(localized: "Delete “\(event?.title ?? "")”?"),
-                                isPresented: Binding(get: { event != nil }, set: { if !$0 { event = nil } }),
-                                titleVisibility: .visible, presenting: event) { e in
+            .alert(String(localized: "Delete “\(event?.title ?? "")”?"),
+                   isPresented: Binding(get: { event != nil }, set: { if !$0 { event = nil } }), presenting: event) { e in
                 if e.occurrence != nil {
                     Button("Delete This Event Only", role: .destructive) { delete(e, span: .this) }
                     Button(e.occurrence == seriesStart ? LocalizedStringKey("Delete All Events")
@@ -309,6 +309,7 @@ private struct CalendarDeleteEventDialog: ViewModifier {
                 } else {
                     Button("Delete", role: .destructive) { delete(e, span: nil) }
                 }
+                Button("Cancel", role: .cancel) {}
             } message: { e in
                 Text(e.occurrence != nil ? LocalizedStringKey("This is a repeating event. You can undo this.")
                                          : LocalizedStringKey("You can undo this."))

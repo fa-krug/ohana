@@ -126,11 +126,12 @@ private struct AppleCalendarSyncPromptsModifier: ViewModifier {
                     Task { await sync.enable(family, calendar: calendar, entries: entries) }
                 }
             }
-            .confirmationDialog("Stop syncing with Apple Calendar?", isPresented: $prompts.stopping, titleVisibility: .visible) {
+            .alert("Stop syncing with Apple Calendar?", isPresented: $prompts.stopping) {
                 Button("Stop and remove Ohana’s events from it", role: .destructive) {
                     sync.disable(family, removeCopies: true)
                 }
                 Button("Stop, keep the events") { sync.disable(family, removeCopies: false) }
+                Button("Cancel", role: .cancel) {}
             } message: {
                 Text("Events that came from Apple Calendar stay in both.")
             }

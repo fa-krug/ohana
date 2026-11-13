@@ -90,11 +90,11 @@ private struct KnowledgeSettingsForm: View {
             Button("Use This Folder") { link(conflict.url, accepted: conflict.error) }
             Button("Cancel", role: .cancel) {}
         }
-        .confirmationDialog("Stop reading this folder on this device?", isPresented: $removing,
-                            titleVisibility: .visible) {
+        .alert("Stop reading this folder on this device?", isPresented: $removing) {
             Button("Remove from This Device", role: .destructive, action: unlink)
+            Button("Cancel", role: .cancel) {}
         }
-        .confirmationDialog("Index everything again?", isPresented: $askingReadAll, titleVisibility: .visible) {
+        .alert("Index everything again?", isPresented: $askingReadAll) {
             Button("Read All", action: readAll)
             Button("Cancel", role: .cancel) {}
         } message: {
