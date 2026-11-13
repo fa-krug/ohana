@@ -14,6 +14,7 @@ import { appointmentTools } from "./appointments";
 import { eventTools } from "./events";
 import { generalTools } from "./general";
 import { knowledgeTools } from "./knowledge";
+import { knowledgePageTools } from "./knowledge-pages";
 import { mealTools } from "./meals";
 import { memoryTools } from "./memory";
 import { noteTools } from "./notes";
@@ -34,6 +35,7 @@ export { type NoteOp, type NotesEdit } from "./notes";
 export { cleanReminders, type ReminderOp, type RemindersEdit, type RemindersSnapshot } from "./reminders";
 export { type SuggestionOp, type SuggestionsEdit } from "./suggestions";
 export { type MemoriesEdit, type MemoryOp } from "./memory";
+export { type PagesRequest } from "./knowledge-pages";
 
 export const TOOLS: Record<string, Tool> = {
   ...calendarTools,
@@ -44,6 +46,7 @@ export const TOOLS: Record<string, Tool> = {
   ...appointmentTools,
   ...choreTools,
   ...knowledgeTools,
+  ...knowledgePageTools,
   ...noteTools,
   ...generalTools,
   ...memoryTools,
@@ -60,6 +63,7 @@ const TOOL_MODULE: Record<string, ModuleName> = Object.fromEntries([
   ...Object.keys(appointmentTools).map((n) => [n, "appointments"]),
   ...Object.keys(choreTools).map((n) => [n, "chores"]),
   ...Object.keys(knowledgeTools).map((n) => [n, "knowledge"]),
+  ...Object.keys(knowledgePageTools).map((n) => [n, "knowledge"]),
   ...Object.keys(noteTools).map((n) => [n, "knowledge"]),
 ]);
 
@@ -98,7 +102,7 @@ export function toolsFor(opts: {
 
 /** A tool that only reads, so calls of it can run side by side (unknown ones fail right away). */
 export function readsOnly(name: string): boolean {
-  return !TOOLS[name]?.write && name !== "ask_user";
+  return !TOOLS[name]?.write && !TOOLS[name]?.waits && name !== "ask_user";
 }
 
 /** Runs a tool call; errors come back to the model as {"error": "..."} so it can react. */

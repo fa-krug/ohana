@@ -43,7 +43,7 @@ enum AssistantToolLinks {
                 let page = a["page"]?.doubleValue.flatMap { $0 >= 1 ? Int($0) : nil }
                 return .knowledgeDocument(id: id, page: page)
             }
-        case "knowledge_values":
+        case "knowledge_values", "view_knowledge_pages":
             if let id = text(a["documentId"]) { return .knowledgeDocument(id: id, page: nil) }
         case "edit_memories":
             return .settings(.assistantMemory)

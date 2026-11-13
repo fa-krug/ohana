@@ -10,7 +10,7 @@ when you use the **Ohana app** for iPhone, iPad and Mac. In short: this website 
 you, and the app sends your data only to the Ohana server you connect it to. If you turn on
 notifications in the app, they pass through our push relay encrypted, so we can't read them.
 
-*Last updated: 4 November 2026*
+*Last updated: 13 November 2026*
 
 ## Who is responsible
 
@@ -78,7 +78,9 @@ Ohana is self-hosted. Everything you enter in the app (calendar, finances, recip
 chores, appointments, chats with the assistant, account data) is sent **directly to the Ohana server
 you connect the app to**, over the address you enter, and stored there. The **operator of that
 server** (often you or someone in your family) decides how it is run and is responsible for the
-data on it. We have no access to servers run by others.
+data on it. We have no access to servers run by others. The server keeps each member's newest
+chats with the assistant (50 unless an editor of your family sets another number in *Settings →
+Assistant → Chat history*) and deletes older ones; you can delete a chat yourself at any time.
 
 What a server sends to other services depends on what its families set up, for example:
 
@@ -237,7 +239,11 @@ editor turns on *Read with the assistant* (off by default), the pages of PDFs an
 folder are sent to your server as **images**, and from there to the AI provider
 your family set up, which writes out their text; *Read Again with the Assistant* on a document does
 the same for every page of that document. Your server deletes each image as soon as its text is
-written (or reading it failed), at the latest after 7 days. Each time it reads the folder it also sends your device's name (as
+written (or reading it failed), at the latest after 7 days. In a chat, the assistant may also ask to
+look at pages of one document (a chart or handwriting its text doesn't hold): only a device with the
+folder chosen sends them, as **images**, to your server, which passes them to that AI provider with
+the chat. While *Read with the assistant* is on this happens without asking; otherwise only after
+you tap *Send Pages*. Your server keeps these images with the chat and deletes them with it. Each time it reads the folder it also sends your device's name (as
 set in the system's settings, e.g. "Anna's iPhone"); your server keeps the name of the device that
 read the folder last and shows it to the family's editors in *Settings → Knowledge*. The app writes a small file `.ohana-knowledge.json` into the folder
 (your server's address and the family's and folder's ids), so another device recognises it. Your

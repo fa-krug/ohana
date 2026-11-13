@@ -376,7 +376,22 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   .markdown / .txt one of a single page (by `documentId` or `path`: `content`, `append` or
   `replace` [{find, with}] each found once, and / or `tags`), resolved against the stored text
   (updates of one note merged; whole new text plus the stored `baseHash`) → `kind: "notes"` card →
-  `POST /ai/chats/{id}/notes` (result ids are the paths). **Suggestions** (`tools/suggestions.ts`): from a letter, school note or invitation (the
+  `POST /ai/chats/{id}/notes` (result ids are the paths). **Pages** (`tools/knowledge-pages.ts`,
+  `view_knowledge_pages`, with `knowledgeFolder` like the notes, also with changes off): the model looks
+  at a PDF's / image's pages as pictures (`pages`: numbers / "3-5" ranges; none: all, at most
+  `pagesFor(contextWindow)` ≤ 30) → `kind: "pages"` item (`auto`: the folder's `ai_scans`, the app sends
+  without asking; else its card's *Send Pages*) → the app renders them (`AssistantPagesRender`, ≤ 1600
+  px JPEGs from the linked folder), `PUT /ai/chats/{id}/pages?call=&page=` each (stored by
+  `page-images.ts` under `MEDIA_ROOT/assistant/<familyId>/<chatId>/`, never served), then `POST
+  …/pages {id, sent | declined | error}`: the tool result plus a user message of their own (first
+  text `PAGES_HEAD`, `isPagesMessage`; compaction never takes it for the request) whose image parts
+  are `media:<path>`, read into data URLs by the `Runner` only for the request (`withPageImages`);
+  `viewOf` keeps every image of the newest message with images, older ones up to 8. The files go with
+  the chat (DELETE, the chat limit) and `cleanup`'s `pruneChatFiles` sweeps folders of chats that
+  are gone. **Chat limit** (`retention.ts`, migration `0038`): `ai_settings.chat_limit` (default
+  `DEFAULT_CHAT_LIMIT` 50, `PUT /ai/settings` `chatLimit` 5–1000; viewers see it): each member keeps
+  their newest chats in the family (`trimChats`: when they start one, and for everyone when the limit
+  is saved; running chats stay); the app's Settings → Assistant → Chat history. **Suggestions** (`tools/suggestions.ts`): from a letter, school note or invitation (the
   app scans it and sends only its text, as a text attachment) `suggest_items` offers events
   (checked with `lib/calendar/events.ts` `checkEventFields`, so `POST /events` takes them),
   tasks and deadlines (Reminders, so only with the `reminders` context; `list` null = the

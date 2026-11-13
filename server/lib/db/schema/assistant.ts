@@ -23,6 +23,9 @@ export const aiSettings = sqliteTable("ai_settings", {
   contextWindow: integer("context_window").notNull().default(0),
   /** The model for recipe photos (meals); "" = none. */
   imageModel: text("image_model").notNull().default(""),
+  /** How many chats each member keeps in the family: older ones are deleted (with their page
+   *  images) when a new one starts or the limit is lowered (lib/assistant/retention.ts). */
+  chatLimit: integer("chat_limit").notNull().default(50),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });
 

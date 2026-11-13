@@ -192,6 +192,16 @@ either by itself: the chat shows what it wants to do, with **Apply** and **Don't
 The paperclip attaches a scanned letter: the assistant lists its events, tasks and deadlines, and
 you tick which to add.
 
+When a document's text isn't enough (a chart, handwriting, a form's layout), the assistant can
+ask to **look at its pages**. A device with the knowledge folder sends them as pictures: by itself
+while *Read with the assistant* is on, otherwise after you tap **Send Pages** on the card in the
+chat. Without a page number it sends the whole document (up to 30 pages at a time, fewer for a
+model with a small context window).
+
+Each member keeps their newest 50 chats; starting another deletes the oldest. Editors set the
+number for the whole family in *Settings → Assistant → Chat history*. The pages sent in a chat go
+with it.
+
 ## Letters and scanning
 
 *Scan letter* (in the family menu, as a Shortcut, or by sharing a photo or PDF with Ohana) scans a

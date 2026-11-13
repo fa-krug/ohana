@@ -39,7 +39,16 @@ import { letterInput, readLetter } from "./letter";
 import { handleMemories, listMemories, memoriesForPrompt } from "./memories";
 import { checkUrl, type NetOptions } from "./net";
 import { contextWindow, listModels, type Provider, streamChat } from "./provider";
-import { type AiSettingsRow, type AssistantStore, type ChatRow, DrizzleAssistantStore, SEARCH_PROVIDERS, type SearchProvider } from "./store";
+import {
+  type AiSettingsRow,
+  type AssistantStore,
+  type ChatRow,
+  DEFAULT_CHAT_LIMIT,
+  DrizzleAssistantStore,
+  SEARCH_PROVIDERS,
+  type SearchProvider,
+} from "./store";
+import { trimChats } from "./retention";
 
 export interface AiEnv extends ChatEnv {
   db: Db;
@@ -76,6 +85,10 @@ export function defaultAiEnv(db: Db): AiEnv {
 const MIN_WINDOW = 1000;
 const MAX_WINDOW = 10_000_000;
 
+/** How many chats each member may keep, as a family sets it. */
+const MIN_CHAT_LIMIT = 5;
+const MAX_CHAT_LIMIT = 1000;
+
 /** Transactions one categorize request sends to the model. */
 const MAX_CATEGORIZE = 200;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -91,6 +104,7 @@ function emptyRow(familyId: string): AiSettingsRow {
     allow_writes: true,
     context_window: 0,
     image_model: "",
+    chat_limit: DEFAULT_CHAT_LIMIT,
     updated_at: new Date().toISOString(),
   };
 }
@@ -119,7 +133,14 @@ function safeOpen(env: AiEnv, sealed: string): string {
 function publicSettings(env: AiEnv, row: AiSettingsRow, viewer = false) {
   const configured = !!(row.base_url && row.model);
   if (viewer) {
-    return { configured, canEdit: false, model: row.model, allowWrites: false, serverReady: true };
+    return {
+      configured,
+      canEdit: false,
+      model: row.model,
+      allowWrites: false,
+      chatLimit: row.chat_limit ?? DEFAULT_CHAT_LIMIT,
+      serverReady: true,
+    };
   }
   return {
     configured,
@@ -134,6 +155,7 @@ function publicSettings(env: AiEnv, row: AiSettingsRow, viewer = false) {
     allowWrites: row.allow_writes,
     contextWindow: row.context_window ?? 0,
     imageModel: row.image_model ?? "",
+    chatLimit: row.chat_limit ?? DEFAULT_CHAT_LIMIT,
     // Ohana always has a key to seal with (ENCRYPTION_KEY, else derived from AUTH_SECRET).
     serverReady: true,
   };
@@ -199,7 +221,7 @@ async function getSettings({ load }: Ctx, env: AiEnv) {
 
 /** PUT /ai/settings {baseUrl, apiKey ("" removes it), model, searchProvider, searchKey,
  *  allowWrites, contextWindow (tokens, 0: from the endpoint), imageModel ("" = no recipe
- *  photos)}: only the fields given change; another baseUrl without an apiKey removes the key. Saving lets the knowledge base's failed cards be made
+ *  photos), chatLimit (chats each member keeps; lowering it deletes the older ones at once)}: only the fields given change; another baseUrl without an apiKey removes the key. Saving lets the knowledge base's failed cards be made
  *  again. */
 async function putSettings({ req, load }: Ctx, env: AiEnv) {
   const { family } = await load("edit");
@@ -247,8 +269,17 @@ async function putSettings({ req, load }: Ctx, env: AiEnv) {
     }
     row.context_window = n;
   }
+  if (body.chatLimit !== undefined) {
+    const n = body.chatLimit;
+    if (typeof n !== "number" || !Number.isInteger(n) || n < MIN_CHAT_LIMIT || n > MAX_CHAT_LIMIT) {
+      throw new HttpError(400, `chatLimit must be ${MIN_CHAT_LIMIT} to ${MAX_CHAT_LIMIT} chats`);
+    }
+    row.chat_limit = n;
+  }
   row.updated_at = new Date().toISOString();
   await env.store.saveAiSettings(row);
+  // A lower limit takes the members' older chats at once.
+  trimChats(env.db, family.id, row.chat_limit);
   // The knowledge base's failed cards get another go: the settings may be fixed now.
   retryFailedCards(env.db, family.id);
   return json(publicSettings(env, row), 200, NO_STORE);
@@ -366,6 +397,7 @@ export async function prepareTurn(
     appleCalendar: !!context.appleCalendar,
     knowledge,
     knowledgeNotes: writes && !!knowledgeFolder,
+    knowledgePages: !!knowledgeFolder,
     mealTags: mealTagNames(env.db, family.id, context.lang),
     home: homeAddressOf(env.db, family.id),
     people: familyNames(env.db, family.id),
@@ -387,6 +419,7 @@ export async function prepareTurn(
       appleCalendar: context.appleCalendar,
       knowledge,
       knowledgeFolder,
+      contextWindow: window || DEFAULT_WINDOW,
     },
     modelNet: env.modelNet,
     writes,

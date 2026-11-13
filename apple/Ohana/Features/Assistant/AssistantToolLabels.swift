@@ -58,6 +58,7 @@ enum AssistantToolLabels {
         case "read_knowledge": return String(localized: "Reading a document")
         case "knowledge_values": return String(localized: "Reading values from the documents")
         case "edit_knowledge_notes": return String(localized: "Suggesting notes for the knowledge folder")
+        case "view_knowledge_pages": return String(localized: "Looking at a document’s pages")
         case "edit_memories": return String(localized: "Suggesting what to remember")
         default: return tool.name
         }
@@ -87,6 +88,7 @@ enum AssistantToolLabels {
             "stethoscope"
         case "search_knowledge", "read_knowledge", "knowledge_values": "books.vertical"
         case "edit_knowledge_notes": "note.text"
+        case "view_knowledge_pages": "doc.viewfinder"
         case "edit_memories": "brain"
         default: "sparkles"
         }

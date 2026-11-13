@@ -38,6 +38,8 @@
 //   "note <path>: <text>"                 -> edit_knowledge_notes: create the note <path>
 //   "append to <ref>: <text>"             -> edit_knowledge_notes: append <text> to the note
 //                                            (<ref>: a path when it has a ".", else a documentId)
+//   "look at <documentId> [pages <a,b-c>]" -> view_knowledge_pages; then, given the pages,
+//                                            "Saw <n> pages: <the pages' header>", else why not
 //   "letter" / "elternbrief" (also in an attached file) -> suggest_items from "Elternbrief": an
 //                                            event in 7 days 15:00–17:00 at the school, and with
 //                                            the user's Reminders (edit_reminders offered) a
@@ -481,8 +483,17 @@ async function respond(req: Request, body: any): Promise<Response> {
     });
   }
 
+  // The pages a device sent for view_knowledge_pages (a message of their own after the result).
+  if (last.role === "user" && textOf(last.content).startsWith("[Pages for view_knowledge_pages")) {
+    const n = Array.isArray(last.content) ? last.content.filter((p) => p.type === "image_url").length : 0;
+    return reply(stream, `Saw ${n} pages: ${textOf(last.content).split("\n")[0]}`);
+  }
   if (last.role === "tool") {
     const result = JSON.parse(textOf(last.content) || "{}");
+    const viewed = messages.flatMap((m) => m.tool_calls ?? []).find((c) => c.id === last.tool_call_id);
+    if (viewed?.function.name === "view_knowledge_pages") {
+      return reply(stream, `No pages: ${result.declined ? "declined" : result.skipped ? "skipped" : result.error}`);
+    }
     if (result.error) return reply(stream, `That didn't work: ${result.error}`);
     const called = messages.flatMap((m) => m.tool_calls ?? []).find((c) => c.id === last.tool_call_id);
     const device = called?.function.name === "edit_apple_calendar"
@@ -657,6 +668,13 @@ async function respond(req: Request, body: any): Promise<Response> {
   const note = /^note (\S+): (.+)$/is.exec(text);
   if (note && tools.has("edit_knowledge_notes")) {
     return reply(stream, "", { name: "edit_knowledge_notes", args: { ops: [{ op: "create", path: note[1], content: note[2] }] } });
+  }
+  const look = /^look at (\S+)(?: pages (\S+))?$/i.exec(text);
+  if (look && tools.has("view_knowledge_pages")) {
+    return reply(stream, "", {
+      name: "view_knowledge_pages",
+      args: { documentId: look[1], ...(look[2] ? { pages: look[2].split(",") } : {}) },
+    });
   }
   const append = /^append to (\S+): (.+)$/is.exec(text);
   if (append && tools.has("edit_knowledge_notes")) {

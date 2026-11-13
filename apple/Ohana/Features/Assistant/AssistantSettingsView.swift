@@ -2,7 +2,8 @@ import SwiftUI
 
 /// Settings → Assistant (web: components/assistant/ai-settings.tsx): the family's
 /// OpenAI-compatible AI (provider, key, model, a test; the URL, context window and the model for
-/// recipe photos under Advanced), the web search, and whether the assistant may change things. Editors only; viewers see who can set it up. Keys are write-only: the server only
+/// recipe photos under Advanced), the web search, whether the assistant may change things and how
+/// many chats each member keeps. Editors only; viewers see who can set it up. Keys are write-only: the server only
 /// says that one is stored (and its last four characters); a blank field keeps it.
 struct AssistantSettingsView: View {
     /// Shown as a sheet (from the chat): Cancel asks before unsaved changes are dropped.
@@ -60,6 +61,9 @@ private struct AssistantSettingsViewerView: View {
                     }
                     if settings.configured, !settings.model.isEmpty {
                         LabeledContent("Model") { Text(verbatim: settings.model) }
+                    }
+                    if let limit = settings.chatLimit {
+                        LabeledContent("Chats kept") { Text(AssistantChatRetention.label(limit)) }
                     }
                 }
             } footer: {
@@ -136,6 +140,7 @@ private struct AssistantSettingsForm: View {
             searchSection
             Section { AssistantMemoryLink() }
             permissionsSection
+            historySection
             if !saveInToolbar {
                 Section {
                     HStack {
@@ -344,6 +349,29 @@ private struct AssistantSettingsForm: View {
         }
     }
 
+    /// How many chats each member keeps (saved at once, like the permissions); not on an older
+    /// server, which doesn't have the setting.
+    @ViewBuilder
+    private var historySection: some View {
+        if let limit = settings.chatLimit {
+            Section {
+                Picker("Chats kept", selection: Binding(
+                    get: { limit },
+                    set: { value in Task { await save(.init(chatLimit: value)) } }
+                )) {
+                    ForEach(AssistantChatRetention.choices(including: limit), id: \.self) { count in
+                        Text(AssistantChatRetention.label(count)).tag(count)
+                    }
+                }
+                .disabled(busy != nil)
+            } header: {
+                Text("Chat history")
+            } footer: {
+                Text("Each member keeps this many of their newest chats; older ones are deleted, with the document pages sent in them.")
+            }
+        }
+    }
+
     private var permissionsSection: some View {
         Section {
             Toggle(isOn: Binding(
@@ -394,6 +422,7 @@ private struct AssistantSettingsForm: View {
         if let patch {
             if patch.apiKey != nil { body.apiKey = patch.apiKey }
             if patch.allowWrites != nil { body.allowWrites = patch.allowWrites }
+            if patch.chatLimit != nil { body.chatLimit = patch.chatLimit }
         }
         do {
             let result = try await family.api.send(.put, "/ai/settings", body: body, as: AssistantSettings.self)
@@ -438,6 +467,21 @@ private struct AssistantSettingsForm: View {
     static func unique(_ list: [String]) -> [String] {
         var seen = Set<String>()
         return list.filter { seen.insert($0).inserted }
+    }
+}
+
+/// How many chats each member keeps (`chatLimit`): the choices of the settings.
+enum AssistantChatRetention {
+    /// The server's default is 50.
+    static let presets = [10, 20, 50, 100, 200, 500]
+
+    /// The presets, plus `count` when it's another value (set through the API).
+    static func choices(including count: Int) -> [Int] {
+        presets.contains(count) ? presets : (presets + [count]).sorted()
+    }
+
+    static func label(_ count: Int) -> String {
+        String(localized: "Last \(count) chats")
     }
 }
 

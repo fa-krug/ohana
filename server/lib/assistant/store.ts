@@ -8,6 +8,9 @@ import { and, asc, desc, eq, gt, inArray, isNull, lt, or, sql } from "drizzle-or
 import type { Db } from "@/lib/db";
 import { aiSettings, chatItems, chatMessages, chats } from "@/lib/db/schema";
 
+/** Chats each member keeps in a family unless the family sets another number. */
+export const DEFAULT_CHAT_LIMIT = 50;
+
 export type SearchProvider = "none" | "tavily" | "brave";
 export const SEARCH_PROVIDERS: SearchProvider[] = ["none", "tavily", "brave"];
 
@@ -24,6 +27,8 @@ export interface AiSettingsRow {
   context_window: number;
   /** The model for recipe photos (meals); "" = none. */
   image_model: string;
+  /** Chats each member keeps in the family; the oldest go (lib/assistant/retention.ts). */
+  chat_limit: number;
   updated_at: string;
 }
 
@@ -186,6 +191,7 @@ function settingsRow(r: SettingsRecord): AiSettingsRow {
     allow_writes: r.allowWrites,
     context_window: r.contextWindow,
     image_model: r.imageModel,
+    chat_limit: r.chatLimit,
     updated_at: r.updatedAt.toISOString(),
   };
 }
@@ -228,6 +234,7 @@ export class DrizzleAssistantStore implements AssistantStore {
       allowWrites: row.allow_writes,
       contextWindow: row.context_window,
       imageModel: row.image_model ?? "",
+      chatLimit: row.chat_limit ?? DEFAULT_CHAT_LIMIT,
       updatedAt: date(row.updated_at),
     };
     this.db

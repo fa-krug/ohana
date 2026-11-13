@@ -5599,7 +5599,7 @@ paths:
       tags: [Assistant]
       operationId: listChats
       summary: The caller's chats in the family (newest first)
-      description: Chats are personal; at most 100 per user and family are kept.
+      description: Chats are personal; each user keeps their newest ones per family (`chatLimit` of the AI settings, 50 by default).
       x-ohana-role: viewer
       responses:
         "200":
@@ -6026,6 +6026,85 @@ paths:
                         Required when `applied` is true: one per op, in order (a missing one
                         counts as failed, extra ones are ignored).
                       items: {$ref: "#/components/schemas/RemindersResult"}
+      responses:
+        "200": {$ref: "#/components/responses/ChatStream"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /api/v1/families/{familyId}/ai/chats/{chatId}/pages:
+    put:
+      tags: [Assistant]
+      operationId: putChatPage
+      summary: Upload a page of the document the assistant asked to look at
+      description: >-
+        For a waiting `pages` item (`view_knowledge_pages`): page `page` of the document as the
+        client rendered it from the family's knowledge folder on the device, an upright JPEG of
+        at most 4 MB (the app: at most 1600 px). Sent again, it replaces the one before. The
+        server keeps it as a file with the chat (deleted with the chat) and never serves it. 409
+        when no `pages` item with the id `call` waits; 400 for a page it didn't ask for.
+      x-ohana-role: viewer
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+        - $ref: "#/components/parameters/ChatId"
+        - {name: call, in: query, required: true, schema: {type: string}, description: "The `pages` item's id."}
+        - {name: page, in: query, required: true, schema: {type: integer, minimum: 1}}
+      requestBody:
+        required: true
+        content:
+          image/jpeg:
+            schema: {type: string, format: binary}
+      responses:
+        "200":
+          description: Kept.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: {type: boolean, const: true}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+        "413": {$ref: "#/components/responses/PayloadTooLarge"}
+        "415":
+          description: The body isn't `image/jpeg`.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+    post:
+      tags: [Assistant]
+      operationId: answerPages
+      summary: Report the pages sent for the assistant to look at (streams the rest of the turn)
+      description: >-
+        For a waiting `pages` item: `id` is its id. `sent` lists the pages uploaded with `PUT
+        …/pages` (only those the item asked for and that were uploaded count); `declined: true`
+        means the user didn't want them sent; `error` says why the device couldn't send them (or
+        some of them). The turn goes on: the tool's result says which pages came, and they follow
+        as images in a message of their own that the model gets (the newest such message
+        always whole, older images only while there are few). 409 when that item doesn't wait any
+        more.
+      x-ohana-role: viewer
+      parameters:
+        - $ref: "#/components/parameters/FamilyId"
+        - $ref: "#/components/parameters/ChatId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/ChatContextInput"
+                - type: object
+                  required: [id]
+                  properties:
+                    id: {type: string}
+                    sent:
+                      type: array
+                      items: {type: integer, minimum: 1}
+                    declined: {type: boolean}
+                    error: {type: string, maxLength: 500}
       responses:
         "200": {$ref: "#/components/responses/ChatStream"}
         "400": {$ref: "#/components/responses/BadRequest"}
@@ -8965,6 +9044,7 @@ components:
         allowWrites: {type: boolean, description: "The assistant may change data (for editors)."}
         contextWindow: {type: integer, description: "Tokens; 0 = ask the endpoint."}
         imageModel: {type: string, description: '"" = no recipe photos.'}
+        chatLimit: {type: integer, description: "How many of their newest chats each member keeps (default 50)."}
         serverReady: {type: boolean}
     AiSettingsViewer:
       type: object
@@ -8975,6 +9055,7 @@ components:
         canEdit: {type: boolean, const: false}
         model: {type: string}
         allowWrites: {type: boolean, const: false}
+        chatLimit: {type: integer, description: "How many of their newest chats each member keeps."}
         serverReady: {type: boolean}
     AiSettingsInput:
       type: object
@@ -8987,6 +9068,14 @@ components:
         searchKey: {type: string, maxLength: 1000}
         allowWrites: {type: boolean}
         contextWindow: {type: integer, description: "0 (automatic) or 1000 to 10 000 000 tokens."}
+        chatLimit:
+          type: integer
+          minimum: 5
+          maximum: 1000
+          description: >-
+            How many of their newest chats each member keeps in the family (default 50). A new chat
+            deletes the member's oldest beyond it; saving a lower number deletes every member's
+            older chats at once (running ones stay). Their page images go with them.
     ChatPage:
       type: string
       enum: [overview, calendar, finance, meals, appointments, chores, settings]
@@ -9301,6 +9390,45 @@ components:
                   required: [applied]
                   properties:
                     applied: {type: boolean, const: false}
+            skipped: {type: boolean}
+        - type: object
+          title: pages
+          description: >-
+            Pages of a knowledge document the assistant wants to look at (`view_knowledge_pages`,
+            only offered while the request names the family's knowledge folder linked on the
+            device). The turn waits for the client, which has the file: it renders the pages,
+            uploads each (`PUT …/pages`) and answers (`POST …/pages`). With `auto` (the family's
+            *Read with the assistant* is on) the app sends them without asking; else it asks the
+            user first. A new message instead marks it `skipped`.
+          required: [kind, id, summary, documentId, name, path, hash, pages, total, auto]
+          properties:
+            kind: {type: string, const: pages}
+            id: {type: string}
+            summary: {type: string, example: "Look at pages 1–3 of “Befund.pdf”"}
+            documentId: {type: string}
+            name: {type: string}
+            path: {type: string, description: "Relative to the knowledge folder, NFC, \"/\"-separated."}
+            hash: {type: string, description: "The document's SHA-256 as indexed."}
+            pages:
+              type: array
+              description: The pages to send, from 1, in order (at most 30; fewer for a small context window).
+              items: {type: integer, minimum: 1}
+            total: {type: integer, description: "The document's pages as indexed (0: not known yet)."}
+            auto: {type: boolean}
+            answer:
+              oneOf:
+                - type: object
+                  required: [sent]
+                  properties:
+                    sent: {type: array, items: {type: integer}}
+                - type: object
+                  required: [declined]
+                  properties:
+                    declined: {type: boolean, const: true}
+                - type: object
+                  required: [error]
+                  properties:
+                    error: {type: string}
             skipped: {type: boolean}
         - type: object
           title: compacted

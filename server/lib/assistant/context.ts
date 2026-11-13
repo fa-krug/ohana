@@ -6,6 +6,7 @@
 import { HttpError } from "@/lib/api/http";
 import type { NetOptions } from "./net";
 import { type ChatMessage, type ContentPart, type Provider, streamChat } from "./provider";
+import { isPagesMessage } from "./page-images";
 
 /** Tokens a model takes when the endpoint doesn't say (and no window is set). */
 export const DEFAULT_WINDOW = 128_000;
@@ -61,10 +62,24 @@ export function viewOf(stored: StoredMessage[]): ChatMessage[] {
     const mark = stored[at] as SummaryMark;
     out = [summaryMessage(mark), ...plain(stored.slice(mark.from))];
   }
+  return newestImages(out);
+}
+
+/** The messages with only the newest images: all of the newest message that has any (a document's
+ *  pages, view_knowledge_pages), then older ones while there are at most MAX_IMAGES; the others
+ *  become a short text. */
+export function newestImages(messages: ChatMessage[]): ChatMessage[] {
+  const out = [...messages];
   let images = 0;
+  let newest = true;
   for (let i = out.length - 1; i >= 0; i--) {
     const m = out[i];
-    if (!Array.isArray(m.content)) continue;
+    if (!Array.isArray(m.content) || !m.content.some((p) => p.type === "image_url")) continue;
+    if (newest) {
+      newest = false;
+      images += m.content.filter((p) => p.type === "image_url").length;
+      continue;
+    }
     out[i] = {
       ...m,
       content: m.content.map((p): ContentPart =>
@@ -177,8 +192,8 @@ export async function compact(opts: {
   }
   if (k <= first) return null;
   const folded = messages.slice(first, k);
-  // The user's latest message stays word for word.
-  const u = messages.findLastIndex((m, i) => i >= first && m.role === "user");
+  // The user's latest message stays word for word (not the pages a device sent for a tool).
+  const u = messages.findLastIndex((m, i) => i >= first && m.role === "user" && !isPagesMessage(m));
   const request = u >= k ? undefined : u >= first ? messages[u].content : summary?.request;
 
   const names = new Map<string, string>();

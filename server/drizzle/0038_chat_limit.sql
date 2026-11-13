@@ -1,0 +1,1 @@
+ALTER TABLE `ai_settings` ADD `chat_limit` integer DEFAULT 50 NOT NULL;

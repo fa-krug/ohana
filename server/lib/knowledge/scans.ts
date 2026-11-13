@@ -46,7 +46,7 @@ function flag(v: string | null): boolean {
 
 /** The request's body as bytes: a JPEG of at most MAX_SCAN_BYTES (413 above, 415 for another
  *  type, 400 for something that isn't a JPEG). */
-async function readJpeg(req: Request): Promise<Buffer> {
+export async function readJpeg(req: Request): Promise<Buffer> {
   const type = (req.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
   if (type !== "image/jpeg") throw new HttpError(415, "The page must be sent as image/jpeg");
   const tooLarge = () => new HttpError(413, `The picture is too large (max. ${MAX_SCAN_BYTES / 1024 / 1024} MB)`);

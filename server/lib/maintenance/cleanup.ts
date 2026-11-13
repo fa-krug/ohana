@@ -8,12 +8,14 @@ import { pruneMissingDocuments } from "@/lib/knowledge/documents";
 import { pruneScans } from "@/lib/knowledge/scan-files";
 import { moduleEnabled } from "@/lib/server-info";
 import { pruneSyncs } from "@/lib/finance/bank/queue";
+import { pruneChatFiles } from "@/lib/assistant/page-images";
 
 /** Removes expired sessions, setup links, invites, old rate-limit windows, the week ahead's
  *  dismissals of days gone by, recipe imports that failed over a week ago, bank syncs that
  *  ended over a day ago, knowledge documents whose file has been gone for 30 days (not
  *  while the module is off: its data stays) and the knowledge base's page scans (their pictures
- *  too) older than 7 days (always: they are only on their way to the AI). */
+ *  too) older than 7 days (always: they are only on their way to the AI) and the page images of
+ *  the assistant's chats that are gone. */
 export function cleanup(
   db: Db,
   now: Date,
@@ -26,6 +28,7 @@ export function cleanup(
   bankSyncs: number;
   documents: number;
   scans: number;
+  chatFiles: number;
 } {
   return {
     tokens: deleteExpiredTokens(db, now),
@@ -36,5 +39,6 @@ export function cleanup(
     bankSyncs: pruneSyncs(db, now),
     documents: moduleEnabled("knowledge") ? pruneMissingDocuments(db, now) : 0,
     scans: pruneScans(db, now),
+    chatFiles: pruneChatFiles(db),
   };
 }
