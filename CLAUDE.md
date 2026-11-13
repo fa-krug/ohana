@@ -387,11 +387,11 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   text `PAGES_HEAD`, `isPagesMessage`; compaction never takes it for the request) whose image parts
   are `media:<path>`, read into data URLs by the `Runner` only for the request (`withPageImages`);
   `viewOf` keeps every image of the newest message with images, older ones up to 8. The files go with
-  the chat (DELETE, `MAX_CHATS`, max age) and `cleanup`'s `pruneChatFiles` sweeps folders of chats
-  that are gone. **Chat max age** (`retention.ts`, migration `0038`): `ai_settings.chat_max_age_days`
-  (`PUT /ai/settings` `chatMaxAgeDays`, 0 = keep, ≤ 3650; viewers see it), `cleanup` deletes idle
-  chats not updated for longer (not with the assistant off); the app's Settings → Assistant → Chat
-  history. **Suggestions** (`tools/suggestions.ts`): from a letter, school note or invitation (the
+  the chat (DELETE, the chat limit) and `cleanup`'s `pruneChatFiles` sweeps folders of chats that
+  are gone. **Chat limit** (`retention.ts`, migration `0038`): `ai_settings.chat_limit` (default
+  `DEFAULT_CHAT_LIMIT` 50, `PUT /ai/settings` `chatLimit` 5–1000; viewers see it): each member keeps
+  their newest chats in the family (`trimChats`: when they start one, and for everyone when the limit
+  is saved; running chats stay); the app's Settings → Assistant → Chat history. **Suggestions** (`tools/suggestions.ts`): from a letter, school note or invitation (the
   app scans it and sends only its text, as a text attachment) `suggest_items` offers events
   (checked with `lib/calendar/events.ts` `checkEventFields`, so `POST /events` takes them),
   tasks and deadlines (Reminders, so only with the `reminders` context; `list` null = the

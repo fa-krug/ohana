@@ -47,7 +47,7 @@ describe("cleanup", () => {
     const later = new Date(NOW.getTime() + INVITE_TTL_MS + 60_000);
     expect(cleanup(db, later)).toEqual({
       tokens: 1, invites: 1, rateLimits: 0, dismissals: 0, imports: 0, bankSyncs: 0, documents: 0, scans: 0,
-      chats: 0, chatFiles: 0,
+      chatFiles: 0,
     });
   });
 });

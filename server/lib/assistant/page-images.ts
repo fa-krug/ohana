@@ -3,7 +3,7 @@
 // the tool call's id). The chat's messages refer to them as "media:<path>" image parts, so the
 // database keeps no image data; the worker reads them into data URLs only for the model's request
 // (`withPageImages`). Never served. They go with their chat: when it is deleted (by the user,
-// MAX_CHATS, the family's max age) and by the cleanup (`pruneChatFiles`: folders of chats that are
+// the family's chat limit) and by the cleanup (`pruneChatFiles`: folders of chats that are
 // gone, after the family or the user was deleted).
 
 import { createHash } from "node:crypto";

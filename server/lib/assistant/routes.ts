@@ -39,7 +39,16 @@ import { letterInput, readLetter } from "./letter";
 import { handleMemories, listMemories, memoriesForPrompt } from "./memories";
 import { checkUrl, type NetOptions } from "./net";
 import { contextWindow, listModels, type Provider, streamChat } from "./provider";
-import { type AiSettingsRow, type AssistantStore, type ChatRow, DrizzleAssistantStore, SEARCH_PROVIDERS, type SearchProvider } from "./store";
+import {
+  type AiSettingsRow,
+  type AssistantStore,
+  type ChatRow,
+  DEFAULT_CHAT_LIMIT,
+  DrizzleAssistantStore,
+  SEARCH_PROVIDERS,
+  type SearchProvider,
+} from "./store";
+import { trimChats } from "./retention";
 
 export interface AiEnv extends ChatEnv {
   db: Db;
@@ -76,8 +85,9 @@ export function defaultAiEnv(db: Db): AiEnv {
 const MIN_WINDOW = 1000;
 const MAX_WINDOW = 10_000_000;
 
-/** The longest max age of chats a family can set (days); 0 keeps them. */
-const MAX_CHAT_AGE_DAYS = 3650;
+/** How many chats each member may keep, as a family sets it. */
+const MIN_CHAT_LIMIT = 5;
+const MAX_CHAT_LIMIT = 1000;
 
 /** Transactions one categorize request sends to the model. */
 const MAX_CATEGORIZE = 200;
@@ -94,7 +104,7 @@ function emptyRow(familyId: string): AiSettingsRow {
     allow_writes: true,
     context_window: 0,
     image_model: "",
-    chat_max_age_days: 0,
+    chat_limit: DEFAULT_CHAT_LIMIT,
     updated_at: new Date().toISOString(),
   };
 }
@@ -128,7 +138,7 @@ function publicSettings(env: AiEnv, row: AiSettingsRow, viewer = false) {
       canEdit: false,
       model: row.model,
       allowWrites: false,
-      chatMaxAgeDays: row.chat_max_age_days ?? 0,
+      chatLimit: row.chat_limit ?? DEFAULT_CHAT_LIMIT,
       serverReady: true,
     };
   }
@@ -145,7 +155,7 @@ function publicSettings(env: AiEnv, row: AiSettingsRow, viewer = false) {
     allowWrites: row.allow_writes,
     contextWindow: row.context_window ?? 0,
     imageModel: row.image_model ?? "",
-    chatMaxAgeDays: row.chat_max_age_days ?? 0,
+    chatLimit: row.chat_limit ?? DEFAULT_CHAT_LIMIT,
     // Ohana always has a key to seal with (ENCRYPTION_KEY, else derived from AUTH_SECRET).
     serverReady: true,
   };
@@ -211,7 +221,7 @@ async function getSettings({ load }: Ctx, env: AiEnv) {
 
 /** PUT /ai/settings {baseUrl, apiKey ("" removes it), model, searchProvider, searchKey,
  *  allowWrites, contextWindow (tokens, 0: from the endpoint), imageModel ("" = no recipe
- *  photos), chatMaxAgeDays (chats untouched for longer are deleted; 0: kept)}: only the fields given change; another baseUrl without an apiKey removes the key. Saving lets the knowledge base's failed cards be made
+ *  photos), chatLimit (chats each member keeps; lowering it deletes the older ones at once)}: only the fields given change; another baseUrl without an apiKey removes the key. Saving lets the knowledge base's failed cards be made
  *  again. */
 async function putSettings({ req, load }: Ctx, env: AiEnv) {
   const { family } = await load("edit");
@@ -259,15 +269,17 @@ async function putSettings({ req, load }: Ctx, env: AiEnv) {
     }
     row.context_window = n;
   }
-  if (body.chatMaxAgeDays !== undefined) {
-    const n = body.chatMaxAgeDays;
-    if (typeof n !== "number" || !Number.isInteger(n) || n < 0 || n > MAX_CHAT_AGE_DAYS) {
-      throw new HttpError(400, `chatMaxAgeDays must be 0 (keep) or 1 to ${MAX_CHAT_AGE_DAYS} days`);
+  if (body.chatLimit !== undefined) {
+    const n = body.chatLimit;
+    if (typeof n !== "number" || !Number.isInteger(n) || n < MIN_CHAT_LIMIT || n > MAX_CHAT_LIMIT) {
+      throw new HttpError(400, `chatLimit must be ${MIN_CHAT_LIMIT} to ${MAX_CHAT_LIMIT} chats`);
     }
-    row.chat_max_age_days = n;
+    row.chat_limit = n;
   }
   row.updated_at = new Date().toISOString();
   await env.store.saveAiSettings(row);
+  // A lower limit takes the members' older chats at once.
+  trimChats(env.db, family.id, row.chat_limit);
   // The knowledge base's failed cards get another go: the settings may be fixed now.
   retryFailedCards(env.db, family.id);
   return json(publicSettings(env, row), 200, NO_STORE);

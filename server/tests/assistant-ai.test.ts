@@ -107,7 +107,7 @@ describe("AI settings", () => {
       allowWrites: false,
       contextWindow: 0,
       imageModel: "",
-      chatMaxAgeDays: 0,
+      chatLimit: 50,
       serverReady: true,
     });
     const row = (await t.store.getAiSettings(t.familyId))!;
@@ -123,7 +123,7 @@ describe("AI settings", () => {
       canEdit: false,
       model: "mock-large",
       allowWrites: false,
-      chatMaxAgeDays: 0,
+      chatLimit: 50,
       serverReady: true,
     });
     expect((await t.view("PUT", `${t.ai}/settings`, { model: "x" })).status).toBe(403);

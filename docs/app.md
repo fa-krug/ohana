@@ -198,9 +198,9 @@ while *Read with the assistant* is on, otherwise after you tap **Send Pages** on
 chat. Without a page number it sends the whole document (up to 30 pages at a time, fewer for a
 model with a small context window).
 
-Chats stay until you delete them. Editors can have them deleted after 30 or 90 days, 6 months or
-a year without use (*Settings → Assistant → Chat history*), for the whole family; the pages sent in
-a chat go with it.
+Each member keeps their newest 50 chats; starting another deletes the oldest. Editors set the
+number for the whole family in *Settings → Assistant → Chat history*. The pages sent in a chat go
+with it.
 
 ## Letters and scanning
 

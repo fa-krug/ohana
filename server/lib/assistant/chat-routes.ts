@@ -70,6 +70,7 @@ import { withoutMarkers } from "./sources";
 import { deleteChatFiles, PAGES_HEAD, pageFileExists, pageFilePath, pagePart, writePageFile } from "./page-images";
 import { pagesText } from "./tools/knowledge-pages";
 import { readJpeg } from "@/lib/knowledge/scans";
+import { chatLimitOf, trimChats } from "./retention";
 import type { ChatMessage, ContentPart } from "./provider";
 import type { AppleCalendarOp, MemoryOp, NoteOp, ReminderOp, SuggestionOp } from "./tools";
 import type { AssistantStore, ChatRow } from "./store";
@@ -80,8 +81,6 @@ const POLL_MS = 500;
 const SEEN_MS = 15_000;
 /** A follower's stream ends after this; the app asks again. */
 const STREAM_MS = 100_000;
-/** Chats per user and family; the oldest go. */
-const MAX_CHATS = 100;
 const MAX_TITLE = 60;
 const MAX_TEXT = 20_000;
 const MAX_ATTACHMENTS = 4;
@@ -322,12 +321,8 @@ class ChatRoutes {
         updated_at: now,
       };
       await store.createChat(chat);
-      // Only the newest chats are kept.
-      const all = await store.listChats(family.id, chat.user_id);
-      for (const old of all.slice(MAX_CHATS)) {
-        await store.deleteChat(old.id);
-        deleteChatFiles(family.id, old.id);
-      }
+      // Only the member's newest chats are kept (the family's chat limit).
+      trimChats(this.ctx.db, family.id, chatLimitOf(this.ctx.db, family.id), chat.user_id);
     } else {
       const own = await this.ownChat(id);
       await this.checkSetUp(own.family.id);

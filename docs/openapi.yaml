@@ -5599,7 +5599,7 @@ paths:
       tags: [Assistant]
       operationId: listChats
       summary: The caller's chats in the family (newest first)
-      description: Chats are personal; at most 100 per user and family are kept.
+      description: Chats are personal; each user keeps their newest ones per family (`chatLimit` of the AI settings, 50 by default).
       x-ohana-role: viewer
       responses:
         "200":
@@ -9044,7 +9044,7 @@ components:
         allowWrites: {type: boolean, description: "The assistant may change data (for editors)."}
         contextWindow: {type: integer, description: "Tokens; 0 = ask the endpoint."}
         imageModel: {type: string, description: '"" = no recipe photos.'}
-        chatMaxAgeDays: {type: integer, description: "Chats untouched for longer are deleted (with their page images); 0 = kept."}
+        chatLimit: {type: integer, description: "How many of their newest chats each member keeps (default 50)."}
         serverReady: {type: boolean}
     AiSettingsViewer:
       type: object
@@ -9055,7 +9055,7 @@ components:
         canEdit: {type: boolean, const: false}
         model: {type: string}
         allowWrites: {type: boolean, const: false}
-        chatMaxAgeDays: {type: integer, description: "Chats untouched for longer are deleted; 0 = kept."}
+        chatLimit: {type: integer, description: "How many of their newest chats each member keeps."}
         serverReady: {type: boolean}
     AiSettingsInput:
       type: object
@@ -9068,13 +9068,14 @@ components:
         searchKey: {type: string, maxLength: 1000}
         allowWrites: {type: boolean}
         contextWindow: {type: integer, description: "0 (automatic) or 1000 to 10 000 000 tokens."}
-        chatMaxAgeDays:
+        chatLimit:
           type: integer
-          minimum: 0
-          maximum: 3650
+          minimum: 5
+          maximum: 1000
           description: >-
-            Days: the family's chats nobody touched for longer are deleted by the worker (running
-            ones once their turn is over); 0 keeps them.
+            How many of their newest chats each member keeps in the family (default 50). A new chat
+            deletes the member's oldest beyond it; saving a lower number deletes every member's
+            older chats at once (running ones stay). Their page images go with them.
     ChatPage:
       type: string
       enum: [overview, calendar, finance, meals, appointments, chores, settings]

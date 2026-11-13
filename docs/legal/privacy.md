@@ -78,9 +78,9 @@ Ohana is self-hosted. Everything you enter in the app (calendar, finances, recip
 chores, appointments, chats with the assistant, account data) is sent **directly to the Ohana server
 you connect the app to**, over the address you enter, and stored there. The **operator of that
 server** (often you or someone in your family) decides how it is run and is responsible for the
-data on it. We have no access to servers run by others. Chats with the assistant stay on the
-server until you delete them, unless an editor of your family has them deleted after a while
-(*Settings → Assistant → Chat history*).
+data on it. We have no access to servers run by others. The server keeps each member's newest
+chats with the assistant (50 unless an editor of your family sets another number in *Settings →
+Assistant → Chat history*) and deletes older ones; you can delete a chat yourself at any time.
 
 What a server sends to other services depends on what its families set up, for example:
 

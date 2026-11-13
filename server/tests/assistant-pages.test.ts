@@ -2,7 +2,7 @@
 // document's pages as pictures. The files are on the user's device, so it waits like the notes
 // tool: the app uploads each page (PUT …/pages?call=&page=), then answers (POST …/pages), and the
 // pages reach the model as images in a message of their own, kept as files (page-images.ts). And
-// the chats' max age (retention.ts).
+// how many chats each member keeps (retention.ts).
 
 import { mkdtempSync, rmSync, existsSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { NetOptions } from "@/lib/assistant/net";
 import { estimateTokens, newestImages, viewOf } from "@/lib/assistant/context";
 import { deleteChatFiles, isPagesMessage, pageFilePath, pruneChatFiles, withPageImages, writePageFile } from "@/lib/assistant/page-images";
-import { pruneOldChats } from "@/lib/assistant/retention";
+import { chatLimitOf, trimChats } from "@/lib/assistant/retention";
 import { runTool, type ToolContext, TOOLS, toolsFor } from "@/lib/assistant/tools";
 import { pagesFor, pagesSummary, resolvePages } from "@/lib/assistant/tools/knowledge-pages";
 import { DrizzleCalendarStore } from "@/lib/calendar/store";
@@ -20,7 +20,6 @@ import type { Db } from "@/lib/db";
 import { chats, kbDocuments, kbFolders } from "@/lib/db/schema";
 import { DrizzleFinanceStore } from "@/lib/finance/store";
 import { ensureFolder, replaceFolder } from "@/lib/knowledge/folders";
-import { cleanup } from "@/lib/maintenance/cleanup";
 import { type AssistantTest, assistantTest, BASE, configure, net } from "@/lib/test/assistant";
 import { NOW } from "@/lib/test/factories";
 import { eq } from "drizzle-orm";
@@ -342,50 +341,54 @@ describe("the page images the model gets", () => {
   });
 });
 
-describe("the chats' max age", () => {
-  it("is a setting of the family's assistant, for editors", async () => {
+describe("the chats each member keeps", () => {
+  it("is a setting of the family's assistant, for editors: 50 unless set", async () => {
     const t = assistantTest({ worker: false });
     current.push(t);
-    expect((await configure(t)).chatMaxAgeDays).toBe(0);
-    expect((await t.call("PUT", `${t.ai}/settings`, { chatMaxAgeDays: 30 })).data.chatMaxAgeDays).toBe(30);
-    expect((await t.call("GET", `${t.ai}/settings`)).data.chatMaxAgeDays).toBe(30);
-    expect((await t.view("GET", `${t.ai}/settings`)).data.chatMaxAgeDays).toBe(30);
-    expect((await t.view("PUT", `${t.ai}/settings`, { chatMaxAgeDays: 0 })).status).toBe(403);
-    for (const bad of [-1, 1.5, "30", 3651]) {
-      expect((await t.call("PUT", `${t.ai}/settings`, { chatMaxAgeDays: bad })).status).toBe(400);
+    expect((await configure(t)).chatLimit).toBe(50);
+    expect((await t.call("PUT", `${t.ai}/settings`, { chatLimit: 20 })).data.chatLimit).toBe(20);
+    expect((await t.call("GET", `${t.ai}/settings`)).data.chatLimit).toBe(20);
+    expect((await t.view("GET", `${t.ai}/settings`)).data.chatLimit).toBe(20);
+    expect((await t.view("PUT", `${t.ai}/settings`, { chatLimit: 100 })).status).toBe(403);
+    for (const bad of [0, 4, 1.5, "30", 1001]) {
+      expect((await t.call("PUT", `${t.ai}/settings`, { chatLimit: bad })).status).toBe(400);
     }
-    expect((await t.call("PUT", `${t.ai}/settings`, { chatMaxAgeDays: 0 })).data.chatMaxAgeDays).toBe(0);
   });
 
-  it("deletes the chats untouched for longer, with their page images, not running ones", async () => {
+  it("keeps each member's newest chats, deleting the others with their page images, not running ones", async () => {
     const t = assistantTest({ worker: false });
     current.push(t);
-    await configure(t, { chatMaxAgeDays: 30 });
-    const day = 24 * 60 * 60 * 1000;
-    const chat = (age: number, status = "idle") => {
+    await configure(t);
+    const minute = 60_000;
+    const chat = (userId: string, age: number, status = "idle") => {
       const id = randomUUID();
-      const at = new Date(NOW.getTime() - age * day);
-      t.db.insert(chats).values({ id, familyId: t.familyId, userId: t.editor.id, status, createdAt: at, updatedAt: at }).run();
+      const at = new Date(NOW.getTime() - age * minute);
+      t.db.insert(chats).values({ id, familyId: t.familyId, userId, status, createdAt: at, updatedAt: at }).run();
       writePageFile(t.familyId, id, "call", 1, JPEG);
       return id;
     };
-    const fresh = chat(29);
-    const old = chat(31);
-    const running = chat(40, "running");
-    expect(pruneOldChats(t.db, NOW)).toBe(1);
-    const left = t.db.select({ id: chats.id }).from(chats).all().map((c) => c.id);
-    expect(left.sort()).toEqual([fresh, running].sort());
-    expect(existsSync(join(dir, "assistant", t.familyId, old))).toBe(false);
-    expect(existsSync(join(dir, "assistant", t.familyId, fresh))).toBe(true);
+    const mine = Array.from({ length: 8 }, (_, i) => chat(t.editor.id, i));
+    const running = chat(t.editor.id, 100, "running");
+    const theirs = Array.from({ length: 6 }, (_, i) => chat(t.viewer.id, i));
+    const ids = (userId: string) =>
+      t.db.select({ id: chats.id }).from(chats).where(eq(chats.userId, userId)).all().map((c) => c.id).sort();
 
-    // 0 keeps them; the module off keeps them too.
-    await t.call("PUT", `${t.ai}/settings`, { chatMaxAgeDays: 0 });
-    expect(pruneOldChats(t.db, new Date(NOW.getTime() + 1000 * day))).toBe(0);
-    await t.call("PUT", `${t.ai}/settings`, { chatMaxAgeDays: 1 });
-    process.env.DISABLED_MODULES = "assistant";
-    expect(cleanup(t.db, NOW).chats).toBe(0);
-    delete process.env.DISABLED_MODULES;
-    expect(cleanup(t.db, NOW).chats).toBe(1);
+    expect(trimChats(t.db, t.familyId, 5, t.editor.id)).toBe(3);
+    expect(ids(t.editor.id)).toEqual([...mine.slice(0, 5), running].sort());
+    expect(ids(t.viewer.id)).toHaveLength(6);
+    expect(existsSync(join(dir, "assistant", t.familyId, mine[7]))).toBe(false);
+    expect(existsSync(join(dir, "assistant", t.familyId, mine[0]))).toBe(true);
+
+    // Lowering the limit trims every member at once.
+    expect((await t.call("PUT", `${t.ai}/settings`, { chatLimit: 5 })).status).toBe(200);
+    expect(ids(t.viewer.id)).toEqual(theirs.slice(0, 5).sort());
+    expect(chatLimitOf(t.db, t.familyId)).toBe(5);
+
+    // A new chat counts: the oldest goes.
+    expect(await t.fire("POST", `${t.ai}/chats`, { text: "hello", ...CONTEXT })).toBe(200);
+    expect(ids(t.editor.id)).toHaveLength(6);
+    expect(ids(t.editor.id)).not.toContain(mine[4]);
+    expect(ids(t.editor.id)).toContain(running);
   });
 
   it("sweeps the page folders of chats that are gone", () => {

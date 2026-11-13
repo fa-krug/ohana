@@ -22,8 +22,8 @@ nonisolated struct AssistantSettings: Codable, Equatable, OffMainDecodable {
     var contextWindow: Int?
     /// The model for recipe photos; "" = none.
     var imageModel: String?
-    /// Chats untouched for longer are deleted (days); 0 or nil: kept.
-    var chatMaxAgeDays: Int?
+    /// How many chats each member keeps (the oldest go); nil from an older server (which keeps 100).
+    var chatLimit: Int?
     var serverReady: Bool?
 }
 
@@ -37,7 +37,7 @@ struct AssistantSettingsPatch: Encodable {
     var allowWrites: Bool?
     var contextWindow: Int?
     var imageModel: String?
-    var chatMaxAgeDays: Int?
+    var chatLimit: Int?
 }
 
 nonisolated struct AssistantModelList: OffMainDecodable { let models: [String] }

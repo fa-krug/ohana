@@ -6,7 +6,7 @@ import UniformTypeIdentifiers
 @testable import Ohana
 
 /// The assistant looks at a knowledge document's pages (view_knowledge_pages): the item, how it
-/// ended, rendering the pages from the folder, and the chats' max age in the settings.
+/// ended, rendering the pages from the folder, and how many chats the settings keep.
 struct AssistantPagesTests {
     static let itemsJSON = """
     {
@@ -43,12 +43,10 @@ struct AssistantPagesTests {
         #expect(AssistantPagesRequest.pagesText([1, 2, 3, 5, 7, 8]) == "1–3, 5, 7–8")
     }
 
-    @Test func offersTheChatAges() {
-        #expect(AssistantChatRetention.choices(including: 90) == [0, 30, 90, 180, 365])
-        #expect(AssistantChatRetention.choices(including: 14) == [0, 14, 30, 90, 180, 365])
-        #expect(AssistantChatRetention.label(0) == "Never")
-        #expect(AssistantChatRetention.label(30) == "After 30 days")
-        #expect(AssistantChatRetention.label(365) == "After a year")
+    @Test func offersTheChatLimits() {
+        #expect(AssistantChatRetention.choices(including: 50) == [10, 20, 50, 100, 200, 500])
+        #expect(AssistantChatRetention.choices(including: 30) == [10, 20, 30, 50, 100, 200, 500])
+        #expect(AssistantChatRetention.label(50) == "Last 50 chats")
     }
 
     // MARK: Rendering

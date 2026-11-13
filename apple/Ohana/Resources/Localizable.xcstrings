@@ -2303,36 +2303,6 @@
         }
       }
     },
-    "After %lld days": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nach %lld Tagen"
-          }
-        }
-      }
-    },
-    "After 6 months": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nach 6 Monaten"
-          }
-        }
-      }
-    },
-    "After a year": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nach einem Jahr"
-          }
-        }
-      }
-    },
     "Airplane": {
       "localizations": {
         "de": {
@@ -4107,12 +4077,12 @@
         }
       }
     },
-    "Chats nobody used for longer are deleted, with the document pages sent in them. For everyone in the family.": {
+    "Chats kept": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Chats, die länger niemand benutzt hat, werden gelöscht, mit den darin gesendeten Dokumentseiten. Für alle in der Familie."
+            "value": "Behaltene Chats"
           }
         }
       }
@@ -5819,16 +5789,6 @@
         }
       }
     },
-    "Delete chats": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chats löschen"
-          }
-        }
-      }
-    },
     "Delete event": {
       "localizations": {
         "de": {
@@ -6595,6 +6555,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Jeder Betrag ist eine Spanne pro Monat in %@, von den unteren bis zu den oberen Haushalten; nur ein Wert ist ein einzelner Durchschnitt. Was ihr nicht wisst, bleibt leer."
+          }
+        }
+      }
+    },
+    "Each member keeps this many of their newest chats; older ones are deleted, with the document pages sent in them.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jedes Mitglied behält so viele seiner neuesten Chats; ältere werden gelöscht, mit den darin gesendeten Dokumentseiten."
           }
         }
       }
@@ -9469,6 +9439,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Laptop"
+          }
+        }
+      }
+    },
+    "Last %lld chats": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die letzten %lld Chats"
           }
         }
       }

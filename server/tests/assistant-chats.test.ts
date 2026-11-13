@@ -502,10 +502,10 @@ describe("assistant chats", () => {
     expect(shown(s.items).slice(-2)).toEqual(["user: left behind", "assistant: Mock reply: left behind"]);
   });
 
-  it("keep only the newest 100 chats per user", async () => {
+  it("keep only the newest 50 chats per user (the family's default limit)", async () => {
     const t = await setup({}, {}, false);
     const old = new Date("2026-01-01T00:00:00Z").getTime();
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 50; i++) {
       await t.store.createChat({
         id: `old-${i}`,
         family_id: t.familyId,
@@ -528,7 +528,7 @@ describe("assistant chats", () => {
     }
     expect(await t.fire("POST", `${t.ai}/chats`, { text: "new", ...CONTEXT })).toBe(200);
     const list = (await t.call("GET", `${t.ai}/chats`)).data.chats;
-    expect(list).toHaveLength(100);
+    expect(list).toHaveLength(50);
     expect(list[0].title).toBe("new");
     expect(list.some((c: { id: string }) => c.id === "old-0")).toBe(false);
   });

@@ -1,1 +1,0 @@
-ALTER TABLE `ai_settings` ADD `chat_max_age_days` integer DEFAULT 0 NOT NULL;

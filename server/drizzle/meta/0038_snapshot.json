@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "5570909c-594f-4ddb-94f6-3de5424bf4a8",
+  "id": "dac681d7-fc23-4fda-af61-3f4e5a698dba",
   "prevId": "b17097d5-f191-4185-b4be-7eb4d5a9be90",
   "tables": {
     "auth_tokens": {
@@ -4635,13 +4635,13 @@
           "autoincrement": false,
           "default": "''"
         },
-        "chat_max_age_days": {
-          "name": "chat_max_age_days",
+        "chat_limit": {
+          "name": "chat_limit",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": 0
+          "default": 50
         },
         "updated_at": {
           "name": "updated_at",

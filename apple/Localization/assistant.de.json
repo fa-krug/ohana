@@ -299,11 +299,9 @@
   "Don’t Send": "Nicht senden",
   "Send Pages": "Seiten senden",
   "Send: %@": "Senden: %@",
-  "Delete chats": "Chats löschen",
   "Chat history": "Chatverlauf",
-  "Chats nobody used for longer are deleted, with the document pages sent in them. For everyone in the family.": "Chats, die länger niemand benutzt hat, werden gelöscht, mit den darin gesendeten Dokumentseiten. Für alle in der Familie.",
-  "After 6 months": "Nach 6 Monaten",
-  "After a year": "Nach einem Jahr",
-  "After %lld days": "Nach %lld Tagen",
-  "Looking at a document’s pages": "Sieht sich Seiten eines Dokuments an"
+  "Looking at a document’s pages": "Sieht sich Seiten eines Dokuments an",
+  "Chats kept": "Behaltene Chats",
+  "Last %lld chats": "Die letzten %lld Chats",
+  "Each member keeps this many of their newest chats; older ones are deleted, with the document pages sent in them.": "Jedes Mitglied behält so viele seiner neuesten Chats; ältere werden gelöscht, mit den darin gesendeten Dokumentseiten."
 }
