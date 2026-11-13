@@ -440,7 +440,7 @@ struct ScanFilingSection: View {
             Label("Can’t be found", systemImage: "folder.badge.questionmark")
                 .foregroundStyle(.orange)
         default:
-            Text("Choose…")
+            Text("Choose")
                 .foregroundStyle(.secondary)
         }
     }

@@ -62,7 +62,7 @@
   "Couldn’t share the recipe. Try again?": "Konnte das Rezept nicht teilen. Nochmal versuchen?",
   "Create a meal plan": "Essensplan erstellen",
   "Cuisine": "Küche",
-  "Custom": "Eigenes",
+  "Custom": "Eigene",
   "Delete": "Löschen",
   "Delete Recipe": "Rezept löschen",
   "Delete recipe?": "Rezept löschen?",
@@ -174,7 +174,6 @@
     }
   },
   "Save 1 recipe": "1 Rezept speichern",
-  "Save…": "Sichern …",
   "Search ingredient…": "Zutat suchen…",
   "Search recipes": "Rezepte suchen",
   "Searing": "Anbraten",
@@ -242,7 +241,6 @@
   },
   "Reading the recipe…": "Rezept wird gelesen…",
   "Ohana couldn’t read a recipe from this page.": "Ohana konnte aus dieser Seite kein Rezept lesen.",
-  "Tags…": "Tags …",
   "Clear Filters": "Filter zurücksetzen",
-  "Manage Tags…": "Tags verwalten …"
+  "Manage Tags": "Tags verwalten"
 }

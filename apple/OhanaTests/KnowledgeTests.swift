@@ -1479,3 +1479,26 @@ struct KnowledgeScanFilingTests {
         #expect(ScanKnowledge.texts([page, ScanPage(image: LetterFilingTests.image(), lines: [])]) == ["oben\nunten", ""])
     }
 }
+
+/// Settings → Knowledge's one progress bar.
+struct KnowledgeWorkProgressTests {
+    @Test func countsWhatIsLeftAgainstTheMostThatWas() {
+        var work = KnowledgeWorkProgress()
+        #expect(!work.isActive)
+        work.update(remaining: 10)
+        #expect((work.done, work.total) == (0, 10))
+        work.update(remaining: 4)
+        #expect((work.done, work.total) == (6, 10))
+        // A little more left again: the bar goes back, the total stays.
+        work.update(remaining: 5)
+        #expect((work.done, work.total) == (5, 10))
+        // More than ever: the total grows.
+        work.update(remaining: 12)
+        #expect((work.done, work.total) == (0, 12))
+        work.update(remaining: 0)
+        #expect(!work.isActive && work.total == 0)
+        // *Read All*'s files known ahead.
+        work.update(remaining: 184, atLeast: 422)
+        #expect((work.done, work.total) == (238, 422))
+    }
+}

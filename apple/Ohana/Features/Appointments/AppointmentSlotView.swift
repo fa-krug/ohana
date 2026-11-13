@@ -116,7 +116,7 @@ struct AppointmentSlotView: View {
                 Button("Book on \(detail.slot.sourceName)") { openProvider(url) }
             }
             if canEdit {
-                Button("Mark as Booked…") { booking = true }
+                Button("Mark as Booked") { booking = true }
                     .keyboardShortcut("b", modifiers: .command)
                     .disabled(detail.booking != nil)
                 Button("Ignore This Doctor") { ignore(detail.slot) }

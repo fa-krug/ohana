@@ -225,7 +225,7 @@ enum RecipeExportFile {
     }
 }
 
-/// A finished export for "Save…".
+/// A finished export for "Save".
 struct RecipeExportDocument: FileDocument {
     static let readableContentTypes: [UTType] = [.pdf, .plainText]
     let data: Data
@@ -328,7 +328,7 @@ struct RecipeExportSheet: View {
                     if format == .markdown {
                         Button("Copy", systemImage: "doc.on.doc") { copy() }
                     }
-                    Button("Save…", systemImage: "square.and.arrow.down") { saving = true }
+                    Button("Save", systemImage: "square.and.arrow.down") { saving = true }
                         .disabled(format == .pdf && pdf == nil)
                     #endif
                     if let file {

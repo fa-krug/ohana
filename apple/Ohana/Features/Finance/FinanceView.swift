@@ -430,7 +430,7 @@ struct FinanceScreen: View {
         Menu {
             intakeItems
         } label: {
-            Label("Add from…", systemImage: "square.and.arrow.down")
+            Label("Add from", systemImage: "square.and.arrow.down")
         }
         .help("Add transactions from a receipt or the bank")
     }
@@ -448,7 +448,7 @@ struct FinanceScreen: View {
         case let .sync(account):
             Button("Sync \(account.name)", systemImage: "arrow.triangle.2.circlepath") { syncing = account }
         case let .choice(linked):
-            Button("Import CSV…", systemImage: "square.and.arrow.down") { chooseFile(receipt: false) }
+            Button("Import CSV", systemImage: "square.and.arrow.down") { chooseFile(receipt: false) }
             ForEach(linked) { account in
                 Button("Sync \(account.name)", systemImage: "arrow.triangle.2.circlepath") { syncing = account }
             }
@@ -521,21 +521,21 @@ struct FinanceScreen: View {
             Divider()
             switch store.intake {
             case .importCSV:
-                Button("Import CSV…") { chooseFile(receipt: false) }
+                Button("Import CSV") { chooseFile(receipt: false) }
                     .keyboardShortcut("i", modifiers: [.command, .shift])
             case let .sync(account):
                 Button("Sync \(account.name)") { syncing = account }
                     .keyboardShortcut("i", modifiers: [.command, .shift])
             case let .choice(linked):
-                Button("Import CSV…") { chooseFile(receipt: false) }
+                Button("Import CSV") { chooseFile(receipt: false) }
                     .keyboardShortcut("i", modifiers: [.command, .shift])
                 ForEach(linked) { account in
                     Button("Sync \(account.name)") { syncing = account }
                 }
             }
-            Button("Scan Receipt…") { scanReceipt() }
+            Button("Scan Receipt") { scanReceipt() }
                 .disabled(readingReceipt)
-            Button("Find Transfers…") { findingTransfers = true }
+            Button("Find Transfers") { findingTransfers = true }
             if family.isEnabled(.assistant) {
                 Button("Sort into Categories") { Task { await store.autoCategorize() } }
                     .disabled(store.categories.isEmpty || store.categorizing != nil)

@@ -117,7 +117,7 @@ private struct KnowledgeOriginalPresentation: ViewModifier {
                    isPresented: Binding(get: { opener.failure != nil }, set: { if !$0 { opener.failure = nil } }),
                    presenting: opener.failure) { failure in
                 if failure.offersSettings {
-                    Button("Choose Folder…") { family.open(.settings(.knowledge)) }
+                    Button("Choose Folder") { family.open(.settings(.knowledge)) }
                 }
                 Button("OK", role: .cancel) {}
             }

@@ -167,8 +167,8 @@ struct FamilyListSection: View {
                 Button("Connect your Ohana", systemImage: "server.rack") { app.showsConnect = true }
             } else {
                 Menu {
-                    Button("New…", systemImage: "plus") { creating = true }
-                    Button("Join…", systemImage: "person.badge.plus") { joining = InviteRequest() }
+                    Button("New", systemImage: "plus") { creating = true }
+                    Button("Join", systemImage: "person.badge.plus") { joining = InviteRequest() }
                 } label: {
                     Label("Add Family", systemImage: "plus")
                 }

@@ -2708,7 +2708,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [folder, counts, chunks, cards, cardCounts, scans, aiScans]
+                required: [folder, counts, chunks, cards, cardCounts, scans, aiScans, working]
                 properties:
                   folder:
                     oneOf:
@@ -2738,6 +2738,12 @@ paths:
                       app sends scans on its own only with `scans` and `aiScans`, forced ones with
                       `scans`.
                   aiScans: {type: boolean, description: "The family's setting (the folder's `aiScans`; false without a folder)."}
+                  working:
+                    type: integer
+                    description: >-
+                      Documents the worker still has to finish: pending ones, ready ones with page
+                      scans it will transcribe and, with `cards`, ready ones whose card waits. With
+                      the device's own uploads, the app's one progress bar.
         "401": {$ref: "#/components/responses/Unauthorized"}
         "404": {$ref: "#/components/responses/NotFound"}
   /api/v1/families/{familyId}/knowledge/cards:
@@ -2748,7 +2754,7 @@ paths:
       operationId: rewriteKnowledgeCards
       summary: Write the family's cards again
       description: >-
-        The app's *Read All* (with `aiScans` on): the cards of ready documents made before cards had
+        The cards of ready documents made before cards had
         keywords or values (`cardCounts.outdated`) and the failed ones, or with `all` every one, wait for
         the worker again (one AI request each). A card keeps its summary, facts, values and keywords until
         the new one is written; the worker writes new documents' cards first. 409 while no cards
@@ -2906,7 +2912,7 @@ paths:
                     folderId: {type: string}
                     reread:
                       type: boolean
-                      description: "The user asked for the file to be read again: text that differs from the stored one replaces it (default false)."
+                      description: "The user asked for the file to be read again: text that differs from the stored one replaces it (default false). With the very same text of a ready document, its card is written again (keeping the earlier one until then) while cards are made, unless `scansChecked` (its pages follow as images, whose transcriptions reset it)."
                     scansChecked:
                       type: boolean
                       description: "The device judged the pages with the family's AI scans on (default false): stored with new text, kept once given for the same file. Without it, the manifest asks once more for a PDF / image (`reader` ≥ 2) while the scans are on and can run."

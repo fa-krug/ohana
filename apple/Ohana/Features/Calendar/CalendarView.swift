@@ -490,9 +490,9 @@ struct CalendarPlannerView: View {
                 .keyboardShortcut("i", modifiers: .command)
                 .disabled(store.selection.isEmpty)
             if !store.readOnly {
-                Button("Icon & Note…") { actions.editNote() }
+                Button("Icon & Note") { actions.editNote() }
                     .disabled(store.selection.isEmpty)
-                Button("Repeat…") { actions.repeatSelection() }
+                Button("Repeat") { actions.repeatSelection() }
                     .disabled(!store.canRepeat)
                 Button("Clear Days") { store.clearSelectedDays() }
                     .disabled(store.selection.isEmpty)

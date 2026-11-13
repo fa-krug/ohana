@@ -86,7 +86,7 @@ struct CalendarHelpSheet: View {
                 Row(what: "Range", does: "Tap a start day, then “Range”, then the end day"),
                 Row(what: "Multi-select", does: "Turn it on, then tap days to add or remove them; long-press + drag adds a range"),
                 Row(what: "Type button", does: "Toggle that entry on the selected days (a day can have several)"),
-                Row(what: "Drag the ▪ handle, or “Repeat…”", does: "Repeat the selected days forwards or backwards"),
+                Row(what: "Drag the ▪ handle, or “Repeat”", does: "Repeat the selected days forwards or backwards"),
                 Row(what: "Pinch", does: "Zoom the year view in or out (iPad)"),
                 Row(what: "↶ / ↷, shake, or swipe with three fingers", does: "Undo / redo"),
             ]

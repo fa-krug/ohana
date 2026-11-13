@@ -79,14 +79,14 @@ struct AppointmentSearchDetailView: View {
             }
             .keyboardShortcut("r", modifiers: .command)
             .disabled(search.isBusy)
-            Button("Edit Search…") { editing = true }
+            Button("Edit Search") { editing = true }
                 // ⌘E is the system's "Use Selection for Find".
                 .keyboardShortcut("e", modifiers: [.command, .option])
             Button(search.enabled ? "Pause Search" : "Resume Search") {
                 perform { try await AppointmentActions.setEnabled(family, search.id, !search.enabled) }
             }
             Divider()
-            Button("Delete Search…") { confirmDelete = true }
+            Button("Delete Search") { confirmDelete = true }
                 .keyboardShortcut(.delete, modifiers: .command)
         }
     }

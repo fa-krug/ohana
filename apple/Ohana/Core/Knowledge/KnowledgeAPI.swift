@@ -70,6 +70,10 @@ nonisolated struct KnowledgeStatusInfo: Codable, Equatable, OffMainDecodable {
     /// The family's switch: the assistant reads the knowledge base (summaries, keywords, difficult
     /// scans sent by themselves).
     var aiScans: Bool?
+    /// Documents the server's worker still has to finish (read, pages transcribed, summary
+    /// written); nil from a server from before it (which also needs *Read All* to ask for the
+    /// summaries at its end).
+    var working: Int?
 }
 
 /// POST /knowledge/cards: how many cards wait for the worker now, and the counts.

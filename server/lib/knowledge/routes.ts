@@ -5,7 +5,7 @@
 // GET   /knowledge/folder                      {folder: {id, createdAt, lastManifestAt, lastManifestDevice, aiScans} | null}
 // POST  /knowledge/folder                      {replace?} → {folder} (201 when this made it; replace: a new one, the old one's documents gone)
 // PATCH /knowledge/folder                      {aiScans} → {folder} (404 without one; off: the waiting scans not asked for go)
-// GET  /knowledge/status                       {folder | null, counts: {pending, ready, failed, missing, excluded}, chunks, cards, cardCounts, scans, aiScans}
+// GET  /knowledge/status                       {folder | null, counts: {pending, ready, failed, missing, excluded}, chunks, cards, cardCounts, scans, aiScans, working}
 // POST /knowledge/cards                        {all?} → 202 {queued, cardCounts} (cards written again: the older ones and failed, or all; 409 while none are made: without the family's AI or with `aiScans` off)
 // POST /knowledge/manifest                     {folderId, device?, files: [{path, size, mtime, hash | null, tags, reader?}]} → {upload: [path]}
 // PUT  /knowledge/documents                    {folderId, path, hash, size, mtime, tags, reader?, reread?, scansChecked?, pages: [text]} → 202 {id, status}
@@ -25,6 +25,7 @@ import {
   type DocumentStatus,
   cleanPages,
   countCards,
+  countWorking,
   countDocuments,
   getDocument,
   listDocuments,
@@ -146,18 +147,23 @@ async function patchFolderRoute(ctx: Ctx, familyId: string): Promise<Response> {
 
 /** The settings screen's view: the folder (with the last manifest), documents by status, chunks,
  *  the cards by status (`cardCounts`, countCards), whether scans can be read (`scans`: the family's AI set up, the assistant on),
- *  whether the family has its AI read the knowledge base (`aiScans`) and so whether cards are made (`cards`: both). */
+ *  whether the family has its AI read the knowledge base (`aiScans`) and so whether cards are made (`cards`: both),
+ *  and how many documents the worker still has to finish (`working`, countWorking). */
 async function statusRoute(ctx: Ctx, familyId: string): Promise<Response> {
   const folder = getFolder(ctx.db, familyId);
   const { counts, chunks } = countDocuments(ctx.db, familyId);
+  const cards = cardsOn(ctx.db, familyId);
+  const scans = scansEnabled(ctx.db, familyId);
+  const aiScans = folder?.aiScans ?? false;
   return json({
     folder: folder ? folderDto(folder) : null,
     counts,
     chunks,
-    cards: cardsOn(ctx.db, familyId),
+    cards,
     cardCounts: countCards(ctx.db, familyId),
-    scans: scansEnabled(ctx.db, familyId),
-    aiScans: folder?.aiScans ?? false,
+    scans,
+    aiScans,
+    working: countWorking(ctx.db, familyId, { cards, scans, aiScans }),
   });
 }
 

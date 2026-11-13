@@ -323,7 +323,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   fields; one field "IBAN or card number"; "Balance differs: Bank … · Ohana …" when the link's
   `balanceCents` isn't the account's balance; after *Import All* the opening field takes the new
   value), `FinanceIntake` (pure: Import CSV, Sync of the shown
-  account; with Scan Receipt first they're the iPad / Mac toolbar's *Add from…* menu and the
+  account; with Scan Receipt first they're the iPad / Mac toolbar's *Add from* menu and the
   import section of the iPhone's More; the CSV sheet leaves linked accounts out; an import always
   remembers its format and sorts into categories, no toggles), `FinanceBankSyncSheet`
   (starts the sync, polls it every second: push / photoTAN / SMS TAN, then the CSV import's sort
@@ -1049,7 +1049,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `enqueue` sends no images. `KnowledgeUploadQueue` keeps the uploads on disk (by path; removed by
   path + hash; a refusal drops, an outage waits with backoff; a file changed since it was hashed
   waits for the next run, never a run at once), all in Application Support `Ohana/Knowledge/<server>/<family>/`
-  (written off the main actor, in order, nothing after *Change…* / *Remove* / sign out; removed on
+  (written off the main actor, in order, nothing after *Change* / *Remove* / sign out; removed on
   sign out / pairing and by *Remove from This Device*). `KnowledgeIndexer` (one per
   family, `FamilyContext.knowledge`, observable `phase` / `lastRun` / `unreadable` / `waiting`)
   walks, hashes, sends the manifest (with the device's name), then reads and uploads what the
@@ -1058,13 +1058,19 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `FamilyContext.indexKnowledge(force:)` for *Read Now*, `enqueue(file:pages:)` for a scan with its
   text (see Scanning). Settings → Knowledge (`Features/Knowledge/KnowledgeSettingsView.swift`, `.settings(.knowledge)`):
   the folder (`.fileImporter`, the conflict as an alert offering to use it anyway), the index
-  (`GET /knowledge/status` through `api.cached`, with the indexer's progress, waiting and unreadable
-  files, the last manifest's time and device; *Read All*'s bar; with status `cards` a bar of the
-  summaries written, reloaded every 15 s while some wait), *Read Now*, *Read All…* (confirmed:
+  (`GET /knowledge/status` through `api.cached`, with unreadable files, the last manifest's time and
+  device; one progress bar, `KnowledgeWorkProgress` kept on the indexer (`work`): what's left is the
+  device's uploads plus the status's `working` (`countWorking`: pending documents, ready ones with
+  scans the worker will transcribe, with `cards` ones whose card waits), the total the most left since
+  it was last nothing, at least *Read All*'s files; reloaded every 5 s while something's left),
+  *Read Now* and *Read All* side by side (confirmed:
   `KnowledgeIndexer.readAll(summaries:)`, a job `KnowledgeReadAll` kept in `read-all.json` beside the
   queue until done: a run that queues every hashed file with `reread`, failed reads included (its
-  `total` the bar's), then once the queue is empty `POST /knowledge/cards {all: true}` (a refusal ends
-  it); a lost connection retries with the uploads' backoff (`resume`, also `retryNow` on reconnecting),
+  `total` the bar's); the server writes each card anew as its file comes in: an upload with `reread`
+  and the very text of a ready document puts its card back to pending (the earlier one showing)
+  while cards are made, unless `scansChecked` (its page images follow and their transcriptions reset
+  it); only for a server without `working` does the app still `POST /knowledge/cards {all: true}`
+  once the queue is empty (a refusal ends it); a lost connection retries with the uploads' backoff (`resume`, also `retryNow` on reconnecting),
   a restart's first run picks it up, `runIfDue` doesn't wait for the interval while its files are
   unread; the documents list doesn't poll for a card rewritten while its earlier summary shows), with
   status `scans` the family's one switch *Read with the assistant* (`PATCH /knowledge/folder

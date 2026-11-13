@@ -30,7 +30,7 @@ struct AppleCalendarSyncSection: View {
                         .foregroundStyle(.secondary)
                     Button("Open Settings", systemImage: "gear") { openURL(Self.settingsURL) }
                 } else {
-                    Button("Sync with Apple Calendar…", systemImage: "arrow.triangle.2.circlepath") {
+                    Button("Sync with Apple Calendar", systemImage: "arrow.triangle.2.circlepath") {
                         Task { if await sync.requestAccess() { prompts.picking = true } }
                     }
                 }

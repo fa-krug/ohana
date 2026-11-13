@@ -177,7 +177,7 @@ enum CalendarRepeatChoice: String, CaseIterable, Identifiable {
         case .biweekly: String(localized: "Every 2 Weeks")
         case .monthly: String(localized: "Every Month")
         case .yearly: String(localized: "Every Year")
-        case .custom: String(localized: "Custom…")
+        case .custom: String(localized: "Custom")
         }
     }
 

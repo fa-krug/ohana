@@ -77,6 +77,9 @@ final class KnowledgeIndexer {
     /// *Read All* until it's done (`readAll`): its files still to read, its summaries still to ask
     /// for. Kept on the disk; resumed by the next run, a retry or the connection coming back.
     private(set) var readingAll: KnowledgeReadAll?
+    /// Settings → Knowledge's one progress bar, kept here so it keeps its total while the
+    /// settings are closed (the settings update it with each status).
+    var work = KnowledgeWorkProgress()
 
     @ObservationIgnored private var queue = KnowledgeUploadQueue()
     @ObservationIgnored private var queueLoaded = false

@@ -25,7 +25,7 @@ struct CalendarSelectionActions: View {
             Button("Event", systemImage: "calendar.badge.plus") { actions.addEvent() }
                 .help("Add a timed event on the first selected day")
             if store.canRepeat {
-                Button("Repeat…", systemImage: "repeat") { actions.repeatSelection() }
+                Button("Repeat", systemImage: "repeat") { actions.repeatSelection() }
                     .help("Repeat the selected days forwards or backwards (or drag the ▪ handle)")
             }
             Button("Clear", systemImage: "eraser") { store.clearSelectedDays() }

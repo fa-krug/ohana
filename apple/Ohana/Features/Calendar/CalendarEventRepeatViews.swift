@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The event editor's Repeat and End Repeat, like Apple Calendar's: the presets, Custom… (its own
+/// The event editor's Repeat and End Repeat, like Apple Calendar's: the presets, Custom (its own
 /// page, `CalendarRepeatRuleEditor`), and when it stops. A rule the editor doesn't make (from
 /// Apple Calendar or the assistant) shows as its summary and stays as it is unless changed. The
 /// chore editor has them too (any `RepeatEditing` draft).
@@ -83,7 +83,7 @@ struct CalendarEventRepeatSection<Draft: RepeatEditing>: View {
     }
 }
 
-/// Custom…: how often (daily, weekly, monthly, yearly, every n), on which weekdays, on which day
+/// Custom: how often (daily, weekly, monthly, yearly, every n), on which weekdays, on which day
 /// of the month (the 15th, the last Friday).
 struct CalendarRepeatRuleEditor<Draft: RepeatEditing>: View {
     @Binding var draft: Draft

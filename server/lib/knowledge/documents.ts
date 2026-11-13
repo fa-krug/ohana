@@ -20,6 +20,7 @@ import type { Db } from "@/lib/db";
 import { kbChunks, kbDocuments, kbPageScans } from "@/lib/db/schema";
 import { HttpError } from "@/lib/api/http";
 import { familyNames } from "@/lib/families/people";
+import { cardsOn } from "./card";
 import { type FileInfo, nameOf } from "./input";
 import { deleteScanFiles, scanPaths, takeScans } from "./scan-files";
 
@@ -386,6 +387,16 @@ export const CARD_RESET = {
   cardError: null,
 } as const;
 
+/** A card written again: waiting for the worker, the earlier one showing until then. */
+const CARD_REWRITE = {
+  cardStatus: "pending",
+  cardError: null,
+  cardAttempts: 0,
+  cardRetries: 0,
+  cardRunToken: null,
+  cardRunUntil: null,
+} as const;
+
 /** What a document's columns become with new text: waiting for the worker, without the old
  *  text's error, card and lease. */
 function freshText(input: UploadInput) {
@@ -450,8 +461,15 @@ export function uploadDocument(
       const betterText = moreText || input.reader > row.reader || input.reread === true;
       if (sameFile && (sameText || !betterText)) {
         const restored = status === "missing" ? restoredColumns(row) : { missingSince: null };
+        const next = "status" in restored ? restored.status : status;
+        // Read again on request with the very text: its card is written anew (the earlier one
+        // shows until then), unless its pages follow as images, whose transcriptions reset it.
+        const rewrite =
+          input.reread === true && sameText && next === "ready" && input.scansChecked !== true &&
+          (row.cardStatus === "ready" || row.cardStatus === "failed") && cardsOn(tx, familyId);
         tx.update(kbDocuments)
           .set({
+            ...(rewrite ? CARD_REWRITE : {}),
             tags: JSON.stringify(input.tags),
             size: input.size,
             mtime: input.mtime,
@@ -463,7 +481,7 @@ export function uploadDocument(
           })
           .where(eq(kbDocuments.id, row.id))
           .run();
-        return { id: row.id, status: "status" in restored ? restored.status : status, created: false };
+        return { id: row.id, status: next, created: false };
       }
       const next: DocumentStatus = status === "excluded" ? "excluded" : "pending";
       deleteChunks(tx, row.id);
@@ -571,6 +589,30 @@ export function countCards(db: Pick<Db, "select">, familyId: string): CardCounts
   return row ?? { ready: 0, outdated: 0, pending: 0, rewriting: 0, failed: 0 };
 }
 
+/** How many documents the worker still has to finish (GET /knowledge/status `working`, the
+ *  settings' one progress bar with the device's own uploads): pending ones (it reads their text),
+ *  ready ones with page scans it will transcribe (`scans`: it reads them at all; not forced ones
+ *  only while `aiScans`), and, with `cards` (cards are written), ready ones whose card waits. */
+export function countWorking(
+  db: Pick<Db, "select">,
+  familyId: string,
+  { cards, scans, aiScans }: { cards: boolean; scans: boolean; aiScans: boolean },
+): number {
+  const forcedOnly = aiScans ? sql`` : sql` and ${kbPageScans.forced} = 1`;
+  const openScan = scans
+    ? sql`exists (select 1 from ${kbPageScans} where ${kbPageScans.documentId} = ${kbDocuments.id} and ${kbPageScans.status} in ('waiting', 'running')${forcedOnly})`
+    : sql`0`;
+  const cardWaits = cards ? sql`${kbDocuments.cardStatus} = 'pending'` : sql`0`;
+  const row = db
+    .select({
+      n: sql<number>`coalesce(sum(${kbDocuments.status} = 'pending' or (${kbDocuments.status} = 'ready' and (${cardWaits} or ${openScan}))), 0)`,
+    })
+    .from(kbDocuments)
+    .where(eq(kbDocuments.familyId, familyId))
+    .get();
+  return row?.n ?? 0;
+}
+
 /** Has the worker write the family's cards again (POST /knowledge/cards): those made before cards
  *  had keywords or values and the failed ones, or with `all` every one of a ready document. A card keeps
  *  showing until its new one is written (the worker takes new documents' cards first). The number
@@ -584,7 +626,7 @@ export function rewriteCards(db: Db, familyId: string, { all }: { all: boolean }
       );
   return db
     .update(kbDocuments)
-    .set({ cardStatus: "pending", cardError: null, cardAttempts: 0, cardRetries: 0, cardRunToken: null, cardRunUntil: null, updatedAt: now })
+    .set({ ...CARD_REWRITE, updatedAt: now })
     .where(and(eq(kbDocuments.familyId, familyId), eq(kbDocuments.status, "ready"), which))
     .run().changes;
 }

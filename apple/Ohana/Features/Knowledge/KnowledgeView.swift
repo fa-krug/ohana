@@ -340,7 +340,7 @@ private struct KnowledgeList: View {
             } description: {
                 Text("Choose the family’s folder of letters and papers on this device: Ohana reads it and keeps its text, never the files.")
             } actions: {
-                Button("Choose Folder…") { family.open(.settings(.knowledge)) }
+                Button("Choose Folder") { family.open(.settings(.knowledge)) }
                     .buttonStyle(.glassProminent)
             }
         } else {

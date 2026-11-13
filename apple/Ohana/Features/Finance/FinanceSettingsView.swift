@@ -544,8 +544,8 @@ struct FinanceAccountEditor: View {
             // Imports with the link as saved: the editor's changes (new credentials, another
             // account at the bank) are saved first.
             if store.canEdit, provider != nil {
-                Button(hasChanges ? String(localized: "Save and Import All Transactions…")
-                                  : String(localized: "Import All Transactions…"),
+                Button(hasChanges ? String(localized: "Save and Import All Transactions")
+                                  : String(localized: "Import All Transactions"),
                        systemImage: "clock.arrow.circlepath") {
                     Task { await importAll() }
                 }

@@ -40,7 +40,7 @@ struct FamilyDataView: View {
                         showImporter = true
                     } label: {
                         HStack {
-                            Label("Import…", systemImage: "square.and.arrow.up")
+                            Label("Import", systemImage: "square.and.arrow.up")
                             Spacer()
                             if importing { ProgressView().controlSize(.small) }
                         }

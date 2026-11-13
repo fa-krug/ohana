@@ -87,8 +87,8 @@ struct FamilyMembersView: View {
     /// The toolbar's +: adding someone without an account or with one, or an invite link.
     private var addMenu: some View {
         Menu {
-            Button("Add a person…", systemImage: "person.badge.plus") { sheet = .addPerson }
-            Button("Add by email…", systemImage: "at") { sheet = .addByEmail }
+            Button("Add a person", systemImage: "person.badge.plus") { sheet = .addPerson }
+            Button("Add by email", systemImage: "at") { sheet = .addByEmail }
             Menu {
                 ForEach([FamilyRole.editor, .viewer], id: \.self) { role in
                     Button {

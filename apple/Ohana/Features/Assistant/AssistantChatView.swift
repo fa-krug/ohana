@@ -182,7 +182,7 @@ struct AssistantChatView: View {
             .disabled(store.current?.items.isEmpty ?? true)
             if family.canEdit {
                 Divider()
-                Button("Assistant settings…", systemImage: "gearshape") { showSettings = true }
+                Button("Assistant settings", systemImage: "gearshape") { showSettings = true }
             }
         }
     }

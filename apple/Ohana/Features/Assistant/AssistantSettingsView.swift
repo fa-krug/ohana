@@ -191,7 +191,7 @@ private struct AssistantSettingsForm: View {
     private var endpointSection: some View {
         Section {
             Picker("Provider", selection: provider) {
-                if provider.wrappedValue.isEmpty { Text("Choose…").tag("") }
+                if provider.wrappedValue.isEmpty { Text("Choose").tag("") }
                 ForEach(AssistantProviders.presets, id: \.name) { preset in
                     Text(verbatim: preset.name).tag(preset.name)
                 }

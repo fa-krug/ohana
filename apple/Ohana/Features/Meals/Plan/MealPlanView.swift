@@ -66,16 +66,16 @@ struct MealPlanView: View {
                 ToolbarItem(placement: .primaryAction) {
                     Menu {
                         if canEdit, let active = plan?.activeIteration {
-                            Button("Plan These Days Again…", systemImage: "arrow.triangle.2.circlepath") {
+                            Button("Plan These Days Again", systemImage: "arrow.triangle.2.circlepath") {
                                 confirmRenew = active
                             }
                             .disabled(working)
                         }
                         if canEdit, plan != nil {
-                            Button("Plan Settings…", systemImage: "slider.horizontal.3") { showSetup = true }
+                            Button("Plan Settings", systemImage: "slider.horizontal.3") { showSetup = true }
                         }
                         if !family.api.client.isDemo {
-                            Button("Shopping List…", systemImage: "checklist") { showsShopping = true }
+                            Button("Shopping List", systemImage: "checklist") { showsShopping = true }
                         }
                     } label: {
                         Label("More", systemImage: "ellipsis")
@@ -580,7 +580,7 @@ struct MealPlanDayRowView: View {
         Button("Cook", systemImage: "flame") { onAction(.cook(entry)) }
         if canEdit {
             Divider()
-            Button("Swap…", systemImage: "arrow.left.arrow.right") { onAction(.swap(entry)) }
+            Button("Swap", systemImage: "arrow.left.arrow.right") { onAction(.swap(entry)) }
             Button("Remove", systemImage: "trash", role: .destructive) { onAction(.remove(entry)) }
         }
     }

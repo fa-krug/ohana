@@ -174,7 +174,7 @@ private struct AccountForm: View {
                 }
             }
             .accessibilityElement(children: .combine)
-            Button("Connect your Ohana…", systemImage: "server.rack") { connecting = true }
+            Button("Connect your Ohana", systemImage: "server.rack") { connecting = true }
         } footer: {
             Text("Until you connect your server, Ohana shows a demo family. It can’t be changed.")
         }
@@ -215,9 +215,9 @@ private struct AccountForm: View {
             LabeledContent("Email", value: user.email)
             // Without a password, the change is confirmed with a passkey on the server's page.
             if AccountRules.canChangeEmailHere(user) {
-                Button("Change email…", systemImage: "envelope") { sheet = .email(user.email) }
+                Button("Change email", systemImage: "envelope") { sheet = .email(user.email) }
             } else {
-                Button("Change with a passkey…", systemImage: "person.badge.key") { openAccountPage() }
+                Button("Change with a passkey", systemImage: "person.badge.key") { openAccountPage() }
                     .disabled(accountPageOpen)
             }
             Picker("Language", selection: Binding(get: { user.preferredLanguage }, set: { setLanguage($0) })) {
@@ -259,11 +259,11 @@ private struct AccountForm: View {
 
     private func passwordSection(_ overview: AccountOverview) -> some View {
         Section {
-            Button(overview.user.hasPassword ? "Change password…" : "Set a password…", systemImage: "key") {
+            Button(overview.user.hasPassword ? "Change password" : "Set a password", systemImage: "key") {
                 sheet = .password(hasPassword: overview.user.hasPassword)
             }
             if overview.user.hasPassword {
-                Button("Remove password…", systemImage: "key.slash", role: .destructive) { sheet = .removePassword }
+                Button("Remove password", systemImage: "key.slash", role: .destructive) { sheet = .removePassword }
                     .disabled(!AccountRules.canRemovePassword(overview))
             }
         } header: {
@@ -398,7 +398,7 @@ private struct AccountForm: View {
             ForEach(tokens) { token in
                 tokenRow(token)
             }
-            Button("Create token…", systemImage: "plus") { sheet = .createToken }
+            Button("Create token", systemImage: "plus") { sheet = .createToken }
         } header: {
             Text("API tokens")
         } footer: {

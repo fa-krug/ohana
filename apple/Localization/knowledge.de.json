@@ -28,11 +28,10 @@
   "All Tags": "Alle Tags",
   "Another device now reads a different folder.": "Ein anderes Gerät liest jetzt einen anderen Ordner.",
   "Another device now reads a different folder. Choose the knowledge folder again.": "Ein anderes Gerät liest jetzt einen anderen Ordner. Wähle den Wissensordner erneut.",
-  "Asking for new summaries": "Neue Zusammenfassungen werden angefordert",
   "By the assistant": "Vom Assistenten",
-  "Change…": "Ändern …",
+  "Change": "Ändern",
   "Checking files": "Dateien werden geprüft",
-  "Choose Again…": "Erneut auswählen …",
+  "Choose Again": "Erneut auswählen",
   "Choose the family’s folder of letters and papers on this device: Ohana reads it and keeps its text, never the files.": "Wähle auf diesem Gerät den Ordner der Familie mit Briefen und Unterlagen: Ohana liest ihn und behält den Text, nie die Dateien.",
   "Documents": "Dokumente",
   "Every file is read again from scratch and every summary written anew: one request to the family’s AI provider each. The summaries stay until their new ones are written.": "Jede Datei wird von Grund auf neu gelesen und jede Zusammenfassung neu geschrieben: je eine Anfrage an den KI-Anbieter der Familie. Die Zusammenfassungen bleiben, bis die neuen geschrieben sind.",
@@ -80,7 +79,7 @@
   "Read again. The assistant reads its pages next.": "Erneut gelesen. Als Nächstes liest der Assistent die Seiten.",
   "Read by the assistant": "Vom Assistenten gelesen",
   "Read with the assistant": "Mit dem Assistenten lesen",
-  "Reading and sending": "Wird gelesen und gesendet",
+  "Reading documents": "Dokumente werden gelesen",
   "Reading every file again": "Alle Dateien werden neu gelesen",
   "Reading the file again…": "Die Datei wird erneut gelesen…",
   "Remove from This Device": "Von diesem Gerät entfernen",
@@ -113,6 +112,5 @@
   "Waiting": "Wartend",
   "Waiting to be read": "Wartet darauf, gelesen zu werden",
   "With “Read with the assistant” off, the documents are read on this device only. With it on, the family’s AI provider gets each document’s text to write a summary and search words, and every page of PDFs and pictures as an image. Read Now reads what’s new or changed, Read All reads everything again.": "Ist „Mit dem Assistenten lesen“ aus, werden die Dokumente nur auf diesem Gerät gelesen. Ist es an, bekommt der KI-Anbieter der Familie den Text jedes Dokuments, um eine Zusammenfassung und Suchwörter zu schreiben, und jede Seite von PDFs und Bildern als Bild. „Jetzt lesen“ liest Neues und Geändertes, „Alles lesen“ alles noch einmal.",
-  "Write Summary Again": "Zusammenfassung neu schreiben",
-  "Writing summaries": "Zusammenfassungen werden geschrieben"
+  "Write Summary Again": "Zusammenfassung neu schreiben"
 }

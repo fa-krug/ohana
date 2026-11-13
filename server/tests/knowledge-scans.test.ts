@@ -189,11 +189,54 @@ describe("scans: the reader version", () => {
     expect(res).toEqual({ status: 202, data: { id, status: "ready" } });
     expect(doc(id)).toMatchObject({ reader: 2, status: "ready", cardStatus: "ready", summary: before.summary, indexedAt: before.indexedAt });
     expect(chunksOf(id)).toEqual(chunks);
-    expect((await upload("a.pdf", ["Die Selbstbeteiligung beträgt 150 €."], { reader: 2, reread: true })).data.status).toBe("ready");
+    // Read again with its pages following as images: their transcriptions reset the card.
+    expect((await upload("a.pdf", ["Die Selbstbeteiligung beträgt 150 €."], { reader: 2, reread: true, scansChecked: true })).data.status).toBe("ready");
     expect(doc(id)).toMatchObject({ reader: 2, cardStatus: "ready" });
     // An older reader with the same text doesn't lower it.
     await upload("a.pdf", ["Die Selbstbeteiligung beträgt 150 €."], { reader: 1 });
     expect(doc(id).reader).toBe(2);
+  });
+
+  it("writes the card again when a reread brings the very text (Read All), the earlier one showing until then", async () => {
+    await configure(t);
+    const { call, upload } = await setup();
+    const id = await readyWithCard(upload, "a.pdf", ["Die Selbstbeteiligung beträgt 150 €."]);
+    const before = doc(id);
+    expect((await call("GET", "/knowledge/status")).data.working).toBe(0);
+    expect((await upload("a.pdf", ["Die Selbstbeteiligung beträgt 150 €."], { reader: 2, reread: true })).data.status).toBe("ready");
+    expect(doc(id)).toMatchObject({ status: "ready", cardStatus: "pending", summary: before.summary, indexedAt: before.indexedAt });
+    expect((await call("GET", "/knowledge/status")).data).toMatchObject({ working: 1, cardCounts: { pending: 1, rewriting: 1 } });
+    await cards();
+    expect(doc(id).cardStatus).toBe("ready");
+    expect((await call("GET", "/knowledge/status")).data.working).toBe(0);
+    // Without cards being made, a reread leaves the card alone.
+    t.db.update(kbFolders).set({ aiScans: false }).run();
+    await upload("a.pdf", ["Die Selbstbeteiligung beträgt 150 €."], { reader: 2, reread: true });
+    expect(doc(id).cardStatus).toBe("ready");
+  });
+
+  it("counts what the worker still has to finish: pending documents, open scans, waiting cards", async () => {
+    await configure(t);
+    const { call, upload } = await setup();
+    const a = await readyWithCard(upload, "a.pdf", ["Seite A"]);
+    const b = (await upload("b.pdf", ["Seite B"])).data.id as string;
+    const working = async () => (await call("GET", "/knowledge/status")).data.working;
+    // b: pending (its text waits for the worker).
+    expect(await working()).toBe(1);
+    await index();
+    // b: ready, its card waits.
+    expect(doc(b)).toMatchObject({ status: "ready", cardStatus: "pending" });
+    expect(await working()).toBe(1);
+    await cards();
+    expect(await working()).toBe(0);
+    // a: a page scan waits for the worker.
+    fakeScan(a, 1);
+    expect(await working()).toBe(1);
+    // With the family's setting off, only forced scans run: this one doesn't count, nor b's waiting card.
+    t.db.update(kbFolders).set({ aiScans: false }).run();
+    expect(await working()).toBe(0);
+    t.db.update(kbPageScans).set({ forced: true }).run();
+    expect(await working()).toBe(1);
   });
 
   it("replaces the text when a newer reader or a reread reads it differently; the same reader's other text changes nothing", async () => {

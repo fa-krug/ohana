@@ -254,7 +254,7 @@ struct RecipeListView: View {
                 if !tags.isEmpty || !tagFilter.isEmpty {
                     Section {
                         if !tags.isEmpty {
-                            Button("Tags…", systemImage: "tag") { showFilter = true }
+                            Button("Tags", systemImage: "tag") { showFilter = true }
                         }
                         if !tagFilter.isEmpty {
                             Button("Clear Filters", systemImage: "xmark") { tagFilter = [] }
@@ -263,7 +263,7 @@ struct RecipeListView: View {
                 }
                 if family.canEdit {
                     Section {
-                        Button("Manage Tags…", systemImage: "square.and.pencil", action: manageTags)
+                        Button("Manage Tags", systemImage: "square.and.pencil", action: manageTags)
                     }
                 }
             } label: {

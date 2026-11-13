@@ -144,7 +144,7 @@ private struct CalendarSettingsContent: View {
                             }
                         }
                     } label: {
-                        Label("Copy from…", systemImage: "doc.on.doc")
+                        Label("Copy from", systemImage: "doc.on.doc")
                     }
                 }
             }

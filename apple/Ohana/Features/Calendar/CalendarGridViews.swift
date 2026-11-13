@@ -620,18 +620,18 @@ struct CalendarCellMenuItems: View {
 
     var body: some View {
         if let actions {
-            Button("Details…", systemImage: "info.circle") {
+            Button("Details", systemImage: "info.circle") {
                 if !store.selection.contains(day) { store.select(day) }
                 actions.showDetails()
             }
             if !store.readOnly {
-                Button("Icon & note…", systemImage: "face.smiling") {
+                Button("Icon & note", systemImage: "face.smiling") {
                     if !store.selection.contains(day) { store.select(day) }
                     actions.editNote()
                 }
-                Button("Add event…", systemImage: "calendar.badge.plus") { actions.addEvent(on: day) }
+                Button("Add event", systemImage: "calendar.badge.plus") { actions.addEvent(on: day) }
                 if store.canRepeat && store.selection.contains(day) {
-                    Button("Repeat…", systemImage: "repeat") { actions.repeatSelection() }
+                    Button("Repeat", systemImage: "repeat") { actions.repeatSelection() }
                 }
                 Divider()
                 Button("Clear", systemImage: "eraser") {

@@ -183,7 +183,7 @@ struct ShellCommands: Commands {
         // The settings (the account's among them) are a page of the sidebar here; the Mac has the
         // Settings scene's window and its own Settings… item (`SettingsWindow`).
         CommandGroup(replacing: .appSettings) {
-            Button("Settings…") { shell?.module.wrappedValue = .settings }
+            Button("Settings") { shell?.module.wrappedValue = .settings }
                 .keyboardShortcut(",", modifiers: .command)
                 .disabled(shell == nil)
         }

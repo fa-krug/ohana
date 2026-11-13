@@ -1803,16 +1803,6 @@
         }
       }
     },
-    "Add a person…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Person hinzufügen …"
-          }
-        }
-      }
-    },
     "Add a timed event": {
       "localizations": {
         "de": {
@@ -1883,16 +1873,6 @@
         }
       }
     },
-    "Add by email…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Per E-Mail hinzufügen …"
-          }
-        }
-      }
-    },
     "Add category": {
       "localizations": {
         "de": {
@@ -1923,22 +1903,12 @@
         }
       }
     },
-    "Add event…": {
+    "Add from": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Termin hinzufügen …"
-          }
-        }
-      }
-    },
-    "Add from…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hinzufügen aus …"
+            "value": "Hinzufügen aus"
           }
         }
       }
@@ -2905,16 +2875,6 @@
         }
       }
     },
-    "Asking for new summaries": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Neue Zusammenfassungen werden angefordert"
-          }
-        }
-      }
-    },
     "Asks the family assistant in Ohana.": {
       "localizations": {
         "de": {
@@ -2981,16 +2941,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Einstellungen des Assistenten"
-          }
-        }
-      }
-    },
-    "Assistant settings…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Einstellungen des Assistenten …"
           }
         }
       }
@@ -3857,16 +3807,6 @@
         }
       }
     },
-    "Change email…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "E-Mail ändern …"
-          }
-        }
-      }
-    },
     "Change how it repeats": {
       "localizations": {
         "de": {
@@ -3907,22 +3847,12 @@
         }
       }
     },
-    "Change password…": {
+    "Change with a passkey": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Passwort ändern …"
-          }
-        }
-      }
-    },
-    "Change with a passkey…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mit einem Passkey ändern …"
+            "value": "Mit einem Passkey ändern"
           }
         }
       }
@@ -3933,16 +3863,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "„%@“ ändern"
-          }
-        }
-      }
-    },
-    "Change…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ändern …"
           }
         }
       }
@@ -4147,12 +4067,22 @@
         }
       }
     },
-    "Choose Again…": {
+    "Choose": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Erneut auswählen …"
+            "value": "Auswählen"
+          }
+        }
+      }
+    },
+    "Choose Again": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erneut auswählen"
           }
         }
       }
@@ -4177,12 +4107,12 @@
         }
       }
     },
-    "Choose Folder…": {
+    "Choose Folder": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ordner wählen …"
+            "value": "Ordner wählen"
           }
         }
       }
@@ -4243,16 +4173,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wählt den Ordner"
-          }
-        }
-      }
-    },
-    "Choose…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Auswählen …"
           }
         }
       }
@@ -4849,16 +4769,6 @@
         }
       }
     },
-    "Connect your Ohana…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dein Ohana verbinden …"
-          }
-        }
-      }
-    },
     "Connecting to %@…": {
       "localizations": {
         "de": {
@@ -4999,12 +4909,12 @@
         }
       }
     },
-    "Copy from…": {
+    "Copy from": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Übernehmen aus …"
+            "value": "Übernehmen aus"
           }
         }
       }
@@ -5309,16 +5219,6 @@
         }
       }
     },
-    "Create token…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Token erstellen …"
-          }
-        }
-      }
-    },
     "Create “%@” in %@": {
       "localizations": {
         "de": {
@@ -5424,7 +5324,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Eigenes"
+            "value": "Eigene"
           }
         }
       }
@@ -5435,16 +5335,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Eigener Zeitplan (Erweitert)"
-          }
-        }
-      }
-    },
-    "Custom…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eigene …"
           }
         }
       }
@@ -5705,16 +5595,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Suche löschen"
-          }
-        }
-      }
-    },
-    "Delete Search…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Suche löschen …"
           }
         }
       }
@@ -6109,16 +5989,6 @@
         }
       }
     },
-    "Details…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Details …"
-          }
-        }
-      }
-    },
     "Dictate": {
       "localizations": {
         "de": {
@@ -6379,12 +6249,12 @@
         }
       }
     },
-    "Drag the ▪ handle, or “Repeat…”": {
+    "Drag the ▪ handle, or “Repeat”": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Den ▪-Anfasser ziehen oder „Wiederholen …“"
+            "value": "Den ▪-Anfasser ziehen oder „Wiederholen“"
           }
         }
       }
@@ -6659,12 +6529,12 @@
         }
       }
     },
-    "Edit Search…": {
+    "Edit Search": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Suche bearbeiten …"
+            "value": "Suche bearbeiten"
           }
         }
       }
@@ -7669,12 +7539,12 @@
         }
       }
     },
-    "Find Transfers…": {
+    "Find Transfers": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Umbuchungen finden …"
+            "value": "Umbuchungen finden"
           }
         }
       }
@@ -8489,12 +8359,12 @@
         }
       }
     },
-    "Icon & Note…": {
+    "Icon & Note": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Symbol & Notiz …"
+            "value": "Symbol & Notiz"
           }
         }
       }
@@ -8505,16 +8375,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Symbol & Notiz"
-          }
-        }
-      }
-    },
-    "Icon & note…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Symbol & Notiz …"
           }
         }
       }
@@ -8619,32 +8479,12 @@
         }
       }
     },
-    "Import All Transactions…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alle Buchungen importieren …"
-          }
-        }
-      }
-    },
     "Import CSV": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "CSV importieren"
-          }
-        }
-      }
-    },
-    "Import CSV…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "CSV importieren …"
           }
         }
       }
@@ -8827,16 +8667,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wird importiert …"
-          }
-        }
-      }
-    },
-    "Import…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importieren …"
           }
         }
       }
@@ -9259,16 +9089,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tritt bei als"
-          }
-        }
-      }
-    },
-    "Join…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Beitreten …"
           }
         }
       }
@@ -10013,12 +9833,12 @@
         }
       }
     },
-    "Manage Tags…": {
+    "Manage Tags": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tags verwalten …"
+            "value": "Tags verwalten"
           }
         }
       }
@@ -10043,12 +9863,12 @@
         }
       }
     },
-    "Mark as Booked…": {
+    "Mark as Booked": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Als gebucht eintragen …"
+            "value": "Als gebucht eintragen"
           }
         }
       }
@@ -10979,16 +10799,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Neueste zuerst"
-          }
-        }
-      }
-    },
-    "New…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Neu …"
           }
         }
       }
@@ -13641,22 +13451,22 @@
         }
       }
     },
-    "Plan Settings…": {
+    "Plan Settings": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Planeinstellungen …"
+            "value": "Planeinstellungen"
           }
         }
       }
     },
-    "Plan These Days Again…": {
+    "Plan These Days Again": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Diese Tage neu planen …"
+            "value": "Diese Tage neu planen"
           }
         }
       }
@@ -14321,22 +14131,22 @@
         }
       }
     },
-    "Reading and sending": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wird gelesen und gesendet"
-          }
-        }
-      }
-    },
     "Reading calendar events": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Liest Termine im Kalender"
+          }
+        }
+      }
+    },
+    "Reading documents": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dokumente werden gelesen"
           }
         }
       }
@@ -14821,16 +14631,6 @@
         }
       }
     },
-    "Remove password…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Passwort entfernen …"
-          }
-        }
-      }
-    },
     "Remove the API key?": {
       "localizations": {
         "de": {
@@ -15027,16 +14827,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wiederholt am"
-          }
-        }
-      }
-    },
-    "Repeat…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wiederholen …"
           }
         }
       }
@@ -15511,12 +15301,12 @@
         }
       }
     },
-    "Save and Import All Transactions…": {
+    "Save and Import All Transactions": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Speichern und alle Buchungen importieren …"
+            "value": "Speichern und alle Buchungen importieren"
           }
         }
       }
@@ -15651,16 +15441,6 @@
         }
       }
     },
-    "Save…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sichern …"
-          }
-        }
-      }
-    },
     "Saving a recipe": {
       "localizations": {
         "de": {
@@ -15687,16 +15467,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kassenbon scannen"
-          }
-        }
-      }
-    },
-    "Scan Receipt…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kassenbon scannen …"
           }
         }
       }
@@ -16361,16 +16131,6 @@
         }
       }
     },
-    "Set a password…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Passwort festlegen …"
-          }
-        }
-      }
-    },
     "Set it": {
       "localizations": {
         "de": {
@@ -16451,16 +16211,6 @@
         }
       }
     },
-    "Settings…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Einstellungen …"
-          }
-        }
-      }
-    },
     "Share": {
       "localizations": {
         "de": {
@@ -16537,16 +16287,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Einkaufsliste"
-          }
-        }
-      }
-    },
-    "Shopping List…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Einkaufsliste …"
           }
         }
       }
@@ -17885,22 +17625,22 @@
         }
       }
     },
+    "Swap": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tauschen"
+          }
+        }
+      }
+    },
     "Swap %@": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ tauschen"
-          }
-        }
-      }
-    },
-    "Swap…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tauschen …"
           }
         }
       }
@@ -17985,16 +17725,6 @@
         }
       }
     },
-    "Sync with Apple Calendar…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mit Apple Kalender abgleichen …"
-          }
-        }
-      }
-    },
     "Synced with the bank": {
       "localizations": {
         "de": {
@@ -18071,16 +17801,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tags: %@"
-          }
-        }
-      }
-    },
-    "Tags…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tags …"
           }
         }
       }
@@ -21091,16 +20811,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Schreiben"
-          }
-        }
-      }
-    },
-    "Writing summaries": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zusammenfassungen werden geschrieben"
           }
         }
       }
