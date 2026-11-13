@@ -551,21 +551,23 @@ struct KnowledgeDocumentRow: View {
         HStack(alignment: .top, spacing: 12) {
             TintedIcon(systemImage: document.kind.systemImage, tint: ModuleTint.knowledge, size: 30)
             VStack(alignment: .leading, spacing: 3) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(verbatim: document.name)
-                        .font(.body.weight(.semibold))
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                    Spacer(minLength: 0)
-                    if let person = document.person {
-                        KnowledgePersonIcon(person: person, members: members, size: 18)
-                            .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 4 }
+                // Name, person and date in one row where the whole name fits (wide windows);
+                // else the name on its own (up to two lines) and the others under it, so a
+                // phone shows more of it than "2026…i.pdf".
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        name.lineLimit(1)
+                        Spacer(minLength: 0)
+                        details
                     }
-                    Text(verbatim: KnowledgeWording.dateText(document))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
-                        .layoutPriority(1)
+                    VStack(alignment: .leading, spacing: 2) {
+                        name
+                            .lineLimit(2)
+                            .truncationMode(.middle)
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            details
+                        }
+                    }
                 }
                 if let folder = KnowledgeWording.folder(document) {
                     Text(verbatim: folder)
@@ -606,6 +608,25 @@ struct KnowledgeDocumentRow: View {
         }
         .padding(.vertical, 4)
         .contentShape(.rect)
+    }
+
+    private var name: some View {
+        Text(verbatim: document.name)
+            .font(.body.weight(.semibold))
+    }
+
+    /// Whose it is and its date.
+    @ViewBuilder
+    private var details: some View {
+        if let person = document.person {
+            KnowledgePersonIcon(person: person, members: members, size: 18)
+                .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 4 }
+        }
+        Text(verbatim: KnowledgeWording.dateText(document))
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .monospacedDigit()
+            .layoutPriority(1)
     }
 }
 
