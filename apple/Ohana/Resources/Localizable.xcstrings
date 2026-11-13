@@ -12175,16 +12175,6 @@
         }
       }
     },
-    "Off, the documents are read on this device only. On, the family’s AI provider gets each document’s text and writes a summary and search words (other words for what it is), and every page of PDFs and pictures goes to it as an image. Read Now reads what’s new or changed, Read All everything again.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aus werden die Dokumente nur auf diesem Gerät gelesen. Ein bekommt der KI-Anbieter der Familie den Text jedes Dokuments und schreibt eine Zusammenfassung und Suchwörter (andere Wörter dafür, was es ist), und jede Seite von PDFs und Bildern geht als Bild an ihn. „Jetzt lesen“ liest Neues und Geändertes, „Alles lesen“ alles noch einmal."
-          }
-        }
-      }
-    },
     "Office": {
       "localizations": {
         "de": {
@@ -14087,16 +14077,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Alles lesen geht von selbst weiter, auch sobald die Verbindung wieder da ist."
-          }
-        }
-      }
-    },
-    "Read All…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alles lesen …"
           }
         }
       }
@@ -20801,6 +20781,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mit dem Link meldet sich %@ mit einem neuen oder dem bestehenden Konto an und behält den Geburtstag. 7 Tage gültig, einmalig."
+          }
+        }
+      }
+    },
+    "With “Read with the assistant” off, the documents are read on this device only. With it on, the family’s AI provider gets each document’s text to write a summary and search words, and every page of PDFs and pictures as an image. Read Now reads what’s new or changed, Read All reads everything again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ist „Mit dem Assistenten lesen“ aus, werden die Dokumente nur auf diesem Gerät gelesen. Ist es an, bekommt der KI-Anbieter der Familie den Text jedes Dokuments, um eine Zusammenfassung und Suchwörter zu schreiben, und jede Seite von PDFs und Bildern als Bild. „Jetzt lesen“ liest Neues und Geändertes, „Alles lesen“ alles noch einmal."
           }
         }
       }

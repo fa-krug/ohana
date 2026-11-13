@@ -277,14 +277,14 @@ private struct KnowledgeSettingsForm: View {
             if folder.url != nil {
                 Button("Read Now", systemImage: "arrow.clockwise") { family.indexKnowledge(force: true) }
                     .disabled(running)
-                Button("Read All…", systemImage: "arrow.triangle.2.circlepath") { askingReadAll = true }
+                Button("Read All", systemImage: "arrow.triangle.2.circlepath") { askingReadAll = true }
                     .disabled(running)
             }
         } header: {
             Text("Index")
         } footer: {
             if offersAssistant {
-                Text("Off, the documents are read on this device only. On, the family’s AI provider gets each document’s text and writes a summary and search words (other words for what it is), and every page of PDFs and pictures goes to it as an image. Read Now reads what’s new or changed, Read All everything again.")
+                Text("With “Read with the assistant” off, the documents are read on this device only. With it on, the family’s AI provider gets each document’s text to write a summary and search words, and every page of PDFs and pictures as an image. Read Now reads what’s new or changed, Read All reads everything again.")
             } else {
                 Text("Read Now reads what’s new or changed, Read All everything again.")
             }
