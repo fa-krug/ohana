@@ -21,6 +21,7 @@ import { aiSettings, kbChunks, kbDocuments, kbFolders, kbPageScans } from "@/lib
 import { deleteFamily } from "@/lib/families/manage";
 import { KnowledgeCardRunner } from "@/lib/knowledge/card-runner";
 import { MISSING_KEEP_MS } from "@/lib/knowledge/documents";
+import { MISSING_GRACE_MS } from "@/lib/knowledge/manifest";
 import { handleKnowledge } from "@/lib/knowledge/routes";
 import { KnowledgeRunner } from "@/lib/knowledge/runner";
 import { SCAN_KEEP_MS } from "@/lib/knowledge/scan-files";
@@ -395,6 +396,8 @@ describe("scans: the route", () => {
     expect((await scan(other, 1)).status).toBe(409);
     await call("POST", `/knowledge/documents/${other}/exclude`, { excluded: false });
     await manifest([{ path: "a.pdf", size: 1, mtime: 1, hash: sha("a.pdf"), tags: [] }]);
+    now = new Date(now.getTime() + MISSING_GRACE_MS);
+    await manifest([{ path: "a.pdf", size: 1, mtime: 1, hash: sha("a.pdf"), tags: [] }]);
     expect(await scan(other, 1)).toMatchObject({ status: 409, data: { error: "The document's file is missing" } });
     process.env.DISABLED_MODULES = "assistant";
     expect((await scan(id, 1, { force: true })).status).toBe(409);
@@ -644,6 +647,8 @@ describe("scans: cleanup", () => {
     const gonePath = fakeScan(gone, 1, later);
     const keptPath = fakeScan(kept, 1, later);
     for (const p of [gonePath, keptPath]) utimesSync(fileOf(p), later.createdAt, later.createdAt);
+    await manifest([{ path: "kept.pdf", size: 1, mtime: 1, hash: sha("kept.pdf"), tags: [] }]);
+    now = new Date(now.getTime() + MISSING_GRACE_MS);
     await manifest([{ path: "kept.pdf", size: 1, mtime: 1, hash: sha("kept.pdf"), tags: [] }]);
     expect(cleanup(t.db, new Date(now.getTime() + MISSING_KEEP_MS + MIN))).toMatchObject({ documents: 1, scans: 0 });
     expect(doc(gone)).toBeUndefined();

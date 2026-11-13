@@ -8,7 +8,9 @@
 // - ready: chunked (`indexedAt` set);
 // - failed: the worker gave up (`error` set, `indexedAt` null);
 // - missing: its path is no longer in the folder, since `missingSince` (chunks and card kept;
-//   back to one of the above when the file is listed again, deleted after 30 days);
+//   back to one of the above when the file is listed again, deleted after 30 days); a document
+//   of the other statuses not listed by the last manifest has `missingSince` too, until a manifest
+//   `MISSING_GRACE_MS` later (manifest.ts) leaves it out again and makes it missing;
 // - excluded: kept out of the index by an editor (no chunks); stays excluded when its file is
 //   gone (`missingSince` set) and comes back, and is deleted 30 days after it went.
 

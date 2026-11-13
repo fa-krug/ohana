@@ -13,6 +13,10 @@ import { scansEnabled } from "./scans";
 
 export const MAX_MANIFEST_FILES = 20_000;
 export const MAX_DEVICE_LENGTH = 100;
+/** How long a document's file must stay unlisted before the document counts as missing: iCloud
+ *  Drive takes files off the disk for minutes while it syncs (after a Mac wakes, say), and a
+ *  manifest read in between mustn't make them missing. */
+export const MISSING_GRACE_MS = 60 * 60 * 1000;
 
 /** The name of the device that sends the manifest (optional; trimmed, null when blank; cut to
  *  100 UTF-16 units, never inside a surrogate pair). */
@@ -108,8 +112,10 @@ function changed(row: Row, changes: Changes): Changes {
  * - a new path whose hash is that of a document whose path isn't listed any more: the file was
  *   moved or renamed; the document moves along (chunks and card kept), no upload;
  * - any other new path: its text is needed;
- * - a document whose path isn't listed (and didn't move): missing since now (kept if it was
- *   already missing; an excluded one stays excluded, with `missingSince`).
+ * - a document whose path isn't listed (and didn't move): `missingSince` now, its status kept;
+ *   missing (since then) once a later manifest, `MISSING_GRACE_MS` on, doesn't list it either:
+ *   a file iCloud took off the disk for a while is listed again in between, which clears
+ *   `missingSince`. An excluded one stays excluded, with `missingSince`.
  * Excluded documents are never asked for. A missing document listed again goes back to ready
  * (indexed), failed or pending. Returns the paths to upload, in the manifest's order.
  *
@@ -178,8 +184,11 @@ export function applyManifest(
       for (const r of rows) {
         if (listed.has(r.path) || moved.has(r.id)) continue;
         const status = r.status as DocumentStatus;
-        if (status === "excluded") save(r, { missingSince: r.missingSince ?? now });
-        else if (status !== "missing") save(r, { status: "missing", missingSince: now, runToken: null, runUntil: null, cardRunToken: null, cardRunUntil: null });
+        if (status === "missing") continue;
+        if (status === "excluded" || !r.missingSince) save(r, { missingSince: r.missingSince ?? now });
+        else if (now.getTime() - r.missingSince.getTime() >= MISSING_GRACE_MS) {
+          save(r, { status: "missing", runToken: null, runUntil: null, cardRunToken: null, cardRunUntil: null });
+        }
       }
       tx.update(kbFolders).set({ lastManifestAt: now, lastManifestDevice: device }).where(eq(kbFolders.id, folderId)).run();
       return { upload };
