@@ -76,6 +76,9 @@ export function defaultAiEnv(db: Db): AiEnv {
 const MIN_WINDOW = 1000;
 const MAX_WINDOW = 10_000_000;
 
+/** The longest max age of chats a family can set (days); 0 keeps them. */
+const MAX_CHAT_AGE_DAYS = 3650;
+
 /** Transactions one categorize request sends to the model. */
 const MAX_CATEGORIZE = 200;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -91,6 +94,7 @@ function emptyRow(familyId: string): AiSettingsRow {
     allow_writes: true,
     context_window: 0,
     image_model: "",
+    chat_max_age_days: 0,
     updated_at: new Date().toISOString(),
   };
 }
@@ -119,7 +123,14 @@ function safeOpen(env: AiEnv, sealed: string): string {
 function publicSettings(env: AiEnv, row: AiSettingsRow, viewer = false) {
   const configured = !!(row.base_url && row.model);
   if (viewer) {
-    return { configured, canEdit: false, model: row.model, allowWrites: false, serverReady: true };
+    return {
+      configured,
+      canEdit: false,
+      model: row.model,
+      allowWrites: false,
+      chatMaxAgeDays: row.chat_max_age_days ?? 0,
+      serverReady: true,
+    };
   }
   return {
     configured,
@@ -134,6 +145,7 @@ function publicSettings(env: AiEnv, row: AiSettingsRow, viewer = false) {
     allowWrites: row.allow_writes,
     contextWindow: row.context_window ?? 0,
     imageModel: row.image_model ?? "",
+    chatMaxAgeDays: row.chat_max_age_days ?? 0,
     // Ohana always has a key to seal with (ENCRYPTION_KEY, else derived from AUTH_SECRET).
     serverReady: true,
   };
@@ -199,7 +211,7 @@ async function getSettings({ load }: Ctx, env: AiEnv) {
 
 /** PUT /ai/settings {baseUrl, apiKey ("" removes it), model, searchProvider, searchKey,
  *  allowWrites, contextWindow (tokens, 0: from the endpoint), imageModel ("" = no recipe
- *  photos)}: only the fields given change; another baseUrl without an apiKey removes the key. Saving lets the knowledge base's failed cards be made
+ *  photos), chatMaxAgeDays (chats untouched for longer are deleted; 0: kept)}: only the fields given change; another baseUrl without an apiKey removes the key. Saving lets the knowledge base's failed cards be made
  *  again. */
 async function putSettings({ req, load }: Ctx, env: AiEnv) {
   const { family } = await load("edit");
@@ -246,6 +258,13 @@ async function putSettings({ req, load }: Ctx, env: AiEnv) {
       throw new HttpError(400, `contextWindow must be 0 (automatic) or ${MIN_WINDOW} to ${MAX_WINDOW} tokens`);
     }
     row.context_window = n;
+  }
+  if (body.chatMaxAgeDays !== undefined) {
+    const n = body.chatMaxAgeDays;
+    if (typeof n !== "number" || !Number.isInteger(n) || n < 0 || n > MAX_CHAT_AGE_DAYS) {
+      throw new HttpError(400, `chatMaxAgeDays must be 0 (keep) or 1 to ${MAX_CHAT_AGE_DAYS} days`);
+    }
+    row.chat_max_age_days = n;
   }
   row.updated_at = new Date().toISOString();
   await env.store.saveAiSettings(row);
@@ -366,6 +385,7 @@ export async function prepareTurn(
     appleCalendar: !!context.appleCalendar,
     knowledge,
     knowledgeNotes: writes && !!knowledgeFolder,
+    knowledgePages: !!knowledgeFolder,
     mealTags: mealTagNames(env.db, family.id, context.lang),
     home: homeAddressOf(env.db, family.id),
     people: familyNames(env.db, family.id),
@@ -387,6 +407,7 @@ export async function prepareTurn(
       appleCalendar: context.appleCalendar,
       knowledge,
       knowledgeFolder,
+      contextWindow: window || DEFAULT_WINDOW,
     },
     modelNet: env.modelNet,
     writes,

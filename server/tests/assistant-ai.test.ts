@@ -107,6 +107,7 @@ describe("AI settings", () => {
       allowWrites: false,
       contextWindow: 0,
       imageModel: "",
+      chatMaxAgeDays: 0,
       serverReady: true,
     });
     const row = (await t.store.getAiSettings(t.familyId))!;
@@ -117,7 +118,14 @@ describe("AI settings", () => {
 
     // Viewers see whether it is set up, not the setup; they can't change it.
     const seen = await t.view("GET", `${t.ai}/settings`);
-    expect(seen.data).toEqual({ configured: true, canEdit: false, model: "mock-large", allowWrites: false, serverReady: true });
+    expect(seen.data).toEqual({
+      configured: true,
+      canEdit: false,
+      model: "mock-large",
+      allowWrites: false,
+      chatMaxAgeDays: 0,
+      serverReady: true,
+    });
     expect((await t.view("PUT", `${t.ai}/settings`, { model: "x" })).status).toBe(403);
     expect((await t.call("PUT", `${t.ai}/settings`, { searchProvider: "bing" })).status).toBe(400);
     expect((await t.call("PUT", `${t.ai}/settings`, { apiKey: "has space" })).status).toBe(400);

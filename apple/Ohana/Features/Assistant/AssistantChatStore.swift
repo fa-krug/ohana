@@ -87,6 +87,8 @@ final class AssistantChatStore {
     private(set) var turn = AssistantTurn.idle
     /// `turn.running` alone, for what shows only that (the floating button): not drawn again with each step.
     private(set) var turnRunning = false
+    /// The pages requests this device is sending pages for right now (by id).
+    private(set) var pagesSending: Set<String> = []
     /// Which suggestions the user ticked, per suggestions item (until they're answered; kept here
     /// so a card rebuilt while scrolling keeps them).
     private(set) var suggestionPicks: [String: Set<Int>] = [:]
@@ -501,6 +503,9 @@ final class AssistantChatStore {
             case var .memories(edit):
                 edit.skipped = true
                 c.items[open] = .memories(edit)
+            case var .pages(request):
+                request.skipped = true
+                c.items[open] = .pages(request)
             default:
                 break
             }
@@ -574,6 +579,7 @@ final class AssistantChatStore {
         case let .suggestions(edit) where edit.answer == nil && !edit.skipped: return index
         case let .notes(edit) where edit.answer == nil && !edit.skipped: return index
         case let .memories(edit) where edit.answer == nil && !edit.skipped: return index
+        case let .pages(request) where request.answer == nil && !request.skipped: return index
         default: return nil
         }
     }
@@ -813,6 +819,102 @@ final class AssistantChatStore {
                 today: AssistantDates.day(), reminders: reminders, appleCalendar: calendar,
                 knowledgeFolder: knowledgeFolder()
             ))
+        }
+    }
+
+    // MARK: Pages
+
+    /// The open chat's request for pages that waits for a device to send them.
+    func openPages() -> (index: Int, request: AssistantPagesRequest)? {
+        guard let index = openWaiting(), case let .pages(request) = current?.items[index] else { return nil }
+        return (index, request)
+    }
+
+    /// This device has the family's knowledge folder linked: it can send a document's pages.
+    var canSendPages: Bool { knowledgeNotes()?.folderID != nil }
+
+    func isSendingPages(_ id: String) -> Bool { pagesSending.contains(id) }
+
+    /// Renders the pages of the open pages request `id` from the knowledge folder here, uploads
+    /// each, then answers with the pages sent (or why none could be). While the server can't be
+    /// reached nothing is answered: the request keeps waiting, to be sent again.
+    func sendPages(_ id: String) async {
+        guard let open = openPages(), open.request.id == id, let chatID = current?.id, !chatID.isEmpty,
+              !pagesSending.contains(id) else { return }
+        pagesSending.insert(id)
+        defer { pagesSending.remove(id) }
+        var sent: [Int] = []
+        var failure: (any Error)?
+        if let notes = knowledgeNotes(), case let .linked(root, folderID) = notes.state(),
+           sentKnowledgeFolder == nil || sentKnowledgeFolder == folderID {
+            do {
+                let pages = try await AssistantPagesRender.render(path: open.request.path, pages: open.request.pages,
+                                                                  in: root)
+                for page in pages {
+                    do {
+                        let request = api.client.request(
+                            .put, api.path("/ai/chats/\(Self.enc(chatID))/pages"),
+                            query: ["call": id, "page": String(page.page)], body: page.jpeg, contentType: "image/jpeg"
+                        )
+                        _ = try await api.client.data(for: request)
+                        sent.append(page.page)
+                    } catch {
+                        failure = error
+                        // Gone, or no longer asked for: the others won't go either.
+                        if APIError.isUnreachable(error) || (error as? APIError)?.status == 409 { break }
+                    }
+                }
+            } catch {
+                failure = error
+            }
+        } else {
+            failure = AssistantPagesError.notLinked
+        }
+        if sent.isEmpty, let failure, APIError.isUnreachable(failure) || failure is CancellationError {
+            if !(failure is CancellationError) { ErrorBanner.shared.show(failure) }
+            return
+        }
+        // Rendering took a while: the item may have moved (a reload), so it's looked up again.
+        guard current?.id == chatID, let again = openPages(), again.request.id == id else { return }
+        let error = failure.map { $0.localizedDescription }
+        answerPages(again, chatID: chatID,
+                    answer: sent.isEmpty ? .failed(error ?? AssistantPagesError.noPages.localizedDescription) : .sent(sent),
+                    error: sent.isEmpty ? nil : error)
+    }
+
+    /// Declines the open pages request `id`: nothing is sent, and the assistant hears so.
+    func declinePages(_ id: String) {
+        guard let open = openPages(), open.request.id == id, let chatID = current?.id, !chatID.isEmpty else { return }
+        answerPages(open, chatID: chatID, answer: .declined, error: nil)
+    }
+
+    private func answerPages(_ open: (index: Int, request: AssistantPagesRequest), chatID: String,
+                             answer: AssistantPagesRequest.Answer, error: String?) {
+        sending = true
+        if current?.id == chatID, let items = current?.items, open.index < items.count, case .pages = items[open.index] {
+            var answered = open.request
+            answered.answer = answer
+            current?.items[open.index] = .pages(answered)
+        }
+        let here = context()
+        let page = current?.page ?? here.page
+        Task {
+            let reminders = await remindersContext()
+            let calendar = await calendarContext()
+            var body = AssistantPagesAnswerInput(
+                id: open.request.id, page: page, year: here.year, lang: language, today: AssistantDates.day(),
+                reminders: reminders, appleCalendar: calendar, knowledgeFolder: knowledgeFolder()
+            )
+            switch answer {
+            case let .sent(pages):
+                body.sent = pages
+                body.error = error
+            case .declined:
+                body.declined = true
+            case let .failed(message):
+                body.error = message
+            }
+            post(chatID, "pages", body: body)
         }
     }
 

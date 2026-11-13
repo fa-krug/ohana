@@ -2303,6 +2303,36 @@
         }
       }
     },
+    "After %lld days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nach %lld Tagen"
+          }
+        }
+      }
+    },
+    "After 6 months": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nach 6 Monaten"
+          }
+        }
+      }
+    },
+    "After a year": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nach einem Jahr"
+          }
+        }
+      }
+    },
     "Airplane": {
       "localizations": {
         "de": {
@@ -4047,6 +4077,16 @@
         }
       }
     },
+    "Chat history": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chatverlauf"
+          }
+        }
+      }
+    },
     "Chat list width": {
       "localizations": {
         "de": {
@@ -4063,6 +4103,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Chats"
+          }
+        }
+      }
+    },
+    "Chats nobody used for longer are deleted, with the document pages sent in them. For everyone in the family.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chats, die länger niemand benutzt hat, werden gelöscht, mit den darin gesendeten Dokumentseiten. Für alle in der Familie."
           }
         }
       }
@@ -5769,6 +5819,16 @@
         }
       }
     },
+    "Delete chats": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chats löschen"
+          }
+        }
+      }
+    },
     "Delete event": {
       "localizations": {
         "de": {
@@ -6295,6 +6355,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nicht benachrichtigen"
+          }
+        }
+      }
+    },
+    "Don’t Send": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht senden"
           }
         }
       }
@@ -9813,6 +9883,16 @@
         }
       }
     },
+    "Looking at a document’s pages": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sieht sich Seiten eines Dokuments an"
+          }
+        }
+      }
+    },
     "Looking for a recipe…": {
       "localizations": {
         "de": {
@@ -11843,6 +11923,26 @@
         }
       }
     },
+    "Not sent": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht gesendet"
+          }
+        }
+      }
+    },
+    "Not sent: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht gesendet: %@"
+          }
+        }
+      }
+    },
     "Not set": {
       "localizations": {
         "de": {
@@ -12491,6 +12591,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nur %@ Stunden Nachtruhe"
+          }
+        }
+      }
+    },
+    "Only PDFs and images can be sent as pages.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur PDFs und Bilder lassen sich als Seiten senden."
+          }
+        }
+      }
+    },
+    "Only a device with the family’s knowledge folder can send the pages.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur ein Gerät mit dem Wissensordner der Familie kann die Seiten senden."
           }
         }
       }
@@ -16061,6 +16181,16 @@
         }
       }
     },
+    "Send Pages": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seiten senden"
+          }
+        }
+      }
+    },
     "Send a test notification": {
       "localizations": {
         "de": {
@@ -16121,6 +16251,16 @@
         }
       }
     },
+    "Send: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senden: %@"
+          }
+        }
+      }
+    },
     "Sender address": {
       "localizations": {
         "de": {
@@ -16141,12 +16281,42 @@
         }
       }
     },
+    "Sending the pages…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sendet die Seiten …"
+          }
+        }
+      }
+    },
     "Sending to Ohana…": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Wird an Ohana gesendet…"
+          }
+        }
+      }
+    },
+    "Sent page %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seite %@ gesendet"
+          }
+        }
+      }
+    },
+    "Sent pages %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seiten %@ gesendet"
           }
         }
       }
@@ -18395,6 +18565,16 @@
         }
       }
     },
+    "The file doesn’t have these pages.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Datei hat diese Seiten nicht."
+          }
+        }
+      }
+    },
     "The file is not valid UTF-8.": {
       "localizations": {
         "de": {
@@ -18531,6 +18711,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Der Wissensordner ist auf diesem Gerät nicht mehr verknüpft."
+          }
+        }
+      }
+    },
+    "The knowledge folder isn’t linked on this device.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Wissensordner ist auf diesem Gerät nicht verknüpft."
           }
         }
       }
@@ -18721,6 +18911,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dein Server liest die Seite, und seine KI macht daraus ein Rezept. Das kann ein, zwei Minuten dauern."
+          }
+        }
+      }
+    },
+    "The pages go to the family’s AI service as pictures.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Seiten gehen als Bilder an den KI-Dienst der Familie."
           }
         }
       }

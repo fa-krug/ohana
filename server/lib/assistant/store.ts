@@ -24,6 +24,8 @@ export interface AiSettingsRow {
   context_window: number;
   /** The model for recipe photos (meals); "" = none. */
   image_model: string;
+  /** Chats untouched for longer are deleted (lib/assistant/retention.ts); 0: kept. */
+  chat_max_age_days: number;
   updated_at: string;
 }
 
@@ -186,6 +188,7 @@ function settingsRow(r: SettingsRecord): AiSettingsRow {
     allow_writes: r.allowWrites,
     context_window: r.contextWindow,
     image_model: r.imageModel,
+    chat_max_age_days: r.chatMaxAgeDays,
     updated_at: r.updatedAt.toISOString(),
   };
 }
@@ -228,6 +231,7 @@ export class DrizzleAssistantStore implements AssistantStore {
       allowWrites: row.allow_writes,
       contextWindow: row.context_window,
       imageModel: row.image_model ?? "",
+      chatMaxAgeDays: row.chat_max_age_days ?? 0,
       updatedAt: date(row.updated_at),
     };
     this.db

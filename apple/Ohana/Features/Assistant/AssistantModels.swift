@@ -22,6 +22,8 @@ nonisolated struct AssistantSettings: Codable, Equatable, OffMainDecodable {
     var contextWindow: Int?
     /// The model for recipe photos; "" = none.
     var imageModel: String?
+    /// Chats untouched for longer are deleted (days); 0 or nil: kept.
+    var chatMaxAgeDays: Int?
     var serverReady: Bool?
 }
 
@@ -35,6 +37,7 @@ struct AssistantSettingsPatch: Encodable {
     var allowWrites: Bool?
     var contextWindow: Int?
     var imageModel: String?
+    var chatMaxAgeDays: Int?
 }
 
 nonisolated struct AssistantModelList: OffMainDecodable { let models: [String] }
@@ -490,6 +493,73 @@ nonisolated struct AssistantNoteOp: Decodable, Equatable, Sendable {
     var tagsOnly: Bool { op == "update" && change == "tags" }
 }
 
+/// Pages of a knowledge document the assistant wants to look at (`kind: "pages"`, server
+/// lib/assistant/tools/knowledge-pages.ts): the server never holds the file, so a device with the
+/// family's knowledge folder renders the pages and uploads them (`AssistantPagesSend`), at once
+/// when `auto` (the family's *Read with the assistant*), else once the user says so.
+nonisolated struct AssistantPagesRequest: Decodable, Equatable, Sendable {
+    var id: String
+    /// What it asks, e.g. "Look at pages 1–3 of “Befund.pdf”".
+    var summary: String
+    var documentId: String
+    var name: String
+    /// Relative to the knowledge folder, NFC, "/"-separated.
+    var path: String
+    var pages: [Int]
+    /// The document's pages as the index knows them (0: not known).
+    var total: Int
+    var auto: Bool
+    var answer: Answer?
+    /// The user wrote a new message instead.
+    var skipped: Bool
+
+    /// How it went: the pages sent, declined, or why none could be sent.
+    enum Answer: Equatable, Sendable {
+        case sent([Int])
+        case declined
+        case failed(String)
+    }
+
+    private enum Keys: String, CodingKey { case id, summary, documentId, name, path, pages, total, auto, answer, skipped }
+    private enum AnswerKeys: String, CodingKey { case sent, declined, error }
+
+    init(id: String, summary: String, documentId: String, name: String, path: String, pages: [Int], total: Int,
+         auto: Bool, answer: Answer? = nil, skipped: Bool = false) {
+        self.id = id
+        self.summary = summary
+        self.documentId = documentId
+        self.name = name
+        self.path = path
+        self.pages = pages
+        self.total = total
+        self.auto = auto
+        self.answer = answer
+        self.skipped = skipped
+    }
+
+    init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: Keys.self)
+        func str(_ key: Keys) -> String { (try? c.decodeIfPresent(String.self, forKey: key)) ?? "" }
+        var answer: Answer?
+        if let a = try? c.nestedContainer(keyedBy: AnswerKeys.self, forKey: .answer) {
+            if let sent = try? a.decode([Int].self, forKey: .sent) {
+                answer = .sent(sent)
+            } else if (try? a.decode(Bool.self, forKey: .declined)) == true {
+                answer = .declined
+            } else if let error = try? a.decode(String.self, forKey: .error) {
+                answer = .failed(error)
+            }
+        }
+        self.init(
+            id: str(.id), summary: str(.summary), documentId: str(.documentId), name: str(.name), path: str(.path),
+            pages: (try? c.decodeIfPresent([Int].self, forKey: .pages)) ?? [],
+            total: (try? c.decodeIfPresent(Int.self, forKey: .total)) ?? 0,
+            auto: (try? c.decodeIfPresent(Bool.self, forKey: .auto)) ?? false,
+            answer: answer, skipped: (try? c.decodeIfPresent(Bool.self, forKey: .skipped)) ?? false
+        )
+    }
+}
+
 /// What the chat shows: messages, tool activity, changes (with undo), questions, changes of the
 /// user's Reminders, calendars and knowledge notes to apply, suggestions to add. Decoded by
 /// `kind`; a kind this app doesn't know yet becomes `.unknown` (and isn't shown).
@@ -512,6 +582,9 @@ nonisolated enum AssistantItem: Decodable, Equatable, Sendable {
     /// What the assistant offers to remember, change or forget (edit_memories) that waits for the
     /// user to pick what to save.
     case memories(AssistantMemoriesEdit)
+    /// Pages of a knowledge document the assistant wants to look at (view_knowledge_pages): sent
+    /// from a device with the knowledge folder.
+    case pages(AssistantPagesRequest)
     /// From here on, the model gets the earlier part of the chat as a summary.
     case compacted
     case error(text: String)
@@ -592,6 +665,12 @@ nonisolated enum AssistantItem: Decodable, Equatable, Sendable {
             self = .memories(AssistantMemoriesEdit(
                 id: str(.id), summary: str(.summary), ops: ops ?? [], answer: answer, skipped: flag(.skipped)
             ))
+        case "pages":
+            if let request = try? AssistantPagesRequest(from: decoder) {
+                self = .pages(request)
+            } else {
+                self = .unknown(kind: kind)
+            }
         case "compacted":
             self = .compacted
         case "error":
@@ -616,7 +695,7 @@ nonisolated enum AssistantItem: Decodable, Equatable, Sendable {
     /// A question, an edit or suggestions: these wait for the user.
     var canWait: Bool {
         switch self {
-        case .question, .reminders, .calendar, .suggestions, .notes, .memories: true
+        case .question, .reminders, .calendar, .suggestions, .notes, .memories, .pages: true
         default: false
         }
     }
@@ -780,6 +859,22 @@ struct AssistantCalendarAnswerInput: Encodable {
     var id: String
     var applied: Bool
     var results: [AssistantReminderResult]?
+    var page: String
+    var year: Int
+    var lang: String
+    var today: String
+    var reminders: AssistantRemindersContext?
+    var appleCalendar: AssistantCalendarContext?
+    var knowledgeFolder: String?
+}
+
+/// POST /ai/chats/{id}/pages: the pages `sent` of the waiting pages request `id` (each uploaded
+/// before with PUT …/pages), or `declined`, or why the device couldn't send them (`error`).
+struct AssistantPagesAnswerInput: Encodable {
+    var id: String
+    var sent: [Int]?
+    var declined: Bool?
+    var error: String?
     var page: String
     var year: Int
     var lang: String

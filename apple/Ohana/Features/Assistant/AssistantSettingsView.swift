@@ -2,7 +2,8 @@ import SwiftUI
 
 /// Settings → Assistant (web: components/assistant/ai-settings.tsx): the family's
 /// OpenAI-compatible AI (provider, key, model, a test; the URL, context window and the model for
-/// recipe photos under Advanced), the web search, and whether the assistant may change things. Editors only; viewers see who can set it up. Keys are write-only: the server only
+/// recipe photos under Advanced), the web search, whether the assistant may change things and how
+/// long chats are kept. Editors only; viewers see who can set it up. Keys are write-only: the server only
 /// says that one is stored (and its last four characters); a blank field keeps it.
 struct AssistantSettingsView: View {
     /// Shown as a sheet (from the chat): Cancel asks before unsaved changes are dropped.
@@ -60,6 +61,9 @@ private struct AssistantSettingsViewerView: View {
                     }
                     if settings.configured, !settings.model.isEmpty {
                         LabeledContent("Model") { Text(verbatim: settings.model) }
+                    }
+                    if let days = settings.chatMaxAgeDays, days > 0 {
+                        LabeledContent("Delete chats") { Text(AssistantChatRetention.label(days)) }
                     }
                 }
             } footer: {
@@ -136,6 +140,7 @@ private struct AssistantSettingsForm: View {
             searchSection
             Section { AssistantMemoryLink() }
             permissionsSection
+            historySection
             if !saveInToolbar {
                 Section {
                     HStack {
@@ -344,6 +349,25 @@ private struct AssistantSettingsForm: View {
         }
     }
 
+    /// How long the family's chats are kept (saved at once, like the permissions).
+    private var historySection: some View {
+        Section {
+            Picker("Delete chats", selection: Binding(
+                get: { settings.chatMaxAgeDays ?? 0 },
+                set: { value in Task { await save(.init(chatMaxAgeDays: value)) } }
+            )) {
+                ForEach(AssistantChatRetention.choices(including: settings.chatMaxAgeDays ?? 0), id: \.self) { days in
+                    Text(AssistantChatRetention.label(days)).tag(days)
+                }
+            }
+            .disabled(busy != nil)
+        } header: {
+            Text("Chat history")
+        } footer: {
+            Text("Chats nobody used for longer are deleted, with the document pages sent in them. For everyone in the family.")
+        }
+    }
+
     private var permissionsSection: some View {
         Section {
             Toggle(isOn: Binding(
@@ -394,6 +418,7 @@ private struct AssistantSettingsForm: View {
         if let patch {
             if patch.apiKey != nil { body.apiKey = patch.apiKey }
             if patch.allowWrites != nil { body.allowWrites = patch.allowWrites }
+            if patch.chatMaxAgeDays != nil { body.chatMaxAgeDays = patch.chatMaxAgeDays }
         }
         do {
             let result = try await family.api.send(.put, "/ai/settings", body: body, as: AssistantSettings.self)
@@ -438,6 +463,26 @@ private struct AssistantSettingsForm: View {
     static func unique(_ list: [String]) -> [String] {
         var seen = Set<String>()
         return list.filter { seen.insert($0).inserted }
+    }
+}
+
+/// How long the family's chats are kept (`chatMaxAgeDays`): the choices of the settings.
+enum AssistantChatRetention {
+    /// Days; 0 keeps them.
+    static let presets = [0, 30, 90, 180, 365]
+
+    /// The presets, plus `days` when it's another value (set through the API).
+    static func choices(including days: Int) -> [Int] {
+        presets.contains(days) ? presets : (presets + [days]).sorted()
+    }
+
+    static func label(_ days: Int) -> String {
+        switch days {
+        case 0: String(localized: "Never")
+        case 180: String(localized: "After 6 months")
+        case 365: String(localized: "After a year")
+        default: String(localized: "After \(days) days")
+        }
     }
 }
 

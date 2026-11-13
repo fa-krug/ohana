@@ -21,7 +21,8 @@ import type { AssistantStore, ChatRow } from "./store";
 import type { NetOptions } from "./net";
 import type { CitedChunk } from "@/lib/knowledge/sources";
 import { checkSources, citedIds, type Source } from "./sources";
-import type { AppleCalendarOp, MemoryOp, NoteOp, ReminderOp, SuggestionOp, ToolContext } from "./tools";
+import type { AppleCalendarOp, MemoryOp, NoteOp, PagesRequest, ReminderOp, SuggestionOp, ToolContext } from "./tools";
+import { withPageImages } from "./page-images";
 
 /** What a turn needs from the family's AI settings. */
 export interface Turn {
@@ -142,11 +143,16 @@ export type Item =
       answer?: EditAnswer;
       skipped?: boolean;
     }
+  /** A document's pages the assistant wants to look at (view_knowledge_pages): the app sends them
+   *  (asking first unless `auto`) and answers (PUT / POST …/pages), like an edit. */
+  | ({ kind: "pages"; id: string; answer?: PagesAnswer; skipped?: boolean } & PagesRequest)
   /** The older part of the chat was condensed for the model from here on. */
   | { kind: "compacted" }
   | { kind: "error"; text: string };
 
 export type Attachment = { kind: "image" | "file"; name: string; url?: string };
+/** How a request for pages went: the pages sent, declined by the user, or why the device couldn't. */
+export type PagesAnswer = { sent: number[] } | { declined: true } | { error: string };
 /** What the app reports per op of an edit of the device's data (Reminders, calendars, notes) it
  *  applied; `declined`: the user left this one out (suggestions they didn't pick). */
 export type EditResult = { ok: true; id?: string } | { ok: false; error: string } | { ok: false; declined: true };
@@ -172,14 +178,17 @@ export type CalendarItem = Item & { kind: "calendar" };
 export type SuggestionsItem = Item & { kind: "suggestions" };
 export type NotesItem = Item & { kind: "notes" };
 export type MemoriesItem = Item & { kind: "memories" };
+export type PagesItem = Item & { kind: "pages" };
 /** An edit of the device's data (or suggestions to add, changes of the memory) that waits for
  *  the user's OK. */
 export type EditItem = RemindersItem | CalendarItem | NotesItem | SuggestionsItem | MemoriesItem;
 export type EditKind = EditItem["kind"];
-/** What waits for the user: a question, an edit of their Reminders, calendars or notes, or
- *  suggestions to add. */
-export type WaitingItem = QuestionItem | EditItem;
-const WAITING_KINDS = new Set<string>(["question", "reminders", "calendar", "notes", "suggestions", "memories"] satisfies WaitingItem["kind"][]);
+/** What waits for the user: a question, an edit of their Reminders, calendars or notes,
+ *  suggestions to add, or a document's pages the device sends. */
+export type WaitingItem = QuestionItem | EditItem | PagesItem;
+const WAITING_KINDS = new Set<string>(
+  ["question", "reminders", "calendar", "notes", "suggestions", "memories", "pages"] satisfies WaitingItem["kind"][],
+);
 /** Where the changes of an edit would have gone, for what the model hears about it. */
 export const EDIT_PLACE: Record<EditKind, string> = {
   reminders: "their Reminders",
@@ -221,6 +230,11 @@ const skippedEdit = (kind: EditKind) =>
         ? `The user neither added nor declined these suggestions and wrote a new message instead: nothing was added to ${EDIT_PLACE[kind]}.`
         : `The user neither applied nor declined these changes and wrote a new message instead: nothing was changed in ${EDIT_PLACE[kind]}.`,
   });
+/** What the model learns about pages the device didn't send before the user wrote again. */
+const SKIPPED_PAGES = JSON.stringify({
+  skipped: true,
+  note: "The pages weren't sent: the user wrote a new message instead (or no device with the files answered).",
+});
 /** What the model learns about a tool that was running when its turn broke off. */
 const INTERRUPTED = JSON.stringify({
   error: "Interrupted: this may or may not have been done. Check before doing it again.",
@@ -296,7 +310,11 @@ export function withMessage(
   const q = waitingFor(shown, messages);
   if (q) {
     add.items.push({ seq: shown.indexOf(q), item: { ...q, skipped: true } });
-    add.messages.push({ role: "tool", tool_call_id: q.id, content: q.kind === "question" ? SKIPPED : skippedEdit(q.kind) });
+    add.messages.push({
+      role: "tool",
+      tool_call_id: q.id,
+      content: q.kind === "question" ? SKIPPED : q.kind === "pages" ? SKIPPED_PAGES : skippedEdit(q.kind),
+    });
   }
   for (const note of notes) {
     add.messages.push({ role: "user", content: `(I undid this change: ${note})` }, { role: "assistant", content: "OK." });
@@ -333,6 +351,12 @@ export function openEdit<K extends EditKind>(
 ): (Item & { kind: K }) | undefined {
   const q = waitingFor(items, messages);
   return q?.kind === kind ? (q as Item & { kind: K }) : undefined;
+}
+
+/** The request for a document's pages that waits for the app (see waitingFor). */
+export function openPages(items: Item[], messages: StoredMessage[]): PagesItem | undefined {
+  const q = waitingFor(items, messages);
+  return q?.kind === "pages" ? q : undefined;
 }
 
 /** The Reminders edit that waits for the user to apply or decline it (see waitingFor). */
@@ -671,6 +695,23 @@ export class Runner {
           this.saveItems();
           outcome = { kind: "done" };
           break;
+        case "pages":
+          this.answer = null;
+          this.add({
+            kind: "pages",
+            id: data.id,
+            summary: data.summary,
+            documentId: data.documentId,
+            name: data.name,
+            path: data.path,
+            hash: data.hash,
+            pages: data.pages,
+            total: data.total,
+            auto: data.auto,
+          });
+          this.saveItems();
+          outcome = { kind: "done" };
+          break;
         case "messages": {
           const list = data.messages as ChatMessage[];
           for (const m of list) {
@@ -722,7 +763,8 @@ export class Runner {
     const at = this.messages.findLastIndex((m) => m.role === "summary");
     await runChat({
       ...turn,
-      history: viewOf(this.messages),
+      // The pages the app sent are files: read for the request only.
+      history: withPageImages(viewOf(this.messages)),
       summary: at < 0 ? null : (this.messages[at] as SummaryMark),
       emit,
       signal: this.signal,

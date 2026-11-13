@@ -85,6 +85,10 @@ enum AssistantTranscript {
                 }
                 if let outcome = edit.outcome { lines.append("(\(outcome))") }
                 out.append(lines.joined(separator: "\n"))
+            case let .pages(request):
+                var lines = ["**🖼️ \(request.summary)**", request.path]
+                if let outcome = request.outcome { lines.append("(\(outcome))") }
+                out.append(lines.joined(separator: "\n"))
             case .compacted:
                 out.append("*\(String(localized: "Earlier messages condensed for the model"))*")
             case let .error(text):

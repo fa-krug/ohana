@@ -17,6 +17,7 @@ import type { NotesEdit } from "./notes";
 import type { RemindersEdit, RemindersSnapshot } from "./reminders";
 import type { SuggestionsEdit } from "./suggestions";
 import type { MemoriesEdit } from "./memory";
+import type { PagesRequest } from "./knowledge-pages";
 
 export interface UndoStep {
   method: "POST" | "PATCH" | "DELETE";
@@ -56,6 +57,9 @@ export interface ToolResult {
   /** Changes of the assistant's memory (edit_memories), the same way: the user confirms them,
    *  the app applies them through /ai/memories. */
   memories?: MemoriesEdit;
+  /** A document's pages the assistant wants to look at (view_knowledge_pages), the same way: the
+   *  app sends them (asking the user first unless the family's switch is on). */
+  pages?: PagesRequest;
   /** The knowledge base's chunk ids the result gives as refs ("k:<id>"): the only ones the
    *  chat's answers may cite (recorded by the runner as the tool runs). */
   refs?: number[];
@@ -92,6 +96,8 @@ export interface ToolContext {
   /** The family's knowledge folder, when the app has it linked on this device (and the user may
    *  use the knowledge base): notes can be written into it; else edit_knowledge_notes is off. */
   knowledgeFolder?: string;
+  /** The model's context window in tokens (how many page images fit). */
+  contextWindow?: number;
   signal?: AbortSignal;
 }
 
@@ -111,8 +117,11 @@ export interface Tool {
   needsAppleCalendar?: boolean;
   /** Offered only when the user may use the knowledge base (ToolContext.knowledge). */
   needsKnowledge?: boolean;
-  /** Offered only when the app has the family's knowledge folder linked (ToolContext.knowledgeFolder). */
+  /** Offered only when the app has the family's knowledge folder linked (ToolContext.knowledgeFolder):
+   *  the notes tool and view_knowledge_pages, whose files are on the device. */
   needsKnowledgeNotes?: boolean;
+  /** It ends the step and waits for the app (never run beside other calls). */
+  waits?: boolean;
   run(args: Record<string, unknown>, ctx: ToolContext): Promise<ToolResult>;
 }
 

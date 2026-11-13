@@ -23,6 +23,9 @@ export const aiSettings = sqliteTable("ai_settings", {
   contextWindow: integer("context_window").notNull().default(0),
   /** The model for recipe photos (meals); "" = none. */
   imageModel: text("image_model").notNull().default(""),
+  /** Chats untouched for longer than this many days are deleted (with their page images); 0:
+   *  kept until the user deletes them (or MAX_CHATS pushes them out). */
+  chatMaxAgeDays: integer("chat_max_age_days").notNull().default(0),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });
 

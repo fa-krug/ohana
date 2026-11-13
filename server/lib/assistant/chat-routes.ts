@@ -19,6 +19,9 @@
 //   POST   {chat}/suggestions  the same for the waiting suggestions (which the user added)
 //   POST   {chat}/memories the same for the waiting changes of the assistant's memory (which
 //                          the user confirmed and the app applied)
+//   PUT    {chat}/pages?call=&page=  (image/jpeg) a page of the document the waiting
+//                          view_knowledge_pages call asked for
+//   POST   {chat}/pages    the pages sent (or declined, or why none could be); streams like events
 //   POST   {chat}/stop     stops the running turn
 //   POST   {chat}/undone   a change of the chat was undone (the model hears it next time)
 //   POST   {chat}/page     moves the chat to another page
@@ -50,7 +53,9 @@ import {
   type EditKind,
   type EditResult,
   openEdit,
+  openPages,
   openQuestion,
+  type PagesAnswer,
   pause,
   type Queued,
   STOPPED,
@@ -62,6 +67,9 @@ import {
 import type { StoredMessage } from "./context";
 import { MAX_PATH_LENGTH } from "@/lib/knowledge/input";
 import { withoutMarkers } from "./sources";
+import { deleteChatFiles, PAGES_HEAD, pageFileExists, pageFilePath, pagePart, writePageFile } from "./page-images";
+import { pagesText } from "./tools/knowledge-pages";
+import { readJpeg } from "@/lib/knowledge/scans";
 import type { ChatMessage, ContentPart } from "./provider";
 import type { AppleCalendarOp, MemoryOp, NoteOp, ReminderOp, SuggestionOp } from "./tools";
 import type { AssistantStore, ChatRow } from "./store";
@@ -128,6 +136,10 @@ export function handleChats(
       return r.edit(id, "suggestions");
     case "POST :id/memories":
       return r.edit(id, "memories");
+    case "PUT :id/pages":
+      return r.putPage(id);
+    case "POST :id/pages":
+      return r.pages(id);
     case "POST :id/stop":
       return r.stop(id);
     case "POST :id/undone":
@@ -212,9 +224,10 @@ class ChatRoutes {
   }
 
   async remove(id: string) {
-    await this.ownChat(id);
+    const { family } = await this.ownChat(id);
     // A turn running in the worker notices that the chat is gone and ends.
     await this.store.deleteChat(id);
+    deleteChatFiles(family.id, id);
     return json({ ok: true });
   }
 
@@ -311,7 +324,10 @@ class ChatRoutes {
       await store.createChat(chat);
       // Only the newest chats are kept.
       const all = await store.listChats(family.id, chat.user_id);
-      for (const old of all.slice(MAX_CHATS)) await store.deleteChat(old.id);
+      for (const old of all.slice(MAX_CHATS)) {
+        await store.deleteChat(old.id);
+        deleteChatFiles(family.id, old.id);
+      }
     } else {
       const own = await this.ownChat(id);
       await this.checkSetUp(own.family.id);
@@ -461,6 +477,93 @@ class ChatRoutes {
       return await this.begin(chat, token, {
         messages: [{ role: "tool", tool_call_id: edit.id, content: JSON.stringify(result) }],
         items: [{ seq: shown.indexOf(edit), item: { ...edit, answer } }],
+        context: onPage(chat, cleanContext(body)),
+      });
+    } catch (err) {
+      await this.letGo(id, token);
+      throw err;
+    }
+  }
+
+  /** PUT /ai/chats/{id}/pages?call=&page= (image/jpeg, at most 4 MB): page `page` of the document
+   *  the waiting view_knowledge_pages call `call` asked for, as the app rendered it. Sent again,
+   *  it replaces the one before. Kept with the chat (page-images.ts). */
+  async putPage(id: string) {
+    const { family } = await this.ownChat(id);
+    const call = this.ctx.url.searchParams.get("call") ?? "";
+    const page = Number(this.ctx.url.searchParams.get("page"));
+    const [items, messages] = await Promise.all([this.store.listChatItems(id), this.store.listChatMessages(id)]);
+    const q = openPages(
+      items.map((r) => r.item as unknown as Item),
+      messages.map((r) => r.message as unknown as StoredMessage),
+    );
+    if (!q || q.id !== call) throw new HttpError(409, "These pages aren't asked for any more");
+    if (!q.pages.includes(page)) throw new HttpError(400, "This page wasn't asked for");
+    const jpeg = await readJpeg(this.ctx.req);
+    writePageFile(family.id, id, call, page, jpeg);
+    return json({ ok: true });
+  }
+
+  /** POST /ai/chats/{id}/pages {id, sent?: [page], declined?: true, error?, page, year, lang,
+   *  today}: the app sent the pages `sent` (each PUT before), the user declined, or the device
+   *  couldn't (`error`, e.g. the file isn't there). The turn goes on: the tool's result says
+   *  what came, and the pages follow as images in a message of their own. */
+  async pages(id: string) {
+    const store = this.store;
+    const body = await readBody(this.ctx.req);
+    const { family } = await this.ownChat(id);
+    await this.checkSetUp(family.id);
+    const token = randomToken(32);
+    const chat = await store.claimChat(id, token, leaseUntil(this.env), "start");
+    if (!chat) throw new HttpError(409, "The assistant is still answering in this chat");
+    try {
+      const [items, messages] = await Promise.all([store.listChatItems(id), store.listChatMessages(id)]);
+      const shown = items.map((r) => r.item as unknown as Item);
+      const q = openPages(
+        shown,
+        messages.map((r) => r.message as unknown as StoredMessage),
+      );
+      if (!q || q.id !== body.id) throw new HttpError(409, "These pages aren't asked for any more");
+      const error = str(body.error, 500).trim();
+      const asked = Array.isArray(body.sent) ? body.sent : [];
+      const sent = q.pages.filter(
+        (p) => asked.includes(p) && pageFileExists(pageFilePath(family.id, id, q.id, p)),
+      );
+      let answer: PagesAnswer;
+      let result: Record<string, unknown>;
+      const add: ChatMessage[] = [];
+      if (body.declined === true) {
+        answer = { declined: true };
+        result = { declined: true, note: "The user didn't want these pages sent: you didn't get them." };
+      } else if (!sent.length) {
+        const why = error || "No page could be sent.";
+        answer = { error: why };
+        result = { error: `The pages couldn't be sent: ${why}` };
+      } else {
+        answer = { sent };
+        const missing = q.pages.filter((p) => !sent.includes(p));
+        const last = Math.max(...q.pages);
+        const rest = Array.from({ length: Math.max(0, q.total - last) }, (_, i) => last + 1 + i);
+        result = {
+          document: q.name,
+          sent: `${sent.length === 1 ? "page" : "pages"} ${pagesText(sent)}`,
+          note: "The pages follow as images in the next message.",
+          ...(missing.length ? { notSent: `pages ${pagesText(missing)}${error ? `: ${error}` : ""}` } : {}),
+          ...(rest.length
+            ? { left: `${rest.length === 1 ? "page" : "pages"} ${pagesText(rest)} not sent yet: call again with them if you need them` }
+            : {}),
+        };
+        const parts: ContentPart[] = [
+          { type: "text", text: `${PAGES_HEAD}: “${q.name}”, ${sent.length === 1 ? "page" : "pages"} ${pagesText(sent)}]` },
+        ];
+        for (const p of sent) {
+          parts.push({ type: "text", text: `Page ${p}:` }, pagePart(pageFilePath(family.id, id, q.id, p)));
+        }
+        add.push({ role: "user", content: parts });
+      }
+      return await this.begin(chat, token, {
+        messages: [{ role: "tool", tool_call_id: q.id, content: JSON.stringify(result) }, ...add],
+        items: [{ seq: shown.indexOf(q), item: { ...q, answer } }],
         context: onPage(chat, cleanContext(body)),
       });
     } catch (err) {

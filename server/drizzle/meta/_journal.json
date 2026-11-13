@@ -267,6 +267,13 @@
       "when": 1794552745075,
       "tag": "0037_knowledge_values",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "6",
+      "when": 1794554264263,
+      "tag": "0038_chat_max_age",
+      "breakpoints": true
     }
   ]
 }

@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// One item of the chat: a message, a tool call, a change with undo, a question, a Reminders,
-/// calendar or notes edit to apply, suggestions to add, a note.
+/// calendar or notes edit to apply, suggestions to add, a document's pages to send, a note.
 /// Equal for the same item (`.equatable()`): the closure would otherwise draw every item again
 /// whenever the chat does (a keystroke, another module beside the panel).
 struct AssistantItemView: View, Equatable {
@@ -48,6 +48,8 @@ struct AssistantItemView: View, Equatable {
             AssistantNotesCard(edit: edit, store: store, isOpen: waiting, busy: busy)
         case let .memories(edit):
             AssistantMemoriesCard(edit: edit, store: store, isOpen: waiting, busy: busy)
+        case let .pages(request):
+            AssistantPagesCard(request: request, store: store, isOpen: waiting, busy: busy, open: open)
         case .compacted:
             HStack(spacing: 8) {
                 VStack { Divider() }
