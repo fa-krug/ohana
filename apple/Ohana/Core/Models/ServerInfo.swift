@@ -72,7 +72,7 @@ extension ServerInfo {
     /// `FamilyContext.isEnabled` adds that.
     func isEnabled(_ module: Module) -> Bool {
         switch module {
-        case .overview, .calendar, .settings, .search: true
+        case .overview, .calendar, .settings, .search, .scanLetter: true
         case .finance, .meals, .appointments, .chores, .assistant, .knowledge: modules.contains(module.rawValue)
         }
     }

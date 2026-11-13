@@ -6,6 +6,8 @@ import SwiftUI
 /// the others keep theirs; the search is last (no number).
 enum Module: String, CaseIterable, Identifiable, Hashable {
     case overview, calendar, finance, meals, appointments, chores, assistant, settings, knowledge, search
+    /// Not a page: a row of the Mac's sidebar that opens the letter scanner (`isAction`).
+    case scanLetter
 
     /// The sidebar's "Modules" section, in its order; the overview stands above it, the settings
     /// at its foot.
@@ -40,6 +42,7 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
         case .assistant: "Assistant"
         case .settings: "Settings"
         case .search: "Search"
+        case .scanLetter: "Scan letter"
         }
     }
 
@@ -55,6 +58,7 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
         case .assistant: "sparkles"
         case .settings: "gearshape"
         case .search: "magnifyingglass"
+        case .scanLetter: "doc.text.viewfinder"
         }
     }
 
@@ -69,7 +73,7 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
         case .knowledge: ModuleTint.knowledge
         case .assistant: ModuleTint.assistant
         case .settings: ModuleTint.settings
-        case .search: ModuleTint.overview
+        case .search, .scanLetter: ModuleTint.overview
         }
     }
 
@@ -82,6 +86,10 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
         false
         #endif
     }
+
+    /// A sidebar row that does something instead of showing a page: picking it never changes the
+    /// page on screen (`AppShell.show`).
+    var isAction: Bool { self == .scanLetter }
 
     var shortcut: KeyEquivalent? {
         let number = Module.allCases.firstIndex(of: self)! + 1
@@ -100,6 +108,7 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
         case .assistant: AssistantPage()
         case .settings: FamilySettingsView()
         case .search: FamilySearchView()
+        case .scanLetter: EmptyView()
         }
     }
 }
@@ -163,7 +172,7 @@ struct ShellCommands: Commands {
         CommandMenu("Go") {
             // The modules the server has on; each keeps its ⌘-number.
             // Not the settings on the Mac: they're a window there (⌘,).
-            ForEach((shell?.modules ?? Module.allCases).filter { $0 != .search && !$0.isWindow }) { module in
+            ForEach((shell?.modules ?? Module.allCases).filter { $0 != .search && !$0.isWindow && !$0.isAction }) { module in
                 Button(module.title) { shell?.module.wrappedValue = module }
                     .keyboardShortcut(module.shortcut.map { KeyboardShortcut($0, modifiers: .command) })
             }

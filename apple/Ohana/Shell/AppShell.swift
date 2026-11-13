@@ -38,7 +38,7 @@ struct AppShell: View {
     private var selection: Binding<Module> {
         Binding {
             let current = module ?? (Module.onPhone ? phoneModule : storedModule)
-            return app.isEnabled(current) && !Module.notPages.contains(current) && !current.isWindow ? current : .overview
+            return app.isEnabled(current) && !Module.notPages.contains(current) && !current.isWindow && !current.isAction ? current : .overview
         } set: { show($0) }
     }
     /// The pages' stores, kept while the shell shows the family (`ShellPageStores`).
@@ -154,6 +154,11 @@ struct AppShell: View {
     /// Switches to `target`'s tab, on iPhone its page (pushed over the family page), or there
     /// opens the assistant's sheet.
     private func show(_ target: Module) {
+        // Mac: the sidebar's "Scan letter" row; the page on screen stays.
+        if target == .scanLetter {
+            if let family = app.selectedFamily { app.context(for: family)?.scanLetter() }
+            return
+        }
         #if os(macOS)
         // A route to a settings page stays pending: the window's view takes it.
         if target.isWindow {
@@ -217,10 +222,23 @@ struct AppShell: View {
             TabView(selection: selection) {
                 tab(.overview, assistantOn: assistantOn)
                 TabSection("Modules") {
-                    ForEach(Module.modules.filter { context.isEnabled($0) }) {
+                    ForEach(Module.modules.filter { context.isEnabled($0) && !Self.ownSection.contains($0) }) {
                         tab($0, assistantOn: assistantOn)
                     }
                 }
+                #if os(macOS)
+                // The assistant and scanning a letter, a section of their own below the modules.
+                TabSection("Tools") {
+                    ForEach(Self.ownSection.filter { context.isEnabled($0) }) {
+                        tab($0, assistantOn: assistantOn)
+                    }
+                    // A tab only for its row (`sectionActions` draw nothing on the Mac): picking it
+                    // opens the scanner (`show`), never its page.
+                    Tab(Module.scanLetter.title, systemImage: Module.scanLetter.systemImage, value: Module.scanLetter) {
+                        Color.clear
+                    }
+                }
+                #endif
                 #if os(iOS)
                 tab(.settings, assistantOn: assistantOn)
                 #endif
@@ -239,9 +257,22 @@ struct AppShell: View {
             .tabViewSidebarBottomBar {
                 SidebarSettingsButton(selected: selection.wrappedValue == .settings) { module = .settings }
             }
+            #else
+            .tabViewSidebarBottomBar {
+                MacSidebarFooter { openSettings() }
+            }
             #endif
             .task { await prebuildPages(context) }
         }
+    }
+
+    /// The Mac's sidebar has the assistant in a section of its own, with scanning a letter.
+    private static var ownSection: [Module] {
+        #if os(macOS)
+        [.assistant]
+        #else
+        []
+        #endif
     }
 
     /// A module's tab; `assistantOn`: the server has the assistant, so the pages get its button.
@@ -253,7 +284,8 @@ struct AppShell: View {
         // the sidebar; a compact tab bar (iPad) keeps the modules.
         .defaultVisibility(item == .assistant || item == .settings ? .hidden : .automatic, for: .tabBar)
         // The settings stand at the sidebar's foot instead (`SidebarSettingsButton`); the Mac has
-        // no settings tab (a window, `SettingsWindow`).
+        // no settings tab (a window, `SettingsWindow`, opened from its sidebar's foot,
+        // `MacSidebarFooter`).
         #if os(iOS)
         .defaultVisibility(item == .settings ? .hidden : .automatic, for: .sidebar)
         #endif
@@ -306,6 +338,70 @@ private struct SidebarSettingsButton: View {
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
         .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+}
+#endif
+
+#if os(macOS)
+/// The foot of the Mac's sidebar, below the modules: the settings window (⌘,), a quiet row in
+/// the secondary color.
+private struct MacSidebarFooter: View {
+    let openSettings: () -> Void
+
+    var body: some View {
+        Button(action: openSettings) {
+            Label(Module.settings.title, systemImage: Module.settings.systemImage)
+                // The bar shows icons only otherwise.
+                .labelStyle(.titleAndIcon)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 8)
+        .padding(.bottom, 8)
+        .background(BarDividerHider())
+    }
+}
+
+/// Takes away the line SwiftUI draws above the sidebar's bottom bar (a 1 pt layer of the bar's
+/// container; no modifier turns it off, `scrollEdgeEffectStyle` / `Hidden` don't reach it), so the
+/// settings sit in the sidebar as in the system's apps. Should the container change, the line simply
+/// shows again.
+private struct BarDividerHider: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView { HiderView() }
+    func updateNSView(_ view: NSView, context: Context) { (view as? HiderView)?.hideSoon() }
+
+    private final class HiderView: NSView {
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            hideSoon()
+        }
+
+        override func layout() {
+            super.layout()
+            hideSoon()
+        }
+
+        func hideSoon() {
+            DispatchQueue.main.async { [weak self] in self?.hide() }
+        }
+
+        private func hide() {
+            var view = superview
+            while let current = view, !NSStringFromClass(type(of: current)).contains("PocketContainer") {
+                view = current.superview
+            }
+            guard let container = view, let layers = container.layer?.sublayers else { return }
+            let viewLayers = Set(container.subviews.compactMap { $0.layer.map(ObjectIdentifier.init) })
+            for layer in layers where !viewLayers.contains(ObjectIdentifier(layer))
+                && layer.bounds.height <= 1 && layer.frame.minY <= 1 && !layer.isHidden {
+                layer.isHidden = true
+            }
+        }
     }
 }
 #endif

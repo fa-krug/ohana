@@ -41,8 +41,8 @@ struct FamilySwitcher: View {
 
 /// Opens the family menu at the top of the sidebar (iPad, Mac; a narrow iPad's toolbar, iPhone has
 /// its family page, `PhoneShell`): the families to switch to, creating or joining one (in the demo:
-/// connecting a server) and scanning a letter. It shows invite links the app was opened with
-/// (`InviteInbox`).
+/// connecting a server) and scanning a letter (the Mac: its sidebar, beside the assistant). It
+/// shows invite links the app was opened with (`InviteInbox`).
 struct FamilyPickerButton<ButtonLabel: View>: View {
     @Environment(AppModel.self) private var app
     /// The family on screen (scanning a letter goes to its shell).
@@ -55,7 +55,8 @@ struct FamilyPickerButton<ButtonLabel: View>: View {
 
     var body: some View {
         Menu {
-            FamilyMenu(scans: family != nil, settings: showsSettings, choose: run)
+            // The Mac's sidebar has its own row for scanning a letter, beside the assistant.
+            FamilyMenu(scans: family != nil && !Self.sidebarScans, settings: showsSettings, choose: run)
         } label: {
             label
         }
@@ -64,6 +65,15 @@ struct FamilyPickerButton<ButtonLabel: View>: View {
         .sheet(isPresented: $creating) { CreateFamilySheet().errorBanner() }
         // In the demo an invite waits for the server (the connect sheet shows it).
         .inviteJoinSheet($joining, claimsLinks: !app.isDemo)
+    }
+
+    /// The Mac scans from the sidebar instead.
+    private static var sidebarScans: Bool {
+        #if os(macOS)
+        true
+        #else
+        false
+        #endif
     }
 
     private func run(_ action: FamilyPickerAction) {
