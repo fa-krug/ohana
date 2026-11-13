@@ -809,7 +809,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   family (`ShellPageStores`, `\.pageStores`), the `LoadState` pages read the cache's memory; on iPad
   and the Mac the launch picks each tab once behind the loading screen (`launchLoading`,
   `prebuildPages`; not the search or the assistant: they take the keyboard), the Mac's toolbar
-  hidden meanwhile); settings pinned at the sidebar's foot (`tabViewSidebarBottomBar`; on the Mac, which can't leave a tab out of the sidebar alone and draws nothing for a `.hidden` tab, the tab is hidden only while another page is on screen); family switcher: on iPad and Mac
+  hidden meanwhile); settings pinned at the iPad sidebar's foot (`tabViewSidebarBottomBar`); on the Mac they're no tab but a window of their own (`Features/Settings/SettingsWindow.swift`, the `Settings` scene, ⌘,): a sidebar like the system's Settings (account, the selected family's pages, the modules', this device's, administration) and the page beside it, following the main window's family; `AppShell.show(.settings)` opens it (`Module.isWindow`) and the window takes the settings route (`takeRoute(for: .settings)`; the memory and the data pushed on their parent page); family switcher: on iPad and Mac
   a system `Menu` (`FamilyMenu`) at the top of the sidebar, where the tab view has no sidebar (a
   narrow iPad window) the same menu from each page's toolbar with the settings in it
   (`FamilyPickerButton(showsSettings:)`, `ShellToolbar`), on iPhone the family page (the family on
@@ -927,7 +927,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   (`didChange(.memories)`); the `edit_memories` card (`AssistantMemories.swift`) ticks each op,
   texts editable, Save applies them through `/ai/memories` (failed ones stay, Save retries only
   those) before answering, Not Now declines.
-  The assistant: `family.ask(prompt, send:, newChat:, attachments:)` opens it ready to type from anywhere (⇧⌘J, the overview's field, the Mac's menu bar item (`MenuBarItem`, an AppKit status item: SwiftUI's `MenuBarExtra` re-sets its icon on every window redraw and crashed the app), the
+  The assistant: `family.ask(prompt, send:, newChat:, attachments:)` opens it ready to type from anywhere (⇧⌘J, the Mac's menu bar item (`MenuBarItem`, an AppKit status item: SwiftUI's `MenuBarExtra` re-sets its icon on every window redraw and crashed the app), the
   `AskOhanaIntent` App Shortcut). The chat (`AssistantChatView`, the same in the panel, the iPhone's
   sheet and the page) has one header everywhere: Chats (the history, pushed; not on the page with its
   list column), the title, New chat, More (Open as a page, Move to …, Copy, *Copy Prompt for AI Agent*: `POST /agent/token`'s prompt to the clipboard, not in the demo, `AssistantAgentPrompt.swift`; settings; it never reads

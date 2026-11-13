@@ -326,12 +326,3 @@ extension OverviewFormat {
         AttributedString(localized: "\(name) and ^[\(more) more doctor](inflect: true)")
     }
 }
-
-/// The "Ask Ohana…" field.
-enum OverviewAsk {
-    /// The question to send, or nil for a blank field.
-    static func question(_ text: String) -> String? {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
-    }
-}

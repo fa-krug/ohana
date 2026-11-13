@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The family overview (the web app's app/(app)/f/[familyId]/page.tsx): one dashboard over all
-/// modules. "Ask Ohana…", today, the meals, the next birthdays, what comes up, this month's
+/// modules: today, the meals, the next birthdays, what comes up, this month's
 /// finances and the appointment searches' latest finds, as content cards. A card's header opens
 /// its module; each row opens its exact place (a day of the calendar, a recipe, a category's
 /// transactions, an appointment slot). What belongs to a
@@ -18,7 +18,6 @@ struct OverviewView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                if family.isEnabled(.assistant) { OverviewAskField() }
                 LoadStateView(state: state, retry: load) { dashboard in
                     OverviewGrid(dashboard: dashboard)
                 }
@@ -48,64 +47,6 @@ struct OverviewView: View {
     /// copy still shows offline.
     static func request(_ api: FamilyAPI) -> CachedGet<OverviewDashboard> {
         api.cached("/overview", query: ["today": Day.today.description], key: "/overview")
-    }
-}
-
-/// "Ask Ohana…": a question typed here goes to a new chat with the assistant.
-private struct OverviewAskField: View {
-    @Environment(FamilyContext.self) private var family
-    @State private var text = ""
-    @FocusState private var focused: Bool
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @ScaledMetric(relativeTo: .title3) private var iconSize: CGFloat = 28
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "sparkles")
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(ModuleTint.assistant)
-                .frame(width: iconSize, height: iconSize)
-                .frame(minWidth: 44, minHeight: 44)
-                .accessibilityHidden(true)
-            TextField("Ask Ohana…", text: $text)
-                .textFieldStyle(.plain)
-                .font(.body)
-                .focused($focused)
-                .submitLabel(.send)
-                .onSubmit {
-                    if let question = OverviewAsk.question(text) { send(question) }
-                }
-            if OverviewAsk.question(text) != nil {
-                Button {
-                    if let question = OverviewAsk.question(text) { send(question) }
-                } label: {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(ModuleTint.assistant)
-                        .frame(minWidth: 44, minHeight: 44)
-                        .contentShape(.rect)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(Text("Send"))
-                .help(Text("Send"))
-                .transition(.scale.combined(with: .opacity))
-            }
-        }
-        .padding(.leading, 6)
-        .padding(.trailing, 10)
-        .padding(.vertical, 4)
-        .background {
-            Capsule()
-                .fill(Color.cardBackground)
-                .overlay { Capsule().fill(ModuleTint.assistant.opacity(0.1)) }
-        }
-        .animation(reduceMotion ? nil : .snappy, value: OverviewAsk.question(text) == nil)
-    }
-
-    private func send(_ question: String) {
-        family.ask(question, send: true, newChat: true)
-        text = ""
-        focused = false
     }
 }
 

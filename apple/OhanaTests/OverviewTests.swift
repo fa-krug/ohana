@@ -136,9 +136,4 @@ struct OverviewTests {
         #expect(String(OverviewFormat.doctorAndMore("Dr. Weber", more: 1).characters) == "Dr. Weber and 1 more doctor")
         #expect(String(OverviewFormat.doctorAndMore("Dr. Weber", more: 2).characters) == "Dr. Weber and 2 more doctors")
     }
-
-    @Test func asksTheAssistant() {
-        #expect(OverviewAsk.question("  What's for dinner?\n") == "What's for dinner?")
-        #expect(OverviewAsk.question(" \n") == nil)
-    }
 }

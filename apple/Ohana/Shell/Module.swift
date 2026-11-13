@@ -74,6 +74,15 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
     }
 
     /// ⌘1 … ⌘9; nil after the ninth (the search).
+    /// The Mac's settings are a window of their own (`SettingsWindow`), not a page of the shell.
+    var isWindow: Bool {
+        #if os(macOS)
+        self == .settings
+        #else
+        false
+        #endif
+    }
+
     var shortcut: KeyEquivalent? {
         let number = Module.allCases.firstIndex(of: self)! + 1
         return number <= 9 ? KeyEquivalent(Character("\(number)")) : nil
@@ -153,7 +162,8 @@ struct ShellCommands: Commands {
         }
         CommandMenu("Go") {
             // The modules the server has on; each keeps its ⌘-number.
-            ForEach((shell?.modules ?? Module.allCases).filter { $0 != .search }) { module in
+            // Not the settings on the Mac: they're a window there (⌘,).
+            ForEach((shell?.modules ?? Module.allCases).filter { $0 != .search && !$0.isWindow }) { module in
                 Button(module.title) { shell?.module.wrappedValue = module }
                     .keyboardShortcut(module.shortcut.map { KeyboardShortcut($0, modifiers: .command) })
             }
@@ -169,11 +179,14 @@ struct ShellCommands: Commands {
                     .keyboardShortcut("j", modifiers: [.command, .shift])
             }
         }
-        // The settings (the account's among them) are a page of the sidebar, not a window.
+        #if os(iOS)
+        // The settings (the account's among them) are a page of the sidebar here; the Mac has the
+        // Settings scene's window and its own Settings… item (`SettingsWindow`).
         CommandGroup(replacing: .appSettings) {
             Button("Settings…") { shell?.module.wrappedValue = .settings }
                 .keyboardShortcut(",", modifiers: .command)
                 .disabled(shell == nil)
         }
+        #endif
     }
 }

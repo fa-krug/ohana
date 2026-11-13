@@ -2875,16 +2875,6 @@
         }
       }
     },
-    "Ask Ohana…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ohana fragen …"
-          }
-        }
-      }
-    },
     "Ask me anything…": {
       "localizations": {
         "de": {

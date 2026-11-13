@@ -74,5 +74,15 @@ struct OhanaApp: App {
             }
             if phase == .background, !app.isDemo { WidgetSync.reload() }
         }
+
+        #if os(macOS)
+        // The settings in a window of their own (⌘,), with a sidebar like the system's.
+        Settings {
+            SettingsWindow()
+                .environment(app)
+        }
+        .defaultSize(width: 880, height: 620)
+        .windowResizability(.contentMinSize)
+        #endif
     }
 }

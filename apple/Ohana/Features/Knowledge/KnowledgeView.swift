@@ -522,12 +522,14 @@ private struct KnowledgeList: View {
 
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
-        ToolbarItem(placement: .primaryAction) {
-            Menu {
-                moduleMenu
-            } label: {
-                Label("More", systemImage: "ellipsis")
+        // Two plain buttons rather than a More menu: there's nothing else to put in one.
+        ToolbarItemGroup(placement: .primaryAction) {
+            Toggle(isOn: $query.excluded) {
+                Label("Show Left Out", systemImage: "eye.slash")
             }
+            .help("Show Left Out")
+            Button("Knowledge Settings", systemImage: "gearshape") { family.open(.settings(.knowledge)) }
+                .help("Knowledge Settings")
         }
     }
 

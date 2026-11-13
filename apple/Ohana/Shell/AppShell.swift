@@ -10,6 +10,10 @@ import SwiftUI
 struct AppShell: View {
     @Environment(AppModel.self) private var app
     @Environment(\.horizontalSizeClass) private var sizeClass
+    #if os(macOS)
+    /// The Mac's settings are a window (`SettingsWindow`).
+    @Environment(\.openSettings) private var openSettings
+    #endif
     /// The tab on screen; nil until one is picked: then the scene's last one (`storedModule`).
     /// The tab view's selection is this state, only mirrored to the scene storage: bound to it
     /// directly, the iPhone's tab bar jumps back to the old tab for a moment at every switch.
@@ -34,7 +38,7 @@ struct AppShell: View {
     private var selection: Binding<Module> {
         Binding {
             let current = module ?? (Module.onPhone ? phoneModule : storedModule)
-            return app.isEnabled(current) && !Module.notPages.contains(current) ? current : .overview
+            return app.isEnabled(current) && !Module.notPages.contains(current) && !current.isWindow ? current : .overview
         } set: { show($0) }
     }
     /// The pages' stores, kept while the shell shows the family (`ShellPageStores`).
@@ -150,6 +154,13 @@ struct AppShell: View {
     /// Switches to `target`'s tab, on iPhone its page (pushed over the family page), or there
     /// opens the assistant's sheet.
     private func show(_ target: Module) {
+        #if os(macOS)
+        // A route to a settings page stays pending: the window's view takes it.
+        if target.isWindow {
+            openSettings()
+            return
+        }
+        #endif
         if Module.notPages.contains(target) {
             showAssistant = true
             return
@@ -173,7 +184,7 @@ struct AppShell: View {
         try? await Task.sleep(for: .milliseconds(16))
         if !Module.onPhone {
             let pages = ([.overview] + Module.modules + [.settings])
-                .filter { !Module.notPages.contains($0) && context.isEnabled($0) }
+                .filter { !Module.notPages.contains($0) && !$0.isWindow && context.isEnabled($0) }
             let start = selection.wrappedValue
             for page in pages where page != start && page != .assistant {
                 guard !Task.isCancelled else { break }
@@ -209,10 +220,6 @@ struct AppShell: View {
                     ForEach(Module.modules.filter { context.isEnabled($0) }) {
                         tab($0, assistantOn: assistantOn)
                     }
-                    #if os(macOS)
-                    // Out of the list (see `tab`) but while on screen: then the list's last row.
-                    tab(.settings, assistantOn: assistantOn)
-                    #endif
                 }
                 #if os(iOS)
                 tab(.settings, assistantOn: assistantOn)
@@ -228,9 +235,11 @@ struct AppShell: View {
             }
             .tabViewStyle(.sidebarAdaptable)
             .tabViewSidebarHeader { FamilySwitcher() }
+            #if os(iOS)
             .tabViewSidebarBottomBar {
                 SidebarSettingsButton(selected: selection.wrappedValue == .settings) { module = .settings }
             }
+            #endif
             .task { await prebuildPages(context) }
         }
     }
@@ -243,13 +252,10 @@ struct AppShell: View {
         // The assistant (a sheet from the toolbar) and the settings (the family picker) live in
         // the sidebar; a compact tab bar (iPad) keeps the modules.
         .defaultVisibility(item == .assistant || item == .settings ? .hidden : .automatic, for: .tabBar)
-        // The settings stand at the sidebar's foot instead (`SidebarSettingsButton`).
+        // The settings stand at the sidebar's foot instead (`SidebarSettingsButton`); the Mac has
+        // no settings tab (a window, `SettingsWindow`).
         #if os(iOS)
         .defaultVisibility(item == .settings ? .hidden : .automatic, for: .sidebar)
-        #else
-        // The Mac can't leave a tab out of the sidebar alone, and a `.hidden` tab draws nothing
-        // when picked: hidden only while another page is on screen.
-        .hidden(item == .settings && selection.wrappedValue != .settings)
         #endif
     }
 
@@ -275,8 +281,9 @@ struct AppShell: View {
     }
 }
 
-/// The settings at the foot of the sidebar (iPad, Mac), below the modules however many there are:
-/// a row like the sidebar's own, highlighted while the settings are on screen.
+#if os(iOS)
+/// The settings at the foot of the iPad's sidebar, below the modules however many there are: a
+/// row like the sidebar's own, highlighted while the settings are on screen.
 private struct SidebarSettingsButton: View {
     let selected: Bool
     let action: () -> Void
@@ -289,11 +296,7 @@ private struct SidebarSettingsButton: View {
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 10)
-                #if os(macOS)
-                .padding(.vertical, 6)
-                #else
                 .padding(.vertical, 11)
-                #endif
                 .background(
                     .primary.opacity(selected ? 0.1 : hovering ? 0.05 : 0),
                     in: .rect(cornerRadius: 10)
@@ -305,6 +308,7 @@ private struct SidebarSettingsButton: View {
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
+#endif
 
 extension Notification.Name {
     /// Switches the shell to a module (`object`: a `Module`), e.g. from an overview card.
