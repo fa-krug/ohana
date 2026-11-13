@@ -2,7 +2,8 @@ import SwiftUI
 
 /// One document of the knowledge base: where it is in the folder, its date, whose it is and its
 /// tags; its card (the summary and the facts, each with the quote it rests on: a tap opens the
-/// original at that quote); where it stands when it isn't simply there; and its text page by page
+/// original at that quote; the values it reports, by their section, a tap opens the original at
+/// their page); where it stands when it isn't simply there; and its text page by page
 /// (collapsed; a route's page open, its quote marked; pages the family's AI transcribed from their
 /// image marked "Read by the assistant"). *Open Original* in the toolbar, the rest in its More menu:
 /// *Show in Finder* (Mac), *Read Again* and *Read Again with the Assistant* (this device reads the
@@ -84,6 +85,7 @@ struct KnowledgeDocumentView: View {
                     rereadStatus
                     scansNote(detail)
                     card(detail)
+                    values(detail)
                     text(detail)
                 }
                 .padding()
@@ -285,6 +287,85 @@ struct KnowledgeDocumentView: View {
         }
         .buttonStyle(.plain)
         .accessibilityHint(Text("Opens the original at this passage"))
+    }
+
+    /// The values the document reports (lab results, grades, readings …), by their section in
+    /// the document's order.
+    @ViewBuilder
+    private func values(_ detail: KnowledgeDocumentDetail) -> some View {
+        if !detail.values.isEmpty {
+            CardSection("Values", systemImage: "list.number", tint: ModuleTint.knowledge) {
+                Text("By the assistant")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } content: {
+                ForEach(Array(Self.valueGroups(detail.values).enumerated()), id: \.offset) { index, group in
+                    if index > 0 { Divider() }
+                    if let title = group.title {
+                        Text(verbatim: title)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                    ForEach(Array(group.values.enumerated()), id: \.offset) { _, value in
+                        valueRow(value, document: detail.document)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Values one after the other under the same section, together.
+    private static func valueGroups(_ values: [KnowledgeValue]) -> [(title: String?, values: [KnowledgeValue])] {
+        var groups: [(title: String?, values: [KnowledgeValue])] = []
+        for value in values {
+            let title = value.group.flatMap { $0.isEmpty ? nil : $0 }
+            if let last = groups.last, last.title == title {
+                groups[groups.count - 1].values.append(value)
+            } else {
+                groups.append((title, [value]))
+            }
+        }
+        return groups
+    }
+
+    private func valueRow(_ value: KnowledgeValue, document: KnowledgeDocumentSummary) -> some View {
+        Button {
+            opener.open(document, page: value.page, quote: value.name, folder: family.knowledge.folder)
+        } label: {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: value.name)
+                        .foregroundStyle(.primary)
+                    let details = Self.valueDetails(value)
+                    if !details.isEmpty {
+                        Text(verbatim: details)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Text(verbatim: value.valueWithUnit)
+                    .monospacedDigit()
+                    .multilineTextAlignment(.trailing)
+                    .foregroundStyle(value.note == nil ? Color.primary : ModuleTint.knowledge)
+            }
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityHint(Text("Opens the original at this passage"))
+    }
+
+    /// "Range 12–16 · H · 3 Mar 2026 · Page 2".
+    private static func valueDetails(_ value: KnowledgeValue) -> String {
+        var parts: [String] = []
+        if let range = value.range, !range.isEmpty { parts.append(String(localized: "Range \(range)")) }
+        if let note = value.note, !note.isEmpty { parts.append(note) }
+        if let day = value.date.flatMap({ Day($0) }) {
+            parts.append(day.date.formatted(date: .abbreviated, time: .omitted))
+        }
+        if let page = value.page { parts.append(String(localized: "Page \(page)")) }
+        return parts.joined(separator: " · ")
     }
 
     /// The text by page, collapsed.

@@ -14041,6 +14041,16 @@
         }
       }
     },
+    "Range %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Referenzbereich %@"
+          }
+        }
+      }
+    },
     "Read Again": {
       "localizations": {
         "de": {
@@ -14327,6 +14337,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Liest Buchungen"
+          }
+        }
+      }
+    },
+    "Reading values from the documents": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liest Werte aus den Dokumenten"
           }
         }
       }
@@ -20171,6 +20191,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Gültig bis"
+          }
+        }
+      }
+    },
+    "Values": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Werte"
           }
         }
       }

@@ -70,7 +70,8 @@
 // "A document named <name>." ("Ein Dokument namens …" in German), the date of a line "Date: <x>"
 // (as written, valid or not), the person of a line "For: <name>", and a fact per line
 // "Fact: <x>" (quoting x), "Shout: <x>" (quoting x in capitals, its spaces as line breaks) or
-// "Invent: <x>" (a quote the text doesn't have), and a keyword per line "Keyword: <x>". A text saying "garbage" gets an answer that
+// "Invent: <x>" (a quote the text doesn't have), a keyword per line "Keyword: <x>" and a value
+// per line "Value: <name> | <value> | <unit> | <range> | <group> | <date> | <note>" (as written). A text saying "garbage" gets an answer that
 // isn't JSON. (Quotes count with 3 words and 15 characters: write facts long enough.)
 // Asked to transcribe a knowledge document's page scan (the transcription prompt), it answers
 // with a Markdown timetable in a ``` fence, or with what follows a line "Transcribe: <x>" in the
@@ -320,12 +321,22 @@ function card(stream: boolean, system: string, message: string) {
     const quote = m[1] === "Shout" ? m[2].toUpperCase().replace(/ /g, "\n ") : m[1] === "Invent" ? `${m[2]} (as nobody wrote)` : m[2];
     facts.push({ text: `${m[1]} ${facts.length + 1}`, quote });
   }
+  // "Value: <name> | <value> | <unit> | <range> | <group> | <date> | <note>" (parts after the
+  // value optional, "-" for none).
+  const values = lines
+    .filter((l) => l.startsWith("Value: "))
+    .map((l) => {
+      const [vName, v, unit, range, group, date, note] = l.slice("Value: ".length).split("|").map((x) => x.trim());
+      const opt = (x?: string) => (x && x !== "-" ? x : null);
+      return { name: vName, value: v, unit: opt(unit), range: opt(range), group: opt(group), date: opt(date), note: opt(note) };
+    });
   const answer = {
     summary: de ? `Ein Dokument namens ${name}.` : `A document named ${name}.`,
     date: value("Date"),
     person: value("For"),
     keywords: lines.filter((l) => l.startsWith("Keyword: ")).map((l) => l.slice("Keyword: ".length)),
     facts,
+    values,
   };
   return reply(stream, "```json\n" + JSON.stringify(answer, null, 1) + "\n```");
 }

@@ -56,6 +56,7 @@ enum AssistantToolLabels {
         case "book_appointment_slot": return String(localized: "Marking a slot as booked")
         case "search_knowledge": return String(localized: "Searching the knowledge base")
         case "read_knowledge": return String(localized: "Reading a document")
+        case "knowledge_values": return String(localized: "Reading values from the documents")
         case "edit_knowledge_notes": return String(localized: "Suggesting notes for the knowledge folder")
         case "edit_memories": return String(localized: "Suggesting what to remember")
         default: return tool.name
@@ -84,7 +85,7 @@ enum AssistantToolLabels {
              "change_appointment_search", "run_appointment_search", "get_appointment_slot",
              "book_appointment_slot":
             "stethoscope"
-        case "search_knowledge", "read_knowledge": "books.vertical"
+        case "search_knowledge", "read_knowledge", "knowledge_values": "books.vertical"
         case "edit_knowledge_notes": "note.text"
         case "edit_memories": "brain"
         default: "sparkles"
@@ -327,6 +328,9 @@ enum AssistantToolLabels {
             if !str(a["query"]).isEmpty { parts.append(quoted(str(a["query"]))) }
             if let tags = a["tags"]?.arrayValue { parts.append(list(tags.map { str($0) }.filter { !$0.isEmpty }, max: 3)) }
             if !str(a["folder"]).isEmpty { parts.append(KnowledgePath.breadcrumb(str(a["folder"]))) }
+        case "knowledge_values":
+            if !str(a["query"]).isEmpty { parts.append(quoted(str(a["query"]))) }
+            if !str(a["person"]).isEmpty { parts.append(str(a["person"])) }
         case "edit_knowledge_notes":
             let names = ops.map { KnowledgePath.parts(str($0["path"])).last ?? "" }.filter { !$0.isEmpty }
             if !ops.isEmpty {

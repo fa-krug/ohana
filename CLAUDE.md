@@ -402,7 +402,10 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   from the `ChatRunner`; `chats.seen_at`, set every 15 s by a follower, says someone looks).
   `net.ts` refuses private addresses (`AiEnv.modelNet` may allow them for the endpoint with
   `AI_ALLOW_PRIVATE_ENDPOINT`). `toolsFor` leaves out the tools of turned-off modules
-  (`toolEnabled`). **Knowledge** (phase 12): `search_knowledge` / `read_knowledge` (read-only,
+  (`toolEnabled`). **Knowledge** (phase 12): `search_knowledge` / `read_knowledge` (with the card's `values`, as many as fit, `moreValues`) /
+  `knowledge_values` (`lib/knowledge/values.ts` `findKnowledgeValues`: the documents' values by name /
+  group word beginnings, person, document, days (the value's own, else the document's), oldest
+  first, with refs: how a value developed) (read-only,
   `needsKnowledge`: only with `ToolContext.knowledge`, i.e. `knowledgeForUser`: an editor, the
   module on, a folder; never viewers) give every passage a `ref` "k:<chunkId>"; the system prompt
   asks for `[[k:<chunkId>]]` after each statement from them; `requireKnowledge` re-checks the
@@ -566,7 +569,13 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   language and `familyNames`; name, path, tags and the text by page "[Page n]", cut at 30 000
   characters, between `<document>` delimiters escaped inside, the prompt saying it is data; zod-checked
   JSON summary / date / person / ≤ 12 keywords (search words: what it is, synonyms, the family's
-  and the document's language; `cleanKeywords`; migration `0034`, older cards have none) / ≤ 12 facts; `findQuote`: each quote ≥ 3 words and ≥ 15 characters,
+  and the document's language; `cleanKeywords`; migration `0034`, older cards have none) / ≤ 12 facts /
+  every value the document reports (`values`, column `card_values`, migration `0037`, ≤ `MAX_VALUES`
+  200: lab results, grades, readings, a statement's figures, each `{name, value, unit, range, group,
+  date, note, chunkId, page}` as written; `cleanValues` / `findValue`: the value at word edges, a
+  number not inside a longer one, spaces beside signs ignored, with its name in the same chunk or
+  near the boundary of the one beside it; unit / range / group / note kept only when the text has
+  them; older cards have none and count as `outdated`); `findQuote`: each quote ≥ 3 words and ≥ 15 characters,
   at word boundaries, in a chunk or across two consecutive ones (NFC, whitespace runs, case,
   typographic quotes ignored); a quote under ¼ of its fact and under 25 characters is a scrap;
   dropped facts are logged; the stored quote is the document's wording); the write checks status
@@ -575,7 +584,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   network) wait 5 min / 30 min / 2 h (`card_run_until` without token = not before, `card_retries`),
   the 5th fails. Saving the AI settings (`PUT /ai/settings`) resets the family's failed cards
   (`retryFailedCards`). The mock AI answers the card prompt from "Date: / For: / Fact: / Shout: /
-  Invent: / Keyword:" lines.
+  Invent: / Keyword: / Value:" lines.
   **Reader version and scans** (migration `0032`): `kb_documents.reader` (the app's
   `KnowledgeText.readerVersion` for PDFs / images, else 1; manifest entries and uploads carry
   `reader`): a manifest entry with the same hash and a newer reader is asked for again; an upload
@@ -1059,7 +1068,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   (documents only, while active) while something shown waits for the worker. `KnowledgeDocumentView`: path as a breadcrumb, date, person, tags, its
   status (failed: `error`; "Summary is being written" while `/knowledge/status` `cards`; a failed
   card: `cardError` quietly and *Write Summary Again*, `POST …/{id}/card`), summary and facts
-  ("Summary" with sparkles, "By the assistant"; each fact keeps its quote and page) (a tap opens the original at the fact's page and quote), the text by page (collapsed;
+  ("Summary" with sparkles, "By the assistant"; each fact keeps its quote and page) (a tap opens the original at the fact's page and quote), the values (by their `group`; value and unit, range, note, own date, page; a tap opens the original at their page), the text by page (collapsed;
   a route's page open, its quote marked; pages in `aiPages` marked "Read by the assistant", open /
   failed `scans` noted quietly); *Open Original*, More: *Show in Finder* (Mac), *Read Again* (this
   device reads the file again; needs the folder here) / *Read Again with the Assistant* (with

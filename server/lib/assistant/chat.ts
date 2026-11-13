@@ -136,7 +136,9 @@ const knowledgeText = (notes: boolean) => `
 The family keeps its paperwork (contracts, insurance policies, letters, medical reports, manuals …)
 in a knowledge base of its documents. To answer from it, search it (search_knowledge, again with
 other words or in the documents' language when nothing fits) and read a document with
-read_knowledge when you need more of it. Several versions of a document may be there (last
+read_knowledge when you need more of it. The values the documents report (lab results, grades,
+readings, a statement's figures) are listed by knowledge_values, across documents and over time:
+use it to say how a value developed or to compare. Several versions of a document may be there (last
 year's and this year's timetable, an old and a new contract): mind their dates and go by the
 newest unless asked about another. Right after each statement taken from it, put its source
 marker: the ref the tool gave, as [[k:<id>]], e.g. "The deductible is 150 € [[k:12]]." Use only

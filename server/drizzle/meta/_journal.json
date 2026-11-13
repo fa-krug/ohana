@@ -260,6 +260,13 @@
       "when": 1794521615820,
       "tag": "0036_finance_insights",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "6",
+      "when": 1794552745075,
+      "tag": "0037_knowledge_values",
+      "breakpoints": true
     }
   ]
 }

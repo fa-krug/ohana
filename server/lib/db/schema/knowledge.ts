@@ -78,6 +78,10 @@ export const kbDocuments = sqliteTable(
     /** JSON array of the card's search words (what the document is called and synonyms, in the
      *  family's and the document's language); null: no card yet, or one made before them. */
     keywords: text("keywords"),
+    /** JSON array of every value the document reports (lab results, grades, readings …: name,
+     *  value, unit, range, group, date, note and where it is); null: no card yet, or one made
+     *  before them. (`values` is an SQL keyword.) */
+    values: text("card_values"),
     docDate: text("doc_date"), // YYYY-MM-DD
     personUserId: text("person_user_id").references(() => users.id, { onDelete: "set null" }),
     personPersonId: text("person_person_id").references(() => familyPeople.id, { onDelete: "set null" }),

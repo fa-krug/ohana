@@ -1,7 +1,8 @@
 // A document's card (phase 12): a summary, the document's own date, whose it is (one of the
-// family), facts, each with a verbatim quote from the text, and keywords: the words someone would
-// search it by (what it is, synonyms, the family's and the document's language), matched by
-// search.ts like the summary. One completion with the family's
+// family), facts, each with a verbatim quote from the text, the values it reports (every lab
+// result, grade, reading, figure …, so a report's numbers are kept, not only summed up) and
+// keywords: the words someone would search it by (what it is, synonyms, the family's and the
+// document's language), matched by search.ts like the summary. One completion with the family's
 // model (lib/assistant/routes.ts familyModel, as the meals' generator and the letter): the
 // instructions name the family's language and members, the user message is the document's name,
 // path, tags and text by page (the first MAX_CARD_TEXT characters). The answer is checked with
@@ -14,6 +15,11 @@
 // A quote must say something on its own: at least MIN_QUOTE_WORDS words and MIN_QUOTE_CHARS
 // characters (normalized), matched at word boundaries (not inside a word), and not a mere scrap of
 // its fact (shorter than a quarter of the fact's statement AND than SCRAP_QUOTE_CHARS).
+//
+// A value counts when its value stands in a chunk (at word edges, a number not inside a longer one)
+// together with its name (in that chunk, else near the boundary of the one before or after: a
+// table row cut by a chunk's end); the first such chunk is its source. Its unit, range, group and note are kept only when the
+// document has them (compared without whitespace), its date only when valid.
 //
 // The document is data, not instructions: it goes between <document> and </document> (the
 // delimiters escaped inside it), and the instructions tell the model to ignore whatever it asks.
@@ -29,7 +35,7 @@ import { aiSettings, kbFolders } from "@/lib/db/schema";
 import type { Locale } from "@/lib/i18n/config";
 import { extractJson } from "@/lib/meals/ai/verify";
 import { moduleEnabled } from "@/lib/server-info";
-import type { KnowledgeFact } from "./documents";
+import type { KnowledgeFact, KnowledgeValue } from "./documents";
 
 /** The document's text the model gets at most (characters, from the start). */
 export const MAX_CARD_TEXT = 30_000;
@@ -43,6 +49,11 @@ export const SCRAP_QUOTE_CHARS = 25;
 /** A fact's statement and the summary are cut there. */
 const MAX_FACT_TEXT = 400;
 const MAX_SUMMARY = 1500;
+/** Values kept at most, and the most characters of a value's parts. */
+export const MAX_VALUES = 200;
+const MAX_VALUE_NAME = 120;
+const MAX_VALUE = 80;
+const MAX_VALUE_PART = 120;
 /** Keywords kept at most, and a keyword's most characters. */
 export const MAX_KEYWORDS = 12;
 const MAX_KEYWORD = 60;
@@ -87,10 +98,14 @@ export interface Card {
   docDate: string | null;
   person: CardPerson | null;
   facts: KnowledgeFact[];
+  /** Every value the document reports, as it writes them. */
+  values: KnowledgeValue[];
   /** Search words: what the document is called, synonyms, in both languages. */
   keywords: string[];
   /** Facts left out: their quote isn't in the text (or the fact was malformed). */
   dropped: number;
+  /** Values left out: not in the text with their name (or malformed). */
+  droppedValues: number;
 }
 
 /** Whether the family's cards are made: the assistant is on and the family set up its AI. */
@@ -145,12 +160,13 @@ export function cardPrompt({ lang, people }: { lang: Locale; people: { name: str
       : "The family's members aren't known.",
     "",
     "Answer only with JSON, no other text:",
-    '{"summary": "…", "date": "YYYY-MM-DD", "person": "…", "keywords": ["…"], "facts": [{"text": "…", "quote": "…"}]}',
+    '{"summary": "…", "date": "YYYY-MM-DD", "person": "…", "keywords": ["…"], "facts": [{"text": "…", "quote": "…"}], "values": [{"name": "…", "value": "…", "unit": "…", "range": "…", "group": "…", "date": "YYYY-MM-DD", "note": "…"}]}',
     '- "summary": 2 to 4 sentences: what the document is, from whom, about what, and what follows from it (an amount, a deadline, what is covered …).',
     '- "date": the document\'s own date (the day it was written, issued or signed), YYYY-MM-DD; null when it shows none. Not a deadline or a period it mentions.',
     '- "person": whose document it is (the policyholder, the patient, the pupil, the addressee), written exactly as one of the members listed above; null when it concerns the whole family, someone else, or it is unclear.',
     `- "keywords": 5 to 10 words or short phrases someone would search for to find this document: what kind of document it is and its synonyms (e.g. "Stundenplan", "Unterrichtszeiten", "Schulschluss" for a timetable), who sent it, its subject, the period it is for (e.g. "2026/27"); in ${language}, and also in the document's language when that differs. Not the people's names, not the facts' numbers.`,
     `- "facts": at most ${MAX_FACTS} of the most useful facts (amounts, dates and deadlines, contract, policy and customer numbers, terms, what is covered, contacts), each a short statement in "text", and in "quote" the words of the document it rests on, copied character for character: one passage of at most ${MAX_QUOTE} characters from one place, not paraphrased, not joined from several places, without "…". No fact without a quote. Nothing worth noting: [].`,
+    `- "values": every value the document reports or lists, all of them, not a selection: lab and test results, measurements and readings (blood pressure, weight, height, a meter), grades and marks, scores and points, the figures of a statement or report (a pension statement, an annual account, an assessment) … A table of results gives one value per row, and one per column when it has a column per date. Each with "name": what was measured, graded or counted, as the document writes it; "value": as written, character for character (e.g. "13,5", "2+", "< 0,5", "negativ", "1.234,56"), never converted or rounded; "unit": as written, or null; "range": the reference, normal or target range as written, or null; "group": the section, panel or heading it is under as written (e.g. "Blutbild", "1. Halbjahr"), or null; "date": YYYY-MM-DD only when the document gives this value a day of its own other than the document's date, else null; "note": a flag or remark beside it as written (e.g. "H", "erhöht", "nicht bestanden"), or null. Copy names and values from the text: a value whose name and value aren't both in the text is dropped. At most ${MAX_VALUES}. A document reporting no values (a contract, a letter): [].`,
     "Don't invent anything the document doesn't say.",
   ].join("\n");
 }
@@ -267,6 +283,120 @@ export function findQuote(chunks: CardChunk[], quote: string): { chunkId: number
   return null;
 }
 
+// ---- values ----
+
+const DIGIT = /\p{N}/u;
+
+/** Whether `q` at `at` in `text` stands at word edges, and a number isn't part of a longer one
+ *  ("2" not in "12", "2,5" or "1.2"). */
+function atValueEdges(text: string, at: number, q: string): boolean {
+  if (!atWordEdges(text, at, q)) return false;
+  const end = at + q.length;
+  if (DIGIT.test(q[0]) && /[.,]/.test(text[at - 1] ?? "") && DIGIT.test(text[at - 2] ?? "")) return false;
+  if (DIGIT.test(q[q.length - 1]) && /[.,]/.test(text[end] ?? "") && DIGIT.test(text[end + 1] ?? "")) return false;
+  if (DIGIT.test(q[0]) && DIGIT.test(text[at - 1] ?? "")) return false;
+  if (DIGIT.test(q[q.length - 1]) && DIGIT.test(text[end] ?? "")) return false;
+  return true;
+}
+
+/** Where `q` stands in `text`, every place where `edges` holds. */
+function places(text: string, q: string, edges: (text: string, at: number, q: string) => boolean): number[] {
+  const out: number[] = [];
+  for (let at = text.indexOf(q); at >= 0; at = text.indexOf(q, at + 1)) {
+    if (edges(text, at, q)) out.push(at);
+  }
+  return out;
+}
+
+/** How close to a chunk's end or start a value and its name in the chunk beside it must be (a
+ *  table row cut by the boundary), in characters. */
+const BESIDE = 160;
+
+/** `s` as quotes are compared, without any whitespace (a unit or range written "12 - 16" or
+ *  "12–16", a value "< 0,5" or "<0,5"). */
+const compact = (s: string) => normalizeForQuote(s.normalize("NFC")).text.replace(/ /g, "");
+
+/** Normalized text without the spaces next to a sign ("< 0,5" as "<0,5", "12 - 16" as "12-16"),
+ *  so a value is found however it is spaced. */
+const tight = (s: string) => s.replace(/ (?=[^\p{L}\p{N}])|(?<=[^\p{L}\p{N} ]) /gu, "");
+
+/** Where a value is: the first chunk holding `value` (at `atValueEdges`, spaced either way:
+ *  `tight`) and its name, else the first holding the value near its start or end with its name
+ *  near the boundary in the chunk before or after it (BESIDE). Null: not there. */
+export function findValue(chunks: CardChunk[], name: string, value: string): { chunkId: number; page: number } | null {
+  const v = tight(normalizeForQuote(value.normalize("NFC")).text);
+  const n = normalizeForQuote(name.normalize("NFC")).text;
+  if (!v || !n) return null;
+  const norms = chunks.map((c) => normalizeForQuote(c.text.normalize("NFC")).text);
+  const tights = norms.map(tight);
+  const valueAt = (i: number) => places(tights[i], v, atValueEdges);
+  const nameAt = (i: number) => (i >= 0 && i < norms.length ? places(norms[i], n, atWordEdges) : []);
+  const at = (i: number) => ({ chunkId: chunks[i].id, page: chunks[i].page });
+  const holding = chunks.map((_, i) => i).filter((i) => valueAt(i).length);
+  const same = holding.find((i) => nameAt(i).length);
+  if (same !== undefined) return at(same);
+  // Cut by a boundary: the name at the end of the chunk before and the value at the start of this
+  // one, or the value at the end of this one and the name at the start of the next.
+  const beside = holding.find(
+    (i) =>
+      (nameAt(i - 1).some((p) => norms[i - 1].length - p <= BESIDE) && valueAt(i).some((p) => p <= BESIDE)) ||
+      (valueAt(i).some((p) => tights[i].length - p <= BESIDE) && nameAt(i + 1).some((p) => p <= BESIDE)),
+  );
+  return beside !== undefined ? at(beside) : null;
+}
+
+const valueSchema = z.object({
+  name: z.string().trim().min(1),
+  value: z.union([z.string(), z.number()]).transform((v) => String(v).trim()).pipe(z.string().min(1)),
+  unit: z.unknown().optional(),
+  range: z.unknown().optional(),
+  group: z.unknown().optional(),
+  date: z.unknown().optional(),
+  note: z.unknown().optional(),
+});
+
+/** The answer's values, checked (see the top): those found, each once, at most MAX_VALUES. */
+export function cleanValues(raw: unknown, chunks: CardChunk[]): { values: KnowledgeValue[]; dropped: number } {
+  if (!Array.isArray(raw)) return { values: [], dropped: 0 };
+  const whole = compact(chunks.map((c) => c.text).join(" "));
+  /** An optional part: tidied, kept when the document has it. */
+  const part = (x: unknown): string | null => {
+    if (typeof x !== "string" && typeof x !== "number") return null;
+    const t = tidy(String(x), MAX_VALUE_PART);
+    const c = compact(t);
+    return t && c && whole.includes(c) ? t : null;
+  };
+  const values: KnowledgeValue[] = [];
+  const seen = new Set<string>();
+  let dropped = 0;
+  for (const item of raw) {
+    const v = valueSchema.safeParse(item);
+    const found = v.success && v.data.name.length <= MAX_VALUE_NAME && v.data.value.length <= MAX_VALUE
+      ? findValue(chunks, v.data.name, v.data.value)
+      : null;
+    if (!v.success || !found) {
+      dropped += 1;
+      continue;
+    }
+    const value: KnowledgeValue = {
+      name: tidy(v.data.name, MAX_VALUE_NAME),
+      value: tidy(v.data.value, MAX_VALUE),
+      unit: part(v.data.unit),
+      range: part(v.data.range),
+      group: part(v.data.group),
+      date: isValidDate(v.data.date) ? v.data.date : null,
+      note: part(v.data.note),
+      ...found,
+    };
+    const key = JSON.stringify([value.group, value.name, value.value, value.unit, value.date].map((x) => x?.toLowerCase() ?? null));
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (values.length >= MAX_VALUES) break;
+    values.push(value);
+  }
+  return { values, dropped };
+}
+
 // ---- the answer ----
 
 const answerSchema = z.object({
@@ -275,6 +405,7 @@ const answerSchema = z.object({
   person: z.unknown().optional(),
   facts: z.array(z.unknown()).nullish(),
   keywords: z.unknown().optional(),
+  values: z.unknown().optional(),
 });
 
 const factSchema = z.object({
@@ -308,7 +439,7 @@ export function parseCard(content: string, { chunks, people }: Pick<CardInput, "
   }
   const parsed = answerSchema.safeParse(data);
   if (!parsed.success) throw new HttpError(502, "The AI model's answer had no summary");
-  const { summary, date, person, facts: rawFacts, keywords } = parsed.data;
+  const { summary, date, person, facts: rawFacts, keywords, values: rawValues } = parsed.data;
   const facts: KnowledgeFact[] = [];
   let dropped = 0;
   for (const raw of rawFacts ?? []) {
@@ -324,13 +455,16 @@ export function parseCard(content: string, { chunks, people }: Pick<CardInput, "
     if (facts.length >= MAX_FACTS) break;
     facts.push({ text: tidy(fact.data.text, MAX_FACT_TEXT), quote: found.quote, chunkId: found.chunkId, page: found.page });
   }
+  const { values, dropped: droppedValues } = cleanValues(rawValues, chunks);
   return {
     summary: tidy(summary, MAX_SUMMARY),
     docDate: isValidDate(date) ? date : null,
     person: matchPerson(person, people),
     facts,
+    values,
     keywords: cleanKeywords(keywords),
     dropped,
+    droppedValues,
   };
 }
 

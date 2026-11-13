@@ -40,6 +40,23 @@ export interface KnowledgeFact {
   page: number;
 }
 
+/** A value the document reports (a lab result, a grade, a reading, a figure of a statement …),
+ *  every one of them, as the document writes it: what it is (`name`), the value, its unit, the
+ *  reference range, the section it is under (`group`), the day it is for when that isn't the
+ *  document's own date, a flag or remark beside it (`note`); found in the chunk `chunkId` (on
+ *  `page`) together with its name. */
+export interface KnowledgeValue {
+  name: string;
+  value: string;
+  unit: string | null;
+  range: string | null;
+  group: string | null;
+  date: string | null;
+  note: string | null;
+  chunkId: number;
+  page: number;
+}
+
 /** How long a document whose file is gone is kept (a file put back in time keeps its card). */
 export const MISSING_KEEP_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -97,9 +114,11 @@ export interface KnowledgePageScan {
   error: string | null;
 }
 
-/** A document with its card's facts, its chunks and its page scans that aren't done. */
+/** A document with its card's facts and values, its chunks and its page scans that aren't done. */
 export interface KnowledgeDocument extends KnowledgeDocumentSummary {
   facts: KnowledgeFact[] | null;
+  /** Null without a card, or with one made before cards had values. */
+  values: KnowledgeValue[] | null;
   chunks: KnowledgeChunk[];
   scans: KnowledgePageScan[];
 }
@@ -195,7 +214,13 @@ export function getDocument(db: Db, familyId: string, id: string): KnowledgeDocu
     .orderBy(kbPageScans.page)
     .all()
     .map((s) => ({ page: s.page, status: s.status as KnowledgePageScan["status"], error: s.status === "failed" ? s.error : null }));
-  return { ...summaryDto(row, peopleOf(db, familyId)), facts: parseJsonArray<KnowledgeFact>(row.facts), chunks, scans };
+  return {
+    ...summaryDto(row, peopleOf(db, familyId)),
+    facts: parseJsonArray<KnowledgeFact>(row.facts),
+    values: parseJsonArray<KnowledgeValue>(row.values),
+    chunks,
+    scans,
+  };
 }
 
 // ---- the list ----
@@ -347,6 +372,7 @@ export const CARD_RESET = {
   summary: null,
   facts: null,
   keywords: null,
+  values: null,
   docDate: null,
   personUserId: null,
   personPersonId: null,
@@ -517,7 +543,7 @@ export function remakeCard(db: Db, familyId: string, id: string, now: Date): Kno
   return summaryDto(requireDocument(db, familyId, id), peopleOf(db, familyId));
 }
 
-/** The family's cards: made (`ready`; `outdated` of them made before cards had keywords), waiting
+/** The family's cards: made (`ready`; `outdated` of them made before cards had keywords or values), waiting
  *  for the worker (`pending`; `rewriting` of them still showing their earlier card) and failed;
  *  of ready documents only (the others' cards don't count). */
 export interface CardCounts {
@@ -532,7 +558,7 @@ export function countCards(db: Pick<Db, "select">, familyId: string): CardCounts
   const row = db
     .select({
       ready: sql<number>`coalesce(sum(${kbDocuments.cardStatus} = 'ready'), 0)`,
-      outdated: sql<number>`coalesce(sum(${kbDocuments.cardStatus} = 'ready' and ${kbDocuments.keywords} is null), 0)`,
+      outdated: sql<number>`coalesce(sum(${kbDocuments.cardStatus} = 'ready' and (${kbDocuments.keywords} is null or ${kbDocuments.values} is null)), 0)`,
       pending: sql<number>`coalesce(sum(${kbDocuments.cardStatus} = 'pending'), 0)`,
       rewriting: sql<number>`coalesce(sum(${kbDocuments.cardStatus} = 'pending' and ${kbDocuments.summary} is not null), 0)`,
       failed: sql<number>`coalesce(sum(${kbDocuments.cardStatus} = 'failed'), 0)`,
@@ -544,13 +570,16 @@ export function countCards(db: Pick<Db, "select">, familyId: string): CardCounts
 }
 
 /** Has the worker write the family's cards again (POST /knowledge/cards): those made before cards
- *  had keywords and the failed ones, or with `all` every one of a ready document. A card keeps
+ *  had keywords or values and the failed ones, or with `all` every one of a ready document. A card keeps
  *  showing until its new one is written (the worker takes new documents' cards first). The number
  *  of cards waiting for it. */
 export function rewriteCards(db: Db, familyId: string, { all }: { all: boolean }, now: Date): number {
   const which = all
     ? inArray(kbDocuments.cardStatus, ["ready", "failed"])
-    : or(and(eq(kbDocuments.cardStatus, "ready"), isNull(kbDocuments.keywords)), eq(kbDocuments.cardStatus, "failed"));
+    : or(
+        and(eq(kbDocuments.cardStatus, "ready"), or(isNull(kbDocuments.keywords), isNull(kbDocuments.values))),
+        eq(kbDocuments.cardStatus, "failed"),
+      );
   return db
     .update(kbDocuments)
     .set({ cardStatus: "pending", cardError: null, cardAttempts: 0, cardRetries: 0, cardRunToken: null, cardRunUntil: null, updatedAt: now })
