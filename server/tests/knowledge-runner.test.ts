@@ -14,6 +14,7 @@ import { handleDisabledModules } from "@/lib/api/disabled-modules";
 import { createToken } from "@/lib/auth/tokens";
 import { chunkPages, type TextChunk } from "@/lib/knowledge/chunk";
 import { handleKnowledge } from "@/lib/knowledge/routes";
+import { MISSING_GRACE_MS } from "@/lib/knowledge/manifest";
 import { KNOWLEDGE_LEASE_MS, KnowledgeRunner, type KnowledgeRunnerOptions } from "@/lib/knowledge/runner";
 import { searchKnowledge } from "@/lib/knowledge/search";
 import { createTestDb } from "@/lib/test/db";
@@ -67,7 +68,13 @@ async function setup(userId = editorId, family = familyId) {
       folderId,
       files: paths.map((path) => ({ path, size: 1, mtime: 1_700_000_000_000, hash: sha(path), tags: [] })),
     });
-  return { edit, folderId, upload, manifest };
+  /** `paths` as the manifest now and once the grace is over: the documents left out are missing. */
+  const untilMissing = async (paths: string[]) => {
+    await manifest(paths);
+    now = new Date(now.getTime() + MISSING_GRACE_MS);
+    return manifest(paths);
+  };
+  return { edit, folderId, upload, manifest, untilMissing };
 }
 
 function runner(opts: KnowledgeRunnerOptions = {}) {
@@ -258,13 +265,13 @@ describe("knowledge runner: leases", () => {
   });
 
   it("doesn't bring back a document marked missing while it ran", async () => {
-    const { upload, manifest } = await setup();
+    const { upload, untilMissing } = await setup();
     const id = await upload("a.pdf", ["Text."]);
     const gate = gatedChunker();
     const r = runner({ chunker: gate.chunker });
     r.tick();
     await turn();
-    expect((await manifest(["other.pdf"])).data).toEqual({ upload: ["other.pdf"] });
+    expect((await untilMissing(["other.pdf"])).data).toEqual({ upload: ["other.pdf"] });
     expect(doc(id)).toMatchObject({ status: "missing", runToken: null });
     gate.open();
     await r.idle(5000);
@@ -293,12 +300,12 @@ describe("knowledge runner: leases", () => {
   });
 
   it("never claims excluded, missing, ready or failed documents", async () => {
-    const { upload, edit, manifest } = await setup();
+    const { upload, edit, untilMissing } = await setup();
     const excluded = await upload("excluded.pdf", ["x"]);
     const missing = await upload("missing.pdf", ["x"]);
     const kept = await upload("kept.pdf", ["x"]);
     await edit("POST", `/knowledge/documents/${excluded}/exclude`, { excluded: true });
-    await manifest(["kept.pdf", "excluded.pdf"]); // missing.pdf is gone
+    await untilMissing(["kept.pdf", "excluded.pdf"]); // missing.pdf is gone
     db.update(kbDocuments).set({ status: "failed", error: "earlier" }).where(eq(kbDocuments.id, kept)).run();
     const gate = gatedChunker();
     const r = runner({ chunker: gate.chunker });

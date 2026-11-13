@@ -2788,8 +2788,10 @@ paths:
         A known path with the same hash: tags, size and time updated in place. Another hash: its
         text is needed. A new path with the hash of a document whose path is no longer listed: the
         file moved, the document moves along (chunks and card kept). Any other new path: its text is
-        needed. Documents not listed become `missing` (deleted after 30 days; listed again, they get
-        their status back); excluded ones are never asked for and stay excluded. A file with `hash:
+        needed. Documents not listed become `missing` once a manifest at least an hour after the
+        first that left them out leaves them out too (iCloud Drive takes files off the disk for a
+        while as it syncs; deleted after 30 days; listed again, they get their status back);
+        excluded ones are never asked for and stay excluded. A file with `hash:
         null` (seen but not hashed, e.g. an iCloud file the device couldn't download): a known path
         counts as present (tags updated, nothing else; never asked for, never moved), an unknown
         one is ignored. A known path with the same hash whose text came from an older `reader`

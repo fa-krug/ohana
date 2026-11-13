@@ -562,7 +562,10 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   …/{id}/reindex`, `POST …/{id}/exclude {excluded}`, `GET /knowledge/tags`. The manifest
   (`manifest.ts`, the device's complete list): same hash → tags / size / time in place; another
   hash → upload; a new path with the hash of a document whose path is gone → that document moves;
-  documents not listed → `missing` (an excluded one keeps its status with `missing_since`); `hash:
+  documents not listed get `missing_since` and turn `missing` (since then) only when a manifest
+  `MISSING_GRACE_MS` (1 h) later leaves them out too: iCloud Drive takes files off the disk for
+  minutes while it syncs, and listed again they're simply back (an excluded one keeps its status
+  with `missing_since`); `hash:
   null` (not hashed, e.g. not downloaded) → a known path is present (tags only), an unknown one
   ignored, never uploaded or moved; an
   empty manifest changes nothing (a folder the device can't read). An upload with the same hash is

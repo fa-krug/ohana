@@ -17,6 +17,7 @@ import { addPerson } from "@/lib/families/people";
 import { MAX_TEXT_BYTES } from "@/lib/knowledge/documents";
 import { ensureFolder } from "@/lib/knowledge/folders";
 import { normalizePath } from "@/lib/knowledge/input";
+import { MISSING_GRACE_MS } from "@/lib/knowledge/manifest";
 import { handleKnowledge } from "@/lib/knowledge/routes";
 import { ftsTerms, searchKnowledge } from "@/lib/knowledge/search";
 import { cleanup } from "@/lib/maintenance/cleanup";
@@ -86,7 +87,14 @@ async function setup() {
   const folderId = (await edit("POST", "/knowledge/folder")).data.folder.id as string;
   const upload = (f: ReturnType<typeof file>, pages: string[] = ["text"]) => edit("PUT", "/knowledge/documents", { folderId, ...f, pages });
   const manifest = (files: ReturnType<typeof file>[]) => edit("POST", "/knowledge/manifest", { folderId, files });
-  return { edit, folderId, upload, manifest };
+  /** `files` as the manifest now and again once the grace is over (the clock stays there): the
+   *  documents not listed are missing since the first. */
+  const untilMissing = async (files: ReturnType<typeof file>[]) => {
+    await manifest(files);
+    now = new Date(now.getTime() + MISSING_GRACE_MS);
+    return manifest(files);
+  };
+  return { edit, folderId, upload, manifest, untilMissing };
 }
 
 describe("knowledge: access", () => {
@@ -260,6 +268,14 @@ describe("knowledge: manifest", () => {
     const other = file("other.pdf");
     await upload(other);
 
+    // Not listed: noted, still there until a manifest after the grace leaves it out too.
+    expect((await manifest([other])).data).toEqual({ upload: [] });
+    expect(docByPath("ready.pdf")).toMatchObject({ status: "ready", missingSince: NOW });
+    expect(docByPath("pending.pdf")).toMatchObject({ status: "pending", missingSince: NOW });
+    now = new Date(NOW.getTime() + MISSING_GRACE_MS - 1);
+    await manifest([other]);
+    expect(docByPath("failed.pdf")).toMatchObject({ status: "failed", missingSince: NOW });
+    now = new Date(NOW.getTime() + MISSING_GRACE_MS);
     expect((await manifest([other])).data).toEqual({ upload: [] });
     for (const p of ["ready.pdf", "pending.pdf", "failed.pdf"]) {
       expect(docByPath(p)).toMatchObject({ status: "missing", missingSince: NOW });
@@ -279,12 +295,28 @@ describe("knowledge: manifest", () => {
     expect(docByPath("failed.pdf")).toMatchObject({ status: "failed", missingSince: null, error: "Unreadable" });
   });
 
-  it("moves a missing document when its file turns up elsewhere later", async () => {
+  it("doesn't mark files missing that are listed again within the grace (iCloud syncing)", async () => {
     const { manifest, upload } = await setup();
+    const a = file("a.pdf");
+    const other = file("other.pdf");
+    await upload(a);
+    await upload(other);
+    await manifest([other]);
+    now = new Date(NOW.getTime() + 10 * 60_000);
+    await manifest([a, other]);
+    expect(docByPath("a.pdf")).toMatchObject({ status: "pending", missingSince: null });
+    // Left out again later: the grace starts anew.
+    now = new Date(NOW.getTime() + MISSING_GRACE_MS);
+    await manifest([other]);
+    expect(docByPath("a.pdf")).toMatchObject({ status: "pending", missingSince: now });
+  });
+
+  it("moves a missing document when its file turns up elsewhere later", async () => {
+    const { untilMissing, manifest, upload } = await setup();
     const a = file("a.pdf", "content");
     await upload(a);
     await upload(file("other.pdf"));
-    await manifest([file("other.pdf")]);
+    await untilMissing([file("other.pdf")]);
     expect(docByPath("a.pdf")!.status).toBe("missing");
     expect((await manifest([file("b/a.pdf", "content")])).data).toEqual({ upload: [] });
     expect(docByPath("b/a.pdf")).toMatchObject({ status: "pending", missingSince: null });
@@ -330,7 +362,7 @@ describe("knowledge: manifest", () => {
   });
 
   it("counts a file listed without a hash as present, without asking for or moving it", async () => {
-    const { manifest, upload, edit, folderId } = await setup();
+    const { manifest, untilMissing, upload, edit, folderId } = await setup();
     const unhashed = (f: ReturnType<typeof file>, tags: string[] = f.tags) => ({ ...f, hash: null, size: 1, mtime: 2, tags });
     const a = file("a.pdf", "v1");
     const gone = file("gone.pdf", "gone");
@@ -345,7 +377,7 @@ describe("knowledge: manifest", () => {
     expect(JSON.parse(docByPath("a.pdf")!.tags)).toEqual(["Neu"]);
 
     // Missing, then listed without a hash: back.
-    await manifest([gone]);
+    await untilMissing([gone]);
     expect(docByPath("a.pdf")!.status).toBe("missing");
     expect((await sendRaw([unhashed(a), gone])).data).toEqual({ upload: [] });
     expect(docByPath("a.pdf")).toMatchObject({ status: "ready", missingSince: null });
@@ -354,9 +386,9 @@ describe("knowledge: manifest", () => {
     expect((await sendRaw([unhashed(a), gone, unhashed(file("new.pdf"))])).data).toEqual({ upload: [] });
     expect(docByPath("new.pdf")).toBeUndefined();
 
-    // Not a move target: gone.pdf's document stays, missing, instead of moving to b.pdf.
+    // Not a move target: gone.pdf's document stays, not listed, instead of moving to b.pdf.
     expect((await sendRaw([unhashed(a), unhashed(file("b.pdf", "gone"))])).data).toEqual({ upload: [] });
-    expect(docByPath("gone.pdf")).toMatchObject({ status: "missing" });
+    expect(docByPath("gone.pdf")).toMatchObject({ missingSince: now });
     expect(docByPath("b.pdf")).toBeUndefined();
 
     // Not a move source: a.pdf listed without a hash stays; its content at another path is a copy.
@@ -425,11 +457,10 @@ describe("knowledge: status", () => {
     db.update(kbDocuments).set({ status: "failed", error: "Unreadable" }).where(eq(kbDocuments.path, "failed.pdf")).run();
     await edit("POST", `/knowledge/documents/${docByPath("excluded.pdf")!.id}/exclude`, { excluded: true });
     now = new Date(NOW.getTime() + 1000);
-    await edit("POST", "/knowledge/manifest", {
-      folderId,
-      device: "iPad",
-      files: ["ready.pdf", "ready2.pdf", "failed.pdf", "excluded.pdf", "pending.pdf"].map((n) => file(n)),
-    });
+    const files = ["ready.pdf", "ready2.pdf", "failed.pdf", "excluded.pdf", "pending.pdf"].map((n) => file(n));
+    await edit("POST", "/knowledge/manifest", { folderId, device: "iPad", files });
+    now = new Date(now.getTime() + MISSING_GRACE_MS);
+    await edit("POST", "/knowledge/manifest", { folderId, device: "iPad", files });
     // Another family's documents don't count.
     const otherEditor = makeUser(db).id;
     const otherFamily = makeFamily(db, otherEditor).id;
@@ -502,7 +533,7 @@ describe("knowledge: uploads", () => {
   });
 
   it("brings a missing document back with the same file, keeping its text, chunks and card", async () => {
-    const { upload, manifest } = await setup();
+    const { upload, untilMissing } = await setup();
     const ready = file("ready.pdf");
     const pending = file("pending.pdf");
     const other = file("other.pdf");
@@ -512,7 +543,7 @@ describe("knowledge: uploads", () => {
     index(r.data.id, [{ page: 1, text: "Alt" }]);
     db.update(kbDocuments).set({ summary: "Karte" }).where(eq(kbDocuments.id, r.data.id)).run();
     db.update(kbDocuments).set({ attempts: 2 }).where(eq(kbDocuments.id, p.data.id)).run();
-    await manifest([other]);
+    await untilMissing([other]);
     expect(docByPath("ready.pdf")!.status).toBe("missing");
 
     expect((await upload({ ...ready, tags: ["Neu"] }, ["Anders"])).data).toEqual({ id: r.data.id, status: "ready" });
