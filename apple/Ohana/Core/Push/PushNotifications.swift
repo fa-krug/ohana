@@ -252,20 +252,33 @@ final class PushNotifications: NSObject {
     }
 }
 
+/// The completion-handler forms on purpose, each handler called on the main actor: the `async`
+/// forms are `nonisolated` here, so Swift called UIKit's completion handler from a background
+/// thread once they returned, and UIKit (iOS 27) asserts it's on the main thread
+/// (`-[UIApplication _performBlockAfterCATransactionCommitSynchronizes:]`): tapping a
+/// notification crashed the app.
 extension PushNotifications: nonisolated UNUserNotificationCenterDelegate {
     /// In the foreground too: a banner, in the list, with its sound and the icon's number
     /// (pushes and the cook timers' local notifications alike).
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
-                                            willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
+                                            willPresent notification: UNNotification,
+                                            withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         // The scheduled switches of the icon's number show nothing.
-        if BadgeSchedule.isBadgeOnly(notification.request.identifier) { return [.badge] }
-        return [.banner, .list, .sound, .badge]
+        let options: UNNotificationPresentationOptions = BadgeSchedule.isBadgeOnly(notification.request.identifier)
+            ? [.badge] : [.banner, .list, .sound, .badge]
+        nonisolated(unsafe) let done = completionHandler
+        Task { @MainActor in done(options) }
     }
 
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
-                                            didReceive response: UNNotificationResponse) async {
+                                            didReceive response: UNNotificationResponse,
+                                            withCompletionHandler completionHandler: @escaping () -> Void) {
         let path = response.notification.request.content.userInfo["path"] as? String
-        await MainActor.run { PushNotifications.shared.open(path: path) }
+        nonisolated(unsafe) let done = completionHandler
+        Task { @MainActor in
+            PushNotifications.shared.open(path: path)
+            done()
+        }
     }
 }
 
