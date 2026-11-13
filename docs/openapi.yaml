@@ -147,7 +147,7 @@ tags:
       the folder's files and the text of those the server asks for; the worker cuts it into chunks
       for the search, then, with the family's AI set up, makes a card per document (a summary,
       the document's date, whose it is, facts each with a verbatim quote checked against the
-      text). The files never reach the server, except, when the family turns it on (`aiScans`) or
+      text, and every value it reports: lab results, grades, readings, a statement's figures). The files never reach the server, except, when the family turns it on (`aiScans`) or
       an editor asks for it, pictures of the pages of PDFs and images, which the worker has
       the family's AI transcribe and deletes once read. **Editors only**: for viewers every
       knowledge route answers 404.
@@ -2671,7 +2671,7 @@ paths:
       description: >-
         `aiScans`: whether the assistant reads the family's knowledge base (off by default: the
         documents are only read on the device): the worker writes each document's card (summary,
-        keywords, facts) and the app sends pictures of every page of PDFs and images to the family's
+        keywords, facts, values) and the app sends pictures of every page of PDFs and images to the family's
         AI provider for a transcription. Turned on, the cards waiting are written; turned off,
         no more are (the written ones stay), and the scans the app sent on
         its own that still wait are deleted (forced ones and those being read stay). 404 without a
@@ -2749,8 +2749,8 @@ paths:
       summary: Write the family's cards again
       description: >-
         The app's *Read All* (with `aiScans` on): the cards of ready documents made before cards had
-        keywords (`cardCounts.outdated`) and the failed ones, or with `all` every one, wait for
-        the worker again (one AI request each). A card keeps its summary, facts and keywords until
+        keywords or values (`cardCounts.outdated`) and the failed ones, or with `all` every one, wait for
+        the worker again (one AI request each). A card keeps its summary, facts, values and keywords until
         the new one is written; the worker writes new documents' cards first. 409 while no cards
         are made (status `cards` false: the family's AI not set up, or `aiScans` off). An agent token can't (403).
       x-ohana-role: editor
@@ -7276,7 +7276,7 @@ components:
       required: [ready, outdated, pending, rewriting, failed]
       properties:
         ready: {type: integer}
-        outdated: {type: integer, description: "Of `ready`: made before cards had keywords (`POST /knowledge/cards` writes them again)."}
+        outdated: {type: integer, description: "Of `ready`: made before cards had keywords or values (`POST /knowledge/cards` writes them again)."}
         pending: {type: integer}
         rewriting: {type: integer, description: "Of `pending`: written again, still showing the earlier card."}
         failed: {type: integer}
@@ -7292,6 +7292,25 @@ components:
         text: {type: string}
         quote: {type: string, description: "At least 3 words and 15 characters, at most about 300; may run on into the next chunk."}
         chunkId: {type: integer, description: "The chunk the quote is in (where it starts)."}
+        page: {type: integer, description: "That chunk's page, from 1."}
+    KnowledgeValue:
+      type: object
+      description: >-
+        A value the document reports (a lab result, a grade, a reading, a figure of a statement),
+        every one of them, as the document writes it. A value counts only when it stands in the
+        text (at word boundaries, a number not inside a longer one, spaces beside signs ignored)
+        together with its name, in the same chunk or near the boundary of the one beside it; its
+        unit, range, group and note are kept only when the text has them.
+      required: [name, value, unit, range, group, date, note, chunkId, page]
+      properties:
+        name: {type: string, description: "What was measured, graded or counted."}
+        value: {type: string, description: "As written (\"13,5\", \"2+\", \"< 0,5\", \"negativ\")."}
+        unit: {type: [string, "null"]}
+        range: {type: [string, "null"], description: "The reference, normal or target range."}
+        group: {type: [string, "null"], description: "The section or panel it is under."}
+        date: {type: [string, "null"], format: date, description: "Its own day, when the document gives one other than its date."}
+        note: {type: [string, "null"], description: "A flag or remark beside it (\"H\", \"erhöht\")."}
+        chunkId: {type: integer, description: "The chunk it is in (the source ref `k:<id>`)."}
         page: {type: integer, description: "That chunk's page, from 1."}
     KnowledgeFile:
       type: object
@@ -7369,7 +7388,7 @@ components:
       allOf:
         - $ref: "#/components/schemas/KnowledgeDocumentSummary"
         - type: object
-          required: [facts, chunks, scans]
+          required: [facts, values, chunks, scans]
           properties:
             scans:
               type: array
@@ -7385,6 +7404,10 @@ components:
               type: [array, "null"]
               description: The card's facts (at most 12), each with its verbatim quote; null without a card.
               items: {$ref: "#/components/schemas/KnowledgeFact"}
+            values:
+              type: [array, "null"]
+              description: The values the document reports (at most 200), in its order; null without a card or with one made before values.
+              items: {$ref: "#/components/schemas/KnowledgeValue"}
             chunks:
               type: array
               description: The text in pieces (about 1 000 characters, never across pages), in order.

@@ -18,12 +18,14 @@ import {
   type CardChunk,
   MAX_FACTS,
   MAX_KEYWORDS,
+  MAX_VALUES,
   MIN_QUOTE_CHARS,
   MIN_QUOTE_WORDS,
   SCRAP_QUOTE_CHARS,
   cardMessage,
   cardPrompt,
   findQuote,
+  findValue,
   parseCard,
 } from "@/lib/knowledge/card";
 import { KnowledgeCardRunner } from "@/lib/knowledge/card-runner";
@@ -96,8 +98,10 @@ describe("cards: the answer", () => {
       docDate: "2026-03-03",
       person: people[0],
       facts: [{ text: "Betrag", quote: "Betrag: 89,00 €", chunkId: 7, page: 1 }],
+      values: [],
       keywords: [],
       dropped: 0,
+      droppedValues: 0,
     });
     expect(parseCard(answer({ person: "LEO" }), { chunks, people }).person).toEqual(people[1]);
   });
@@ -142,6 +146,73 @@ describe("cards: the answer", () => {
   it("refuses an answer that isn't JSON or has no summary", () => {
     expect(() => parseCard("Sorry.", { chunks, people })).toThrow("not valid JSON");
     expect(() => parseCard(JSON.stringify({ facts: [] }), { chunks, people })).toThrow("no summary");
+  });
+});
+
+describe("cards: values", () => {
+  const LAB = [
+    chunk(1, `Blutbild\n| Hämoglobin | 13,5 | g/dl | 12,0 - 16,0 |\n| Leukozyten | 12 | /nl | 4–10 | H |\n${"Hinweise ".repeat(20)}`, 1),
+    chunk(2, `CRP <0,5 mg/l\nMathematik: 2\nDeutsch 1-2\n${"Bemerkungen ".repeat(20)}\nVitamin D`, 2),
+    chunk(3, "25,3 ng/ml", 2),
+  ];
+
+  it("finds a value with its name in the same chunk, spaced either way, else with its name beside it", () => {
+    expect(findValue(LAB, "Hämoglobin", "13,5")).toEqual({ chunkId: 1, page: 1 });
+    expect(findValue(LAB, "hämoglobin", "13,5")).toEqual({ chunkId: 1, page: 1 });
+    expect(findValue(LAB, "CRP", "< 0,5")).toEqual({ chunkId: 2, page: 2 });
+    expect(findValue(LAB, "Deutsch", "1-2")).toEqual({ chunkId: 2, page: 2 });
+    expect(findValue(LAB, "Mathematik", "2")).toEqual({ chunkId: 2, page: 2 });
+    // A table row cut by the chunk's end.
+    expect(findValue(LAB, "Vitamin D", "25,3")).toEqual({ chunkId: 3, page: 2 });
+  });
+
+  it("finds no number inside a longer one, no value without its name, no name that isn't there", () => {
+    expect(findValue(LAB, "Hämoglobin", "13")).toBeNull();
+    expect(findValue(LAB, "Hämoglobin", "3,5")).toBeNull();
+    // Its name in the chunk before, but far from the boundary.
+    expect(findValue(LAB, "Leukozyten", "2")).toBeNull();
+    expect(findValue(LAB, "Physik", "2")).toBeNull();
+    expect(findValue(LAB, "Hämoglobin", "14,1")).toBeNull();
+  });
+
+  it("keeps the values found, their unit, range, group and note only when the document has them", () => {
+    const card = parseCard(
+      JSON.stringify({
+        summary: "Ein Laborbefund.",
+        values: [
+          { name: "Hämoglobin", value: "13,5", unit: "g/dl", range: "12,0–16,0", group: "Blutbild", date: null, note: null },
+          { name: "Leukozyten", value: 12, unit: "/nl", range: "4-10", note: "H", date: "2026-01-02" },
+          { name: "Hämoglobin", value: "13,5", unit: "g/dl", range: "12,0–16,0", group: "Blutbild" },
+          { name: "CRP", value: "< 0,5", unit: "mmol/l", range: "< 5", group: "Entzündung", date: "2026-02-30", note: "normal" },
+          { name: "Ferritin", value: "88" },
+          { name: "Mathematik" },
+          "not a value",
+        ],
+      }),
+      { chunks: LAB, people: [] },
+    );
+    expect(card.values).toEqual([
+      { name: "Hämoglobin", value: "13,5", unit: "g/dl", range: "12,0–16,0", group: "Blutbild", date: null, note: null, chunkId: 1, page: 1 },
+      { name: "Leukozyten", value: "12", unit: "/nl", range: "4-10", group: null, date: "2026-01-02", note: "H", chunkId: 1, page: 1 },
+      { name: "CRP", value: "< 0,5", unit: null, range: null, group: null, date: null, note: null, chunkId: 2, page: 2 },
+    ]);
+    expect(card.droppedValues).toBe(3);
+    // An answer without values (an older prompt, a letter): none.
+    expect(parseCard(JSON.stringify({ summary: "Ein Brief." }), { chunks: LAB, people: [] }).values).toEqual([]);
+  });
+
+  it(`keeps at most ${MAX_VALUES} values`, () => {
+    const rows = Array.from({ length: MAX_VALUES + 5 }, (_, i) => `Wert ${i + 1}: ${i + 1001}`);
+    const chunks = rows.map((r, i) => chunk(i + 1, r));
+    const values = rows.map((_, i) => ({ name: `Wert ${i + 1}`, value: `${i + 1001}` }));
+    expect(parseCard(JSON.stringify({ summary: "Viele Werte.", values }), { chunks, people: [] }).values).toHaveLength(MAX_VALUES);
+  });
+
+  it("asks for every value, as written", () => {
+    const prompt = cardPrompt({ lang: "de", people: [] });
+    expect(prompt).toContain('"values"');
+    expect(prompt).toMatch(/every value the document reports/);
+    expect(prompt).toMatch(/character for character/);
   });
 });
 
@@ -428,6 +499,36 @@ describe("cards: the worker", () => {
     expect(net.aiBody.messages[0].content).toContain('"keywords"');
   });
 
+  it("keeps every value the document reports; the document's detail has them", async () => {
+    await configure(t);
+    const { edit, upload } = await setup();
+    const id = await upload("Labor.pdf", [
+      "Laborbefund vom 3. März\nHämoglobin 13,5 g/dl (12,0–16,0)\nValue: Hämoglobin | 13,5 | g/dl | 12,0–16,0 | Blutbild",
+      "Leukozyten 11,2 /nl erhöht\nValue: Leukozyten | 11,2 | /nl | - | - | - | erhöht",
+    ]);
+    await index();
+    await cards();
+    const values = JSON.parse(doc(id).values!);
+    expect(values).toEqual([
+      expect.objectContaining({ name: "Hämoglobin", value: "13,5", unit: "g/dl", range: "12,0–16,0", group: "Blutbild", page: 1 }),
+      expect.objectContaining({ name: "Leukozyten", value: "11,2", unit: "/nl", note: "erhöht", page: 2 }),
+    ]);
+    const res = await edit("GET", `/knowledge/documents/${id}`);
+    expect(res.data.document.values).toEqual(values);
+  });
+
+  it("counts a card made before values as outdated, and rewrites it", async () => {
+    await configure(t);
+    const { edit, upload } = await setup();
+    const id = await upload("alt.pdf", ["Ein älterer Befund"]);
+    await index();
+    t.db.update(kbDocuments).set({ cardStatus: "ready", summary: "Alt.", facts: "[]", keywords: '["Befund"]', values: null }).where(eq(kbDocuments.id, id)).run();
+    expect((await edit("GET", "/knowledge/status")).data.cardCounts).toMatchObject({ ready: 1, outdated: 1 });
+    expect((await edit("POST", "/knowledge/cards", {})).data.queued).toBe(1);
+    await cards();
+    expect(doc(id)).toMatchObject({ cardStatus: "ready", values: "[]" });
+  });
+
   it("rewrites the older and failed cards, or all, keeping each until its new one is written; new documents first", async () => {
     const { edit, upload } = await setup();
     const old = await upload("old.pdf", ["Altes Dokument mit Text"]);
@@ -436,7 +537,7 @@ describe("cards: the worker", () => {
     await index();
     const set = (id: string, v: Partial<typeof kbDocuments.$inferInsert>) => t.db.update(kbDocuments).set(v).where(eq(kbDocuments.id, id)).run();
     set(old, { cardStatus: "ready", summary: "Die alte Karte.", facts: "[]", keywords: null });
-    set(kept, { cardStatus: "ready", summary: "Mit Stichwörtern.", facts: "[]", keywords: '["Brief"]' });
+    set(kept, { cardStatus: "ready", summary: "Mit Stichwörtern.", facts: "[]", keywords: '["Brief"]', values: "[]" });
     set(failed, { cardStatus: "failed", cardError: "Broken", cardRetries: 4 });
     const counts = async () => (await edit("GET", "/knowledge/status")).data.cardCounts;
     expect(await counts()).toEqual({ ready: 2, outdated: 1, pending: 0, rewriting: 0, failed: 1 });
@@ -470,7 +571,7 @@ describe("cards: the worker", () => {
     await cards(cardRunner({ ...t.env, modelNet: { ...t.env.modelNet, fetch } }));
     expect(order).toEqual(["failed.pdf", "fresh.pdf", "old.pdf"]);
     expect(doc(fresh).cardStatus).toBe("ready");
-    expect(doc(old)).toMatchObject({ cardStatus: "ready", summary: "A document named old.pdf.", keywords: "[]" });
+    expect(doc(old)).toMatchObject({ cardStatus: "ready", summary: "A document named old.pdf.", keywords: "[]", values: "[]" });
     expect(await counts()).toEqual({ ready: 4, outdated: 0, pending: 0, rewriting: 0, failed: 0 });
 
     // Everything: all ready documents' cards.

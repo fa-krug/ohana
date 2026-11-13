@@ -276,11 +276,13 @@ export class KnowledgeCardRunner {
       return;
     }
     if (card.dropped) this.log(`card of document ${doc.id}: ${card.dropped} fact(s) dropped, their quote isn't in the text`);
+    if (card.droppedValues) this.log(`card of document ${doc.id}: ${card.droppedValues} value(s) dropped, not in the text with their name`);
     const written = this.write(doc, claimed, run, {
       cardStatus: "ready",
       summary: card.summary,
       facts: JSON.stringify(card.facts),
       keywords: JSON.stringify(card.keywords),
+      values: JSON.stringify(card.values),
       docDate: card.docDate,
       personUserId: card.person?.account ? card.person.id : null,
       personPersonId: card.person && !card.person.account ? card.person.id : null,

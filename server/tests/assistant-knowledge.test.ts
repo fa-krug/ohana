@@ -14,7 +14,9 @@ import type { Db } from "@/lib/db";
 import { kbChunks, kbDocuments } from "@/lib/db/schema";
 import { DrizzleFinanceStore } from "@/lib/finance/store";
 import { chunkPages } from "@/lib/knowledge/chunk";
+import type { KnowledgeValue } from "@/lib/knowledge/documents";
 import { ensureFolder } from "@/lib/knowledge/folders";
+import { familyNames } from "@/lib/families/people";
 import { type CitedChunk, EXCERPT_MAX, excerptOf } from "@/lib/knowledge/sources";
 import { type AssistantTest, assistantTest, configure, net } from "@/lib/test/assistant";
 import { NOW, makeFamily, makeUser } from "@/lib/test/factories";
@@ -158,8 +160,9 @@ describe("knowledge tools: who gets them", () => {
     current.push(t);
     const names = (k: boolean) => toolsFor({ writes: true, search: false, knowledge: k }).map((x) => x.function.name);
     expect(names(false)).not.toContain("search_knowledge");
-    expect(names(true)).toEqual(expect.arrayContaining(["search_knowledge", "read_knowledge"]));
+    expect(names(true)).toEqual(expect.arrayContaining(["search_knowledge", "read_knowledge", "knowledge_values"]));
     expect(TOOLS.search_knowledge.write).toBeFalsy();
+    expect(TOOLS.knowledge_values.write).toBeFalsy();
     expect(TOOLS.read_knowledge.write).toBeFalsy();
     process.env.DISABLED_MODULES = "knowledge";
     expect(names(true)).not.toContain("search_knowledge");
@@ -260,6 +263,85 @@ describe("knowledge tools", () => {
     const all = [third, last].flatMap((r) => r.result.chunks.map((c: { text: string }) => c.text));
     expect(all.at(-1)).toContain("Absatz 129.");
     expect(JSON.stringify(third.result).length).toBeLessThan(16_000);
+  });
+
+  it("knowledge_values: the documents' values over time, by name, person, document and days, with refs", async () => {
+    const { t, policy } = setup();
+    const value = (chunkId: number, name: string, v: string, extra: Partial<KnowledgeValue> = {}): KnowledgeValue => ({
+      name, value: v, unit: null, range: null, group: null, date: null, note: null, chunkId, page: 1, ...extra,
+    });
+    const older = addDocument(t.db, t.familyId, "Labor/2025.pdf", ["Hämoglobin 12,9 g/dl, Ferritin 40 ng/ml"]);
+    const newer = addDocument(t.db, t.familyId, "Labor/2026.pdf", ["Hämoglobin 13,5 g/dl, Leukozyten 11,2 /nl"]);
+    const anna = familyNames(t.db, t.familyId).find((p) => p.id === t.editor.id)!;
+    const set = (id: string, v: Partial<typeof kbDocuments.$inferInsert>) => t.db.update(kbDocuments).set(v).where(eq(kbDocuments.id, id)).run();
+    set(older.id, {
+      docDate: "2025-04-01",
+      personUserId: t.editor.id,
+      values: JSON.stringify([
+        value(older.chunks[0], "Hämoglobin", "12,9", { unit: "g/dl", range: "12–16", group: "Blutbild" }),
+        value(older.chunks[0], "Ferritin", "40", { unit: "ng/ml" }),
+      ]),
+    });
+    set(newer.id, {
+      docDate: "2026-03-03",
+      values: JSON.stringify([
+        value(newer.chunks[0], "Hämoglobin", "13,5", { unit: "g/dl", group: "Blutbild" }),
+        value(newer.chunks[0], "Leukozyten", "11,2", { unit: "/nl", note: "H", date: "2026-02-27" }),
+      ]),
+    });
+    // A card from before values: none.
+    set(policy.id, { values: null });
+
+    const hb = await tool(toolCtx(t), "knowledge_values", { query: "hämo" });
+    expect(hb.ok, JSON.stringify(hb.result)).toBe(true);
+    expect(hb.result.values).toEqual([
+      { documentId: older.id, document: "2025.pdf", day: "2025-04-01", person: anna.name, group: "Blutbild", name: "Hämoglobin", value: "12,9", unit: "g/dl", range: "12–16", ref: `k:${older.chunks[0]}` },
+      { documentId: newer.id, document: "2026.pdf", day: "2026-03-03", group: "Blutbild", name: "Hämoglobin", value: "13,5", unit: "g/dl", ref: `k:${newer.chunks[0]}` },
+    ]);
+    expect(hb.summary).toBe("2 values");
+    // Accents don't matter, the group counts, a value's own day comes first.
+    expect((await tool(toolCtx(t), "knowledge_values", { query: "hamoglobin" })).result.values).toHaveLength(2);
+    expect((await tool(toolCtx(t), "knowledge_values", { query: "blutbild" })).result.values).toHaveLength(2);
+    const all = (await tool(toolCtx(t), "knowledge_values", {})).result.values;
+    expect(all.map((v: { name: string; day: string }) => [v.name, v.day])).toEqual([
+      ["Hämoglobin", "2025-04-01"],
+      ["Ferritin", "2025-04-01"],
+      ["Leukozyten", "2026-02-27"],
+      ["Hämoglobin", "2026-03-03"],
+    ]);
+    expect((await tool(toolCtx(t), "knowledge_values", { documentId: newer.id })).result.values).toHaveLength(2);
+    expect((await tool(toolCtx(t), "knowledge_values", { person: anna.name })).result.values).toHaveLength(2);
+    expect((await tool(toolCtx(t), "knowledge_values", { from: "2026-01-01", to: "2026-02-28" })).result.values).toMatchObject([{ name: "Leukozyten" }]);
+    expect((await tool(toolCtx(t), "knowledge_values", { person: "Nobody" })).result.error).toMatch(/No family member/);
+    expect((await tool(toolCtx(t), "knowledge_values", { from: "März" })).result.error).toMatch(/YYYY-MM-DD/);
+    expect((await tool(toolCtx(t), "knowledge_values", { query: "zebra" })).result).toMatchObject({ values: [], note: expect.stringMatching(/No values/) });
+
+    // Another family's values never show.
+    const other = makeFamily(t.db, makeUser(t.db, { email: "other@test" }).id).id;
+    const theirs = addDocument(t.db, other, "Labor.pdf", ["Hämoglobin 9,1"]);
+    set(theirs.id, { values: JSON.stringify([value(theirs.chunks[0], "Hämoglobin", "9,1")]) });
+    expect((await tool(toolCtx(t), "knowledge_values", { query: "hämoglobin" })).result.values).toHaveLength(2);
+
+    // read_knowledge gives a document's values with their refs.
+    const read = await tool(toolCtx(t), "read_knowledge", { documentId: newer.id });
+    expect(read.result.document.values).toEqual([
+      { group: "Blutbild", name: "Hämoglobin", value: "13,5", unit: "g/dl", ref: `k:${newer.chunks[0]}` },
+      { name: "Leukozyten", value: "11,2", unit: "/nl", note: "H", date: "2026-02-27", ref: `k:${newer.chunks[0]}` },
+    ]);
+  });
+
+  it("read_knowledge gives as many values as fit, and says how to get the rest", async () => {
+    const { t, policy } = setup();
+    const values = Array.from({ length: 200 }, (_, i) => ({
+      name: `Messwert Nummer ${i + 1}`, value: `${i + 1000}`, unit: "mg/dl", range: "100–2000", group: "Großes Labor", date: null, note: null, chunkId: policy.chunks[0], page: 1,
+    }));
+    t.db.update(kbDocuments).set({ values: JSON.stringify(values) }).where(eq(kbDocuments.id, policy.id)).run();
+    const read = await tool(toolCtx(t), "read_knowledge", { documentId: policy.id });
+    expect(read.ok).toBe(true);
+    expect(read.result.document.values.length).toBeLessThan(200);
+    expect(read.result.document.moreValues).toMatch(/knowledge_values with this documentId/);
+    expect(read.result.chunks).toHaveLength(2);
+    expect(JSON.stringify(read.result).length).toBeLessThan(16_000);
   });
 
   it("only the family's documents: another family's id or an excluded one is not found", async () => {

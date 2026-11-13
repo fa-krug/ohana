@@ -1,15 +1,20 @@
 // The assistant's tools for the family's knowledge base (lib/knowledge/): search the documents
 // (their text, names, folders, tags and summaries), read a document (its card and its text, a
-// page at a time when it is long). Read-only, and only for editors with the module on
+// page at a time when it is long), list the values the documents report (lab results, grades,
+// readings …) across documents and over time. Read-only, and only for editors with the module on
 // (ToolContext.knowledge): viewers never get them. Every piece of text comes with its `ref`
 // ("k:<chunkId>"), which the answer cites as `[[k:<chunkId>]]`; the chat keeps only refs these tools returned (lib/assistant/sources.ts).
 
 import { asc, eq } from "drizzle-orm";
 import { HttpError } from "@/lib/api/http";
 import { kbChunks } from "@/lib/db/schema";
-import { getDocumentRow, type KnowledgeFact, parseJsonArray } from "@/lib/knowledge/documents";
+import { isValidDate } from "@/lib/calendar/dates";
+import { familyNames } from "@/lib/families/people";
+import { matchPerson } from "@/lib/knowledge/card";
+import { getDocumentRow, type KnowledgeFact, type KnowledgeValue, parseJsonArray } from "@/lib/knowledge/documents";
 import { searchKnowledge } from "@/lib/knowledge/search";
 import { knowledgeForUser } from "@/lib/knowledge/sources";
+import { findKnowledgeValues } from "@/lib/knowledge/values";
 import { fitting, MAX_PAGE_TEXT, MAX_TOOL_RESULT, type Tool, type ToolContext } from "./common";
 
 export const KNOWLEDGE_DEFAULT_HITS = 8;
@@ -34,6 +39,24 @@ function strings(v: unknown, field: string): string[] | undefined {
   if (list.some((x) => typeof x !== "string")) throw new HttpError(400, `${field} must be a list of strings`);
   return (list as string[]).map((s) => s.trim()).filter(Boolean);
 }
+
+/** A value as the model reads it: only the parts it has, with its ref. */
+function valueOut(v: KnowledgeValue) {
+  return {
+    ...(v.group ? { group: v.group } : {}),
+    name: v.name,
+    value: v.value,
+    ...(v.unit ? { unit: v.unit } : {}),
+    ...(v.range ? { range: v.range } : {}),
+    ...(v.note ? { note: v.note } : {}),
+    ...(v.date ? { date: v.date } : {}),
+    ref: refOf(v.chunkId),
+  };
+}
+
+/** Values read_knowledge gives with a document at most (characters of JSON); the rest come from
+ *  knowledge_values. */
+const MAX_READ_VALUES = 6000;
 
 /** Splits `chunks` into parts of at most `budget` characters of text (each at least one chunk). */
 function parts<T extends { text: string }>(chunks: T[], budget: number): T[][] {
@@ -112,7 +135,7 @@ export const knowledgeTools: Record<string, Tool> = {
     spec: {
       name: "read_knowledge",
       description:
-        "Reads one of the family's documents (by documentId from search_knowledge): its card (summary, date, tags, facts with verbatim quotes and their refs) and its text in passages with their refs. A short document comes whole; a long one a page at a time (page, from 1; part when a page is longer still).",
+        "Reads one of the family's documents (by documentId from search_knowledge): its card (summary, date, tags, facts with verbatim quotes and their refs, the values it reports with their refs) and its text in passages with their refs. A short document comes whole; a long one a page at a time (page, from 1; part when a page is longer still).",
       parameters: {
         type: "object",
         properties: {
@@ -141,6 +164,8 @@ export const knowledgeTools: Record<string, Tool> = {
         ref: refOf(f.chunkId),
         page: f.page,
       }));
+      const allValues = (parseJsonArray<KnowledgeValue>(row.values) ?? []).map(valueOut);
+      const values = fitting({}, allValues, MAX_READ_VALUES);
       const document = {
         id: row.id,
         name: row.name,
@@ -150,8 +175,14 @@ export const knowledgeTools: Record<string, Tool> = {
         summary: row.summary,
         ...(row.keywords ? { keywords: parseJsonArray<string>(row.keywords) ?? [] } : {}),
         facts,
+        ...(values.length ? { values } : {}),
+        ...(values.length < allValues.length
+          ? { moreValues: `${allValues.length - values.length} more values: knowledge_values with this documentId` }
+          : {}),
         ...(row.status === "ready" ? {} : { status: row.status }),
       };
+      // The card's refs (facts and values) count as given with every page.
+      const cardRefs = [...facts, ...values];
       const pages = Math.max(row.pages, ...chunks.map((c) => c.page), 0);
       const budget = Math.max(2000, Math.min(MAX_PAGE_TEXT, MAX_TOOL_RESULT - 1500 - JSON.stringify(document).length));
       const total = chunks.reduce((n, c) => n + c.text.length + 40, 0);
@@ -159,11 +190,11 @@ export const knowledgeTools: Record<string, Tool> = {
         return {
           result: { document, pages, page: null, chunks: [], note: "The document has no text in the knowledge base." },
           summary: row.name,
-          refs: idsOf(facts.map((f) => f.ref)),
+          refs: idsOf(cardRefs.map((f) => f.ref)),
         };
       }
       if ((args.page === undefined || args.page === null) && total <= budget) {
-        return { result: { document, pages, page: null, chunks }, summary: row.name, refs: idsOf([...facts, ...chunks].map((c) => c.ref)) };
+        return { result: { document, pages, page: null, chunks }, summary: row.name, refs: idsOf([...cardRefs, ...chunks].map((c) => c.ref)) };
       }
       const page = args.page === undefined || args.page === null ? chunks[0].page : Number(args.page);
       if (!Number.isInteger(page) || page < 1 || page > pages) throw new HttpError(400, `page must be 1–${pages}`);
@@ -185,7 +216,68 @@ export const knowledgeTools: Record<string, Tool> = {
           next: part < onPage.length ? { page, part: part + 1 } : next ? { page: next } : null,
         },
         summary: `${row.name}, p. ${page}${onPage.length > 1 ? ` (${part}/${onPage.length})` : ""}`,
-        refs: idsOf([...facts, ...(onPage[part - 1] ?? [])].map((c) => c.ref)),
+        refs: idsOf([...cardRefs, ...(onPage[part - 1] ?? [])].map((c) => c.ref)),
+      };
+    },
+  },
+
+  knowledge_values: {
+    needsKnowledge: true,
+    spec: {
+      name: "knowledge_values",
+      description:
+        "Lists the values the family's documents report, as the documents write them: lab and test results, measurements and readings, grades, scores, the figures of statements and reports. Across documents and over time, oldest first (e.g. every \"Hämoglobin\" of the blood tests, a child's grades over the school years), each with its document, day (its own, else the document's), person, group, unit, reference range, note and its ref for the source marker. Use it for how a value developed, for comparisons, and for all values of a report (documentId). Names are in the documents' language; search with a word beginning (\"hämo\", \"mathe\"); without query, all of them.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Words that begin words of the value's name or group (e.g. \"Cholesterin\", \"Mathe\")" },
+          documentId: { type: "string", description: "Only this document's values" },
+          person: { type: "string", description: "Only documents of this family member (their name)" },
+          from: { type: "string", description: "YYYY-MM-DD: values of this day or later" },
+          to: { type: "string", description: "YYYY-MM-DD: values of this day or earlier" },
+        },
+      },
+    },
+    async run(args, ctx) {
+      requireKnowledge(ctx);
+      const text = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+      const date = (v: unknown, field: string) => {
+        const d = text(v);
+        if (d && !isValidDate(d)) throw new HttpError(400, `${field} must be YYYY-MM-DD`);
+        return d;
+      };
+      let personId: string | null = null;
+      const person = text(args.person);
+      if (person) {
+        const found = matchPerson(person, familyNames(ctx.db, ctx.familyId).map(({ id, name, account }) => ({ id, name, account })));
+        if (!found) throw new HttpError(400, `No family member "${person}"`);
+        personId = found.id;
+      }
+      const hits = findKnowledgeValues(ctx.db, ctx.familyId, {
+        query: text(args.query),
+        documentId: text(args.documentId),
+        personId,
+        from: date(args.from, "from"),
+        to: date(args.to, "to"),
+      });
+      const rows = hits.map((h) => ({
+        documentId: h.documentId,
+        document: h.documentName,
+        ...(h.day ? { day: h.day } : {}),
+        ...(h.person ? { person: h.person } : {}),
+        ...valueOut({ ...h, date: null }),
+      }));
+      const shown = fitting({}, rows);
+      return {
+        result: {
+          values: shown,
+          ...(shown.length < rows.length ? { more: rows.length - shown.length, note: "Narrow it down with query, documentId, person or from / to." } : {}),
+          ...(rows.length
+            ? {}
+            : { note: "No values found. Try another word, or search_knowledge: a document's card may not be written yet." }),
+        },
+        summary: `${rows.length} ${rows.length === 1 ? "value" : "values"}`,
+        refs: idsOf(shown.map((r) => r.ref)),
       };
     },
   },

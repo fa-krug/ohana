@@ -137,6 +137,56 @@ nonisolated struct KnowledgeFact: Decodable, Hashable, Sendable {
     }
 }
 
+/// A value a document reports (a lab result, a grade, a reading …), as the document writes it,
+/// found on `page`.
+nonisolated struct KnowledgeValue: Decodable, Hashable, Sendable {
+    var name: String
+    var value: String
+    var unit: String?
+    /// The reference or normal range.
+    var range: String?
+    /// The section it is under ("Blutbild", "1. Halbjahr").
+    var group: String?
+    /// Its own day ("YYYY-MM-DD") when it isn't the document's.
+    var date: String?
+    /// A flag or remark beside it ("H", "erhöht").
+    var note: String?
+    /// From 1.
+    var page: Int?
+
+    private enum CodingKeys: String, CodingKey { case name, value, unit, range, group, date, note, page }
+
+    init(name: String, value: String, unit: String? = nil, range: String? = nil, group: String? = nil,
+         date: String? = nil, note: String? = nil, page: Int? = nil) {
+        self.name = name
+        self.value = value
+        self.unit = unit
+        self.range = range
+        self.group = group
+        self.date = date
+        self.note = note
+        self.page = page
+    }
+
+    init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        name = (try? c.decodeIfPresent(String.self, forKey: .name)) ?? ""
+        value = (try? c.decodeIfPresent(String.self, forKey: .value)) ?? ""
+        unit = try? c.decodeIfPresent(String.self, forKey: .unit)
+        range = try? c.decodeIfPresent(String.self, forKey: .range)
+        group = try? c.decodeIfPresent(String.self, forKey: .group)
+        date = try? c.decodeIfPresent(String.self, forKey: .date)
+        note = try? c.decodeIfPresent(String.self, forKey: .note)
+        page = try? c.decodeIfPresent(Int.self, forKey: .page)
+    }
+
+    /// The value with its unit: "13,5 g/dl".
+    var valueWithUnit: String {
+        guard let unit, !unit.isEmpty else { return value }
+        return "\(value) \(unit)"
+    }
+}
+
 /// A page image waiting for the family's AI, or one it couldn't transcribe (done ones aren't listed).
 nonisolated struct KnowledgePageScanState: Decodable, Hashable, Sendable {
     nonisolated enum Status: String, Decodable, Hashable, Sendable {
@@ -163,7 +213,7 @@ nonisolated struct KnowledgeChunk: Decodable, Hashable, Identifiable, Sendable {
     var text: String
 }
 
-/// GET /knowledge/documents/{id}: the document with its card's facts and its text.
+/// GET /knowledge/documents/{id}: the document with its card's facts and values and its text.
 nonisolated struct KnowledgeDocumentDetail: Decodable, Hashable, Sendable {
     /// A page of the text.
     nonisolated struct PageText: Hashable, Sendable {
@@ -174,6 +224,9 @@ nonisolated struct KnowledgeDocumentDetail: Decodable, Hashable, Sendable {
     var document: KnowledgeDocumentSummary
     /// Nil without a card.
     var facts: [KnowledgeFact]?
+    /// The values the document reports; empty without a card, from a card made before them, or
+    /// from an older server.
+    var values: [KnowledgeValue]
     var chunks: [KnowledgeChunk]
     /// The page images not transcribed yet, or that failed; empty from an older server.
     var scans: [KnowledgePageScanState]
@@ -181,7 +234,7 @@ nonisolated struct KnowledgeDocumentDetail: Decodable, Hashable, Sendable {
     /// once, while decoding (off the main thread), not on every redraw of the page.
     let textByPage: [PageText]
 
-    private enum CodingKeys: String, CodingKey { case facts, chunks, scans }
+    private enum CodingKeys: String, CodingKey { case facts, values, chunks, scans }
 
     init(from decoder: any Decoder) throws {
         document = try KnowledgeDocumentSummary(from: decoder)
@@ -189,6 +242,8 @@ nonisolated struct KnowledgeDocumentDetail: Decodable, Hashable, Sendable {
         // Facts without their text (an older card) are left out.
         facts = (try? c.decodeIfPresent([KnowledgeFact].self, forKey: .facts))?
             .map { $0.filter { !$0.text.isEmpty } }
+        values = ((try? c.decodeIfPresent([KnowledgeValue].self, forKey: .values)) ?? [])
+            .filter { !$0.name.isEmpty && !$0.value.isEmpty }
         chunks = (try? c.decodeIfPresent([KnowledgeChunk].self, forKey: .chunks)) ?? []
         scans = ((try? c.decodeIfPresent([KnowledgePageScanState].self, forKey: .scans)) ?? [])
             .filter { $0.status != .done }
