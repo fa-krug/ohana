@@ -151,13 +151,14 @@ private struct AccountForm: View {
         }
         .sheet(isPresented: $connecting) { ConnectServerView().errorBanner() }
         .accountConfirmation($confirmation)
-        .confirmationDialog("Sign out of Ohana on this device?", isPresented: $confirmSignOut, titleVisibility: .visible) {
+        .alert("Sign out of Ohana on this device?", isPresented: $confirmSignOut) {
             Button("Sign out", role: .destructive) {
                 Task {
                     await app.signOut()
                     dismiss()
                 }
             }
+            Button("Cancel", role: .cancel) {}
         }
     }
 

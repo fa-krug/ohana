@@ -82,10 +82,10 @@ struct AssistantChatListContent: View {
             }
             .refreshable { await store.loadChats() }
             .task { await store.loadChats() }
-            .confirmationDialog("Delete this chat?", isPresented: Binding(
+            .alert("Delete this chat?", isPresented: Binding(
                 get: { deleting != nil },
                 set: { if !$0 { deleting = nil } }
-            ), titleVisibility: .visible, presenting: deleting) { chat in
+            ), presenting: deleting) { chat in
                 Button("Delete Chat", role: .destructive) {
                     Task { await store.remove(chat.id) }
                 }

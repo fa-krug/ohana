@@ -139,7 +139,7 @@ struct FinanceTransactionEditor: View {
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar { toolbar }
-            .confirmationDialog("Delete this transaction?", isPresented: $confirmDelete, titleVisibility: .visible) {
+            .alert("Delete this transaction?", isPresented: $confirmDelete) {
                 Button("Delete", role: .destructive) {
                     guard let existing else { return }
                     Task {
@@ -147,6 +147,7 @@ struct FinanceTransactionEditor: View {
                         dismiss()
                     }
                 }
+                Button("Cancel", role: .cancel) {}
             }
         }
         .errorBanner()

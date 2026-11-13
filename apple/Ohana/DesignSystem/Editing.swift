@@ -27,7 +27,7 @@ struct CancelButton: View {
         }
         .keyboardShortcut(.cancelAction)
         // Without a guard around the sheet (not on the Mac, see above).
-        .confirmationDialog("Discard your changes?", isPresented: $asking, titleVisibility: .visible) {
+        .alert("Discard your changes?", isPresented: $asking) {
             Button("Discard Changes", role: .destructive) {
                 onCancel()
                 dismiss()
@@ -66,7 +66,7 @@ private struct DiscardGuard: ViewModifier {
                 asking = true
             })
             .interactiveDismissDisabled(hasChanges)
-            .confirmationDialog("Discard your changes?", isPresented: $asking, titleVisibility: .visible) {
+            .alert("Discard your changes?", isPresented: $asking) {
                 Button("Discard Changes", role: .destructive) {
                     onDiscard()
                     dismiss()

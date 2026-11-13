@@ -64,11 +64,11 @@ private struct CalendarSettingsContent: View {
         .sheet(item: $editing) { type in
             CalendarTypeEditor(store: store, type: type)
         }
-        .confirmationDialog(deleteTitle, isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
-                            titleVisibility: .visible, presenting: deleting) { type in
+        .alert(deleteTitle, isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), presenting: deleting) { type in
             Button("Delete", role: .destructive) {
                 perform { try await store.deleteType(type.id) }
             }
+            Button("Cancel", role: .cancel) {}
         } message: { type in
             let used = store.daysWith(type.id)
             if used > 0 {
@@ -425,13 +425,14 @@ struct CalendarTypeEditor: View {
                         .keyboardShortcut(.defaultAction)
                 }
             }
-            .confirmationDialog("Delete “\(type.name)”?", isPresented: $confirmDelete, titleVisibility: .visible) {
+            .alert("Delete “\(type.name)”?", isPresented: $confirmDelete) {
                 Button("Delete", role: .destructive) {
                     perform {
                         try await store.deleteType(type.id)
                         dismiss()
                     }
                 }
+                Button("Cancel", role: .cancel) {}
             } message: {
                 let used = store.daysWith(type.id)
                 if used > 0 {

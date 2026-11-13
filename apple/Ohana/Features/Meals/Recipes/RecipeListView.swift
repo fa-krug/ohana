@@ -107,14 +107,14 @@ struct RecipeListView: View {
                 family.open(.recipe(id: id))
             }
         }
-        .confirmationDialog("Delete recipe?", isPresented: Binding(get: { confirmDelete != nil }, set: { if !$0 { confirmDelete = nil } }),
-                            titleVisibility: .visible, presenting: confirmDelete) { recipe in
+        .alert("Delete recipe?", isPresented: Binding(get: { confirmDelete != nil }, set: { if !$0 { confirmDelete = nil } }), presenting: confirmDelete) { recipe in
             Button("Delete", role: .destructive) {
                 withAnimation {
                     deletes.schedule(recipe.id, kind: .recipe, title: recipe.title, family: family,
                                      undoManager: undoManager)
                 }
             }
+            Button("Cancel", role: .cancel) {}
         } message: { _ in
             Text("Delete this recipe? You’ll have a few seconds to undo.")
         }

@@ -99,8 +99,9 @@ struct MealPlanSetupSheet: View {
                     .disabled(!daysValid || saving)
                 }
             }
-            .confirmationDialog("Replace the current plan?", isPresented: $confirmReplace, titleVisibility: .visible) {
+            .alert("Replace the current plan?", isPresented: $confirmReplace) {
                 Button("Replace Plan", role: .destructive) { submit() }
+                Button("Cancel", role: .cancel) {}
             } message: {
                 Text("The meals of every iteration are deleted and planned anew from today. This can’t be undone.")
             }

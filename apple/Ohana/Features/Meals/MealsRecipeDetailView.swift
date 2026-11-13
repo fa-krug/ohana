@@ -71,7 +71,7 @@ struct MealsRecipeDetailView: View {
             guard let data = try? Data(contentsOf: url) else { return }
             Task { await upload(data) }
         }
-        .confirmationDialog("Delete recipe?", isPresented: $confirmDelete, titleVisibility: .visible) {
+        .alert("Delete recipe?", isPresented: $confirmDelete) {
             Button("Delete", role: .destructive) {
                 if let recipe = state.value?.detail {
                     MealsPendingDeletes.shared.schedule(recipe.id, kind: .recipe, title: recipe.title, family: family,
@@ -79,6 +79,7 @@ struct MealsRecipeDetailView: View {
                     dismiss()
                 }
             }
+            Button("Cancel", role: .cancel) {}
         } message: {
             Text("Delete this recipe? You’ll have a few seconds to undo.")
         }

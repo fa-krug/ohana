@@ -208,9 +208,9 @@ struct ChoreEditor: View {
                     Section {
                         Button("Delete Chore", role: .destructive) { confirmDelete = true }
                     }
-                    .confirmationDialog(Text("Delete “\(chore.title)”?"), isPresented: $confirmDelete,
-                                        titleVisibility: .visible) {
+                    .alert(Text("Delete “\(chore.title)”?"), isPresented: $confirmDelete) {
                         Button("Delete", role: .destructive) { delete(chore) }
+                        Button("Cancel", role: .cancel) {}
                     }
                 }
             }

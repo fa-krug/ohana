@@ -378,13 +378,15 @@ private struct FamilyGeneralView: View {
                     .disabled(model.state.isSaved)
             }
         }
-        .confirmationDialog(Text("Leave \(household.name)?"), isPresented: $confirmLeave, titleVisibility: .visible) {
+        .alert(Text("Leave \(household.name)?"), isPresented: $confirmLeave) {
             Button("Leave the family", role: .destructive) { leave(household) }
+            Button("Cancel", role: .cancel) {}
         } message: {
             Text("You won’t see it anymore unless someone adds you again.")
         }
-        .confirmationDialog(Text("Delete \(household.name)?"), isPresented: $confirmDelete, titleVisibility: .visible) {
+        .alert(Text("Delete \(household.name)?"), isPresented: $confirmDelete) {
             Button("Delete the family", role: .destructive, action: delete)
+            Button("Cancel", role: .cancel) {}
         } message: {
             Text("Everything in it is deleted. This can’t be undone.")
         }

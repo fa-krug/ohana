@@ -68,9 +68,8 @@ struct FamilyDataView: View {
             case let .failure(error): ErrorBanner.shared.show(error)
             }
         }
-        .confirmationDialog("Replace the family’s data?",
-                            isPresented: Binding(get: { pendingImport != nil }, set: { if !$0 { pendingImport = nil } }),
-                            titleVisibility: .visible, presenting: pendingImport) { pending in
+        .alert("Replace the family’s data?",
+               isPresented: Binding(get: { pendingImport != nil }, set: { if !$0 { pendingImport = nil } }), presenting: pendingImport) { pending in
             Button("Replace", role: .destructive) { runImport(pending) }
             Button("Cancel", role: .cancel) {}
         } message: { pending in

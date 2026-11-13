@@ -42,9 +42,10 @@ struct KnowledgeDocumentView: View {
         .task(id: family.revision(.knowledge)) { await load() }
         .onAppear { if let page = target.page { expanded.insert(page) } }
         .knowledgeOriginal(opener)
-        .confirmationDialog(Text("Leave “\(state.value?.document.name ?? "")” out of the knowledge base?"),
-                            isPresented: $leavingOut, titleVisibility: .visible) {
+        .alert(Text("Leave “\(state.value?.document.name ?? "")” out of the knowledge base?"),
+               isPresented: $leavingOut) {
             Button("Leave Out", role: .destructive) { setExcluded(true) }
+            Button("Cancel", role: .cancel) {}
         } message: {
             Text("Its text leaves the index; the file stays in the folder.")
         }

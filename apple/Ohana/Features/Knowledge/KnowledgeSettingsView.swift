@@ -90,11 +90,11 @@ private struct KnowledgeSettingsForm: View {
             Button("Use This Folder") { link(conflict.url, accepted: conflict.error) }
             Button("Cancel", role: .cancel) {}
         }
-        .confirmationDialog("Stop reading this folder on this device?", isPresented: $removing,
-                            titleVisibility: .visible) {
+        .alert("Stop reading this folder on this device?", isPresented: $removing) {
             Button("Remove from This Device", role: .destructive, action: unlink)
+            Button("Cancel", role: .cancel) {}
         }
-        .confirmationDialog("Index everything again?", isPresented: $askingReadAll, titleVisibility: .visible) {
+        .alert("Index everything again?", isPresented: $askingReadAll) {
             Button("Read All", action: readAll)
             Button("Cancel", role: .cancel) {}
         } message: {
@@ -276,9 +276,11 @@ private struct KnowledgeSettingsForm: View {
                 .disabled(savingAIScans)
             }
             if folder.url != nil {
-                HStack(spacing: 12) {
-                    Button("Read Now", systemImage: "arrow.clockwise") { family.indexKnowledge(force: true) }
-                    Button("Read All", systemImage: "arrow.triangle.2.circlepath") { askingReadAll = true }
+                // Side by side and as wide as each other; stacked when large text doesn't fit them on
+                // one line each (they wrapped into uneven pills).
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 12) { readButtons }
+                    VStack(spacing: 12) { readButtons }
                 }
                 // Each its own button in the row (a plain row would press both).
                 .buttonStyle(.bordered)
@@ -292,6 +294,19 @@ private struct KnowledgeSettingsForm: View {
             } else {
                 Text("Read Now reads what’s new or changed, Read All everything again.")
             }
+        }
+    }
+
+    @ViewBuilder private var readButtons: some View {
+        Button { family.indexKnowledge(force: true) } label: {
+            Label("Read Now", systemImage: "arrow.clockwise")
+                .lineLimit(1)
+                .frame(maxWidth: .infinity)
+        }
+        Button { askingReadAll = true } label: {
+            Label("Read All", systemImage: "arrow.triangle.2.circlepath")
+                .lineLimit(1)
+                .frame(maxWidth: .infinity)
         }
     }
 

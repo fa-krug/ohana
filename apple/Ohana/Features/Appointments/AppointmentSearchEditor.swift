@@ -97,7 +97,7 @@ struct AppointmentSearchEditor: View {
             .onChange(of: input.maxPages) { touched.insert(.maxPages) }
             .onChange(of: input.scheduleMinutes) { touched.insert(.interval) }
             .onChange(of: input.cron) { touched.insert(.cron) }
-            .confirmationDialog("Discard your changes?", isPresented: $confirmLeave, titleVisibility: .visible) {
+            .alert("Discard your changes?", isPresented: $confirmLeave) {
                 Button("Discard Changes", role: .destructive, action: openChannelSettings)
                 Button("Keep Editing", role: .cancel) {}
             }
