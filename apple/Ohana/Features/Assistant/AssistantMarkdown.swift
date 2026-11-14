@@ -165,23 +165,69 @@ nonisolated enum AssistantMarkdownBlock: Equatable, Sendable {
         return blocks
     }
 
-    /// Inline Markdown (bold, italics, code, links); links only for http(s) and the app's own pages.
+    /// The link schemes an answer may use: the web, email and phone numbers.
+    private static let linkSchemes: Set<String> = ["http", "https", "mailto", "tel"]
+
+    /// Inline Markdown (bold, italics, code, links); links only for http(s), mailto, tel and the
+    /// app's own pages. Web addresses, email addresses and phone numbers written out become links.
     static func inline(_ text: String) -> AttributedString {
         let options = AttributedString.MarkdownParsingOptions(
             interpretedSyntax: .inlineOnlyPreservingWhitespace, failurePolicy: .returnPartiallyParsedIfPossible
         )
         guard var s = try? AttributedString(markdown: text, options: options) else {
-            return AssistantSourceMarkers.chips(in: AttributedString(text))
+            var plain = AttributedString(text)
+            detectLinks(in: &plain)
+            return AssistantSourceMarkers.chips(in: plain)
         }
         for run in s.runs {
             // The app's own pages (/f/{id}/…, e.g. a recipe the assistant saved) open in the app.
-            if let link = run.link, !["http", "https"].contains(link.scheme?.lowercased() ?? ""),
+            if let link = run.link, !linkSchemes.contains(link.scheme?.lowercased() ?? ""),
                !(link.scheme == nil && link.path.hasPrefix("/f/")) {
                 s[run.range].link = nil
             }
         }
+        detectLinks(in: &s)
         // The source chips (`AssistantSourceMarkers.prepare`), after the links are sorted out.
         return AssistantSourceMarkers.chips(in: s)
+    }
+
+    // Matching with one is safe from any thread.
+    private nonisolated(unsafe) static let detector = try? NSDataDetector(
+        types: NSTextCheckingResult.CheckingType.link.rawValue | NSTextCheckingResult.CheckingType.phoneNumber.rawValue
+    )
+    private nonisolated(unsafe) static let dateLike = /^\d{1,4}[.\/-]\d{1,2}[.\/-]\d{1,4}$/
+
+    /// Web addresses, email addresses and phone numbers in the text as links, except inside code
+    /// and links already there.
+    static func detectLinks(in s: inout AttributedString) {
+        let text = String(s.characters)
+        // Each kind needs a dot, an "@" or digits.
+        guard let detector, text.contains(where: { $0 == "." || $0 == "@" || $0.isNumber }) else { return }
+        let matches = detector.matches(in: text, range: NSRange(text.startIndex..., in: text))
+        for match in matches {
+            guard let range = Range<AttributedString.Index>(match.range, in: s), let url = linkURL(match) else { continue }
+            let taken = s[range].runs.contains { run in
+                run.link != nil || run.inlinePresentationIntent?.contains(.code) == true
+            }
+            if !taken { s[range].link = url }
+        }
+    }
+
+    /// A match's link: a web or email address, or a phone number (7 to 15 digits, not a date).
+    private static func linkURL(_ match: NSTextCheckingResult) -> URL? {
+        switch match.resultType {
+        case .link:
+            guard let url = match.url, ["http", "https", "mailto"].contains(url.scheme?.lowercased() ?? "") else { return nil }
+            return url
+        case .phoneNumber:
+            guard let number = match.phoneNumber?.trimmingCharacters(in: .whitespaces),
+                  number.wholeMatch(of: dateLike) == nil else { return nil }
+            let digits = number.filter(\.isASCII).filter(\.isNumber)
+            guard (7...15).contains(digits.count) else { return nil }
+            return URL(string: "tel:" + (number.hasPrefix("+") ? "+" : "") + digits)
+        default:
+            return nil
+        }
     }
 }
 

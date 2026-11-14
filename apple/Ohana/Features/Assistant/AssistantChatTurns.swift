@@ -208,25 +208,35 @@ struct AssistantSelectTextSheet: View {
     }
 }
 
-/// A read-only text view: SwiftUI's text selects only all of it at once on iOS.
+/// A read-only text view: SwiftUI's text selects only all of it at once on iOS. TextKit 1: with
+/// TextKit 2 the view laid out its text while it still had no size (the sheet sliding in) and then
+/// stayed blank. Web addresses, email addresses and phone numbers are links.
 private struct AssistantSelectableTextView: UIViewRepresentable {
     let text: String
 
     func makeUIView(context: Context) -> UITextView {
-        let view = UITextView()
+        let view = UITextView(usingTextLayoutManager: false)
         view.isEditable = false
         view.isSelectable = true
+        view.isScrollEnabled = true
+        view.alwaysBounceVertical = true
         view.backgroundColor = .clear
         view.font = .preferredFont(forTextStyle: .body)
         view.adjustsFontForContentSizeCategory = true
         view.textColor = .label
         view.textContainerInset = UIEdgeInsets(top: 16, left: 12, bottom: 24, right: 12)
-        view.dataDetectorTypes = [.link]
+        view.dataDetectorTypes = [.link, .phoneNumber]
+        view.text = text
         return view
     }
 
     func updateUIView(_ view: UITextView, context: Context) {
         if view.text != text { view.text = text }
+    }
+
+    /// All the room it's given: it scrolls its text itself.
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
+        CGSize(width: proposal.width ?? 320, height: proposal.height ?? 480)
     }
 }
 #endif
