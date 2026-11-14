@@ -436,6 +436,21 @@ struct AssistantRenderingTests {
         #expect(links == [URL(string: "https://x.example")!])
     }
 
+    @Test func linksAddressesAndPhoneNumbers() {
+        let s = AssistantMarkdownBlock.inline(
+            "Mail **s.weiss@schule.example**, see www.schule.example or call +49 9131 123456. On 2026-11-14 `x@y.example`."
+        )
+        let links = s.runs.compactMap(\.link).map(\.absoluteString)
+        #expect(links.contains("mailto:s.weiss@schule.example"))
+        #expect(links.contains { $0.hasPrefix("http") && $0.contains("www.schule.example") })
+        #expect(links.contains("tel:+499131123456"))
+        // Not a date, nor inside code.
+        #expect(!links.contains { $0.contains("2026") || $0.contains("x@y.example") })
+        // A Markdown link stays as written.
+        let written = AssistantMarkdownBlock.inline("[Schule](https://schule.example/kontakt)")
+        #expect(written.runs.compactMap(\.link) == [URL(string: "https://schule.example/kontakt")!])
+    }
+
     @Test func namesToolCalls() {
         let tool = AssistantToolCall(id: "1", name: "list_recipes",
                                      args: ["query": .string("Pasta"), "tags": .array([.string("quick")])],

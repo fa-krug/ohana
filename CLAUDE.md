@@ -946,7 +946,9 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   after the other are one row (`AssistantItemGroups`, `AssistantToolGroupRow`: the running one with a
   spinner, then "Used 3 tools", a tap unfolds them); the activity line has one pulsing symbol and no
   timer. On iOS messages aren't selectable in place (costly to lay out): their menu's *Select Text*
-  opens the plain text in a sheet (`AssistantSelectTextSheet`); the Mac selects in place. Paste in the
+  opens the plain text in a sheet (`AssistantSelectTextSheet`, a TextKit 1 `UITextView`: TextKit 2's stayed
+  blank there); the Mac selects in place. Web and email addresses and phone numbers in answers are links
+  (`AssistantMarkdownBlock.detectLinks`, not in code; Markdown links may be http(s), mailto, tel or `/f/…`). Paste in the
   composer attaches the clipboard's pictures, and long text (≥ 1 000 characters or 10 lines,
   `isLongPaste`) as "Pasted text.txt"; shorter text goes into the field. iOS: `AssistantTextPaste`
   (the field's UIKit text view's paste delegate; rich text only while the clipboard holds a picture
