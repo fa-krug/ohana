@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"${CLAUDE_PROJECT_DIR:-.}\" && if [ -f .githooks/pre-commit ]; then sh .githooks/pre-commit install --quiet || true; fi"
+          }
+        ]
+      }
+    ]
+  }
+}
