@@ -1,0 +1,60 @@
+# Leuchtfeuer configuration — generated during onboarding.
+# Schema: https://raw.githubusercontent.com/SaschaKrug/Leuchtfeuer/main/contracts/leuchtfeuer-config.schema.json
+# Policy (gates, thresholds, severity) is managed in the Leuchtfeuer UI, not here.
+version: 1
+tools:
+  bandit:  # Python · SAST (code security)
+    enabled: true
+  checkov:  # Containers & infrastructure · Infrastructure as code
+    enabled: true
+  eslint:  # JavaScript / TypeScript · Lint
+    enabled: true
+  gitleaks:  # Every repository · Secrets
+    enabled: true
+  grype:  # Every repository · SCA (vulnerable dependencies)
+    enabled: true
+  hadolint:  # Containers & infrastructure · Infrastructure as code
+    enabled: true
+  jscpd:  # Every repository · Complexity and duplication
+    enabled: true
+  lizard:  # Python · Complexity and duplication
+    enabled: true
+  mobsfscan:  # Swift, SwiftUI & Objective-C · SAST (code security)
+    enabled: true
+  mypy:  # Python · Type check
+    enabled: true
+  opengrep:  # Every repository · SAST (code security)
+    enabled: true
+  ruff:  # Python · Lint
+    enabled: true
+  shellcheck:  # Containers & infrastructure · Infrastructure as code
+    enabled: true
+  swiftlint:  # Swift, SwiftUI & Objective-C · Lint
+    enabled: true
+  syft:  # Every repository · Licenses and SBOM
+    enabled: true
+  tsc:  # JavaScript / TypeScript · Type check
+    enabled: true
+  biome:  # JavaScript / TypeScript · Lint
+    enabled: false
+  osv-scanner:  # Every repository · SCA (vulnerable dependencies)
+    enabled: false
+  pyright:  # Python · Type check
+    enabled: false
+  stylelint:  # JavaScript / TypeScript · Lint
+    enabled: false
+paths:
+  exclude:
+    - "**/node_modules/**"
+    - "**/vendor/**"
+    - "**/dist/**"
+    - "**/.venv/**"
+ignore: []
+#  - rule: "ruff:S101"
+#    paths: ["tests/**"]
+#    reason: "assert is fine in tests"
+reports:
+  junit: []
+  coverage: []
+secrets:
+  full_history: false
