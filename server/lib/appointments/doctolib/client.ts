@@ -59,7 +59,10 @@ const CHROME_HEADERS: Record<string, string> = {
 };
 
 function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise<void>((resolve) => {
+    const signal = AbortSignal.timeout(ms > 0 ? ms : 0);
+    signal.addEventListener("abort", () => resolve(), { once: true });
+  });
 }
 
 export class DoctolibClient {
