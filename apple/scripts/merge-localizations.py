@@ -20,13 +20,14 @@ import glob
 import json
 import os
 import sys
+from typing import Any
 
 CHECK = "--check" in sys.argv
 ARGS = [a for a in sys.argv[1:] if a != "--check"]
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CATALOG = os.path.join(ROOT, "Ohana", "Resources", "Localizable.xcstrings")
 
-translations = {}
+translations: dict[str, Any] = {}
 for path in sorted(glob.glob(os.path.join(ROOT, "Localization", "*.de.json"))):
     with open(path, encoding="utf-8") as f:
         for key, value in json.load(f).items():
