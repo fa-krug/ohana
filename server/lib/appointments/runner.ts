@@ -62,7 +62,7 @@ export class SearchRunner {
   /** Waits up to `ms` for running searches, then frees the leases of those still running. */
   async stop(ms: number): Promise<void> {
     const all = Promise.allSettled([...this.running.values()]);
-    await Promise.race([all, new Promise((r) => setTimeout(r, ms))]);
+    await Promise.race([all, new Promise<void>((resolve) => { setTimeout(() => resolve(), ms); })]);
     releaseSearches(this.db, [...this.running.keys()]);
   }
 }
