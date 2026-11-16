@@ -281,7 +281,7 @@ export const leaseUntil = (env: ChatEnv) => new Date(Date.now() + (env.leaseMs ?
 export function pause(ms: number, signal?: AbortSignal) {
   return new Promise<void>((resolve) => {
     if (signal?.aborted) return resolve();
-    const timer = setTimeout(done, ms);
+    const timer = setTimeout(() => done(), ms);
     signal?.addEventListener("abort", done, { once: true });
     function done() {
       clearTimeout(timer);
