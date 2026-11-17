@@ -16,9 +16,9 @@ struct ServerInfoTests {
         #expect(info.version == "0.2.0")
         #expect(info.apiVersion == 1)
         #expect(info.isSupported)
-        // The knowledge base isn't in the list: off.
-        #expect(Module.allCases.filter { $0 != .knowledge }.allSatisfy { info.isEnabled($0) })
-        #expect(!info.isEnabled(.knowledge))
+        // The knowledge base and health aren't in the list: off.
+        #expect(Module.allCases.filter { $0 != .knowledge && $0 != .health }.allSatisfy { info.isEnabled($0) })
+        #expect(!info.isEnabled(.knowledge) && !info.isEnabled(.health))
         let withKnowledge = try decode(#"{"name":"Ohana","version":"0.3.0","apiVersion":1,"modules":["calendar","knowledge"]}"#)
         #expect(withKnowledge.isEnabled(.knowledge) && withKnowledge.hasKnowledge)
     }

@@ -18,7 +18,7 @@ Only `APP_URL` and `AUTH_SECRET` are required. Developers running from source us
 | Variable | Default | |
 | --- | --- | --- |
 | `ENCRYPTION_KEY` | derived from `AUTH_SECRET` | A separate key for secrets at rest (32 random bytes, base64: `openssl rand -base64 32`). Changing it makes the stored secrets unreadable. |
-| `DISABLED_MODULES` | none | Modules turned off, comma list: `finance`, `meals`, `appointments`, `chores`, `assistant`, `knowledge`. The calendar is always on. See [Modules](/self-hosting#modules). |
+| `DISABLED_MODULES` | none | Modules turned off, comma list: `finance`, `meals`, `appointments`, `chores`, `assistant`, `knowledge`, `health`. The calendar is always on. See [Modules](/self-hosting#modules). |
 | `PORT` | `8000` (image), `3000` (source) | The port the server listens on. |
 | `HOST` | `0.0.0.0` | The address the server listens on. |
 | `DATABASE_FILE` | `/app/data/ohana.db` (image), `./data/ohana.db` (source) | The SQLite database. |

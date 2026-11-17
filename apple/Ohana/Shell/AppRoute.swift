@@ -40,6 +40,9 @@ enum AppRoute: Hashable {
     /// One document of the knowledge base (`/f/{id}/knowledge/{documentId}?page=`): `page` (from 1)
     /// shows that page's text, with `quote` marked in it (an assistant's source).
     case knowledgeDocument(id: String, page: Int? = nil, quote: String? = nil)
+    // Health
+    /// One member's check-ups and vaccinations (`/f/{id}/health/{memberId}`, a reminder's link).
+    case healthMember(id: String)
     // Assistant
     /// The assistant's page, optionally on one chat.
     case assistantChat(id: String?)
@@ -57,6 +60,7 @@ enum AppRoute: Hashable {
         case .appointmentSearch, .appointmentSlot, .newAppointmentSearch: .appointments
         case .chore, .newChore: .chores
         case .knowledgeDocument: .knowledge
+        case .healthMember: .health
         case .assistantChat: .assistant
         case .settings: .settings
         }
@@ -174,6 +178,9 @@ extension AppRoute {
             // `/knowledge/{documentId}?page=`: a document, at a page of its text.
             guard let document = at(1) else { return .module(.knowledge) }
             return .knowledgeDocument(id: document, page: page)
+        case "health":
+            // `/health/{memberId}`: a member (a reminder's link).
+            return at(1).map { .healthMember(id: $0) } ?? .module(.health)
         case "assistant":
             return .assistantChat(id: nil)
         case "settings":

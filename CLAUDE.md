@@ -2,8 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-**Ohana** is one app for a family: calendar, finance, meals, chores, doctor appointments
-and an AI assistant. It is **open source and self-hosted** (server AGPL-3.0, app MPL-2.0). The
+**Ohana** is one app for a family: calendar, finance, meals, chores, doctor appointments,
+check-ups and vaccinations and an AI assistant. It is **open source and self-hosted** (server AGPL-3.0, app MPL-2.0). The
 repository holds **`server/`**, the server (JSON API, the few sign-in pages, worker; Hono +
 SQLite, one Docker image on GHCR), **`apple/`**, the native SwiftUI app for iOS/iPadOS and
 macOS, the **only client**: there is no web UI (see *Native app* below), and **`relay/`**, the
@@ -49,7 +49,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `http/index.ts`; `docker-entrypoint.sh worker` runs `worker/index.ts` (waits for the
   migrations, then loops every `APPT_TICK_SECONDS` (15): the appointment `SearchRunner`, and
   every `WORKER_TICK_SECONDS` (60) `lib/maintenance/cleanup.ts`, the nightly
-  `lib/maintenance/backup.ts` and `lib/notifications/daily.ts`; the loop itself ticks every
+  `lib/maintenance/backup.ts`, `lib/notifications/daily.ts` and `lib/health/notify.ts`; the loop itself ticks every
   `ASSISTANT_TICK_MS` (1000) for the assistant's `ChatRunner`, the meals' `ImportRunner` and the
   calendar's `HolidayRunner` and the knowledge base's `KnowledgeRunner`, `KnowledgeCardRunner` and `KnowledgeScanRunner`;
   turned-off modules' runners don't run; the same tick runs finance's `BankSyncRunner`). `docker-entrypoint.sh setup-link <email>` prints a setup link. Long-running jobs
@@ -506,7 +506,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
 - **Schema files:** `lib/db/schema.ts` holds accounts + families and re-exports one file per
   module from `lib/db/schema/` (`notifications.ts`, `appointments.ts`, `finance.ts`,
   `meals.ts`, `connections.ts`, `chores.ts`, `digest.ts`, `knowledge.ts`,
-  `assistant.ts`, `holidays.ts`).
+  `assistant.ts`, `holidays.ts`, `health.ts`).
 - **Chores (`lib/chores/`):** table `chores` (`lib/db/schema/chores.ts`): title, note, assigned to
   one account (`assignee_user_id`) or person (`assignee_person_id`) of the family or nobody, `day`
   (the due day / a series' first), `time` ("HH:MM" or null), `part` (morning | day | evening; a
@@ -642,6 +642,42 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   family search (`searchFamily`, `knowledge: true` for editors) has the kind `knowledge`: documents
   (not excluded) by name, folder, tags and their best FTS passage (one per document, `page`,
   `snippet` without the `**` marks), every word required as for the other kinds.
+- **Health (`lib/health/`, phase 13):** check-ups and vaccinations worked out from the birthdays
+  (nothing to set up). `schedule.ts` (pure, browser-safe; `SCHEDULE_AS_OF`): the G-BA check-ups
+  U1–U11, U7a, J1, J2 (ages from the Richtlinie's months / weeks / days *of life*: the 21st month is
+  age 20 months; `until` its tolerance; U10, U11, J2 `notAlwaysPaid`), the STIKO calendar for
+  children **by visit** (`vac-6w` … `vac-9y`, `hpv-1` / `hpv-2`, `rsv-infant`) and adults (`td` every
+  10 years from 18, `flu` / `covid` `seasonal` from 60, `pneumo`, `shingles-1` / `-2` (`after`: ages
+  from the first dose), `rsv` from 75); children's items until 18; `addAge` (a month end that doesn't
+  exist: the month's last day). `status.ts` `personHealth` / `itemState`: done / skipped (recorded;
+  a repeating one from its newest record, a dateless one from the day it was recorded; seasonal per
+  `seasonOf`: 1 Oct – 31 Mar, a shot from 1 Aug counts), due, upcoming, **past** (a child's window
+  closed without a record: "not recorded", never overdue), unknown (a repeating one never recorded,
+  a second dose whose first has no date); `next` (the due one closing first, else the next to
+  open). `health_records` (`lib/db/schema/health.ts`, migration `0039`): member = account or person
+  (as chores' assignee, cascades), `code`, `day` (null: date unknown), done | skipped, note; a code
+  recorded once replaces its record (`recordedOnce`), a repeating one adds one per day; accepting a
+  person's invite moves theirs, removing a member deletes theirs (and their `health_notified`).
+  `routes.ts` `handleHealth(env)`: `GET /health?today=&lang=` (`{members, canEdit, scan, asOf}`;
+  editors everyone, **a viewer only themselves**, 404 for others), `POST /health/records {memberId,
+  records}` (optional `id`: undo), `PATCH|DELETE /health/records/{id}`, `POST /health/past
+  {memberId}` (every past one done, date unknown), `POST /health/scan {memberId, pages}` (`scan.ts`:
+  ≤ 8 base64 JPEG / PNG pages to the family's AI with the name, birthday and codes, one completion;
+  `parseScanAnswer` keeps codes of the member's age, no future dates or dates before the birth,
+  `known` when recorded; nothing saved; `ai: false` without the AI); changes answer the member's new
+  state. `notify.ts` `healthNotifications` (worker, from `NOTIFY_HOUR`): a window that opened in the
+  last 14 days and a check-up's closing in ≤ 28 days (windows > 42 days), once each
+  (`health_notified`), pushed **only to the editors' devices** (`channelIds: []`), link
+  `/f/{id}/health/{memberId}`. Assistant `tools/health.ts`: `get_health`, `record_health`,
+  `remove_health_record` (undo: DELETE / POST back with the id), system prompt section, page
+  `health`. The mock AI answers the scan prompt. App: `Features/Health/` (`HealthView`: due now
+  across the family (swipe *Done Today*), the members → `HealthMemberView`: due, check-ups,
+  vaccinations, *All Done* for the past ones, *Scan Booklet* (`paperScanner` → `HealthScanSheet`,
+  suggestions ticked), `HealthRecordSheet` (date or unknown, done / skipped, note; a repeating one's
+  earlier records); `HealthStore` (shared by the page and the sheets, `didChange(.health)`);
+  *Find an Appointment* (`HealthBooking`: asks the assistant to start a search, else a new search);
+  `AppRoute.healthMember`, `Module.health` (no ⌘-number), demo `demo-health.json` (dates
+  `{{day:N}}`).
 - **Connections between modules (phase 7):**
   - *Appointments → Calendar:* `cal_events` (`lib/db/schema/connections.ts`): events from
     `day` to `end_day` (wall-clock `start` on the first / `end` on the last "HH:MM", or null =
@@ -737,9 +773,9 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `{ name, version (OHANA_VERSION, else package.json), apiVersion: API_VERSION, modules }`.
   The app requires its `requiredAPIVersion` (apple `Core/Models/ServerInfo.swift`); raise
   `API_VERSION` only for a change an older app can't handle — otherwise the API only grows.
-  `DISABLED_MODULES` (finance, meals, appointments, chores, assistant, knowledge; never calendar):
+  `DISABLED_MODULES` (finance, meals, appointments, chores, assistant, knowledge, health; never calendar):
   `moduleEnabled()`; `moduleOfFamilyPath` maps family API paths (finance, meals / recipes,
-  appointments, chores, ai / agent, knowledge) for `handleDisabledModules`; the worker, the dashboard's searches, `mealsAi` and the assistant's tools check it.
+  appointments, chores, ai / agent, knowledge, health) for `handleDisabledModules`; the worker, the dashboard's searches, `mealsAi` and the assistant's tools check it.
 - **Native app (`apple/`):** SwiftUI, one source tree `apple/Ohana/` for two XcodeGen targets
   (`Ohana` iOS 26, `Ohana-macOS` macOS 26; `project.yml`, the `.xcodeproj` is generated and not
   committed: `cd apple && xcodegen generate`). Pairing: the app opens `/device/pair?state=…&deviceName=…`

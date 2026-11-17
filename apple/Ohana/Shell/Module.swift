@@ -3,15 +3,15 @@ import SwiftUI
 /// The pages of the shell (the web app's components/shell/modules.ts plus the overview, the
 /// assistant's own page and the settings), and the search across them (its own tab, ⌘K). The
 /// order gives the ⌘-numbers: the knowledge base came later, so it's after the settings (⌘9) and
-/// the others keep theirs; the search is last (no number).
+/// the others keep theirs; health came after it (no number), the search is last (no number).
 enum Module: String, CaseIterable, Identifiable, Hashable {
-    case overview, calendar, finance, meals, appointments, chores, assistant, settings, knowledge, search
+    case overview, calendar, finance, meals, appointments, chores, assistant, settings, knowledge, health, search
     /// Not a page: a row of the Mac's sidebar that opens the letter scanner (`isAction`).
     case scanLetter
 
     /// The sidebar's "Modules" section, in its order; the overview stands above it, the settings
     /// at its foot.
-    static let modules: [Module] = [.calendar, .finance, .meals, .appointments, .chores, .knowledge, .assistant]
+    static let modules: [Module] = [.calendar, .finance, .meals, .appointments, .health, .chores, .knowledge, .assistant]
 
     var id: String { rawValue }
 
@@ -39,6 +39,7 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
         case .appointments: "Appointments"
         case .chores: "Chores"
         case .knowledge: "Knowledge"
+        case .health: "Health"
         case .assistant: "Assistant"
         case .settings: "Settings"
         case .search: "Search"
@@ -55,6 +56,7 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
         case .appointments: "stethoscope"
         case .chores: "checklist.checked"
         case .knowledge: "books.vertical"
+        case .health: "heart.text.square"
         case .assistant: "sparkles"
         case .settings: "gearshape"
         case .search: "magnifyingglass"
@@ -71,6 +73,7 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
         case .appointments: ModuleTint.appointments
         case .chores: ModuleTint.chores
         case .knowledge: ModuleTint.knowledge
+        case .health: ModuleTint.health
         case .assistant: ModuleTint.assistant
         case .settings: ModuleTint.settings
         case .search, .scanLetter: ModuleTint.overview
@@ -105,6 +108,7 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
         case .appointments: AppointmentsView()
         case .chores: ChoresView()
         case .knowledge: KnowledgeView()
+        case .health: HealthView()
         case .assistant: AssistantPage()
         case .settings: FamilySettingsView()
         case .search: FamilySearchView()

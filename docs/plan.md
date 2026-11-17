@@ -193,6 +193,7 @@ empty Ohana database. It has a **dry run** that only reports what it would do.
 | 10 | Shopping in Reminders ✅ | The shopping list moves to Apple Reminders: the server computes what the meal plan needs, the app writes it into a list the user picks; the assistant reads and edits reminders, each edit confirmed (see Phase 10) |
 | 11 | Week ahead ✅ | A weekly digest per member that checks the next two weeks for clashes and plans that don't work out (overlaps, no time to get from one place to the next, packed days, a lot of driving, events while the family is away, children needing two drivers at once); a *Week ahead* page in the app (see Phase 11) |
 | 12 | Knowledge base | The parents' documents in a shared iCloud Drive folder become searchable knowledge: the app reads the files, the server keeps only their text, a card per document and a reference to the file; the assistant answers from it with sources that open the original at the right page; scans are filed straight into that folder (see Phase 12) |
+| 13 | Health | Check-ups (U1–U11, J1, J2) and vaccinations (STIKO, children and adults) worked out from the birthdays: a page of its own, one tap to record, every earlier one marked done at once, the booklet read with the camera, reminders pushed to the editors, assistant tools (see Phase 13) |
 
 ### Phase 8: headless, open source, self-hosted
 
@@ -205,7 +206,7 @@ Ohana is not sold. It is an open-source app the family runs on its own server; t
 | Server | **Hono** on `@hono/node-server` instead of Next.js; `web/` becomes `server/`. Pages are server-rendered with `hono/jsx`, one small browser script (`client/`, bundled by esbuild) does the WebAuthn ceremonies and the forms; plain CSS, no Tailwind. Run with `tsx`, like the worker. |
 | Links | Notification links keep `/f/{id}/…`; the server answers them with a page that opens `ohana://f/{id}/…` (no universal links, see above). |
 | Compatibility | `GET /api/v1/server` (public): name, version, API version, enabled modules. The app refuses a server with an API version older than it needs, and hides turned-off modules. Changes to the API add, they don't remove. |
-| Modules | `DISABLED_MODULES` (comma list of `finance`, `meals`, `appointments`, `assistant`; the calendar is always on): their routes answer 404, the worker skips their jobs, the assistant loses their tools. |
+| Modules | `DISABLED_MODULES` (comma list of `finance`, `meals`, `appointments`, `chores`, `assistant`, `knowledge`, `health`; the calendar is always on): their routes answer 404, the worker skips their jobs, the assistant loses their tools. |
 | Push | A new channel **ntfy** (topic URL, optional access token): self-hostable push with an iOS app. A server can't use APNs without the developer's key, so no relay. *Revised in phase 9: an opt-in relay with end-to-end encrypted payloads, ntfy and the other channels stay.* |
 | API description | `docs/openapi.yaml` (OpenAPI 3.1), written by hand from the route modules. |
 | License | Server (`server/`) **AGPL-3.0**, app (`apple/`) **MPL-2.0** (fits App Store distribution). |
@@ -457,6 +458,22 @@ Notes (deviations and details):
   person only for `birthday_away`; keys over 200 characters become `kind:#<sha256 prefix>`.
 - `weeklyDigests` runs next to the daily notifications in the worker tick (not behind
   `NOTIFY_HOUR`); `lastSent` is written before sending, so a failed send isn't retried that day.
+
+### Phase 13: check-ups and vaccinations
+
+The lowest barrier: nobody types in a schedule. Everything comes from the birthdays the family
+already has, and recording is one tap.
+
+| Topic | Decision |
+| ----- | -------- |
+| Module | `health`, its own page (`Module.health`, the sidebar after Appointments) and `DISABLED_MODULES` entry; only additions to the API, no `API_VERSION` raise. |
+| Schedule | `lib/health/schedule.ts` (pure, browser-safe): the G-BA check-ups U1–U11, U7a, J1, J2 (windows from the Richtlinie's months / weeks / days *of life*, `until` = its tolerance; U10, U11, J2 `notAlwaysPaid`), the STIKO calendar for children **by visit** (6 weeks, 2, 4, 11, 12, 15 months, 5–6 and 9–16 years, HPV in two doses, RSV protection in the first season) and for adults (tetanus / diphtheria every 10 years from 18, flu and COVID-19 each autumn from 60, pneumococcal and shingles (two doses) from 60, RSV from 75). `SCHEDULE_AS_OF` names the edition; children's items show until 18. Germany only for now. |
+| States | `status.ts`: done / skipped (recorded), due (window open), upcoming, **past** (a child's window closed without a record: "not recorded", never overdue, since most happened before Ohana), unknown (a repeating one never recorded, a second dose without its first's date). Repeating ones count from the newest record (a record without a date from the day it was recorded); seasonal ones per season (1 Oct – 31 Mar, a shot from 1 Aug counts). |
+| Records | `health_records` (member = account or person, as chores' assignee; `code`, `day` or null = date unknown, done / skipped, note). A code recorded once replaces its record; a repeating one adds one per day. Accepting a person's invite moves their records; removing a member deletes theirs. `POST /health/past` marks every past one done (date unknown): the one-tap catch-up. |
+| Who | Editors see and record everyone's; a viewer only their own (404 for others). |
+| Scanner | The app photographs the Impfpass / U-Heft (`paperScanner`, ≤ 8 pages, upright JPEGs) and `POST /health/scan` sends them with the member's name, birthday and the codes to the family's AI (one completion, like the letter scan); the answer is checked one by one (codes of the member's age, no future dates or dates before the birth) and returned as suggestions to tick, nothing saved. |
+| Reminders | The worker (`notify.ts`, from `NOTIFY_HOUR`): when a window opens (within 14 days) and when a check-up's closes in 28 days without a record (windows over 42 days), once each (`health_notified`), pushed to the **editors' devices only** (health data never goes to the channels), link `/f/{id}/health/{memberId}`. |
+| Assistant | `get_health`, `record_health`, `remove_health_record` (undo: DELETE / POST back with the id), a "Check-ups and vaccinations" section in the system prompt, the page `health`. "Find an appointment" in the app asks the assistant to start an appointment search (else opens a new search). |
 
 ### Phase 12: the knowledge base
 

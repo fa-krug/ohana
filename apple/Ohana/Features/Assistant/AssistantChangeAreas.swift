@@ -19,6 +19,7 @@ enum AssistantChangeAreas {
         case "recipes": [.recipes, .meals]
         case "plan": [.mealPlan, .meals]
         case "appointments": [.appointments]
+        case "health": [.health]
         default: []
         }
     }
@@ -34,6 +35,7 @@ enum AssistantChangeAreas {
         case "finance": return [.finance]
         case "appointments": return [.appointments]
         case "chores": return [.chores]
+        case "health": return [.health]
         case "recipes": return [.recipes, .meals]
         case "meals":
             switch parts.dropFirst().first {
@@ -56,6 +58,7 @@ enum AssistantChangeAreas {
         case "plan_meals": [.mealPlan, .meals]
         case "create_appointment_search", "change_appointment_search", "run_appointment_search": [.appointments]
         case "book_appointment_slot": [.appointments, .events, .calendar]
+        case "record_health", "remove_health_record": [.health]
         default: []
         }
     }
