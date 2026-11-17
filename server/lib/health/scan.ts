@@ -65,11 +65,8 @@ export function scanPrompt({ name, birthday, today, lang }: { name: string; birt
   ].join("\n");
 }
 
-/** The model's answer, checked one by one (see the top). */
-export function parseScanAnswer(
-  content: string,
-  opts: { birthday: string; today: string; lang: Lang; known: { code: string; day: string | null }[] },
-): ScanSuggestion[] {
+/** The answer's `records`: JSON, in a fence or not. */
+function answerRecords(content: string): unknown[] {
   const text = content.trim();
   const fenced = /```(?:json)?\s*([\s\S]*?)```/.exec(text);
   let parsed: unknown;
@@ -80,26 +77,42 @@ export function parseScanAnswer(
   }
   const list = (parsed as { records?: unknown })?.records;
   if (!Array.isArray(list)) throw new HttpError(502, "The AI model's answer had no records");
+  return list;
+}
+
+interface ScanCheck {
+  birthday: string;
+  today: string;
+  lang: Lang;
+  known: { code: string; day: string | null }[];
+}
+
+/** One suggestion, or null when it's wrong: an unknown code or one not of the member's age, an
+ *  impossible date. A date that can't be read stays a suggestion without one. */
+function suggestionOf(raw: unknown, opts: ScanCheck): ScanSuggestion | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const code = typeof r.code === "string" ? r.code.trim().toLowerCase() : "";
+  const item = SCHEDULE_BY_CODE.get(code);
+  if (!item || !codeApplies(code, opts.birthday, opts.today)) return null;
+  const day = isValidDate(r.day) ? r.day : null;
+  if (day && (day > opts.today || day < opts.birthday)) return null;
+  const note = typeof r.note === "string" ? r.note.trim().slice(0, 60) : "";
+  const known = opts.known.some((k) => k.code === code && (recordedOnce(code) || k.day === day));
+  return { code, title: item.title[opts.lang], day, note, known };
+}
+
+/** The model's answer, checked one by one (see the top). */
+export function parseScanAnswer(content: string, opts: ScanCheck): ScanSuggestion[] {
   const out: ScanSuggestion[] = [];
   const seen = new Set<string>();
-  for (const raw of list) {
-    if (!raw || typeof raw !== "object") continue;
-    const r = raw as Record<string, unknown>;
-    const code = typeof r.code === "string" ? r.code.trim().toLowerCase() : "";
-    const item = SCHEDULE_BY_CODE.get(code);
-    if (!item || !codeApplies(code, opts.birthday, opts.today)) continue;
-    // A date that can't be read stays a suggestion without one; an impossible one is dropped.
-    let day: string | null = null;
-    if (isValidDate(r.day)) {
-      if (r.day > opts.today || r.day < opts.birthday) continue;
-      day = r.day;
-    }
-    const key = recordedOnce(code) ? code : `${code}:${day ?? ""}`;
+  for (const raw of answerRecords(content)) {
+    const s = suggestionOf(raw, opts);
+    if (!s) continue;
+    const key = recordedOnce(s.code) ? s.code : `${s.code}:${s.day ?? ""}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    const note = typeof r.note === "string" ? r.note.trim().slice(0, 60) : "";
-    const known = opts.known.some((k) => k.code === code && (recordedOnce(code) || k.day === day));
-    out.push({ code, title: item.title[opts.lang], day, note, known });
+    out.push(s);
     if (out.length >= MAX_SUGGESTIONS) break;
   }
   return out.sort((a, b) => (a.day ?? "").localeCompare(b.day ?? "") || a.code.localeCompare(b.code));

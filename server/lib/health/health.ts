@@ -104,6 +104,34 @@ export interface RecordInput {
   note: string;
 }
 
+/** A record's day: a date or null (unknown), neither in the future nor before the birth. */
+function recordDay(value: unknown, member: HealthMember, today: string): string | null {
+  if (value === undefined || value === null || value === "") return null;
+  if (!isValidDate(value)) throw new HttpError(400, "day must be YYYY-MM-DD or null");
+  if (value > today) throw new HttpError(400, "day can't be in the future");
+  if (member.birthday && value < member.birthday) throw new HttpError(400, "day can't be before the birthday");
+  return value;
+}
+
+function recordStatus(value: unknown): RecordStatus {
+  if (value === undefined) return "done";
+  if (value !== "done" && value !== "skipped") throw new HttpError(400, "status must be done or skipped");
+  return value;
+}
+
+function recordNote(value: unknown): string {
+  if (value === undefined || value === null) return "";
+  if (typeof value !== "string") throw new HttpError(400, "note must be a string");
+  if (value.length > 200) throw new HttpError(400, "note is too long (max. 200)");
+  return value.trim();
+}
+
+function recordId(value: unknown): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || !value || value.length > 64) throw new HttpError(400, "id must be a string");
+  return value;
+}
+
 /** A record's input, checked: a code of the schedule, a day (or null) neither in the future nor
  *  before the member's birth. */
 export function recordInput(raw: unknown, member: HealthMember, today: string): RecordInput {
@@ -111,18 +139,13 @@ export function recordInput(raw: unknown, member: HealthMember, today: string): 
   const r = raw as Record<string, unknown>;
   const item = typeof r.code === "string" ? SCHEDULE_BY_CODE.get(r.code) : undefined;
   if (!item) throw new HttpError(400, `Unknown code "${String(r.code)}"`);
-  const day = r.day === undefined || r.day === null || r.day === "" ? null : r.day;
-  if (day !== null && !isValidDate(day)) throw new HttpError(400, "day must be YYYY-MM-DD or null");
-  if (day !== null && day > today) throw new HttpError(400, "day can't be in the future");
-  if (day !== null && member.birthday && day < member.birthday) throw new HttpError(400, "day can't be before the birthday");
-  const status = r.status === undefined ? "done" : r.status;
-  if (status !== "done" && status !== "skipped") throw new HttpError(400, "status must be done or skipped");
-  const note = r.note === undefined || r.note === null ? "" : r.note;
-  if (typeof note !== "string") throw new HttpError(400, "note must be a string");
-  if (note.length > 200) throw new HttpError(400, "note is too long (max. 200)");
-  const id = r.id === undefined ? undefined : r.id;
-  if (id !== undefined && (typeof id !== "string" || !id || id.length > 64)) throw new HttpError(400, "id must be a string");
-  return { id, code: item.code, day, status, note: note.trim() };
+  return {
+    id: recordId(r.id),
+    code: item.code,
+    day: recordDay(r.day, member, today),
+    status: recordStatus(r.status),
+    note: recordNote(r.note),
+  };
 }
 
 /** Whether a code is recorded once (a check-up, a visit) rather than each time (tetanus, flu). */

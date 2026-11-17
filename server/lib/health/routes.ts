@@ -43,22 +43,25 @@ export function handleHealth(env: AiEnv) {
   return (ctx: Ctx): Promise<Response> | null => {
     if (ctx.rest[0] !== "health") return null;
     const [, sub, id, ...more] = ctx.rest;
-    const { method } = ctx;
-    if (more.length) return Promise.reject(new HttpError(404, "Not found"));
-    if (sub === undefined) return method === "GET" ? listRoute(ctx, env) : notAllowed();
-    if (sub === "records" && id === undefined) return method === "POST" ? addRoute(ctx) : notAllowed();
-    if (sub === "records") {
-      if (method === "PATCH") return updateRoute(ctx, id);
-      if (method === "DELETE") return deleteRoute(ctx, id);
-      return notAllowed();
-    }
-    if (id !== undefined) return Promise.reject(new HttpError(404, "Not found"));
-    if (sub === "past") return method === "POST" ? pastRoute(ctx) : notAllowed();
-    if (sub === "scan") return method === "POST" ? scanRoute(ctx, env) : notAllowed();
-    return Promise.reject(new HttpError(404, "Not found"));
+    if (more.length) return notFound();
+    if (sub === undefined) return ctx.method === "GET" ? listRoute(ctx, env) : notAllowed();
+    if (sub === "records") return recordsRoutes(ctx, id);
+    if (id !== undefined) return notFound();
+    if (sub === "past") return ctx.method === "POST" ? pastRoute(ctx) : notAllowed();
+    if (sub === "scan") return ctx.method === "POST" ? scanRoute(ctx, env) : notAllowed();
+    return notFound();
   };
 }
 
+/** /health/records (POST) and /health/records/{id} (PATCH, DELETE). */
+function recordsRoutes(ctx: Ctx, id: string | undefined): Promise<Response> {
+  if (id === undefined) return ctx.method === "POST" ? addRoute(ctx) : notAllowed();
+  if (ctx.method === "PATCH") return updateRoute(ctx, id);
+  if (ctx.method === "DELETE") return deleteRoute(ctx, id);
+  return notAllowed();
+}
+
+const notFound = () => Promise.reject(new HttpError(404, "Not found"));
 const notAllowed = () => Promise.reject(new HttpError(405, "Method not allowed"));
 
 /** ?today=, else the server's day. */

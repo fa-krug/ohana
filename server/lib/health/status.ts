@@ -52,6 +52,61 @@ function windowState(from: string, to: string, until: string, today: string): He
   return "past";
 }
 
+/** Where an item stands, and its window. */
+interface Standing {
+  status: HealthStatus;
+  from: string | null;
+  to: string | null;
+  until: string | null;
+}
+
+const NO_WINDOW = { from: null, to: null, until: null };
+
+/** Flu, COVID-19: the current autumn season's record, else due from 1 October. */
+function seasonal(records: HealthRecord[], today: string): Standing {
+  const season = seasonOf(today);
+  const current = records.find((r) => dayOf(r) >= season.counts && dayOf(r) <= season.end);
+  const status = current ? current.status : today < season.start ? "upcoming" : "due";
+  return { status, from: season.start, to: `${season.start.slice(0, 4)}-12-31`, until: season.end };
+}
+
+/** Tetanus: due again `every` after the newest record; never recorded: unknown. */
+function repeating(item: ScheduleItem, latest: HealthRecord | undefined, today: string): Standing {
+  if (!latest) return { status: "unknown", ...NO_WINDOW };
+  const from = addAge(dayOf(latest), item.every!);
+  return { status: today < from ? latest.status : "due", ...NO_WINDOW, from };
+}
+
+/** A second dose: its window counts from the first one's day. */
+function secondDose(
+  item: ScheduleItem,
+  latest: HealthRecord | undefined,
+  byCode: Map<string, HealthRecord[]>,
+  today: string,
+): Standing {
+  const first = [...(byCode.get(item.after!) ?? [])].filter((r) => r.status === "done").sort(newestFirst)[0];
+  const window = first?.day
+    ? { from: addAge(first.day, item.from), to: addAge(first.day, item.to), until: addAge(first.day, item.until) }
+    : NO_WINDOW;
+  if (latest) return { status: latest.status, ...window };
+  if (!first) return { status: "upcoming", ...window };
+  if (!window.from || !window.to || !window.until) return { status: "unknown", ...window };
+  const status = windowState(window.from, window.to, window.until, today);
+  // An adult's second dose is still worth having late.
+  return { status: status === "past" && item.group === "adult" ? "due" : status, ...window };
+}
+
+/** By age: a child's window, or an adult's from an age on (due until recorded). */
+function byAge(item: ScheduleItem, latest: HealthRecord | undefined, birthday: string, today: string): Standing {
+  const from = addAge(birthday, item.from);
+  if (item.group === "adult") {
+    return { status: latest ? latest.status : today < from ? "upcoming" : "due", ...NO_WINDOW, from };
+  }
+  const to = addAge(birthday, item.to);
+  const until = addAge(birthday, item.until);
+  return { status: latest ? latest.status : windowState(from, to, until, today), from, to, until };
+}
+
 /** One item's state. `byCode`: all of the person's records by code. */
 export function itemState(
   item: ScheduleItem,
@@ -62,49 +117,13 @@ export function itemState(
 ): ItemState {
   const records = [...(byCode.get(item.code) ?? [])].sort(newestFirst);
   const latest = records[0];
-  let status: HealthStatus;
-  let from: string | null = null;
-  let to: string | null = null;
-  let until: string | null = null;
-
-  if (item.seasonal) {
-    const season = seasonOf(today);
-    const current = records.find((r) => dayOf(r) >= season.counts && dayOf(r) <= season.end);
-    from = season.start;
-    to = `${season.start.slice(0, 4)}-12-31`;
-    until = season.end;
-    status = current ? current.status : today < season.start ? "upcoming" : "due";
-  } else if (item.every) {
-    if (!latest) status = "unknown";
-    else {
-      from = addAge(dayOf(latest), item.every);
-      status = today < from ? latest.status : "due";
-    }
-  } else if (item.after) {
-    const first = [...(byCode.get(item.after) ?? [])].filter((r) => r.status === "done").sort(newestFirst)[0];
-    if (first?.day) {
-      from = addAge(first.day, item.from);
-      to = addAge(first.day, item.to);
-      until = addAge(first.day, item.until);
-    }
-    if (latest) status = latest.status;
-    else if (!first) status = "upcoming";
-    else if (!from || !to || !until) status = "unknown";
-    else {
-      status = windowState(from, to, until, today);
-      // An adult's second dose is still worth having late.
-      if (status === "past" && item.group === "adult") status = "due";
-    }
-  } else {
-    from = addAge(birthday, item.from);
-    if (item.group === "adult") {
-      status = latest ? latest.status : today < from ? "upcoming" : "due";
-    } else {
-      to = addAge(birthday, item.to);
-      until = addAge(birthday, item.until);
-      status = latest ? latest.status : windowState(from, to, until, today);
-    }
-  }
+  const { status, from, to, until } = item.seasonal
+    ? seasonal(records, today)
+    : item.every
+      ? repeating(item, latest, today)
+      : item.after
+        ? secondDose(item, latest, byCode, today)
+        : byAge(item, latest, birthday, today);
 
   return {
     code: item.code,
