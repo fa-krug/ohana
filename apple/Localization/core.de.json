@@ -60,6 +60,8 @@
   "The assistant is turned off on your Ohana server.": "Der Assistent ist auf deinem Ohana-Server ausgeschaltet.",
   "The server answered with an error (%lld).": "Der Server hat mit einem Fehler geantwortet (%lld).",
   "The server sent something unexpected: %@": "Der Server hat etwas Unerwartetes geschickt: %@",
+  "Start page": "Startseite",
+  "Last opened": "Zuletzt geöffnet",
   "Theme": "Design",
   "These open your Ohana server in the browser.": "Diese öffnen deinen Ohana-Server im Browser.",
   "This server runs an older version of Ohana. Ask its administrator to update it.": "Auf diesem Server läuft eine ältere Version von Ohana. Bitte die Person, die ihn betreut, um ein Update.",

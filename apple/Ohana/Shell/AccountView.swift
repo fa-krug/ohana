@@ -713,12 +713,13 @@ enum Appearance: String, CaseIterable, Identifiable {
     }
 }
 
-/// The settings of this device: the theme and (on the Mac, when the server has the assistant)
-/// the menu bar assistant.
+/// The settings of this device: the theme, the page the app opens on (`StartPage`) and (on the
+/// Mac, when the server has the assistant) the menu bar assistant.
 struct DeviceSettingsSection: View {
     @AppStorage("appearance") private var appearance = Appearance.system
-    #if os(macOS)
+    @AppStorage(StartPage.key) private var startPage = StartPage.last
     @Environment(AppModel.self) private var app
+    #if os(macOS)
     @AppStorage("menuBarAssistant") private var menuBarAssistant = true
     #endif
 
@@ -726,6 +727,15 @@ struct DeviceSettingsSection: View {
         Section {
             Picker("Theme", selection: $appearance) {
                 ForEach(Appearance.allCases) { Text($0.title).tag($0) }
+            }
+            // A page the server has off (or none) reads as the last one, which is what opens then.
+            Picker("Start page", selection: Binding {
+                StartPage.module(startPage) { app.isEnabled($0) }?.rawValue ?? StartPage.last
+            } set: {
+                startPage = $0
+            }) {
+                Text("Last opened").tag(StartPage.last)
+                ForEach(StartPage.choices.filter { app.isEnabled($0) }) { Text($0.title).tag($0.rawValue) }
             }
             #if os(macOS)
             if app.isEnabled(.assistant) {

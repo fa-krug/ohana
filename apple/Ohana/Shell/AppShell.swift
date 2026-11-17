@@ -22,6 +22,14 @@ struct AppShell: View {
     /// iPhone: the page on screen, kept across launches (a scene's storage goes when the app is
     /// swiped away).
     @AppStorage("phoneModule") private var phoneModule: Module = .overview
+    /// The page picked to open on (Settings → This device; "": the last one, `StartPage`).
+    @AppStorage(StartPage.key) private var startPage = StartPage.last
+    @Environment(\.scenePhase) private var scenePhase
+    /// When the app went to the background: back after `StartPage.awayLimit`, it opens the start page.
+    @State private var backgroundAt: Date?
+    /// When a route (a notification, a link, Spotlight) last arrived: one since going to the
+    /// background beats the start page.
+    @State private var routeAt: Date?
     /// At launch the loading screen stays over the shell while the pages are built
     /// (`prebuildPages`), so none has to be built when it's first opened.
     @State private var launchLoading = !AppShell.launchBuilt
@@ -37,10 +45,15 @@ struct AppShell: View {
     /// assistant, which isn't a page there).
     private var selection: Binding<Module> {
         Binding {
-            let current = module ?? (Module.onPhone ? phoneModule : storedModule)
+            let current = module ?? startModule ?? (Module.onPhone ? phoneModule : storedModule)
             return app.isEnabled(current) && !Module.notPages.contains(current) && !current.isWindow && !current.isAction ? current : .overview
         } set: { show($0) }
     }
+    /// The page picked to open on, while the server has it on; nil: the last one.
+    private var startModule: Module? {
+        StartPage.module(startPage) { app.isEnabled($0) }
+    }
+
     /// The pages' stores, kept while the shell shows the family (`ShellPageStores`).
     @State private var pageStores = ShellPageStores()
     /// The assistant panel: each window opens it as the last one left it (on iPhone, where it
@@ -105,12 +118,14 @@ struct AppShell: View {
                 guard let pending = AssistantInbox.shared.take() else { return }
                 context.ask(pending.prompt, send: pending.prompt != nil, newChat: true)
             }
+            .onChange(of: scenePhase) { returned(to: scenePhase) }
             .sheet(isPresented: $app.showsConnect) { ConnectServerView().errorBanner() }
             .onReceive(NotificationCenter.default.publisher(for: .openModule)) { note in
                 if let target = note.object as? Module, context.isEnabled(target) { show(target) }
             }
             .onChange(of: context.pendingRoute, initial: true) {
                 guard let route = context.pendingRoute else { return }
+                routeAt = .now
                 #if os(iOS)
                 // The iPhone has no assistant page: it opens as the panel.
                 if route.module == .assistant, Module.onPhone || sizeClass == .compact {
@@ -174,6 +189,28 @@ struct AppShell: View {
         if launchLoading, !Module.onPhone { tabAfterLaunch = target }
         module = target
         if Module.onPhone { app.showsFamilySidebar = false }
+    }
+
+    /// Back from the background after `StartPage.awayLimit`: the start page, if one is picked and
+    /// no notification or link opened the app (those arrive just after it became active, so it
+    /// waits a moment for them).
+    private func returned(to phase: ScenePhase) {
+        switch phase {
+        case .background:
+            backgroundAt = .now
+        case .active:
+            guard let since = backgroundAt else { return }
+            backgroundAt = nil
+            guard Date.now.timeIntervalSince(since) >= StartPage.awayLimit, startModule != nil else { return }
+            Task {
+                try? await Task.sleep(for: .milliseconds(500))
+                if let routeAt, routeAt >= since { return }
+                guard let start = startModule else { return }
+                show(start)
+            }
+        default:
+            break
+        }
     }
 
     /// iPad, Mac: the tabs that weren't opened yet, built ahead behind the loading screen at launch

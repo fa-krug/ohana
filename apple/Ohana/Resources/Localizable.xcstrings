@@ -9273,6 +9273,16 @@
         }
       }
     },
+    "Last opened": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zuletzt geöffnet"
+          }
+        }
+      }
+    },
     "Last read": {
       "localizations": {
         "de": {
@@ -17211,6 +17221,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nächste Iteration starten"
+          }
+        }
+      }
+    },
+    "Start page": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Startseite"
           }
         }
       }

@@ -419,7 +419,7 @@ private struct FamilyGeneralView: View {
     }
 }
 
-/// Settings → This device: the theme and (on the Mac) the menu bar assistant.
+/// Settings → This device: the theme, the start page and (on the Mac) the menu bar assistant.
 private struct DeviceSettingsView: View {
     var body: some View {
         Form {
