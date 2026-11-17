@@ -801,7 +801,11 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   mailboxes): the family page is its root, the page on screen pushed over it, opening on the last one
   (`@AppStorage("phoneModule")`, so also after the app was closed; `preferredCompactColumn` bound to
   `AppModel.showsFamilySidebar`); the system's back button ("Ohana") and swipe go to the family page,
-  a row or a swipe to the left there back to a page. The detail column holds only the page on
+  a row or a swipe to the left there back to a page. Settings → This device → *Start page*
+  (`Shell/StartPage.swift`, `@AppStorage("startPage")`, "" = the last one, the default) picks a page
+  the device opens on instead: at launch (on iPad / Mac each new window) and when the app comes back
+  after 15 min in the background, unless a notification or link opened it (`AppShell.returned(to:)`).
+  The detail column holds only the page on
   screen (several pages' stacks in it merge their toolbars), but the same page stays the same view
   while the family page shows, so it's kept as it was left; what polls (the calendar, the knowledge
   base, the recipe imports) waits for `shellPageVisible` (false while the family page shows). A page
@@ -852,8 +856,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   gestures step aside on an event label).
   Chores (`Features/Chores/`): `ChoresView` shows one day (a day bar under the navigation bar:
   back / forward, date picker, Today) in Morning / Day / Evening sections, Overdue on top on today,
-  from `GET /chores` + `GET /chores/agenda` (62-day windows from today − 30, `ChoreAgenda.window`);
-  rows tick an occurrence off (`POST …/done`, `day` for repeating ones) and show a bell while the
+  from `GET /chores` + `GET /chores/agenda` (62-day windows from today − 30, `ChoreAgenda.window`;
+  closed (left, or the app away) for 15 min, it comes back on today: `ChoresView.backToToday`); rows tick an occurrence off (`POST …/done`, `day` for repeating ones) and show a bell while the
   caller is subscribed (`…/subscribe`: context menu, leading swipe, editor). Local-first, without sync indicators: `ChoresStore` (one per
   family, `FamilyContext.chores`, shared by the pages and the editor) shows the `ResponseCache`
   copies at once and refreshes silently (appear, active, reconnect, `didChange(.chores)`); changes
