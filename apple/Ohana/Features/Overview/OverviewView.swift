@@ -1,14 +1,16 @@
 import SwiftUI
 
 /// The family overview (the web app's app/(app)/f/[familyId]/page.tsx): one dashboard over all
-/// modules: today, the meals, the next birthdays, what comes up, this month's
+/// modules: today, the meals, today's chores, the next birthdays, what comes up, this month's
 /// finances and the appointment searches' latest finds, as content cards. A card's header opens
 /// its module; each row opens its exact place (a day of the calendar, a recipe, a category's
-/// transactions, an appointment slot). What belongs to a
-/// module the server has off doesn't show.
+/// transactions, an appointment slot, a chore). What belongs to a
+/// module the server has off doesn't show; any card can be hidden on this device (its context
+/// menu, the toolbar's Cards menu: `OverviewCardKind`).
 struct OverviewView: View {
     @Environment(FamilyContext.self) private var family
     @State private var state: LoadState<OverviewDashboard> = .idle
+    @AppStorage(OverviewCardKind.hiddenKey) private var hidden = ""
     /// The week ahead, pushed (its card, a notification's link).
     @State private var showsWeekAhead = false
 
@@ -29,6 +31,23 @@ struct OverviewView: View {
         }
         .ohanaBackground(ModuleTint.overview)
         .navigationTitle("Overview")
+        .toolbar {
+            ToolbarItem {
+                Menu {
+                    Section("Cards") {
+                        ForEach(OverviewCardKind.available(family)) { kind in
+                            Toggle(isOn: shows(kind)) { Label(kind.title, systemImage: kind.systemImage) }
+                        }
+                    }
+                    if !OverviewCardKind.hidden(in: hidden).isEmpty {
+                        Button("Show All Cards", systemImage: "eye") { hidden = "" }
+                    }
+                } label: {
+                    Label("Cards", systemImage: "rectangle.grid.2x2")
+                }
+                .help("Choose the cards to show")
+            }
+        }
         .refreshable { await load() }
         .task(id: reloadKey) { await load() }
         .navigationDestination(isPresented: $showsWeekAhead) { WeekAheadView().shellPageItems() }
@@ -43,6 +62,11 @@ struct OverviewView: View {
         await LoadState.run($state, Self.request(family.api))
     }
 
+    private func shows(_ kind: OverviewCardKind) -> Binding<Bool> {
+        Binding(get: { !OverviewCardKind.hidden(in: hidden).contains(kind) },
+                set: { hidden = OverviewCardKind.setting(kind, hidden: !$0, in: hidden) })
+    }
+
     /// The overview's GET (the prefetch asks the same): filed without `today`, so yesterday's
     /// copy still shows offline.
     static func request(_ api: FamilyAPI) -> CachedGet<OverviewDashboard> {
@@ -52,28 +76,116 @@ struct OverviewView: View {
 
 private struct OverviewGrid: View {
     @Environment(FamilyContext.self) private var family
+    @AppStorage(OverviewCardKind.hiddenKey) private var hidden = ""
     let dashboard: OverviewDashboard
 
-    var body: some View {
-        OverviewColumns {
-            OverviewTodayCard(dashboard: dashboard)
-            if let weekAhead = dashboard.weekAhead, weekAhead.hasIssues {
-                OverviewWeekAheadCard(summary: weekAhead)
-            }
-            if family.isEnabled(.meals) {
-                OverviewMealsCard(meals: dashboard.meals, awayToday: dashboard.awayToday)
-            }
-            if !dashboard.birthdays.isEmpty {
-                OverviewBirthdaysCard(birthdays: dashboard.birthdays, today: dashboard.today)
-            }
-            OverviewUpcomingCard(items: dashboard.upcoming, today: dashboard.today)
-            if family.isEnabled(.finance) {
-                OverviewFinanceCard(summary: dashboard.finance)
-            }
-            if family.isEnabled(.appointments) {
-                OverviewSearchesCard(searches: dashboard.searches)
+    /// The cards to show, in order: those of modules the family has on and not hidden here, and
+    /// only those with something to say where an empty one would be noise.
+    private var cards: [OverviewCardKind] {
+        let hidden = OverviewCardKind.hidden(in: self.hidden)
+        return OverviewCardKind.available(family).filter { kind in
+            guard !hidden.contains(kind) else { return false }
+            switch kind {
+            case .weekAhead: return dashboard.weekAhead?.hasIssues == true
+            case .birthdays: return !dashboard.birthdays.isEmpty
+            default: return true
             }
         }
+    }
+
+    var body: some View {
+        let shown = cards
+        if shown.isEmpty {
+            ContentUnavailableView {
+                Label("All cards are hidden", systemImage: "rectangle.grid.2x2")
+            } actions: {
+                Button("Show All Cards") { hidden = "" }
+            }
+        } else {
+            OverviewColumns {
+                ForEach(shown) { kind in
+                    card(kind)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func card(_ kind: OverviewCardKind) -> some View {
+        switch kind {
+        case .today: OverviewTodayCard(dashboard: dashboard)
+        case .weekAhead: if let weekAhead = dashboard.weekAhead { OverviewWeekAheadCard(summary: weekAhead) }
+        case .meals: OverviewMealsCard(meals: dashboard.meals, awayToday: dashboard.awayToday)
+        case .chores: OverviewChoresCard(today: .today)
+        case .birthdays: OverviewBirthdaysCard(birthdays: dashboard.birthdays, today: dashboard.today)
+        case .upcoming: OverviewUpcomingCard(items: dashboard.upcoming, today: dashboard.today)
+        case .finance: OverviewFinanceCard(summary: dashboard.finance)
+        case .searches: OverviewSearchesCard(searches: dashboard.searches)
+        }
+    }
+}
+
+/// The overview's cards, in their order. Hiding one is this device's choice (`hiddenKey`, the
+/// raw values joined by commas), for every family.
+enum OverviewCardKind: String, CaseIterable, Identifiable {
+    case today, weekAhead, meals, chores, birthdays, upcoming, finance, searches
+
+    static let hiddenKey = "overviewHiddenCards"
+
+    var id: String { rawValue }
+
+    var title: LocalizedStringKey {
+        switch self {
+        case .today: "Today"
+        case .weekAhead: "Week ahead"
+        case .meals: "Meals"
+        case .chores: "Chores"
+        case .birthdays: "Birthdays"
+        case .upcoming: "Coming up"
+        case .finance: "Finance"
+        case .searches: "Appointment searches"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .today: "sun.max.fill"
+        case .weekAhead: "calendar.badge.exclamationmark"
+        case .meals: "fork.knife"
+        case .chores: Module.chores.systemImage
+        case .birthdays: "birthday.cake.fill"
+        case .upcoming: "calendar"
+        case .finance: "banknote"
+        case .searches: "stethoscope"
+        }
+    }
+
+    /// The module the card belongs to; nil: the calendar's, always on.
+    var module: Module? {
+        switch self {
+        case .meals: .meals
+        case .chores: .chores
+        case .finance: .finance
+        case .searches: .appointments
+        default: nil
+        }
+    }
+
+    /// The cards of the modules the family has on.
+    @MainActor
+    static func available(_ family: FamilyContext) -> [OverviewCardKind] {
+        allCases.filter { $0.module.map(family.isEnabled) ?? true }
+    }
+
+    static func hidden(in raw: String) -> Set<OverviewCardKind> {
+        Set(raw.split(separator: ",").compactMap { OverviewCardKind(rawValue: String($0)) })
+    }
+
+    /// `raw` with `kind` hidden or shown.
+    static func setting(_ kind: OverviewCardKind, hidden isHidden: Bool, in raw: String) -> String {
+        var set = hidden(in: raw)
+        if isHidden { set.insert(kind) } else { set.remove(kind) }
+        return allCases.filter(set.contains).map(\.rawValue).joined(separator: ",")
     }
 }
 
@@ -149,6 +261,9 @@ struct OverviewColumns: Layout {
 private struct OverviewCard<Content: View>: View {
     @Environment(FamilyContext.self) private var family
     @Environment(\.dynamicTypeSize) private var typeSize
+    @AppStorage(OverviewCardKind.hiddenKey) private var hidden = ""
+    /// Which card it is, for hiding it.
+    let kind: OverviewCardKind
     let title: Text
     let systemImage: String
     let module: Module
@@ -184,6 +299,12 @@ private struct OverviewCard<Content: View>: View {
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .contentCard()
+        .contentShape(.contextMenuPreview, .rect(cornerRadius: 24, style: .continuous))
+        .contextMenu {
+            Button("Hide Card", systemImage: "eye.slash") {
+                withAnimation(.snappy) { hidden = OverviewCardKind.setting(kind, hidden: true, in: hidden) }
+            }
+        }
     }
 }
 
@@ -240,7 +361,7 @@ private struct OverviewTodayCard: View {
     let dashboard: OverviewDashboard
 
     var body: some View {
-        OverviewCard(title: Text("Today · \(dashboard.today.formatted())"), systemImage: "sun.max.fill",
+        OverviewCard(kind: .today, title: Text("Today · \(dashboard.today.formatted())"), systemImage: "sun.max.fill",
                      module: .calendar, route: .calendarDay(dashboard.today)) {
             VStack(alignment: .leading, spacing: 6) {
                 if dashboard.todayEvents.isEmpty {
@@ -283,7 +404,7 @@ private struct OverviewWeekAheadCard: View {
     let summary: WeekAheadSummary
 
     var body: some View {
-        OverviewCard(title: Text("Week ahead"), systemImage: "calendar.badge.exclamationmark", module: .calendar,
+        OverviewCard(kind: .weekAhead, title: Text("Week ahead"), systemImage: "calendar.badge.exclamationmark", module: .calendar,
                      route: .weekAhead, destination: Text("Week ahead")) {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 14) {
@@ -332,7 +453,7 @@ private struct OverviewMealsCard: View {
     let awayToday: [String]
 
     var body: some View {
-        OverviewCard(title: Text("Meals"), systemImage: "fork.knife", module: .meals) {
+        OverviewCard(kind: .meals, title: Text("Meals"), systemImage: "fork.knife", module: .meals) {
             HStack(spacing: 8) {
                 OverviewRow(route: OverviewLinks.meal(meals)) {
                     HStack(spacing: 10) {
@@ -362,12 +483,74 @@ private struct OverviewMealsCard: View {
     }
 }
 
+/// Today's chores from the family's `ChoresStore` (on the device, synced in the background): the
+/// overdue ones, then today's open ones by part of the day, ticked off right here; a row opens the
+/// chore on its day.
+private struct OverviewChoresCard: View {
+    @Environment(FamilyContext.self) private var family
+    @Environment(AppModel.self) private var app
+    let today: Day
+
+    /// Rows shown before "+ n more".
+    private static let limit = 6
+
+    private struct Row: Identifiable {
+        let item: ChoreItem
+        let overdue: Bool
+        var id: String { item.id }
+    }
+
+    private var store: ChoresStore { family.chores }
+
+    var body: some View {
+        OverviewCard(kind: .chores, title: Text("Chores"), systemImage: Module.chores.systemImage, module: .chores) {
+            content
+        }
+        .task(id: family.revision(.chores)) {
+            store.me = app.me?.id
+            await store.refresh()
+        }
+    }
+
+    @ViewBuilder private var content: some View {
+        if let page = store.page {
+            let todays = store.items(on: today)
+            let overdue = store.overdue(today: today)
+            let open = ChoreParts.items(todays).flatMap(\.items).filter { !$0.done }
+            let rows = overdue.map { Row(item: $0, overdue: true) } + open.map { Row(item: $0, overdue: false) }
+            if rows.isEmpty {
+                let message: LocalizedStringKey = page.chores.isEmpty ? "No chores yet"
+                    : todays.isEmpty ? "Nothing to do" : "All done for today"
+                Label(message, systemImage: todays.isEmpty ? "checklist" : "checkmark.circle.fill")
+                    .foregroundStyle(todays.isEmpty ? Color.secondary : Color.green)
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(rows.prefix(Self.limit)) { row in
+                        ChoreItemRow(item: row.item, today: today, overdue: row.overdue, canTick: store.canTick(row.item),
+                                     tick: { store.toggleDone(row.item) },
+                                     open: { family.open(.chore(id: row.item.choreId, day: row.item.day)) })
+                    }
+                    if rows.count > Self.limit {
+                        OverviewRow(route: .module(.chores)) {
+                            Text("+ \(rows.count - Self.limit) more").foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+        } else if case .failed = store.phase {
+            Text("Couldn’t load the chores.").foregroundStyle(.secondary)
+        } else {
+            ProgressView().frame(maxWidth: .infinity)
+        }
+    }
+}
+
 private struct OverviewBirthdaysCard: View {
     let birthdays: [OverviewBirthday]
     let today: Day
 
     var body: some View {
-        OverviewCard(title: Text("Birthdays"), systemImage: "birthday.cake.fill", module: .calendar,
+        OverviewCard(kind: .birthdays, title: Text("Birthdays"), systemImage: "birthday.cake.fill", module: .calendar,
                      route: birthdays.first.map(OverviewLinks.route(for:))) {
             VStack(alignment: .leading, spacing: 4) {
                 ForEach(birthdays) { birthday in
@@ -402,7 +585,7 @@ private struct OverviewUpcomingCard: View {
     let today: Day
 
     var body: some View {
-        OverviewCard(title: Text("Coming up"), systemImage: "calendar", module: .calendar) {
+        OverviewCard(kind: .upcoming, title: Text("Coming up"), systemImage: "calendar", module: .calendar) {
             if items.isEmpty {
                 Text("Nothing planned for the next weeks.")
                     .foregroundStyle(.secondary)
@@ -501,7 +684,7 @@ private struct OverviewFinanceCard: View {
     }
 
     var body: some View {
-        OverviewCard(title: Text("Finance"), systemImage: "banknote", module: .finance) {
+        OverviewCard(kind: .finance, title: Text("Finance"), systemImage: "banknote", module: .finance) {
             VStack(alignment: .leading, spacing: 12) {
                 Text("This month · \(monthName)")
                     .font(.caption.weight(.semibold))
@@ -572,7 +755,7 @@ private struct OverviewSearchesCard: View {
     let searches: [OverviewSearchFind]
 
     var body: some View {
-        OverviewCard(title: Text("Appointment searches"), systemImage: "stethoscope", module: .appointments) {
+        OverviewCard(kind: .searches, title: Text("Appointment searches"), systemImage: "stethoscope", module: .appointments) {
             if searches.isEmpty {
                 Text("No searches yet: Ohana can watch Doctolib and jameda for you.")
                     .foregroundStyle(.secondary)

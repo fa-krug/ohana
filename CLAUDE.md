@@ -709,7 +709,10 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
     days). `notifyRun` skips when `appointment_found`
     is off.
   - *Overview:* `lib/families/dashboard.ts` (`familyDashboard`, `GET /overview`; no searches
-    with appointments off).
+    with appointments off). App: `Features/Overview/OverviewView.swift`; the chores card reads the
+    device's `ChoresStore` (today's open ones and the overdue, ticked off there), not the dashboard;
+    any card can be hidden on the device (`OverviewCardKind`, `@AppStorage("overviewHiddenCards")`:
+    a card's context menu, the toolbar's Cards menu).
   - *Week ahead (phase 11):* `lib/digest/`. `checks.ts` `checkSchedule` (pure, thresholds as
     constants): per person over the next 14 days `overlap`, `tight_transfer`, `during_trip`,
     `packed_day`, `long_travel_day`, `travel_week`, `short_night`, `away_clash`,

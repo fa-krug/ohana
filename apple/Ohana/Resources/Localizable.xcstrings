@@ -2445,6 +2445,16 @@
         }
       }
     },
+    "All cards are hidden": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Karten sind ausgeblendet"
+          }
+        }
+      }
+    },
     "All categories": {
       "localizations": {
         "de": {
@@ -2491,6 +2501,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ganztägig"
+          }
+        }
+      }
+    },
+    "All done for today": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für heute alles erledigt"
           }
         }
       }
@@ -3839,6 +3859,16 @@
         }
       }
     },
+    "Cards": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Karten"
+          }
+        }
+      }
+    },
     "Cat": {
       "localizations": {
         "de": {
@@ -4285,6 +4315,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dateien auswählen"
+          }
+        }
+      }
+    },
+    "Choose the cards to show": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wählen, welche Karten erscheinen"
           }
         }
       }
@@ -5127,6 +5167,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Konnte nicht geladen werden"
+          }
+        }
+      }
+    },
+    "Couldn’t load the chores.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Aufgaben konnten nicht geladen werden."
           }
         }
       }
@@ -8457,6 +8507,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ausgeblendet (%lld)"
+          }
+        }
+      }
+    },
+    "Hide Card": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Karte ausblenden"
           }
         }
       }
@@ -16869,6 +16929,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Anzeigen"
+          }
+        }
+      }
+    },
+    "Show All Cards": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Karten zeigen"
           }
         }
       }
