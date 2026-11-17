@@ -404,7 +404,8 @@ private struct OverviewWeekAheadCard: View {
     let summary: WeekAheadSummary
 
     var body: some View {
-        OverviewCard(kind: .weekAhead, title: Text("Week ahead"), systemImage: "calendar.badge.exclamationmark", module: .calendar,
+        OverviewCard(kind: .weekAhead, title: Text("Week ahead"), systemImage: "calendar.badge.exclamationmark",
+                     module: .calendar,
                      route: .weekAhead, destination: Text("Week ahead")) {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 14) {
@@ -526,7 +527,8 @@ private struct OverviewChoresCard: View {
             } else {
                 VStack(alignment: .leading, spacing: 8) {
                     ForEach(rows.prefix(Self.limit)) { row in
-                        ChoreItemRow(item: row.item, today: today, overdue: row.overdue, canTick: store.canTick(row.item),
+                        ChoreItemRow(item: row.item, today: today, overdue: row.overdue,
+                                     canTick: store.canTick(row.item),
                                      tick: { store.toggleDone(row.item) },
                                      open: { family.open(.chore(id: row.item.choreId, day: row.item.day)) })
                     }
@@ -755,7 +757,8 @@ private struct OverviewSearchesCard: View {
     let searches: [OverviewSearchFind]
 
     var body: some View {
-        OverviewCard(kind: .searches, title: Text("Appointment searches"), systemImage: "stethoscope", module: .appointments) {
+        OverviewCard(kind: .searches, title: Text("Appointment searches"), systemImage: "stethoscope",
+                     module: .appointments) {
             if searches.isEmpty {
                 Text("No searches yet: Ohana can watch Doctolib and jameda for you.")
                     .foregroundStyle(.secondary)
