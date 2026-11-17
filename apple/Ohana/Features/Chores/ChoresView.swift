@@ -15,9 +15,9 @@ struct ChoresView: View {
     @Environment(\.shellPageVisible) private var pageVisible
     /// The day on screen.
     @State private var shown = Day.today
-    /// When the day on screen was last picked or the page last left: `ChoresView.backToToday`
-    /// later it shows today again (on screen, or when coming back).
-    @State private var settledAt = Date.now
+    /// When the page was closed (left, or the app went away): back `ChoresView.backToToday` later
+    /// or more, it shows today again.
+    @State private var closedAt: Date?
     /// The page is in the view hierarchy (on iPad and the Mac other tabs' pages stay built).
     @State private var onScreen = false
     /// The last step went to a later day: the list slides in from the trailing edge.
@@ -33,7 +33,7 @@ struct ChoresView: View {
     @State private var highlighted: String?
 
     private var today: Day { Day.today }
-    /// Left alone this long, the page goes back to today.
+    /// Closed this long, the page comes back on today.
     static let backToToday: TimeInterval = 15 * 60
     /// Someone can see the page: in the tab on screen, not covered, the app active.
     private var visible: Bool { onScreen && scenePhase == .active && pageVisible }
@@ -78,32 +78,21 @@ struct ChoresView: View {
             store.me = app.me?.id
             await store.refresh()
         }
-        .onChange(of: shown, initial: true) {
-            store.show(shown)
-            settledAt = .now
-        }
+        .onChange(of: shown, initial: true) { store.show(shown) }
         .onChange(of: scenePhase) {
             if scenePhase == .active { Task { await store.refresh() } }
         }
         .onAppear { onScreen = true }
         .onDisappear { onScreen = false }
         .onChange(of: visible) { seen(visible) }
-        // On screen, today again `backToToday` after the day was picked (also after midnight on
-        // what was today).
-        .task(id: "\(shown)|\(visible)|\(settledAt.timeIntervalSince1970)") {
-            guard visible else { return }
-            let wait = settledAt.addingTimeInterval(Self.backToToday).timeIntervalSinceNow
-            if wait > 0 { try? await Task.sleep(for: .seconds(wait)) }
-            guard !Task.isCancelled else { return }
-            showToday()
-        }
         .onChange(of: family.pendingRoute, initial: true) {
             guard let route = family.takeRoute(for: .chores) else { return }
             switch route {
             case .newChore: if canEdit { editing = .new }
             case let .chore(id, day?):
-                // A notification's: the chore on its day.
+                // A notification's: the chore on its day (not today, however long it was closed).
                 shown = day
+                closedAt = nil
                 highlighted = id
             case let .chore(id, nil): pendingChoreID = id
             default: break
@@ -127,20 +116,16 @@ struct ChoresView: View {
 
     // MARK: Day
 
-    /// The page came on screen (`visible`) or went: left, the time counts from now; back after
-    /// `backToToday`, it shows today.
+    /// The page came on screen (`visible`) or was closed: closed, the time counts from now; back
+    /// after `backToToday`, it shows today (without the slide: nobody is looking for it).
     private func seen(_ visible: Bool) {
-        if visible {
-            if Date.now.timeIntervalSince(settledAt) >= Self.backToToday { showToday() }
-        } else {
-            settledAt = .now
+        guard visible else {
+            closedAt = .now
+            return
         }
-    }
-
-    /// Today, without the slide (nobody is looking for it); the time counts anew.
-    private func showToday() {
-        settledAt = .now
-        guard shown != today else { return }
+        defer { self.closedAt = nil }
+        guard let closedAt = self.closedAt, Date.now.timeIntervalSince(closedAt) >= Self.backToToday,
+              shown != today else { return }
         steppedForward = today > shown
         shown = today
     }

@@ -857,8 +857,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   Chores (`Features/Chores/`): `ChoresView` shows one day (a day bar under the navigation bar:
   back / forward, date picker, Today) in Morning / Day / Evening sections, Overdue on top on today,
   from `GET /chores` + `GET /chores/agenda` (62-day windows from today − 30, `ChoreAgenda.window`;
-  15 min after a day was picked or the page was left, on screen or when coming back, it shows today
-  again: `ChoresView.backToToday`); rows tick an occurrence off (`POST …/done`, `day` for repeating ones) and show a bell while the
+  closed (left, or the app away) for 15 min, it comes back on today: `ChoresView.backToToday`); rows tick an occurrence off (`POST …/done`, `day` for repeating ones) and show a bell while the
   caller is subscribed (`…/subscribe`: context menu, leading swipe, editor). Local-first, without sync indicators: `ChoresStore` (one per
   family, `FamilyContext.chores`, shared by the pages and the editor) shows the `ResponseCache`
   copies at once and refreshes silently (appear, active, reconnect, `didChange(.chores)`); changes
