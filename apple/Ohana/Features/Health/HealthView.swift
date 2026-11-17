@@ -48,7 +48,8 @@ struct HealthView: View {
                     ContentUnavailableView {
                         Label("No birthdays yet", systemImage: "birthday.cake")
                     } description: {
-                        Text("Check-ups and vaccinations are worked out from birthdays. Add them to the family’s members.")
+                        Text("Check-ups and vaccinations are worked out from birthdays.")
+                            + Text(verbatim: " ") + Text("Add them to the family’s members.")
                     } actions: {
                         Button("Members") { family.open(.settings(.members)) }
                             .buttonStyle(.glassProminent)
@@ -111,7 +112,8 @@ struct HealthFooter: View {
     let asOf: String
 
     var body: some View {
-        Text("Worked out from the birthdays (\(asOf)). The vaccination booklet, the U-Heft and your doctor decide; Ohana only reminds.")
+        Text("Worked out from the birthdays (\(asOf)).") + Text(verbatim: " ")
+            + Text("The vaccination booklet, the U-Heft and your doctor decide; Ohana only reminds.")
     }
 }
 
@@ -150,7 +152,7 @@ private struct HealthDueRow: View {
     }
 
     private func doneToday() {
-        perform { try await store.record(family, member: member.id, [HealthRecordInput(code: item.code, day: .today)]) }
+        perform { try await store.doneToday(family, member: member.id, code: item.code) }
     }
 }
 
@@ -166,10 +168,11 @@ struct HealthItemMenu: View {
         if member.canEdit, store.canChange {
             if !item.status.isRecorded || item.repeats {
                 Button("Done Today", systemImage: "checkmark") {
-                    perform { try await store.record(family, member: member.id, [HealthRecordInput(code: item.code, day: .today)]) }
+                    perform { try await store.doneToday(family, member: member.id, code: item.code) }
                 }
             }
-            Button(item.status.isRecorded ? LocalizedStringKey("Edit…") : LocalizedStringKey("Done on…"), systemImage: "calendar", action: edit)
+            Button(item.status.isRecorded ? "Edit…" : "Done on…" as LocalizedStringKey,
+                   systemImage: "calendar", action: edit)
             if item.status == .due || item.status == .past {
                 Button("Skip", systemImage: "minus.circle") {
                     perform {

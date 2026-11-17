@@ -6,7 +6,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { NetOptions } from "@/lib/assistant/net";
 import { runTool, type ToolContext, TOOLS, toolsFor } from "@/lib/assistant/tools";
-import { createToken } from "@/lib/auth/tokens";
 import { DrizzleCalendarStore } from "@/lib/calendar/store";
 import type { Db } from "@/lib/db";
 import { healthRecords } from "@/lib/db/schema";
@@ -16,13 +15,10 @@ import { DrizzleFinanceStore } from "@/lib/finance/store";
 import { healthNotifications, noticesFor } from "@/lib/health/notify";
 import { scanPages } from "@/lib/health/scan";
 import type { ItemState } from "@/lib/health/status";
-import { DEFAULT_PUSH_RELAY_URL } from "@/lib/push/config";
-import { registerDevice } from "@/lib/push/devices";
-import { openPayload } from "@/lib/push/payload";
-import type { RelayClient, RelayMessage } from "@/lib/push/relay";
 import { type AssistantTest, assistantTest, configure } from "@/lib/test/assistant";
 import { createTestDb } from "@/lib/test/db";
 import { NOW, makeFamily, makeUser } from "@/lib/test/factories";
+import { type FakePush, fakePush } from "@/lib/test/push";
 
 afterEach(() => {
   delete process.env.DISABLED_MODULES;
@@ -66,19 +62,7 @@ describe("healthNotifications", () => {
   let annaId: string;
   let benId: string;
   let familyId: string;
-  let messages: RelayMessage[];
-  const keyOf = (n: number) => Buffer.alloc(32, n);
-  const relay: RelayClient = {
-    async send(_url, batch) {
-      messages.push(...batch);
-      return batch.map(() => ({ status: "ok" as const }));
-    },
-  };
-  const device = (userId: string, n: number) => {
-    const { row } = createToken(db, { userId, kind: "api", name: `Device ${n}` }, NOW);
-    registerDevice(db, { id: userId }, row.id, { relay: DEFAULT_PUSH_RELAY_URL, relayToken: `r1.${n}`, key: keyOf(n).toString("base64"), platform: "ios" }, NOW);
-  };
-  const received = (n: number) => messages.filter((m) => m.relayToken === `r1.${n}`).map((m) => openPayload(keyOf(n), m.payload));
+  let push: FakePush;
   const at = (day: string, hour = 9) => {
     const [y, m, d] = day.split("-").map(Number);
     return new Date(y, m - 1, d, hour);
@@ -89,26 +73,26 @@ describe("healthNotifications", () => {
     annaId = makeUser(db, { name: "Anna" }).id;
     benId = makeUser(db, { name: "Ben" }).id;
     familyId = makeFamily(db, annaId, [{ userId: benId, role: "viewer" }]).id;
-    device(annaId, 1);
-    device(benId, 2);
-    messages = [];
+    push = fakePush(db);
+    push.device(annaId, 1);
+    push.device(benId, 2);
   });
 
   it("pushes an opening window to the editors, once, from the hour on", async () => {
     const mia = addPerson(db, { id: annaId }, familyId, { name: "Mia", birthday: "2025-02-10" }, NOW).person;
-    expect(await healthNotifications(db, at("2026-10-12", 6), { push: relay, hour: 7 })).toEqual([]);
-    const told = await healthNotifications(db, at("2026-10-12"), { push: relay, hour: 7 });
+    expect(await healthNotifications(db, at("2026-10-12", 6), { push: push.client, hour: 7 })).toEqual([]);
+    const told = await healthNotifications(db, at("2026-10-12"), { push: push.client, hour: 7 });
     expect(told).toEqual([{ familyId, memberId: mia.id, code: "u7", kind: "open", userIds: [annaId] }]);
-    expect(received(2)).toEqual([]);
-    expect(received(1)).toEqual([
+    expect(push.received(2)).toEqual([]);
+    expect(push.received(1)).toEqual([
       expect.objectContaining({ title: "U7 for Mia", body: "Due until 10 May 2027", path: `/f/${familyId}/health/${mia.id}` }),
     ]);
-    expect(await healthNotifications(db, at("2026-10-13"), { push: relay, hour: 7 })).toEqual([]);
+    expect(await healthNotifications(db, at("2026-10-13"), { push: push.client, hour: 7 })).toEqual([]);
     // Closing in four weeks, still not recorded.
-    expect(await healthNotifications(db, at("2027-04-12"), { push: relay, hour: 7 })).toEqual([
+    expect(await healthNotifications(db, at("2027-04-12"), { push: push.client, hour: 7 })).toEqual([
       expect.objectContaining({ code: "u7", kind: "closing" }),
     ]);
-    expect(received(1).at(-1)?.body).toBe("Only until 10 May 2027: time to book");
+    expect(push.received(1).at(-1)?.body).toBe("Only until 10 May 2027: time to book");
   });
 
   it("says nothing about a recorded one, and nothing with the module off", async () => {
@@ -116,13 +100,13 @@ describe("healthNotifications", () => {
     db.insert(healthRecords)
       .values({ id: "r1", familyId, memberPersonId: mia.id, code: "u7", day: "2026-10-11", status: "done", createdAt: NOW, updatedAt: NOW })
       .run();
-    expect(await healthNotifications(db, at("2026-10-12"), { push: relay, hour: 7 })).toEqual([]);
+    expect(await healthNotifications(db, at("2026-10-12"), { push: push.client, hour: 7 })).toEqual([]);
     setMemberBirthday(db, { id: annaId }, familyId, annaId, "1960-03-15", NOW);
     process.env.DISABLED_MODULES = "health";
-    expect(await healthNotifications(db, at("2026-10-02"), { push: relay, hour: 7 })).toEqual([]);
+    expect(await healthNotifications(db, at("2026-10-02"), { push: push.client, hour: 7 })).toEqual([]);
     delete process.env.DISABLED_MODULES;
     // Flu and COVID-19 from 1 October.
-    expect((await healthNotifications(db, at("2026-10-02"), { push: relay, hour: 7 })).map((n) => n.code)).toEqual(["flu", "covid"]);
+    expect((await healthNotifications(db, at("2026-10-02"), { push: push.client, hour: 7 })).map((n) => n.code)).toEqual(["flu", "covid"]);
   });
 });
 

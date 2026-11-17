@@ -73,7 +73,8 @@ extension ServerInfo {
     func isEnabled(_ module: Module) -> Bool {
         switch module {
         case .overview, .calendar, .settings, .search, .scanLetter: true
-        case .finance, .meals, .appointments, .chores, .assistant, .knowledge, .health: modules.contains(module.rawValue)
+        case .finance, .meals, .appointments, .chores, .assistant, .knowledge, .health:
+            modules.contains(module.rawValue)
         }
     }
 

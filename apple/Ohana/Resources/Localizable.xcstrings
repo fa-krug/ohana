@@ -2055,6 +2055,16 @@
         }
       }
     },
+    "Add them to the family’s members.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trag sie bei den Mitgliedern der Familie ein."
+          }
+        }
+      }
+    },
     "Add to Shopping List": {
       "localizations": {
         "de": {
@@ -4129,12 +4139,12 @@
         }
       }
     },
-    "Check-ups and vaccinations are worked out from birthdays. Add them to the family’s members.": {
+    "Check-ups and vaccinations are worked out from birthdays.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Untersuchungen und Impfungen ergeben sich aus den Geburtstagen. Trag sie bei den Mitgliedern der Familie ein."
+            "value": "Untersuchungen und Impfungen ergeben sich aus den Geburtstagen."
           }
         }
       }
@@ -7401,12 +7411,12 @@
         }
       }
     },
-    "Every check-up and vaccination whose time has passed is recorded as done, without a date. You can change each one later.": {
+    "Every check-up and vaccination whose time has passed is recorded as done, without a date.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Jede Untersuchung und Impfung, deren Zeitraum vorbei ist, wird ohne Datum als erledigt eingetragen. Du kannst jede später ändern."
+            "value": "Jede Untersuchung und Impfung, deren Zeitraum vorbei ist, wird ohne Datum als erledigt eingetragen."
           }
         }
       }
@@ -7831,17 +7841,7 @@
         }
       }
     },
-    "Find an Appointment": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Termin finden"
-          }
-        }
-      }
-    },
-    "Find an appointment at a family doctor for %@’s %@, before %@.": {
+    "Find a GP appointment for %@’s %@ before %@.": {
       "localizations": {
         "de": {
           "stringUnit": {
@@ -7851,7 +7851,7 @@
         }
       }
     },
-    "Find an appointment at a family doctor for %@’s %@.": {
+    "Find a GP appointment for %@’s %@.": {
       "localizations": {
         "de": {
           "stringUnit": {
@@ -7861,7 +7861,7 @@
         }
       }
     },
-    "Find an appointment at a pediatrician for %@’s %@, before %@.": {
+    "Find a pediatrician appointment for %@’s %@ before %@.": {
       "localizations": {
         "de": {
           "stringUnit": {
@@ -7871,12 +7871,22 @@
         }
       }
     },
-    "Find an appointment at a pediatrician for %@’s %@.": {
+    "Find a pediatrician appointment for %@’s %@.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Finde einen Termin beim Kinderarzt für %1$@: %2$@."
+          }
+        }
+      }
+    },
+    "Find an Appointment": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termin finden"
           }
         }
       }
@@ -11435,12 +11445,12 @@
         }
       }
     },
-    "No check-ups or vaccinations could be read on these pages.": {
+    "No check-ups or vaccinations found on these pages.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Auf diesen Seiten konnten keine Untersuchungen oder Impfungen gelesen werden."
+            "value": "Auf diesen Seiten wurden keine Untersuchungen oder Impfungen gefunden."
           }
         }
       }
@@ -19357,6 +19367,16 @@
         }
       }
     },
+    "The vaccination booklet, the U-Heft and your doctor decide; Ohana only reminds.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Es zählen Impfpass, U-Heft und deine Ärztin oder dein Arzt; Ohana erinnert nur."
+          }
+        }
+      }
+    },
     "The whole family as a JSON file: the calendar of all years (entry types, entries, notes) and the finances (accounts, categories, transactions, settings). Viewers can export too.": {
       "localizations": {
         "de": {
@@ -21377,12 +21397,12 @@
         }
       }
     },
-    "Worked out from the birthdays (%@). The vaccination booklet, the U-Heft and your doctor decide; Ohana only reminds.": {
+    "Worked out from the birthdays (%@).": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aus den Geburtstagen berechnet (%@). Es zählen Impfpass, U-Heft und deine Ärztin oder dein Arzt; Ohana erinnert nur."
+            "value": "Aus den Geburtstagen berechnet (%@)."
           }
         }
       }
@@ -21553,6 +21573,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Du wirst sofort abgemeldet und verbindest die App erneut, um zurückzukommen."
+          }
+        }
+      }
+    },
+    "You can change each one later.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du kannst jede später ändern."
           }
         }
       }

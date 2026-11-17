@@ -19,7 +19,9 @@ struct HealthTests {
         #expect(AppRoute.parse(webPath: "/f/fam1/health")?.route == .module(.health))
         #expect(AppRoute.parse(webPath: "/f/fam1/health/m1")?.route == .healthMember(id: "m1"))
         #expect(AppRoute.healthMember(id: "m1").module == .health)
-        let info = try decode(ServerInfo.self, #"{"name":"Ohana","version":"1","apiVersion":1,"modules":["calendar","health"]}"#)
+        let info = try decode(ServerInfo.self, """
+        {"name":"Ohana","version":"1","apiVersion":1,"modules":["calendar","health"]}
+        """)
         #expect(info.isEnabled(.health))
     }
 
@@ -27,11 +29,14 @@ struct HealthTests {
         let overview = try decode(HealthOverview.self, """
         {"members":[{"id":"m1","name":"Mia","account":false,"birthday":"2025-02-10","color":"green","photo":null,
           "canEdit":true,"counts":{"due":1,"past":2,"unknown":0},
-          "next":{"code":"u7","kind":"checkup","title":"U7","detail":"Months 21–24","vaccines":[],"notAlwaysPaid":false,
-                  "status":"due","from":"2026-10-10","to":"2027-02-10","until":"2027-05-10","repeats":false,"records":[]},
+          "next":{"code":"u7","kind":"checkup","title":"U7","detail":"Months 21–24","vaccines":[],
+                  "notAlwaysPaid":false,"status":"due","from":"2026-10-10","to":"2027-02-10",
+                  "until":"2027-05-10","repeats":false,"records":[]},
           "items":[
-            {"code":"u7","kind":"checkup","title":"U7","detail":"","status":"due","from":"2026-10-10","until":"2027-05-10"},
-            {"code":"u6","kind":"checkup","title":"U6","status":"done","records":[{"id":"r1","day":null,"status":"done","note":""}]},
+            {"code":"u7","kind":"checkup","title":"U7","detail":"","status":"due",
+             "from":"2026-10-10","until":"2027-05-10"},
+            {"code":"u6","kind":"checkup","title":"U6","status":"done",
+             "records":[{"id":"r1","day":null,"status":"done","note":""}]},
             {"code":"x","kind":"newKind","title":"X","status":"somethingNew"}
           ]},
          {"id":"m2","name":"Leo","birthday":null}],

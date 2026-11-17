@@ -11,7 +11,9 @@ enum Module: String, CaseIterable, Identifiable, Hashable {
 
     /// The sidebar's "Modules" section, in its order; the overview stands above it, the settings
     /// at its foot.
-    static let modules: [Module] = [.calendar, .finance, .meals, .appointments, .health, .chores, .knowledge, .assistant]
+    static let modules: [Module] = [
+        .calendar, .finance, .meals, .appointments, .health, .chores, .knowledge, .assistant,
+    ]
 
     var id: String { rawValue }
 

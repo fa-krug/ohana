@@ -16,11 +16,11 @@ nonisolated struct HealthOverview: Codable, Hashable, OffMainDecodable {
 
 nonisolated extension HealthOverview {
     init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        members = try c.decodeIfPresent([HealthMember].self, forKey: .members) ?? []
-        canEdit = try c.decodeIfPresent(Bool.self, forKey: .canEdit) ?? false
-        scan = try c.decodeIfPresent(Bool.self, forKey: .scan) ?? false
-        asOf = try c.decodeIfPresent(String.self, forKey: .asOf) ?? ""
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        members = try container.decodeIfPresent([HealthMember].self, forKey: .members) ?? []
+        canEdit = try container.decodeIfPresent(Bool.self, forKey: .canEdit) ?? false
+        scan = try container.decodeIfPresent(Bool.self, forKey: .scan) ?? false
+        asOf = try container.decodeIfPresent(String.self, forKey: .asOf) ?? ""
     }
 }
 
@@ -42,17 +42,17 @@ nonisolated struct HealthMember: Codable, Hashable, Identifiable, Sendable {
 
 nonisolated extension HealthMember {
     init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        id = try c.decode(String.self, forKey: .id)
-        name = try c.decodeIfPresent(String.self, forKey: .name) ?? ""
-        account = try c.decodeIfPresent(Bool.self, forKey: .account) ?? false
-        birthday = try? c.decodeIfPresent(Day.self, forKey: .birthday)
-        color = try c.decodeIfPresent(String.self, forKey: .color)
-        photo = try c.decodeIfPresent(String.self, forKey: .photo)
-        canEdit = try c.decodeIfPresent(Bool.self, forKey: .canEdit) ?? false
-        items = try c.decodeIfPresent([HealthItem].self, forKey: .items) ?? []
-        next = try c.decodeIfPresent(HealthItem.self, forKey: .next)
-        counts = try c.decodeIfPresent(HealthCounts.self, forKey: .counts) ?? HealthCounts()
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        name = try container.decodeIfPresent(String.self, forKey: .name) ?? ""
+        account = try container.decodeIfPresent(Bool.self, forKey: .account) ?? false
+        birthday = try? container.decodeIfPresent(Day.self, forKey: .birthday)
+        color = try container.decodeIfPresent(String.self, forKey: .color)
+        photo = try container.decodeIfPresent(String.self, forKey: .photo)
+        canEdit = try container.decodeIfPresent(Bool.self, forKey: .canEdit) ?? false
+        items = try container.decodeIfPresent([HealthItem].self, forKey: .items) ?? []
+        next = try container.decodeIfPresent(HealthItem.self, forKey: .next)
+        counts = try container.decodeIfPresent(HealthCounts.self, forKey: .counts) ?? HealthCounts()
     }
 
     /// Full years on `today`.
@@ -116,9 +116,8 @@ nonisolated struct HealthItem: Codable, Hashable, Identifiable, Sendable {
     /// U10, U11, J2: not paid by every health insurer.
     var notAlwaysPaid: Bool
     var status: HealthStatus
-    /// The window; a repeating one's `from` is when it's due next.
+    /// The window (its last day `until`); a repeating one's `from` is when it's due next.
     var from: Day?
-    var to: Day?
     var until: Day?
     /// Tetanus (every 10 years), flu and COVID-19 (each autumn).
     var repeats: Bool
@@ -130,19 +129,18 @@ nonisolated struct HealthItem: Codable, Hashable, Identifiable, Sendable {
 
 nonisolated extension HealthItem {
     init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        code = try c.decode(String.self, forKey: .code)
-        kind = try c.decodeIfPresent(HealthKind.self, forKey: .kind) ?? .vaccination
-        title = try c.decodeIfPresent(String.self, forKey: .title) ?? code
-        detail = try c.decodeIfPresent(String.self, forKey: .detail) ?? ""
-        vaccines = try c.decodeIfPresent([String].self, forKey: .vaccines) ?? []
-        notAlwaysPaid = try c.decodeIfPresent(Bool.self, forKey: .notAlwaysPaid) ?? false
-        status = try c.decodeIfPresent(HealthStatus.self, forKey: .status) ?? .unknown
-        from = try? c.decodeIfPresent(Day.self, forKey: .from)
-        to = try? c.decodeIfPresent(Day.self, forKey: .to)
-        until = try? c.decodeIfPresent(Day.self, forKey: .until)
-        repeats = try c.decodeIfPresent(Bool.self, forKey: .repeats) ?? false
-        records = try c.decodeIfPresent([HealthRecord].self, forKey: .records) ?? []
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        code = try container.decode(String.self, forKey: .code)
+        kind = try container.decodeIfPresent(HealthKind.self, forKey: .kind) ?? .vaccination
+        title = try container.decodeIfPresent(String.self, forKey: .title) ?? code
+        detail = try container.decodeIfPresent(String.self, forKey: .detail) ?? ""
+        vaccines = try container.decodeIfPresent([String].self, forKey: .vaccines) ?? []
+        notAlwaysPaid = try container.decodeIfPresent(Bool.self, forKey: .notAlwaysPaid) ?? false
+        status = try container.decodeIfPresent(HealthStatus.self, forKey: .status) ?? .unknown
+        from = try? container.decodeIfPresent(Day.self, forKey: .from)
+        until = try? container.decodeIfPresent(Day.self, forKey: .until)
+        repeats = try container.decodeIfPresent(Bool.self, forKey: .repeats) ?? false
+        records = try container.decodeIfPresent([HealthRecord].self, forKey: .records) ?? []
     }
 
     /// The record of a check-up or visit recorded once (a repeating one's newest).
@@ -160,11 +158,11 @@ nonisolated struct HealthRecord: Codable, Hashable, Identifiable, Sendable {
 
 nonisolated extension HealthRecord {
     init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        id = try c.decode(String.self, forKey: .id)
-        day = try? c.decodeIfPresent(Day.self, forKey: .day)
-        status = try c.decodeIfPresent(HealthStatus.self, forKey: .status) ?? .done
-        note = try c.decodeIfPresent(String.self, forKey: .note) ?? ""
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        day = try? container.decodeIfPresent(Day.self, forKey: .day)
+        status = try container.decodeIfPresent(HealthStatus.self, forKey: .status) ?? .done
+        note = try container.decodeIfPresent(String.self, forKey: .note) ?? ""
     }
 }
 
@@ -182,11 +180,11 @@ nonisolated struct HealthRecordInput: Encodable, Hashable, Sendable {
     var note: String = ""
 
     func encode(to encoder: any Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(code, forKey: .code)
-        if let day { try c.encode(day, forKey: .day) } else { try c.encodeNil(forKey: .day) }
-        try c.encode(status, forKey: .status)
-        try c.encode(note, forKey: .note)
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(code, forKey: .code)
+        try container.encode(day, forKey: .day)
+        try container.encode(status, forKey: .status)
+        try container.encode(note, forKey: .note)
     }
 
     private enum CodingKeys: String, CodingKey { case code, day, status, note }
@@ -206,94 +204,30 @@ nonisolated struct HealthScanSuggestion: Codable, Hashable, Identifiable, Sendab
 
 nonisolated extension HealthScanSuggestion {
     init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        code = try c.decode(String.self, forKey: .code)
-        title = try c.decodeIfPresent(String.self, forKey: .title) ?? code
-        day = try? c.decodeIfPresent(Day.self, forKey: .day)
-        note = try c.decodeIfPresent(String.self, forKey: .note) ?? ""
-        known = try c.decodeIfPresent(Bool.self, forKey: .known) ?? false
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        code = try container.decode(String.self, forKey: .code)
+        title = try container.decodeIfPresent(String.self, forKey: .title) ?? code
+        day = try? container.decodeIfPresent(Day.self, forKey: .day)
+        note = try container.decodeIfPresent(String.self, forKey: .note) ?? ""
+        known = try container.decodeIfPresent(Bool.self, forKey: .known) ?? false
     }
 }
 
 nonisolated struct HealthScanAnswer: Decodable, Sendable, OffMainDecodable {
-    var ai: Bool
+    /// The family's AI is set up (else nothing was read).
+    var readable: Bool
     var items: [HealthScanSuggestion]
 }
 
 nonisolated extension HealthScanAnswer {
     init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        ai = try c.decodeIfPresent(Bool.self, forKey: .ai) ?? false
-        items = try c.decodeIfPresent([HealthScanSuggestion].self, forKey: .items) ?? []
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        readable = try container.decodeIfPresent(Bool.self, forKey: .readable) ?? false
+        items = try container.decodeIfPresent([HealthScanSuggestion].self, forKey: .items) ?? []
     }
 
-    private enum CodingKeys: String, CodingKey { case ai, items }
-}
-
-// MARK: Texts
-
-/// How an item reads: its status as a symbol and a line ("Due until 10 May 2027").
-enum HealthText {
-    static func date(_ day: Day) -> String {
-        day.formatted(.dateTime.day().month(.abbreviated).year())
-    }
-
-    static func systemImage(_ status: HealthStatus) -> String {
-        switch status {
-        case .done: "checkmark.circle.fill"
-        case .skipped: "minus.circle"
-        case .due: "exclamationmark.circle.fill"
-        case .upcoming: "circle"
-        case .past: "circle.dashed"
-        case .unknown: "questionmark.circle"
-        }
-    }
-
-    static func tint(_ status: HealthStatus) -> Color {
-        switch status {
-        case .done: .green
-        case .due: .orange
-        case .skipped, .upcoming, .past, .unknown: .secondary
-        }
-    }
-
-    static func label(_ status: HealthStatus) -> String {
-        switch status {
-        case .done: String(localized: "Completed")
-        case .skipped: String(localized: "Skipped")
-        case .due: String(localized: "Due")
-        case .upcoming: String(localized: "Coming up")
-        case .past: String(localized: "Not recorded")
-        case .unknown: String(localized: "Unknown")
-        }
-    }
-
-    /// The line under an item's title.
-    static func line(_ item: HealthItem) -> String {
-        switch item.status {
-        case .done, .skipped:
-            let day = item.latest?.day.map { date($0) }
-            var text = switch (item.status == .done, day) {
-            case let (true, day?): String(localized: "Done on \(day)")
-            case (true, nil): String(localized: "Done, date unknown")
-            case let (false, day?): String(localized: "Skipped on \(day)")
-            case (false, nil): String(localized: "Skipped")
-            }
-            if item.repeats, let next = item.from, item.status == .done {
-                text += " · " + String(localized: "next \(date(next))")
-            }
-            return text
-        case .due:
-            if let until = item.until { return String(localized: "Due until \(date(until))") }
-            if let from = item.from { return String(localized: "Due since \(date(from))") }
-            return String(localized: "Due")
-        case .upcoming:
-            if let from = item.from { return String(localized: "Due from \(date(from))") }
-            return String(localized: "After the first dose")
-        case .past:
-            return String(localized: "Not recorded")
-        case .unknown:
-            return item.repeats ? String(localized: "When was the last one?") : String(localized: "Date of the first dose unknown")
-        }
+    private enum CodingKeys: String, CodingKey {
+        case readable = "ai"
+        case items
     }
 }
