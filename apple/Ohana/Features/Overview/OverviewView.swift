@@ -299,7 +299,10 @@ private struct OverviewCard<Content: View>: View {
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .contentCard()
+        #if os(iOS)
+        // The lifted preview's shape; macOS has no preview (and no such content shape kind).
         .contentShape(.contextMenuPreview, .rect(cornerRadius: 24, style: .continuous))
+        #endif
         .contextMenu {
             Button("Hide Card", systemImage: "eye.slash") {
                 withAnimation(.snappy) { hidden = OverviewCardKind.setting(kind, hidden: true, in: hidden) }
