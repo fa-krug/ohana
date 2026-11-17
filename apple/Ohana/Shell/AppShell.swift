@@ -166,83 +166,6 @@ struct AppShell: View {
         }
     }
 
-    /// Switches to `target`'s tab, on iPhone its page (pushed over the family page), or there
-    /// opens the assistant's sheet.
-    private func show(_ target: Module) {
-        // Mac: the sidebar's "Scan letter" row; the page on screen stays.
-        if target == .scanLetter {
-            if let family = app.selectedFamily { app.context(for: family)?.scanLetter() }
-            return
-        }
-        #if os(macOS)
-        // A route to a settings page stays pending: the window's view takes it.
-        if target.isWindow {
-            openSettings()
-            return
-        }
-        #endif
-        if Module.notPages.contains(target) {
-            showAssistant = true
-            return
-        }
-        // The launch is going through the tabs: this one once it's done.
-        if launchLoading, !Module.onPhone { tabAfterLaunch = target }
-        module = target
-        if Module.onPhone { app.showsFamilySidebar = false }
-    }
-
-    /// Back from the background after `StartPage.awayLimit`: the start page, if one is picked and
-    /// no notification or link opened the app (those arrive just after it became active, so it
-    /// waits a moment for them).
-    private func returned(to phase: ScenePhase) {
-        switch phase {
-        case .background:
-            backgroundAt = .now
-        case .active:
-            guard let since = backgroundAt else { return }
-            backgroundAt = nil
-            guard Date.now.timeIntervalSince(since) >= StartPage.awayLimit, startModule != nil else { return }
-            Task {
-                try? await Task.sleep(for: .milliseconds(500))
-                if let routeAt, routeAt >= since { return }
-                guard let start = startModule else { return }
-                show(start)
-            }
-        default:
-            break
-        }
-    }
-
-    /// iPad, Mac: the tabs that weren't opened yet, built ahead behind the loading screen at launch
-    /// (each takes a few hundred milliseconds, and built when first opened it showed a blank page or
-    /// a spinner): each tab picked for a moment (a tab view builds a tab only when it's picked, and
-    /// keeps it), then the one to show. Not the search page or the assistant's: they take the keyboard
-    /// on appearing. Later shells (another family, another server) build theirs when opened. On
-    /// iPhone only the page on screen is built (the split view has one).
-    private func prebuildPages(_ context: FamilyContext) async {
-        guard launchLoading else { return }
-        AppShell.launchBuilt = true
-        // The loading screen drawn first.
-        try? await Task.sleep(for: .milliseconds(16))
-        if !Module.onPhone {
-            let pages = ([.overview] + Module.modules + [.settings])
-                .filter { !Module.notPages.contains($0) && !$0.isWindow && context.isEnabled($0) }
-            let start = selection.wrappedValue
-            for page in pages where page != start && page != .assistant {
-                guard !Task.isCancelled else { break }
-                module = page
-                try? await Task.sleep(for: .milliseconds(16))
-            }
-            module = tabAfterLaunch ?? start
-            tabAfterLaunch = nil
-        }
-        // The last one drawn and the toolbar back (laid out under the loading screen), then the
-        // pages show.
-        launchToolbarHidden = false
-        try? await Task.sleep(for: .milliseconds(100))
-        withAnimation(.smooth(duration: 0.3)) { launchLoading = false }
-    }
-
     /// The pages: on iPhone the one on screen over the family page (the assistant's button floating
     /// on it, `ShellPageItems`); elsewhere the tab view (a sidebar, or a tab bar on a narrow iPad), each
     /// page with the button over it.
@@ -347,6 +270,87 @@ struct AppShell: View {
         // page.
         .assistantFloatingButton(isOpen: $showAssistant,
                                  enabled: assistantOn && item != .assistant && !Module.onPhone)
+    }
+}
+
+/// Moving between the pages: picking one, the start page after a while away, the launch's
+/// prebuilt tabs.
+extension AppShell {
+    /// Switches to `target`'s tab, on iPhone its page (pushed over the family page), or there
+    /// opens the assistant's sheet.
+    private func show(_ target: Module) {
+        // Mac: the sidebar's "Scan letter" row; the page on screen stays.
+        if target == .scanLetter {
+            if let family = app.selectedFamily { app.context(for: family)?.scanLetter() }
+            return
+        }
+        #if os(macOS)
+        // A route to a settings page stays pending: the window's view takes it.
+        if target.isWindow {
+            openSettings()
+            return
+        }
+        #endif
+        if Module.notPages.contains(target) {
+            showAssistant = true
+            return
+        }
+        // The launch is going through the tabs: this one once it's done.
+        if launchLoading, !Module.onPhone { tabAfterLaunch = target }
+        module = target
+        if Module.onPhone { app.showsFamilySidebar = false }
+    }
+
+    /// Back from the background after `StartPage.awayLimit`: the start page, if one is picked and
+    /// no notification or link opened the app (those arrive just after it became active, so it
+    /// waits a moment for them).
+    private func returned(to phase: ScenePhase) {
+        switch phase {
+        case .background:
+            backgroundAt = .now
+        case .active:
+            guard let since = backgroundAt else { return }
+            backgroundAt = nil
+            guard Date.now.timeIntervalSince(since) >= StartPage.awayLimit, startModule != nil else { return }
+            Task {
+                try? await Task.sleep(for: .milliseconds(500))
+                if let routeAt, routeAt >= since { return }
+                guard let start = startModule else { return }
+                show(start)
+            }
+        default:
+            break
+        }
+    }
+
+    /// iPad, Mac: the tabs that weren't opened yet, built ahead behind the loading screen at launch
+    /// (each takes a few hundred milliseconds, and built when first opened it showed a blank page or
+    /// a spinner): each tab picked for a moment (a tab view builds a tab only when it's picked, and
+    /// keeps it), then the one to show. Not the search page or the assistant's: they take the keyboard
+    /// on appearing. Later shells (another family, another server) build theirs when opened. On
+    /// iPhone only the page on screen is built (the split view has one).
+    private func prebuildPages(_ context: FamilyContext) async {
+        guard launchLoading else { return }
+        AppShell.launchBuilt = true
+        // The loading screen drawn first.
+        try? await Task.sleep(for: .milliseconds(16))
+        if !Module.onPhone {
+            let pages = ([.overview] + Module.modules + [.settings])
+                .filter { !Module.notPages.contains($0) && !$0.isWindow && context.isEnabled($0) }
+            let start = selection.wrappedValue
+            for page in pages where page != start && page != .assistant {
+                guard !Task.isCancelled else { break }
+                module = page
+                try? await Task.sleep(for: .milliseconds(16))
+            }
+            module = tabAfterLaunch ?? start
+            tabAfterLaunch = nil
+        }
+        // The last one drawn and the toolbar back (laid out under the loading screen), then the
+        // pages show.
+        launchToolbarHidden = false
+        try? await Task.sleep(for: .milliseconds(100))
+        withAnimation(.smooth(duration: 0.3)) { launchLoading = false }
     }
 }
 
