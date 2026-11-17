@@ -14,10 +14,9 @@
 //                                               (suggestions read from the booklet's pages; nothing saved)
 
 import type { Ctx } from "@/lib/api/family-api";
-import { HttpError, json, readBody } from "@/lib/api/http";
+import { HttpError, json, readBody, todayParam } from "@/lib/api/http";
 import type { AiEnv } from "@/lib/assistant/routes";
 import { familyModel } from "@/lib/assistant/routes";
-import { isValidDate } from "@/lib/calendar/dates";
 import { isLocale } from "@/lib/i18n/config";
 import { familyLocale } from "@/lib/notifications/locale";
 import { moduleEnabled } from "@/lib/server-info";
@@ -65,12 +64,7 @@ const notFound = () => Promise.reject(new HttpError(404, "Not found"));
 const notAllowed = () => Promise.reject(new HttpError(405, "Method not allowed"));
 
 /** ?today=, else the server's day. */
-function todayOf({ url, now }: Ctx): string {
-  const asked = url.searchParams.get("today");
-  if (asked === null || asked === "") return now.toISOString().slice(0, 10);
-  if (!isValidDate(asked)) throw new HttpError(400, "today must be YYYY-MM-DD");
-  return asked;
-}
+const todayOf = ({ url, now }: Ctx): string => todayParam(url, now);
 
 function langOf(ctx: Ctx, familyId: string): Lang {
   const asked = ctx.url.searchParams.get("lang");

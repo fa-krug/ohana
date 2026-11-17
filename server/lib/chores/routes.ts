@@ -15,7 +15,7 @@
 // POST   /chores/{id}/subscribe?today=     {subscribed} → {chore} (the caller)
 
 import type { Ctx } from "@/lib/api/family-api";
-import { HttpError, json, readBody } from "@/lib/api/http";
+import { HttpError, json, readBody, todayParam } from "@/lib/api/http";
 import { isValidDate } from "@/lib/calendar/dates";
 import {
   choreAgenda,
@@ -61,12 +61,7 @@ export function handleChores(ctx: Ctx): Promise<Response> | null {
 const notAllowed = () => Promise.reject(new HttpError(405, "Method not allowed"));
 
 /** ?today=, else the server's day. */
-function todayOf({ url, now }: Ctx): string {
-  const asked = url.searchParams.get("today");
-  if (asked === null || asked === "") return now.toISOString().slice(0, 10);
-  if (!isValidDate(asked)) throw new HttpError(400, "today must be YYYY-MM-DD");
-  return asked;
-}
+const todayOf = ({ url, now }: Ctx): string => todayParam(url, now);
 
 /** A required date parameter. */
 function dateParam({ url }: Ctx, name: string): string {

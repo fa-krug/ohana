@@ -4,18 +4,15 @@
 // /health/scan, the mock AI) and the assistant's tools with their undo.
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { NetOptions } from "@/lib/assistant/net";
-import { runTool, type ToolContext, TOOLS, toolsFor } from "@/lib/assistant/tools";
-import { DrizzleCalendarStore } from "@/lib/calendar/store";
+import { runTool, TOOLS, toolsFor } from "@/lib/assistant/tools";
 import type { Db } from "@/lib/db";
 import { healthRecords } from "@/lib/db/schema";
 import { setMemberBirthday } from "@/lib/families/members";
 import { addPerson } from "@/lib/families/people";
-import { DrizzleFinanceStore } from "@/lib/finance/store";
 import { healthNotifications, noticesFor } from "@/lib/health/notify";
 import { scanPages } from "@/lib/health/scan";
 import type { ItemState } from "@/lib/health/status";
-import { type AssistantTest, assistantTest, configure } from "@/lib/test/assistant";
+import { type AssistantTest, assistantTest, configure, toolContext } from "@/lib/test/assistant";
 import { createTestDb } from "@/lib/test/db";
 import { NOW, makeFamily, makeUser } from "@/lib/test/factories";
 import { type FakePush, fakePush } from "@/lib/test/push";
@@ -124,18 +121,7 @@ describe("POST /health/scan and the tools", () => {
     current.push(t);
     const mia = addPerson(t.db, { id: t.editor.id }, t.familyId, { name: "Mia", birthday: "2025-02-10" }, NOW).person;
     setMemberBirthday(t.db, { id: t.editor.id }, t.familyId, t.editor.id, "1985-04-01", NOW);
-    const ctx: ToolContext = {
-      lang: "en",
-      calendar: new DrizzleCalendarStore(t.db),
-      finance: new DrizzleFinanceStore(t.db),
-      db: t.db,
-      familyId: t.familyId,
-      net: {} as NetOptions,
-      search: null,
-      userId: t.editor.id,
-      today: TODAY,
-      now: () => NOW,
-    };
+    const ctx = toolContext(t, TODAY);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const tool = async (name: string, args: unknown, c = ctx): Promise<any> => runTool(name, JSON.stringify(args), c, new Set(Object.keys(TOOLS)));
     const undo = async (change: { undo: { method: string; path: string; body?: unknown }[] }) => {

@@ -347,15 +347,20 @@ function card(stream: boolean, system: string, message: string) {
   return reply(stream, "```json\n" + JSON.stringify(answer, null, 1) + "\n```");
 }
 
+/** A 400 like a model that takes no pictures, when the message has none. */
+function refusesWithoutImage(message: Msg): Response | null {
+  const parts = Array.isArray(message.content) ? message.content : [];
+  if (parts.some((p) => p.type === "image_url")) return null;
+  return Response.json({ error: { message: "This model does not support image input" } }, { status: 400 });
+}
+
 /** The answer to a page scan (see the top). */
 export const MOCK_TRANSCRIPTION = "| Stunde | Montag | Dienstag |\n| --- | --- | --- |\n| 1 | Mathe | Deutsch |\n| 2 | Englisch | Sport |";
 
 /** The transcription prompt: the page as Markdown (see the top). */
 function transcription(stream: boolean, message: Msg) {
-  const parts = Array.isArray(message.content) ? message.content : [];
-  if (!parts.some((p) => p.type === "image_url")) {
-    return Response.json({ error: { message: "This model does not support image input" } }, { status: 400 });
-  }
+  const refused = refusesWithoutImage(message);
+  if (refused) return refused;
   const line = /^Transcribe: (.*)$/m.exec(textOf(message.content))?.[1];
   if (line === undefined) return reply(stream, "```markdown\n" + MOCK_TRANSCRIPTION + "\n```");
   return reply(stream, line === "nothing" ? "" : line.replace(/\\n/g, "\n"));
@@ -363,10 +368,8 @@ function transcription(stream: boolean, message: Msg) {
 
 /** The health scan prompt: a few records around the birthday (see the top). */
 function healthScan(stream: boolean, system: string, message: Msg) {
-  const parts = Array.isArray(message.content) ? message.content : [];
-  if (!parts.some((p) => p.type === "image_url")) {
-    return Response.json({ error: { message: "This model does not support image input" } }, { status: 400 });
-  }
+  const refused = refusesWithoutImage(message);
+  if (refused) return refused;
   const born = /born (\d{4}-\d{2}-\d{2})/.exec(system)?.[1] ?? "2020-01-01";
   const plus = (days: number) => new Date(Date.parse(`${born}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
   const records = [

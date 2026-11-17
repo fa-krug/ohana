@@ -13,7 +13,7 @@ import { isValidDate } from "@/lib/calendar/dates";
 import { ageOn } from "@/lib/families/birthdays";
 import { extractJson } from "@/lib/meals/ai/verify";
 import type { NetOptions } from "./net";
-import { type Provider, streamChat } from "./provider";
+import { type Provider, completeOnce } from "./provider";
 import { MAX_SOURCE, MAX_SUGGESTIONS, resolveSuggestion, type SuggestionOp } from "./tools/suggestions";
 
 /** The letter's text the route takes at most (characters). */
@@ -213,22 +213,13 @@ export async function readLetter(
 ): Promise<LetterResult> {
   const sig = AbortSignal.any([AbortSignal.timeout(LETTER_TIMEOUT_MS), ...(signal ? [signal] : [])]);
   const system = letterPrompt({ today: input.today, lang: input.lang, people, tags: input.tags });
-  let content = "";
+  let content: string;
   try {
-    for await (const ev of streamChat(
-      p,
-      {
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: input.text },
-        ],
-        temperature: LETTER_TEMPERATURE,
-      },
-      net,
-      sig,
-    )) {
-      if (ev.type === "done") content = ev.content;
-    }
+    const messages = [
+      { role: "system" as const, content: system },
+      { role: "user" as const, content: input.text },
+    ];
+    content = await completeOnce(p, messages, LETTER_TEMPERATURE, net, sig);
   } catch (err) {
     if (err instanceof HttpError) throw err;
     throw new HttpError(502, sig.aborted ? "The AI model took too long to answer" : "The AI request failed");

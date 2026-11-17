@@ -43,10 +43,7 @@ enum HealthText {
         case .due: due(item)
         case .upcoming: upcoming(item)
         case .past: String(localized: "Not recorded")
-        case .unknown:
-            item.repeats
-                ? String(localized: "When was the last one?")
-                : String(localized: "Date of the first dose unknown")
+        case .unknown: unknown(item)
         }
     }
 
@@ -63,6 +60,11 @@ enum HealthText {
             text += " · " + String(localized: "next \(date(next))")
         }
         return text
+    }
+
+    private static func unknown(_ item: HealthItem) -> String {
+        if item.repeats { return String(localized: "When was the last one?") }
+        return String(localized: "Date of the first dose unknown")
     }
 
     private static func upcoming(_ item: HealthItem) -> String {

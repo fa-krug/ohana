@@ -9,7 +9,7 @@
 
 import { HttpError } from "@/lib/api/http";
 import type { NetOptions } from "@/lib/assistant/net";
-import { type ContentPart, type Provider, streamChat } from "@/lib/assistant/provider";
+import { type ContentPart, type Provider, completeOnce } from "@/lib/assistant/provider";
 import { isValidDate } from "@/lib/calendar/dates";
 import { codeApplies, recordedOnce } from "./health";
 import { type Lang, SCHEDULE, SCHEDULE_BY_CODE } from "./schedule";
@@ -133,22 +133,13 @@ export async function readBooklet(
       return { type: "image_url", image_url: { url: `data:image/${type};base64,${b.toString("base64")}` } };
     }),
   ];
-  let content = "";
+  let content: string;
   try {
-    for await (const ev of streamChat(
-      p,
-      {
-        messages: [
-          { role: "system", content: scanPrompt(input) },
-          { role: "user", content: parts },
-        ],
-        temperature: SCAN_TEMPERATURE,
-      },
-      net,
-      sig,
-    )) {
-      if (ev.type === "done") content = ev.content;
-    }
+    const messages = [
+      { role: "system" as const, content: scanPrompt(input) },
+      { role: "user" as const, content: parts },
+    ];
+    content = await completeOnce(p, messages, SCAN_TEMPERATURE, net, sig);
   } catch (err) {
     if (err instanceof HttpError) throw err;
     throw new HttpError(502, sig.aborted ? "The AI model took too long to answer" : "The AI request failed");

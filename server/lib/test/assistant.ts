@@ -17,6 +17,10 @@ import { handleMeals } from "@/lib/meals/family-routes";
 import { handleAppointments } from "@/lib/appointments/family-routes";
 import { handleChores } from "@/lib/chores/routes";
 import { handleHealth } from "@/lib/health/routes";
+import type { NetOptions } from "@/lib/assistant/net";
+import type { ToolContext } from "@/lib/assistant/tools";
+import { DrizzleCalendarStore } from "@/lib/calendar/store";
+import { DrizzleFinanceStore } from "@/lib/finance/store";
 import { devSecret, SecretBox } from "@/lib/secrets";
 import { createTestDb } from "./db";
 import { NOW, makeFamily, makeUser } from "./factories";
@@ -206,4 +210,20 @@ export async function configure(t: AssistantTest, settings: Record<string, unkno
   const res = await t.call("PUT", `${t.ai}/settings`, { baseUrl: AI, apiKey: KEY, model: "mock-large", ...settings });
   if (res.status !== 200) throw new Error(JSON.stringify(res.data));
   return res.data;
+}
+
+/** The tools' context for the family's editor (or `userId`), on `today`. */
+export function toolContext(t: AssistantTest, today: string, userId = t.editor.id): ToolContext {
+  return {
+    lang: "en",
+    calendar: new DrizzleCalendarStore(t.db),
+    finance: new DrizzleFinanceStore(t.db),
+    db: t.db,
+    familyId: t.familyId,
+    net: {} as NetOptions,
+    search: null,
+    userId,
+    today,
+    now: () => NOW,
+  };
 }

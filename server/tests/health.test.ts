@@ -18,6 +18,7 @@ import { type HealthRecord, personHealth } from "@/lib/health/status";
 import type { AiEnv } from "@/lib/assistant/routes";
 import { createTestDb } from "@/lib/test/db";
 import { NOW, makeFamily, makeUser } from "@/lib/test/factories";
+import { jsonRequest } from "@/lib/test/http";
 
 const BASE = "http://ohana.test/api/v1";
 const TODAY = "2026-11-02";
@@ -40,16 +41,7 @@ function call(userId: string) {
   const token = createToken(db, { userId, kind: "api" }, NOW).token;
   return async (method: string, path: string, body?: unknown): Promise<Res> => {
     const sep = path.includes("?") ? "&" : "?";
-    const res = await handler(
-      new Request(`${BASE}/families/${familyId}${path}${sep}today=${TODAY}&lang=en`, {
-        method,
-        headers: {
-          authorization: `Bearer ${token}`,
-          ...(body !== undefined ? { "content-type": "application/json" } : {}),
-        },
-        body: body !== undefined ? JSON.stringify(body) : undefined,
-      }),
-    );
+    const res = await handler(jsonRequest(`${BASE}/families/${familyId}${path}${sep}today=${TODAY}&lang=en`, method, token, body));
     return { status: res.status, data: await res.json() };
   };
 }

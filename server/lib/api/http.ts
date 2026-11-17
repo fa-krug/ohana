@@ -1,6 +1,7 @@
 // HTTP helpers and input checks shared by the family API modules (ported from family-planner's
 // _shared/http.ts).
 
+import { isValidDate } from "@/lib/calendar/dates";
 import type { Lang } from "@/lib/i18n/config";
 
 export const CORS = {
@@ -95,4 +96,12 @@ export function slug(name: string): string {
       .replace(/^-+|-+$/g, "")
       .slice(0, 32) || "type"
   );
+}
+
+/** A request's `?today=` (YYYY-MM-DD), else the server's (UTC) day; 400 for anything else. */
+export function todayParam(url: URL, now: Date): string {
+  const asked = url.searchParams.get("today");
+  if (asked === null || asked === "") return now.toISOString().slice(0, 10);
+  if (!isValidDate(asked)) throw new HttpError(400, "today must be YYYY-MM-DD");
+  return asked;
 }

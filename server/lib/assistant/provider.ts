@@ -162,6 +162,21 @@ function usageOf(u: any): Usage | undefined {
   return { prompt, completion: Number.isFinite(completion) ? completion : 0 };
 }
 
+/** One completion without tools: the whole answer's text (aborted with `signal`). */
+export async function completeOnce(
+  p: Provider,
+  messages: ChatMessage[],
+  temperature: number,
+  net: NetOptions,
+  signal?: AbortSignal,
+): Promise<string> {
+  let content = "";
+  for await (const ev of streamChat(p, { messages, temperature }, net, signal)) {
+    if (ev.type === "done") content = ev.content;
+  }
+  return content;
+}
+
 /**
  * One chat completion, streamed: yields text as it arrives, then the whole message with its
  * tool calls (and the tokens used, if the endpoint says). Servers that don't stream (they answer
