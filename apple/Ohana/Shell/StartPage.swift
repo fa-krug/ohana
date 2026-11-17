@@ -5,7 +5,8 @@ import Foundation
 /// after `awayLimit` in the background (`AppShell`); a notification or link that opened the app
 /// wins.
 enum StartPage {
-    static let key = "startPage"
+    /// Its `UserDefaults` entry.
+    static let defaultsName = "startPage"
     /// The stored value for "the page shown last".
     static let last = ""
     /// Away this long, the app opens on the picked page again.

@@ -23,7 +23,7 @@ struct AppShell: View {
     /// swiped away).
     @AppStorage("phoneModule") private var phoneModule: Module = .overview
     /// The page picked to open on (Settings → This device; "": the last one, `StartPage`).
-    @AppStorage(StartPage.key) private var startPage = StartPage.last
+    @AppStorage(StartPage.defaultsName) private var startPage = StartPage.last
     @Environment(\.scenePhase) private var scenePhase
     /// When the app went to the background: back after `StartPage.awayLimit`, it opens the start page.
     @State private var backgroundAt: Date?

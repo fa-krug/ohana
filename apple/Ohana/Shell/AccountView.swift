@@ -717,7 +717,7 @@ enum Appearance: String, CaseIterable, Identifiable {
 /// Mac, when the server has the assistant) the menu bar assistant.
 struct DeviceSettingsSection: View {
     @AppStorage("appearance") private var appearance = Appearance.system
-    @AppStorage(StartPage.key) private var startPage = StartPage.last
+    @AppStorage(StartPage.defaultsName) private var startPage = StartPage.last
     @Environment(AppModel.self) private var app
     #if os(macOS)
     @AppStorage("menuBarAssistant") private var menuBarAssistant = true
