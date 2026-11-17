@@ -693,4 +693,6 @@ enum DataArea: String, CaseIterable, Hashable {
     case digest
     /// The assistant's memory (its standing instructions).
     case memories
+    /// Check-ups and vaccinations.
+    case health
 }

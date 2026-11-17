@@ -1,0 +1,120 @@
+{
+  "members": [
+    {
+      "id": "demo-anna",
+      "name": "Anna Parker",
+      "account": true,
+      "birthday": "{{day:-13695}}",
+      "color": "blue",
+      "counts": {"due": 0,"past": 0,"unknown": 0},
+      "next": null,
+      "items": [
+        {"code": "td", "kind": "vaccination", "title": "Tetanus / diphtheria", "vaccines": ["Tetanus / diphtheria"], "status": "done", "from": "{{day:511}}", "repeats": true, "records": [{"id": "demo-demo-anna-td", "day": "{{day:-3142}}", "note": "Boostrix"}]}
+      ]
+    },
+    {
+      "id": "demo-user",
+      "name": "Ben Parker",
+      "account": true,
+      "birthday": "{{day:-14320}}",
+      "color": "orange",
+      "counts": {"due": 0,"past": 0,"unknown": 1},
+      "next": null,
+      "items": [
+        {"code": "td", "kind": "vaccination", "title": "Tetanus / diphtheria", "vaccines": ["Tetanus / diphtheria"], "status": "unknown", "repeats": true}
+      ]
+    },
+    {
+      "id": "person-grandma-rose",
+      "name": "Grandma Rose",
+      "account": false,
+      "birthday": "{{day:-27018}}",
+      "color": "purple",
+      "counts": {"due": 1,"past": 0,"unknown": 0},
+      "next": {"code": "flu", "kind": "vaccination", "title": "Flu", "vaccines": ["Flu"], "status": "due", "from": "{{day:-47}}", "until": "{{day:134}}", "repeats": true},
+      "items": [
+        {"code": "td", "kind": "vaccination", "title": "Tetanus / diphtheria", "vaccines": ["Tetanus / diphtheria"], "status": "done", "from": "{{day:1762}}", "repeats": true, "records": [{"id": "demo-person-grandma-rose-td", "day": "{{day:-1890}}"}]},
+        {"code": "flu", "kind": "vaccination", "title": "Flu", "vaccines": ["Flu"], "status": "due", "from": "{{day:-47}}", "until": "{{day:134}}", "repeats": true},
+        {"code": "covid", "kind": "vaccination", "title": "COVID-19", "vaccines": ["COVID-19"], "status": "done", "from": "{{day:-47}}", "until": "{{day:134}}", "repeats": true, "records": [{"id": "demo-person-grandma-rose-covid", "day": "{{day:-20}}"}]},
+        {"code": "pneumo", "kind": "vaccination", "title": "Pneumococcal", "vaccines": ["Pneumococcal"], "status": "done", "from": "{{day:-5103}}", "records": [{"id": "demo-person-grandma-rose-pneumo", "day": "{{day:-1504}}", "note": "Prevenar 20"}]},
+        {"code": "shingles-1", "kind": "vaccination", "title": "Shingles (1st dose)", "vaccines": ["Shingles (1st dose)"], "status": "done", "from": "{{day:-5103}}", "records": [{"id": "demo-person-grandma-rose-shingles-1", "day": "{{day:-1356}}", "note": "Shingrix"}]},
+        {"code": "shingles-2", "kind": "vaccination", "title": "Shingles (2nd dose)", "vaccines": ["Shingles (2nd dose)"], "status": "done", "from": "{{day:-1295}}", "until": "{{day:-1172}}", "records": [{"id": "demo-person-grandma-rose-shingles-2", "day": "{{day:-1265}}", "note": "Shingrix"}]}
+      ]
+    },
+    {
+      "id": "person-leo",
+      "name": "Leo",
+      "account": false,
+      "birthday": "{{day:-1964}}",
+      "color": "red",
+      "counts": {"due": 2,"past": 0,"unknown": 0},
+      "next": {"code": "u9", "kind": "checkup", "title": "U9", "detail": "Months 60–64, before school", "status": "due", "from": "{{day:-168}}", "until": "{{day:46}}"},
+      "items": [
+        {"code": "u1", "kind": "checkup", "title": "U1", "detail": "Right after birth", "status": "done", "from": "{{day:-1964}}", "until": "{{day:-1963}}", "records": [{"id": "demo-person-leo-u1", "day": "{{day:-1983}}"}]},
+        {"code": "u2", "kind": "checkup", "title": "U2", "detail": "Days 3–10, often with the newborn screening", "status": "done", "from": "{{day:-1962}}", "until": "{{day:-1951}}", "records": [{"id": "demo-person-leo-u2", "day": "{{day:-1971}}"}]},
+        {"code": "u3", "kind": "checkup", "title": "U3", "detail": "Weeks 4–5, hip ultrasound", "status": "done", "from": "{{day:-1943}}", "until": "{{day:-1908}}", "records": [{"id": "demo-person-leo-u3", "day": "{{day:-1928}}"}]},
+        {"code": "u4", "kind": "checkup", "title": "U4", "detail": "Months 3–4", "status": "done", "from": "{{day:-1902}}", "until": "{{day:-1826}}", "records": [{"id": "demo-person-leo-u4", "day": "{{day:-1846}}"}]},
+        {"code": "u5", "kind": "checkup", "title": "U5", "detail": "Months 6–7", "status": "done", "from": "{{day:-1811}}", "until": "{{day:-1721}}", "records": [{"id": "demo-person-leo-u5", "day": "{{day:-1741}}"}]},
+        {"code": "u6", "kind": "checkup", "title": "U6", "detail": "Months 10–12", "status": "done", "from": "{{day:-1690}}", "until": "{{day:-1537}}", "records": [{"id": "demo-person-leo-u6", "day": "{{day:-1557}}"}]},
+        {"code": "u7", "kind": "checkup", "title": "U7", "detail": "Months 21–24", "status": "done", "from": "{{day:-1356}}", "until": "{{day:-1142}}", "records": [{"id": "demo-person-leo-u7", "day": "{{day:-1162}}"}]},
+        {"code": "u7a", "kind": "checkup", "title": "U7a", "detail": "Months 34–36", "status": "done", "from": "{{day:-959}}", "until": "{{day:-806}}", "records": [{"id": "demo-person-leo-u7a", "day": "{{day:-826}}"}]},
+        {"code": "u8", "kind": "checkup", "title": "U8", "detail": "Months 46–48", "status": "done", "from": "{{day:-594}}", "until": "{{day:-441}}", "records": [{"id": "demo-person-leo-u8", "day": "{{day:-461}}"}]},
+        {"code": "u9", "kind": "checkup", "title": "U9", "detail": "Months 60–64, before school", "status": "due", "from": "{{day:-168}}", "until": "{{day:46}}"},
+        {"code": "u10", "kind": "checkup", "title": "U10", "detail": "Age 7–8", "notAlwaysPaid": true, "status": "upcoming", "from": "{{day:593}}", "until": "{{day:1323}}"},
+        {"code": "u11", "kind": "checkup", "title": "U11", "detail": "Age 9–10", "notAlwaysPaid": true, "status": "upcoming", "from": "{{day:1323}}", "until": "{{day:2054}}"},
+        {"code": "j1", "kind": "checkup", "title": "J1", "detail": "Age 12–14", "status": "upcoming", "from": "{{day:2419}}", "until": "{{day:3515}}"},
+        {"code": "j2", "kind": "checkup", "title": "J2", "detail": "Age 16–17", "notAlwaysPaid": true, "status": "upcoming", "from": "{{day:3880}}", "until": "{{day:4610}}"},
+        {"code": "rsv-infant", "kind": "vaccination", "title": "RSV protection", "vaccines": ["RSV antibody (nirsevimab)"], "status": "done", "from": "{{day:-1964}}", "until": "{{day:-1599}}", "records": [{"id": "demo-person-leo-rsv-infant", "day": "{{day:-1619}}"}]},
+        {"code": "vac-6w", "kind": "vaccination", "title": "Vaccination at 6 weeks", "vaccines": ["Rotavirus (1)"], "status": "done", "from": "{{day:-1922}}", "until": "{{day:-1880}}", "records": [{"id": "demo-person-leo-vac-6w", "day": "{{day:-1900}}"}]},
+        {"code": "vac-2m", "kind": "vaccination", "title": "Vaccinations at 2 months", "vaccines": ["6-in-1 (1)", "Pneumococcal (1)", "Rotavirus (2)", "Meningococcal B (1)"], "status": "done", "from": "{{day:-1902}}", "until": "{{day:-1841}}", "records": [{"id": "demo-person-leo-vac-2m", "day": "{{day:-1861}}"}]},
+        {"code": "vac-4m", "kind": "vaccination", "title": "Vaccinations at 4 months", "vaccines": ["6-in-1 (2)", "Pneumococcal (2)", "Meningococcal B (2)"], "status": "done", "from": "{{day:-1841}}", "until": "{{day:-1629}}", "records": [{"id": "demo-person-leo-vac-4m", "day": "{{day:-1649}}"}]},
+        {"code": "vac-11m", "kind": "vaccination", "title": "Vaccinations at 11 months", "vaccines": ["6-in-1 (3)", "Pneumococcal (3)", "MMR (1)", "Chickenpox (1)"], "status": "done", "from": "{{day:-1629}}", "until": "{{day:-1507}}", "records": [{"id": "demo-person-leo-vac-11m", "day": "{{day:-1527}}"}]},
+        {"code": "vac-12m", "kind": "vaccination", "title": "Vaccinations at 12 months", "vaccines": ["Meningococcal C", "Meningococcal B (3)"], "status": "done", "from": "{{day:-1599}}", "until": "{{day:-1234}}", "records": [{"id": "demo-person-leo-vac-12m", "day": "{{day:-1254}}"}]},
+        {"code": "vac-15m", "kind": "vaccination", "title": "Vaccinations at 15 months", "vaccines": ["MMR (2)", "Chickenpox (2)"], "status": "done", "from": "{{day:-1507}}", "until": "{{day:-1234}}", "records": [{"id": "demo-person-leo-vac-15m", "day": "{{day:-1254}}"}]},
+        {"code": "vac-5y", "kind": "vaccination", "title": "Booster at 5–6 years", "vaccines": ["Tetanus, diphtheria, whooping cough"], "status": "due", "from": "{{day:-138}}", "until": "{{day:1323}}"},
+        {"code": "vac-9y", "kind": "vaccination", "title": "Booster at 9–16 years", "vaccines": ["Tetanus, diphtheria, whooping cough, polio"], "status": "upcoming", "from": "{{day:1323}}", "until": "{{day:4610}}"},
+        {"code": "hpv-1", "kind": "vaccination", "title": "HPV (1st dose)", "vaccines": ["HPV (1)"], "status": "upcoming", "from": "{{day:1323}}", "until": "{{day:4610}}"},
+        {"code": "hpv-2", "kind": "vaccination", "title": "HPV (2nd dose)", "vaccines": ["HPV (2)"], "status": "upcoming"}
+      ]
+    },
+    {
+      "id": "person-mia",
+      "name": "Mia",
+      "account": false,
+      "birthday": "{{day:-3170}}",
+      "color": "green",
+      "counts": {"due": 2,"past": 0,"unknown": 0},
+      "next": {"code": "vac-5y", "kind": "vaccination", "title": "Booster at 5–6 years", "vaccines": ["Tetanus, diphtheria, whooping cough"], "status": "due", "from": "{{day:-1344}}", "until": "{{day:117}}"},
+      "items": [
+        {"code": "u1", "kind": "checkup", "title": "U1", "detail": "Right after birth", "status": "done", "from": "{{day:-3170}}", "until": "{{day:-3169}}", "records": [{"id": "demo-person-mia-u1", "day": "{{day:-3189}}"}]},
+        {"code": "u2", "kind": "checkup", "title": "U2", "detail": "Days 3–10, often with the newborn screening", "status": "done", "from": "{{day:-3168}}", "until": "{{day:-3157}}", "records": [{"id": "demo-person-mia-u2", "day": "{{day:-3177}}"}]},
+        {"code": "u3", "kind": "checkup", "title": "U3", "detail": "Weeks 4–5, hip ultrasound", "status": "done", "from": "{{day:-3149}}", "until": "{{day:-3114}}", "records": [{"id": "demo-person-mia-u3", "day": "{{day:-3134}}"}]},
+        {"code": "u4", "kind": "checkup", "title": "U4", "detail": "Months 3–4", "status": "done", "from": "{{day:-3109}}", "until": "{{day:-3033}}", "records": [{"id": "demo-person-mia-u4", "day": "{{day:-3053}}"}]},
+        {"code": "u5", "kind": "checkup", "title": "U5", "detail": "Months 6–7", "status": "done", "from": "{{day:-3017}}", "until": "{{day:-2925}}", "records": [{"id": "demo-person-mia-u5", "day": "{{day:-2945}}"}]},
+        {"code": "u6", "kind": "checkup", "title": "U6", "detail": "Months 10–12", "status": "done", "from": "{{day:-2895}}", "until": "{{day:-2744}}", "records": [{"id": "demo-person-mia-u6", "day": "{{day:-2764}}"}]},
+        {"code": "u7", "kind": "checkup", "title": "U7", "detail": "Months 21–24", "status": "done", "from": "{{day:-2560}}", "until": "{{day:-2347}}", "records": [{"id": "demo-person-mia-u7", "day": "{{day:-2367}}"}]},
+        {"code": "u7a", "kind": "checkup", "title": "U7a", "detail": "Months 34–36", "status": "done", "from": "{{day:-2164}}", "until": "{{day:-2013}}", "records": [{"id": "demo-person-mia-u7a", "day": "{{day:-2033}}"}]},
+        {"code": "u8", "kind": "checkup", "title": "U8", "detail": "Months 46–48", "status": "done", "from": "{{day:-1799}}", "until": "{{day:-1648}}", "records": [{"id": "demo-person-mia-u8", "day": "{{day:-1668}}"}]},
+        {"code": "u9", "kind": "checkup", "title": "U9", "detail": "Months 60–64, before school", "status": "done", "from": "{{day:-1372}}", "until": "{{day:-1160}}", "records": [{"id": "demo-person-mia-u9", "day": "{{day:-1180}}"}]},
+        {"code": "u10", "kind": "checkup", "title": "U10", "detail": "Age 7–8", "notAlwaysPaid": true, "status": "due", "from": "{{day:-613}}", "until": "{{day:117}}"},
+        {"code": "u11", "kind": "checkup", "title": "U11", "detail": "Age 9–10", "notAlwaysPaid": true, "status": "upcoming", "from": "{{day:117}}", "until": "{{day:848}}"},
+        {"code": "j1", "kind": "checkup", "title": "J1", "detail": "Age 12–14", "status": "upcoming", "from": "{{day:1213}}", "until": "{{day:2309}}"},
+        {"code": "j2", "kind": "checkup", "title": "J2", "detail": "Age 16–17", "notAlwaysPaid": true, "status": "upcoming", "from": "{{day:2674}}", "until": "{{day:3405}}"},
+        {"code": "rsv-infant", "kind": "vaccination", "title": "RSV protection", "vaccines": ["RSV antibody (nirsevimab)"], "status": "done", "from": "{{day:-3170}}", "until": "{{day:-2805}}", "records": [{"id": "demo-person-mia-rsv-infant", "day": "{{day:-2825}}"}]},
+        {"code": "vac-6w", "kind": "vaccination", "title": "Vaccination at 6 weeks", "vaccines": ["Rotavirus (1)"], "status": "done", "from": "{{day:-3128}}", "until": "{{day:-3086}}", "records": [{"id": "demo-person-mia-vac-6w", "day": "{{day:-3106}}"}]},
+        {"code": "vac-2m", "kind": "vaccination", "title": "Vaccinations at 2 months", "vaccines": ["6-in-1 (1)", "Pneumococcal (1)", "Rotavirus (2)", "Meningococcal B (1)"], "status": "done", "from": "{{day:-3109}}", "until": "{{day:-3048}}", "records": [{"id": "demo-person-mia-vac-2m", "day": "{{day:-3068}}"}]},
+        {"code": "vac-4m", "kind": "vaccination", "title": "Vaccinations at 4 months", "vaccines": ["6-in-1 (2)", "Pneumococcal (2)", "Meningococcal B (2)"], "status": "done", "from": "{{day:-3048}}", "until": "{{day:-2833}}", "records": [{"id": "demo-person-mia-vac-4m", "day": "{{day:-2853}}"}]},
+        {"code": "vac-11m", "kind": "vaccination", "title": "Vaccinations at 11 months", "vaccines": ["6-in-1 (3)", "Pneumococcal (3)", "MMR (1)", "Chickenpox (1)"], "status": "done", "from": "{{day:-2833}}", "until": "{{day:-2713}}", "records": [{"id": "demo-person-mia-vac-11m", "day": "{{day:-2733}}"}]},
+        {"code": "vac-12m", "kind": "vaccination", "title": "Vaccinations at 12 months", "vaccines": ["Meningococcal C", "Meningococcal B (3)"], "status": "done", "from": "{{day:-2805}}", "until": "{{day:-2439}}", "records": [{"id": "demo-person-mia-vac-12m", "day": "{{day:-2459}}"}]},
+        {"code": "vac-15m", "kind": "vaccination", "title": "Vaccinations at 15 months", "vaccines": ["MMR (2)", "Chickenpox (2)"], "status": "done", "from": "{{day:-2713}}", "until": "{{day:-2439}}", "records": [{"id": "demo-person-mia-vac-15m", "day": "{{day:-2459}}"}]},
+        {"code": "vac-5y", "kind": "vaccination", "title": "Booster at 5–6 years", "vaccines": ["Tetanus, diphtheria, whooping cough"], "status": "due", "from": "{{day:-1344}}", "until": "{{day:117}}"},
+        {"code": "vac-9y", "kind": "vaccination", "title": "Booster at 9–16 years", "vaccines": ["Tetanus, diphtheria, whooping cough, polio"], "status": "upcoming", "from": "{{day:117}}", "until": "{{day:3405}}"},
+        {"code": "hpv-1", "kind": "vaccination", "title": "HPV (1st dose)", "vaccines": ["HPV (1)"], "status": "upcoming", "from": "{{day:117}}", "until": "{{day:3405}}"},
+        {"code": "hpv-2", "kind": "vaccination", "title": "HPV (2nd dose)", "vaccines": ["HPV (2)"], "status": "upcoming"}
+      ]
+    }
+  ],
+  "canEdit": false,
+  "scan": false,
+  "asOf": "STIKO 2025 \u00b7 G-BA 2025"
+}

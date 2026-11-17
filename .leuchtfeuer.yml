@@ -49,6 +49,8 @@ paths:
     - "**/vendor/**"
     - "**/dist/**"
     - "**/.venv/**"
+    # drizzle-kit's schema snapshots: generated, each repeats the previous one.
+    - "server/drizzle/meta/**"
 ignore: []
 #  - rule: "ruff:S101"
 #    paths: ["tests/**"]

@@ -111,6 +111,21 @@ notification opens its day. *Settings → Chores* sets when the morning, the day
 start (07:00, 12:00 and 18:00 at first): a chore's time puts it in its part, and a chore without
 a time is due when its part starts.
 
+## Check-ups and vaccinations
+
+**Health** works out from each member's birthday which check-ups (U1–U11, J1, J2) and
+vaccinations (the STIKO calendar: children's by visit, and for adults tetanus every ten years,
+flu and COVID-19 each autumn from 60 …) are due, coming or done; nothing to set up but the
+birthdays. On top is what's **due now** across the family: swipe to the right for *Done Today*,
+or tap to pick the date (or *Date unknown*), mark it skipped or add a note; *Find an
+Appointment* asks the assistant to start an appointment search. A member's page lists their
+check-ups and vaccinations. Windows that closed before anyone recorded them show quietly as *Not
+recorded*, never as overdue: **All Done** marks them all at once, or **Scan Booklet** photographs
+the vaccination booklet or U-Heft and lets the family's AI read the dates, to tick and save. The
+editors get a notification when something becomes due and four weeks before a check-up's window
+closes. Editors see everyone, a viewer only themselves. The booklets and your doctor decide; Ohana
+only reminds.
+
 ## Syncing an account with its bank
 
 Instead of importing CSV files, a finance account can fetch its transactions from the bank

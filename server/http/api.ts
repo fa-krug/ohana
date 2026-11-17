@@ -17,6 +17,7 @@ import { handleAssistantApp } from "@/lib/assistant/app-routes";
 import { defaultAiEnv, familyModel, handleAi } from "@/lib/assistant/routes";
 import { handleAccountApp } from "@/lib/auth/app-routes";
 import { handleChores } from "@/lib/chores/routes";
+import { handleHealth } from "@/lib/health/routes";
 import { handleKnowledge } from "@/lib/knowledge/routes";
 import { AuthError } from "@/lib/auth/errors";
 import { handle } from "@/lib/auth/route";
@@ -228,6 +229,7 @@ export function apiRoutes(db: Db): Hono {
       handleAppointments,
       handleChores,
       handleKnowledge,
+      handleHealth(defaultAiEnv(db)),
       handleAssistantApp,
       handleAi(defaultAiEnv(db)),
     ],

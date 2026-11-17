@@ -1,6 +1,6 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import type { Db } from "@/lib/db";
-import { calEntryTypes, choreSubscribers, chores, familyMembers, kbDocuments, users } from "@/lib/db/schema";
+import { calEntryTypes, choreSubscribers, chores, familyMembers, healthNotified, healthRecords, kbDocuments, users } from "@/lib/db/schema";
 import { AuthError } from "@/lib/auth/errors";
 import { assertMemberColor, nextMemberColor } from "./member-colors";
 import { assertBirthday } from "./people";
@@ -145,7 +145,8 @@ export function setRole(db: Db, actor: Actor, familyId: string, userId: string, 
 }
 
 /** Removes a member (their chores, entry types and knowledge documents in the family become
- *  nobody's, their subscriptions to its chores end, their photo is deleted); everyone may remove
+ *  nobody's, their subscriptions to its chores end, their check-ups and vaccinations and their
+ *  photo are deleted); everyone may remove
  *  themselves (leave), editors anyone. */
 export function removeMember(db: Db, actor: Actor, familyId: string, userId: string): void {
   requireRole(db, actor, familyId, userId === actor.id ? "viewer" : "editor");
@@ -182,6 +183,12 @@ export function removeMember(db: Db, actor: Actor, familyId: string, userId: str
         inArray(choreSubscribers.choreId, db.select({ id: chores.id }).from(chores).where(eq(chores.familyId, familyId))),
       ),
     )
+    .run();
+  db.delete(healthRecords)
+    .where(and(eq(healthRecords.familyId, familyId), eq(healthRecords.memberUserId, userId)))
+    .run();
+  db.delete(healthNotified)
+    .where(and(eq(healthNotified.familyId, familyId), eq(healthNotified.memberId, userId)))
     .run();
   deletePhotoFiles(removed);
 }

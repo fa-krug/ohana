@@ -5,7 +5,7 @@ info:
   license:
     name: AGPL-3.0-only
     identifier: AGPL-3.0-only
-  summary: The JSON API of a self-hosted Ohana server (calendar, finance, meals, appointments, chores, assistant, knowledge base).
+  summary: The JSON API of a self-hosted Ohana server (calendar, finance, meals, appointments, chores, assistant, knowledge base, health).
   description: |
     Ohana is one app for a family: a calendar, finances, meals, doctor appointments and an AI
     assistant. A server holds any number of **families**; every piece of data belongs to one.
@@ -49,7 +49,7 @@ info:
     ## Modules
 
     The calendar is always on. A server may turn off `finance`, `meals`, `appointments`,
-    `chores`, `assistant` and `knowledge` (`DISABLED_MODULES`); `GET /api/v1/server` lists the enabled ones, and the
+    `chores`, `assistant`, `knowledge` and `health` (`DISABLED_MODULES`); `GET /api/v1/server` lists the enabled ones, and the
     routes of a disabled module answer 404.
 
     ## Errors and status codes
@@ -151,6 +151,16 @@ tags:
       an editor asks for it, pictures of the pages of PDFs and images, which the worker has
       the family's AI transcribe and deletes once read. **Editors only**: for viewers every
       knowledge route answers 404.
+  - name: Health
+    description: >-
+      Check-ups and vaccinations of the family's members (module `health`), worked out from their
+      birthdays: Germany's check-ups for children and young people (U1–U11, J1, J2; G-BA) and the
+      STIKO vaccination calendar (children's vaccinations by visit; adults: tetanus / diphtheria
+      every 10 years, flu and COVID-19 each autumn from 60, pneumococcal and shingles from 60, RSV
+      from 75). Editors see and record everyone's, a viewer only their own. The family's editors
+      get a push notification on their devices when a window opens and when a check-up's closes
+      in four weeks without a record (from `NOTIFY_HOUR`, server time). The booklets (Impfpass,
+      U-Heft) are what counts; this only reminds.
   - name: Assistant
     description: The AI assistant's chats and agent instructions (module `assistant`).
   - name: AI settings
@@ -2615,6 +2625,235 @@ paths:
         "400": {$ref: "#/components/responses/BadRequest"}
         "401": {$ref: "#/components/responses/Unauthorized"}
         "404": {$ref: "#/components/responses/NotFound"}
+
+  # ------------------------------------------------------------------ health
+  /api/v1/families/{familyId}/health:
+    parameters:
+      - $ref: "#/components/parameters/FamilyId"
+    get:
+      tags: [Health]
+      operationId: getHealth
+      summary: Everyone's check-ups and vaccinations
+      description: >-
+        The members the caller may see (editors everyone, a viewer themselves; accounts and
+        people without one, by name), each with the items of their age and where they stand. A
+        member without a birthday has no items.
+      x-ohana-role: viewer
+      parameters:
+        - $ref: "#/components/parameters/HealthToday"
+        - $ref: "#/components/parameters/HealthLang"
+      responses:
+        "200":
+          description: The members.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [members, canEdit, scan, asOf]
+                properties:
+                  members:
+                    type: array
+                    items: {$ref: "#/components/schemas/HealthMember"}
+                  canEdit: {type: boolean, description: "Whether the caller is an editor."}
+                  scan: {type: boolean, description: "The family's AI is set up (and the assistant on): `POST /health/scan` reads booklets."}
+                  asOf: {type: string, description: "Which edition of the recommendations, e.g. \"STIKO 2025 · G-BA 2025\"."}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/families/{familyId}/health/records:
+    parameters:
+      - $ref: "#/components/parameters/FamilyId"
+    post:
+      tags: [Health]
+      operationId: addHealthRecords
+      summary: Record check-ups or vaccinations
+      description: >-
+        A check-up or a child's vaccination visit is recorded once: a new record replaces its
+        earlier one (answered in `replaced`). Tetanus, flu and COVID-19 get a record each time
+        (the same day twice is one). With `id` a record is put back with that id (how the
+        assistant's undo restores one). Editors for anyone, a viewer for themselves.
+      x-ohana-role: viewer
+      parameters:
+        - $ref: "#/components/parameters/HealthToday"
+        - $ref: "#/components/parameters/HealthLang"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [memberId, records]
+              properties:
+                memberId: {type: string, description: "An account's or a person's id."}
+                records:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items: {$ref: "#/components/schemas/HealthRecordInput"}
+      responses:
+        "201":
+          description: The records saved, those they replaced and the member's new state.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [records, replaced, member]
+                properties:
+                  records:
+                    type: array
+                    items: {$ref: "#/components/schemas/HealthRecord"}
+                  replaced:
+                    type: array
+                    items: {$ref: "#/components/schemas/HealthRecord"}
+                  member: {$ref: "#/components/schemas/HealthMember"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /api/v1/families/{familyId}/health/records/{recordId}:
+    parameters:
+      - $ref: "#/components/parameters/FamilyId"
+      - $ref: "#/components/parameters/HealthRecordId"
+      - $ref: "#/components/parameters/HealthToday"
+      - $ref: "#/components/parameters/HealthLang"
+    patch:
+      tags: [Health]
+      operationId: updateHealthRecord
+      summary: Change a record
+      description: Only the fields given; `day` null means done, date unknown.
+      x-ohana-role: viewer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                day: {type: [string, "null"], format: date}
+                status: {type: string, enum: [done, skipped]}
+                note: {type: string, maxLength: 200}
+      responses:
+        "200":
+          description: The record and the member's new state.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [record, member]
+                properties:
+                  record: {$ref: "#/components/schemas/HealthRecord"}
+                  member: {$ref: "#/components/schemas/HealthMember"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    delete:
+      tags: [Health]
+      operationId: deleteHealthRecord
+      summary: Remove a record
+      x-ohana-role: viewer
+      responses:
+        "200":
+          description: Deleted, and the member's new state.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [deleted, member]
+                properties:
+                  deleted: {type: string}
+                  member: {$ref: "#/components/schemas/HealthMember"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/families/{familyId}/health/past:
+    parameters:
+      - $ref: "#/components/parameters/FamilyId"
+    post:
+      tags: [Health]
+      operationId: markHealthPastDone
+      summary: Mark every earlier one done
+      description: >-
+        Every child's check-up and vaccination whose window closed without a record (status
+        `past`) is recorded as done, without a date: "all the earlier ones happened".
+      x-ohana-role: viewer
+      parameters:
+        - $ref: "#/components/parameters/HealthToday"
+        - $ref: "#/components/parameters/HealthLang"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [memberId]
+              properties:
+                memberId: {type: string}
+      responses:
+        "200":
+          description: The records made and the member's new state.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [records, member]
+                properties:
+                  records:
+                    type: array
+                    items: {$ref: "#/components/schemas/HealthRecord"}
+                  member: {$ref: "#/components/schemas/HealthMember"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/families/{familyId}/health/scan:
+    parameters:
+      - $ref: "#/components/parameters/FamilyId"
+    post:
+      tags: [Health]
+      operationId: scanHealthBooklet
+      summary: Read a booklet's pages
+      description: >-
+        Photos of a vaccination booklet (Impfpass) or a check-up booklet (U-Heft) go to the
+        family's AI (one completion, up to 2 minutes); the answer is a list of suggestions to
+        confirm, nothing is saved. Codes that aren't of the member's age, dates in the future or
+        before the birth are left out; an unreadable date is null. `known`: recorded like this
+        already. Without the family's AI (or with the assistant off) `ai` is false.
+      x-ohana-role: viewer
+      parameters:
+        - $ref: "#/components/parameters/HealthToday"
+        - $ref: "#/components/parameters/HealthLang"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [memberId, pages]
+              properties:
+                memberId: {type: string}
+                pages:
+                  type: array
+                  minItems: 1
+                  maxItems: 8
+                  description: The pages as base64 JPEG or PNG pictures, each at most 4 MB.
+                  items: {type: string, contentEncoding: base64}
+      responses:
+        "200":
+          description: The suggestions.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ai, items]
+                properties:
+                  ai: {type: boolean}
+                  items:
+                    type: array
+                    items: {$ref: "#/components/schemas/HealthScanSuggestion"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+        "413": {$ref: "#/components/responses/PayloadTooLarge"}
+        "502": {$ref: "#/components/responses/BadGateway"}
 
   # ------------------------------------------------------------------ knowledge
   /api/v1/families/{familyId}/knowledge/folder:
@@ -6309,6 +6548,21 @@ components:
       in: path
       required: true
       schema: {type: string}
+    HealthRecordId:
+      name: recordId
+      in: path
+      required: true
+      schema: {type: string}
+    HealthToday:
+      name: today
+      in: query
+      description: "The client's day, for the windows (default the server's UTC day)."
+      schema: {type: string, format: date}
+    HealthLang:
+      name: lang
+      in: query
+      description: "The titles' language (default the family's)."
+      schema: {type: string, enum: [en, de]}
     KnowledgeDocumentId:
       name: documentId
       in: path
@@ -7331,6 +7585,94 @@ components:
             - $ref: "#/components/schemas/ChorePerson"
             - type: "null"
         subscribed: {type: boolean, description: "Whether the caller gets its notification."}
+    HealthMember:
+      type: object
+      required: [id, name, account, birthday, color, photo, canEdit, items, next, counts]
+      properties:
+        id: {type: string}
+        name: {type: string}
+        account: {type: boolean, description: "An account (else a person without one)."}
+        birthday: {type: [string, "null"], format: date}
+        color: {type: string}
+        photo: {type: [string, "null"]}
+        canEdit: {type: boolean, description: "The caller may record for them."}
+        items:
+          type: array
+          description: The items of their age, check-ups then vaccinations in the schedule's order.
+          items: {$ref: "#/components/schemas/HealthItem"}
+        next:
+          description: The open window closing first, else the next to open.
+          oneOf:
+            - $ref: "#/components/schemas/HealthItem"
+            - type: "null"
+        counts:
+          type: object
+          required: [due, past, unknown]
+          properties:
+            due: {type: integer}
+            past: {type: integer}
+            unknown: {type: integer}
+    HealthItem:
+      type: object
+      required: [code, kind, title, detail, vaccines, notAlwaysPaid, status, from, to, until, repeats, records]
+      properties:
+        code: {type: string, description: "The schedule's code: u1 … u11, u7a, j1, j2, rsv-infant, vac-6w, vac-2m, vac-4m, vac-11m, vac-12m, vac-15m, vac-5y, vac-9y, hpv-1, hpv-2, td, flu, covid, pneumo, shingles-1, shingles-2, rsv."}
+        kind: {type: string, enum: [checkup, vaccination]}
+        title: {type: string}
+        detail: {type: string}
+        vaccines: {type: array, items: {type: string}}
+        notAlwaysPaid: {type: boolean, description: "Not paid by every health insurer (U10, U11, J2)."}
+        status:
+          type: string
+          enum: [done, skipped, due, upcoming, past, unknown]
+          description: >-
+            done / skipped: recorded (a repeating one for the current period); due: its window is
+            open; upcoming: it opens later; past: a child's window closed without a record (shown
+            as "not recorded"); unknown: a repeating one never recorded, or a second dose whose
+            first has no date.
+        from: {type: [string, "null"], format: date, description: "The window's first day; a repeating one's next due day."}
+        to: {type: [string, "null"], format: date, description: "Recommended until."}
+        until: {type: [string, "null"], format: date, description: "The window's last day (its tolerance)."}
+        repeats: {type: boolean}
+        records:
+          type: array
+          description: Newest first.
+          items:
+            type: object
+            required: [id, day, status, note]
+            properties:
+              id: {type: string}
+              day: {type: [string, "null"], format: date}
+              status: {type: string, enum: [done, skipped]}
+              note: {type: string}
+    HealthRecord:
+      type: object
+      required: [id, memberId, code, day, status, note]
+      properties:
+        id: {type: string}
+        memberId: {type: string}
+        code: {type: string}
+        day: {type: [string, "null"], format: date, description: "null: done, the date isn't known."}
+        status: {type: string, enum: [done, skipped]}
+        note: {type: string}
+    HealthRecordInput:
+      type: object
+      required: [code]
+      properties:
+        id: {type: string, maxLength: 64}
+        code: {type: string}
+        day: {type: [string, "null"], format: date, description: "Not in the future nor before the birthday; null or none: date unknown."}
+        status: {type: string, enum: [done, skipped], default: done}
+        note: {type: string, maxLength: 200}
+    HealthScanSuggestion:
+      type: object
+      required: [code, title, day, note, known]
+      properties:
+        code: {type: string}
+        title: {type: string}
+        day: {type: [string, "null"], format: date}
+        note: {type: string}
+        known: {type: boolean}
     KnowledgeFolder:
       type: object
       required: [id, createdAt, lastManifestAt, lastManifestDevice, aiScans]

@@ -45,7 +45,7 @@ struct AssistantPanel: View {
 /// The pages a chat can belong to (the server's `PAGES`) and their names.
 enum AssistantPages {
     /// The pages the server takes; any other is the overview.
-    static let all = ["overview", "calendar", "finance", "meals", "appointments", "chores", "settings"]
+    static let all = ["overview", "calendar", "finance", "meals", "appointments", "chores", "health", "settings"]
 
     /// The page a chat beside `module` belongs to.
     static func page(of module: Module?) -> String {
@@ -60,6 +60,7 @@ enum AssistantPages {
         case "meals": String(localized: "Meals")
         case "appointments": String(localized: "Appointments")
         case "chores": String(localized: "Chores")
+        case "health": String(localized: "Health")
         case "settings": String(localized: "Settings")
         default: String(localized: "Overview")
         }

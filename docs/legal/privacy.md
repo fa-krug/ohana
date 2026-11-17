@@ -75,7 +75,7 @@ usage statistics. This is controlled by Apple and by your device settings
 ### Your Ohana server
 
 Ohana is self-hosted. Everything you enter in the app (calendar, finances, recipes,
-chores, appointments, chats with the assistant, account data) is sent **directly to the Ohana server
+chores, appointments, check-ups and vaccinations, chats with the assistant, account data) is sent **directly to the Ohana server
 you connect the app to**, over the address you enter, and stored there. The **operator of that
 server** (often you or someone in your family) decides how it is run and is responsible for the
 data on it. We have no access to servers run by others. The server keeps each member's newest
@@ -107,6 +107,19 @@ What a server sends to other services depends on what its families set up, for e
   login is never sent back to the app; removing the bank connection deletes it.
 
 Ask your server's operator about their privacy policy.
+
+### Check-ups and vaccinations
+
+The *Health* page works out from your family members' birthdays which check-ups (U1–U11, J1,
+J2) and vaccinations are due. What you record (which check-up or vaccination, its date, a note)
+is **health data**: it is stored only on your Ohana server, shown to your family's editors and,
+for a member with their own account, to that member, and pushed as reminders (what is due for
+whom) only to the editors' devices, never to a family's other notification channels. If you
+**scan a vaccination booklet or U-Heft**, the photos of its pages are sent to your server and from
+there to the AI provider your family set up, with the member's name and birthday, to read the
+dates; your server doesn't keep the photos, and nothing is recorded until you tick it and save.
+The assistant can read and record check-ups and vaccinations like any other data of the family
+(and so sends them to that AI provider when it answers about them).
 
 ### Notifications in the app
 
@@ -166,6 +179,7 @@ The app only asks for these permissions, and only when you use the feature:
   (at most 2048 pixels) with the part you chose, so you can change the crop later, and shows it
   only to the members of that family; removing the picture deletes both. And to scan receipts: the receipt is read on your device (Apple's text recognition); the
   picture stays there, only the amount, date and shop you save are sent to your server.
+  And to scan a vaccination booklet or U-Heft (see *Check-ups and vaccinations*).
   And to scan letters (a school letter, a notice, an invitation), or read the photos and PDFs you
   share with Ohana or open in it: the letter is read on your device the same way and the picture
   stays there. With the assistant on, its text is sent to

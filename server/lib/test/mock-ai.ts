@@ -79,6 +79,10 @@
 // with a Markdown timetable in a ``` fence, or with what follows a line "Transcribe: <x>" in the
 // OCR hint (as written, "\n" a line break; "Transcribe: nothing" an empty answer). Without a
 // picture in the message it refuses (400: a model that takes no images).
+// Asked to read a vaccination / check-up booklet (the health scan prompt), it answers with JSON:
+// U1 on the birthday, U2 four days later (twice), vac-2m with an unreadable date, tetanus on
+// 2019-05-03, a flu shot in the future and an unknown code "u99". Without a picture it refuses
+// like the transcription.
 // Asked to sort transactions into categories (the categorize prompt), it picks the category
 // whose id or name occurs in a standing instruction that names a word of the row's payee (4
 // letters or more), else in the row's payee or description, searching the web once for a payee
@@ -343,18 +347,41 @@ function card(stream: boolean, system: string, message: string) {
   return reply(stream, "```json\n" + JSON.stringify(answer, null, 1) + "\n```");
 }
 
+/** A 400 like a model that takes no pictures, when the message has none. */
+function refusesWithoutImage(message: Msg): Response | null {
+  const parts = Array.isArray(message.content) ? message.content : [];
+  if (parts.some((p) => p.type === "image_url")) return null;
+  return Response.json({ error: { message: "This model does not support image input" } }, { status: 400 });
+}
+
 /** The answer to a page scan (see the top). */
 export const MOCK_TRANSCRIPTION = "| Stunde | Montag | Dienstag |\n| --- | --- | --- |\n| 1 | Mathe | Deutsch |\n| 2 | Englisch | Sport |";
 
 /** The transcription prompt: the page as Markdown (see the top). */
 function transcription(stream: boolean, message: Msg) {
-  const parts = Array.isArray(message.content) ? message.content : [];
-  if (!parts.some((p) => p.type === "image_url")) {
-    return Response.json({ error: { message: "This model does not support image input" } }, { status: 400 });
-  }
+  const refused = refusesWithoutImage(message);
+  if (refused) return refused;
   const line = /^Transcribe: (.*)$/m.exec(textOf(message.content))?.[1];
   if (line === undefined) return reply(stream, "```markdown\n" + MOCK_TRANSCRIPTION + "\n```");
   return reply(stream, line === "nothing" ? "" : line.replace(/\\n/g, "\n"));
+}
+
+/** The health scan prompt: a few records around the birthday (see the top). */
+function healthScan(stream: boolean, system: string, message: Msg) {
+  const refused = refusesWithoutImage(message);
+  if (refused) return refused;
+  const born = /born (\d{4}-\d{2}-\d{2})/.exec(system)?.[1] ?? "2020-01-01";
+  const plus = (days: number) => new Date(Date.parse(`${born}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
+  const records = [
+    { code: "u1", day: born, note: "" },
+    { code: "U2", day: plus(4), note: "Stempel Dr. Weiß" },
+    { code: "u2", day: plus(5), note: "" },
+    { code: "vac-2m", day: "15.??.20", note: "Vaxelis" },
+    { code: "td", day: "2019-05-03", note: "Boostrix" },
+    { code: "flu", day: "2999-10-01", note: "" },
+    { code: "u99", day: born, note: "" },
+  ];
+  return reply(stream, "```json\n" + JSON.stringify({ records }) + "\n```");
 }
 
 /** How often the conversation looked at the calendar: in the summary, and after it. */
@@ -439,6 +466,7 @@ async function respond(req: Request, body: any): Promise<Response> {
   }
   if (system.startsWith("You write a card for a document")) return card(stream, system, textOf(last.content));
   if (system.startsWith("You transcribe one scanned page")) return transcription(stream, last);
+  if (system.startsWith("You read photos of pages of a German vaccination booklet")) return healthScan(stream, system, last);
   if (system.startsWith("You sort bank transactions into categories.")) {
     return categorize(
       stream,

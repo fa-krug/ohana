@@ -65,7 +65,7 @@ nonisolated struct ServerInfo: Codable, Equatable, OffMainDecodable {
 @MainActor
 extension ServerInfo {
     /// The modules a server can turn off.
-    static let optionalModules: [Module] = [.finance, .meals, .appointments, .chores, .assistant, .knowledge]
+    static let optionalModules: [Module] = [.finance, .meals, .appointments, .chores, .assistant, .knowledge, .health]
 
     /// Whether the server has `module` on. The overview, the calendar and the settings are
     /// always there. The knowledge base is for editors only, outside the demo, too: the family's
@@ -73,7 +73,8 @@ extension ServerInfo {
     func isEnabled(_ module: Module) -> Bool {
         switch module {
         case .overview, .calendar, .settings, .search, .scanLetter: true
-        case .finance, .meals, .appointments, .chores, .assistant, .knowledge: modules.contains(module.rawValue)
+        case .finance, .meals, .appointments, .chores, .assistant, .knowledge, .health:
+            modules.contains(module.rawValue)
         }
     }
 

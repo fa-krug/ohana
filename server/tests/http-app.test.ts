@@ -75,7 +75,7 @@ describe("the HTTP server", () => {
   it("answers the health check and the server info", async () => {
     expect(await (await app.request("/api/health")).json()).toEqual({ status: "ok" });
     const info = await (await app.request("/api/v1/server")).json();
-    expect(info).toMatchObject({ name: "Ohana", apiVersion: 1, modules: ["calendar", "finance", "meals", "appointments", "chores", "assistant", "knowledge"] });
+    expect(info).toMatchObject({ name: "Ohana", apiVersion: 1, modules: ["calendar", "finance", "meals", "appointments", "chores", "assistant", "knowledge", "health"] });
   });
 
   it("sends a fresh server to the first-run setup", async () => {
@@ -196,7 +196,7 @@ describe("the HTTP server", () => {
     expect((await get("/finance")).status).toBe(404);
     expect((await get("/recipes")).status).toBe(404);
     expect((await get("/meals/status")).status).toBe(404);
-    expect((await (await app.request("/api/v1/server")).json()).modules).toEqual(["calendar", "appointments", "chores", "assistant", "knowledge"]);
+    expect((await (await app.request("/api/v1/server")).json()).modules).toEqual(["calendar", "appointments", "chores", "assistant", "knowledge", "health"]);
     delete process.env.DISABLED_MODULES;
   });
 

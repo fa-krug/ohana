@@ -11,11 +11,11 @@ import { holidaysUrl } from "./calendar/holidays/openholidays";
 /** Raised when a change to the API would break an older app: the app refuses older servers. */
 export const API_VERSION = 1;
 
-export const MODULES = ["calendar", "finance", "meals", "appointments", "chores", "assistant", "knowledge"] as const;
+export const MODULES = ["calendar", "finance", "meals", "appointments", "chores", "assistant", "knowledge", "health"] as const;
 export type ModuleName = (typeof MODULES)[number];
 
 /** Modules that can be turned off (the calendar can't: the overview and the events use it). */
-export const OPTIONAL_MODULES: readonly ModuleName[] = ["finance", "meals", "appointments", "chores", "assistant", "knowledge"];
+export const OPTIONAL_MODULES: readonly ModuleName[] = ["finance", "meals", "appointments", "chores", "assistant", "knowledge", "health"];
 
 /** The modules that are on, from DISABLED_MODULES (unknown names are ignored). */
 export function enabledModules(env: Record<string, string | undefined> = process.env): ModuleName[] {
@@ -78,6 +78,8 @@ export function moduleOfFamilyPath(rest: string[]): ModuleName | null {
       return "assistant";
     case "knowledge":
       return "knowledge";
+    case "health":
+      return "health";
     default:
       return null;
   }

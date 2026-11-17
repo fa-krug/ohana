@@ -13,6 +13,7 @@ import { financeTools } from "./finance";
 import { appointmentTools } from "./appointments";
 import { eventTools } from "./events";
 import { generalTools } from "./general";
+import { healthTools } from "./health";
 import { knowledgeTools } from "./knowledge";
 import { knowledgePageTools } from "./knowledge-pages";
 import { mealTools } from "./meals";
@@ -45,6 +46,7 @@ export const TOOLS: Record<string, Tool> = {
   ...mealTools,
   ...appointmentTools,
   ...choreTools,
+  ...healthTools,
   ...knowledgeTools,
   ...knowledgePageTools,
   ...noteTools,
@@ -62,6 +64,7 @@ const TOOL_MODULE: Record<string, ModuleName> = Object.fromEntries([
   ...Object.keys(mealTools).map((n) => [n, "meals"]),
   ...Object.keys(appointmentTools).map((n) => [n, "appointments"]),
   ...Object.keys(choreTools).map((n) => [n, "chores"]),
+  ...Object.keys(healthTools).map((n) => [n, "health"]),
   ...Object.keys(knowledgeTools).map((n) => [n, "knowledge"]),
   ...Object.keys(knowledgePageTools).map((n) => [n, "knowledge"]),
   ...Object.keys(noteTools).map((n) => [n, "knowledge"]),
