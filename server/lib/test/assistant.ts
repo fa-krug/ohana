@@ -212,9 +212,8 @@ export async function configure(t: AssistantTest, settings: Record<string, unkno
   return res.data;
 }
 
-/** The tools' context for the family's editor, on `today`, with `extra` (another `userId`, the
- *  device's context, lookups …) over it. */
-export function toolContext(t: AssistantTest, today: string, extra: Partial<ToolContext> = {}): ToolContext {
+/** The tools' context for the family's editor (or `userId`), on `today`. */
+export function toolContext(t: AssistantTest, today: string, userId = t.editor.id): ToolContext {
   return {
     lang: "en",
     calendar: new DrizzleCalendarStore(t.db),
@@ -223,9 +222,8 @@ export function toolContext(t: AssistantTest, today: string, extra: Partial<Tool
     familyId: t.familyId,
     net: {} as NetOptions,
     search: null,
-    userId: t.editor.id,
+    userId,
     today,
     now: () => NOW,
-    ...extra,
   };
 }

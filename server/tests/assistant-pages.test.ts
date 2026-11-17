@@ -9,15 +9,18 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { NetOptions } from "@/lib/assistant/net";
 import { estimateTokens, newestImages, viewOf } from "@/lib/assistant/context";
 import { deleteChatFiles, isPagesMessage, pageFilePath, pruneChatFiles, withPageImages, writePageFile } from "@/lib/assistant/page-images";
 import { chatLimitOf, trimChats } from "@/lib/assistant/retention";
 import { runTool, type ToolContext, TOOLS, toolsFor } from "@/lib/assistant/tools";
 import { pagesFor, pagesSummary, resolvePages } from "@/lib/assistant/tools/knowledge-pages";
+import { DrizzleCalendarStore } from "@/lib/calendar/store";
 import type { Db } from "@/lib/db";
 import { chats, kbDocuments, kbFolders } from "@/lib/db/schema";
+import { DrizzleFinanceStore } from "@/lib/finance/store";
 import { ensureFolder, replaceFolder } from "@/lib/knowledge/folders";
-import { type AssistantTest, assistantTest, BASE, configure, net, toolContext } from "@/lib/test/assistant";
+import { type AssistantTest, assistantTest, BASE, configure, net } from "@/lib/test/assistant";
 import { NOW } from "@/lib/test/factories";
 import { eq } from "drizzle-orm";
 
@@ -68,11 +71,21 @@ function addDocument(db: Db, familyId: string, path: string, pages: number, extr
 }
 
 function toolCtx(t: AssistantTest, knowledgeFolder?: string, contextWindow?: number): ToolContext {
-  return toolContext(t, CONTEXT.today, {
+  return {
+    lang: "en",
+    calendar: new DrizzleCalendarStore(t.db),
+    finance: new DrizzleFinanceStore(t.db),
+    db: t.db,
+    familyId: t.familyId,
+    net: {} as NetOptions,
+    search: null,
+    userId: t.editor.id,
+    today: CONTEXT.today,
+    now: () => NOW,
     knowledge: true,
     knowledgeFolder,
     contextWindow,
-  });
+  };
 }
 
 const tool = async (ctx: ToolContext, args: unknown): Promise<Res> =>
