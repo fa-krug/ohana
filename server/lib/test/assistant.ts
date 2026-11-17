@@ -214,16 +214,7 @@ export async function configure(t: AssistantTest, settings: Record<string, unkno
 
 /** The tools' context for the family's editor (or `userId`), on `today`. */
 export function toolContext(t: AssistantTest, today: string, userId = t.editor.id): ToolContext {
-  return {
-    lang: "en",
-    calendar: new DrizzleCalendarStore(t.db),
-    finance: new DrizzleFinanceStore(t.db),
-    db: t.db,
-    familyId: t.familyId,
-    net: {} as NetOptions,
-    search: null,
-    userId,
-    today,
-    now: () => NOW,
-  };
+  const { db, familyId } = t;
+  const stores = { calendar: new DrizzleCalendarStore(db), finance: new DrizzleFinanceStore(db) };
+  return { ...stores, db, familyId, userId, today, lang: "en", now: () => NOW, net: {} as NetOptions, search: null };
 }
