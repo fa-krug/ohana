@@ -18,6 +18,7 @@ import {
   windowFromError,
 } from "./context";
 import { ageOn } from "@/lib/families/birthdays";
+import { moduleEnabled } from "@/lib/server-info";
 import type { NetOptions } from "./net";
 import {
   type ChatMessage,
@@ -97,7 +98,7 @@ const WAITS = new Set([
 ]);
 
 /** The pages a chat can belong to: Ohana's modules, the family overview and the settings. */
-export const PAGES = ["overview", "calendar", "finance", "meals", "appointments", "chores", "settings"];
+export const PAGES = ["overview", "calendar", "finance", "meals", "appointments", "chores", "health", "settings"];
 /** family-planner's names of pages (its chats may come with them). */
 const OLD_PAGES: Record<string, string> = { vacation: "calendar" };
 
@@ -181,6 +182,18 @@ changes are off).
 `
 }`;
 
+/** The system prompt's part about check-ups and vaccinations (with the module on). */
+const HEALTH_TEXT = `
+## Check-ups and vaccinations
+get_health works out from each member's birthday which German check-ups (U1–U11, J1, J2) and
+vaccinations (STIKO calendar; adults: tetanus every 10 years, flu and COVID-19 each autumn from
+60 …) are done, due or coming, with their windows. record_health records one the user mentions
+("Mia had her U7 today", "my last tetanus shot was in 2019") by its code; a date that isn't
+known is null. Windows that closed without a record are only "not recorded" (status past), not
+missed: don't alarm. Ohana reminds; the booklets (Impfpass, U-Heft) and the doctor decide. To book,
+offer an appointment search (a Kinderarzt for children's check-ups). Viewers see only their own.
+`;
+
 /** The memory's modules as the prompt names them. */
 const MEMORY_TOPICS: Record<string, string> = {
   general: "General",
@@ -244,6 +257,9 @@ booking).`,
   chores: `the family's chores: who does what and when, once or repeating. Read requests as
 being about them, and keep suggestions, options and next steps about them (sharing the chores
 out, new ones, what is due or overdue).`,
+  health: `the family's check-ups (U1–U11, J1, J2) and vaccinations: what each member had, what is
+due and when. Read requests as being about them, and keep suggestions, options and next steps
+about them (recording one, what is due next, booking an appointment).`,
   settings: `the settings: the family's name, members and sharing, the year's entry types,
 the finance categories and accounts, and the AI. Read requests as being about these settings,
 and keep suggestions, options and next steps about them.`,
@@ -402,7 +418,7 @@ for one member or nobody, at a time or in a part of the day (morning, day, eveni
 starts is the family's: get_chores' dayParts, changed with set_day_parts). They live in Ohana, not
 in Reminders. set_chore_done ticks off a single chore, or one day of a repeating one
 (day). Whoever subscribed to a chore gets a notification when it is due (the one who adds it).
-${input.knowledge ? knowledgeText(!!input.knowledgeNotes, !!input.knowledgePages) : ""}${memoryText(input.memories ?? [], input.writes)}
+${moduleEnabled("health") ? HEALTH_TEXT : ""}${input.knowledge ? knowledgeText(!!input.knowledgeNotes, !!input.knowledgePages) : ""}${memoryText(input.memories ?? [], input.writes)}
 ## Reminders
 ${
     input.reminders

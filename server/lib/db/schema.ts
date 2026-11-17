@@ -273,3 +273,4 @@ export * from "./schema/digest";
 export * from "./schema/chores";
 export * from "./schema/holidays";
 export * from "./schema/knowledge";
+export * from "./schema/health";

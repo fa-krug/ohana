@@ -177,6 +177,12 @@
     "test": {
       "body": "Der Kanal „{{channel}}“ funktioniert.",
       "title": "Ohana-Testnachricht"
+    },
+    "health": {
+      "title": "{{item}} für {{name}}",
+      "due": "Jetzt fällig",
+      "dueUntil": "Fällig bis {{date}}",
+      "closing": "Nur noch bis {{date}}: Zeit, einen Termin zu machen"
     }
   }
 }

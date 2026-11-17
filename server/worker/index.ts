@@ -1,7 +1,7 @@
 // The worker process: everything that runs in the background, apart from the HTTP server,
 // so that a slow job never blocks a request. Same image as the server, started with
 // `docker-entrypoint.sh worker`. Today: cleanup, the nightly backup and the appointment
-// searches (every APPT_TICK_SECONDS), the daily notifications (coverage), chores that are due, the week ahead
+// searches (every APPT_TICK_SECONDS), the daily notifications (coverage), chores that are due, check-ups and vaccinations, the week ahead
 // (geocoding event locations daily, the weekly digest), the assistant's chat turns, the
 // recipe imports the share extension handed over, the holiday imports, the bank syncs of
 // linked finance accounts and the knowledge base's documents waiting to be chunked, for their
@@ -24,6 +24,7 @@ import { migrationsApplied } from "../lib/maintenance/migrations";
 import { dailyNotifications } from "../lib/notifications/daily";
 import { weeklyDigests } from "../lib/digest/digest";
 import { choreNotifications } from "../lib/chores/notify";
+import { healthNotifications } from "../lib/health/notify";
 import { enabledModules, moduleEnabled } from "../lib/server-info";
 
 const TICK_MS = Number(process.env.WORKER_TICK_SECONDS ?? 60) * 1000;
@@ -71,6 +72,8 @@ async function tick(now: Date): Promise<void> {
   await dailyNotifications(db, now);
   // Chores that are due now, to their subscribers' devices (off with the module).
   if (moduleEnabled("chores")) await choreNotifications(db, now);
+  // Check-ups and vaccinations whose window opens or closes, to the editors' devices.
+  if (moduleEnabled("health")) await healthNotifications(db, now);
   // The week ahead (phase 11): places geocoded daily, the digest on DIGEST_WEEKDAY from DIGEST_HOUR.
   await weeklyDigests(db, now);
   // Public and school holidays (HOLIDAYS_URL): every family that imports them, once a day.
