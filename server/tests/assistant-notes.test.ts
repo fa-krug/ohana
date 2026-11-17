@@ -7,7 +7,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanContext } from "@/lib/assistant/chat";
-import type { NetOptions } from "@/lib/assistant/net";
 import { runTool, type ToolContext, TOOLS, toolsFor } from "@/lib/assistant/tools";
 import {
   MAX_NOTE_CONTENT,
@@ -17,12 +16,10 @@ import {
   notesEditSummary,
   resolveNoteOps,
 } from "@/lib/assistant/tools/notes";
-import { DrizzleCalendarStore } from "@/lib/calendar/store";
 import type { Db } from "@/lib/db";
 import { kbDocuments } from "@/lib/db/schema";
-import { DrizzleFinanceStore } from "@/lib/finance/store";
 import { ensureFolder, replaceFolder } from "@/lib/knowledge/folders";
-import { type AssistantTest, assistantTest, configure, net } from "@/lib/test/assistant";
+import { type AssistantTest, assistantTest, configure, net, toolContext } from "@/lib/test/assistant";
 import { NOW } from "@/lib/test/factories";
 
 let current: AssistantTest[] = [];
@@ -283,20 +280,10 @@ function addNote(db: Db, familyId: string, path: string, text: string, extra: Pa
 }
 
 function toolCtx(t: AssistantTest, knowledgeFolder?: string): ToolContext {
-  return {
-    lang: "en",
-    calendar: new DrizzleCalendarStore(t.db),
-    finance: new DrizzleFinanceStore(t.db),
-    db: t.db,
-    familyId: t.familyId,
-    net: {} as NetOptions,
-    search: null,
-    userId: t.editor.id,
-    today: CONTEXT.today,
-    now: () => NOW,
+  return toolContext(t, CONTEXT.today, {
     knowledge: true,
     knowledgeFolder,
-  };
+  });
 }
 
 const tool = async (ctx: ToolContext, args: unknown): Promise<Res> =>

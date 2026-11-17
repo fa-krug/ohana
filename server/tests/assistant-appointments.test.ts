@@ -5,13 +5,10 @@
 
 import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, it } from "vitest";
-import type { NetOptions } from "@/lib/assistant/net";
 import { runTool, type ToolContext, TOOLS, toolsFor } from "@/lib/assistant/tools";
-import { DrizzleCalendarStore } from "@/lib/calendar/store";
-import { DrizzleFinanceStore } from "@/lib/finance/store";
 import { createEvent, findBooking, findExternalEvent, loadSeries, seriesJson } from "@/lib/calendar/events";
 import { apptSearchChannels, apptSearches, families, notificationChannels } from "@/lib/db/schema";
-import { type AssistantTest, assistantTest, configure, type Event } from "@/lib/test/assistant";
+import { type AssistantTest, assistantTest, configure, type Event, toolContext } from "@/lib/test/assistant";
 import { makeResult, makeRun, makeSearch } from "@/lib/test/appointments";
 import { NOW } from "@/lib/test/factories";
 import { haversineKm } from "@/lib/appointments/distance";
@@ -46,17 +43,8 @@ function family(opts: { home?: boolean; worker?: boolean } = {}) {
   if (opts.home !== false) {
     t.db.update(families).set({ homeAddress: "Hauptstr. 1, 10115 Berlin", homeLat: 52.53, homeLng: 13.38 }).where(eq(families.id, t.familyId)).run();
   }
-  const ctx = (userId = t.editor.id): ToolContext => ({
-    lang: "en",
-    calendar: new DrizzleCalendarStore(t.db),
-    finance: new DrizzleFinanceStore(t.db),
-    db: t.db,
-    familyId: t.familyId,
-    net: {} as NetOptions,
-    search: null,
+  const ctx = (userId = t.editor.id): ToolContext => toolContext(t, TODAY, {
     userId,
-    today: TODAY,
-    now: () => NOW,
     lookups,
   });
   const tool = async (name: string, args: unknown, c = ctx()): Promise<Res> =>

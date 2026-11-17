@@ -5,12 +5,9 @@
 
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanContext } from "@/lib/assistant/chat";
-import type { NetOptions } from "@/lib/assistant/net";
 import { runTool, type ToolContext, TOOLS, toolsFor } from "@/lib/assistant/tools";
 import { calendarEditSummary, cleanAppleCalendar, resolveCalendarOps } from "@/lib/assistant/tools/apple-calendar";
-import { DrizzleCalendarStore } from "@/lib/calendar/store";
-import { DrizzleFinanceStore } from "@/lib/finance/store";
-import { type AssistantTest, assistantTest, configure, type Event, net } from "@/lib/test/assistant";
+import { type AssistantTest, assistantTest, configure, type Event, net, toolContext } from "@/lib/test/assistant";
 
 let current: AssistantTest[] = [];
 afterEach(async () => {
@@ -41,18 +38,7 @@ const CONTEXT = { today: "2026-11-02", year: 2026, lang: "en", page: "calendar" 
 type Res = { ok: boolean; result: any; summary: string; appleCalendar?: any };
 
 function toolCtx(t: AssistantTest, appleCalendar = snapshot()): ToolContext {
-  return {
-    lang: "en",
-    calendar: new DrizzleCalendarStore(t.db),
-    finance: new DrizzleFinanceStore(t.db),
-    db: t.db,
-    familyId: t.familyId,
-    net: {} as NetOptions,
-    search: null,
-    userId: t.editor.id,
-    today: CONTEXT.today,
-    appleCalendar,
-  };
+  return toolContext(t, CONTEXT.today, { now: undefined, appleCalendar });
 }
 
 async function setup(worker = true) {
