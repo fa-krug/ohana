@@ -68,7 +68,7 @@ struct FinanceAccountChip: View {
 struct FinanceCategoryMenuItems: View {
     let tree: FinanceCategoryTree
     var selection: String?
-    var income: Bool? = nil
+    var income: Bool?
     let pick: (String?) -> Void
 
     var body: some View {
@@ -85,6 +85,15 @@ struct FinanceCategoryMenuItems: View {
         if !roots.usual.isEmpty { Divider() }
         ForEach(roots.rest) { node in
             FinanceCategoryMenuNode(tree: tree, node: node, selection: selection, pick: pick)
+        }
+    }
+}
+
+extension FinanceCategoryMenuItems {
+    /// A transaction's category menu: the categories used its way first; picking one sets it.
+    init(store: FinanceStore, transaction: FinanceTransaction) {
+        self.init(tree: store.tree, selection: transaction.categoryId, income: transaction.amountCents > 0) { id in
+            Task { await store.setCategory([transaction.id], to: id) }
         }
     }
 }
@@ -123,7 +132,7 @@ struct FinanceCategoryMenuNode: View {
 struct FinanceCategoryPickerList: View {
     let tree: FinanceCategoryTree
     @Binding var selection: String?
-    var income: Bool? = nil
+    var income: Bool?
     var noneTitle: LocalizedStringKey = "Uncategorized"
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""

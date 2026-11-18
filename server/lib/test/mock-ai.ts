@@ -167,11 +167,7 @@ function categorize(stream: boolean, system: string, messages: Msg[], canSearch:
     const rule = instructions.find((i) => words.some((w) => i.includes(w)));
     return rule ? match(rule) : null;
   };
-  const found = new Map<string, string>();
-  for (const m of messages.filter((m) => m.role === "tool")) {
-    const result = JSON.parse(textOf(m.content));
-    found.set(result.query, JSON.stringify(result.results ?? []).toLowerCase());
-  }
+  const found = searchesFound(messages);
   const answer: Record<string, string | null> = {};
   const unknown: string[] = [];
   for (const line of textOf(messages[1].content).split("\n")) {
@@ -184,6 +180,16 @@ function categorize(stream: boolean, system: string, messages: Msg[], canSearch:
     return reply(stream, "", { name: "web_search", args: { query: unknown[0] } });
   }
   return reply(stream, "```json\n" + JSON.stringify(answer) + "\n```");
+}
+
+/** What the web searches so far found, by query (lower case). */
+function searchesFound(messages: Msg[]): Map<string, string> {
+  const found = new Map<string, string>();
+  for (const m of messages.filter((m) => m.role === "tool")) {
+    const result = JSON.parse(textOf(m.content));
+    found.set(result.query, JSON.stringify(result.results ?? []).toLowerCase());
+  }
+  return found;
 }
 
 /** Waits `ms`, or fails once the request is aborted. */

@@ -16,7 +16,8 @@ struct FinanceDecodingTests {
         "payee":null,"description":[]},{"signature":"odd","something":"else"}],
         "benchmark":{"label":"Destatis","income":{"lowCents":400000,"highCents":400000},
         "expense":{"lowCents":250000,"highCents":320000},"categories":[{"categoryId":"groceries","lowCents":50000,"highCents":70000}]},
-        "categories":[{"id":"salary","name":"Salary","color":"#22c55e","icon":"💼","kind":"income","position":0,"parentId":null,"inCount":3,"outCount":0},
+        "categories":[{"id":"salary","name":"Salary","color":"#22c55e","icon":"💼","kind":"income","position":0,
+        "parentId":null,"inCount":3,"outCount":0},
         {"id":"groceries","name":"Groceries","color":"#f97316","icon":"🛒","kind":"expense","position":2,"parentId":null},
         {"id":"bakery","name":"Bakery","color":"#f97316","icon":"","kind":"expense","position":0,"parentId":"groceries"}],
         "accounts":[{"id":"giro","name":"Giro","color":"#3b82f6","icon":"","openingCents":10000,"position":0,"balanceCents":-5000}]}
@@ -199,7 +200,7 @@ struct FinanceCategoryTreeTests {
             category("kids", "Kids", position: 1, moneyIn: 2, moneyOut: 2),
             category("clothes", "Clothes", parent: "kids", moneyIn: 3, moneyOut: 1),
             category("salary", "Salary", position: 2, moneyIn: 12),
-            category("new", "New", position: 3),
+            category("new", "New", position: 3)
         ])
         // Subcategories count with their top-level category: Kids is mostly money in.
         #expect(tree.usuallyIncome("food") == false)

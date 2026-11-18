@@ -312,10 +312,7 @@ struct FinanceTransactionMenu: View {
         if store.canEdit {
             Button("Edit", systemImage: "pencil") { onEdit(t) }
             Menu {
-                FinanceCategoryMenuItems(tree: store.tree, selection: t.categoryId,
-                                         income: t.amountCents > 0) { id in
-                    Task { await store.setCategory([t.id], to: id) }
-                }
+                FinanceCategoryMenuItems(store: store, transaction: t)
             } label: {
                 Label("Category", systemImage: "tag")
             }
@@ -543,10 +540,7 @@ struct FinanceTransactionTable: View {
             .help(row.categoryPath)
             #else
             Menu {
-                FinanceCategoryMenuItems(tree: store.tree, selection: t.categoryId,
-                                         income: t.amountCents > 0) { id in
-                    Task { await store.setCategory([t.id], to: id) }
-                }
+                FinanceCategoryMenuItems(store: store, transaction: t)
             } label: {
                 FinanceCategoryLabel(category: row.categoryValue)
             }

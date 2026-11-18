@@ -396,8 +396,19 @@ export function cleanBenchmark(raw: unknown, categories: CategoryRow[]): Benchma
   if (b.categories !== undefined && b.categories !== null && !Array.isArray(b.categories)) {
     throw new HttpError(400, "benchmark.categories must be an array");
   }
+  const out: Benchmark = {
+    label: ((b.label as string | undefined) ?? "").trim().slice(0, MAX_BENCHMARK_LABEL),
+    income: cleanCentsRange(b.income, "benchmark.income"),
+    expense: cleanCentsRange(b.expense, "benchmark.expense"),
+    categories: benchmarkCategories((b.categories ?? []) as unknown[], categories),
+  };
+  return out.income || out.expense || out.categories.length ? out : null;
+}
+
+/** A statistic average's category ranges; a category given twice keeps its last range. */
+function benchmarkCategories(list: unknown[], categories: CategoryRow[]): Benchmark["categories"] {
   const byCategory = new Map<string, CentsRange>();
-  for (const raw of (b.categories ?? []) as unknown[]) {
+  for (const raw of list) {
     const c = objectOf(raw, "Each benchmark category");
     const id = findCategory(categories, c.categoryId ?? c.category).id;
     const range = cleanCentsRange(
@@ -407,13 +418,7 @@ export function cleanBenchmark(raw: unknown, categories: CategoryRow[]): Benchma
     if (range) byCategory.set(id, range);
     else byCategory.delete(id);
   }
-  const out: Benchmark = {
-    label: ((b.label as string | undefined) ?? "").trim().slice(0, MAX_BENCHMARK_LABEL),
-    income: cleanCentsRange(b.income, "benchmark.income"),
-    expense: cleanCentsRange(b.expense, "benchmark.expense"),
-    categories: [...byCategory].map(([categoryId, range]) => ({ categoryId, ...range })),
-  };
-  return out.income || out.expense || out.categories.length ? out : null;
+  return [...byCategory].map(([categoryId, range]) => ({ categoryId, ...range }));
 }
 
 /** The statistic average without categories that are gone since. */

@@ -290,9 +290,9 @@ private struct DemoFinance {
         for item in items {
             if item.amountCents > 0 { income += item.amountCents } else { expense -= item.amountCents }
             guard let id = item.categoryId else { continue }
-            var c = byCategory[id] ?? (moneyIn: 0, moneyOut: 0)
-            if item.amountCents > 0 { c.moneyIn += item.amountCents } else { c.moneyOut -= item.amountCents }
-            byCategory[id] = c
+            var sums = byCategory[id] ?? (moneyIn: 0, moneyOut: 0)
+            if item.amountCents > 0 { sums.moneyIn += item.amountCents } else { sums.moneyOut -= item.amountCents }
+            byCategory[id] = sums
         }
         let overlap = byCategory.values.reduce(0) { $0 + min($1.moneyIn, $1.moneyOut) }
         return (income - overlap, expense - overlap)

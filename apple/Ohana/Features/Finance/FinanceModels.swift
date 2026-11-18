@@ -17,8 +17,8 @@ nonisolated struct FinanceCategory: Codable, Hashable, Identifiable, Sendable {
     var parentId: String?
     /// How many of its own transactions brought money in / took it out (GET /finance only; nil
     /// from other answers, older servers and the demo): which way it is usually used.
-    var inCount: Int? = nil
-    var outCount: Int? = nil
+    var inCount: Int?
+    var outCount: Int?
 
     /// "🛒 Groceries".
     var label: String { icon.isEmpty ? name : "\(icon) \(name)" }
@@ -341,14 +341,6 @@ nonisolated struct FinanceBenchmark: Codable, Hashable, Sendable {
     var income: FinanceCentsRange?
     var expense: FinanceCentsRange?
     var categories: [FinanceBenchmarkCategory]
-
-    init(label: String, income: FinanceCentsRange?, expense: FinanceCentsRange?,
-         categories: [FinanceBenchmarkCategory]) {
-        self.label = label
-        self.income = income
-        self.expense = expense
-        self.categories = categories
-    }
 }
 
 /// GET /finance (overviewData), also the answer of PATCH /finance/settings and DELETE /finance.

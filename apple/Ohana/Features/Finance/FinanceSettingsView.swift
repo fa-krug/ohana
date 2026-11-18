@@ -709,7 +709,8 @@ struct FinanceCategoryEditor: View {
                 guard await store.updateCategory(category.id, patch) else { return }
             }
         } else {
-            guard await store.addCategory(name: trimmed, parent: store.category(parentId), color: hex, icon: iconText) != nil
+            let parent = store.category(parentId)
+            guard await store.addCategory(name: trimmed, parent: parent, color: hex, icon: iconText) != nil
             else { return }
         }
         dismiss()

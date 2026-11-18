@@ -59,7 +59,7 @@ struct DemoFinanceTests {
         // 500 to savings is a transfer and counts nothing. The refund (24.99, Other) lowers what
         // Other cost (34.85) instead of counting as income.
         #expect(month.incomeCents == 312_000 + 164_000 + 51_800 + 60_000)
-        let other = try list(october.merging(["category": "other"]) { a, _ in a })
+        let other = try list(october.merging(["category": "other"]) { first, _ in first })
         #expect(other.incomeCents == 0 && other.expenseCents == 3_485 - 2_499)
         let legs = month.transactions.filter { $0.transferId != nil }
         #expect(legs.count == 2 && Set(legs.compactMap(\.accountId)) == ["acc-checking", "acc-savings"])
