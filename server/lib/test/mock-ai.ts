@@ -157,7 +157,7 @@ function reply(stream: boolean, content: string, call?: Call | Call[]) {
  *  found; unknown payees are searched once. */
 function categorize(stream: boolean, system: string, messages: Msg[], canSearch: boolean) {
   const [head, standing = ""] = system.split("The family's standing instructions (they come first):\n");
-  const categories = [...head.matchAll(/^- ([a-z0-9-]+): (?:[^\w\s]\S* )?([^(\n]+?) \(/gmu)];
+  const categories = [...head.matchAll(/^- ([a-z0-9-]+): (?:[^\w\s]\S* )?([^(\n]+?)(?: \(|$)/gmu)];
   const instructions = [...standing.matchAll(/^- (.+)$/gm)].map((m) => m[1].toLowerCase());
   const match = (text: string) =>
     categories.find(([, id, name]) => text.includes(id) || text.includes(name.toLowerCase()))

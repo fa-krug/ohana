@@ -210,11 +210,19 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   export file's import is all or nothing), `finance.ts` (routes under
   `/api/v1/families/{id}/finance/...`, `applyTransactionOps` with `inverse` undo ops, transfer
   groups and split bookings with net counting `netItems`, `matchSplits` / `matchTransfers` /
-  `autoCombine`, import hashes, `financeSummary`, the statistic average (benchmark; `net`, default on: within a top-level
-  category money in and out cancel out, so a refund lowers its spending; the app's
-  `benchmarkValues`), `exportFinance` /
+  `autoCombine`, import hashes, `financeSummary`, the statistic average (benchmark: within a top-level
+  category money in and out cancel out, the app's `benchmarkValues`; its old `net` option is ignored,
+  always true), `exportFinance` /
   `parseFinanceImport` / `copyFinance`), `category-tree.ts`, `csv.ts` and `money.ts`
-  (shared with the client) are ported with few changes; `summary.ts` is the overview card,
+  (shared with the client) are ported with few changes. **No income or expense categories**
+  (migration `0040`: `kind` is always "both", an older app's is ignored): any category takes money in
+  and out, and within a category they cancel out in every total (`netTotals`: the summary over the
+  range for totals and categories, within each month for the months, the list's totals, insights'
+  *changes*; uncategorized money as it is), so a refund or a sale lowers what its category cost;
+  GET /finance's categories carry `inCount` / `outCount` (`categoryCounts`), which the app's pickers
+  (`FinanceCategoryTree.roots(for:)`, the usual way first) and the comparison (`usuallyIncome`) read,
+  and categorizing tells the model each category's usual way (`usualWay`) and prefers similar rows
+  going the same way (`matchSimilar`). `summary.ts` is the overview card,
   `presets.ts` the default categories `createFamily` adds (creator's language). Tables
   `fin_settings` (currency, CSV mappings and benchmark as JSON text), `fin_categories` (tree
   via `parent_id`), `fin_accounts`, `fin_transactions` (`transfer_id`, `split_of`,

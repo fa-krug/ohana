@@ -29,9 +29,11 @@ struct FinanceCategoryPick: Identifiable, Hashable {
     var income: Bool
     var id: String { (income ? "income:" : "expense:") + (categoryId ?? "none") }
 
-    /// Its transactions (subcategories included), of its kind.
+    /// Its transactions (subcategories included): of a category all of them, as money in and
+    /// out cancel out in its total (the list's totals count the same way); uncategorized ones of
+    /// its kind.
     var filter: FinanceFilter {
-        FinanceFilter(category: categoryId ?? "none", kind: income ? .income : .expense)
+        FinanceFilter(category: categoryId ?? "none", kind: categoryId == nil ? (income ? .income : .expense) : .all)
     }
 }
 

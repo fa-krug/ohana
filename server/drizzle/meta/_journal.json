@@ -281,6 +281,13 @@
       "when": 1794910978492,
       "tag": "0039_health",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "6",
+      "when": 1795012603299,
+      "tag": "0040_categories_both",
+      "breakpoints": true
     }
   ]
 }

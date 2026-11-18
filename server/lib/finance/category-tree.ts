@@ -1,6 +1,6 @@
 // Finance categories form a tree: a category may have a parent, at any depth (Food > Groceries
 // > Bakery). Transactions can sit on any level; a category's totals include its subcategories.
-// A subcategory has the kind (income / expense) of its top-level category.
+// Every category holds money in and out alike (they cancel out within it).
 
 import type { CategoryRow } from "./store";
 

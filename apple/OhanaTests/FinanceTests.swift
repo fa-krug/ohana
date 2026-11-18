@@ -16,7 +16,7 @@ struct FinanceDecodingTests {
         "payee":null,"description":[]},{"signature":"odd","something":"else"}],
         "benchmark":{"label":"Destatis","income":{"lowCents":400000,"highCents":400000},
         "expense":{"lowCents":250000,"highCents":320000},"categories":[{"categoryId":"groceries","lowCents":50000,"highCents":70000}]},
-        "categories":[{"id":"salary","name":"Salary","color":"#22c55e","icon":"💼","kind":"income","position":0,"parentId":null},
+        "categories":[{"id":"salary","name":"Salary","color":"#22c55e","icon":"💼","kind":"income","position":0,"parentId":null,"inCount":3,"outCount":0},
         {"id":"groceries","name":"Groceries","color":"#f97316","icon":"🛒","kind":"expense","position":2,"parentId":null},
         {"id":"bakery","name":"Bakery","color":"#f97316","icon":"","kind":"expense","position":0,"parentId":"groceries"}],
         "accounts":[{"id":"giro","name":"Giro","color":"#3b82f6","icon":"","openingCents":10000,"position":0,"balanceCents":-5000}]}
@@ -25,11 +25,11 @@ struct FinanceDecodingTests {
         #expect(overview.currency == "EUR")
         #expect(overview.categories.count == 3)
         #expect(overview.categories[2].parentId == "groceries")
-        #expect(overview.categories[0].kind == .income)
+        // The kind (from older servers) is ignored; the counts come from GET /finance only.
+        #expect(overview.categories[0].inCount == 3 && overview.categories[1].inCount == nil)
         #expect(overview.accounts[0].balanceCents == -5000)
         #expect(overview.benchmark?.expense == FinanceCentsRange(lowCents: 250000, highCents: 320000))
         #expect(overview.benchmark?.categories.first?.categoryId == "groceries")
-        #expect(overview.benchmark?.net == true) // not sent by an older server
         // The mapping the app can't read is kept as JSON but not offered.
         #expect(overview.csvMappings.count == 2)
         #expect(overview.mappings.count == 1)
@@ -152,8 +152,9 @@ struct FinanceDecodingTests {
 
 struct FinanceCategoryTreeTests {
     private func category(_ id: String, _ name: String, parent: String? = nil, position: Int = 0,
-                          kind: FinanceCategoryKind = .expense) -> FinanceCategory {
-        FinanceCategory(id: id, name: name, color: "#000000", icon: "", kind: kind, position: position, parentId: parent)
+                          moneyIn: Int? = nil, moneyOut: Int? = nil) -> FinanceCategory {
+        FinanceCategory(id: id, name: name, color: "#000000", icon: "", position: position, parentId: parent,
+                        inCount: moneyIn, outCount: moneyOut)
     }
 
     @Test func ordersDepthFirstBySiblingPosition() {
@@ -162,7 +163,7 @@ struct FinanceCategoryTreeTests {
             category("bakery", "Bakery", parent: "groceries", position: 0),
             category("groceries", "Groceries", parent: "food", position: 1),
             category("out", "Eating out", parent: "food", position: 0),
-            category("salary", "Salary", position: 0, kind: .income),
+            category("salary", "Salary", position: 0),
             category("orphan", "Orphan", parent: "gone", position: 2),
         ])
         #expect(tree.ordered.map(\.id) == ["salary", "food", "out", "groceries", "bakery", "orphan"])
@@ -191,10 +192,28 @@ struct FinanceCategoryTreeTests {
         #expect(tree.reorder("a", by: -1).isEmpty)
     }
 
-    @Test func fitsTheSign() {
-        #expect(FinanceCategoryTree.fits(category("x", "X", kind: .both), income: true))
-        #expect(FinanceCategoryTree.fits(category("x", "X", kind: .income), income: true))
-        #expect(!FinanceCategoryTree.fits(category("x", "X", kind: .income), income: false))
+    @Test func putsTheCategoriesUsedThatWayFirst() {
+        let tree = FinanceCategoryTree([
+            category("food", "Food", position: 0, moneyOut: 9),
+            category("groceries", "Groceries", parent: "food", moneyIn: 1, moneyOut: 20),
+            category("kids", "Kids", position: 1, moneyIn: 2, moneyOut: 2),
+            category("clothes", "Clothes", parent: "kids", moneyIn: 3, moneyOut: 1),
+            category("salary", "Salary", position: 2, moneyIn: 12),
+            category("new", "New", position: 3),
+        ])
+        // Subcategories count with their top-level category: Kids is mostly money in.
+        #expect(tree.usuallyIncome("food") == false)
+        #expect(tree.usuallyIncome("kids") == true)
+        #expect(tree.usuallyIncome("new") == nil)
+        let money = tree.roots(for: true)
+        #expect(money.usual.map(\.id) == ["kids", "salary"])
+        #expect(money.rest.map(\.id) == ["food", "new"])
+        #expect(tree.ordered(for: true).map(\.id) == ["kids", "clothes", "salary", "food", "groceries", "new"])
+        // Without a way, or when it doesn't tell them apart: the tree's order, everything offered.
+        #expect(tree.roots(for: nil).usual.isEmpty && tree.roots(for: nil).rest.count == 4)
+        #expect(tree.ordered(for: nil).map(\.id) == tree.ordered.map(\.id))
+        let unused = FinanceCategoryTree([category("a", "A"), category("b", "B", position: 1)])
+        #expect(unused.roots(for: false).usual.isEmpty && unused.roots(for: false).rest.count == 2)
     }
 
     @Test func breaksDownByCategoryWithSubcategories() {
@@ -295,10 +314,10 @@ struct FinancePeriodTests {
     }
 
     @Test func netsRefundsForTheBenchmark() {
-        func cat(_ id: String, _ kind: FinanceCategoryKind, parent: String? = nil) -> FinanceCategory {
-            FinanceCategory(id: id, name: id, color: "#000000", icon: "", kind: kind, position: 0, parentId: parent)
+        func cat(_ id: String, parent: String? = nil) -> FinanceCategory {
+            FinanceCategory(id: id, name: id, color: "#000000", icon: "", position: 0, parentId: parent)
         }
-        let categories = [cat("clothes", .expense), cat("shoes", .expense, parent: "clothes"), cat("salary", .income)]
+        let categories = [cat("clothes"), cat("shoes", parent: "clothes"), cat("salary")]
         let tree = FinanceCategoryTree(categories)
         let summary = FinanceSummary(currency: "EUR", incomeCents: 400_000 + 8_000 + 2_000 + 500, expenseCents: 30_000 + 1_000 + 700, count: 6,
                                      months: [FinanceSummaryMonth(month: "2026-07", incomeCents: 410_500, expenseCents: 31_700)],
@@ -309,9 +328,7 @@ struct FinancePeriodTests {
                                          FinanceSummaryCategory(categoryId: nil, incomeCents: 500, expenseCents: 700, count: 2),
                                      ])
         let column = FinanceComparison.from(summary, range: FinanceComparisonRange(key: .month, average: false, from: "2026-07-01", to: "2026-07-31"))
-        let gross = column.benchmarkValues(tree, net: false)
-        #expect(gross.expense["clothes"] == 30_000 && gross.income["clothes"] == 10_000 && gross.expenseCents == 31_700)
-        let net = column.benchmarkValues(tree, net: true)
+        let net = column.benchmarkValues(tree)
         // Refunds (also a subcategory's) lower the spending; uncategorized money stays as it is.
         #expect(net.expense["clothes"] == 20_000 && net.income["clothes"] == 0)
         #expect(net.income["salary"] == 399_000 && net.expense["salary"] == 0)

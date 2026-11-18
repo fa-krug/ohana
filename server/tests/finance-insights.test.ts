@@ -125,6 +125,26 @@ it("ranks the categories whose spending grew, with the payees behind it", () => 
   ]);
 });
 
+it("counts a category's money in against its spending", () => {
+  const baseline = { from: "2025-11-01", to: "2026-10-31", months: 12 };
+  const period = { from: "2026-11-01", to: TODAY, months: 1 };
+  const kids = (n: number) => item(monthDay("2025-11", n, "10"), -6000, "Kids shop", "kids");
+  const items = [
+    ...Array.from({ length: 12 }, (_, i) => kids(i)),
+    // More clothes bought this month, but most of it sold again: no change.
+    item("2026-11-02", -12000, "Kids shop", "kids"),
+    item("2026-11-03", 8000, "Vinted", "kids"),
+    // Uncategorized money in doesn't lower anything.
+    item("2026-11-04", -10000, "Shop"),
+    item("2026-11-05", 20000, "Someone"),
+    ...Array.from({ length: 12 }, (_, i) => item(monthDay("2025-11", i, "11"), -1000, "Shop")),
+    // A category that only takes money in never shows.
+    item("2026-11-06", 500000, "Employer", "salary"),
+  ];
+  const changes = spendingChanges(items, period, baseline);
+  expect(changes.map((c) => [c.categoryId, c.currentCents, c.usualCents])).toEqual([[null, 10000, 1000]]);
+});
+
 it("finds small amounts that add up, but not the regular ones", () => {
   const items = [
     ...Array.from({ length: 9 }, (_, i) => item(`2026-11-0${i + 1}`, -320, "Bäckerei Schmidt", "groceries")),

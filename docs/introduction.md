@@ -46,7 +46,8 @@ Ready to try it? Go to the [quick start](/quickstart).
 ## Finance
 
 - Transactions, accounts and a **category tree**, transfers between accounts and **split
-  bookings**.
+  bookings**. Any category takes money in and out: a refund, or selling the children's old
+  clothes, lowers what that category cost instead of counting as income.
 - **CSV import** of bank statements with saved formats per bank, duplicates recognized.
 - **Bank sync** of an account or a Visa credit card with **comdirect**: the server fetches the
   booked transactions, you confirm the login with a TAN

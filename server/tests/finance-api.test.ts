@@ -107,9 +107,11 @@ describe("finance categories and settings", () => {
       name: "Salary",
       color: "#22c55e",
       icon: "💼",
-      kind: "income",
+      kind: "both", // every category takes money in and out
       position: 0,
       parentId: null,
+      inCount: 0,
+      outCount: 0,
     });
     expect(res.data.categories).toHaveLength(13);
     const de = createFamily(db, { name: "Krug", editorId: owner.id, lang: "de" }, NOW);
@@ -123,8 +125,9 @@ describe("finance categories and settings", () => {
     const add = await call("POST", `${f}/categories`, { name: "Pets", color: "#ff0000", icon: "🐶" });
     expect(add.status).toBe(201);
     expect(add.data.id).toBe("pets");
-    expect(add.data.kind).toBe("expense");
-    const patched = await call("PATCH", `${f}/categories/Pets`, { kind: "both", position: 99 });
+    expect(add.data.kind).toBe("both");
+    // An older app's kind is ignored.
+    const patched = await call("PATCH", `${f}/categories/Pets`, { kind: "income", position: 99 });
     expect([patched.data.kind, patched.data.position]).toEqual(["both", 99]);
     expect((await call("POST", `${f}/categories`, { name: "X", color: "red" })).status).toBe(400);
 
@@ -168,7 +171,7 @@ describe("finance categories and settings", () => {
         { categoryId: "groceries", lowCents: 60000, highCents: 80000 },
         { categoryId: "salary", lowCents: 1, highCents: 1 },
       ],
-      net: true, // by default refunds count against their category's spending
+      net: true, // refunds always count against their category's spending (older apps read it)
     });
     // Other settings leave it alone; a deleted category drops out of it.
     await call("PATCH", `${f}/settings`, { currency: "CHF" });
@@ -187,15 +190,14 @@ describe("finance categories and settings", () => {
       { label: 3, income: 1 },
       { categories: [{ categoryId: "nope", cents: 1 }] },
       { categories: "groceries" },
-      { income: 1, net: "no" },
       "x",
     ]) {
       const res = await call("PATCH", `${f}/settings`, { benchmark: bad });
       expect([400, 404], JSON.stringify(bad)).toContain(res.status);
     }
-    // Comparing gross amounts is kept; an average stored before the option is net.
+    // Money in and out within a category always cancel out: an older app's net is ignored.
     const gross = await call("PATCH", `${f}/settings`, { benchmark: { income: 1, net: false } });
-    expect(gross.data.benchmark.net).toBe(false);
+    expect(gross.data.benchmark.net).toBe(true);
     const old = { label: "", income: { lowCents: 1, highCents: 1 }, expense: null, categories: [] };
     db.update(finSettings).set({ benchmark: JSON.stringify(old) }).where(eq(finSettings.familyId, s.id)).run();
     expect((await call("GET", f)).data.benchmark.net).toBe(true);
@@ -210,22 +212,21 @@ describe("finance categories and settings", () => {
     const { call, s, f, newFamily } = financeFamily();
     const food = (await call("POST", `${f}/categories`, { name: "Food", color: "#ff0000" })).data;
     expect(food.parentId).toBeNull();
-    // Moving a category under another; a subcategory has its top-level category's kind.
+    // Moving a category under another.
     const moved = await call("PATCH", `${f}/categories/groceries`, { parentId: "Food" });
-    expect([moved.data.parentId, moved.data.kind]).toEqual(["food", "expense"]);
+    expect([moved.data.parentId, moved.data.kind]).toEqual(["food", "both"]);
     const bakery = await call("POST", `${f}/categories`, {
       name: "Bakery",
       color: "#00ff00",
       kind: "income",
       parentId: "food > GROCERIES",
     });
-    expect([bakery.status, bakery.data.parentId, bakery.data.kind]).toEqual([201, "groceries", "expense"]);
+    expect([bakery.status, bakery.data.parentId, bakery.data.kind]).toEqual([201, "groceries", "both"]);
     // Not into itself or one of its subcategories.
     for (const parentId of ["food", "bakery"]) {
       expect((await call("PATCH", `${f}/categories/food`, { parentId })).status).toBe(400);
     }
-    // The top level's kind goes down the tree; a subcategory's can't be set.
-    await call("PATCH", `${f}/categories/food`, { kind: "both" });
+    // There are no kinds any more: an older app's is ignored.
     await call("PATCH", `${f}/categories/bakery`, { kind: "income" });
     const kinds = async () =>
       Object.fromEntries((await call("GET", f)).data.categories.map((c: any) => [c.id, [c.parentId, c.kind]]));
@@ -435,6 +436,59 @@ describe("finance transactions", () => {
     ]);
     expect(res.data.categories[0]).toEqual({ categoryId: "groceries", incomeCents: 0, expenseCents: 12000, count: 2 });
     expect(res.data.categories.some((c: any) => c.categoryId === null && c.expenseCents === 2000)).toBe(true);
+  });
+
+  it("cancels out money in and out within a category", async () => {
+    const { call, f } = financeFamily();
+    await call("POST", `${f}/transactions`, {
+      ops: [
+        { date: "2026-03-02", amountCents: -30000, payee: "Kids shop", categoryId: "kids" },
+        // Selling the children's clothes lowers what they cost: not income.
+        { date: "2026-03-20", amountCents: 8000, payee: "Vinted", categoryId: "kids" },
+        // Across months: each month on its own, the range as a whole.
+        { date: "2026-04-05", amountCents: 5000, payee: "Vinted", categoryId: "kids" },
+        { date: "2026-03-31", amountCents: 300000, categoryId: "salary" },
+        { date: "2026-03-15", amountCents: -2000, categoryId: "salary" },
+        // A category that took in more than it spent counts as income.
+        { date: "2026-03-10", amountCents: -1000, categoryId: "shopping" },
+        { date: "2026-03-11", amountCents: 4000, categoryId: "shopping" },
+        // Uncategorized money counts as it is.
+        { date: "2026-03-12", amountCents: -700 },
+        { date: "2026-03-13", amountCents: 900 },
+      ],
+    });
+    const res = (await call("GET", `${f}/summary?from=2026-01-01&to=2026-12-31`)).data;
+    const byCategory = Object.fromEntries(
+      res.categories.map((c: any) => [c.categoryId ?? "none", [c.incomeCents, c.expenseCents, c.count]]),
+    );
+    expect(byCategory).toEqual({
+      kids: [0, 17000, 3],
+      salary: [298000, 0, 2],
+      shopping: [3000, 0, 2],
+      none: [900, 700, 2],
+    });
+    expect([res.incomeCents, res.expenseCents]).toEqual([298000 + 3000 + 900, 17000 + 700]);
+    expect(res.months).toEqual([
+      { month: "2026-03", incomeCents: 298000 + 3000 + 900, expenseCents: 22000 + 700 },
+      { month: "2026-04", incomeCents: 5000, expenseCents: 0 },
+    ]);
+
+    // The list's totals count the same way: a category's list shows what it cost.
+    const list = async (q: string) => (await call("GET", `${f}/transactions?${q}`)).data;
+    const kids = await list("category=kids");
+    expect([kids.total, kids.incomeCents, kids.expenseCents]).toEqual([3, 0, 17000]);
+    const all = await list("from=2026-03-01&to=2026-03-31");
+    expect([all.incomeCents, all.expenseCents]).toEqual([298000 + 3000 + 900, 22000 + 700]);
+    // Money out alone (kind=expense) is what went out.
+    expect((await list("category=kids&kind=expense")).expenseCents).toBe(30000);
+
+    // GET /finance says which way each category was used, for the app's pickers.
+    const cats = (await call("GET", f)).data.categories;
+    const counts = (id: string) => {
+      const c = cats.find((c: any) => c.id === id);
+      return [c.inCount, c.outCount];
+    };
+    expect([counts("kids"), counts("salary"), counts("housing")]).toEqual([[2, 1], [1, 1], [0, 0]]);
   });
 
   it("exports and imports the finances", async () => {

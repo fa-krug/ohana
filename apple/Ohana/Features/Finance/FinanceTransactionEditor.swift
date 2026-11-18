@@ -204,10 +204,6 @@ struct FinanceTransactionEditor: View {
             }
             .pickerStyle(.segmented)
             .labelsHidden()
-            .onChange(of: draft.income) {
-                // A category of the other kind doesn't fit any more.
-                if let c = store.category(draft.categoryId), !FinanceCategoryTree.fits(c, income: draft.income) { draft.categoryId = nil }
-            }
             LabeledContent {
                 TextField("Amount", text: $draft.amount, prompt: Text(FinanceMoney.placeholder))
                     .multilineTextAlignment(.trailing)
@@ -231,8 +227,7 @@ struct FinanceTransactionEditor: View {
         }
         Section {
             NavigationLink {
-                FinanceCategoryPickerList(tree: store.tree, selection: $draft.categoryId,
-                                          fits: { FinanceCategoryTree.fits($0, income: draft.income) })
+                FinanceCategoryPickerList(tree: store.tree, selection: $draft.categoryId, income: draft.income)
             } label: {
                 LabeledContent("Category") { FinanceCategoryLabel(category: store.category(draft.categoryId)) }
             }

@@ -166,37 +166,34 @@ private struct DemoFinance {
         return rows
     }
 
-    /// GET /finance/summary?from&to (financeSummary).
+    /// GET /finance/summary?from&to (financeSummary): within a category money in and out cancel
+    /// out, over the range for the totals and the categories, within the month for the months.
     func summary(from: String?, to: String?) -> FinanceSummary {
-        var months: [String: FinanceSummaryMonth] = [:]
-        var categories: [FinanceSummaryCategory] = []
-        var income = 0, expense = 0
         let items = netItems(inRange(from, to))
+        var byMonth: [String: [NetItem]] = [:]
+        var byCategory: [String?: [NetItem]] = [:]
+        var order: [String?] = []
         for item in items {
-            let month = String(item.date.prefix(7))
-            var m = months[month] ?? FinanceSummaryMonth(month: month, incomeCents: 0, expenseCents: 0)
-            if !categories.contains(where: { $0.categoryId == item.categoryId }) {
-                categories.append(FinanceSummaryCategory(categoryId: item.categoryId, incomeCents: 0, expenseCents: 0, count: 0))
-            }
-            let index = categories.firstIndex { $0.categoryId == item.categoryId }!
-            if item.amountCents > 0 {
-                m.incomeCents += item.amountCents
-                categories[index].incomeCents += item.amountCents
-                income += item.amountCents
-            } else {
-                m.expenseCents -= item.amountCents
-                categories[index].expenseCents -= item.amountCents
-                expense -= item.amountCents
-            }
-            categories[index].count += 1
-            months[month] = m
+            byMonth[String(item.date.prefix(7)), default: []].append(item)
+            if byCategory[item.categoryId] == nil { order.append(item.categoryId) }
+            byCategory[item.categoryId, default: []].append(item)
+        }
+        let months = byMonth.map { month, list -> FinanceSummaryMonth in
+            let (income, expense) = totals(list)
+            return FinanceSummaryMonth(month: month, incomeCents: income, expenseCents: expense)
+        }
+        let categories = order.map { id -> FinanceSummaryCategory in
+            let list = byCategory[id] ?? []
+            let (income, expense) = totals(list)
+            return FinanceSummaryCategory(categoryId: id, incomeCents: income, expenseCents: expense, count: list.count)
         }
         let byExpense = categories.enumerated()
             .sorted { a, b in a.element.expenseCents != b.element.expenseCents
                 ? a.element.expenseCents > b.element.expenseCents : a.offset < b.offset }
             .map(\.element)
+        let (income, expense) = totals(items)
         return FinanceSummary(currency: base.currency, incomeCents: income, expenseCents: expense, count: items.count,
-                              months: months.values.sorted { $0.month < $1.month }, categories: byExpense)
+                              months: months.sorted { $0.month < $1.month }, categories: byExpense)
     }
 
     /// GET /finance/transfers/suggestions?from&to (matchTransfers over the transactions that
@@ -285,10 +282,20 @@ private struct DemoFinance {
         }
     }
 
+    /// Income and expenses, money in and out within a category cancelling out (netTotals);
+    /// uncategorized money as it is.
     private func totals(_ items: [NetItem]) -> (income: Int, expense: Int) {
-        items.reduce((0, 0)) { sum, item in
-            item.amountCents > 0 ? (sum.0 + item.amountCents, sum.1) : (sum.0, sum.1 - item.amountCents)
+        var income = 0, expense = 0
+        var byCategory: [String: (moneyIn: Int, moneyOut: Int)] = [:]
+        for item in items {
+            if item.amountCents > 0 { income += item.amountCents } else { expense -= item.amountCents }
+            guard let id = item.categoryId else { continue }
+            var c = byCategory[id] ?? (moneyIn: 0, moneyOut: 0)
+            if item.amountCents > 0 { c.moneyIn += item.amountCents } else { c.moneyOut -= item.amountCents }
+            byCategory[id] = c
         }
+        let overlap = byCategory.values.reduce(0) { $0 + min($1.moneyIn, $1.moneyOut) }
+        return (income - overlap, expense - overlap)
     }
 
     /// As the list shows it: the transfer id only on legs of a transfer.

@@ -63,21 +63,27 @@ struct FinanceAccountChip: View {
 }
 
 /// The category tree as menu items: a category with subcategories opens a submenu holding
-/// itself and them. `fits` leaves out top-level categories (with their subcategories) it rejects.
+/// itself and them. `income` (the transaction's way, if known) puts the top-level categories
+/// usually used that way first; every category takes either.
 struct FinanceCategoryMenuItems: View {
     let tree: FinanceCategoryTree
     var selection: String?
-    var fits: (FinanceCategory) -> Bool = { _ in true }
+    var income: Bool? = nil
     let pick: (String?) -> Void
 
     var body: some View {
+        let roots = tree.roots(for: income)
         Button {
             pick(nil)
         } label: {
             if selection == nil { Label("Uncategorized", systemImage: "checkmark") } else { Text("Uncategorized") }
         }
         Divider()
-        ForEach(tree.children(of: nil).filter { fits($0.category) }) { node in
+        ForEach(roots.usual) { node in
+            FinanceCategoryMenuNode(tree: tree, node: node, selection: selection, pick: pick)
+        }
+        if !roots.usual.isEmpty { Divider() }
+        ForEach(roots.rest) { node in
             FinanceCategoryMenuNode(tree: tree, node: node, selection: selection, pick: pick)
         }
     }
@@ -112,19 +118,20 @@ struct FinanceCategoryMenuNode: View {
     }
 }
 
-/// A list to pick a category from (forms): the tree indented, searchable by path.
+/// A list to pick a category from (forms): the tree indented, searchable by path; with
+/// `income` the top-level categories usually used that way first.
 struct FinanceCategoryPickerList: View {
     let tree: FinanceCategoryTree
     @Binding var selection: String?
-    var fits: (FinanceCategory) -> Bool = { _ in true }
+    var income: Bool? = nil
     var noneTitle: LocalizedStringKey = "Uncategorized"
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
 
     private var nodes: [FinanceCategoryTree.Node] {
-        let fitting = tree.ordered.filter { fits($0.category) }
+        let all = tree.ordered(for: income)
         let q = query.trimmingCharacters(in: .whitespaces)
-        return q.isEmpty ? fitting : fitting.filter { tree.path($0.id).localizedCaseInsensitiveContains(q) }
+        return q.isEmpty ? all : all.filter { tree.path($0.id).localizedCaseInsensitiveContains(q) }
     }
 
     var body: some View {

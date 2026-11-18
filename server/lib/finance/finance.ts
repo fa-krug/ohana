@@ -17,8 +17,6 @@ import { categoryTree, PATH_SEPARATOR } from "./category-tree";
 import {
   type AccountRow,
   type Benchmark,
-  CATEGORY_KINDS,
-  type CategoryKind,
   type CategoryRow,
   type CentsRange,
   type FinanceContents,
@@ -51,92 +49,79 @@ const DEFAULT_CATEGORIES: {
   id: string;
   icon: string;
   color: string;
-  kind: CategoryKind;
   name: Record<Lang, string>;
 }[] = [
   {
     id: "salary",
     icon: "💼",
     color: "#22c55e",
-    kind: "income",
     name: { en: "Salary", de: "Gehalt" },
   },
   {
     id: "other-income",
     icon: "💰",
     color: "#14b8a6",
-    kind: "income",
     name: { en: "Other income", de: "Sonstige Einnahmen" },
   },
   {
     id: "groceries",
     icon: "🛒",
     color: "#f97316",
-    kind: "expense",
     name: { en: "Groceries", de: "Lebensmittel" },
   },
   {
     id: "housing",
     icon: "🏠",
     color: "#8b5cf6",
-    kind: "expense",
     name: { en: "Housing", de: "Wohnen" },
   },
   {
     id: "utilities",
     icon: "💡",
     color: "#eab308",
-    kind: "expense",
     name: { en: "Utilities", de: "Nebenkosten" },
   },
   {
     id: "mobility",
     icon: "🚗",
     color: "#3b82f6",
-    kind: "expense",
     name: { en: "Mobility", de: "Mobilität" },
   },
   {
     id: "insurance",
     icon: "🛡️",
     color: "#64748b",
-    kind: "expense",
     name: { en: "Insurance", de: "Versicherungen" },
   },
   {
     id: "health",
     icon: "🩺",
     color: "#ef4444",
-    kind: "expense",
     name: { en: "Health", de: "Gesundheit" },
   },
-  { id: "kids", icon: "🧸", color: "#ec4899", kind: "expense", name: { en: "Kids", de: "Kinder" } },
+  { id: "kids", icon: "🧸", color: "#ec4899", name: { en: "Kids", de: "Kinder" } },
   {
     id: "leisure",
     icon: "🎉",
     color: "#a855f7",
-    kind: "expense",
     name: { en: "Leisure", de: "Freizeit" },
   },
   {
     id: "vacation",
     icon: "🏖️",
     color: "#06b6d4",
-    kind: "expense",
     name: { en: "Vacation", de: "Urlaub" },
   },
   {
     id: "shopping",
     icon: "🛍️",
     color: "#84cc16",
-    kind: "expense",
     name: { en: "Shopping", de: "Einkäufe" },
   },
   {
     id: "other",
     icon: "📦",
     color: "#94a3b8",
-    kind: "both",
     name: { en: "Other", de: "Sonstiges" },
   },
 ];
@@ -148,7 +133,6 @@ export function defaultCategories(familyId: string, lang: Lang): CategoryRow[] {
     name: c.name[lang],
     color: c.color,
     icon: c.icon,
-    kind: c.kind,
     position,
     parent_id: null,
   }));
@@ -169,14 +153,6 @@ function cleanColor(v: unknown): string {
     throw new HttpError(400, "color must look like #22c55e");
   }
   return v.toLowerCase();
-}
-
-function cleanKind(v: unknown): CategoryKind {
-  if (v === undefined) return "expense";
-  if (!CATEGORY_KINDS.includes(v as CategoryKind)) {
-    throw new HttpError(400, `kind must be one of ${CATEGORY_KINDS.join(", ")}`);
-  }
-  return v as CategoryKind;
 }
 
 function cleanDate(v: unknown, field = "date"): string {
@@ -242,13 +218,9 @@ export function findCategory(categories: CategoryRow[], ref: unknown): CategoryR
   return c;
 }
 
-/** The kind of a top-level category: a subcategory has its top-level category's. */
-function kindUnder(categories: CategoryRow[], parentId: string | null, kind: CategoryKind) {
-  return parentId ? categoryTree(categories).atLevel(parentId, 1).kind : kind;
-}
-
-/** A new category from {name, color, icon, kind, parentId (id, name or path; none: top
- *  level)}, added after the family's others. A subcategory gets the kind of its parent. */
+/** A new category from {name, color, icon, parentId (id, name or path; none: top level)},
+ *  added after the family's others. Every category holds money in and out alike (`kind`, from
+ *  older apps, is ignored). */
 export function newCategory(
   familyId: string,
   categories: CategoryRow[],
@@ -263,18 +235,16 @@ export function newCategory(
     name,
     color: cleanColor(body.color),
     icon: text(body.icon, "icon", 16),
-    kind: kindUnder(categories, parent, cleanKind(body.kind)),
     position: categories.reduce((m, c) => Math.max(m, c.position + 1), 0),
     parent_id: parent,
   };
 }
 
 /**
- * The category with any of {name, color, icon, kind, position, parentId} changed, first, and
- * its subcategories whose kind changes with it. parentId (id, name or path; null / "": top
- * level) moves it with its subcategories, to the end of its new siblings unless position is
- * given; not into itself or one of its subcategories. Only a top-level category's kind can be
- * set; a subcategory has its top-level category's.
+ * The category with any of {name, color, icon, position, parentId} changed (`kind` is
+ * ignored). parentId (id, name or path; null / "": top level) moves it with its subcategories,
+ * to the end of its new siblings unless position is given; not into itself or one of its
+ * subcategories.
  */
 export function changedCategories(
   categories: CategoryRow[],
@@ -302,14 +272,7 @@ export function changedCategories(
     }
     next.position = body.position as number;
   }
-  const kind = body.kind === undefined ? current.kind : cleanKind(body.kind);
-  next.kind = kindUnder(categories, next.parent_id ?? null, kind);
-  const out = [next];
-  for (const id of tree.subtree(current.id)) {
-    const c = tree.byId.get(id)!;
-    if (id !== current.id && c.kind !== next.kind) out.push({ ...c, kind: next.kind });
-  }
-  return out;
+  return [next];
 }
 
 /** An account reference by id or (case-insensitive) name; null / "" clears it. */
@@ -331,13 +294,15 @@ function uniqueId(base: string, taken: Set<string>, fallback = "category"): stri
 
 // ------------------------------------------------------------------ public shapes
 
+/** A category for the API. `kind` is always "both" (every category holds money in and out),
+ *  for older apps that still read it. */
 export function publicCategory(c: CategoryRow) {
   return {
     id: c.id,
     name: c.name,
     color: c.color,
     icon: c.icon,
-    kind: c.kind,
+    kind: "both" as const,
     position: c.position,
     parentId: c.parent_id ?? null,
   };
@@ -419,8 +384,8 @@ function cleanCentsRange(v: unknown, field: string): CentsRange | null {
  * A statistic average from {label, income, expense, categories: [{categoryId (id, name or
  * path), lowCents, highCents}]}: amounts per month, each a range {lowCents, highCents} or a
  * single value (a number, or a category's `cents`). Null (or one without any amount) clears it.
- * A category given twice keeps its last range. `net` (default true): refunds count against the
- * spending of their category (see Benchmark.net).
+ * A category given twice keeps its last range. Within a category money in and out always
+ * cancel out (`net`, from older apps, is ignored).
  */
 export function cleanBenchmark(raw: unknown, categories: CategoryRow[]): Benchmark | null {
   if (raw === null) return null;
@@ -430,9 +395,6 @@ export function cleanBenchmark(raw: unknown, categories: CategoryRow[]): Benchma
   }
   if (b.categories !== undefined && b.categories !== null && !Array.isArray(b.categories)) {
     throw new HttpError(400, "benchmark.categories must be an array");
-  }
-  if (b.net !== undefined && b.net !== null && typeof b.net !== "boolean") {
-    throw new HttpError(400, "benchmark.net must be true or false");
   }
   const byCategory = new Map<string, CentsRange>();
   for (const raw of (b.categories ?? []) as unknown[]) {
@@ -450,7 +412,6 @@ export function cleanBenchmark(raw: unknown, categories: CategoryRow[]): Benchma
     income: cleanCentsRange(b.income, "benchmark.income"),
     expense: cleanCentsRange(b.expense, "benchmark.expense"),
     categories: [...byCategory].map(([categoryId, range]) => ({ categoryId, ...range })),
-    net: (b.net as boolean | null | undefined) ?? true,
   };
   return out.income || out.expense || out.categories.length ? out : null;
 }
@@ -463,7 +424,7 @@ export function benchmarkOf(settings: FinanceSettingsRow | null, categories: Cat
   return {
     ...b,
     categories: b.categories.filter((c) => ids.has(c.categoryId)),
-    net: b.net ?? true,
+    net: true, // older apps: money in and out within a category always cancel out
   };
 }
 
@@ -520,18 +481,16 @@ export function parseFinanceImport(raw: unknown, familyId: string): FinanceConte
       name: cleanName(c.name),
       color: cleanColor(c.color),
       icon: text(c.icon, "icon", 16),
-      kind: cleanKind(c.kind),
       position: Number.isInteger(c.position) ? c.position as number : i,
       parent_id: c.parentId === undefined || c.parentId === null ? null : String(c.parentId),
     };
   });
-  // Parents must be in the file, without loops; subcategories get their top level's kind.
+  // Parents must be in the file, without loops.
   const tree = categoryTree(categories);
   for (const c of categories) {
     if (c.parent_id && (!ids.has(c.parent_id) || tree.parentOf(c.id)?.id !== c.parent_id)) {
       throw new HttpError(400, `Invalid parent "${c.parent_id}" of category "${c.id}"`);
     }
-    c.kind = tree.atLevel(c.id, 1).kind;
   }
   const accountsRaw = f.accounts ?? [];
   if (!Array.isArray(accountsRaw)) throw new HttpError(400, "finance.accounts must be an array");
@@ -818,13 +777,28 @@ export function similarKey(t: { payee: string; description: string }): string {
   return (payee.length ? payee : words(t.description)).slice(0, 3).join(" ");
 }
 
-function netTotals(items: { amountCents: number }[]) {
+/**
+ * Income and expenses of the items, with what came in and what went out within one category
+ * cancelling out: a refund or a sale lowers its category's spending, and only what is left
+ * counts as income or as an expense (a category that took in more than it spent counts as
+ * income). Uncategorized money counts as it is. Every category works this way; there are no
+ * income or expense categories.
+ */
+export function netTotals(items: { amountCents: number; categoryId: string | null }[]) {
   let incomeCents = 0, expenseCents = 0;
+  const byCategory = new Map<string, { in: number; out: number }>();
   for (const it of items) {
     if (it.amountCents > 0) incomeCents += it.amountCents;
     else expenseCents -= it.amountCents;
+    if (!it.categoryId) continue;
+    const c = byCategory.get(it.categoryId) ?? { in: 0, out: 0 };
+    if (it.amountCents > 0) c.in += it.amountCents;
+    else c.out -= it.amountCents;
+    byCategory.set(it.categoryId, c);
   }
-  return { incomeCents, expenseCents };
+  let overlap = 0;
+  for (const c of byCategory.values()) overlap += Math.min(c.in, c.out);
+  return { incomeCents: incomeCents - overlap, expenseCents: expenseCents - overlap };
 }
 
 type SplitMatch = { booking: TransactionRow; parts: TransactionRow[] };
@@ -1157,17 +1131,23 @@ export function handleFinance(ctx: Ctx): Promise<Response> | null {
 }
 
 async function overviewData(store: Store, familyId: string) {
-  const [settings, categories, accounts] = await Promise.all([
+  const [settings, categories, accounts, counts] = await Promise.all([
     store.getFinanceSettings(familyId),
     store.listCategories(familyId),
     listAccounts(store, familyId),
+    store.categoryCounts(familyId),
   ]);
   const s = settingsOf(familyId, settings);
   return {
     currency: s.currency,
     csvMappings: s.csv_mappings,
     benchmark: benchmarkOf(s, categories),
-    categories: categories.map(publicCategory),
+    // inCount / outCount: how many of its own transactions brought money in / took it out.
+    categories: categories.map((c) => ({
+      ...publicCategory(c),
+      inCount: counts.get(c.id)?.in ?? 0,
+      outCount: counts.get(c.id)?.out ?? 0,
+    })),
     accounts,
   };
 }
@@ -1791,44 +1771,38 @@ export async function importTransactions(
 }
 
 /** Income and expenses per month and per category in the range (net counting: a transfer
- *  group is one item, in its lead leg's month; a split booking counts by its parts). */
+ *  group is one item, in its lead leg's month; a split booking counts by its parts). Within a
+ *  category money in and out cancel out (netTotals): over the range for the totals and the
+ *  categories, within each month for the months. */
 export async function financeSummary(store: Store, familyId: string, from?: string, to?: string) {
   const [settings, rows] = await Promise.all([
     store.getFinanceSettings(familyId),
     store.listTransactions(familyId, from, to),
   ]);
   const items = netItems(rows, await loadLinks(store, familyId, rows));
-  const months = new Map<string, { month: string; incomeCents: number; expenseCents: number }>();
-  const cats = new Map<
-    string | null,
-    { categoryId: string | null; incomeCents: number; expenseCents: number; count: number }
-  >();
-  let income = 0, expense = 0;
+  const byMonth = new Map<string, NetItem[]>();
+  const byCategory = new Map<string | null, NetItem[]>();
+  const add = <K>(map: Map<K, NetItem[]>, key: K, t: NetItem) => {
+    const list = map.get(key);
+    if (list) list.push(t);
+    else map.set(key, [t]);
+  };
   for (const t of items) {
-    const month = t.day.slice(0, 7);
-    const m = months.get(month) ?? { month, incomeCents: 0, expenseCents: 0 };
-    const c = cats.get(t.categoryId) ??
-      { categoryId: t.categoryId, incomeCents: 0, expenseCents: 0, count: 0 };
-    if (t.amountCents > 0) {
-      m.incomeCents += t.amountCents;
-      c.incomeCents += t.amountCents;
-      income += t.amountCents;
-    } else {
-      m.expenseCents -= t.amountCents;
-      c.expenseCents -= t.amountCents;
-      expense -= t.amountCents;
-    }
-    c.count++;
-    months.set(month, m);
-    cats.set(t.categoryId, c);
+    add(byMonth, t.day.slice(0, 7), t);
+    add(byCategory, t.categoryId, t);
   }
+  const months = [...byMonth].map(([month, list]) => ({ month, ...netTotals(list) }));
+  const categories = [...byCategory].map(([categoryId, list]) => ({
+    categoryId,
+    ...netTotals(list),
+    count: list.length,
+  }));
   return {
     currency: settingsOf(familyId, settings).currency,
-    incomeCents: income,
-    expenseCents: expense,
+    ...netTotals(items),
     count: items.length,
-    months: [...months.values()].sort((a, b) => a.month.localeCompare(b.month)),
-    categories: [...cats.values()].sort((a, b) => b.expenseCents - a.expenseCents),
+    months: months.sort((a, b) => a.month.localeCompare(b.month)),
+    categories: categories.sort((a, b) => b.expenseCents - a.expenseCents),
   };
 }
 

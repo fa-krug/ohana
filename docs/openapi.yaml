@@ -3422,7 +3422,9 @@ paths:
       tags: [Finance]
       operationId: createCategory
       summary: Add a category (max. 250)
-      description: A subcategory takes the kind of its top-level category. The id is made from the name.
+      description: >-
+        The id is made from the name. Every category takes money in and out (within it they
+        cancel out); an older app's `kind` is ignored.
       x-ohana-role: editor
       parameters:
         - $ref: "#/components/parameters/FamilyId"
@@ -3481,7 +3483,7 @@ paths:
       summary: Change or move a category
       description: >-
         `parentId` moves it with its subcategories (not into itself); `null`/`""` makes it
-        top-level. Only a top-level category's `kind` can be set; its subcategories follow.
+        top-level. `kind` is ignored.
       x-ohana-role: editor
       requestBody:
         required: true
@@ -3818,7 +3820,8 @@ paths:
       summary: Transactions matching filters (newest first) with net totals
       description: >-
         `incomeCents` / `expenseCents` count the matching rows the net way: a transfer group
-        is one item (a net-0 transfer is neither), a split booking counts by its parts.
+        is one item (a net-0 transfer is neither), a split booking counts by its parts, and
+        within a category money in and out cancel out (see FinanceSummary).
       x-ohana-role: viewer
       parameters:
         - $ref: "#/components/parameters/RangeFrom"
@@ -8326,9 +8329,15 @@ components:
     # ---------------------------------------------------------------- finance
     CategoryKind:
       type: string
+      description: >-
+        Deprecated: categories are no longer for income or expenses. Always `both` in answers;
+        ignored in requests.
       enum: [income, expense, both]
     Category:
       type: object
+      description: >-
+        A category takes money in and out alike; within it they cancel out in every total (a
+        refund or a sale lowers what it cost).
       required: [id, name, color, icon, kind, position, parentId]
       properties:
         id: {type: string}
@@ -8338,6 +8347,12 @@ components:
         kind: {$ref: "#/components/schemas/CategoryKind"}
         position: {type: integer}
         parentId: {type: [string, "null"]}
+        inCount:
+          type: integer
+          description: >-
+            GET /finance only: how many of its own transactions brought money in (which way it
+            is usually used, e.g. to order a picker).
+        outCount: {type: integer, description: "GET /finance only: how many took money out."}
     CategoryInput:
       type: object
       required: [name, color]
@@ -8534,9 +8549,8 @@ components:
         net:
           type: boolean
           description: >-
-            Within each top-level category money in and out cancel out before comparing (a
-            refund lowers its spending; both totals drop by the same). False compares spending
-            and income as they are.
+            Deprecated, always true: within each top-level category money in and out cancel out
+            before comparing (a refund lowers its spending; both totals drop by the same).
     BenchmarkInput:
       type: object
       description: Amounts per month, each a number or `{lowCents, highCents}` (one is enough).
@@ -8562,7 +8576,7 @@ components:
               cents: {type: integer}
               lowCents: {type: [integer, "null"]}
               highCents: {type: [integer, "null"]}
-        net: {type: boolean, default: true, description: "See Benchmark.net."}
+        net: {type: boolean, deprecated: true, description: "Ignored (see Benchmark.net)."}
     CentsRangeInput:
       type: object
       properties:
@@ -8588,6 +8602,12 @@ components:
           items: {$ref: "#/components/schemas/Account"}
     FinanceSummary:
       type: object
+      description: >-
+        Counted the net way (a transfer group once, a split booking by its parts). Within a
+        category money in and out cancel out, so a refund or a sale lowers what it cost and only
+        what is left counts as income or as an expense: over the range for the totals and
+        `categories`, within the month for each of `months` (so the months need not add up to
+        the totals). Uncategorized money counts as it is.
       required: [currency, incomeCents, expenseCents, count, months, categories]
       properties:
         currency: {type: string}
