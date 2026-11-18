@@ -13307,6 +13307,26 @@
         }
       }
     },
+    "Optional": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Freiwillig"
+          }
+        }
+      }
+    },
+    "Optional · once recorded, a reminder each autumn": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Freiwillig · nach dem Eintragen jeden Herbst eine Erinnerung"
+          }
+        }
+      }
+    },
     "Orange": {
       "localizations": {
         "de": {

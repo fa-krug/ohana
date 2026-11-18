@@ -6,10 +6,10 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { runTool, TOOLS, toolsFor } from "@/lib/assistant/tools";
 import type { Db } from "@/lib/db";
-import { healthRecords } from "@/lib/db/schema";
+import { familyMembers, healthRecords } from "@/lib/db/schema";
 import { setMemberBirthday } from "@/lib/families/members";
 import { addPerson } from "@/lib/families/people";
-import { healthNotifications, noticesFor } from "@/lib/health/notify";
+import { healthNotifications, noticesFor, recipientsFor } from "@/lib/health/notify";
 import { scanPages } from "@/lib/health/scan";
 import type { ItemState } from "@/lib/health/status";
 import { type AssistantTest, assistantTest, configure, toolContext } from "@/lib/test/assistant";
@@ -33,6 +33,7 @@ const item = (over: Partial<ItemState>): ItemState => ({
   to: "2027-02-10",
   until: "2027-05-10",
   repeats: false,
+  optional: false,
   records: [],
   ...over,
 });
@@ -46,6 +47,8 @@ describe("noticesFor", () => {
     expect(noticesFor(item({}), "2027-05-11")).toEqual([]);
     expect(noticesFor(item({ kind: "vaccination" }), "2027-04-12")).toEqual([]);
     expect(noticesFor(item({ status: "done" }), "2026-10-10")).toEqual([]);
+    // Flu before 60: optional, never told about.
+    expect(noticesFor(item({ code: "flu", status: "optional", optional: true, from: "2026-10-01" }), "2026-10-02")).toEqual([]);
     // A short window: its opening message says until when.
     expect(noticesFor(item({ from: "2026-10-01", until: "2026-11-05" }), "2026-10-20")).toEqual([]);
     expect(noticesFor(item({ code: "td", from: "2026-11-01", until: null, to: null }), "2026-11-02")).toEqual([
@@ -102,8 +105,45 @@ describe("healthNotifications", () => {
     process.env.DISABLED_MODULES = "health";
     expect(await healthNotifications(db, at("2026-10-02"), { push: push.client, hour: 7 })).toEqual([]);
     delete process.env.DISABLED_MODULES;
-    // Flu and COVID-19 from 1 October.
-    expect((await healthNotifications(db, at("2026-10-02"), { push: push.client, hour: 7 })).map((n) => n.code)).toEqual(["flu", "covid"]);
+    // Flu and COVID-19 from 1 October; Ben's (36) are optional: only his regular flu shot is
+    // told about.
+    setMemberBirthday(db, { id: benId }, familyId, benId, "1990-06-01", NOW);
+    db.insert(healthRecords)
+      .values({ id: "r2", familyId, memberUserId: benId, code: "flu", day: "2025-10-15", status: "done", createdAt: NOW, updatedAt: NOW })
+      .run();
+    const told = await healthNotifications(db, at("2026-10-02"), { push: push.client, hour: 7 });
+    // Grown-ups get their own, nobody else: Ben (a viewer) his, Anna (the editor) only hers.
+    expect(told.map((n) => [n.code, n.memberId, n.userIds])).toEqual([
+      ["flu", annaId, [annaId]],
+      ["covid", annaId, [annaId]],
+      ["flu", benId, [benId]],
+    ]);
+    expect(push.received(1).map((p) => p.title)).toEqual(["Your vaccination: Flu", "Your vaccination: COVID-19"]);
+    expect(push.received(2).map((p) => p.title)).toEqual(["Your vaccination: Flu"]);
+  });
+
+  it("speaks to a child with an account, and tells the editors about them", async () => {
+    const tomId = makeUser(db, { name: "Tom" }).id;
+    db.insert(familyMembers).values({ familyId, userId: tomId, role: "viewer", color: "red", joinedAt: NOW }).run();
+    setMemberBirthday(db, { id: annaId }, familyId, tomId, "2014-02-10", NOW);
+    push.device(tomId, 3);
+    // J1 (12 years) opened on 10 Feb 2026.
+    const told = await healthNotifications(db, at("2026-02-12"), { push: push.client, hour: 7 });
+    expect(told).toEqual([expect.objectContaining({ memberId: tomId, code: "j1", userIds: [annaId, tomId] })]);
+    expect(push.received(3).map((p) => p.title)).toEqual(["Your check-up: J1"]);
+    expect(push.received(1).map((p) => p.title)).toEqual(["J1 for Tom"]);
+    expect(push.received(2)).toEqual([]);
+  });
+
+  it("tells grown-ups themselves, children and people without an account the editors", () => {
+    const today = "2026-11-02";
+    const editors = ["anna"];
+    expect(recipientsFor({ id: "ben", account: true, birthday: "2008-11-02" }, editors, today)).toEqual(["ben"]);
+    expect(recipientsFor({ id: "anna", account: true, birthday: "1980-01-01" }, editors, today)).toEqual(["anna"]);
+    // A child's own account and the editors.
+    expect(recipientsFor({ id: "tom", account: true, birthday: "2008-11-03" }, editors, today)).toEqual(["anna", "tom"]);
+    expect(recipientsFor({ id: "mia", account: false, birthday: "1950-01-01" }, editors, today)).toEqual(["anna"]);
+    expect(recipientsFor({ id: "mia", account: false, birthday: "2020-01-01" }, [], today)).toEqual([]);
   });
 });
 

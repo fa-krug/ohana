@@ -182,7 +182,7 @@ struct HealthMemberView: View {
 struct HealthItemRow: View {
     let item: HealthItem
 
-    private var faded: Bool { item.status == .upcoming || item.status == .past || item.status == .skipped }
+    private var faded: Bool { [.upcoming, .past, .skipped, .optional].contains(item.status) }
 
     private var lineStyle: AnyShapeStyle {
         item.status == .due ? AnyShapeStyle(Color.orange) : AnyShapeStyle(HierarchicalShapeStyle.secondary)

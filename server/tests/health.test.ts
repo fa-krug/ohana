@@ -97,11 +97,11 @@ describe("the schedule", () => {
     const codes = (b: string) => itemsFor(b, TODAY).map((i) => i.code);
     expect(codes(MIA)).toContain("u7");
     expect(codes(MIA)).not.toContain("td");
-    expect(codes(BEN)).toEqual(["td"]);
+    expect(codes(BEN)).toEqual(["td", "flu", "covid"]);
     expect(codes(ANNA)).toEqual(["td", "flu", "covid", "pneumo", "shingles-1", "shingles-2"]);
     expect(codes("1950-01-01")).toContain("rsv");
     expect(codes("2008-11-03")).toContain("j2");
-    expect(codes("2008-11-02")).toEqual(["td"]);
+    expect(codes("2008-11-02")).toEqual(["td", "flu", "covid"]);
     expect(codes("2027-01-01")).toEqual([]);
   });
 
@@ -148,6 +148,26 @@ describe("the states", () => {
     expect(state(ANNA, [rec("flu", "2025-10-20")]).flu.status).toBe("due");
     expect(state(ANNA, [rec("flu", "2025-10-20")], "2026-06-01").flu).toMatchObject({ status: "upcoming", from: "2026-10-01" });
     expect(state(ANNA, [rec("flu", "2025-10-20")], "2026-02-01").flu.status).toBe("done");
+    // Done this season: next autumn's window.
+    expect(state(ANNA, [rec("flu", "2026-10-20")]).flu).toMatchObject({ from: "2027-10-01", until: "2028-03-31", optional: false });
+  });
+
+  it("offers flu and COVID-19 before 60 as optional, and reminds who has them regularly", () => {
+    expect(state(BEN, []).flu).toMatchObject({ status: "optional", optional: true, repeats: true, from: "2026-10-01" });
+    expect(state(BEN, [rec("covid", "2026-10-20")]).covid).toMatchObject({ status: "done", optional: true, from: "2027-10-01" });
+    // Had last season (or the one before): due again, coming before October.
+    expect(state(BEN, [rec("flu", "2025-10-20")]).flu).toMatchObject({ status: "due", optional: true, until: "2027-03-31" });
+    expect(state(BEN, [rec("flu", "2024-11-02")]).flu.status).toBe("due");
+    expect(state(BEN, [rec("flu", "2025-10-20")], "2026-06-01").flu).toMatchObject({ status: "upcoming", from: "2026-10-01" });
+    // Longer ago, or the last season skipped: optional again.
+    expect(state(BEN, [rec("flu", "2024-07-31")]).flu.status).toBe("optional");
+    expect(state(BEN, [rec("flu", "2025-10-20", { status: "skipped" }), rec("flu", "2024-10-20")]).flu.status).toBe("optional");
+    const h = personHealth(BEN, TODAY, [rec("td", "2019-05-03")], "en");
+    expect(h.counts).toEqual({ due: 0, past: 0, unknown: 0 });
+    expect(h.next).toBeNull();
+    // From 60 on they're recommended.
+    expect(state("1966-11-02", []).flu).toMatchObject({ status: "due", optional: false });
+    expect(state("1966-11-03", []).flu.status).toBe("optional");
   });
 
   it("times a second dose from the first", () => {

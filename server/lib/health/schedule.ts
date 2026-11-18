@@ -3,7 +3,8 @@
 // J2 are paid by many health insurers, not by all) and the STIKO vaccination calendar, for
 // children by visit (the vaccines given together at that age) and for adults (tetanus /
 // diphtheria every ten years, from 60 flu and COVID-19 each autumn, pneumococcal, shingles in two
-// doses, from 75 RSV).
+// doses, from 75 RSV). Flu and COVID-19 can be had by anyone; from 18 they're shown as optional
+// (recorded, never due) until they're recommended.
 //
 // Ages: the Richtlinie counts in months / weeks / days *of life* (the 21st month of life is age
 // 20 months), so "21.–24. Lebensmonat" is `from` 20 months, `to` 24 months, and its tolerance
@@ -48,6 +49,8 @@ export interface ScheduleItem {
   seasonal?: boolean;
   /** A second dose: its ages count from the day the first (`after`) was given. */
   after?: string;
+  /** Shown from this age on as optional (recordable, never due) until `from` (flu, COVID-19 from 18). */
+  optionalFrom?: Age;
 }
 
 const both = (en: string, de: string): Record<Lang, string> => ({ en, de });
@@ -109,6 +112,8 @@ const MENB = both("Meningococcal B", "Meningokokken B");
 const ROTA = both("Rotavirus", "Rotaviren");
 const MMR = both("MMR", "MMR");
 const VAR = both("Chickenpox", "Varizellen");
+const EVERY_AUTUMN = both("Every autumn from 60; optional before", "Jeden Herbst ab 60; vorher freiwillig");
+const ADULT_AGE = 18;
 const dose = (v: Record<Lang, string>, n: number) => ({ en: `${v.en} (${n})`, de: `${v.de} (${n})` });
 const list = (...v: Record<Lang, string>[]) => ({ en: v.map((x) => x.en), de: v.map((x) => x.de) });
 
@@ -158,8 +163,8 @@ export const SCHEDULE: ScheduleItem[] = [
     { y: 18 },
     { every: { y: 10 } },
   ),
-  adult("flu", both("Flu", "Grippe"), both("Every autumn from 60", "Jeden Herbst ab 60"), { y: 60 }, { seasonal: true }),
-  adult("covid", both("COVID-19", "COVID-19"), both("Every autumn from 60", "Jeden Herbst ab 60"), { y: 60 }, { seasonal: true }),
+  adult("flu", both("Flu", "Grippe"), EVERY_AUTUMN, { y: 60 }, { seasonal: true, optionalFrom: { y: ADULT_AGE } }),
+  adult("covid", both("COVID-19", "COVID-19"), EVERY_AUTUMN, { y: 60 }, { seasonal: true, optionalFrom: { y: ADULT_AGE } }),
   adult("pneumo", both("Pneumococcal", "Pneumokokken"), both("Once from 60", "Einmal ab 60"), { y: 60 }),
   adult("shingles-1", both("Shingles (1st dose)", "Gürtelrose (1. Impfung)"), both("From 60, two doses", "Ab 60, zwei Impfungen"), { y: 60 }),
   adult(
@@ -191,14 +196,18 @@ export function addAge(day: string, age: Age): string {
   return `${r.getUTCFullYear()}-${pad(r.getUTCMonth() + 1)}-${pad(r.getUTCDate())}`;
 }
 
-const ADULT_AGE = 18;
-
 /** Whether an item is shown for someone born on `birthday`, on `today`: children's while under
- *  18 (and once born), adults' from their age on. */
+ *  18 (and once born), adults' from their age on (an optional one's from `optionalFrom`). */
 export function applies(item: ScheduleItem, birthday: string, today: string): boolean {
   if (item.group === "child") return today >= birthday && today < addAge(birthday, { y: ADULT_AGE });
   if (item.after) return applies(SCHEDULE_BY_CODE.get(item.after)!, birthday, today);
-  return today >= addAge(birthday, item.from);
+  return today >= addAge(birthday, item.optionalFrom ?? item.from);
+}
+
+/** Whether an item is only optional for someone born on `birthday`, on `today` (younger than its
+ *  `from`). */
+export function isOptional(item: ScheduleItem, birthday: string, today: string): boolean {
+  return !!item.optionalFrom && today < addAge(birthday, item.from);
 }
 
 /** The items for someone born on `birthday`, on `today`. */

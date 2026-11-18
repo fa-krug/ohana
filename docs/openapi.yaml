@@ -7617,7 +7617,7 @@ components:
             unknown: {type: integer}
     HealthItem:
       type: object
-      required: [code, kind, title, detail, vaccines, notAlwaysPaid, status, from, to, until, repeats, records]
+      required: [code, kind, title, detail, vaccines, notAlwaysPaid, status, from, to, until, repeats, optional, records]
       properties:
         code: {type: string, description: "The schedule's code: u1 … u11, u7a, j1, j2, rsv-infant, vac-6w, vac-2m, vac-4m, vac-11m, vac-12m, vac-15m, vac-5y, vac-9y, hpv-1, hpv-2, td, flu, covid, pneumo, shingles-1, shingles-2, rsv."}
         kind: {type: string, enum: [checkup, vaccination]}
@@ -7627,16 +7627,20 @@ components:
         notAlwaysPaid: {type: boolean, description: "Not paid by every health insurer (U10, U11, J2)."}
         status:
           type: string
-          enum: [done, skipped, due, upcoming, past, unknown]
+          enum: [done, skipped, due, upcoming, past, unknown, optional]
           description: >-
             done / skipped: recorded (a repeating one for the current period); due: its window is
             open; upcoming: it opens later; past: a child's window closed without a record (shown
             as "not recorded"); unknown: a repeating one never recorded, or a second dose whose
-            first has no date.
+            first has no date; optional: not recommended at this age but can be had and recorded
+            (flu, COVID-19 from 18 until 60); someone whose newest earlier shot is from one of the
+            last two seasons is upcoming / due like anyone else, until a season is recorded as
+            skipped.
         from: {type: [string, "null"], format: date, description: "The window's first day; a repeating one's next due day."}
         to: {type: [string, "null"], format: date, description: "Recommended until."}
         until: {type: [string, "null"], format: date, description: "The window's last day (its tolerance)."}
         repeats: {type: boolean}
+        optional: {type: boolean, description: "Not recommended at this age but can be had (flu, COVID-19 before 60); due and notified only for someone who has it regularly."}
         records:
           type: array
           description: Newest first.

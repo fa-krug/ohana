@@ -1,6 +1,9 @@
 // "A check-up or vaccination is due" (the worker, every WORKER_TICK_SECONDS, from NOTIFY_HOUR):
-// pushed to the family's editors' app devices (no channels: it's health data), in the family's
-// language, with a link to the member's page. Once each (`health_notified`):
+// pushed to app devices only (no channels: it's health data), in the family's language, with a
+// link to the member's page: a grown-up with an account (ADULT_AGE) gets their own, nobody else;
+// children and people without an account go to the family's editors (a child's account too).
+// The member themselves reads "Your vaccination: Flu", everyone else "Flu for Ben".
+// Once each (`health_notified`):
 //
 // - open: a window opened (status due) in the last OPEN_WITHIN_DAYS days. Windows that opened
 //   earlier aren't announced late (most of them before anyone used Ohana).
@@ -17,12 +20,27 @@ import { localDay } from "@/lib/notifications/daily";
 import { familyLocale, translator } from "@/lib/notifications/locale";
 import type { RelayClient } from "@/lib/push/relay";
 import { moduleEnabled } from "@/lib/server-info";
+import { ageOn } from "@/lib/families/birthdays";
 import { healthMembers, toRecord } from "./health";
 import { type ItemState, personHealth } from "./status";
 
 export const OPEN_WITHIN_DAYS = 14;
 export const CLOSING_DAYS = 28;
 export const SHORT_WINDOW_DAYS = 42;
+/** From this age a member with an account gets their own reminders, and the editors don't. */
+export const ADULT_AGE = 18;
+
+/** Who is told about a member's items: a grown-up account itself, else the editors (and a child's
+ *  own account). */
+export function recipientsFor(
+  member: { id: string; account: boolean; birthday: string | null },
+  editors: string[],
+  today: string,
+): string[] {
+  if (!member.account) return editors;
+  if (member.birthday && ageOn(member.birthday, today) >= ADULT_AGE) return [member.id];
+  return editors.includes(member.id) ? editors : [...editors, member.id];
+}
 
 export interface HealthNotice {
   familyId: string;
@@ -62,7 +80,7 @@ function dayFormat(locale: string) {
   return (d: string) => f.format(new Date(`${d}T00:00:00Z`));
 }
 
-/** Pushes the reminders that are due now to the editors; returns what it told about. */
+/** Pushes the reminders that are due now (see the top for to whom); returns what it told about. */
 export async function healthNotifications(
   db: Db,
   now: Date,
@@ -80,12 +98,13 @@ export async function healthNotifications(
       .where(and(eq(familyMembers.familyId, familyId), eq(familyMembers.role, "editor")))
       .all()
       .map((r) => r.id);
-    if (!editors.length) continue;
     const members = healthMembers(db, familyId, null).filter((m) => m.birthday);
     if (!members.length) continue;
     const records = db.select().from(healthRecords).where(eq(healthRecords.familyId, familyId)).all();
     const locale = familyLocale(db, familyId);
     for (const m of members) {
+      const userIds = recipientsFor(m, editors, today);
+      if (!userIds.length) continue;
       const mine = records.filter((r) => (r.memberUserId ?? r.memberPersonId) === m.id).map(toRecord);
       for (const item of personHealth(m.birthday, today, mine, locale).items) {
         for (const notice of noticesFor(item, today)) {
@@ -98,13 +117,13 @@ export async function healthNotifications(
             .get();
           if (sent) continue;
           try {
-            await notifyItem(db, familyId, m, item, notice.kind, editors, { ...opts, now, locale });
+            await notifyItem(db, familyId, m, item, notice.kind, userIds, { ...opts, now, locale });
           } catch (e) {
             console.error(`[health] notification of ${item.code} for ${m.id} failed:`, e);
           }
           // Once, sent or not.
           db.insert(healthNotified).values({ familyId, memberId: m.id, key: notice.key, sentAt: now }).onConflictDoNothing().run();
-          told.push({ familyId, memberId: m.id, code: item.code, kind: notice.kind, userIds: editors });
+          told.push({ familyId, memberId: m.id, code: item.code, kind: notice.kind, userIds });
         }
       }
     }
@@ -121,6 +140,22 @@ async function notifyItem(
   userIds: string[],
   opts: { push?: RelayClient; now: Date; locale: "en" | "de" },
 ) {
+  const own = userIds.filter((id) => id === member.id);
+  const others = userIds.filter((id) => id !== member.id);
+  if (own.length) await notifyGroup(db, familyId, member, item, kind, own, true, opts);
+  if (others.length) await notifyGroup(db, familyId, member, item, kind, others, false, opts);
+}
+
+async function notifyGroup(
+  db: Db,
+  familyId: string,
+  member: { id: string; name: string },
+  item: ItemState,
+  kind: "open" | "closing",
+  userIds: string[],
+  own: boolean,
+  opts: { push?: RelayClient; now: Date; locale: "en" | "de" },
+) {
   const t = translator(opts.locale);
   const day = dayFormat(opts.locale);
   const body =
@@ -133,7 +168,11 @@ async function notifyItem(
     db,
     familyId,
     {
-      title: t("notifications.health.title", { item: item.title, name: member.name }),
+      title: own
+        ? t(item.kind === "checkup" ? "notifications.health.ownCheckup" : "notifications.health.ownVaccination", {
+            item: item.title,
+          })
+        : t("notifications.health.title", { item: item.title, name: member.name }),
       body,
       url: `${getAppUrl()}/f/${familyId}/health/${member.id}`,
       collapseKey: `health:${member.id}:${item.code}`,

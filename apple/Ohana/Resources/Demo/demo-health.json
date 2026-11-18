@@ -9,7 +9,9 @@
       "counts": {"due": 0,"past": 0,"unknown": 0},
       "next": null,
       "items": [
-        {"code": "td", "kind": "vaccination", "title": "Tetanus / diphtheria", "vaccines": ["Tetanus / diphtheria"], "status": "done", "from": "{{day:511}}", "repeats": true, "records": [{"id": "demo-demo-anna-td", "day": "{{day:-3142}}", "note": "Boostrix"}]}
+        {"code": "td", "kind": "vaccination", "title": "Tetanus / diphtheria", "vaccines": ["Tetanus / diphtheria"], "status": "done", "from": "{{day:511}}", "repeats": true, "records": [{"id": "demo-demo-anna-td", "day": "{{day:-3142}}", "note": "Boostrix"}]},
+        {"code": "flu", "kind": "vaccination", "title": "Flu", "detail": "Every autumn from 60; optional before", "vaccines": ["Flu"], "status": "done", "from": "{{day:318}}", "until": "{{day:499}}", "repeats": true, "optional": true, "records": [{"id": "demo-demo-anna-flu", "day": "{{day:-20}}"}]},
+        {"code": "covid", "kind": "vaccination", "title": "COVID-19", "detail": "Every autumn from 60; optional before", "vaccines": ["COVID-19"], "status": "optional", "from": "{{day:-47}}", "until": "{{day:134}}", "repeats": true, "optional": true}
       ]
     },
     {
@@ -21,7 +23,9 @@
       "counts": {"due": 0,"past": 0,"unknown": 1},
       "next": null,
       "items": [
-        {"code": "td", "kind": "vaccination", "title": "Tetanus / diphtheria", "vaccines": ["Tetanus / diphtheria"], "status": "unknown", "repeats": true}
+        {"code": "td", "kind": "vaccination", "title": "Tetanus / diphtheria", "vaccines": ["Tetanus / diphtheria"], "status": "unknown", "repeats": true},
+        {"code": "flu", "kind": "vaccination", "title": "Flu", "detail": "Every autumn from 60; optional before", "vaccines": ["Flu"], "status": "optional", "from": "{{day:-47}}", "until": "{{day:134}}", "repeats": true, "optional": true},
+        {"code": "covid", "kind": "vaccination", "title": "COVID-19", "detail": "Every autumn from 60; optional before", "vaccines": ["COVID-19"], "status": "optional", "from": "{{day:-47}}", "until": "{{day:134}}", "repeats": true, "optional": true}
       ]
     },
     {
@@ -35,7 +39,7 @@
       "items": [
         {"code": "td", "kind": "vaccination", "title": "Tetanus / diphtheria", "vaccines": ["Tetanus / diphtheria"], "status": "done", "from": "{{day:1762}}", "repeats": true, "records": [{"id": "demo-person-grandma-rose-td", "day": "{{day:-1890}}"}]},
         {"code": "flu", "kind": "vaccination", "title": "Flu", "vaccines": ["Flu"], "status": "due", "from": "{{day:-47}}", "until": "{{day:134}}", "repeats": true},
-        {"code": "covid", "kind": "vaccination", "title": "COVID-19", "vaccines": ["COVID-19"], "status": "done", "from": "{{day:-47}}", "until": "{{day:134}}", "repeats": true, "records": [{"id": "demo-person-grandma-rose-covid", "day": "{{day:-20}}"}]},
+        {"code": "covid", "kind": "vaccination", "title": "COVID-19", "vaccines": ["COVID-19"], "status": "done", "from": "{{day:318}}", "until": "{{day:499}}", "repeats": true, "records": [{"id": "demo-person-grandma-rose-covid", "day": "{{day:-20}}"}]},
         {"code": "pneumo", "kind": "vaccination", "title": "Pneumococcal", "vaccines": ["Pneumococcal"], "status": "done", "from": "{{day:-5103}}", "records": [{"id": "demo-person-grandma-rose-pneumo", "day": "{{day:-1504}}", "note": "Prevenar 20"}]},
         {"code": "shingles-1", "kind": "vaccination", "title": "Shingles (1st dose)", "vaccines": ["Shingles (1st dose)"], "status": "done", "from": "{{day:-5103}}", "records": [{"id": "demo-person-grandma-rose-shingles-1", "day": "{{day:-1356}}", "note": "Shingrix"}]},
         {"code": "shingles-2", "kind": "vaccination", "title": "Shingles (2nd dose)", "vaccines": ["Shingles (2nd dose)"], "status": "done", "from": "{{day:-1295}}", "until": "{{day:-1172}}", "records": [{"id": "demo-person-grandma-rose-shingles-2", "day": "{{day:-1265}}", "note": "Shingrix"}]}

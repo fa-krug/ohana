@@ -57,6 +57,7 @@ function compactItem(i: ItemState) {
     from: i.from,
     until: i.until,
     ...(i.notAlwaysPaid ? { notAlwaysPaid: true } : {}),
+    ...(i.optional ? { optional: true } : {}),
     ...(i.records.length ? { records: i.records } : {}),
   };
 }
@@ -72,7 +73,7 @@ export const healthTools: Record<string, Tool> = {
     spec: {
       name: "get_health",
       description:
-        "Check-ups (German U1–U11, J1, J2) and vaccinations (STIKO calendar: children's by visit, adults' tetanus every 10 years, flu / COVID-19 each autumn from 60 …) of the family's members, worked out from their birthdays: each item's code, status (done, skipped, due, upcoming, past = a child's window closed without a record, unknown = never recorded), window (from, until) and records. A member without a birthday has no items. The booklets (Impfpass, U-Heft) are what counts; this only reminds.",
+        "Check-ups (German U1–U11, J1, J2) and vaccinations (STIKO calendar: children's by visit, adults' tetanus every 10 years, flu / COVID-19 each autumn from 60, optional from 18 …) of the family's members, worked out from their birthdays: each item's code, status (done, skipped, due, upcoming, past = a child's window closed without a record, unknown = never recorded, optional = not recommended at this age but can be had and recorded; once had, due again each autumn until a season is skipped), window (from, until) and records. A member without a birthday has no items. The booklets (Impfpass, U-Heft) are what counts; this only reminds.",
       parameters: {
         type: "object",
         properties: { member: { type: "string", description: "A member's name or id (none: everyone)" } },

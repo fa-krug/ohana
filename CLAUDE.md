@@ -657,7 +657,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   U1–U11, U7a, J1, J2 (ages from the Richtlinie's months / weeks / days *of life*: the 21st month is
   age 20 months; `until` its tolerance; U10, U11, J2 `notAlwaysPaid`), the STIKO calendar for
   children **by visit** (`vac-6w` … `vac-9y`, `hpv-1` / `hpv-2`, `rsv-infant`) and adults (`td` every
-  10 years from 18, `flu` / `covid` `seasonal` from 60, `pneumo`, `shingles-1` / `-2` (`after`: ages
+  10 years from 18, `flu` / `covid` `seasonal` from 60 (from 18 `optionalFrom`: status `optional`, recordable; whose newest earlier record is done and within `REGULAR_SEASONS` (2) is upcoming / due and notified as usual, a skipped season ends it; `ItemState.optional`), `pneumo`, `shingles-1` / `-2` (`after`: ages
   from the first dose), `rsv` from 75); children's items until 18; `addAge` (a month end that doesn't
   exist: the month's last day). `status.ts` `personHealth` / `itemState`: done / skipped (recorded;
   a repeating one from its newest record, a dateless one from the day it was recorded; seasonal per
@@ -677,7 +677,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `known` when recorded; nothing saved; `ai: false` without the AI); changes answer the member's new
   state. `notify.ts` `healthNotifications` (worker, from `NOTIFY_HOUR`): a window that opened in the
   last 14 days and a check-up's closing in ≤ 28 days (windows > 42 days), once each
-  (`health_notified`), pushed **only to the editors' devices** (`channelIds: []`), link
+  (`health_notified`), pushed to app devices only (`channelIds: []`): `recipientsFor`, a member with an account from `ADULT_AGE` (18) gets their own and nobody else, everyone else's go to the editors (plus a child's own account); the member's own push says "Your vaccination / check-up: …" (`ownVaccination` / `ownCheckup`), the others' "… for <name>", link
   `/f/{id}/health/{memberId}`. Assistant `tools/health.ts`: `get_health`, `record_health`,
   `remove_health_record` (undo: DELETE / POST back with the id), system prompt section, page
   `health`. The mock AI answers the scan prompt. App: `Features/Health/` (`HealthView`: due now
