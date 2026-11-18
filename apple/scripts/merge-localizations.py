@@ -54,7 +54,10 @@ if ARGS:
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
         for entry in data.get("tables", {}).get("Localizable", []):
-            keys.add(entry["key"])
+            # A key without a letter ("", "%@ · %@") needs no German: it shows as it is. Left out,
+            # so the catalog is the same with or without the derived data (CI checks both).
+            if any(c.isalpha() for c in entry["key"]):
+                keys.add(entry["key"])
     missing = sorted(k for k in keys if k not in translations and any(c.isalpha() for c in k))
     for key in missing:
         print(f"missing: {key!r}", file=sys.stderr)
