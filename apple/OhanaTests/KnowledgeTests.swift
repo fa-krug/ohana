@@ -935,13 +935,13 @@ struct KnowledgeIndexerTests {
         KnowledgeStubProtocol.putStatus = 413
         await s.indexer.run()
         #expect(s.indexer.waiting == 0)
-        #expect(!FileManager.default.fileExists(atPath: s.data.appending(path: "queue.json").path))
+        #expect(await until { !FileManager.default.fileExists(atPath: s.data.appending(path: "queue.json").path) })
 
         // The server is down: the upload waits on the device and goes once it's back.
         KnowledgeStubProtocol.putStatus = 503
         await s.indexer.run()
         #expect(s.indexer.waiting == 1)
-        #expect(FileManager.default.fileExists(atPath: s.data.appending(path: "queue.json").path))
+        #expect(await until { FileManager.default.fileExists(atPath: s.data.appending(path: "queue.json").path) })
         if case .failed = s.indexer.phase {} else { Issue.record("phase \(s.indexer.phase)") }
         KnowledgeStubProtocol.putStatus = 202
         s.indexer.retryNow()
@@ -1005,7 +1005,7 @@ struct KnowledgeIndexerTests {
         #expect(s.indexer.unreadable == ["Brief.pages": .format])
         #expect(s.indexer.lastRun?.uploaded == 2 && s.indexer.phase == .idle)
         #expect(s.indexer.readingAll == nil)
-        #expect(!FileManager.default.fileExists(atPath: s.data.appending(path: "read-all.json").path))
+        #expect(await until { !FileManager.default.fileExists(atPath: s.data.appending(path: "read-all.json").path) })
 
         // Once: the next run is an ordinary one again.
         KnowledgeStubProtocol.reset()
@@ -1174,12 +1174,12 @@ struct KnowledgeIndexerTests {
         KnowledgeStubProtocol.putStatus = 503
         await s.indexer.run()
         #expect(s.indexer.waiting == 1)
-        #expect(FileManager.default.fileExists(atPath: s.data.appending(path: "hashes.json").path))
+        #expect(await until { FileManager.default.fileExists(atPath: s.data.appending(path: "hashes.json").path) })
         await s.indexer.unlink()
         #expect(!s.indexer.folder.isLinked && s.indexer.waiting == 0 && s.indexer.lastRun == nil)
         #expect(s.indexer.phase == .idle)
-        #expect(!FileManager.default.fileExists(atPath: s.data.appending(path: "queue.json").path))
-        #expect(!FileManager.default.fileExists(atPath: s.data.appending(path: "hashes.json").path))
+        #expect(await until { !FileManager.default.fileExists(atPath: s.data.appending(path: "queue.json").path) })
+        #expect(await until { !FileManager.default.fileExists(atPath: s.data.appending(path: "hashes.json").path) })
     }
 
     @Test func aScanIsQueuedWithItsText() async throws {

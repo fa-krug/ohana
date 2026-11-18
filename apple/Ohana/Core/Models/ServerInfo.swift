@@ -30,7 +30,7 @@ nonisolated struct ServerInfo: Codable, Equatable, OffMainDecodable {
     static let legacy = ServerInfo(name: "Ohana", version: "", apiVersion: 0, modules: legacyModules)
 
     /// `legacy`'s modules (`Module`'s raw values): the calendar and the optional modules but the
-    /// chores and the knowledge base. Spelled out: decoding runs off the main actor, `Module` on it.
+    /// chores, the knowledge base and health. Spelled out: decoding runs off the main actor, `Module` on it.
     static let legacyModules = ["calendar", "finance", "meals", "appointments", "assistant"]
 
     init(name: String, version: String, apiVersion: Int, modules: [String], push: Push? = nil, holidays: Bool = false) {

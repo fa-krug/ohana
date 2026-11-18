@@ -40,9 +40,10 @@ struct ServerInfoTests {
         #expect(ServerInfo.requiredAPIVersion == 1)
         #expect(!ServerInfo.legacy.isSupported)
         #expect(ServerInfo.legacy.apiVersion == 0)
-        // Everything but the chores and the knowledge base, which came after the route.
-        #expect(Module.allCases.filter { $0 != .chores && $0 != .knowledge }.allSatisfy { ServerInfo.legacy.isEnabled($0) })
-        #expect(!ServerInfo.legacy.isEnabled(.chores) && !ServerInfo.legacy.isEnabled(.knowledge))
+        // Everything but the chores, the knowledge base and health, which came after the route.
+        let later: [Module] = [.chores, .knowledge, .health]
+        #expect(Module.allCases.filter { !later.contains($0) }.allSatisfy { ServerInfo.legacy.isEnabled($0) })
+        #expect(later.allSatisfy { !ServerInfo.legacy.isEnabled($0) })
         let old = try decode(#"{"name":"Ohana","version":"0.1.0","apiVersion":0,"modules":["calendar"]}"#)
         #expect(!old.isSupported)
         let newer = try decode(#"{"name":"Ohana","version":"1.0.0","apiVersion":2,"modules":["calendar"]}"#)
