@@ -190,8 +190,9 @@ struct ResponseCacheTests {
         #expect(plan.state.isSaved)
         let recipes = Set(plan.state.value?.plan?.activeIteration?.entries.map(\.recipeId) ?? [])
         #expect(!recipes.isEmpty)
-        // Every request answered: each screen's and the plan's recipes.
-        #expect(answered == Prefetch.jobs(family).count + recipes.count)
+        // Every request answered: each screen's and the plan's recipes, but the finance insights
+        // (the demo doesn't answer them, `Demo+Finance`).
+        #expect(answered == Prefetch.jobs(family).count - 1 + recipes.count)
         for id in recipes {
             #expect(MealsRecipeDetailView.request(api, recipeID: id).saved() != nil, "recipe \(id)")
         }

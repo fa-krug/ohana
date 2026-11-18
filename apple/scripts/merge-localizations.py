@@ -54,7 +54,10 @@ if ARGS:
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
         for entry in data.get("tables", {}).get("Localizable", []):
-            keys.add(entry["key"])
+            # A key without a letter ("", "%@ · %@") needs no German: it shows as it is. Left out,
+            # so the catalog is the same with or without the derived data (CI checks both).
+            if any(c.isalpha() for c in entry["key"]):
+                keys.add(entry["key"])
     missing = sorted(k for k in keys if k not in translations and any(c.isalpha() for c in k))
     for key in missing:
         print(f"missing: {key!r}", file=sys.stderr)
@@ -93,6 +96,11 @@ if CHECK:
     problems = (len(missing) if ARGS else 0) + len(loose) + (current != text)
     if current != text:
         print("Localizable.xcstrings is out of date: run scripts/merge-localizations.py", file=sys.stderr)
+        # Which keys: a key the build extracts without a letter (say "%@ · %@") gets no German and
+        # is only added with DERIVED_DATA; give it one in Localization/ (the same text) instead.
+        have = set(json.loads(current).get("strings", {}))
+        for key in sorted(have ^ set(strings)):
+            print(f"{'only in the catalog' if key in have else 'not in the catalog'}: {key!r}", file=sys.stderr)
     sys.exit(1 if problems else 0)
 with open(CATALOG, "w", encoding="utf-8") as f:
     f.write(text)
