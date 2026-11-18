@@ -10,7 +10,7 @@
 import { HttpError } from "@/lib/api/http";
 import type { Lang } from "@/lib/i18n/config";
 import { categoryTree } from "@/lib/finance/category-tree";
-import { similarKey } from "@/lib/finance/finance";
+import { similarKey } from "@/lib/finance/net";
 import type { CategoryRow, TransactionRow } from "@/lib/finance/store";
 import type { NetOptions } from "./net";
 import { type ChatMessage, type Provider, streamChat } from "./provider";

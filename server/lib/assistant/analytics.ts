@@ -5,7 +5,7 @@
 import { weekday } from "@/lib/calendar/dates";
 import type { EntryRow, TypeRow } from "@/lib/calendar/store";
 import { categoryTree } from "@/lib/finance/category-tree";
-import { type NetItem, similarKey } from "@/lib/finance/finance";
+import { type NetItem, similarKey } from "@/lib/finance/net";
 import type { AccountRow, CategoryRow } from "@/lib/finance/store";
 import { median, variance } from "./calc";
 

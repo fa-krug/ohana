@@ -122,9 +122,6 @@ export interface FinanceStore {
   /** Categories ordered by position. */
   listCategories(familyId: string): Promise<CategoryRow[]>;
   upsertCategories(rows: CategoryRow[]): Promise<void>;
-  /** Per category how many of its own transactions brought money in and how many took money
-   *  out (split bookings by their parts): which way it is usually used. */
-  categoryCounts(familyId: string): Promise<Map<string, { in: number; out: number }>>;
   /** Deletes the category; its subcategories and transactions move to its parent (top level:
    *  the subcategories become top-level ones, the transactions uncategorized). */
   deleteCategory(familyId: string, id: string): Promise<void>;
@@ -383,20 +380,6 @@ export class DrizzleFinanceStore implements FinanceStore {
       .orderBy(asc(finCategories.position), asc(finCategories.id))
       .all()
       .map(categoryRow);
-  }
-
-  async categoryCounts(familyId: string) {
-    const rows = this.db
-      .select({
-        id: finTransactions.categoryId,
-        in: sql<number>`sum(${finTransactions.amountCents} > 0)`,
-        out: sql<number>`sum(${finTransactions.amountCents} < 0)`,
-      })
-      .from(finTransactions)
-      .where(and(eq(finTransactions.familyId, familyId), isNotNull(finTransactions.categoryId)))
-      .groupBy(finTransactions.categoryId)
-      .all();
-    return new Map(rows.map((r) => [r.id!, { in: Number(r.in), out: Number(r.out) }]));
   }
 
   async upsertCategories(rows: CategoryRow[]) {

@@ -1,4 +1,4 @@
-// Serves the scripted stand-in for an OpenAI-compatible API (lib/test/mock-ai.ts) on
+// Serves the scripted stand-in for an OpenAI-compatible API (lib/test/mock-ai/) on
 // http://localhost:<port>/v1, to try the assistant without a key:
 //   npm run mock-ai -- 4011
 // then run the app and the worker with AI_ALLOW_PRIVATE_ENDPOINT=1 and set the API URL to

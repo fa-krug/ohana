@@ -4,23 +4,21 @@
 
 import { HttpError, objectOf } from "@/lib/api/http";
 import { isValidDate } from "@/lib/calendar/dates";
-import { categoryTree } from "@/lib/finance/category-tree";
+import { benchmarkOf, cleanBenchmark } from "@/lib/finance/benchmark";
+import { categoryTree, findCategory } from "@/lib/finance/category-tree";
 import {
   applyTransactionOps,
   autoCombine,
-  benchmarkOf,
   changedCategories,
-  cleanBenchmark,
   financeSummary,
-  findCategory,
   findTransactions,
   listAccounts,
-  netItems,
   newCategory,
   publicCategory,
   publicTransaction,
   transferPairs,
 } from "@/lib/finance/finance";
+import { netItems } from "@/lib/finance/net";
 import { buildInsights, dismissInsight, restoreInsight, validInsightKey } from "@/lib/finance/insights";
 import type { AccountRow, CategoryRow, FinanceStore as Store } from "@/lib/finance/store";
 import { analyzeTransactions, TX_DIMENSIONS, TX_SORTS, TX_STATS } from "../analytics";

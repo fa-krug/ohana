@@ -7,7 +7,7 @@ import type { NetOptions } from "@/lib/assistant/net";
 import { runTool, type ToolContext, TOOLS } from "@/lib/assistant/tools";
 import { addDays } from "@/lib/calendar/dates";
 import { DrizzleCalendarStore } from "@/lib/calendar/store";
-import type { NetItem } from "@/lib/finance/finance";
+import type { NetItem } from "@/lib/finance/net";
 import {
   findDuplicates,
   frequentSmall,

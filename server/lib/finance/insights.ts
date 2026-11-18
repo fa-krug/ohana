@@ -14,17 +14,19 @@ import { finInsightDismissals } from "@/lib/db/schema";
 import { addDays, diffDays } from "@/lib/calendar/dates";
 import { categoryTree } from "./category-tree";
 import {
-  groupOf,
-  type Links,
   listAccounts,
-  loadLinks,
   merchantOf,
-  type NetItem,
-  netItems,
   publicTransaction,
-  similarKey,
   transferPairs,
 } from "./finance";
+import {
+  groupOf,
+  type Links,
+  loadLinks,
+  type NetItem,
+  netItems,
+  similarKey,
+} from "./net";
 import type { FinanceStore as Store, TransactionRow } from "./store";
 
 /** How many completed months before the period are its baseline. */

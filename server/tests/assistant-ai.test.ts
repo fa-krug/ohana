@@ -12,7 +12,7 @@ import { prepareTurn } from "@/lib/assistant/routes";
 import type { ChatRow } from "@/lib/assistant/store";
 import { runTool } from "@/lib/assistant/tools";
 import { DrizzleCalendarStore } from "@/lib/calendar/store";
-import { similarKey } from "@/lib/finance/finance";
+import { similarKey } from "@/lib/finance/net";
 import { DrizzleFinanceStore } from "@/lib/finance/store";
 import { AI, type AssistantTest, assistantTest, configure, type Event, fakeFetch, KEY, net } from "@/lib/test/assistant";
 import type { AiEnv } from "@/lib/assistant/routes";

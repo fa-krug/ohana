@@ -208,18 +208,18 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   is the finance part of its `Store` over Drizzle (`DrizzleFinanceStore`, snake_case rows,
   promise API; `replaceFinance` runs inside the calendar store's `replaceContents`, so an
   export file's import is all or nothing), `finance.ts` (routes under
-  `/api/v1/families/{id}/finance/...`, `applyTransactionOps` with `inverse` undo ops, transfer
-  groups and split bookings with net counting `netItems`, `matchSplits` / `matchTransfers` /
-  `autoCombine`, import hashes, `financeSummary`, the statistic average (benchmark: within a top-level
-  category money in and out cancel out, the app's `benchmarkValues`; its old `net` option is ignored,
-  always true), `exportFinance` /
-  `parseFinanceImport` / `copyFinance`), `category-tree.ts`, `csv.ts` and `money.ts`
-  (shared with the client) are ported with few changes. **No income or expense categories**
+  `/api/v1/families/{id}/finance/...`, `applyTransactionOps` with `inverse` undo ops,
+  `matchSplits` / `matchTransfers` / `autoCombine`, import hashes, `financeSummary`, `exportFinance` /
+  `parseFinanceImport` / `copyFinance`), `net.ts` (net counting: transfer groups and split bookings,
+  `loadLinks`, `netItems`, `netTotals`, `similarKey`), `benchmark.ts` (the statistic average: within a
+  top-level category money in and out cancel out, the app's `benchmarkValues`; its old `net` option
+  is ignored, always true), `amounts.ts` (`cleanAmount`), `category-tree.ts` (the tree, and
+  `resolveCategory` / `findCategory`: by id, name or path). **No income or expense categories**
   (migration `0040`: `kind` is always "both", an older app's is ignored): any category takes money in
   and out, and within a category they cancel out in every total (`netTotals`: the summary over the
   range for totals and categories, within each month for the months, the list's totals, insights'
   *changes*; uncategorized money as it is), so a refund or a sale lowers what its category cost;
-  GET /finance's categories carry `inCount` / `outCount` (`categoryCounts`), which the app's pickers
+  GET /finance's categories carry `inCount` / `outCount` (`category-counts.ts`), which the app's pickers
   (`FinanceCategoryTree.roots(for:)`, the usual way first) and the comparison (`usuallyIncome`) read,
   and categorizing tells the model each category's usual way (`usualWay`) and prefers similar rows
   going the same way (`matchSimilar`). `summary.ts` is the overview card,
@@ -443,7 +443,9 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   most words with the statement before the marker, or a matching card fact's quote, else the
   first sentence). Only the saved copy is checked (the streaming text keeps half-written
   markers); the model's messages keep the raw text; imported chats' items lose their markers. Tests use
-  `lib/test/assistant.ts` (fake fetch + `lib/test/mock-ai.ts`, a ticking `ChatRunner`);
+  `lib/test/assistant.ts` (fake fetch + `lib/test/mock-ai/`, a ticking `ChatRunner`; `index.ts` the
+  chat and its commands, `tool-results.ts` what it says after a tool, one file per feature's prompt:
+  `finance.ts`, `meals.ts`, `letter.ts`, `knowledge.ts`, `health.ts`, shared `reply.ts`);
   `npm run mock-ai` serves the mock for trying it out.
 - **Secrets (`lib/secrets.ts`):** `SecretBox` (port of family-planner's): AES-256-GCM,
   `v1:<base64 iv+ciphertext+tag>`, keyed by `ENCRYPTION_KEY` or else HKDF(`AUTH_SECRET`,
