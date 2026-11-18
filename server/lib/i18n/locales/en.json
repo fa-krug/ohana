@@ -180,6 +180,8 @@
     },
     "health": {
       "title": "{{item}} for {{name}}",
+      "ownCheckup": "Your check-up: {{item}}",
+      "ownVaccination": "Your vaccination: {{item}}",
       "due": "Due now",
       "dueUntil": "Due until {{date}}",
       "closing": "Only until {{date}}: time to book"

@@ -2,6 +2,7 @@
 // pushed to app devices only (no channels: it's health data), in the family's language, with a
 // link to the member's page: a grown-up with an account (ADULT_AGE) gets their own, nobody else;
 // children and people without an account go to the family's editors (a child's account too).
+// The member themselves reads "Your vaccination: Flu", everyone else "Flu for Ben".
 // Once each (`health_notified`):
 //
 // - open: a window opened (status due) in the last OPEN_WITHIN_DAYS days. Windows that opened
@@ -139,6 +140,22 @@ async function notifyItem(
   userIds: string[],
   opts: { push?: RelayClient; now: Date; locale: "en" | "de" },
 ) {
+  const own = userIds.filter((id) => id === member.id);
+  const others = userIds.filter((id) => id !== member.id);
+  if (own.length) await notifyGroup(db, familyId, member, item, kind, own, true, opts);
+  if (others.length) await notifyGroup(db, familyId, member, item, kind, others, false, opts);
+}
+
+async function notifyGroup(
+  db: Db,
+  familyId: string,
+  member: { id: string; name: string },
+  item: ItemState,
+  kind: "open" | "closing",
+  userIds: string[],
+  own: boolean,
+  opts: { push?: RelayClient; now: Date; locale: "en" | "de" },
+) {
   const t = translator(opts.locale);
   const day = dayFormat(opts.locale);
   const body =
@@ -151,7 +168,11 @@ async function notifyItem(
     db,
     familyId,
     {
-      title: t("notifications.health.title", { item: item.title, name: member.name }),
+      title: own
+        ? t(item.kind === "checkup" ? "notifications.health.ownCheckup" : "notifications.health.ownVaccination", {
+            item: item.title,
+          })
+        : t("notifications.health.title", { item: item.title, name: member.name }),
       body,
       url: `${getAppUrl()}/f/${familyId}/health/${member.id}`,
       collapseKey: `health:${member.id}:${item.code}`,

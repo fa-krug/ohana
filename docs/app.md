@@ -124,7 +124,7 @@ check-ups and vaccinations. Windows that closed before anyone recorded them show
 recorded*, never as overdue: **All Done** marks them all at once, or **Scan Booklet** photographs
 the vaccination booklet or U-Heft and lets the family's AI read the dates, to tick and save. A
 notification comes when something becomes due and four weeks before a check-up's window closes:
-grown-ups with an account get their own (and only they), the editors those of the children and of
+grown-ups with an account get their own (and only they: "Your vaccination: Flu"), the editors those of the children and of
 the people without an account. Editors see everyone, a viewer only themselves. The booklets and your doctor decide; Ohana
 only reminds.
 

@@ -6,7 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { runTool, TOOLS, toolsFor } from "@/lib/assistant/tools";
 import type { Db } from "@/lib/db";
-import { healthRecords } from "@/lib/db/schema";
+import { familyMembers, healthRecords } from "@/lib/db/schema";
 import { setMemberBirthday } from "@/lib/families/members";
 import { addPerson } from "@/lib/families/people";
 import { healthNotifications, noticesFor, recipientsFor } from "@/lib/health/notify";
@@ -118,8 +118,21 @@ describe("healthNotifications", () => {
       ["covid", annaId, [annaId]],
       ["flu", benId, [benId]],
     ]);
-    expect(push.received(1).map((p) => p.title)).toEqual(["Flu for Anna", "COVID-19 for Anna"]);
-    expect(push.received(2).map((p) => p.title)).toEqual(["Flu for Ben"]);
+    expect(push.received(1).map((p) => p.title)).toEqual(["Your vaccination: Flu", "Your vaccination: COVID-19"]);
+    expect(push.received(2).map((p) => p.title)).toEqual(["Your vaccination: Flu"]);
+  });
+
+  it("speaks to a child with an account, and tells the editors about them", async () => {
+    const tomId = makeUser(db, { name: "Tom" }).id;
+    db.insert(familyMembers).values({ familyId, userId: tomId, role: "viewer", color: "red", joinedAt: NOW }).run();
+    setMemberBirthday(db, { id: annaId }, familyId, tomId, "2014-02-10", NOW);
+    push.device(tomId, 3);
+    // J1 (12 years) opened on 10 Feb 2026.
+    const told = await healthNotifications(db, at("2026-02-12"), { push: push.client, hour: 7 });
+    expect(told).toEqual([expect.objectContaining({ memberId: tomId, code: "j1", userIds: [annaId, tomId] })]);
+    expect(push.received(3).map((p) => p.title)).toEqual(["Your check-up: J1"]);
+    expect(push.received(1).map((p) => p.title)).toEqual(["J1 for Tom"]);
+    expect(push.received(2)).toEqual([]);
   });
 
   it("tells grown-ups themselves, children and people without an account the editors", () => {

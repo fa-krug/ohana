@@ -180,6 +180,8 @@
     },
     "health": {
       "title": "{{item}} für {{name}}",
+      "ownCheckup": "Deine Untersuchung: {{item}}",
+      "ownVaccination": "Deine Impfung: {{item}}",
       "due": "Jetzt fällig",
       "dueUntil": "Fällig bis {{date}}",
       "closing": "Nur noch bis {{date}}: Zeit, einen Termin zu machen"
