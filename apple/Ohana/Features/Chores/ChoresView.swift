@@ -41,6 +41,34 @@ struct ChoresView: View {
     private var canEdit: Bool { store.canEdit }
 
     var body: some View {
+        // Split in two (and the longer closures into methods): as one expression the compiler
+        // couldn't type-check it in time.
+        screen
+            .task(id: family.revision(.chores)) {
+                store.me = app.me?.id
+                await store.refresh()
+            }
+            .onChange(of: shown, initial: true) { store.show(shown) }
+            .onChange(of: scenePhase) { sceneChanged() }
+            .onAppear { onScreen = true }
+            .onDisappear { onScreen = false }
+            .onChange(of: visible) { seen(visible) }
+            .onChange(of: family.pendingRoute, initial: true) { takeRoute() }
+            .onChange(of: store.page) { openPending() }
+            .navigationDestination(isPresented: $showAll) {
+                ChoresAllView(filter: $filter).shellPageItems()
+            }
+            .sheet(item: $editing) { target in
+                ChoreEditorHost(target: target, filter: filter, day: shown)
+            }
+            .alert(deleteTitle, isPresented: deletingShown, presenting: deleting) { item in
+                Button("Delete", role: .destructive) { store.delete(item.choreId) }
+                Button("Cancel", role: .cancel) {}
+            }
+    }
+
+    /// The page with its bars.
+    private var screen: some View {
         Group {
             if let page = store.page {
                 // Another day slides in from the side it lies on.
@@ -74,44 +102,34 @@ struct ChoresView: View {
         .toolbar { toolbar }
         .focusedSceneValue(\.newItem, canEdit ? NewItemAction(title: "New Chore") { editing = .new } : nil)
         .focusedSceneValue(\.moduleMenu, ModuleMenu(title: "Chores") { moduleMenu })
-        .task(id: family.revision(.chores)) {
-            store.me = app.me?.id
-            await store.refresh()
+    }
+
+    private var deleteTitle: Text { Text("Delete “\(deleting?.title ?? "")”?") }
+
+    /// Whether the delete confirmation shows (while a chore is being deleted).
+    private var deletingShown: Binding<Bool> {
+        Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } })
+    }
+
+    /// Back in the foreground: the chores again.
+    private func sceneChanged() {
+        if scenePhase == .active { Task { await store.refresh() } }
+    }
+
+    /// A route for the chores page: a new chore, or a chore (on its day, for a notification's).
+    private func takeRoute() {
+        guard let route = family.takeRoute(for: .chores) else { return }
+        switch route {
+        case .newChore: if canEdit { editing = .new }
+        case let .chore(id, day?):
+            // A notification's: the chore on its day (not today, however long it was closed).
+            shown = day
+            closedAt = nil
+            highlighted = id
+        case let .chore(id, nil): pendingChoreID = id
+        default: break
         }
-        .onChange(of: shown, initial: true) { store.show(shown) }
-        .onChange(of: scenePhase) {
-            if scenePhase == .active { Task { await store.refresh() } }
-        }
-        .onAppear { onScreen = true }
-        .onDisappear { onScreen = false }
-        .onChange(of: visible) { seen(visible) }
-        .onChange(of: family.pendingRoute, initial: true) {
-            guard let route = family.takeRoute(for: .chores) else { return }
-            switch route {
-            case .newChore: if canEdit { editing = .new }
-            case let .chore(id, day?):
-                // A notification's: the chore on its day (not today, however long it was closed).
-                shown = day
-                closedAt = nil
-                highlighted = id
-            case let .chore(id, nil): pendingChoreID = id
-            default: break
-            }
-            openPending()
-        }
-        .onChange(of: store.page) { openPending() }
-        .navigationDestination(isPresented: $showAll) {
-            ChoresAllView(filter: $filter).shellPageItems()
-        }
-        .sheet(item: $editing) { target in
-            ChoreEditorHost(target: target, filter: filter, day: shown)
-        }
-        .alert(
-            Text("Delete “\(deleting?.title ?? "")”?"), isPresented: .init(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), presenting: deleting
-        ) { item in
-            Button("Delete", role: .destructive) { store.delete(item.choreId) }
-            Button("Cancel", role: .cancel) {}
-        }
+        openPending()
     }
 
     // MARK: Day
