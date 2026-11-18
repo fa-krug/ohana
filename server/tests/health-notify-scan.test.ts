@@ -105,12 +105,17 @@ describe("healthNotifications", () => {
     process.env.DISABLED_MODULES = "health";
     expect(await healthNotifications(db, at("2026-10-02"), { push: push.client, hour: 7 })).toEqual([]);
     delete process.env.DISABLED_MODULES;
-    // Flu and COVID-19 from 1 October; Ben's (36) are optional, not told about.
+    // Flu and COVID-19 from 1 October; Ben's (36) are optional: only his regular flu shot is
+    // told about.
     setMemberBirthday(db, { id: benId }, familyId, benId, "1990-06-01", NOW);
+    db.insert(healthRecords)
+      .values({ id: "r2", familyId, memberUserId: benId, code: "flu", day: "2025-10-15", status: "done", createdAt: NOW, updatedAt: NOW })
+      .run();
     const told = await healthNotifications(db, at("2026-10-02"), { push: push.client, hour: 7 });
     expect(told.map((n) => [n.code, n.memberId])).toEqual([
       ["flu", annaId],
       ["covid", annaId],
+      ["flu", benId],
     ]);
   });
 });

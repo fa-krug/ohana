@@ -7633,12 +7633,14 @@ components:
             open; upcoming: it opens later; past: a child's window closed without a record (shown
             as "not recorded"); unknown: a repeating one never recorded, or a second dose whose
             first has no date; optional: not recommended at this age but can be had and recorded
-            (flu, COVID-19 from 18 until 60), never due.
+            (flu, COVID-19 from 18 until 60); someone whose newest earlier shot is from one of the
+            last two seasons is upcoming / due like anyone else, until a season is recorded as
+            skipped.
         from: {type: [string, "null"], format: date, description: "The window's first day; a repeating one's next due day."}
         to: {type: [string, "null"], format: date, description: "Recommended until."}
         until: {type: [string, "null"], format: date, description: "The window's last day (its tolerance)."}
         repeats: {type: boolean}
-        optional: {type: boolean, description: "Not recommended at this age but can be had (flu, COVID-19 before 60): never due, never notified."}
+        optional: {type: boolean, description: "Not recommended at this age but can be had (flu, COVID-19 before 60); due and notified only for someone who has it regularly."}
         records:
           type: array
           description: Newest first.

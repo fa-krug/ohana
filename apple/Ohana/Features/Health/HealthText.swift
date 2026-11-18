@@ -46,7 +46,7 @@ enum HealthText {
         case .upcoming: upcoming(item)
         case .past: String(localized: "Not recorded")
         case .unknown: unknown(item)
-        case .optional: String(localized: "Optional")
+        case .optional: String(localized: "Optional · once recorded, a reminder each autumn")
         }
     }
 
@@ -59,7 +59,7 @@ enum HealthText {
         case let (false, day?): String(localized: "Skipped on \(day)")
         case (false, nil): String(localized: "Skipped")
         }
-        if item.repeats, !item.optional, item.status == .done, let next = item.from {
+        if item.repeats, item.status == .done, let next = item.from {
             text += " · " + String(localized: "next \(date(next))")
         }
         return text

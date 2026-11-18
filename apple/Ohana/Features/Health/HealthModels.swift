@@ -97,7 +97,8 @@ nonisolated enum HealthStatus: String, Codable, Hashable, Sendable {
     case past
     /// Never recorded (when was the last tetanus shot?), or a second dose whose first has no date.
     case unknown
-    /// Not recommended at this age but can be had (flu, COVID-19 before 60): never due.
+    /// Not recommended at this age but can be had (flu, COVID-19 before 60). Once recorded it's
+    /// due again each autumn (until a season is skipped).
     case optional
 
     init(from decoder: any Decoder) throws {

@@ -9,7 +9,9 @@
 // - unknown: a repeating one never recorded (when was the last tetanus shot?), or a second dose
 //   whose first has no date.
 // - optional: one that's not recommended at this age but can be had (flu, COVID-19 before 60),
-//   without a record for the current period: never due, never told about.
+//   without a record for the current period: not due, not told about. Someone who has it
+//   regularly (the newest earlier record is done, from one of the last two seasons) is reminded
+//   like anyone it's recommended for (upcoming, then due); a season recorded as skipped ends it.
 
 import { type Lang, type ScheduleItem, SCHEDULE_BY_CODE, addAge, isOptional, itemsFor, seasonOf } from "./schedule";
 
@@ -72,13 +74,20 @@ const seasonWindow = (season: ReturnType<typeof seasonOf>) => ({
   until: season.end,
 });
 
+/** Seasons an optional one's last shot may be back for its next to be asked for: the last two
+ *  (one forgotten to record doesn't end it). */
+export const REGULAR_SEASONS = 2;
+
 /** Flu, COVID-19: the current autumn season's record (then the next season's window), else due
- *  from 1 October; `optional`: never due. */
+ *  from 1 October; `optional`: only for someone who has it regularly (see the top). */
 function seasonal(records: HealthRecord[], today: string, optional: boolean): Standing {
   const season = seasonOf(today);
+  const year = Number(season.start.slice(0, 4));
   const current = records.find((r) => dayOf(r) >= season.counts && dayOf(r) <= season.end);
-  if (current) return { status: current.status, ...seasonWindow(seasonOf(`${Number(season.start.slice(0, 4)) + 1}-06-01`)) };
-  const status = optional ? "optional" : today < season.start ? "upcoming" : "due";
+  if (current) return { status: current.status, ...seasonWindow(seasonOf(`${year + 1}-06-01`)) };
+  const before = records.find((r) => dayOf(r) < season.counts);
+  const regular = before?.status === "done" && dayOf(before) >= `${year - REGULAR_SEASONS}-08-01`;
+  const status = optional && !regular ? "optional" : today < season.start ? "upcoming" : "due";
   return { status, ...seasonWindow(season) };
 }
 
