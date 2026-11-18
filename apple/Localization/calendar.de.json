@@ -1,4 +1,5 @@
 {
+  "%@ %@": "%@ %@",
   "%lldd": "%lld T",
   "1 – 9 (⌥⌘1 – 9)": "1 – 9 (⌥⌘1 – 9)",
   "^[%lld day](inflect: true) selected": {
