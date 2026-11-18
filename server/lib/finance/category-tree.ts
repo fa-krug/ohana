@@ -1,7 +1,8 @@
 // Finance categories form a tree: a category may have a parent, at any depth (Food > Groceries
 // > Bakery). Transactions can sit on any level; a category's totals include its subcategories.
-// A subcategory has the kind (income / expense) of its top-level category.
+// Every category holds money in and out alike (they cancel out within it).
 
+import { HttpError } from "@/lib/api/http";
 import type { CategoryRow } from "./store";
 
 /** Between the names of a category's path: "Food > Groceries". */
@@ -81,4 +82,39 @@ export function categoryTree(categories: CategoryRow[]): CategoryTree {
     },
     index: (id) => indexes.get(id) ?? Infinity,
   };
+}
+
+/** A category reference by id, (case-insensitive) path ("Food > Groceries") or name; null /
+ *  "" clears it. A name that several categories have needs the path. */
+export function resolveCategory(categories: CategoryRow[], ref: unknown): string | null {
+  if (ref === null || ref === "" || ref === undefined) return null;
+  if (typeof ref !== "string") throw new HttpError(400, "categoryId must be a string");
+  const byId = categories.find((c) => c.id === ref);
+  if (byId) return byId.id;
+  const tree = categoryTree(categories);
+  const want = ref.split(">").map((n) => n.trim().toLowerCase()).join(PATH_SEPARATOR);
+  const byPath = ref.includes(">")
+    ? categories.filter((c) => tree.path(c.id).toLowerCase() === want)
+    : [];
+  const named = byPath.length
+    ? byPath
+    : categories.filter((c) => c.name.toLowerCase() === ref.trim().toLowerCase());
+  if (named.length > 1) {
+    throw new HttpError(
+      400,
+      `Several categories are called "${ref}": use the path (${
+        named.map((c) => `"${tree.path(c.id)}"`).join(", ")
+      })`,
+    );
+  }
+  if (!named.length) throw new HttpError(404, `Unknown category "${ref}"`);
+  return named[0].id;
+}
+
+/** A category by id or (case-insensitive) name. */
+export function findCategory(categories: CategoryRow[], ref: unknown): CategoryRow {
+  const id = resolveCategory(categories, ref);
+  const c = categories.find((c) => c.id === id);
+  if (!c) throw new HttpError(404, `Unknown category "${ref}"`);
+  return c;
 }

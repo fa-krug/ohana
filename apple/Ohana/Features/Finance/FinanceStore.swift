@@ -1157,22 +1157,21 @@ final class FinanceStore {
         await saveSettings(["benchmark": benchmark.map { FinanceJSON.encode($0) } ?? .null])
     }
 
-    /// A new category at the top level or (with its color and kind) under `parent`.
+    /// A new category at the top level or (with its color) under `parent`.
     @discardableResult
-    func addCategory(name: String, parent: FinanceCategory? = nil, kind: FinanceCategoryKind = .expense,
+    func addCategory(name: String, parent: FinanceCategory? = nil,
                      color: String? = nil, icon: String = "") async -> FinanceCategory? {
         await withOverview {
             try await api.send(.post, "/finance/categories", body: JSONValue.object([
                 "name": .string(name),
                 "color": .string(color ?? parent?.color ?? FinanceColor.next(used: categories.map(\.color))),
                 "icon": .string(icon),
-                "kind": .string((parent?.kind ?? kind).rawValue),
                 "parentId": FinanceJSON.string(parent?.id),
             ]), as: FinanceCategory.self)
         }
     }
 
-    /// Changes any of name, color, icon, kind, parentId (`.null`: top level), position; false
+    /// Changes any of name, color, icon, parentId (`.null`: top level), position; false
     /// when it failed (the banner says why).
     @discardableResult
     func updateCategory(_ id: String, _ patch: [String: JSONValue]) async -> Bool {

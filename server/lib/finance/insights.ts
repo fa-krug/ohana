@@ -14,17 +14,19 @@ import { finInsightDismissals } from "@/lib/db/schema";
 import { addDays, diffDays } from "@/lib/calendar/dates";
 import { categoryTree } from "./category-tree";
 import {
-  groupOf,
-  type Links,
   listAccounts,
-  loadLinks,
   merchantOf,
-  type NetItem,
-  netItems,
   publicTransaction,
-  similarKey,
   transferPairs,
 } from "./finance";
+import {
+  groupOf,
+  type Links,
+  loadLinks,
+  type NetItem,
+  netItems,
+  similarKey,
+} from "./net";
 import type { FinanceStore as Store, TransactionRow } from "./store";
 
 /** How many completed months before the period are its baseline. */
@@ -197,7 +199,8 @@ const inRange = (day: string, from?: string | null, to?: string | null) =>
 // ------------------------------------------------------------------ changes
 
 /** The period's expenses per month against the baseline's, per category, the largest increases
- *  first, each with the payees that grew most. */
+ *  first, each with the payees that grew most. Within a category money in lowers its spending
+ *  (netTotals: a refund or a sale), down to nothing; uncategorized money in doesn't count. */
 export function spendingChanges(
   items: NetItem[],
   period: { from: string; to: string; months: number },
@@ -206,7 +209,7 @@ export function spendingChanges(
   type Sums = { current: number; usual: number; count: number; name: string; day: string };
   const cats = new Map<string | null, { current: number; usual: number; payees: Map<string, Sums> }>();
   for (const it of items) {
-    if (it.amountCents >= 0) continue;
+    if (it.amountCents === 0 || (it.amountCents > 0 && !it.categoryId)) continue;
     const current = inRange(it.day, period.from, period.to);
     if (!current && !inRange(it.day, baseline.from, baseline.to)) continue;
     const cents = -it.amountCents;
@@ -216,7 +219,7 @@ export function spendingChanges(
     if (current) {
       c.current += cents;
       p.current += cents;
-      p.count++;
+      if (cents > 0) p.count++;
     } else {
       c.usual += cents;
       p.usual += cents;
@@ -231,8 +234,8 @@ export function spendingChanges(
   }
   const out: Change[] = [];
   for (const [categoryId, c] of cats) {
-    const currentCents = per(c.current, period.months);
-    const usualCents = per(c.usual, baseline.months);
+    const currentCents = per(Math.max(0, c.current), period.months);
+    const usualCents = per(Math.max(0, c.usual), baseline.months);
     const deltaCents = currentCents - usualCents;
     if (deltaCents < MIN_CHANGE_CENTS || deltaCents < usualCents * MIN_CHANGE_SHARE) continue;
     const payees = [...c.payees].map(([key, p]) => {

@@ -7,7 +7,7 @@ import type { NetOptions } from "@/lib/assistant/net";
 import { runTool, type ToolContext, TOOLS } from "@/lib/assistant/tools";
 import { addDays } from "@/lib/calendar/dates";
 import { DrizzleCalendarStore } from "@/lib/calendar/store";
-import type { NetItem } from "@/lib/finance/finance";
+import type { NetItem } from "@/lib/finance/net";
 import {
   findDuplicates,
   frequentSmall,
@@ -123,6 +123,26 @@ it("ranks the categories whose spending grew, with the payees behind it", () => 
   expect(changes[0].payees).toEqual([
     { key: "lieferando de", name: "Lieferando.de", count: 6, currentCents: 18000, usualCents: 0, deltaCents: 18000 },
   ]);
+});
+
+it("counts a category's money in against its spending", () => {
+  const baseline = { from: "2025-11-01", to: "2026-10-31", months: 12 };
+  const period = { from: "2026-11-01", to: TODAY, months: 1 };
+  const kids = (n: number) => item(monthDay("2025-11", n, "10"), -6000, "Kids shop", "kids");
+  const items = [
+    ...Array.from({ length: 12 }, (_, i) => kids(i)),
+    // More clothes bought this month, but most of it sold again: no change.
+    item("2026-11-02", -12000, "Kids shop", "kids"),
+    item("2026-11-03", 8000, "Vinted", "kids"),
+    // Uncategorized money in doesn't lower anything.
+    item("2026-11-04", -10000, "Shop"),
+    item("2026-11-05", 20000, "Someone"),
+    ...Array.from({ length: 12 }, (_, i) => item(monthDay("2025-11", i, "11"), -1000, "Shop")),
+    // A category that only takes money in never shows.
+    item("2026-11-06", 500000, "Employer", "salary"),
+  ];
+  const changes = spendingChanges(items, period, baseline);
+  expect(changes.map((c) => [c.categoryId, c.currentCents, c.usualCents])).toEqual([[null, 10000, 1000]]);
 });
 
 it("finds small amounts that add up, but not the regular ones", () => {

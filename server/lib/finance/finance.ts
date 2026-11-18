@@ -8,19 +8,36 @@
 // netItems). Viewers and editors read, editors change.
 
 import type { Ctx } from "@/lib/api/family-api";
+import type { Db } from "@/lib/db";
 import { cleanName, CORS, HttpError, json, objectOf, readBody, slug } from "@/lib/api/http";
 import { addDays, diffDays, isValidDate } from "@/lib/calendar/dates";
 import type { Lang } from "@/lib/i18n/config";
 import { bankRoute } from "./bank/routes";
 import { buildInsights, dismissInsight, restoreInsight, validInsightKey } from "./insights";
-import { categoryTree, PATH_SEPARATOR } from "./category-tree";
+import { cleanAmount } from "./amounts";
+import { benchmarkOf, cleanBenchmark } from "./benchmark";
+import { categoryCounts } from "./category-counts";
+import { categoryTree, findCategory, resolveCategory } from "./category-tree";
+import {
+  byLead,
+  groupOf,
+  inSplit,
+  type Links,
+  loadLinks,
+  loadSplits,
+  type NetItem,
+  netItems,
+  netOf,
+  netTotals,
+  NO_LINKS,
+  remainderOf,
+  similarKey,
+  type Splits,
+} from "./net";
 import {
   type AccountRow,
   type Benchmark,
-  CATEGORY_KINDS,
-  type CategoryKind,
   type CategoryRow,
-  type CentsRange,
   type FinanceContents,
   type FinanceSettingsRow,
   type FinanceStore as Store,
@@ -33,10 +50,8 @@ export const MAX_ACCOUNTS = 50;
 const MAX_OPS = 2000;
 const MAX_IMPORT_ROWS = 5000;
 const MAX_IMPORT_TRANSACTIONS = 100_000; // in an export file
-const MAX_AMOUNT = 100_000_000_000_000; // cents
 const MAX_LIST = 1000;
 const MAX_MAPPINGS = 20;
-const MAX_BENCHMARK_LABEL = 120;
 const MAX_SUGGESTIONS = 200;
 const TRANSFER_DAYS = 4; // how far apart the two legs of a suggested transfer may be
 const SPLIT_RE = /split-?buchung/i; // how banks mark a booking whose parts they list as well
@@ -51,92 +66,79 @@ const DEFAULT_CATEGORIES: {
   id: string;
   icon: string;
   color: string;
-  kind: CategoryKind;
   name: Record<Lang, string>;
 }[] = [
   {
     id: "salary",
     icon: "💼",
     color: "#22c55e",
-    kind: "income",
     name: { en: "Salary", de: "Gehalt" },
   },
   {
     id: "other-income",
     icon: "💰",
     color: "#14b8a6",
-    kind: "income",
     name: { en: "Other income", de: "Sonstige Einnahmen" },
   },
   {
     id: "groceries",
     icon: "🛒",
     color: "#f97316",
-    kind: "expense",
     name: { en: "Groceries", de: "Lebensmittel" },
   },
   {
     id: "housing",
     icon: "🏠",
     color: "#8b5cf6",
-    kind: "expense",
     name: { en: "Housing", de: "Wohnen" },
   },
   {
     id: "utilities",
     icon: "💡",
     color: "#eab308",
-    kind: "expense",
     name: { en: "Utilities", de: "Nebenkosten" },
   },
   {
     id: "mobility",
     icon: "🚗",
     color: "#3b82f6",
-    kind: "expense",
     name: { en: "Mobility", de: "Mobilität" },
   },
   {
     id: "insurance",
     icon: "🛡️",
     color: "#64748b",
-    kind: "expense",
     name: { en: "Insurance", de: "Versicherungen" },
   },
   {
     id: "health",
     icon: "🩺",
     color: "#ef4444",
-    kind: "expense",
     name: { en: "Health", de: "Gesundheit" },
   },
-  { id: "kids", icon: "🧸", color: "#ec4899", kind: "expense", name: { en: "Kids", de: "Kinder" } },
+  { id: "kids", icon: "🧸", color: "#ec4899", name: { en: "Kids", de: "Kinder" } },
   {
     id: "leisure",
     icon: "🎉",
     color: "#a855f7",
-    kind: "expense",
     name: { en: "Leisure", de: "Freizeit" },
   },
   {
     id: "vacation",
     icon: "🏖️",
     color: "#06b6d4",
-    kind: "expense",
     name: { en: "Vacation", de: "Urlaub" },
   },
   {
     id: "shopping",
     icon: "🛍️",
     color: "#84cc16",
-    kind: "expense",
     name: { en: "Shopping", de: "Einkäufe" },
   },
   {
     id: "other",
     icon: "📦",
     color: "#94a3b8",
-    kind: "both",
     name: { en: "Other", de: "Sonstiges" },
   },
 ];
@@ -148,7 +150,6 @@ export function defaultCategories(familyId: string, lang: Lang): CategoryRow[] {
     name: c.name[lang],
     color: c.color,
     icon: c.icon,
-    kind: c.kind,
     position,
     parent_id: null,
   }));
@@ -171,24 +172,9 @@ function cleanColor(v: unknown): string {
   return v.toLowerCase();
 }
 
-function cleanKind(v: unknown): CategoryKind {
-  if (v === undefined) return "expense";
-  if (!CATEGORY_KINDS.includes(v as CategoryKind)) {
-    throw new HttpError(400, `kind must be one of ${CATEGORY_KINDS.join(", ")}`);
-  }
-  return v as CategoryKind;
-}
-
 function cleanDate(v: unknown, field = "date"): string {
   if (!isValidDate(v)) throw new HttpError(400, `${field} must be YYYY-MM-DD`);
   return v as string;
-}
-
-function cleanAmount(v: unknown, field = "amountCents"): number {
-  if (typeof v !== "number" || !Number.isInteger(v) || Math.abs(v) > MAX_AMOUNT) {
-    throw new HttpError(400, `${field} must be a whole number of cents`);
-  }
-  return v;
 }
 
 /** A transfer id or a booking's id: a uuid; null / "" clears it. */
@@ -207,48 +193,9 @@ function cleanCurrency(v: unknown): string {
   return v;
 }
 
-/** A category reference by id, (case-insensitive) path ("Food > Groceries") or name; null /
- *  "" clears it. A name that several categories have needs the path. */
-function resolveCategory(categories: CategoryRow[], ref: unknown): string | null {
-  if (ref === null || ref === "" || ref === undefined) return null;
-  if (typeof ref !== "string") throw new HttpError(400, "categoryId must be a string");
-  const byId = categories.find((c) => c.id === ref);
-  if (byId) return byId.id;
-  const tree = categoryTree(categories);
-  const want = ref.split(">").map((n) => n.trim().toLowerCase()).join(PATH_SEPARATOR);
-  const byPath = ref.includes(">")
-    ? categories.filter((c) => tree.path(c.id).toLowerCase() === want)
-    : [];
-  const named = byPath.length
-    ? byPath
-    : categories.filter((c) => c.name.toLowerCase() === ref.trim().toLowerCase());
-  if (named.length > 1) {
-    throw new HttpError(
-      400,
-      `Several categories are called "${ref}": use the path (${
-        named.map((c) => `"${tree.path(c.id)}"`).join(", ")
-      })`,
-    );
-  }
-  if (!named.length) throw new HttpError(404, `Unknown category "${ref}"`);
-  return named[0].id;
-}
-
-/** A category by id or (case-insensitive) name. */
-export function findCategory(categories: CategoryRow[], ref: unknown): CategoryRow {
-  const id = resolveCategory(categories, ref);
-  const c = categories.find((c) => c.id === id);
-  if (!c) throw new HttpError(404, `Unknown category "${ref}"`);
-  return c;
-}
-
-/** The kind of a top-level category: a subcategory has its top-level category's. */
-function kindUnder(categories: CategoryRow[], parentId: string | null, kind: CategoryKind) {
-  return parentId ? categoryTree(categories).atLevel(parentId, 1).kind : kind;
-}
-
-/** A new category from {name, color, icon, kind, parentId (id, name or path; none: top
- *  level)}, added after the family's others. A subcategory gets the kind of its parent. */
+/** A new category from {name, color, icon, parentId (id, name or path; none: top level)},
+ *  added after the family's others. Every category holds money in and out alike (`kind`, from
+ *  older apps, is ignored). */
 export function newCategory(
   familyId: string,
   categories: CategoryRow[],
@@ -263,18 +210,16 @@ export function newCategory(
     name,
     color: cleanColor(body.color),
     icon: text(body.icon, "icon", 16),
-    kind: kindUnder(categories, parent, cleanKind(body.kind)),
     position: categories.reduce((m, c) => Math.max(m, c.position + 1), 0),
     parent_id: parent,
   };
 }
 
 /**
- * The category with any of {name, color, icon, kind, position, parentId} changed, first, and
- * its subcategories whose kind changes with it. parentId (id, name or path; null / "": top
- * level) moves it with its subcategories, to the end of its new siblings unless position is
- * given; not into itself or one of its subcategories. Only a top-level category's kind can be
- * set; a subcategory has its top-level category's.
+ * The category with any of {name, color, icon, position, parentId} changed (`kind` is
+ * ignored). parentId (id, name or path; null / "": top level) moves it with its subcategories,
+ * to the end of its new siblings unless position is given; not into itself or one of its
+ * subcategories.
  */
 export function changedCategories(
   categories: CategoryRow[],
@@ -302,14 +247,7 @@ export function changedCategories(
     }
     next.position = body.position as number;
   }
-  const kind = body.kind === undefined ? current.kind : cleanKind(body.kind);
-  next.kind = kindUnder(categories, next.parent_id ?? null, kind);
-  const out = [next];
-  for (const id of tree.subtree(current.id)) {
-    const c = tree.byId.get(id)!;
-    if (id !== current.id && c.kind !== next.kind) out.push({ ...c, kind: next.kind });
-  }
-  return out;
+  return [next];
 }
 
 /** An account reference by id or (case-insensitive) name; null / "" clears it. */
@@ -331,13 +269,15 @@ function uniqueId(base: string, taken: Set<string>, fallback = "category"): stri
 
 // ------------------------------------------------------------------ public shapes
 
+/** A category for the API. `kind` is always "both" (every category holds money in and out),
+ *  for older apps that still read it. */
 export function publicCategory(c: CategoryRow) {
   return {
     id: c.id,
     name: c.name,
     color: c.color,
     icon: c.icon,
-    kind: c.kind,
+    kind: "both" as const,
     position: c.position,
     parentId: c.parent_id ?? null,
   };
@@ -389,82 +329,6 @@ export function publicTransaction(t: TransactionRow, links?: Links) {
 
 function settingsOf(familyId: string, row: FinanceSettingsRow | null): FinanceSettingsRow {
   return row ?? { family_id: familyId, currency: "EUR", csv_mappings: [], benchmark: null };
-}
-
-/** A range per month from a number (a single value) or {lowCents, highCents} (one of them is
- *  enough for a single value); null when none is given. Not negative, low not above high. */
-function cleanCentsRange(v: unknown, field: string): CentsRange | null {
-  if (v === null || v === undefined || v === "") return null;
-  const cents = (n: unknown, name: string) => {
-    if (n === null || n === undefined) return null;
-    const c = cleanAmount(n, name);
-    if (c < 0) throw new HttpError(400, `${name} must not be negative`);
-    return c;
-  };
-  if (typeof v === "number") {
-    const n = cents(v, field)!;
-    return { lowCents: n, highCents: n };
-  }
-  const r = objectOf(v, field);
-  const low = cents(r.lowCents, `${field}.lowCents`);
-  const high = cents(r.highCents, `${field}.highCents`);
-  if (low === null && high === null) return null;
-  if (low !== null && high !== null && low > high) {
-    throw new HttpError(400, `${field}.lowCents must not be above highCents`);
-  }
-  return { lowCents: low ?? high!, highCents: high ?? low! };
-}
-
-/**
- * A statistic average from {label, income, expense, categories: [{categoryId (id, name or
- * path), lowCents, highCents}]}: amounts per month, each a range {lowCents, highCents} or a
- * single value (a number, or a category's `cents`). Null (or one without any amount) clears it.
- * A category given twice keeps its last range. `net` (default true): refunds count against the
- * spending of their category (see Benchmark.net).
- */
-export function cleanBenchmark(raw: unknown, categories: CategoryRow[]): Benchmark | null {
-  if (raw === null) return null;
-  const b = objectOf(raw, "benchmark");
-  if (b.label !== undefined && typeof b.label !== "string") {
-    throw new HttpError(400, "benchmark.label must be a string");
-  }
-  if (b.categories !== undefined && b.categories !== null && !Array.isArray(b.categories)) {
-    throw new HttpError(400, "benchmark.categories must be an array");
-  }
-  if (b.net !== undefined && b.net !== null && typeof b.net !== "boolean") {
-    throw new HttpError(400, "benchmark.net must be true or false");
-  }
-  const byCategory = new Map<string, CentsRange>();
-  for (const raw of (b.categories ?? []) as unknown[]) {
-    const c = objectOf(raw, "Each benchmark category");
-    const id = findCategory(categories, c.categoryId ?? c.category).id;
-    const range = cleanCentsRange(
-      c.cents ?? { lowCents: c.lowCents, highCents: c.highCents },
-      "benchmark.categories",
-    );
-    if (range) byCategory.set(id, range);
-    else byCategory.delete(id);
-  }
-  const out: Benchmark = {
-    label: ((b.label as string | undefined) ?? "").trim().slice(0, MAX_BENCHMARK_LABEL),
-    income: cleanCentsRange(b.income, "benchmark.income"),
-    expense: cleanCentsRange(b.expense, "benchmark.expense"),
-    categories: [...byCategory].map(([categoryId, range]) => ({ categoryId, ...range })),
-    net: (b.net as boolean | null | undefined) ?? true,
-  };
-  return out.income || out.expense || out.categories.length ? out : null;
-}
-
-/** The statistic average without categories that are gone since. */
-export function benchmarkOf(settings: FinanceSettingsRow | null, categories: CategoryRow[]) {
-  const b = settings?.benchmark;
-  if (!b) return null;
-  const ids = new Set(categories.map((c) => c.id));
-  return {
-    ...b,
-    categories: b.categories.filter((c) => ids.has(c.categoryId)),
-    net: b.net ?? true,
-  };
 }
 
 // ------------------------------------------------------------------ export / import
@@ -520,18 +384,16 @@ export function parseFinanceImport(raw: unknown, familyId: string): FinanceConte
       name: cleanName(c.name),
       color: cleanColor(c.color),
       icon: text(c.icon, "icon", 16),
-      kind: cleanKind(c.kind),
       position: Number.isInteger(c.position) ? c.position as number : i,
       parent_id: c.parentId === undefined || c.parentId === null ? null : String(c.parentId),
     };
   });
-  // Parents must be in the file, without loops; subcategories get their top level's kind.
+  // Parents must be in the file, without loops.
   const tree = categoryTree(categories);
   for (const c of categories) {
     if (c.parent_id && (!ids.has(c.parent_id) || tree.parentOf(c.id)?.id !== c.parent_id)) {
       throw new HttpError(400, `Invalid parent "${c.parent_id}" of category "${c.id}"`);
     }
-    c.kind = tree.atLevel(c.id, 1).kind;
   }
   const accountsRaw = f.accounts ?? [];
   if (!Array.isArray(accountsRaw)) throw new HttpError(400, "finance.accounts must be an array");
@@ -676,156 +538,7 @@ export async function importHashes(
   return out;
 }
 
-// ------------------------------------------------------------------ transfers, splits, net counting
-
-/** Transfer groups by transfer id, each with its legs in lead order. Only groups with at least
- *  two legs: a lone leg counts as a normal transaction. */
-export type Groups = Map<string, TransactionRow[]>;
-
-/** The parts of split bookings by booking id. */
-export type Splits = Map<string, TransactionRow[]>;
-
-/** How transactions are tied together: transfer groups and split bookings. */
-export type Links = { groups: Groups; splits: Splits };
-
-const NO_LINKS: Links = { groups: new Map(), splits: new Map() };
-
-/** Lead order: the earliest day first, ties by id. */
-function byLead(a: TransactionRow, b: TransactionRow): number {
-  return a.day.localeCompare(b.day) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
-}
-
-/** All legs of the transfer groups the rows touch: a range can cut a group apart, but it
- *  always counts as a whole. */
-export async function loadGroups(
-  store: Store,
-  familyId: string,
-  rows: TransactionRow[],
-): Promise<Groups> {
-  const groups: Groups = new Map();
-  const ids = [...new Set(rows.flatMap((t) => t.transfer_id ? [t.transfer_id] : []))];
-  if (!ids.length) return groups;
-  for (const t of await store.listTransfers(familyId, ids)) {
-    const legs = groups.get(t.transfer_id!) ?? [];
-    legs.push(t);
-    groups.set(t.transfer_id!, legs);
-  }
-  for (const [id, legs] of groups) {
-    if (legs.length < 2) groups.delete(id);
-    else legs.sort(byLead);
-  }
-  return groups;
-}
-
-/** All split bookings of the family with their parts (there are few). */
-async function loadSplits(store: Store, familyId: string): Promise<Splits> {
-  const splits: Splits = new Map();
-  for (const t of await store.listSplitParts(familyId)) {
-    splits.set(t.split_of!, [...(splits.get(t.split_of!) ?? []), t]);
-  }
-  return splits;
-}
-
-/** The transfer groups the rows touch and all split bookings. */
-export async function loadLinks(
-  store: Store,
-  familyId: string,
-  rows: TransactionRow[],
-): Promise<Links> {
-  const [groups, splits] = await Promise.all([
-    loadGroups(store, familyId, rows),
-    loadSplits(store, familyId),
-  ]);
-  return { groups, splits };
-}
-
-/** The legs of the transaction's transfer group, if it is a leg of one. */
-export function groupOf(t: TransactionRow, groups: Groups): TransactionRow[] | undefined {
-  return t.transfer_id ? groups.get(t.transfer_id) : undefined;
-}
-
-/** What a transaction counts as: its amount, or the net (sum of the legs) of its group. */
-function netOf(t: TransactionRow, groups: Groups): number {
-  const legs = groupOf(t, groups);
-  return legs ? legs.reduce((sum, l) => sum + l.amount_cents, 0) : t.amount_cents;
-}
-
-/** What a split booking still counts as itself: its amount minus its parts (shipping, say). */
-function remainderOf(booking: TransactionRow, parts: TransactionRow[]): number {
-  return parts.reduce((rest, p) => rest - p.amount_cents, booking.amount_cents);
-}
-
-/** Whether the transaction is a part or a booking of a split. */
-function inSplit(t: TransactionRow, splits: Splits): boolean {
-  return !!t.split_of || splits.has(t.id);
-}
-
-/**
- * Net counting, used by every income / expense total. A transaction counts with its amount; a
- * transfer group counts once, by its net: on its lead leg's day, with the first category of
- * its legs (lead first), and only if the lead leg is among the rows. So moving 500 from one
- * account to another counts nothing (net 0), and only money that leaves the family (or comes
- * in) counts. A split booking's parts count with their own amounts and categories, and the
- * booking only with what is left of it, so the totals still match the statement.
- */
-export function netItems(rows: TransactionRow[], { groups, splits }: Links): NetItem[] {
-  const out: NetItem[] = [];
-  const item = (t: TransactionRow, amountCents: number, categoryId: string | null) => ({
-    day: t.day,
-    amountCents,
-    categoryId,
-    accountId: t.account_id,
-    payee: t.payee,
-    description: t.description,
-  });
-  for (const t of rows) {
-    const parts = splits.get(t.id);
-    const legs = groupOf(t, groups);
-    if (parts) {
-      const rest = remainderOf(t, parts);
-      if (rest !== 0) out.push(item(t, rest, t.category_id));
-    } else if (!legs) {
-      out.push(item(t, t.amount_cents, t.category_id));
-    } else if (legs[0].id === t.id) {
-      const net = netOf(t, groups);
-      if (net === 0) continue;
-      out.push(item(t, net, legs.find((l) => l.category_id)?.category_id ?? null));
-    }
-  }
-  return out;
-}
-
-/** What one transaction (or transfer group, or what is left of a split booking) counts as;
- *  payee, description and account are those of the transaction (a group's lead leg). */
-export type NetItem = {
-  day: string;
-  amountCents: number;
-  categoryId: string | null;
-  accountId: string | null;
-  payee: string;
-  description: string;
-};
-
-/**
- * What makes transactions "similar": the first words of the payee (or, without one, of the
- * description), without numbers, punctuation and case, so "REWE Markt 1234 Berlin" and
- * "Rewe Markt 5678 Berlin" match.
- */
-export function similarKey(t: { payee: string; description: string }): string {
-  const words = (s: string) =>
-    s.toLowerCase().replace(/[^\p{L}\s]+/gu, " ").split(/\s+/).filter((w) => w.length > 1);
-  const payee = words(t.payee);
-  return (payee.length ? payee : words(t.description)).slice(0, 3).join(" ");
-}
-
-function netTotals(items: { amountCents: number }[]) {
-  let incomeCents = 0, expenseCents = 0;
-  for (const it of items) {
-    if (it.amountCents > 0) incomeCents += it.amountCents;
-    else expenseCents -= it.amountCents;
-  }
-  return { incomeCents, expenseCents };
-}
+// ------------------------------------------------------------------ transfers and splits: matching
 
 type SplitMatch = { booking: TransactionRow; parts: TransactionRow[] };
 
@@ -1156,39 +869,45 @@ export function handleFinance(ctx: Ctx): Promise<Response> | null {
   return Promise.reject(new HttpError(404, "Not found"));
 }
 
-async function overviewData(store: Store, familyId: string) {
+async function overviewData(db: Db, store: Store, familyId: string) {
   const [settings, categories, accounts] = await Promise.all([
     store.getFinanceSettings(familyId),
     store.listCategories(familyId),
     listAccounts(store, familyId),
   ]);
+  const counts = categoryCounts(db, familyId);
   const s = settingsOf(familyId, settings);
   return {
     currency: s.currency,
     csvMappings: s.csv_mappings,
     benchmark: benchmarkOf(s, categories),
-    categories: categories.map(publicCategory),
+    // inCount / outCount: how many of its own transactions brought money in / took it out.
+    categories: categories.map((c) => ({
+      ...publicCategory(c),
+      inCount: counts.get(c.id)?.in ?? 0,
+      outCount: counts.get(c.id)?.out ?? 0,
+    })),
     accounts,
   };
 }
 
 /** GET /finance: currency, saved CSV mappings, the statistic average, the categories and the
  *  accounts. */
-async function overview({ finance: store, load }: Ctx): Promise<Response> {
+async function overview({ db, finance: store, load }: Ctx): Promise<Response> {
   const { family } = await load("view");
-  return json(await overviewData(store, family.id));
+  return json(await overviewData(db, store, family.id));
 }
 
 /** DELETE /finance: deletes all transactions, accounts, categories and settings. */
-async function clearRoute({ finance: store, load }: Ctx): Promise<Response> {
+async function clearRoute({ db, finance: store, load }: Ctx): Promise<Response> {
   const { family } = await load("edit");
   await store.clearFinance(family.id);
-  return json(await overviewData(store, family.id));
+  return json(await overviewData(db, store, family.id));
 }
 
 /** PATCH /finance/settings {"currency": "EUR", "csvMappings": [...], "benchmark": {...}}
  *  (benchmark: see cleanBenchmark; null clears it). */
-async function updateSettings({ finance: store, req, load }: Ctx): Promise<Response> {
+async function updateSettings({ db, finance: store, req, load }: Ctx): Promise<Response> {
   const { family } = await load("edit");
   const body = await readBody(req);
   const row = settingsOf(family.id, await store.getFinanceSettings(family.id));
@@ -1206,7 +925,7 @@ async function updateSettings({ finance: store, req, load }: Ctx): Promise<Respo
     row.benchmark = cleanBenchmark(body.benchmark, await store.listCategories(family.id));
   }
   await store.saveFinanceSettings(row);
-  return json(await overviewData(store, family.id));
+  return json(await overviewData(db, store, family.id));
 }
 
 async function categoriesRoute(ctx: Ctx, id: string | undefined): Promise<Response> {
@@ -1791,44 +1510,38 @@ export async function importTransactions(
 }
 
 /** Income and expenses per month and per category in the range (net counting: a transfer
- *  group is one item, in its lead leg's month; a split booking counts by its parts). */
+ *  group is one item, in its lead leg's month; a split booking counts by its parts). Within a
+ *  category money in and out cancel out (netTotals): over the range for the totals and the
+ *  categories, within each month for the months. */
 export async function financeSummary(store: Store, familyId: string, from?: string, to?: string) {
   const [settings, rows] = await Promise.all([
     store.getFinanceSettings(familyId),
     store.listTransactions(familyId, from, to),
   ]);
   const items = netItems(rows, await loadLinks(store, familyId, rows));
-  const months = new Map<string, { month: string; incomeCents: number; expenseCents: number }>();
-  const cats = new Map<
-    string | null,
-    { categoryId: string | null; incomeCents: number; expenseCents: number; count: number }
-  >();
-  let income = 0, expense = 0;
+  const byMonth = new Map<string, NetItem[]>();
+  const byCategory = new Map<string | null, NetItem[]>();
+  const add = <K>(map: Map<K, NetItem[]>, key: K, t: NetItem) => {
+    const list = map.get(key);
+    if (list) list.push(t);
+    else map.set(key, [t]);
+  };
   for (const t of items) {
-    const month = t.day.slice(0, 7);
-    const m = months.get(month) ?? { month, incomeCents: 0, expenseCents: 0 };
-    const c = cats.get(t.categoryId) ??
-      { categoryId: t.categoryId, incomeCents: 0, expenseCents: 0, count: 0 };
-    if (t.amountCents > 0) {
-      m.incomeCents += t.amountCents;
-      c.incomeCents += t.amountCents;
-      income += t.amountCents;
-    } else {
-      m.expenseCents -= t.amountCents;
-      c.expenseCents -= t.amountCents;
-      expense -= t.amountCents;
-    }
-    c.count++;
-    months.set(month, m);
-    cats.set(t.categoryId, c);
+    add(byMonth, t.day.slice(0, 7), t);
+    add(byCategory, t.categoryId, t);
   }
+  const months = [...byMonth].map(([month, list]) => ({ month, ...netTotals(list) }));
+  const categories = [...byCategory].map(([categoryId, list]) => ({
+    categoryId,
+    ...netTotals(list),
+    count: list.length,
+  }));
   return {
     currency: settingsOf(familyId, settings).currency,
-    incomeCents: income,
-    expenseCents: expense,
+    ...netTotals(items),
     count: items.length,
-    months: [...months.values()].sort((a, b) => a.month.localeCompare(b.month)),
-    categories: [...cats.values()].sort((a, b) => b.expenseCents - a.expenseCents),
+    months: months.sort((a, b) => a.month.localeCompare(b.month)),
+    categories: categories.sort((a, b) => b.expenseCents - a.expenseCents),
   };
 }
 

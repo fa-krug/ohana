@@ -99,9 +99,36 @@ struct FinanceCategoryTree {
         return current
     }
 
-    /// The kind a transaction of this sign fits (both, or the matching one).
-    static func fits(_ category: FinanceCategory, income: Bool) -> Bool {
-        category.kind == .both || (category.kind == .income) == income
+    /// Which way a category (its subcategories included) has been used, from GET /finance's
+    /// counts: true mostly for money coming in, false for money going out, nil when unused or
+    /// both alike. Every category takes either: within it they cancel out.
+    func usuallyIncome(_ id: String) -> Bool? {
+        var moneyIn = 0, moneyOut = 0
+        for sid in subtree(id) {
+            moneyIn += nodes[sid]?.category.inCount ?? 0
+            moneyOut += nodes[sid]?.category.outCount ?? 0
+        }
+        return moneyIn == moneyOut ? nil : moneyIn > moneyOut
+    }
+
+    /// The top-level categories for a transaction going this way: first those usually used
+    /// that way, then the others (`nil`: all in order, as `rest`).
+    func roots(for income: Bool?) -> (usual: [Node], rest: [Node]) {
+        let all = children(of: nil)
+        guard let income else { return ([], all) }
+        let usual = all.filter { usuallyIncome($0.id) == income }
+        return usual.isEmpty || usual.count == all.count ? ([], all)
+            : (usual, all.filter { usuallyIncome($0.id) != income })
+    }
+
+    /// `ordered` with the top-level categories (each with its subcategories) as `roots(for:)`
+    /// puts them.
+    func ordered(for income: Bool?) -> [Node] {
+        let (usual, rest) = roots(for: income)
+        guard !usual.isEmpty else { return ordered }
+        // Grouping keeps each top-level category's nodes in their order.
+        let byRoot = Dictionary(grouping: ordered) { top(of: $0.id) }
+        return (usual + rest).flatMap { byRoot[$0.id] ?? [] }
     }
 
     /// Where a category can move: anywhere but into itself or one of its subcategories.

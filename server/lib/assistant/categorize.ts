@@ -10,7 +10,7 @@
 import { HttpError } from "@/lib/api/http";
 import type { Lang } from "@/lib/i18n/config";
 import { categoryTree } from "@/lib/finance/category-tree";
-import { similarKey } from "@/lib/finance/finance";
+import { similarKey } from "@/lib/finance/net";
 import type { CategoryRow, TransactionRow } from "@/lib/finance/store";
 import type { NetOptions } from "./net";
 import { type ChatMessage, type Provider, streamChat } from "./provider";
@@ -33,38 +33,66 @@ export const MARKER = "You sort bank transactions into categories.";
 
 const LANGUAGES: Record<Lang, string> = { en: "English", de: "German" };
 
-/** Whether a category may hold a transaction of this amount. */
-export function fits(c: CategoryRow, amountCents: number): boolean {
-  if (c.kind === "both" || amountCents === 0) return true;
-  return (c.kind === "income") === amountCents > 0;
-}
-
 /**
  * Categories from similar transactions that already have one: the category most of them have
- * (at least 60 %), if it fits the amount. No AI involved.
+ * (at least 60 %). No AI involved. Any category may hold money in and out, so a refund goes
+ * where the purchase went; similar rows going the same way (in or out) decide when there are
+ * any, so a payee paid and paying back into different categories keeps them apart.
  */
 export function matchSimilar(
   rows: TransactionRow[],
   sorted: TransactionRow[],
   categories: CategoryRow[],
 ): Map<string, string> {
-  const byId = new Map(categories.map((c) => [c.id, c]));
+  const ids = new Set(categories.map((c) => c.id));
   const counts = new Map<string, Map<string, number>>();
+  const count = (key: string, id: string) => {
+    const c = counts.get(key) ?? new Map<string, number>();
+    c.set(id, (c.get(id) ?? 0) + 1);
+    counts.set(key, c);
+  };
   for (const t of sorted) {
     const key = similarKey(t);
-    if (!key || !t.category_id || !byId.has(t.category_id)) continue;
-    const c = counts.get(key) ?? new Map<string, number>();
-    c.set(t.category_id, (c.get(t.category_id) ?? 0) + 1);
-    counts.set(key, c);
+    if (!key || !t.category_id || !ids.has(t.category_id)) continue;
+    count(key, t.category_id);
+    count(`${key}|${t.amount_cents > 0}`, t.category_id);
   }
   const out = new Map<string, string>();
   for (const row of rows) {
-    const c = counts.get(similarKey(row));
+    const key = similarKey(row);
+    const c = counts.get(`${key}|${row.amount_cents > 0}`) ?? counts.get(key);
     if (!c) continue;
-    const fitting = [...c].filter(([id]) => fits(byId.get(id)!, row.amount_cents));
-    const total = fitting.reduce((sum, [, n]) => sum + n, 0);
-    const [best, n] = fitting.sort((a, b) => b[1] - a[1])[0] ?? [];
+    const total = [...c.values()].reduce((sum, n) => sum + n, 0);
+    const [best, n] = [...c].sort((a, b) => b[1] - a[1])[0] ?? [];
     if (best && n / total >= MAJORITY) out.set(row.id, best);
+  }
+  return out;
+}
+
+/** Which way a category (its subcategories included) is usually used, from the rows that have
+ *  one: "money out", "money in", "money in and out" (neither ≥ 80 %), or "" when unused. */
+function usualWay(rows: TransactionRow[], categories: CategoryRow[]): Map<string, string> {
+  const tree = categoryTree(categories);
+  const own = new Map<string, { in: number; out: number }>();
+  for (const t of rows) {
+    if (!t.category_id || t.amount_cents === 0) continue;
+    const c = own.get(t.category_id) ?? { in: 0, out: 0 };
+    if (t.amount_cents > 0) c.in++;
+    else c.out++;
+    own.set(t.category_id, c);
+  }
+  const out = new Map<string, string>();
+  for (const c of tree.ordered) {
+    let inN = 0, outN = 0;
+    for (const id of tree.subtree(c.id)) {
+      inN += own.get(id)?.in ?? 0;
+      outN += own.get(id)?.out ?? 0;
+    }
+    const all = inN + outN;
+    out.set(
+      c.id,
+      !all ? "" : outN >= all * 0.8 ? "money out" : inN >= all * 0.8 ? "money in" : "money in and out",
+    );
   }
   return out;
 }
@@ -108,19 +136,20 @@ export function categorizePrompt(
 ): string {
   const ex = examples(sorted, categories);
   const tree = categoryTree(categories);
+  const ways = usualWay(sorted, categories);
   const standing = instructions.length > 0;
   return [
     MARKER,
     `The statements are probably ${LANGUAGES[lang]}. Each row is: number | date | amount ` +
     "(negative = money going out) | payee | description" +
     (standing ? " | usual category id (how the family sorted such rows so far; - for none)." : "."),
-    'Categories (id: name after its parent categories, as in "Food > Groceries"; for which ' +
-    "amounts):",
-    ...tree.ordered.map((c) =>
-      `- ${c.id}: ${c.icon ? c.icon + " " : ""}${tree.path(c.id)} (${
-        c.kind === "both" ? "income and expenses" : c.kind === "income" ? "income" : "expenses"
-      })`
-    ),
+    'Categories (id: name after its parent categories, as in "Food > Groceries"; how the ' +
+    "family has used it so far, when it has). Any category may take money in and out: a refund " +
+    "or the sale of something used goes where buying it went, a salary into an income category.",
+    ...tree.ordered.map((c) => {
+      const way = ways.get(c.id);
+      return `- ${c.id}: ${c.icon ? c.icon + " " : ""}${tree.path(c.id)}${way ? ` (${way})` : ""}`;
+    }),
     ...(ex.length ? ["How the family sorted earlier transactions (payee -> id):", ...ex] : []),
     ...(standing
       ? [
@@ -137,7 +166,7 @@ export function categorizePrompt(
       ]
       : []),
     'Answer with one JSON object and nothing else: {"<row number>": "<category id>"}. Use only ' +
-    "the ids above, only categories that fit the amount, and null when you aren't fairly sure.",
+    "the ids above, and null when you aren't fairly sure.",
   ].join("\n");
 }
 
@@ -261,7 +290,7 @@ export async function suggestCategories(opts: {
         const row = batch[Number(key) - 1];
         const ref = typeof value === "string" ? value.trim() : "";
         const category = byId.get(ref) ?? byName.get(ref.toLowerCase());
-        if (row && category && fits(category, row.amount_cents)) out.set(row.id, category.id);
+        if (row && category) out.set(row.id, category.id);
       }
     });
   }

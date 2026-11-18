@@ -16,17 +16,14 @@ import {
 } from "@/lib/db/schema";
 import { categoryTree } from "./category-tree";
 
-export type CategoryKind = "income" | "expense" | "both";
-export const CATEGORY_KINDS: CategoryKind[] = ["income", "expense", "both"];
-
-/** A finance category, e.g. Groceries. */
+/** A finance category, e.g. Groceries. It holds money in and out alike: within it they cancel
+ *  out (netTotals). */
 export interface CategoryRow {
   family_id: string;
   id: string; // unique within the family
   name: string;
   color: string;
   icon: string; // an emoji, or ""
-  kind: CategoryKind; // a subcategory has the kind of its top-level category
   position: number; // among its siblings
   /** The category it is a subcategory of; null for a top-level one. */
   parent_id: string | null;
@@ -99,8 +96,7 @@ export interface Benchmark {
   income: CentsRange | null;
   expense: CentsRange | null;
   categories: ({ categoryId: string } & CentsRange)[];
-  /** Within each top-level category, money in and out cancel out (a refund lowers its
-   *  spending) before comparing. Not stored (older averages): true. */
+  /** Older averages: whether money in and out cancelled out. They always do now; ignored. */
   net?: boolean;
 }
 
@@ -165,10 +161,6 @@ function chunks<T>(list: T[], size = CHUNK): T[][] {
 
 type Tx = Pick<Db, "insert" | "update" | "delete" | "select">;
 
-function isKind(v: string): v is CategoryKind {
-  return CATEGORY_KINDS.includes(v as CategoryKind);
-}
-
 function categoryRow(c: typeof finCategories.$inferSelect): CategoryRow {
   return {
     family_id: c.familyId,
@@ -176,7 +168,6 @@ function categoryRow(c: typeof finCategories.$inferSelect): CategoryRow {
     name: c.name,
     color: c.color,
     icon: c.icon,
-    kind: isKind(c.kind) ? c.kind : "expense",
     position: c.position,
     parent_id: c.parentId,
   };
@@ -220,7 +211,7 @@ function categoryValues(c: CategoryRow) {
     name: c.name,
     color: c.color,
     icon: c.icon,
-    kind: c.kind,
+    kind: "both", // a column from when categories were for income or expenses
     position: c.position,
     parentId: c.parent_id ?? null,
   };

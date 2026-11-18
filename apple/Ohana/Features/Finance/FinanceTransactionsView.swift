@@ -312,10 +312,7 @@ struct FinanceTransactionMenu: View {
         if store.canEdit {
             Button("Edit", systemImage: "pencil") { onEdit(t) }
             Menu {
-                FinanceCategoryMenuItems(tree: store.tree, selection: t.categoryId,
-                                         fits: { FinanceCategoryTree.fits($0, income: t.amountCents > 0) }) { id in
-                    Task { await store.setCategory([t.id], to: id) }
-                }
+                FinanceCategoryMenuItems(store: store, transaction: t)
             } label: {
                 Label("Category", systemImage: "tag")
             }
@@ -531,7 +528,7 @@ struct FinanceTransactionTable: View {
             #if os(macOS)
             Button {
                 FinanceCategoryPopUp.show(tree: store.tree, selection: t.categoryId,
-                                          fits: { FinanceCategoryTree.fits($0, income: t.amountCents > 0) }) { id in
+                                          income: t.amountCents > 0) { id in
                     Task { await store.setCategory([t.id], to: id) }
                 }
             } label: {
@@ -543,10 +540,7 @@ struct FinanceTransactionTable: View {
             .help(row.categoryPath)
             #else
             Menu {
-                FinanceCategoryMenuItems(tree: store.tree, selection: t.categoryId,
-                                         fits: { FinanceCategoryTree.fits($0, income: t.amountCents > 0) }) { id in
-                    Task { await store.setCategory([t.id], to: id) }
-                }
+                FinanceCategoryMenuItems(store: store, transaction: t)
             } label: {
                 FinanceCategoryLabel(category: row.categoryValue)
             }
@@ -566,7 +560,7 @@ struct FinanceTransactionTable: View {
 /// one checked, a category with subcategories a submenu holding itself and them, as
 /// `FinanceCategoryMenuItems`.
 enum FinanceCategoryPopUp {
-    static func show(tree: FinanceCategoryTree, selection: String?, fits: (FinanceCategory) -> Bool,
+    static func show(tree: FinanceCategoryTree, selection: String?, income: Bool?,
                      pick: @escaping (String?) -> Void) {
         let target = Target(pick: pick)
         func item(_ title: String, id: String?) -> NSMenuItem {
@@ -593,7 +587,10 @@ enum FinanceCategoryPopUp {
         let menu = NSMenu()
         menu.addItem(item(String(localized: "Uncategorized"), id: nil))
         menu.addItem(.separator())
-        for node in tree.children(of: nil) where fits(node.category) { add(node, to: menu) }
+        let roots = tree.roots(for: income)
+        for node in roots.usual { add(node, to: menu) }
+        if !roots.usual.isEmpty { menu.addItem(.separator()) }
+        for node in roots.rest { add(node, to: menu) }
         // Returns once the menu closed, after the chosen item's action.
         withExtendedLifetime(target) {
             _ = menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)

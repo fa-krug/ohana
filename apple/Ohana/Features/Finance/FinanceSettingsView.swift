@@ -234,9 +234,6 @@ struct FinanceSettingsForm: View {
                 FinanceColorDot(hex: c.color, size: 12)
                 Text(c.label).foregroundStyle(.primary)
                 Spacer()
-                if node.depth == 0 {
-                    Text(c.kind.title).font(.caption).foregroundStyle(.secondary)
-                }
             }
             .padding(.leading, CGFloat(min(node.depth, 6)) * 18)
             .frame(minHeight: 44)
@@ -247,7 +244,7 @@ struct FinanceSettingsForm: View {
         // reaches the context menu's moves as actions.
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(c.label))
-        .accessibilityValue(Text(node.depth == 0 ? c.kind.title
+        .accessibilityValue(Text(node.depth == 0 ? String(localized: "Top level")
                                  : String(localized: "Subcategory of \(store.tree.parent(of: c.id)?.label ?? "")")))
         .accessibilityAddTraits(.isButton)
         .accessibilityAction(named: Text("Move up")) {
@@ -623,7 +620,7 @@ struct FinanceAccountEditor: View {
     }
 }
 
-/// A category's name, icon, color, kind (top level only) and place in the tree.
+/// A category's name, icon, color and place in the tree. Every category takes money in and out.
 struct FinanceCategoryEditor: View {
     @Bindable var store: FinanceStore
     let category: FinanceCategory?
@@ -632,13 +629,12 @@ struct FinanceCategoryEditor: View {
     @State private var name = ""
     @State private var icon = ""
     @State private var color = Color.blue
-    @State private var kind = FinanceCategoryKind.expense
     @State private var parentId: String?
     @State private var original: FinanceEditorSnapshot?
     @State private var busy = false
 
     private var snapshot: FinanceEditorSnapshot {
-        FinanceEditorSnapshot(name: name, icon: icon, color: FinanceColor.hex(color), rest: [kind.rawValue, parentId])
+        FinanceEditorSnapshot(name: name, icon: icon, color: FinanceColor.hex(color), rest: [parentId])
     }
 
     private var hasChanges: Bool { store.canEdit && original != nil && snapshot != original }
@@ -660,14 +656,6 @@ struct FinanceCategoryEditor: View {
                         ForEach(category.map { store.tree.moveTargets(for: $0.id) } ?? store.tree.ordered) { node in
                             Text(String(repeating: "   ", count: min(node.depth, 6)) + node.category.label).tag(Optional(node.id))
                         }
-                    }
-                    if parentId == nil {
-                        Picker("Kind", selection: $kind) {
-                            ForEach(FinanceCategoryKind.allCases) { Text($0.title).tag($0) }
-                        }
-                    } else if let top = store.category(store.tree.top(of: parentId)) {
-                        // A subcategory has the kind of its top-level category.
-                        LabeledContent("Kind", value: top.kind.title)
                     }
                 }
             }
@@ -694,12 +682,10 @@ struct FinanceCategoryEditor: View {
                 name = category.name
                 icon = category.icon
                 color = FinanceColor.color(category.color)
-                kind = category.kind
                 parentId = category.parentId
             } else {
                 name = String(localized: "Category \(store.categories.count + 1)")
                 color = FinanceColor.color(parent?.color ?? FinanceColor.next(used: store.categories.map(\.color)))
-                kind = parent?.kind ?? .expense
                 parentId = parent?.id
             }
         }
@@ -718,13 +704,13 @@ struct FinanceCategoryEditor: View {
             if iconText != category.icon { patch["icon"] = .string(iconText) }
             if hex != category.color.lowercased() { patch["color"] = .string(hex) }
             if parentId != category.parentId { patch["parentId"] = FinanceJSON.string(parentId) }
-            if parentId == nil && kind != category.kind { patch["kind"] = .string(kind.rawValue) }
             // A failed save keeps the sheet open; its banner says why.
             if !patch.isEmpty {
                 guard await store.updateCategory(category.id, patch) else { return }
             }
         } else {
-            guard await store.addCategory(name: trimmed, parent: store.category(parentId), kind: kind, color: hex, icon: iconText) != nil
+            let parent = store.category(parentId)
+            guard await store.addCategory(name: trimmed, parent: parent, color: hex, icon: iconText) != nil
             else { return }
         }
         dismiss()
@@ -740,7 +726,6 @@ struct FinanceBenchmarkEditor: View {
     @State private var income = FinanceRangeDraft()
     @State private var expense = FinanceRangeDraft()
     @State private var categories: [String: FinanceRangeDraft] = [:]
-    @State private var net = true
     @State private var busy = false
     @State private var loaded: FinanceBenchmark??
 
@@ -762,14 +747,9 @@ struct FinanceBenchmarkEditor: View {
                     ForEach(store.tree.children(of: nil)) { node in
                         rangeRow(node.category.label, Binding { categories[node.id] ?? FinanceRangeDraft() } set: { categories[node.id] = $0 },
                                  placeholder: rolledUp(node.id),
-                                 caption: node.category.kind == .income ? String(localized: "Income") : nil)
+                                 caption: store.tree.usuallyIncome(node.id) == true ? String(localized: "Income") : nil)
                     }
                 }
-            }
-            Section {
-                Toggle("Count refunds against spending", isOn: $net)
-            } footer: {
-                Text("Money coming back within a category (a return, a reimbursement) lowers its spending instead of counting as income.")
             }
             if store.canEdit {
                 Section {
@@ -805,7 +785,6 @@ struct FinanceBenchmarkEditor: View {
         income = FinanceRangeDraft(saved?.income)
         expense = FinanceRangeDraft(saved?.expense)
         categories = Dictionary((saved?.categories ?? []).map { ($0.categoryId, FinanceRangeDraft($0.range)) }) { _, b in b }
-        net = saved?.net ?? true
     }
 
     private struct Made {
@@ -822,7 +801,7 @@ struct FinanceBenchmarkEditor: View {
             if let range { list.append(FinanceBenchmarkCategory(categoryId: id, lowCents: range.lowCents, highCents: range.highCents)) }
         }
         return Made(benchmark: FinanceBenchmark(label: label.trimmingCharacters(in: .whitespaces), income: income,
-                                                expense: expense, categories: list, net: net))
+                                                expense: expense, categories: list))
     }
 
     /// What a top-level category without its own range shows: its subcategories' sum.

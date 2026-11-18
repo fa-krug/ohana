@@ -335,7 +335,7 @@ export function systemPrompt(input: {
     : "- (none yet)";
   const tree = categoryTree(input.categories);
   const cats = input.categories.length
-    ? tree.ordered.map((c) => `${c.id} (“${tree.path(c.id)}”, ${c.kind})`).join(", ")
+    ? tree.ordered.map((c) => `${c.id} (“${tree.path(c.id)}”)`).join(", ")
     : "(none)";
   const accounts = input.accounts.length
     ? input.accounts.map((a) => `${a.id} (“${a.name}”)`).join(", ")
@@ -344,7 +344,7 @@ export function systemPrompt(input: {
   const benchmark = b
     ? `${b.label ? `“${b.label}”: ` : ""}${
       JSON.stringify(inCurrency({ income: b.income, expense: b.expense, categories: b.categories }))
-    }${b.net === false ? " (spending and income as they are)" : " (net: refunds lower their category's spending)"}`
+    }`
     : "not set";
   return `You are the assistant inside Ohana, the family app of the family “${family.name}”.
 Today is ${today} (${weekday}). This chat belongs to the ${input.page} page; the calendar
@@ -371,7 +371,11 @@ ${typeList}
 A transactions log in ${input.currency}. Amounts in tools are in ${input.currency} with decimals,
 negative for money going out (-45.99 = 45.99 out; 3 = 3.00, never 300). Categories: ${cats}. Accounts: ${accounts}.
 Categories nest to any depth (“Food > Groceries”): a transaction can be on any level, and a
-category's totals and filters include its subcategories.
+category's totals and filters include its subcategories. There are no income or expense
+categories: any category takes money in and out, and within a category they cancel out in every
+total (a refund, or selling the children's old clothes, lowers what that category cost; only
+what is left counts as income or expense). So money back belongs in the category of what it is
+for; uncategorized money counts as it is.
 The overview compares the chosen month, year or all time (per month) with others, and shows
 where it is within the ranges of a statistic average per month the family sets
 (set_statistic_average), currently: ${benchmark}. finance_insights: where spending grew,

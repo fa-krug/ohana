@@ -12,7 +12,7 @@ import { prepareTurn } from "@/lib/assistant/routes";
 import type { ChatRow } from "@/lib/assistant/store";
 import { runTool } from "@/lib/assistant/tools";
 import { DrizzleCalendarStore } from "@/lib/calendar/store";
-import { similarKey } from "@/lib/finance/finance";
+import { similarKey } from "@/lib/finance/net";
 import { DrizzleFinanceStore } from "@/lib/finance/store";
 import { AI, type AssistantTest, assistantTest, configure, type Event, fakeFetch, KEY, net } from "@/lib/test/assistant";
 import type { AiEnv } from "@/lib/assistant/routes";
@@ -532,7 +532,8 @@ describe("a turn of the assistant", () => {
     expect([change.kind, change.summary]).toEqual(["categories", "Added the category “Pets”"]);
     const cats = async () => (await t.call("GET", `${t.f}/finance`)).data.categories as { id: string; name: string; kind: string; icon: string }[];
     const pets = (await cats()).find((c) => c.name === "Pets")!;
-    expect([pets.id, pets.kind, pets.icon]).toEqual(["pets", "expense", "🐾"]);
+    // Every category takes money in and out ("both", for older apps).
+    expect([pets.id, pets.kind, pets.icon]).toEqual(["pets", "both", "🐾"]);
 
     for (const step of change.undo) {
       expect((await t.call(step.method, `${t.f}${step.path}`, step.body)).status).toBe(200);
@@ -600,15 +601,9 @@ describe("a turn of the assistant", () => {
     await undo(first.change!.undo);
     expect(await benchmark()).toBeNull();
 
-    // Comparing gross is kept when the average is set again without saying.
+    // Money in and out within a category always cancel out: an older "net: false" is ignored.
     await set({ expense: { low: 3000, high: 3000 }, net: false });
-    await set({ income: { low: 5000, high: 5000 } });
-    expect((await benchmark()).net).toBe(false);
-
-    // Comparing gross is kept when the average is set again without saying.
-    await set({ expense: { low: 3000, high: 3000 }, net: false });
-    await set({ income: { low: 5000, high: 5000 } });
-    expect((await benchmark()).net).toBe(false);
+    expect((await benchmark()).net).toBe(true);
 
     expect((await set({ categories: [{ category: "Nope", low: 1 }] })).ok).toBe(false);
     expect((await set({ expense: { low: -5 } })).ok).toBe(false);
@@ -680,7 +675,7 @@ describe("categorize", () => {
     const ids = await addTransactions(t, [
       { date: "2026-02-01", amountCents: -4520, payee: "Supermarket", description: "groceries" },
       { date: "2026-02-02", amountCents: -1200, payee: "City", description: "Mobility pass" },
-      // Income can't go to an expense category, whatever the model says.
+      // Money back goes where the purchase went: any category takes money in and out.
       { date: "2026-02-03", amountCents: 900, payee: "Groceries refund" },
       { date: "2026-02-04", amountCents: -999, payee: "Something odd" },
       // Already sorted: stays as it is, and is shown to the model as an example.
@@ -688,10 +683,13 @@ describe("categorize", () => {
     ]);
     const res = await t.call("POST", `${t.ai}/categorize`, { from: "2026-02-01", to: "2026-02-28" });
     expect(res.status, JSON.stringify(res.data)).toBe(200);
-    expect([res.data.changed, res.data.considered, res.data.remaining]).toEqual([2, 4, 0]);
-    expect(await categoryOf(t, ids)).toEqual(["groceries", "mobility", null, null, "health"]);
+    expect([res.data.changed, res.data.considered, res.data.remaining]).toEqual([3, 4, 0]);
+    expect(await categoryOf(t, ids)).toEqual(["groceries", "mobility", "groceries", null, "health"]);
     expect(net.aiBody.temperature).toBe(0);
     expect(net.aiBody.messages[0].content).toMatch(/Pharmacy -> health/);
+    // How the family used a category so far: the pharmacy's money out.
+    expect(net.aiBody.messages[0].content).toMatch(/^- health: .*Health \(money out\)$/m);
+    expect(net.aiBody.messages[0].content).toMatch(/^- groceries: .*Groceries$/m);
     expect(net.aiBody.messages[1].content).toMatch(/^1 \| 2026-02-04 \| -9\.99 \| Something odd \| $/m);
 
     const undo = await t.call("POST", `${t.f}/finance/transactions`, { ops: res.data.inverse });
@@ -730,18 +728,24 @@ describe("categorize", () => {
       { date: "2026-01-09", amountCents: -2000, payee: "Rewe Markt 99", categoryId: "groceries" },
       { date: "2026-01-10", amountCents: -900, payee: "Kiosk", categoryId: "leisure" },
       { date: "2026-01-11", amountCents: -900, payee: "Kiosk", categoryId: "shopping" },
+      // Bought there as shopping, sold the children's clothes there.
+      { date: "2026-01-12", amountCents: -1500, payee: "Vinted", categoryId: "shopping" },
+      { date: "2026-01-13", amountCents: 2000, payee: "Vinted", categoryId: "kids" },
       { date: "2026-02-01", amountCents: -4520, payee: "REWE MARKT 5678" },
       // The family sorted the kiosk both ways: no clear answer.
       { date: "2026-02-02", amountCents: -800, payee: "Kiosk" },
-      // Money back from the supermarket doesn't go into an expense category.
+      // Money back from the supermarket goes where buying there went.
       { date: "2026-02-03", amountCents: 500, payee: "Rewe Markt 1" },
+      // Similar rows going the same way decide.
+      { date: "2026-02-04", amountCents: 1200, payee: "Vinted" },
+      { date: "2026-02-05", amountCents: -700, payee: "Vinted" },
     ]);
     net.requests.length = 0;
     const res = await t.call("POST", `${t.ai}/categorize`, { from: "2026-02-01" });
     expect(res.status, JSON.stringify(res.data)).toBe(200);
-    expect([res.data.changed, res.data.matched, res.data.ai]).toEqual([1, 1, false]);
+    expect([res.data.changed, res.data.matched, res.data.ai]).toEqual([4, 4, false]);
     expect(res.data.assignments[0].source).toBe("similar");
-    expect((await categoryOf(t, ids)).slice(4)).toEqual(["groceries", null, null]);
+    expect((await categoryOf(t, ids)).slice(6)).toEqual(["groceries", null, "groceries", "kids", "shopping"]);
     expect(net.requests).toHaveLength(0);
     expect(similarKey({ payee: "", description: "SEPA 4711 Stadtwerke München GmbH" })).toBe("sepa stadtwerke münchen");
   });

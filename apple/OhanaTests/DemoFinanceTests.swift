@@ -55,9 +55,12 @@ struct DemoFinanceTests {
 
         let month = try list(october)
         #expect(month.transactions.allSatisfy { $0.date.hasPrefix("2026-10") })
-        // Two salaries, child benefit, a refund and the vacation money from savings (not combined
-        // yet); the 500 to savings is a transfer and counts nothing.
-        #expect(month.incomeCents == 312_000 + 164_000 + 51_800 + 2_499 + 60_000)
+        // Two salaries, child benefit and the vacation money from savings (not combined yet); the
+        // 500 to savings is a transfer and counts nothing. The refund (24.99, Other) lowers what
+        // Other cost (34.85) instead of counting as income.
+        #expect(month.incomeCents == 312_000 + 164_000 + 51_800 + 60_000)
+        let other = try list(october.merging(["category": "other"]) { first, _ in first })
+        #expect(other.incomeCents == 0 && other.expenseCents == 3_485 - 2_499)
         let legs = month.transactions.filter { $0.transferId != nil }
         #expect(legs.count == 2 && Set(legs.compactMap(\.accountId)) == ["acc-checking", "acc-savings"])
 
@@ -66,7 +69,8 @@ struct DemoFinanceTests {
 
         let income = try list(october.merging(["kind": "income"]) { a, _ in a })
         #expect(income.transactions.allSatisfy { $0.amountCents > 0 && $0.transferId == nil })
-        #expect(income.incomeCents == month.incomeCents && income.expenseCents == 0)
+        // Money in alone: the refund has nothing to cancel against there.
+        #expect(income.incomeCents == month.incomeCents + 2_499 && income.expenseCents == 0)
     }
 
     @Test func theListFiltersByCategoryAccountSearchAndPages() throws {

@@ -21,8 +21,8 @@ export const finSettings = sqliteTable("fin_settings", {
   benchmark: text("benchmark"),
 });
 
-/** A category (e.g. Groceries); a tree through parent_id, any depth. A subcategory has the kind
- *  of its top-level category. */
+/** A category (e.g. Groceries); a tree through parent_id, any depth. It holds money in and out
+ *  alike (within it they cancel out). */
 export const finCategories = sqliteTable(
   "fin_categories",
   {
@@ -34,7 +34,8 @@ export const finCategories = sqliteTable(
     name: text("name").notNull(),
     color: text("color").notNull(),
     icon: text("icon").notNull().default(""),
-    kind: text("kind").notNull().default("expense"), // income | expense | both
+    // From when a category was for income or expenses; always "both" since migration 0040.
+    kind: text("kind").notNull().default("expense"),
     position: integer("position").notNull().default(0), // among its siblings
     parentId: text("parent_id"),
   },

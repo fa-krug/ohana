@@ -4,23 +4,21 @@
 
 import { HttpError, objectOf } from "@/lib/api/http";
 import { isValidDate } from "@/lib/calendar/dates";
-import { categoryTree } from "@/lib/finance/category-tree";
+import { benchmarkOf, cleanBenchmark } from "@/lib/finance/benchmark";
+import { categoryTree, findCategory } from "@/lib/finance/category-tree";
 import {
   applyTransactionOps,
   autoCombine,
-  benchmarkOf,
   changedCategories,
-  cleanBenchmark,
   financeSummary,
-  findCategory,
   findTransactions,
   listAccounts,
-  netItems,
   newCategory,
   publicCategory,
   publicTransaction,
   transferPairs,
 } from "@/lib/finance/finance";
+import { netItems } from "@/lib/finance/net";
 import { buildInsights, dismissInsight, restoreInsight, validInsightKey } from "@/lib/finance/insights";
 import type { AccountRow, CategoryRow, FinanceStore as Store } from "@/lib/finance/store";
 import { analyzeTransactions, TX_DIMENSIONS, TX_SORTS, TX_STATS } from "../analytics";
@@ -170,7 +168,7 @@ export const financeTools: Record<string, Tool> = {
     spec: {
       name: "list_transactions",
       description:
-        'Lists transactions (newest first) with totals, as rows of `columns`: as many as fit, long descriptions shortened. If `nextOffset` is set there are more: call again with that offset. For totals per month or category use finance_summary instead. Amounts are in the currency (-45.99), negative = money out. Legs of a transfer between the family\'s accounts share a transferId; totals count a transfer once by its net (500 moved between two accounts counts 0). A part of a split booking (e.g. an order line of an Amazon "Splitbuchung") has the booking\'s id as splitOf; totals count the parts and only what is left of the booking. Filters: from/to (YYYY-MM-DD), account (id, name or "none"), category (id, name, path like "Food > Groceries", or "none"; includes its subcategories), kind (income | expense | transfer: legs of transfers), source (manual | csv | bank, comma-separated; after a full bank import "manual,csv" of that account are what the bank doesn\'t list), payee (a key from finance_insights), q (text in payee, description, note).',
+        'Lists transactions (newest first) with totals (money in and out within a category cancel out, as in finance_summary), as rows of `columns`: as many as fit, long descriptions shortened. If `nextOffset` is set there are more: call again with that offset. For totals per month or category use finance_summary instead. Amounts are in the currency (-45.99), negative = money out. Legs of a transfer between the family\'s accounts share a transferId; totals count a transfer once by its net (500 moved between two accounts counts 0). A part of a split booking (e.g. an order line of an Amazon "Splitbuchung") has the booking\'s id as splitOf; totals count the parts and only what is left of the booking. Filters: from/to (YYYY-MM-DD), account (id, name or "none"), category (id, name, path like "Food > Groceries", or "none"; includes its subcategories), kind (income | expense | transfer: legs of transfers), source (manual | csv | bank, comma-separated; after a full bank import "manual,csv" of that account are what the bank doesn\'t list), payee (a key from finance_insights), q (text in payee, description, note).',
       parameters: {
         type: "object",
         properties: {
@@ -247,7 +245,7 @@ export const financeTools: Record<string, Tool> = {
     spec: {
       name: "finance_summary",
       description:
-        "Income and expenses (in the currency, e.g. 45.99) per month and per category between two days (a transfer between the family's accounts counts once by its net), plus the currency, the categories and the accounts with their current balances (balance) and their balances at the end of `to` (balanceAtTo); a linked account's bank.balance is its booked balance at the bank as of the last sync (bank.balanceAt). Categories nest: per category its own transactions, and for one with subcategories also withSubcategories (it and all below it).",
+        "Income and expenses (in the currency, e.g. 45.99) per month and per category between two days (a transfer between the family's accounts counts once by its net; within a category money in and out cancel out, over the range for the totals and categories, within the month for each month, so a refund lowers its category's expenses; uncategorized money counts as it is), plus the currency, the categories and the accounts with their current balances (balance) and their balances at the end of `to` (balanceAtTo); a linked account's bank.balance is its booked balance at the bank as of the last sync (bank.balanceAt). Categories nest: per category its own transactions, and for one with subcategories also withSubcategories (it and all below it).",
       parameters: {
         type: "object",
         properties: { from: { type: "string" }, to: { type: "string" } },
@@ -383,7 +381,7 @@ export const financeTools: Record<string, Tool> = {
     spec: {
       name: "analyze_transactions",
       description:
-        'Totals and statistics of transactions per group, computed exactly (use it instead of adding up list_transactions): up to 2 of groupBy: month, quarter, year, week (ISO), weekday, day, category, account, payee (similar spellings together), kind (income / expense). Each group has count, income, expense, net, and the asked stats of its single amounts (avg, median, min, max, stddev); amounts in the currency (45.99), negative = out. With one groupBy, perGroup has the average and median group (e.g. the average month; empty months count as 0). Counted like all totals: a transfer between the family\'s accounts once by its net, a split booking by its parts. Categories nest ("Food > Groceries"): by default a transaction counts for its own category; with categoryLevel (1 = top level, 2 = second level …) for its category\'s ancestor at that level, or its own category if that isn\'t as deep; nested groups have categoryPath. Same filters as list_transactions (from, to, account, category with its subcategories, kind, q). Time groups come in order, others largest first; sortBy: key, total (income + expenses), count, income, expense, net; order: asc or desc. One call usually covers a whole question: groupBy category, account or kind gives every category, account or kind at once (with year or month as the second dimension, per period). To compare different periods or filters, don\'t call once each: give `queries`, up to 10 analyses with their own filters and options (and a label, given back) in one call; what is set outside queries applies to all of them, e.g. {"groupBy": ["category"], "categoryLevel": 1, "kind": "expense", "queries": [{"label": "2025", "from": "2025-01-01", "to": "2025-10-25"}, {"label": "2026", "from": "2026-01-01", "to": "2026-10-25"}]}. The result then has results: one per query, in order.',
+        'Totals and statistics of transactions per group, computed exactly (use it instead of adding up list_transactions): up to 2 of groupBy: month, quarter, year, week (ISO), weekday, day, category, account, payee (similar spellings together), kind (income / expense). Each group has count, income, expense (both as they are: unlike finance_summary a refund isn\'t taken off its category\'s expenses), net (what came in minus what went out: for a category what it cost), and the asked stats of its single amounts (avg, median, min, max, stddev); amounts in the currency (45.99), negative = out. With one groupBy, perGroup has the average and median group (e.g. the average month; empty months count as 0). Counted like all totals: a transfer between the family\'s accounts once by its net, a split booking by its parts. Categories nest ("Food > Groceries"): by default a transaction counts for its own category; with categoryLevel (1 = top level, 2 = second level …) for its category\'s ancestor at that level, or its own category if that isn\'t as deep; nested groups have categoryPath. Same filters as list_transactions (from, to, account, category with its subcategories, kind, q). Time groups come in order, others largest first; sortBy: key, total (income + expenses), count, income, expense, net; order: asc or desc. One call usually covers a whole question: groupBy category, account or kind gives every category, account or kind at once (with year or month as the second dimension, per period). To compare different periods or filters, don\'t call once each: give `queries`, up to 10 analyses with their own filters and options (and a label, given back) in one call; what is set outside queries applies to all of them, e.g. {"groupBy": ["category"], "categoryLevel": 1, "kind": "expense", "queries": [{"label": "2025", "from": "2025-01-01", "to": "2025-10-25"}, {"label": "2026", "from": "2026-01-01", "to": "2026-10-25"}]}. The result then has results: one per query, in order.',
       parameters: {
         type: "object",
         properties: {
@@ -442,7 +440,7 @@ export const financeTools: Record<string, Tool> = {
     spec: {
       name: "manage_categories",
       description:
-        'Adds, changes, moves or deletes finance categories. Categories nest to any depth (e.g. "Food > Groceries > Bakery"); transactions can be on any level, and a category\'s totals include its subcategories. "add": name, parent (id, name or path; leave out for a top-level category), kind (expense | income | both, default expense; only for top-level ones, a subcategory has its top-level category\'s), color (#rrggbb), icon (one emoji). "update": category (id, name or path) and any of name, parent (moves it with its subcategories; "" = top level), kind (top level only, its subcategories follow), color, icon. "delete": category (its subcategories and transactions move to its parent; for a top-level one the subcategories become top-level and the transactions uncategorized; needs confirmed). A name that several categories have needs the path.',
+        'Adds, changes, moves or deletes finance categories. Categories nest to any depth (e.g. "Food > Groceries > Bakery"); transactions can be on any level, and a category\'s totals include its subcategories. Any category takes money in and out (they cancel out within it). "add": name, parent (id, name or path; leave out for a top-level category), color (#rrggbb), icon (one emoji). "update": category (id, name or path) and any of name, parent (moves it with its subcategories; "" = top level), color, icon. "delete": category (its subcategories and transactions move to its parent; for a top-level one the subcategories become top-level and the transactions uncategorized; needs confirmed). A name that several categories have needs the path.',
       parameters: {
         type: "object",
         properties: {
@@ -450,7 +448,6 @@ export const financeTools: Record<string, Tool> = {
           category: { type: "string" },
           parent: { type: "string" },
           name: { type: "string" },
-          kind: { type: "string", enum: ["expense", "income", "both"] },
           color: { type: "string" },
           icon: { type: "string" },
           confirmed: { type: "boolean" },
@@ -481,10 +478,9 @@ export const financeTools: Record<string, Tool> = {
         }
         case "update": {
           const current = findCategory(categories, args.category);
-          const { name, kind, color, icon, parent } = args;
+          const { name, color, icon, parent } = args;
           const changed = changedCategories(categories, current, {
             name,
-            kind,
             color,
             icon,
             parentId: parent,
@@ -502,7 +498,6 @@ export const financeTools: Record<string, Tool> = {
                 path: path(current.id),
                 body: {
                   name: current.name,
-                  kind: current.kind,
                   color: current.color,
                   icon: current.icon,
                   parentId: current.parent_id ?? null,
@@ -533,7 +528,7 @@ export const financeTools: Record<string, Tool> = {
     spec: {
       name: "set_statistic_average",
       description:
-        "Sets the statistic average that the finance overview compares the family's months with, e.g. a statistics office's figures on household income and spending for a household like this one (search the web for current figures and name the source and year in label). Every amount is a range per month in the currency (e.g. 3500.50), not negative: {low, high}, e.g. the typical span between lower and upper households, or the same twice for a single average. income, expense, and categories: [{category (id, name or path), low, high}] for the family's categories (top-level ones show in the overview; one without its own range sums up those of its subcategories). Leave out what isn't known. net (default: as before, at first true): within each top-level category money in and out cancel out before comparing, so a refund lowers the category's spending (and the expense total); false compares spending and income as they are. It replaces the whole average; clear: true removes it (the overview then doesn't show it).",
+        "Sets the statistic average that the finance overview compares the family's months with, e.g. a statistics office's figures on household income and spending for a household like this one (search the web for current figures and name the source and year in label). Every amount is a range per month in the currency (e.g. 3500.50), not negative: {low, high}, e.g. the typical span between lower and upper households, or the same twice for a single average. income, expense, and categories: [{category (id, name or path), low, high}] for the family's categories (top-level ones show in the overview; one without its own range sums up those of its subcategories). Leave out what isn't known. Within each top-level category money in and out cancel out before comparing, so a refund lowers the category's spending (and the expense total). It replaces the whole average; clear: true removes it (the overview then doesn't show it).",
       parameters: {
         type: "object",
         properties: {
@@ -548,7 +543,6 @@ export const financeTools: Record<string, Tool> = {
               required: ["category"],
             },
           },
-          net: { type: "boolean" },
           clear: { type: "boolean" },
         },
       },
@@ -568,7 +562,6 @@ export const financeTools: Record<string, Tool> = {
           income: range(args.income),
           expense: range(args.expense),
           categories: Array.isArray(args.categories) ? args.categories.map(range) : args.categories,
-          net: args.net ?? settings?.benchmark?.net,
         },
         categories,
       );

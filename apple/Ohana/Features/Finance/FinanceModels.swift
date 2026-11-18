@@ -4,31 +4,21 @@ import Foundation
 // publicTransaction, overviewData, financeSummary, the routes' answers). Amounts are integer
 // cents, negative for money going out; days are "YYYY-MM-DD".
 
-nonisolated enum FinanceCategoryKind: String, Codable, CaseIterable, Hashable, Identifiable, Sendable {
-    case expense, income, both
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .expense: String(localized: "Expense")
-        case .income: String(localized: "Income")
-        case .both: String(localized: "Both")
-        }
-    }
-}
-
-/// A category (publicCategory). A subcategory has the kind of its top-level category.
+/// A category (publicCategory). It takes money in and out alike: within it they cancel out
+/// (the server's totals), so a refund or a sale lowers what it cost.
 nonisolated struct FinanceCategory: Codable, Hashable, Identifiable, Sendable {
     var id: String
     var name: String
     var color: String
     var icon: String
-    var kind: FinanceCategoryKind
     /// Among its siblings.
     var position: Int
     /// Nil for a top-level category.
     var parentId: String?
+    /// How many of its own transactions brought money in / took it out (GET /finance only; nil
+    /// from other answers, older servers and the demo): which way it is usually used.
+    var inCount: Int?
+    var outCount: Int?
 
     /// "🛒 Groceries".
     var label: String { icon.isEmpty ? name : "\(icon) \(name)" }
@@ -343,33 +333,14 @@ nonisolated struct FinanceBenchmarkCategory: Codable, Hashable, Sendable {
     var range: FinanceCentsRange { FinanceCentsRange(lowCents: lowCents, highCents: highCents) }
 }
 
-/// A statistic average to compare with: ranges per month.
+/// A statistic average to compare with: ranges per month. Within each top-level category money
+/// in and out cancel out before comparing (a refund lowers its spending); the server's `net`
+/// (always true) isn't read.
 nonisolated struct FinanceBenchmark: Codable, Hashable, Sendable {
     var label: String
     var income: FinanceCentsRange?
     var expense: FinanceCentsRange?
     var categories: [FinanceBenchmarkCategory]
-    /// Within each top-level category money in and out cancel out before comparing (a refund
-    /// lowers its spending); an older server sends none: true.
-    var net = true
-
-    init(label: String, income: FinanceCentsRange?, expense: FinanceCentsRange?,
-         categories: [FinanceBenchmarkCategory], net: Bool = true) {
-        self.label = label
-        self.income = income
-        self.expense = expense
-        self.categories = categories
-        self.net = net
-    }
-
-    init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        label = try c.decode(String.self, forKey: .label)
-        income = try c.decodeIfPresent(FinanceCentsRange.self, forKey: .income)
-        expense = try c.decodeIfPresent(FinanceCentsRange.self, forKey: .expense)
-        categories = try c.decode([FinanceBenchmarkCategory].self, forKey: .categories)
-        net = try c.decodeIfPresent(Bool.self, forKey: .net) ?? true
-    }
 }
 
 /// GET /finance (overviewData), also the answer of PATCH /finance/settings and DELETE /finance.

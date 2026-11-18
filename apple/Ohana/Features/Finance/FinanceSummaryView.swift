@@ -316,7 +316,7 @@ struct FinanceBenchmarkCard: View {
     }
 
     private func rows(_ benchmark: FinanceBenchmark, _ column: FinanceComparison) -> [Row] {
-        let values = column.months > 0 ? column.benchmarkValues(store.tree, net: benchmark.net) : nil
+        let values = column.months > 0 ? column.benchmarkValues(store.tree) : nil
         var rows: [Row] = []
         if let income = benchmark.income {
             rows.append(Row(id: "income", label: String(localized: "Income"), range: income,
@@ -329,7 +329,8 @@ struct FinanceBenchmarkCard: View {
         let own = Dictionary(benchmark.categories.map { ($0.categoryId, $0.range) }) { _, b in b }
         for node in store.tree.children(of: nil) {
             guard let range = Self.categoryRange(store.tree, own: own, id: node.id) else { continue }
-            let income = node.category.kind == .income
+            // Compared as income when the category is mostly used for money coming in.
+            let income = store.tree.usuallyIncome(node.id) == true
             rows.append(Row(id: node.id, label: node.category.label, range: range,
                             cents: values.map { (income ? $0.income : $0.expense)[node.id] ?? 0 }, higherIsGood: income))
         }
