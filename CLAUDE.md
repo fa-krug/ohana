@@ -657,7 +657,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   U1–U11, U7a, J1, J2 (ages from the Richtlinie's months / weeks / days *of life*: the 21st month is
   age 20 months; `until` its tolerance; U10, U11, J2 `notAlwaysPaid`), the STIKO calendar for
   children **by visit** (`vac-6w` … `vac-9y`, `hpv-1` / `hpv-2`, `rsv-infant`) and adults (`td` every
-  10 years from 18, `flu` / `covid` `seasonal` from 60, `pneumo`, `shingles-1` / `-2` (`after`: ages
+  10 years from 18, `flu` / `covid` `seasonal` from 60 (from 18 `optionalFrom`: status `optional`, recordable, never due or notified; `ItemState.optional`), `pneumo`, `shingles-1` / `-2` (`after`: ages
   from the first dose), `rsv` from 75); children's items until 18; `addAge` (a month end that doesn't
   exist: the month's last day). `status.ts` `personHealth` / `itemState`: done / skipped (recorded;
   a repeating one from its newest record, a dateless one from the day it was recorded; seasonal per

@@ -8,10 +8,12 @@
 //   overdue: most of these happened before anyone used Ohana; one tap marks them all done.
 // - unknown: a repeating one never recorded (when was the last tetanus shot?), or a second dose
 //   whose first has no date.
+// - optional: one that's not recommended at this age but can be had (flu, COVID-19 before 60),
+//   without a record for the current period: never due, never told about.
 
-import { type Lang, type ScheduleItem, SCHEDULE_BY_CODE, addAge, itemsFor, seasonOf } from "./schedule";
+import { type Lang, type ScheduleItem, SCHEDULE_BY_CODE, addAge, isOptional, itemsFor, seasonOf } from "./schedule";
 
-export type HealthStatus = "done" | "skipped" | "due" | "upcoming" | "past" | "unknown";
+export type HealthStatus = "done" | "skipped" | "due" | "upcoming" | "past" | "unknown" | "optional";
 export type RecordStatus = "done" | "skipped";
 
 export interface HealthRecord {
@@ -39,6 +41,8 @@ export interface ItemState {
   until: string | null;
   /** Again every so often (tetanus) or each autumn. */
   repeats: boolean;
+  /** Not recommended at this age, but can be had (flu, COVID-19 before 60). */
+  optional: boolean;
   /** Its records, newest first. */
   records: Omit<HealthRecord, "code" | "recorded">[];
 }
@@ -62,12 +66,20 @@ interface Standing {
 
 const NO_WINDOW = { from: null, to: null, until: null };
 
-/** Flu, COVID-19: the current autumn season's record, else due from 1 October. */
-function seasonal(records: HealthRecord[], today: string): Standing {
+const seasonWindow = (season: ReturnType<typeof seasonOf>) => ({
+  from: season.start,
+  to: `${season.start.slice(0, 4)}-12-31`,
+  until: season.end,
+});
+
+/** Flu, COVID-19: the current autumn season's record (then the next season's window), else due
+ *  from 1 October; `optional`: never due. */
+function seasonal(records: HealthRecord[], today: string, optional: boolean): Standing {
   const season = seasonOf(today);
   const current = records.find((r) => dayOf(r) >= season.counts && dayOf(r) <= season.end);
-  const status = current ? current.status : today < season.start ? "upcoming" : "due";
-  return { status, from: season.start, to: `${season.start.slice(0, 4)}-12-31`, until: season.end };
+  if (current) return { status: current.status, ...seasonWindow(seasonOf(`${Number(season.start.slice(0, 4)) + 1}-06-01`)) };
+  const status = optional ? "optional" : today < season.start ? "upcoming" : "due";
+  return { status, ...seasonWindow(season) };
 }
 
 /** Tetanus: due again `every` after the newest record; never recorded: unknown. */
@@ -117,8 +129,9 @@ export function itemState(
 ): ItemState {
   const records = [...(byCode.get(item.code) ?? [])].sort(newestFirst);
   const latest = records[0];
+  const optional = isOptional(item, birthday, today);
   const { status, from, to, until } = item.seasonal
-    ? seasonal(records, today)
+    ? seasonal(records, today, optional)
     : item.every
       ? repeating(item, latest, today)
       : item.after
@@ -137,6 +150,7 @@ export function itemState(
     to,
     until,
     repeats: !!(item.every || item.seasonal),
+    optional,
     records: records.map(({ id, day, status: s, note }) => ({ id, day, status: s, note })),
   };
 }

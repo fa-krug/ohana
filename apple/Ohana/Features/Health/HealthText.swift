@@ -14,6 +14,7 @@ enum HealthText {
         case .upcoming: "circle"
         case .past: "circle.dashed"
         case .unknown: "questionmark.circle"
+        case .optional: "circle"
         }
     }
 
@@ -21,7 +22,7 @@ enum HealthText {
         switch status {
         case .done: .green
         case .due: .orange
-        case .skipped, .upcoming, .past, .unknown: .secondary
+        case .skipped, .upcoming, .past, .unknown, .optional: .secondary
         }
     }
 
@@ -33,6 +34,7 @@ enum HealthText {
         case .upcoming: String(localized: "Coming up")
         case .past: String(localized: "Not recorded")
         case .unknown: String(localized: "Unknown")
+        case .optional: String(localized: "Optional")
         }
     }
 
@@ -44,6 +46,7 @@ enum HealthText {
         case .upcoming: upcoming(item)
         case .past: String(localized: "Not recorded")
         case .unknown: unknown(item)
+        case .optional: String(localized: "Optional")
         }
     }
 
@@ -56,7 +59,7 @@ enum HealthText {
         case let (false, day?): String(localized: "Skipped on \(day)")
         case (false, nil): String(localized: "Skipped")
         }
-        if item.repeats, item.status == .done, let next = item.from {
+        if item.repeats, !item.optional, item.status == .done, let next = item.from {
             text += " · " + String(localized: "next \(date(next))")
         }
         return text

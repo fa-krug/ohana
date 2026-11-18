@@ -97,6 +97,8 @@ nonisolated enum HealthStatus: String, Codable, Hashable, Sendable {
     case past
     /// Never recorded (when was the last tetanus shot?), or a second dose whose first has no date.
     case unknown
+    /// Not recommended at this age but can be had (flu, COVID-19 before 60): never due.
+    case optional
 
     init(from decoder: any Decoder) throws {
         let raw = try decoder.singleValueContainer().decode(String.self)
@@ -121,6 +123,8 @@ nonisolated struct HealthItem: Codable, Hashable, Identifiable, Sendable {
     var until: Day?
     /// Tetanus (every 10 years), flu and COVID-19 (each autumn).
     var repeats: Bool
+    /// Not recommended at this age but can be had (flu, COVID-19 before 60).
+    var optional: Bool
     /// Newest first.
     var records: [HealthRecord]
 
@@ -140,6 +144,7 @@ nonisolated extension HealthItem {
         from = try? container.decodeIfPresent(Day.self, forKey: .from)
         until = try? container.decodeIfPresent(Day.self, forKey: .until)
         repeats = try container.decodeIfPresent(Bool.self, forKey: .repeats) ?? false
+        optional = try container.decodeIfPresent(Bool.self, forKey: .optional) ?? false
         records = try container.decodeIfPresent([HealthRecord].self, forKey: .records) ?? []
     }
 

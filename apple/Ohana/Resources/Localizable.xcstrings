@@ -13297,6 +13297,16 @@
         }
       }
     },
+    "Optional": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Freiwillig"
+          }
+        }
+      }
+    },
     "Orange": {
       "localizations": {
         "de": {

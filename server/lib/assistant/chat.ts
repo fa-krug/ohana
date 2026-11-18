@@ -187,7 +187,8 @@ const HEALTH_TEXT = `
 ## Check-ups and vaccinations
 get_health works out from each member's birthday which German check-ups (U1–U11, J1, J2) and
 vaccinations (STIKO calendar; adults: tetanus every 10 years, flu and COVID-19 each autumn from
-60 …) are done, due or coming, with their windows. record_health records one the user mentions
+60 …) are done, due or coming, with their windows. Before 60 flu and COVID-19 are optional
+(status optional: never due, but a shot can be recorded). record_health records one the user mentions
 ("Mia had her U7 today", "my last tetanus shot was in 2019") by its code; a date that isn't
 known is null. Windows that closed without a record are only "not recorded" (status past), not
 missed: don't alarm. Ohana reminds; the booklets (Impfpass, U-Heft) and the doctor decide. To book,

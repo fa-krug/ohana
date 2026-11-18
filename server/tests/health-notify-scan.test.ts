@@ -33,6 +33,7 @@ const item = (over: Partial<ItemState>): ItemState => ({
   to: "2027-02-10",
   until: "2027-05-10",
   repeats: false,
+  optional: false,
   records: [],
   ...over,
 });
@@ -46,6 +47,8 @@ describe("noticesFor", () => {
     expect(noticesFor(item({}), "2027-05-11")).toEqual([]);
     expect(noticesFor(item({ kind: "vaccination" }), "2027-04-12")).toEqual([]);
     expect(noticesFor(item({ status: "done" }), "2026-10-10")).toEqual([]);
+    // Flu before 60: optional, never told about.
+    expect(noticesFor(item({ code: "flu", status: "optional", optional: true, from: "2026-10-01" }), "2026-10-02")).toEqual([]);
     // A short window: its opening message says until when.
     expect(noticesFor(item({ from: "2026-10-01", until: "2026-11-05" }), "2026-10-20")).toEqual([]);
     expect(noticesFor(item({ code: "td", from: "2026-11-01", until: null, to: null }), "2026-11-02")).toEqual([
@@ -102,8 +105,13 @@ describe("healthNotifications", () => {
     process.env.DISABLED_MODULES = "health";
     expect(await healthNotifications(db, at("2026-10-02"), { push: push.client, hour: 7 })).toEqual([]);
     delete process.env.DISABLED_MODULES;
-    // Flu and COVID-19 from 1 October.
-    expect((await healthNotifications(db, at("2026-10-02"), { push: push.client, hour: 7 })).map((n) => n.code)).toEqual(["flu", "covid"]);
+    // Flu and COVID-19 from 1 October; Ben's (36) are optional, not told about.
+    setMemberBirthday(db, { id: benId }, familyId, benId, "1990-06-01", NOW);
+    const told = await healthNotifications(db, at("2026-10-02"), { push: push.client, hour: 7 });
+    expect(told.map((n) => [n.code, n.memberId])).toEqual([
+      ["flu", annaId],
+      ["covid", annaId],
+    ]);
   });
 });
 
