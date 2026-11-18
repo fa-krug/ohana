@@ -122,9 +122,10 @@ or tap to pick the date (or *Date unknown*), mark it skipped or add a note; *Fin
 Appointment* asks the assistant to start an appointment search. A member's page lists their
 check-ups and vaccinations. Windows that closed before anyone recorded them show quietly as *Not
 recorded*, never as overdue: **All Done** marks them all at once, or **Scan Booklet** photographs
-the vaccination booklet or U-Heft and lets the family's AI read the dates, to tick and save. The
-editors get a notification when something becomes due and four weeks before a check-up's window
-closes. Editors see everyone, a viewer only themselves. The booklets and your doctor decide; Ohana
+the vaccination booklet or U-Heft and lets the family's AI read the dates, to tick and save. A
+notification comes when something becomes due and four weeks before a check-up's window closes:
+grown-ups with an account get their own (and only they), the editors those of the children and of
+the people without an account. Editors see everyone, a viewer only themselves. The booklets and your doctor decide; Ohana
 only reminds.
 
 ## Syncing an account with its bank

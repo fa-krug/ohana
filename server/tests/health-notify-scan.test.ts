@@ -9,7 +9,7 @@ import type { Db } from "@/lib/db";
 import { healthRecords } from "@/lib/db/schema";
 import { setMemberBirthday } from "@/lib/families/members";
 import { addPerson } from "@/lib/families/people";
-import { healthNotifications, noticesFor } from "@/lib/health/notify";
+import { healthNotifications, noticesFor, recipientsFor } from "@/lib/health/notify";
 import { scanPages } from "@/lib/health/scan";
 import type { ItemState } from "@/lib/health/status";
 import { type AssistantTest, assistantTest, configure, toolContext } from "@/lib/test/assistant";
@@ -112,11 +112,25 @@ describe("healthNotifications", () => {
       .values({ id: "r2", familyId, memberUserId: benId, code: "flu", day: "2025-10-15", status: "done", createdAt: NOW, updatedAt: NOW })
       .run();
     const told = await healthNotifications(db, at("2026-10-02"), { push: push.client, hour: 7 });
-    expect(told.map((n) => [n.code, n.memberId])).toEqual([
-      ["flu", annaId],
-      ["covid", annaId],
-      ["flu", benId],
+    // Grown-ups get their own, nobody else: Ben (a viewer) his, Anna (the editor) only hers.
+    expect(told.map((n) => [n.code, n.memberId, n.userIds])).toEqual([
+      ["flu", annaId, [annaId]],
+      ["covid", annaId, [annaId]],
+      ["flu", benId, [benId]],
     ]);
+    expect(push.received(1).map((p) => p.title)).toEqual(["Flu for Anna", "COVID-19 for Anna"]);
+    expect(push.received(2).map((p) => p.title)).toEqual(["Flu for Ben"]);
+  });
+
+  it("tells grown-ups themselves, children and people without an account the editors", () => {
+    const today = "2026-11-02";
+    const editors = ["anna"];
+    expect(recipientsFor({ id: "ben", account: true, birthday: "2008-11-02" }, editors, today)).toEqual(["ben"]);
+    expect(recipientsFor({ id: "anna", account: true, birthday: "1980-01-01" }, editors, today)).toEqual(["anna"]);
+    // A child's own account and the editors.
+    expect(recipientsFor({ id: "tom", account: true, birthday: "2008-11-03" }, editors, today)).toEqual(["anna", "tom"]);
+    expect(recipientsFor({ id: "mia", account: false, birthday: "1950-01-01" }, editors, today)).toEqual(["anna"]);
+    expect(recipientsFor({ id: "mia", account: false, birthday: "2020-01-01" }, [], today)).toEqual([]);
   });
 });
 

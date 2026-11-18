@@ -677,7 +677,7 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   `known` when recorded; nothing saved; `ai: false` without the AI); changes answer the member's new
   state. `notify.ts` `healthNotifications` (worker, from `NOTIFY_HOUR`): a window that opened in the
   last 14 days and a check-up's closing in ≤ 28 days (windows > 42 days), once each
-  (`health_notified`), pushed **only to the editors' devices** (`channelIds: []`), link
+  (`health_notified`), pushed to app devices only (`channelIds: []`): `recipientsFor`, a member with an account from `ADULT_AGE` (18) gets their own and nobody else, everyone else's go to the editors (plus a child's own account), link
   `/f/{id}/health/{memberId}`. Assistant `tools/health.ts`: `get_health`, `record_health`,
   `remove_health_record` (undo: DELETE / POST back with the id), system prompt section, page
   `health`. The mock AI answers the scan prompt. App: `Features/Health/` (`HealthView`: due now
