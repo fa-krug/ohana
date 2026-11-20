@@ -3,6 +3,10 @@
 # Policy (gates, thresholds, severity) is managed in the Leuchtfeuer UI, not here.
 version: 1
 tools:
+  ai-review:  # AI review · AI review
+    enabled: true
+  ai-structure:  # AI review · AI review
+    enabled: true
   bandit:  # Python · SAST (code security)
     enabled: true
   checkov:  # Containers & infrastructure · Infrastructure as code
@@ -57,6 +61,7 @@ ignore: []
 #    reason: "assert is fine in tests"
 reports:
   junit: []
-  coverage: []
+  coverage:
+    - {format: lcov, path: ".leuchtfeuer/tests/*/lcov/*.info"}
 secrets:
   full_history: false
