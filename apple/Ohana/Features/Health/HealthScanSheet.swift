@@ -128,8 +128,7 @@ struct HealthScanSheet: View {
         Form {
             Section {
                 ForEach(items) { item in
-                    Toggle(isOn: Binding(get: { reader.ticked.contains(item.id) },
-                                         set: { if $0 { reader.ticked.insert(item.id) } else { reader.ticked.remove(item.id) } })) {
+                    Toggle(isOn: tick(item)) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(item.title)
                             Text(item.day.map { HealthText.date($0) } ?? String(localized: "Date not readable"))
@@ -148,6 +147,11 @@ struct HealthScanSheet: View {
             }
         }
         .formStyle(.grouped)
+    }
+
+    private func tick(_ item: HealthScanSuggestion) -> Binding<Bool> {
+        Binding(get: { reader.ticked.contains(item.id) },
+                set: { if $0 { reader.ticked.insert(item.id) } else { reader.ticked.remove(item.id) } })
     }
 
     private func save() {

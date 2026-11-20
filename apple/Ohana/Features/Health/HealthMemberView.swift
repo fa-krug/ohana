@@ -54,9 +54,7 @@ struct HealthMemberView: View {
                 scan = reader
             }
         }
-        .sheet(item: $scan, onDismiss: { reading?.cancel(); reading = nil }) { reader in
-            HealthScanSheet(reader: reader).environment(store).errorBanner()
-        }
+        .sheet(item: $scan, onDismiss: stopReading, content: scanSheet)
         .alert("Mark earlier ones as done?", isPresented: $markingPast) {
             Button("Mark as Done") {
                 perform { try await store.markPastDone(family, member: memberID) }
@@ -66,6 +64,15 @@ struct HealthMemberView: View {
             Text("Every check-up and vaccination whose time has passed is recorded as done, without a date.")
                 + Text(verbatim: " ") + Text("You can change each one later.")
         }
+    }
+
+    private func scanSheet(_ reader: HealthScanReader) -> some View {
+        HealthScanSheet(reader: reader).environment(store).errorBanner()
+    }
+
+    private func stopReading() {
+        reading?.cancel()
+        reading = nil
     }
 
     private func canScan(_ member: HealthMember) -> Bool {
