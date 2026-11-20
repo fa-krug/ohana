@@ -22,6 +22,7 @@ import { BANK_MAX_UNCONFIRMED, LOGIN_REFUSED_MESSAGE, UNCONFIRMED_MESSAGE, type 
 import { PROVIDERS } from "./providers";
 import { type SyncResult, type SyncRow, failedSet } from "./queue";
 import { BankError, type BankProvider, type BankStatement, type SyncHooks, type SyncTiming } from "./types";
+import { settle } from "@/lib/settle";
 
 /** The lease a running sync holds; renewed every tick. */
 export const SYNC_LEASE_MS = 60_000;
@@ -523,13 +524,7 @@ export class BankSyncRunner {
 
   /** Waits for the running syncs until all ended or `ms` passed. */
   async idle(ms = Infinity): Promise<void> {
-    const until = Date.now() + ms;
-    while (this.done.size && Date.now() < until) {
-      await Promise.race([
-        Promise.allSettled([...this.done.values()]),
-        new Promise((r) => setTimeout(r, Math.min(50, until - Date.now()))),
-      ]);
-    }
+    await settle(this.done, ms);
   }
 
   /** Stops: the running syncs end as interrupted (never run again: see above). */

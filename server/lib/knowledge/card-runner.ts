@@ -34,6 +34,7 @@ import { familyLocale } from "@/lib/notifications/locale";
 import { moduleEnabled } from "@/lib/server-info";
 import { CARD_TIMEOUT_MS, type Card, type CardInput, TemporaryCardError, makeCard } from "./card";
 import { parseJsonArray } from "./documents";
+import { settle } from "@/lib/settle";
 
 /** The lease a running card holds (longer than it may take). */
 export const CARD_LEASE_MS = 5 * 60_000;
@@ -362,13 +363,7 @@ export class KnowledgeCardRunner {
 
   /** Waits for the running cards until all ended or `ms` passed. */
   async idle(ms = Infinity): Promise<void> {
-    const until = Date.now() + ms;
-    while (this.done.size && Date.now() < until) {
-      await Promise.race([
-        Promise.allSettled([...this.done.values()]),
-        new Promise<void>((resolve) => setTimeout(() => resolve(), Math.min(50, until - Date.now()))),
-      ]);
-    }
+    await settle(this.done, ms);
   }
 
   /** Stops: the runs end where they are and their cards wait again for the next worker. */

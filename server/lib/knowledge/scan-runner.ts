@@ -31,6 +31,7 @@ import { TemporaryCardError } from "./card";
 import { CARD_RESET, MAX_TEXT_BYTES, parseJsonArray } from "./documents";
 import { deleteScanFiles } from "./scan-files";
 import { TRANSCRIBE_TIMEOUT_MS, type TranscribeInput, transcribePage } from "./transcribe";
+import { settle } from "@/lib/settle";
 
 /** The lease a running scan holds (longer than it may take). */
 export const SCAN_LEASE_MS = 5 * 60_000;
@@ -396,13 +397,7 @@ export class KnowledgeScanRunner {
 
   /** Waits for the running scans until all ended or `ms` passed. */
   async idle(ms = Infinity): Promise<void> {
-    const until = Date.now() + ms;
-    while (this.done.size && Date.now() < until) {
-      await Promise.race([
-        Promise.allSettled([...this.done.values()]),
-        new Promise<void>((r) => setTimeout(() => r(), Math.min(50, until - Date.now()))),
-      ]);
-    }
+    await settle(this.done, ms);
   }
 
   /** Stops: the runs end where they are and their scans wait again for the next worker. */

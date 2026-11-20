@@ -24,6 +24,7 @@ import { translator } from "@/lib/notifications/locale";
 import type { RelayClient } from "@/lib/push/relay";
 import { moduleEnabled } from "@/lib/server-info";
 import { type ImportRecipeInput, importRecipe, importRecipeSchema } from "./import";
+import { settle } from "@/lib/settle";
 
 /** How long one import may take. */
 export const IMPORT_TIMEOUT_MS = 4 * 60_000;
@@ -404,13 +405,7 @@ export class ImportRunner {
 
   /** Waits for the running imports until all ended or `ms` passed. */
   async idle(ms = Infinity): Promise<void> {
-    const until = Date.now() + ms;
-    while (this.done.size && Date.now() < until) {
-      await Promise.race([
-        Promise.allSettled([...this.done.values()]),
-        new Promise<void>((resolve) => { setTimeout(() => resolve(), Math.min(50, until - Date.now())); }),
-      ]);
-    }
+    await settle(this.done, ms);
   }
 
   /** Stops: the runs end where they are and their imports wait again for the next worker. */

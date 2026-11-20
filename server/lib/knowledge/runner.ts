@@ -21,6 +21,7 @@ import { kbChunks, kbDocuments } from "@/lib/db/schema";
 import { moduleEnabled } from "@/lib/server-info";
 import { type TextChunk, chunkPages, storedPages } from "./chunk";
 import { CARD_RESET, deleteChunks } from "./documents";
+import { settle } from "@/lib/settle";
 
 /** How long one document's chunks may take. */
 export const KNOWLEDGE_TIMEOUT_MS = 4 * 60_000;
@@ -293,13 +294,7 @@ export class KnowledgeRunner {
 
   /** Waits for the running documents until all ended or `ms` passed. */
   async idle(ms = Infinity): Promise<void> {
-    const until = Date.now() + ms;
-    while (this.done.size && Date.now() < until) {
-      await Promise.race([
-        Promise.allSettled([...this.done.values()]),
-        new Promise<void>((r) => setTimeout(() => r(), Math.min(50, until - Date.now()))),
-      ]);
-    }
+    await settle(this.done, ms);
   }
 
   /** Stops: the runs end where they are and their documents wait again for the next worker. */

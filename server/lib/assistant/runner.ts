@@ -11,6 +11,7 @@ import { type AiEnv, prepareTurn } from "./routes";
 import { DrizzleAssistantStore } from "./store";
 import { notifyTurnFinished } from "./notify";
 import { chunkSources, knowledgeForUser } from "@/lib/knowledge/sources";
+import { settle } from "@/lib/settle";
 
 export class ChatRunner {
   private readonly running = new Map<string, Runner>();
@@ -93,10 +94,7 @@ export class ChatRunner {
 
   /** Waits for the running turns until all ended or `ms` passed. */
   async idle(ms = Infinity): Promise<void> {
-    const until = Date.now() + ms;
-    while (this.done.size && Date.now() < until) {
-      await Promise.race([Promise.allSettled([...this.done.values()]), new Promise<void>((r) => setTimeout(() => r(), Math.min(50, until - Date.now())))]);
-    }
+    await settle(this.done, ms);
   }
 
   /** Stops: the turns end where they are, and their chats are let go, so the next worker takes
