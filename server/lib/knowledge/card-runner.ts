@@ -34,7 +34,7 @@ import { familyLocale } from "@/lib/notifications/locale";
 import { moduleEnabled } from "@/lib/server-info";
 import { CARD_TIMEOUT_MS, type Card, type CardInput, TemporaryCardError, makeCard } from "./card";
 import { parseJsonArray } from "./documents";
-import { settle } from "@/lib/settle";
+import { JobRunner } from "@/lib/settle";
 
 /** The lease a running card holds (longer than it may take). */
 export const CARD_LEASE_MS = 5 * 60_000;
@@ -98,10 +98,7 @@ function shortError(err: unknown): string {
   return message.length > MAX_ERROR ? `${message.slice(0, MAX_ERROR - 1)}…` : message;
 }
 
-export class KnowledgeCardRunner {
-  private readonly running = new Map<string, Running>();
-  private readonly done = new Map<string, Promise<void>>();
-  private stopped = false;
+export class KnowledgeCardRunner extends JobRunner<Running> {
   private readonly db: Db;
   private readonly maxConcurrent: number;
   private readonly maker: NonNullable<KnowledgeCardRunnerOptions["maker"]>;
@@ -114,6 +111,7 @@ export class KnowledgeCardRunner {
     private readonly env: AiEnv,
     opts: KnowledgeCardRunnerOptions = {},
   ) {
+    super();
     this.db = env.db;
     this.maxConcurrent = opts.maxConcurrent ?? Math.max(1, Number(process.env.KNOWLEDGE_CARD_CONCURRENT) || 1);
     this.maker = opts.maker ?? defaultMaker;
@@ -359,17 +357,5 @@ export class KnowledgeCardRunner {
       .where(held(doc))
       .run().changes;
     if (changed) this.log(`card of document ${doc.id} was interrupted ${doc.cardAttempts} times, marked failed`);
-  }
-
-  /** Waits for the running cards until all ended or `ms` passed. */
-  async idle(ms = Infinity): Promise<void> {
-    await settle(this.done, ms);
-  }
-
-  /** Stops: the runs end where they are and their cards wait again for the next worker. */
-  async stop(ms: number): Promise<void> {
-    this.stopped = true;
-    for (const run of this.running.values()) run.abort.abort("stop");
-    await this.idle(ms);
   }
 }
