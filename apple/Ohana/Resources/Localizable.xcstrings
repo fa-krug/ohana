@@ -18787,6 +18787,16 @@
         }
       }
     },
+    "The connection was interrupted.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Verbindung wurde unterbrochen."
+          }
+        }
+      }
+    },
     "The cron expression is too long (max. 100).": {
       "localizations": {
         "de": {
@@ -19603,6 +19613,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dieser Kalender lässt sich nicht laden: Die Familie gibt es nicht (mehr), oder du bist kein Mitglied."
+          }
+        }
+      }
+    },
+    "This can take a minute or two.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das kann ein, zwei Minuten dauern."
           }
         }
       }
