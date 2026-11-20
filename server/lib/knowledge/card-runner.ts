@@ -366,7 +366,7 @@ export class KnowledgeCardRunner {
     while (this.done.size && Date.now() < until) {
       await Promise.race([
         Promise.allSettled([...this.done.values()]),
-        new Promise((resolve) => setTimeout(() => resolve(), Math.min(50, until - Date.now()))),
+        new Promise<void>((resolve) => setTimeout(() => resolve(), Math.min(50, until - Date.now()))),
       ]);
     }
   }

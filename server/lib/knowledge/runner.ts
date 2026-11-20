@@ -297,7 +297,7 @@ export class KnowledgeRunner {
     while (this.done.size && Date.now() < until) {
       await Promise.race([
         Promise.allSettled([...this.done.values()]),
-        new Promise((r) => setTimeout(() => r(), Math.min(50, until - Date.now()))),
+        new Promise<void>((r) => setTimeout(() => r(), Math.min(50, until - Date.now()))),
       ]);
     }
   }
