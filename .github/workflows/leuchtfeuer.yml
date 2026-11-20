@@ -37,7 +37,7 @@ jobs:
     - name: Build the pages' script
       run: npm run build
     - name: Run tests
-      run: npm install --no-save --no-audit --no-fund @vitest/coverage-v8@^4.1.9 && npm run test -- --coverage.enabled --coverage.reporter=lcov
+      run: npm install --no-save --no-audit --no-fund "@vitest/coverage-v8@$(node -p "require('vitest/package.json').version")" && npm run test -- --coverage.enabled --coverage.reporter=lcov
     - name: Collect the test reports for Leuchtfeuer
       if: always()
       shell: sh
@@ -76,7 +76,7 @@ jobs:
     - name: TypeScript check
       run: npm run typecheck
     - name: Run tests
-      run: npm install --no-save --no-audit --no-fund @vitest/coverage-v8@^4.1.9 && npm run test -- --coverage.enabled --coverage.reporter=lcov
+      run: npm install --no-save --no-audit --no-fund "@vitest/coverage-v8@$(node -p "require('vitest/package.json').version")" && npm run test -- --coverage.enabled --coverage.reporter=lcov
     - name: Collect the test reports for Leuchtfeuer
       if: always()
       shell: sh
