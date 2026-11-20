@@ -29,7 +29,7 @@ jobs:
 
   test:
     name: Build & Test
-    if: github.event_name == 'workflow_dispatch'
+    if: ${{ false }}  # Leuchtfeuer: runs as lf-test-test-3 in leuchtfeuer.yml (was: github.event_name == 'workflow_dispatch')
     runs-on: macos-26
     timeout-minutes: 45
     defaults:
