@@ -184,7 +184,7 @@ jobs:
     steps:
       - uses: getarcaneapp/setup-cli@v1
         with:
-          version: 2.17.1
+          version: 3.1.1
       - name: Redeploy Arcane project
         env:
           ARCANE_URL: https://arcane.fa-krug.de
