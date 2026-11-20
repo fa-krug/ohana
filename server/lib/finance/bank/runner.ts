@@ -22,6 +22,7 @@ import { BANK_MAX_UNCONFIRMED, LOGIN_REFUSED_MESSAGE, UNCONFIRMED_MESSAGE, type 
 import { PROVIDERS } from "./providers";
 import { type SyncResult, type SyncRow, failedSet } from "./queue";
 import { BankError, type BankProvider, type BankStatement, type SyncHooks, type SyncTiming } from "./types";
+import { JobRunner } from "@/lib/settle";
 
 /** The lease a running sync holds; renewed every tick. */
 export const SYNC_LEASE_MS = 60_000;
@@ -69,10 +70,7 @@ function localDay(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-export class BankSyncRunner {
-  private readonly running = new Map<string, Running>();
-  private readonly done = new Map<string, Promise<void>>();
-  private stopped = false;
+export class BankSyncRunner extends JobRunner<Running> {
   private readonly fetch: typeof fetch;
   private readonly providers: Record<string, BankProvider>;
   private readonly now: () => Date;
@@ -87,6 +85,7 @@ export class BankSyncRunner {
     private readonly db: Db,
     opts: BankSyncRunnerOptions = {},
   ) {
+    super();
     this.fetch = opts.fetch ?? fetch;
     this.providers = opts.providers ?? PROVIDERS;
     this.now = opts.now ?? (() => new Date());
@@ -519,24 +518,6 @@ export class BankSyncRunner {
       matched.set(i, t.id);
     }
     return { matched, taken, existing };
-  }
-
-  /** Waits for the running syncs until all ended or `ms` passed. */
-  async idle(ms = Infinity): Promise<void> {
-    const until = Date.now() + ms;
-    while (this.done.size && Date.now() < until) {
-      await Promise.race([
-        Promise.allSettled([...this.done.values()]),
-        new Promise((r) => setTimeout(r, Math.min(50, until - Date.now()))),
-      ]);
-    }
-  }
-
-  /** Stops: the running syncs end as interrupted (never run again: see above). */
-  async stop(ms: number): Promise<void> {
-    this.stopped = true;
-    for (const run of this.running.values()) run.abort.abort("stop");
-    await this.idle(ms);
   }
 }
 

@@ -1,40 +1,89 @@
 import CoreGraphics
 import SwiftUI
 
-/// Pages of a booklet to read for a member.
-struct HealthScanReview: Identifiable {
-    let id = UUID()
-    let member: HealthMember
-    let images: [CGImage]
-    let needsCrop: Bool
-}
-
-/// Reads a booklet's pages with the family's AI (only the pictures go to the server, which asks
-/// the family's AI), then lists what it found to tick: those already recorded unticked. Save
-/// records the ticked ones.
-struct HealthScanSheet: View {
-    @Environment(FamilyContext.self) private var family
-    @Environment(HealthStore.self) private var store
-    @Environment(\.dismiss) private var dismiss
-    let review: HealthScanReview
-    @State private var phase: Phase = .reading
-    @State private var ticked: Set<String> = []
-    @State private var saving = false
-
+/// Reading a booklet's pages for a member: started as soon as the pages are scanned, kept by the
+/// member's page while its sheet shows, cancelled only when the sheet is dismissed. Not the
+/// sheet's `.task`: SwiftUI cancels that whenever the sheet's content goes away, if only for a
+/// moment, and the read then failed with a CancellationError.
+@MainActor @Observable
+final class HealthScanReader: Identifiable {
     enum Phase {
         case reading
         case found([HealthScanSuggestion])
         case failed(String)
     }
 
+    let id = UUID()
+    let member: HealthMember
+    private let images: [CGImage]
+    private let needsCrop: Bool
+    private(set) var phase: Phase = .reading
+    var ticked: Set<String> = []
+    @ObservationIgnored private var task: Task<Void, Never>?
+
+    init(member: HealthMember, images: [CGImage], needsCrop: Bool) {
+        self.member = member
+        self.images = images
+        self.needsCrop = needsCrop
+    }
+
+    /// Reads the pages (again); a read under way goes on.
+    func start(_ family: FamilyContext, store: HealthStore) {
+        guard task == nil else { return }
+        phase = .reading
+        task = Task { await read(family, store: store) }
+    }
+
+    /// The sheet was dismissed: the answer isn't wanted any more.
+    func cancel() {
+        task?.cancel()
+        task = nil
+    }
+
+    private func read(_ family: FamilyContext, store: HealthStore) async {
+        defer { if !Task.isCancelled { task = nil } }
+        do {
+            let pages = await HealthScanPages.encode(images, crop: needsCrop)
+            try Task.checkCancellation()
+            guard !pages.isEmpty else { throw LetterScanError.unreadable }
+            let answer = try await store.scan(family, member: member.id, pages: pages)
+            try Task.checkCancellation()
+            guard answer.readable else {
+                phase = .failed(String(localized: "Set up the assistant’s AI in the settings to read booklets."))
+                return
+            }
+            ticked = Set(answer.items.filter { !$0.known }.map(\.id))
+            phase = .found(answer.items)
+        } catch {
+            guard !Task.isCancelled else { return }
+            phase = .failed(error is CancellationError
+                ? String(localized: "The connection was interrupted.")
+                : error.localizedDescription)
+        }
+    }
+}
+
+/// Reads a booklet's pages with the family's AI (only the pictures go to the server, which asks
+/// the family's AI; `HealthScanReader` does the reading), then lists what it found to tick: those
+/// already recorded unticked. Save records the ticked ones.
+struct HealthScanSheet: View {
+    @Environment(FamilyContext.self) private var family
+    @Environment(HealthStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
+    let reader: HealthScanReader
+    @State private var saving = false
+
     var body: some View {
         NavigationStack {
             Group {
-                switch phase {
+                switch reader.phase {
                 case .reading:
                     VStack(spacing: 14) {
                         ProgressView()
                         Text("Reading the booklet…").foregroundStyle(.secondary)
+                        Text("This can take a minute or two.")
+                            .font(.footnote)
+                            .foregroundStyle(.tertiary)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 case let .failed(message):
@@ -43,7 +92,7 @@ struct HealthScanSheet: View {
                     } description: {
                         Text(message)
                     } actions: {
-                        Button("Try Again") { Task { await read() } }
+                        Button("Try Again") { reader.start(family, store: store) }
                             .buttonStyle(.glassProminent)
                     }
                 case let .found(items) where items.isEmpty:
@@ -54,23 +103,22 @@ struct HealthScanSheet: View {
                     list(items)
                 }
             }
-            .navigationTitle(Text(verbatim: review.member.name))
+            .navigationTitle(Text(verbatim: reader.member.name))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    CancelButton(hasChanges: !ticked.isEmpty)
+                    CancelButton(hasChanges: !reader.ticked.isEmpty)
                 }
-                if case .found = phase {
+                if case .found = reader.phase {
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Save") { save() }
-                            .disabled(ticked.isEmpty || saving)
+                            .disabled(reader.ticked.isEmpty || saving)
                     }
                 }
             }
         }
-        .task { await read() }
         #if os(macOS)
         .frame(minWidth: 440, minHeight: 420)
         #endif
@@ -80,8 +128,7 @@ struct HealthScanSheet: View {
         Form {
             Section {
                 ForEach(items) { item in
-                    Toggle(isOn: Binding(get: { ticked.contains(item.id) },
-                                         set: { if $0 { ticked.insert(item.id) } else { ticked.remove(item.id) } })) {
+                    Toggle(isOn: tick(item)) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(item.title)
                             Text(item.day.map { HealthText.date($0) } ?? String(localized: "Date not readable"))
@@ -102,31 +149,19 @@ struct HealthScanSheet: View {
         .formStyle(.grouped)
     }
 
-    private func read() async {
-        phase = .reading
-        do {
-            let pages = await HealthScanPages.encode(review.images, crop: review.needsCrop)
-            guard !pages.isEmpty else { throw LetterScanError.unreadable }
-            let answer = try await store.scan(family, member: review.member.id, pages: pages)
-            guard answer.readable else {
-                phase = .failed(String(localized: "Set up the assistant’s AI in the settings to read booklets."))
-                return
-            }
-            ticked = Set(answer.items.filter { !$0.known }.map(\.id))
-            phase = .found(answer.items)
-        } catch {
-            phase = .failed(error.localizedDescription)
-        }
+    private func tick(_ item: HealthScanSuggestion) -> Binding<Bool> {
+        Binding(get: { reader.ticked.contains(item.id) },
+                set: { if $0 { reader.ticked.insert(item.id) } else { reader.ticked.remove(item.id) } })
     }
 
     private func save() {
-        guard case let .found(items) = phase else { return }
+        guard case let .found(items) = reader.phase else { return }
         saving = true
-        let records = items.filter { ticked.contains($0.id) }
+        let records = items.filter { reader.ticked.contains($0.id) }
             .map { HealthRecordInput(code: $0.code, day: $0.day, note: $0.note) }
         perform {
             defer { saving = false }
-            try await store.record(family, member: review.member.id, records)
+            try await store.record(family, member: reader.member.id, records)
             dismiss()
         }
     }

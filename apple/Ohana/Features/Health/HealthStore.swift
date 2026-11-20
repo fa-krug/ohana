@@ -69,11 +69,20 @@ final class HealthStore {
         apply(change.member, family)
     }
 
-    /// Asks the family's AI what a booklet's pages say (nothing is saved).
+    /// Asks the family's AI what a booklet's pages say (nothing is saved). A vision model takes its
+    /// time over several pages: the request waits longer than the server's own limit
+    /// (server/lib/health/scan.ts `SCAN_TIMEOUT_MS`), so its message arrives rather than a timeout.
     func scan(_ family: FamilyContext, member: String, pages: [String]) async throws -> HealthScanAnswer {
-        try await family.api.send(
-            .post, "/health/scan", query: Self.query, body: HealthScanBody(memberId: member, pages: pages))
+        let client = family.api.client
+        let body = try APIClient.encoder.encode(HealthScanBody(memberId: member, pages: pages))
+        var req = client.request(.post, family.api.path("/health/scan"), query: Self.query, body: body)
+        req.timeoutInterval = Self.scanTimeout
+        let (data, _) = try await client.data(for: req)
+        return try await client.decode(HealthScanAnswer.self, from: data)
     }
+
+    /// Seconds a booklet's read may take: the server gives the AI 180.
+    static let scanTimeout: TimeInterval = 210
 
     private func apply(_ member: HealthMember, _ family: FamilyContext) {
         if case var .loaded(overview) = state,

@@ -31,6 +31,7 @@ import { TemporaryCardError } from "./card";
 import { CARD_RESET, MAX_TEXT_BYTES, parseJsonArray } from "./documents";
 import { deleteScanFiles } from "./scan-files";
 import { TRANSCRIBE_TIMEOUT_MS, type TranscribeInput, transcribePage } from "./transcribe";
+import { JobRunner } from "@/lib/settle";
 
 /** The lease a running scan holds (longer than it may take). */
 export const SCAN_LEASE_MS = 5 * 60_000;
@@ -96,10 +97,7 @@ function shortError(err: unknown): string {
   return message.length > MAX_ERROR ? `${message.slice(0, MAX_ERROR - 1)}…` : message;
 }
 
-export class KnowledgeScanRunner {
-  private readonly running = new Map<string, Running>();
-  private readonly done = new Map<string, Promise<void>>();
-  private stopped = false;
+export class KnowledgeScanRunner extends JobRunner<Running> {
   private readonly db: Db;
   private readonly maxConcurrent: number;
   private readonly transcriber: NonNullable<KnowledgeScanRunnerOptions["transcriber"]>;
@@ -112,6 +110,7 @@ export class KnowledgeScanRunner {
     private readonly env: AiEnv,
     opts: KnowledgeScanRunnerOptions = {},
   ) {
+    super();
     this.db = env.db;
     this.maxConcurrent = opts.maxConcurrent ?? Math.max(1, Number(process.env.KNOWLEDGE_SCAN_CONCURRENT) || 1);
     this.transcriber = opts.transcriber ?? defaultTranscriber;
@@ -392,24 +391,6 @@ export class KnowledgeScanRunner {
       deleteScanFiles([row.path]);
       this.log(`page ${scan.page} of document ${scan.documentId} was interrupted ${scan.attempts} times, marked failed`);
     }
-  }
-
-  /** Waits for the running scans until all ended or `ms` passed. */
-  async idle(ms = Infinity): Promise<void> {
-    const until = Date.now() + ms;
-    while (this.done.size && Date.now() < until) {
-      await Promise.race([
-        Promise.allSettled([...this.done.values()]),
-        new Promise((r) => setTimeout(() => r(), Math.min(50, until - Date.now()))),
-      ]);
-    }
-  }
-
-  /** Stops: the runs end where they are and their scans wait again for the next worker. */
-  async stop(ms: number): Promise<void> {
-    this.stopped = true;
-    for (const run of this.running.values()) run.abort.abort("stop");
-    await this.idle(ms);
   }
 }
 

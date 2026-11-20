@@ -21,6 +21,7 @@ import { kbChunks, kbDocuments } from "@/lib/db/schema";
 import { moduleEnabled } from "@/lib/server-info";
 import { type TextChunk, chunkPages, storedPages } from "./chunk";
 import { CARD_RESET, deleteChunks } from "./documents";
+import { JobRunner } from "@/lib/settle";
 
 /** How long one document's chunks may take. */
 export const KNOWLEDGE_TIMEOUT_MS = 4 * 60_000;
@@ -68,10 +69,7 @@ function shortError(err: unknown): string {
 /** The worker's knowledge loop: every tick one cheap indexed query finds the pending documents
  *  whose lease is free (or ran out), claims each and runs it WITHOUT awaiting, at most
  *  `maxConcurrent` at once. */
-export class KnowledgeRunner {
-  private readonly running = new Map<string, Running>();
-  private readonly done = new Map<string, Promise<void>>();
-  private stopped = false;
+export class KnowledgeRunner extends JobRunner<Running> {
   private readonly maxConcurrent: number;
   private readonly chunker: (pages: string[]) => TextChunk[] | Promise<TextChunk[]>;
   private readonly now: () => Date;
@@ -83,6 +81,7 @@ export class KnowledgeRunner {
     private readonly db: Db,
     opts: KnowledgeRunnerOptions = {},
   ) {
+    super();
     this.maxConcurrent = opts.maxConcurrent ?? Math.max(1, Number(process.env.KNOWLEDGE_MAX_CONCURRENT) || 2);
     this.chunker = opts.chunker ?? chunkPages;
     this.now = opts.now ?? (() => new Date());
@@ -289,23 +288,5 @@ export class KnowledgeRunner {
       { behavior: "immediate" },
     );
     if (failed) this.log(`document ${doc.id} was interrupted ${doc.attempts} times, marked failed`);
-  }
-
-  /** Waits for the running documents until all ended or `ms` passed. */
-  async idle(ms = Infinity): Promise<void> {
-    const until = Date.now() + ms;
-    while (this.done.size && Date.now() < until) {
-      await Promise.race([
-        Promise.allSettled([...this.done.values()]),
-        new Promise((r) => setTimeout(() => r(), Math.min(50, until - Date.now()))),
-      ]);
-    }
-  }
-
-  /** Stops: the runs end where they are and their documents wait again for the next worker. */
-  async stop(ms: number): Promise<void> {
-    this.stopped = true;
-    for (const run of this.running.values()) run.abort.abort("stop");
-    await this.idle(ms);
   }
 }

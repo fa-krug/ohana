@@ -12,7 +12,9 @@ struct HealthMemberView: View {
     @State private var editing: HealthEditTarget?
     @State private var markingPast = false
     @State private var scanning = false
-    @State private var scan: HealthScanReview?
+    @State private var scan: HealthScanReader?
+    /// The read under way, cancelled when its sheet is dismissed (`scan` is nil by then).
+    @State private var reading: HealthScanReader?
 
     private var member: HealthMember? { store.member(memberID) }
 
@@ -41,15 +43,18 @@ struct HealthMemberView: View {
         }
         .paperScanner(isPresented: $scanning, maxPages: HealthScanPages.maxPages) { images, needsCrop in
             guard let member else { return }
+            // Reading starts at once, while the camera or the file picker goes.
+            let reader = HealthScanReader(member: member, images: images, needsCrop: needsCrop)
+            reader.start(family, store: store)
+            reading?.cancel()
+            reading = reader
             Task {
                 // After the camera or the file picker has gone: one presentation at a time.
                 try? await Task.sleep(for: .milliseconds(350))
-                scan = HealthScanReview(member: member, images: images, needsCrop: needsCrop)
+                scan = reader
             }
         }
-        .sheet(item: $scan) { review in
-            HealthScanSheet(review: review).environment(store).errorBanner()
-        }
+        .sheet(item: $scan, onDismiss: stopReading, content: scanSheet)
         .alert("Mark earlier ones as done?", isPresented: $markingPast) {
             Button("Mark as Done") {
                 perform { try await store.markPastDone(family, member: memberID) }
@@ -59,6 +64,15 @@ struct HealthMemberView: View {
             Text("Every check-up and vaccination whose time has passed is recorded as done, without a date.")
                 + Text(verbatim: " ") + Text("You can change each one later.")
         }
+    }
+
+    private func scanSheet(_ reader: HealthScanReader) -> some View {
+        HealthScanSheet(reader: reader).environment(store).errorBanner()
+    }
+
+    private func stopReading() {
+        reading?.cancel()
+        reading = nil
     }
 
     private func canScan(_ member: HealthMember) -> Bool {

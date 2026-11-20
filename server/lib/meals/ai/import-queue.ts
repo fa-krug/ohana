@@ -24,6 +24,7 @@ import { translator } from "@/lib/notifications/locale";
 import type { RelayClient } from "@/lib/push/relay";
 import { moduleEnabled } from "@/lib/server-info";
 import { type ImportRecipeInput, importRecipe, importRecipeSchema } from "./import";
+import { JobRunner } from "@/lib/settle";
 
 /** How long one import may take. */
 export const IMPORT_TIMEOUT_MS = 4 * 60_000;
@@ -169,10 +170,7 @@ interface Running {
 /** The worker's import loop: every tick one cheap indexed query finds the waiting imports (and
  *  running ones whose lease ran out), claims each and runs it WITHOUT awaiting, at most
  *  `maxConcurrent` at once. */
-export class ImportRunner {
-  private readonly running = new Map<string, Running>();
-  private readonly done = new Map<string, Promise<void>>();
-  private stopped = false;
+export class ImportRunner extends JobRunner<Running> {
   private readonly env: AiEnv;
   private readonly maxConcurrent: number;
   private readonly now: () => Date;
@@ -184,6 +182,7 @@ export class ImportRunner {
     private readonly db: Db,
     private readonly opts: ImportRunnerOptions = {},
   ) {
+    super();
     this.env = opts.env ?? defaultAiEnv(db);
     this.maxConcurrent = opts.maxConcurrent ?? Math.max(1, Number(process.env.IMPORT_MAX_CONCURRENT) || 2);
     this.now = opts.now ?? (() => new Date());
@@ -400,23 +399,5 @@ export class ImportRunner {
     } catch (err) {
       console.error(`[imports] notification of import ${row.id} failed:`, err);
     }
-  }
-
-  /** Waits for the running imports until all ended or `ms` passed. */
-  async idle(ms = Infinity): Promise<void> {
-    const until = Date.now() + ms;
-    while (this.done.size && Date.now() < until) {
-      await Promise.race([
-        Promise.allSettled([...this.done.values()]),
-        new Promise<void>((resolve) => { setTimeout(() => resolve(), Math.min(50, until - Date.now())); }),
-      ]);
-    }
-  }
-
-  /** Stops: the runs end where they are and their imports wait again for the next worker. */
-  async stop(ms: number): Promise<void> {
-    this.stopped = true;
-    for (const run of this.running.values()) run.abort.abort("stop");
-    await this.idle(ms);
   }
 }

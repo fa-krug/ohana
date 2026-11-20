@@ -17,7 +17,7 @@ import { type Lang, SCHEDULE, SCHEDULE_BY_CODE } from "./schedule";
 export const MAX_SCAN_PAGES = 8;
 /** A page's picture at most (decoded). */
 export const MAX_SCAN_PAGE_BYTES = 4 * 1024 * 1024;
-export const SCAN_TIMEOUT_MS = 120_000;
+export const SCAN_TIMEOUT_MS = 180_000;
 export const MAX_SUGGESTIONS = 60;
 const SCAN_TEMPERATURE = 0;
 
