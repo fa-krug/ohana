@@ -322,6 +322,6 @@ export class HolidayRunner {
   }
 
   async stop(ms: number): Promise<void> {
-    if (this.running) await Promise.race([this.running, new Promise((r) => setTimeout(r, ms).unref())]);
+    if (this.running) await Promise.race([this.running, new Promise<void>((resolve) => setTimeout(() => resolve(), ms).unref())]);
   }
 }

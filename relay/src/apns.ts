@@ -168,7 +168,7 @@ export class Http2ApnsClient implements ApnsClient {
       if (this.sessions.get(environment) === session) this.sessions.delete(environment);
       session.destroy();
     };
-    const timer = setTimeout(drop, 5000);
+    const timer = setTimeout(() => drop(), 5000);
     try {
       session.ping((err) => {
         clearTimeout(timer);

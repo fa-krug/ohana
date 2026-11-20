@@ -90,7 +90,7 @@ const CHROME_HEADERS: Record<string, string> = {
 };
 
 function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise<void>((resolve) => setTimeout(() => resolve(), ms));
 }
 
 /** Extract a named attribute value from an HTML opening tag substring. Returns "" if absent. */
