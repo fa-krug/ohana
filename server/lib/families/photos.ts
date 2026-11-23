@@ -337,3 +337,5 @@ export async function cropPersonPhoto(
 export function removePersonPhoto(db: Db, actor: Actor, familyId: string, personId: string): void {
   remove(personAccess(db, actor, familyId, personId));
 }
+
+// MARKER_RUN_VIEW_12345
