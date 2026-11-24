@@ -9,7 +9,7 @@
     "preview": "vitepress preview"
   },
   "devDependencies": {
-    "redoc": "2.5.4",
+    "redoc": "3.2.0",
     "vitepress": "1.6.4"
   }
 }
