@@ -9684,7 +9684,7 @@ components:
             ops:
               type: array
               maxItems: 10
-              items: {$ref: "#/components/schemas/NoteOp"}
+              items: {$ref: "#/components/schemas/AssistantNoteOp"}
             answer:
               oneOf:
                 - type: object
@@ -10098,7 +10098,7 @@ components:
             itemTitle: {type: string}
             list: {type: string, description: "The reminder's list."}
             listTitle: {type: string}
-    NoteOp:
+    AssistantNoteOp:
       description: >-
         One change to the family's notes as the assistant asked for it, resolved by the server:
         `path` is relative to the knowledge folder ("/"-separated), `title` its last part. An
