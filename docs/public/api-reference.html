@@ -1,45 +1,75 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>API reference · Ohana</title>
-  <meta name="description" content="The JSON API of a self-hosted Ohana server (OpenAPI 3.1).">
-  <link rel="icon" type="image/svg+xml" href="/icon.svg">
-  <meta name="theme-color" content="#0d9488">
-  <style>
-    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #fff; }
-    .bar { display: flex; align-items: center; gap: 16px; padding: 10px 16px; border-bottom: 1px solid #e2e2e3; font-size: 14px; }
-    .bar a { color: #0f766e; text-decoration: none; font-weight: 500; }
-    .bar a:hover { text-decoration: underline; }
-    .bar .home { display: flex; align-items: center; gap: 8px; color: #1f2937; font-weight: 600; font-size: 16px; }
-    .bar img { width: 24px; height: 24px; border-radius: 22%; }
-    .bar .spacer { flex: 1; }
-    .bar .legal { color: #6b7280; font-weight: 400; }
-  </style>
-</head>
-<body>
-  <nav class="bar">
-    <a class="home" href="/"><img src="/icon.svg" alt="">Ohana</a>
-    <a href="/api">API guide</a>
-    <a href="/openapi.yaml" download>openapi.yaml</a>
-    <span class="spacer"></span>
-    <a class="legal" href="/legal/imprint">Imprint</a>
-    <a class="legal" href="/legal/privacy">Privacy</a>
-  </nav>
-  <div id="redoc"></div>
-  <!-- Redoc (MIT), served from this site: no third-party requests. -->
-  <script src="/redoc.standalone.js"></script>
-  <script>
-    Redoc.init("/openapi.yaml", {
-      hideDownloadButton: true,
-      expandResponses: "200,201",
-      theme: {
-        colors: { primary: { main: "#0f766e" } },
-        typography: { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', headings: { fontFamily: 'inherit' } },
-        sidebar: { width: "280px" },
-      },
-    }, document.getElementById("redoc"));
-  </script>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pulse API reference</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 2rem;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        background: #f6f7f9;
+      }
+      .frame {
+        max-width: 1400px;
+        margin: 0 auto;
+        background: #fff;
+        border: 1px solid #dfe3e8;
+        border-radius: 8px;
+        padding: 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="frame">
+      <div id="redoc-container"></div>
+    </div>
+    <script type="module">
+      // Redoc 3 ships its standalone bundle as an ES module, so the UMD
+      // `window.Redoc.init` global the 2.x page relied on is gone; the bundle
+      // is copied into the site by the docs build (see .vitepress/config.mts)
+      // and imported from there so the page stays self-contained.
+      import { init } from '/assets/redoc.standalone.js';
+
+      init(
+        '/openapi.json',
+        {
+          // The spec is served by the API itself; the docs site only renders it.
+          specUrl: '/openapi.json',
+          options: {
+            // Redoc 3 renamed these options and removed the ones that no longer apply.
+            hideOneOfDescription: true,
+            hideDownloadButton: false,
+            pathInMiddlePanel: false,
+            unIndentedSchemaExamples: true,
+            theme: {
+              // Redoc 3 draws this mark itself when the spec has no logo, and it
+              // points at redoc.ly, so the logo is set here instead.
+              logo: {
+                url: '/logo.svg',
+                altText: 'Pulse',
+              },
+              apiLogo: {
+                src: '/logo.svg',
+                altText: 'Pulse',
+                href: '/',
+              },
+              sidebar: {
+                backgroundColor: '#f6f7f9',
+                width: '320px',
+              },
+              color: {
+                primary: { main: '#2f6fed' },
+              },
+              typography: {
+                headings: { fontFamily: 'ui-sans-serif, system-ui, sans-serif' },
+              },
+            },
+          },
+        },
+        document.getElementById('redoc-container'),
+      );
+    </script>
+  </body>
 </html>
