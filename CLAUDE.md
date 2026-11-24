@@ -997,8 +997,8 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   was in view (scrolled up: "Jump to latest"), and a change of the visible height (keyboard, window)
   keeps the end in view (`AssistantScrollFollow`). Tool calls one
   after the other are one row (`AssistantItemGroups`, `AssistantToolGroupRow`: the running one with a
-  spinner, then "Used 3 tools", a tap unfolds them); the activity line has one pulsing symbol and no
-  timer. On iOS messages aren't selectable in place (costly to lay out): their menu's *Select Text*
+  spinner, then "Used 3 tools", a tap unfolds them); the activity line has one symbol, pulsing on iOS only (on the Mac a
+  repeating symbol effect starved the main actor: the stream's end never landed), and no timer. On iOS messages aren't selectable in place (costly to lay out): their menu's *Select Text*
   opens the plain text in a sheet (`AssistantSelectTextSheet`, a TextKit 1 `UITextView`: TextKit 2's stayed
   blank there); the Mac selects in place. Web and email addresses and phone numbers in answers are links
   (`AssistantMarkdownBlock.detectLinks`, not in code; Markdown links may be http(s), mailto, tel or `/f/…`). Paste in the
@@ -1203,8 +1203,9 @@ npm run mock-ai       # scripted OpenAI-compatible stand-in on :4011 (server + w
   (an inspector laid out the whole window at every step of its slide), stays built while closed
   (`AssistantPanel(visible:)`: closed, invisible, no hit testing, no toolbar items, no ask requests,
   not a viewer of the chat) and has its buttons in a header of its own, not in the toolbar; the
-  chat is laid out to its scroll view's measured width (never `containerRelativeFrame`, which in
-  the overlay took the window's); every page (`AppShell`) and the panel take any size
+  chat takes the width its scroll view offers it (`.frame(minWidth: 0, maxWidth: .infinity)` on the
+  content: never the scroll view's measured frame, which a classic scroll bar widened by itself
+  without end, nor `containerRelativeFrame`, which in the overlay took the window's); every page (`AppShell`) and the panel take any size
   (`.frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)`), so the window
   doesn't measure them for its smallest size — never a frame or a custom `Layout` around the tab
   view itself (that lays out without end); no `ViewThatFits` in a toolbar; no width in a page's
