@@ -6,6 +6,6 @@ export const setupPlanSchema = z.object({
   servings: z.number().int().min(1).max(12),
   knownRatio: z.number().min(0).max(1),
   defaultLeftoverDays: z.number().int().min(0).max(3),
-  excludedTagIds: z.array(z.string().uuid()).default([]),
+  excludedTagIds: z.array(z.uuid()).default([]),
 });
 export type SetupPlanInput = z.infer<typeof setupPlanSchema>;

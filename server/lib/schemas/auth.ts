@@ -2,7 +2,8 @@ import { z } from "zod";
 import { ROLES } from "@/lib/families/roles";
 import { MEMBER_COLORS } from "@/lib/families/colors";
 
-const email = z.string().trim().toLowerCase().email();
+// Trimmed and lower-cased before the address is checked, so `z.email()` alone wouldn't do.
+const email = z.string().trim().toLowerCase().pipe(z.email());
 // Sign-in name: an email or a plain name (accounts imported from the old apps may use one).
 const identifier = z.string().trim().toLowerCase().min(1);
 const password = z.string().min(1);

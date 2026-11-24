@@ -34,14 +34,13 @@ export interface PhotoCrop {
 
 const CROP_SLACK = 1e-6;
 const INVALID_CROP = "Invalid crop.";
-const fraction = z.number({ invalid_type_error: INVALID_CROP, required_error: INVALID_CROP }).finite(INVALID_CROP);
+// One message for every way a fraction can be wrong: zod 4 answers its `error` for a missing key,
+// the wrong type, NaN and the infinite values it no longer takes either (what `.finite()` said in v3).
+const fraction = z.number({ error: INVALID_CROP });
 
 /** A crop inside the picture (with a little slack for rounding, then clamped to it). */
 export const photoCropSchema = z
-  .object(
-    { x: fraction, y: fraction, w: fraction, h: fraction },
-    { invalid_type_error: INVALID_CROP, required_error: INVALID_CROP },
-  )
+  .object({ x: fraction, y: fraction, w: fraction, h: fraction }, { error: INVALID_CROP })
   .refine(
     (c) =>
       c.x >= -CROP_SLACK &&

@@ -49,7 +49,9 @@ const httpUrl = z.string().trim().max(2000).refine(isHttpUrl, "url must be an ht
 /** POST …/meals/recipes/import's body. A text beyond MAX_IMPORT_TEXT is cut; an imageUrl that
  *  isn't http(s) is ignored (the photo is best effort). */
 export const importRecipeSchema = z.object({
-  url: z.string({ required_error: "url is required", invalid_type_error: "url must be a string" })
+  // zod 4 takes one `error` per schema, so it says which of the two failures it saw.
+  url: z
+    .string({ error: (issue) => (issue.input === undefined ? "url is required" : "url must be a string") })
     .pipe(httpUrl),
   text: z.string().nullish().transform((s) => s?.slice(0, MAX_IMPORT_TEXT) ?? ""),
   title: z.string().nullish().transform((s) => s?.trim().slice(0, 300) ?? ""),
