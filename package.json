@@ -2,13 +2,15 @@
   "name": "ohana",
   "private": true,
   "version": "0.3.0",
-  "description": "Ohana – private family assistant (Next.js server + MCP relay + docs)",
+  "description": "Ohana \u2013 private family assistant (Next.js server + MCP relay + docs)",
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/node": "^22.19.2",
     "typescript": "5.9.3",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "vitest": "4.0.16",
+    "@vitest/coverage-v8": "4.0.16"
   }
 }
