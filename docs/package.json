@@ -2,11 +2,16 @@
   "name": "ohana-site",
   "private": true,
   "type": "module",
-  "description": "ohana.fa-krug.de: the project's website and documentation (VitePress, deployed to GitHub Pages)",
   "scripts": {
-    "dev": "vitepress dev",
-    "build": "vitepress build",
-    "preview": "vitepress preview"
+    "docs:dev": "vitepress dev",
+    "docs:build": "vitepress build",
+    "docs:preview": "vitepress preview",
+    "api:dev": "redoc-cli serve ../openapi.yaml --watch",
+    "api:build": "redoc-cli bundle ../openapi.yaml --output .vitepress/dist/api/index.html"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "redoc": "3.2.0",
