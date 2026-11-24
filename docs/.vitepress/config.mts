@@ -15,16 +15,19 @@ const require = createRequire(import.meta.url)
 
 // Files the API reference page (public/api-reference.html) loads, written next to it: the spec
 // from docs/ and Redoc's bundle from node_modules, served by the site itself. Redoc's sidebar
-// shows its logo from cdn.redoc.ly: replaced by an empty image, so the page makes no request
-// to anyone else (see legal/privacy.md).
+// shows its own logo from cdn.redoc.ly (the wide one next to "API docs by", the square one in the
+// collapsed sidebar): replaced by an empty image, so the page makes no request to anyone else
+// (see legal/privacy.md).
 const blankImage = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
+const redoclyLogos = ["https://cdn.redoc.ly/redoc/logo-mini.svg", "https://cdn.redoc.ly/redoc/logo-mini-full.svg"]
 const extraFiles: Record<string, () => string> = {
   "openapi.yaml": () => readFileSync(path.join(docsDir, "openapi.yaml"), "utf8"),
   "redoc.standalone.js": () => {
     const bundle = readFileSync(require.resolve("redoc/bundles/redoc.standalone.js"), "utf8")
-    const logo = "https://cdn.redoc.ly/redoc/logo-mini.svg"
-    if (!bundle.includes(logo)) throw new Error(`redoc.standalone.js no longer loads ${logo}: check it for outside requests`)
-    return bundle.replaceAll(logo, blankImage)
+    for (const logo of redoclyLogos) {
+      if (!bundle.includes(logo)) throw new Error(`redoc.standalone.js no longer loads ${logo}: check it for outside requests`)
+    }
+    return redoclyLogos.reduce((js, logo) => js.replaceAll(logo, blankImage), bundle)
   },
 }
 
