@@ -62,8 +62,6 @@ struct AssistantChatView: View {
     @State private var scrollPhase: ScrollPhase = .idle
     /// How tall the last turn is at least (the visible height of the chat, `AssistantTurnLayout`).
     @State private var turnHeight: CGFloat = 0
-    /// How wide the scroll view is (the chat is laid out to it).
-    @State private var chatWidth: CGFloat = 0
     /// The visible height changed with the end in view: back to the end until it is there.
     @State private var pinning = false
     /// The user sent a message: it scrolls to the top once it is in the chat.
@@ -492,17 +490,13 @@ struct AssistantChatView: View {
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 16)
             .padding(.vertical, AssistantScrollFollow.padding)
-            // Exactly as wide as the scroll view: nothing in the chat can make it pan sideways. Its
-            // own width, not `containerRelativeFrame`: in the floating panel (an overlay) that took
-            // the window's.
-            .frame(width: chatWidth > 0 ? chatWidth : nil)
+            // Exactly the width the scroll view offers its content, whatever the chat holds: nothing
+            // in it can make it pan sideways. Never its measured frame (a Mac's scroll bar takes
+            // from that room: the chat at the frame's width made the scroll view wider by the bar,
+            // and so on without end) nor `containerRelativeFrame` (the window's, in the panel).
+            .frame(minWidth: 0, maxWidth: .infinity)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        // Its frame, not its scroll geometry: that didn't tell when the panel went from its first,
-        // narrow layout to its width.
-        .onGeometryChange(for: CGFloat.self) { $0.size.width.rounded() } action: { width in
-            if width != chatWidth { chatWidth = width }
-        }
+        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
         .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
         .scrollPosition($scroll)
         .defaultScrollAnchor(.bottom, for: .initialOffset)

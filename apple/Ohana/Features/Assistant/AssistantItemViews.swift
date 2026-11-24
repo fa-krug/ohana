@@ -1007,9 +1007,9 @@ struct AssistantQueuedRow: View {
 }
 
 /// What the assistant is doing right now, under the chat while it answers: the sparkles, gently
-/// pulsing (still under Reduce Motion), and the status, cross-fading as it changes. The only thing
-/// in the chat that moves on its own; nothing ticks: "Writing…" turns into "Thinking…" after a
-/// pause by a task that waits for that moment.
+/// pulsing on iOS (still under Reduce Motion, and always on the Mac), and the status, cross-fading
+/// as it changes. The only thing in the chat that moves on its own; nothing ticks: "Writing…" turns
+/// into "Thinking…" after a pause by a task that waits for that moment.
 struct AssistantActivityLine: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let store: AssistantChatStore
@@ -1026,7 +1026,13 @@ struct AssistantActivityLine: View {
         HStack(spacing: 8) {
             Image(systemName: "sparkles")
                 .foregroundStyle(ModuleTint.assistant)
+                // Not on the Mac: there the repeating pulse drew a frame after frame that waited
+                // for the window server (for good while the window was covered), and the main
+                // actor's tasks never got their turn: the chat's stream didn't end, it showed
+                // "Thinking…" for good and nothing more could be sent.
+                #if os(iOS)
                 .symbolEffect(.pulse, options: .repeating, isActive: !reduceMotion)
+                #endif
                 .accessibilityHidden(true)
             Text(verbatim: status)
                 .lineLimit(1)
