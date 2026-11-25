@@ -65,7 +65,8 @@ struct AssistantCalendarContext: Encodable, Equatable {
             .sorted { ($0.start.description, $0.title) < ($1.start.description, $1.title) }
             .prefix(maxEvents)
             .map { deviceEvent in
-                Event(id: deviceEvent.ref.description, calendar: deviceEvent.calendarID, title: cut(deviceEvent.title, maxTitle), allDay: deviceEvent.allDay,
+                Event(id: deviceEvent.ref.description, calendar: deviceEvent.calendarID,
+                      title: cut(deviceEvent.title, maxTitle), allDay: deviceEvent.allDay,
                       start: deviceEvent.start.description, end: deviceEvent.end.description,
                       location: deviceEvent.location.flatMap { nonEmpty(cut($0, maxLocation)) },
                       notes: deviceEvent.notes.flatMap { nonEmpty(cut($0, maxNotes)) }, rrule: deviceEvent.rrule)
