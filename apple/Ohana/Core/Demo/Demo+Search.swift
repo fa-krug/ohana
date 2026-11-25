@@ -39,7 +39,8 @@ extension DemoServer {
         }
         let calendar = request.json("calendar")
         let events = (calendar?["events"]?.arrayValue ?? []).map {
-            DemoSearchItem(id: field($0, "id"), title: field($0, "title"), detail: joined(field($0, "location"), field($0, "person")),
+            DemoSearchItem(id: field($0, "id"), title: field($0, "title"),
+                           detail: joined(field($0, "location"), field($0, "person")),
                            text: [field($0, "note")], day: field($0, "date"), extra: ["time": $0["start"] ?? .null])
         }
         let notes = (calendar?["notes"]?.objectValue ?? [:]).compactMap { day, note -> DemoSearchItem? in
@@ -49,18 +50,24 @@ extension DemoServer {
             return DemoSearchItem(id: day, title: firstLine(comment), detail: "", text: [comment], day: day,
                                   extra: icon.isEmpty ? [:] : ["icon": .string(icon)])
         }
-        let categories = Dictionary((request.json("finance")?["categories"]?.arrayValue ?? []).map { (field($0, "id"), field($0, "name")) },
+        let categoryRows = request.json("finance")?["categories"]?.arrayValue ?? []
+        let categories = Dictionary(categoryRows.map { (field($0, "id"), field($0, "name")) },
                                     uniquingKeysWith: { existing, _ in existing })
         let transactions = (request.json("finance-transactions")?["transactions"]?.arrayValue ?? []).map { row in
             let payee = field(row, "payee")
-            return DemoSearchItem(id: field(row, "id"), title: payee.isEmpty ? firstLine(field(row, "description")) : payee,
-                                  detail: joined(payee.isEmpty ? "" : firstLine(field(row, "description")), categories[field(row, "categoryId")] ?? ""),
+            let description = firstLine(field(row, "description"))
+            let title = payee.isEmpty ? description : payee
+            let detail = joined(payee.isEmpty ? "" : description, categories[field(row, "categoryId")] ?? "")
+            return DemoSearchItem(id: field(row, "id"), title: title, detail: detail,
                                   text: [field(row, "description"), field(row, "note")], day: field(row, "date"),
                                   extra: ["amountCents": row["amountCents"] ?? .number(0)])
         }
         let searches = (request.json("appointments")?["searches"]?.arrayValue ?? []).map {
-            let speciality = field($0, "specialityLabel").isEmpty ? field($0, "jamedaSpecialityLabel") : field($0, "specialityLabel")
-            return DemoSearchItem(id: field($0, "id"), title: field($0, "name"), detail: joined(speciality, field($0, "locationLabel")))
+            let speciality = field($0, "specialityLabel").isEmpty
+                ? field($0, "jamedaSpecialityLabel")
+                : field($0, "specialityLabel")
+            return DemoSearchItem(id: field($0, "id"), title: field($0, "name"),
+                                  detail: joined(speciality, field($0, "locationLabel")))
         }
         let household = request.json("household")
         let members = (household?["members"]?.arrayValue ?? []).map {
@@ -72,7 +79,8 @@ extension DemoServer {
             DemoSearchItem(id: field($0, "id"), title: field($0, "name"), detail: "", extra: ["account": .bool(false)])
         }
         let chats = (request.json("ai-chats")?["chats"]?.arrayValue ?? []).map {
-            DemoSearchItem(id: field($0, "id"), title: field($0, "title"), detail: "", day: String(field($0, "updatedAt").prefix(10)))
+            DemoSearchItem(id: field($0, "id"), title: field($0, "title"), detail: "",
+                           day: String(field($0, "updatedAt").prefix(10)))
         }
         return [("recipe", recipes), ("event", events), ("note", notes), ("transaction", transactions),
                 ("search", searches), ("person", members + people), ("chat", chats)]
