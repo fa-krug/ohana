@@ -21,16 +21,6 @@
         }
       }
     },
-    " Before it is full, older messages are condensed into a summary, so long tasks can go on.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": " Bevor es voll ist, werden ältere Nachrichten zu einer Zusammenfassung verdichtet, damit lange Aufgaben weiterlaufen können."
-          }
-        }
-      }
-    },
     " Everyone in the family uses this setup.": {
       "localizations": {
         "de": {
@@ -8741,12 +8731,12 @@
         }
       }
     },
-    "How much of the model’s context window this chat uses.": {
+    "How much of the model’s context window this chat uses. Before it is full, older messages are condensed into a summary, so long tasks can go on.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wie viel vom Kontextfenster des Modells dieser Chat belegt."
+            "value": "Wie viel vom Kontextfenster des Modells dieser Chat belegt. Bevor es voll ist, werden ältere Nachrichten zu einer Zusammenfassung verdichtet, damit lange Aufgaben weiterlaufen können."
           }
         }
       }
