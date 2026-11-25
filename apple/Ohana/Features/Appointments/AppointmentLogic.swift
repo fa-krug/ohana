@@ -28,7 +28,9 @@ enum AppointmentLogic {
         let name = searchInput.name.trimmingCharacters(in: .whitespacesAndNewlines)
         if name.isEmpty { out.append((.name, String(localized: "Give the search a name."))) }
         if name.count > 200 { out.append((.name, String(localized: "The name is too long (max. 200)."))) }
-        if searchInput.latitude.trimmingCharacters(in: .whitespaces).isEmpty || searchInput.longitude.trimmingCharacters(in: .whitespaces).isEmpty {
+        let latitudeBlank = searchInput.latitude.trimmingCharacters(in: .whitespaces).isEmpty
+        let longitudeBlank = searchInput.longitude.trimmingCharacters(in: .whitespaces).isEmpty
+        if latitudeBlank || longitudeBlank {
             out.append((.location, String(localized: "Pick a location from the suggestions.")))
         }
         if searchInput.doctolibOn && searchInput.specialitySlug.trimmingCharacters(in: .whitespaces).isEmpty {
@@ -43,6 +45,14 @@ enum AppointmentLogic {
         if !(1...20).contains(searchInput.maxPages) {
             out.append((.maxPages, String(localized: "Result pages must be between 1 and 20.")))
         }
+        out.append(contentsOf: scheduleIssues(searchInput))
+        return out
+    }
+
+    /// The schedule part of the problems: the interval's range and the cron expression's shape.
+    static func scheduleIssues(_ searchInput: AppointmentSearchInput)
+        -> [(field: AppointmentSearchField, message: String)] {
+        var out: [(field: AppointmentSearchField, message: String)] = []
         if searchInput.scheduleType == "MINUTES", !(1...1440).contains(searchInput.scheduleMinutes ?? 0) {
             out.append((.interval, String(localized: "The interval must be between 1 and 1440 minutes.")))
         }
@@ -105,7 +115,9 @@ enum AppointmentLogic {
             if !label.isEmpty { specialities.append(both ? "Doctolib: \(label)" : label) }
         }
         if jameda {
-            let label = savedSearch.jamedaSpecialityLabel.isEmpty ? savedSearch.jamedaSpecialitySlug : savedSearch.jamedaSpecialityLabel
+            let label = savedSearch.jamedaSpecialityLabel.isEmpty
+                ? savedSearch.jamedaSpecialitySlug
+                : savedSearch.jamedaSpecialityLabel
             if !label.isEmpty { specialities.append(both ? "jameda: \(label)" : label) }
         }
         var parts = [specialities.isEmpty ? "—" : specialities.joined(separator: " · ")]
@@ -126,7 +138,12 @@ enum AppointmentLogic {
     }
 
     static func scheduleSummary(_ savedSearch: AppointmentSearch) -> String {
-        scheduleSummary(enabled: savedSearch.enabled, type: savedSearch.scheduleType, minutes: savedSearch.scheduleMinutes, cron: savedSearch.cron)
+        scheduleSummary(
+            enabled: savedSearch.enabled,
+            type: savedSearch.scheduleType,
+            minutes: savedSearch.scheduleMinutes,
+            cron: savedSearch.cron
+        )
     }
 
     /// Doctolib's insurance sector ("" | public | private).
@@ -219,44 +236,61 @@ enum AppointmentLogic {
     /// The practice in Apple Maps.
     static func mapsURL(lat: Double, lng: Double, name: String) -> URL {
         var urlComponents = URLComponents(string: "https://maps.apple.com/")!
-        urlComponents.queryItems = [URLQueryItem(name: "ll", value: "\(lat),\(lng)"), URLQueryItem(name: "q", value: name)]
+        urlComponents.queryItems = [
+            URLQueryItem(name: "ll", value: "\(lat),\(lng)"),
+            URLQueryItem(name: "q", value: name)
+        ]
         return urlComponents.url!
     }
 
     /// The search on Doctolib (search-form.tsx `doctolibPreviewUrl`).
     static func doctolibPreviewURL(_ searchInput: AppointmentSearchInput) -> URL? {
-        guard !searchInput.specialitySlug.isEmpty, !searchInput.latitude.isEmpty, !searchInput.longitude.isEmpty else { return nil }
+        let hasSpeciality = !searchInput.specialitySlug.isEmpty
+        let hasCoordinates = !searchInput.latitude.isEmpty && !searchInput.longitude.isEmpty
+        guard hasSpeciality, hasCoordinates else { return nil }
         var urlComponents = URLComponents(string: "https://www.doctolib.de/search")!
         var items = [
             URLQueryItem(name: "around_me", value: "true"),
             URLQueryItem(name: "keyword", value: searchInput.specialitySlug),
             URLQueryItem(name: "latitude", value: searchInput.latitude),
-            URLQueryItem(name: "longitude", value: searchInput.longitude),
+            URLQueryItem(name: "longitude", value: searchInput.longitude)
         ]
-        if !searchInput.insuranceSector.isEmpty { items.append(URLQueryItem(name: "insuranceSector", value: searchInput.insuranceSector)) }
+        if !searchInput.insuranceSector.isEmpty {
+            items.append(URLQueryItem(name: "insuranceSector", value: searchInput.insuranceSector))
+        }
         urlComponents.queryItems = items
         return urlComponents.url
     }
 
     /// The search on jameda (search-form.tsx `jamedaPreviewUrl`).
     static func jamedaPreviewURL(_ searchInput: AppointmentSearchInput) -> URL? {
-        let loc = (searchInput.locationLabel.split(separator: ",", omittingEmptySubsequences: false).first.map(String.init) ?? "")
-            .trimmingCharacters(in: .whitespaces)
+        let firstLabelPart = searchInput.locationLabel.split(separator: ",", omittingEmptySubsequences: false).first
+        let loc = (firstLabelPart.map(String.init) ?? "").trimmingCharacters(in: .whitespaces)
         guard !loc.isEmpty else { return nil }
         var extra: [URLQueryItem] = []
-        if !searchInput.jamedaInsuranceType.isEmpty { extra.append(URLQueryItem(name: "filters[insurance_types][]", value: searchInput.jamedaInsuranceType)) }
-        if searchInput.jamedaKidsFriendly { extra.append(URLQueryItem(name: "filters[kids_friendly][]", value: "true")) }
-        if searchInput.jamedaVideo == "only" { extra.append(URLQueryItem(name: "filters[online_only][]", value: "true")) }
+        if !searchInput.jamedaInsuranceType.isEmpty {
+            extra.append(URLQueryItem(name: "filters[insurance_types][]", value: searchInput.jamedaInsuranceType))
+        }
+        if searchInput.jamedaKidsFriendly {
+            extra.append(URLQueryItem(name: "filters[kids_friendly][]", value: "true"))
+        }
+        if searchInput.jamedaVideo == "only" {
+            extra.append(URLQueryItem(name: "filters[online_only][]", value: "true"))
+        }
         if searchInput.jamedaSpecialityType == "specialization", !searchInput.jamedaSpecialitySlug.isEmpty {
             let city = citySlug(searchInput.locationLabel)
             guard !city.isEmpty else { return nil }
-            var specialityComponents = URLComponents(string: "https://www.jameda.de/\(searchInput.jamedaSpecialitySlug)/\(city)")!
+            let specialityPath = "https://www.jameda.de/\(searchInput.jamedaSpecialitySlug)/\(city)"
+            var specialityComponents = URLComponents(string: specialityPath)!
             specialityComponents.queryItems = extra.isEmpty ? nil : extra
             return specialityComponents.url
         }
         guard !searchInput.jamedaSpecialityLabel.isEmpty else { return nil }
         var urlComponents = URLComponents(string: "https://www.jameda.de/suchen")!
-        urlComponents.queryItems = [URLQueryItem(name: "q", value: searchInput.jamedaSpecialityLabel), URLQueryItem(name: "loc", value: loc)] + extra
+        urlComponents.queryItems = [
+            URLQueryItem(name: "q", value: searchInput.jamedaSpecialityLabel),
+            URLQueryItem(name: "loc", value: loc)
+        ] + extra
         return urlComponents.url
     }
 
@@ -269,9 +303,9 @@ enum AppointmentLogic {
         }
         var out = ""
         var dash = false
-        for ch in rawSlug.unicodeScalars {
-            if (97...122).contains(ch.value) || (48...57).contains(ch.value) {
-                out.unicodeScalars.append(ch)
+        for scalar in rawSlug.unicodeScalars {
+            if (97...122).contains(scalar.value) || (48...57).contains(scalar.value) {
+                out.unicodeScalars.append(scalar)
                 dash = false
             } else if !dash {
                 out.append("-")
