@@ -45,10 +45,13 @@ paths:
 # Repository-level suppressions. A reason is mandatory; every suppression is visible in the
 # finding list and the audit log. Inline alternative on (or above) the flagged line:
 #   # leuchtfeuer:ignore ruff:S101 asserts are fine in tests
-# ignore:
-#   - rule: "ruff:S101"
-#     paths: ["tests/**"]
-#     reason: asserts are fine in tests
+ignore:
+  # The German translation files are label tables ("API-Tokens", "SMTP-Passwort", "Client-Secret"
+  # are the German texts for those field labels). JSON takes no comment, so the reason lives here:
+  # the flagged strings are UI wording, never a credential.
+  - rule: "checkov:CKV_SECRET_6"
+    paths: ["apple/Localization/*.de.json"]
+    reason: German UI label translations that only look like base64; no credential in them
 
 # Test and coverage reports produced by earlier CI jobs (uploaded as raw files).
 # reports:
