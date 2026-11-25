@@ -119,7 +119,8 @@ enum AssistantToolLabels {
     private static func noon(_ day: String) -> Date? {
         let dayParts = day.split(separator: "-").compactMap { Int($0) }
         guard dayParts.count == 3 else { return nil }
-        return Calendar.current.date(from: DateComponents(year: dayParts[0], month: dayParts[1], day: dayParts[2], hour: 12))
+        let noon = DateComponents(year: dayParts[0], month: dayParts[1], day: dayParts[2], hour: 12)
+        return Calendar.current.date(from: noon)
     }
 
     private static func formatted(_ day: String, template: String) -> String {
@@ -200,6 +201,16 @@ enum AssistantToolLabels {
         return names.filter { !$0.isEmpty && seen.insert($0).inserted }
     }
 
+    /// The parts of an edit tool (reminders, calendars): how many ops, and the titles they touch.
+    private static func editParts(_ operations: [[String: JSONValue]], into parts: inout [String]) {
+        let titles = operations.map { str($0["title"]) }.filter { !$0.isEmpty }
+        if !operations.isEmpty {
+            let total = operations.count
+            parts.append(String(AttributedString(localized: "^[\(total) change](inflect: true)").characters))
+        }
+        parts.append(list(titles, max: 3))
+    }
+
     /// What the call is about, in a few words ("" when there is nothing to add).
     static func detail(_ tool: AssistantToolCall) -> String {
         let callArgs = tool.args
@@ -210,10 +221,12 @@ enum AssistantToolLabels {
             parts.append(span(date(callArgs["from"]), date(callArgs["to"])))
         case "analyze_calendar":
             parts.append(span(date(callArgs["from"]), date(callArgs["to"])))
-            let types = (callArgs["types"]?.arrayValue ?? [callArgs["types"] ?? .null]).map { named($0) }.filter { !$0.isEmpty }
+            let rawTypes = callArgs["types"]?.arrayValue ?? [callArgs["types"] ?? .null]
+            let types = rawTypes.map { named($0) }.filter { !$0.isEmpty }
             parts.append(list(types))
         case "calculate":
-            let all = callArgs["expressions"]?.arrayValue ?? [callArgs["expressions"] ?? callArgs["expression"] ?? .null]
+            let single = callArgs["expressions"] ?? callArgs["expression"] ?? .null
+            let all = callArgs["expressions"]?.arrayValue ?? [single]
             let first = str(all.first)
             parts.append(first.count > 40 ? String(first.prefix(40)) + "…" : first)
             if all.count > 1 { parts.append("+\(all.count - 1)") }
@@ -221,14 +234,25 @@ enum AssistantToolLabels {
             let queries = (callArgs["queries"]?.arrayValue ?? []).compactMap(\.objectValue)
             if !queries.isEmpty {
                 parts.append(opsSpan(queries.map { oneQuery in
-                    ["from": oneQuery["from"] ?? callArgs["from"] ?? .null, "to": oneQuery["to"] ?? callArgs["to"] ?? .null]
+                    [
+                        "from": oneQuery["from"] ?? callArgs["from"] ?? .null,
+                        "to": oneQuery["to"] ?? callArgs["to"] ?? .null
+                    ]
                 }))
             } else {
                 parts.append(span(date(callArgs["from"]), date(callArgs["to"])))
             }
             if !str(callArgs["q"]).isEmpty { parts.append(quoted(str(callArgs["q"]))) }
-            if str(callArgs["account"]) == "none" { parts.append(String(localized: "No account")) } else { parts.append(named(callArgs["account"])) }
-            if str(callArgs["category"]) == "none" { parts.append(String(localized: "Uncategorized")) } else { parts.append(named(callArgs["category"])) }
+            if str(callArgs["account"]) == "none" {
+                parts.append(String(localized: "No account"))
+            } else {
+                parts.append(named(callArgs["account"]))
+            }
+            if str(callArgs["category"]) == "none" {
+                parts.append(String(localized: "Uncategorized"))
+            } else {
+                parts.append(named(callArgs["category"]))
+            }
             switch str(callArgs["kind"]) {
             case "income": parts.append(String(localized: "Income"))
             case "expense": parts.append(String(localized: "Expenses"))
@@ -257,7 +281,9 @@ enum AssistantToolLabels {
             let total = ops.reduce(0) { sum, operation in
                 sum + (str(operation["action"]) == "delete" ? (operation["ids"]?.arrayValue?.count ?? 1) : 1)
             }
-            if total > 0 { parts.append(String(AttributedString(localized: "^[\(total) change](inflect: true)").characters)) }
+            if total > 0 {
+                parts.append(String(AttributedString(localized: "^[\(total) change](inflect: true)").characters))
+            }
         case "manage_entry_types":
             if str(callArgs["action"]) == "copy_year" {
                 parts.append("\(number(callArgs["from"])) → \(number(callArgs["to"]))")
@@ -290,22 +316,12 @@ enum AssistantToolLabels {
         case "get_reminders":
             if !named(callArgs["list"]).isEmpty { parts.append(quoted(named(callArgs["list"]))) }
         case "edit_reminders":
-            let titles = ops.map { str($0["title"]) }.filter { !$0.isEmpty }
-            if !ops.isEmpty {
-                let total = ops.count
-                parts.append(String(AttributedString(localized: "^[\(total) change](inflect: true)").characters))
-            }
-            parts.append(list(titles, max: 3))
+            editParts(ops, into: &parts)
         case "get_apple_calendar":
             parts.append(span(date(callArgs["from"]), date(callArgs["to"])))
             if !named(callArgs["calendar"]).isEmpty { parts.append(quoted(named(callArgs["calendar"]))) }
         case "edit_apple_calendar":
-            let titles = ops.map { str($0["title"]) }.filter { !$0.isEmpty }
-            if !ops.isEmpty {
-                let total = ops.count
-                parts.append(String(AttributedString(localized: "^[\(total) change](inflect: true)").characters))
-            }
-            parts.append(list(titles, max: 3))
+            editParts(ops, into: &parts)
         case "suggest_items":
             let items = (callArgs["items"]?.arrayValue ?? []).compactMap(\.objectValue)
             let titles = items.map { str($0["title"]) }.filter { !$0.isEmpty }
@@ -328,7 +344,9 @@ enum AssistantToolLabels {
             if !named(callArgs["parent"]).isEmpty { parts.append("→ \(quoted(named(callArgs["parent"])))") }
         case "search_knowledge":
             if !str(callArgs["query"]).isEmpty { parts.append(quoted(str(callArgs["query"]))) }
-            if let tags = callArgs["tags"]?.arrayValue { parts.append(list(tags.map { str($0) }.filter { !$0.isEmpty }, max: 3)) }
+            if let tags = callArgs["tags"]?.arrayValue {
+                parts.append(list(tags.map { str($0) }.filter { !$0.isEmpty }, max: 3))
+            }
             if !str(callArgs["folder"]).isEmpty { parts.append(KnowledgePath.breadcrumb(str(callArgs["folder"]))) }
         case "knowledge_values":
             if !str(callArgs["query"]).isEmpty { parts.append(quoted(str(callArgs["query"]))) }
