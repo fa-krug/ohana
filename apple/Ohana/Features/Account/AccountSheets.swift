@@ -82,6 +82,7 @@ struct AccountEmailSheet: View {
     let current: String
     let save: (AccountEmailInput) async throws -> Void
     @State private var email = ""
+    // leuchtfeuer:ignore mobsfscan:ios_hardcoded_secret empty start value of the SecureField below, not a credential
     @State private var password = ""
 
     private var newEmail: String? { AccountRules.trimmed(email) }
@@ -153,6 +154,7 @@ struct AccountPasswordSheet: View {
 /// Removing the password (sign in with passkeys only), confirmed with it.
 struct AccountRemovePasswordSheet: View {
     let save: (String) async throws -> Void
+    // leuchtfeuer:ignore mobsfscan:ios_hardcoded_secret empty start value of the SecureField below, not a credential
     @State private var password = ""
 
     var body: some View {
