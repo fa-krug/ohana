@@ -1,6 +1,76 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    " (stored encrypted, never shown again).": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " (verschlüsselt gespeichert, nie wieder angezeigt)."
+          }
+        }
+      }
+    },
+    " Ask an editor of the family to do it in the settings.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " Bitte jemanden, der die Familie bearbeiten darf, das in den Einstellungen zu tun."
+          }
+        }
+      }
+    },
+    " Before it is full, older messages are condensed into a summary, so long tasks can go on.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " Bevor es voll ist, werden ältere Nachrichten zu einer Zusammenfassung verdichtet, damit lange Aufgaben weiterlaufen können."
+          }
+        }
+      }
+    },
+    " Everyone in the family uses this setup.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " Alle in der Familie nutzen diese Einrichtung."
+          }
+        }
+      }
+    },
+    " It can then look things up on the web and plan in your calendar and finances.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " Dann kann sie im Web recherchieren und in Kalender und Finanzen planen."
+          }
+        }
+      }
+    },
+    " Load the models from the API or type one; it needs to support tool calls.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " Lade die Modelle von der API oder gib eins ein; es muss Tool-Aufrufe unterstützen."
+          }
+        }
+      }
+    },
+    " in the settings.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " in den Einstellungen."
+          }
+        }
+      }
+    },
     "%@ %@": {
       "localizations": {
         "de": {
@@ -4891,12 +4961,12 @@
         }
       }
     },
-    "Connect any OpenAI-compatible AI (OpenAI, OpenRouter, Mistral, Gemini, a local model …) in the settings. It can then look things up on the web and plan in your calendar and finances.": {
+    "Connect any OpenAI-compatible AI (OpenAI, OpenRouter, Mistral, Gemini, a local model …)": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Verbinde eine beliebige OpenAI-kompatible KI (OpenAI, OpenRouter, Mistral, Gemini, ein lokales Modell …) in den Einstellungen. Dann kann sie im Web recherchieren und in Kalender und Finanzen planen."
+            "value": "Verbinde eine beliebige OpenAI-kompatible KI (OpenAI, OpenRouter, Mistral, Gemini, ein lokales Modell …)"
           }
         }
       }
@@ -8671,12 +8741,12 @@
         }
       }
     },
-    "How much of the model’s context window this chat uses. Before it is full, older messages are condensed into a summary, so long tasks can go on.": {
+    "How much of the model’s context window this chat uses.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wie viel vom Kontextfenster des Modells dieser Chat belegt. Bevor es voll ist, werden ältere Nachrichten zu einer Zusammenfassung verdichtet, damit lange Aufgaben weiterlaufen können."
+            "value": "Wie viel vom Kontextfenster des Modells dieser Chat belegt."
           }
         }
       }
@@ -11945,12 +12015,12 @@
         }
       }
     },
-    "Nobody has set up the assistant for this family yet. Ask an editor of the family to do it in the settings.": {
+    "Nobody has set up the assistant for this family yet.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Für diese Familie hat noch niemand den Assistenten eingerichtet. Bitte jemanden, der die Familie bearbeiten darf, das in den Einstellungen zu tun."
+            "value": "Für diese Familie hat noch niemand den Assistenten eingerichtet."
           }
         }
       }
@@ -13863,12 +13933,12 @@
         }
       }
     },
-    "Pick the AI service you have an account with and paste its key (stored encrypted, never shown again). Load the models from the API or type one; it needs to support tool calls. Everyone in the family uses this setup.": {
+    "Pick the AI service you have an account with and paste its key": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wähle den KI-Dienst, bei dem du ein Konto hast, und füge seinen Schlüssel ein (verschlüsselt gespeichert, nie wieder angezeigt). Lade die Modelle von der API oder gib eins ein; es muss Tool-Aufrufe unterstützen. Alle in der Familie nutzen diese Einrichtung."
+            "value": "Wähle den KI-Dienst, bei dem du ein Konto hast, und füge seinen Schlüssel ein"
           }
         }
       }
