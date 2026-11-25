@@ -801,9 +801,9 @@ struct AssistantChatView: View {
             if !attachments.isEmpty || preparing > 0 {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
-                        ForEach(attachments) { a in
-                            AssistantPendingChip(attachment: a) {
-                                attachments.removeAll { $0.id == a.id }
+                        ForEach(attachments) { pending in
+                            AssistantPendingChip(attachment: pending) {
+                                attachments.removeAll { $0.id == pending.id }
                             }
                         }
                         ForEach(0..<preparing, id: \.self) { _ in
@@ -1020,12 +1020,12 @@ struct AssistantChatView: View {
     /// for are left out with a note.
     private func prepare(_ count: Int, _ read: @escaping (Int) async throws -> AssistantPendingAttachment?) {
         if count > room { ErrorBanner.shared.show(AssistantAttachments.limitMessage) }
-        for n in 0..<min(count, max(0, room)) {
+        for index in 0..<min(count, max(0, room)) {
             preparing += 1
             Task {
                 defer { preparing -= 1 }
                 do {
-                    guard let attachment = try await read(n) else { return }
+                    guard let attachment = try await read(index) else { return }
                     attachments.append(attachment)
                     if AssistantAttachments.wasCut(attachment) {
                         ErrorBanner.shared.show(String(localized: "“\(attachment.name)” is long: only the first 50,000 characters are sent."))
@@ -1038,17 +1038,17 @@ struct AssistantChatView: View {
     }
 
     private func attach(_ urls: [URL]) {
-        prepare(urls.count) { n in
-            let url = urls[n]
+        prepare(urls.count) { index in
+            let url = urls[index]
             return try await Task.detached { try AssistantAttachments.read(url) }.value
         }
     }
 
     private func attach(_ items: [PhotosPickerItem]) {
         let first = attachments.count
-        prepare(items.count) { n in
-            let name = String(localized: "Photo \(first + n + 1).jpg")
-            guard let data = try await items[n].loadTransferable(type: Data.self) else {
+        prepare(items.count) { index in
+            let name = String(localized: "Photo \(first + index + 1).jpg")
+            guard let data = try await items[index].loadTransferable(type: Data.self) else {
                 throw AssistantAttachmentError.unreadable(name)
             }
             return try await Task.detached { try AssistantAttachments.image(data, name: name) }.value
@@ -1069,9 +1069,9 @@ struct AssistantChatView: View {
     /// Images from the clipboard.
     private func attach(pasted images: [Data]) {
         let first = attachments.count
-        prepare(images.count) { n in
-            let name = String(localized: "Photo \(first + n + 1).jpg")
-            let data = images[n]
+        prepare(images.count) { index in
+            let name = String(localized: "Photo \(first + index + 1).jpg")
+            let data = images[index]
             return try await Task.detached { try AssistantAttachments.image(data, name: name) }.value
         }
     }
@@ -1083,8 +1083,8 @@ struct AssistantChatView: View {
 
     /// Files and pictures dropped on the chat.
     private func drop(_ providers: [NSItemProvider]) {
-        prepare(providers.count) { n in
-            try await AssistantAttachments.load(providers[n])
+        prepare(providers.count) { index in
+            try await AssistantAttachments.load(providers[index])
         }
     }
 
