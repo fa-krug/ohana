@@ -13,7 +13,7 @@ enum LoadState<Value> {
 
     var value: Value? {
         switch self {
-        case let .loaded(v), let .saved(v, _, _): v
+        case let .loaded(payload), let .saved(payload, _, _): payload
         default: nil
         }
     }
