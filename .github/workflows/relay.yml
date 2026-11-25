@@ -16,6 +16,10 @@ on:
     branches: [main]
     paths: ['relay/**', '.github/workflows/relay.yml']
 
+# Read-only by default; the jobs that push the image ask for `packages: write` themselves.
+permissions:
+  contents: read
+
 concurrency:
   group: relay-${{ github.ref }}
   cancel-in-progress: true
