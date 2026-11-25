@@ -66,8 +66,8 @@ nonisolated enum ScanCrop {
             let points = corners
             var sum: CGFloat = 0
             for index in points.indices {
-                let a = points[index], b = points[(index + 1) % points.count]
-                sum += a.x * b.y - b.x * a.y
+                let corner = points[index], nextCorner = points[(index + 1) % points.count]
+                sum += corner.x * nextCorner.y - nextCorner.x * corner.y
             }
             return abs(sum) / 2
         }
@@ -75,14 +75,14 @@ nonisolated enum ScanCrop {
         func contains(_ point: CGPoint) -> Bool {
             let points = corners
             var inside = false
-            var j = points.count - 1
-            for i in points.indices {
-                let a = points[i], b = points[j]
-                if (a.y > point.y) != (b.y > point.y),
-                   point.x < (b.x - a.x) * (point.y - a.y) / (b.y - a.y) + a.x {
+            var previousPosition = points.count - 1
+            for position in points.indices {
+                let corner = points[position], previousCorner = points[previousPosition]
+                if (corner.y > point.y) != (previousCorner.y > point.y),
+                   point.x < (previousCorner.x - corner.x) * (point.y - corner.y) / (previousCorner.y - corner.y) + corner.x {
                     inside.toggle()
                 }
-                j = i
+                previousPosition = position
             }
             return inside
         }
