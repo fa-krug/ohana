@@ -12,12 +12,19 @@ nonisolated enum JSONValue: Codable, Hashable, Sendable {
 
     init(from decoder: any Decoder) throws {
         let container = try decoder.singleValueContainer()
-        if container.decodeNil() { self = .null }
-        else if let boolean = try? container.decode(Bool.self) { self = .bool(boolean) }
-        else if let numericValue = try? container.decode(Double.self) { self = .number(numericValue) }
-        else if let textValue = try? container.decode(String.self) { self = .string(textValue) }
-        else if let items = try? container.decode([JSONValue].self) { self = .array(items) }
-        else { self = .object(try container.decode([String: JSONValue].self)) }
+        if container.decodeNil() {
+            self = .null
+        } else if let boolean = try? container.decode(Bool.self) {
+            self = .bool(boolean)
+        } else if let numericValue = try? container.decode(Double.self) {
+            self = .number(numericValue)
+        } else if let textValue = try? container.decode(String.self) {
+            self = .string(textValue)
+        } else if let items = try? container.decode([JSONValue].self) {
+            self = .array(items)
+        } else {
+            self = .object(try container.decode([String: JSONValue].self))
+        }
     }
 
     func encode(to encoder: any Encoder) throws {
