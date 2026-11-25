@@ -143,9 +143,9 @@ struct ReminderSnapshot: Hashable, Identifiable {
         switch (lhs.due, rhs.due) {
         case let (lhsDue?, rhsDue?) where lhsDue != rhsDue:
             if lhsDue.day != rhsDue.day { return lhsDue.day < rhsDue.day }
-            let tx = lhsDue.time.map { $0.hour * 60 + $0.minute } ?? -1
-            let ty = rhsDue.time.map { $0.hour * 60 + $0.minute } ?? -1
-            return tx < ty
+            let lhsMinutes = lhsDue.time.map { $0.hour * 60 + $0.minute } ?? -1
+            let rhsMinutes = rhsDue.time.map { $0.hour * 60 + $0.minute } ?? -1
+            return lhsMinutes < rhsMinutes
         case (.some, nil): return true
         case (nil, .some): return false
         default: return lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
