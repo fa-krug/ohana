@@ -147,7 +147,9 @@ final class KnowledgeIndexer {
     private func isCurrent(_ generation: Int) -> Bool {
         !closed && gate.current == generation
     }
+}
 
+extension KnowledgeIndexer {
     // MARK: Running
 
     /// A run unless one started within `minimumInterval` (launch, active again, the Mac's timer).
@@ -511,7 +513,9 @@ final class KnowledgeIndexer {
         let depth = file.path.split(separator: "/").count
         return file.url.pathComponents.suffix(depth).joined(separator: "/")
     }
+}
 
+extension KnowledgeIndexer {
     // MARK: The server's folder
 
     static func isFolderGone(_ error: any Error) -> Bool {
@@ -922,7 +926,9 @@ final class KnowledgeIndexer {
             await resume()
         }
     }
+}
 
+extension KnowledgeIndexer {
     // MARK: On the disk
 
     private func ensureQueue() async {
