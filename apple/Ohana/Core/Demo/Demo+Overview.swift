@@ -29,7 +29,11 @@ extension DemoServer {
         return .array(searches.map { search in
             let doctors = search["doctors"]?.arrayValue ?? []
             let first: JSONValue = doctors.first.map { doctor in
-                .object(["resultId": doctor["resultId"] ?? .null, "doctorName": doctor["doctorName"] ?? .null, "slot": doctor["slot"] ?? .null])
+                .object([
+                    "resultId": doctor["resultId"] ?? .null,
+                    "doctorName": doctor["doctorName"] ?? .null,
+                    "slot": doctor["slot"] ?? .null
+                ])
             } ?? .null
             return .object([
                 "id": search["id"] ?? .null,
@@ -55,7 +59,8 @@ extension DemoServer {
         guard let overview = finance("/finance"),
               let summary = finance("/finance/summary", ["from": "\(month)-01", "to": last.description]) else { return nil }
         let categories = overview["categories"]?.arrayValue ?? []
-        let byID = Dictionary(categories.compactMap { category in category["id"]?.stringValue.map { ($0, category) } }) { existing, _ in existing }
+        let categoryPairs = categories.compactMap { category in category["id"]?.stringValue.map { ($0, category) } }
+        let byID = Dictionary(categoryPairs) { existing, _ in existing }
         func top(_ id: String) -> String {
             var id = id
             while let parent = byID[id]?["parentId"]?.stringValue { id = parent }
@@ -66,12 +71,21 @@ extension DemoServer {
             guard let id = entry["categoryId"]?.stringValue, byID[id] != nil else { continue }
             let cents = entry["expenseCents"]?.doubleValue ?? 0
             let topID = top(id)
-            if let index = byTop.firstIndex(where: { $0.id == topID }) { byTop[index].cents += cents } else { byTop.append((topID, cents)) }
+            if let index = byTop.firstIndex(where: { $0.id == topID }) {
+                byTop[index].cents += cents
+            } else {
+                byTop.append((topID, cents))
+            }
         }
         var topExpense: JSONValue = .null
         if let best = byTop.filter({ $0.cents > 0 }).max(by: { $0.cents < $1.cents }), let matched = byID[best.id] {
-            topExpense = .object(["categoryId": .string(best.id), "name": matched["name"] ?? .string(""), "icon": matched["icon"] ?? .string(""),
-                                  "color": matched["color"] ?? .string(""), "expenseCents": .number(best.cents)])
+            topExpense = .object([
+                "categoryId": .string(best.id),
+                "name": matched["name"] ?? .string(""),
+                "icon": matched["icon"] ?? .string(""),
+                "color": matched["color"] ?? .string(""),
+                "expenseCents": .number(best.cents)
+            ])
         }
         let accounts = overview["accounts"]?.arrayValue ?? []
         let balance = accounts.reduce(0) { $0 + ($1["balanceCents"]?.doubleValue ?? 0) }
