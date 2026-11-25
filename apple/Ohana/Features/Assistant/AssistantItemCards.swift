@@ -1,7 +1,105 @@
 import SwiftUI
 
-/// The cards that offer an edit of the assistant: a question to answer, and the Reminders,
-/// calendar and notes edits to apply. Drawn by `AssistantItemView` (AssistantItemViews.swift).
+// The cards that offer an edit of the assistant: a question to answer, and the Reminders,
+// calendar and notes edits to apply. Drawn by `AssistantItemView` (AssistantItemViews.swift).
+
+// MARK: - The pieces every edit card shares
+
+/// The first line of an edit card: what the assistant offers to change, with its icon.
+struct AssistantEditCardHeader: View {
+    let summary: String
+    let systemImage: String
+
+    var body: some View {
+        Label {
+            Text(verbatim: summary).font(.callout.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
+        } icon: {
+            Image(systemName: systemImage).foregroundStyle(ModuleTint.assistant)
+        }
+    }
+}
+
+/// The two buttons of an edit card while it waits: **Don't apply** and **Apply** (a spinner
+/// while the apply is on its way).
+struct AssistantEditApplyButtons: View {
+    let summary: String
+    var busy = false
+    var enabled = true
+    let decline: () -> Void
+    let apply: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Spacer(minLength: 0)
+            Button("Don’t Apply") { decline() }
+                .buttonStyle(.bordered)
+            Button {
+                apply()
+            } label: {
+                if busy {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Text("Apply")
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(ModuleTint.assistant)
+            .accessibilityLabel(Text("Apply: \(summary)"))
+        }
+        .disabled(!enabled)
+    }
+}
+
+/// The ops of an edit, one row under the other.
+struct AssistantEditOpsList<Row: View>: View {
+    let count: Int
+    let row: (Int) -> Row
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(0..<count, id: \.self) { index in
+                row(index)
+            }
+        }
+        .padding(.vertical, 2)
+    }
+}
+
+/// The card's note when the device won't let it work: what is missing, and the way to the
+/// Settings (nothing there to open when the device itself refuses the whole thing).
+struct AssistantNoAccessNote: View {
+    /// What to say when the device itself won't allow this at all.
+    let restrictedText: LocalizedStringKey
+    /// What to say when only Ohana is missing the access.
+    let deniedText: LocalizedStringKey
+    let restricted: Bool
+    let settingsURL: URL?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label(restricted ? restrictedText : deniedText, systemImage: "exclamationmark.triangle")
+                .foregroundStyle(.orange)
+            if !restricted, let settingsURL {
+                Link(destination: settingsURL) {
+                    Label("Open Settings", systemImage: "gear")
+                }
+            }
+        }
+        .font(.caption)
+    }
+}
+
+extension AssistantEditOutcome {
+    /// The line of an edit's outcome; nothing while the edit still waits for the user.
+    @ViewBuilder static func line(outcome: String?, answer: AssistantRemindersEdit.Answer?) -> some View {
+        if let outcome {
+            AssistantEditOutcome(text: outcome, answer: answer)
+        }
+    }
+}
+
+// MARK: - The cards
 
 /// A question of the assistant: a tap on an option answers it (or, with several to pick, ticks
 /// it, and **Answer** sends the ticked ones). An own answer is written in the composer, whose Send
@@ -25,39 +123,14 @@ struct AssistantQuestionCard: View {
             Text(verbatim: question.question).font(.callout.weight(.semibold))
                 .fixedSize(horizontal: false, vertical: true)
             ForEach(question.options, id: \.self) { option in
-                let on = chosen.contains(option)
-                Button {
+                AssistantQuestionOptionRow(option: option, chosen: chosen.contains(option), multiple: question.multiple,
+                                           open: open, active: active) {
                     if question.multiple {
                         store.togglePick(question, option)
                     } else {
                         store.answer(selected: [option], text: "")
                     }
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: on
-                              ? (question.multiple ? "checkmark.square.fill" : "largecircle.fill.circle")
-                              : (question.multiple ? "square" : "circle"))
-                            .foregroundStyle(on ? ModuleTint.assistant : .secondary)
-                            .accessibilityHidden(true)
-                        Text(verbatim: option)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .multilineTextAlignment(.leading)
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 8)
-                    .frame(minHeight: 44)
-                    .contentShape(.rect)
-                    .background(on ? ModuleTint.assistant.opacity(0.12) : .clear, in: .rect(cornerRadius: 10))
                 }
-                .buttonStyle(.plain)
-                .disabled(!active)
-                .opacity(!open && !on ? 0.6 : 1)
-                // The ticked box and filled circle say it only to the eye.
-                .accessibilityLabel(Text(verbatim: option))
-                .accessibilityAddTraits(on ? .isSelected : [])
-                .accessibilityHint(open
-                                   ? (question.multiple ? Text("Ticks or unticks it") : Text("Answers with it"))
-                                   : Text(verbatim: ""))
             }
             if open, question.multiple {
                 HStack {
@@ -78,6 +151,52 @@ struct AssistantQuestionCard: View {
             }
         }
         .contentCard(cornerRadius: 18, padding: 12)
+    }
+}
+
+/// One option of a question: a button that answers with it (a question with one answer) or ticks
+/// it (a question with several). The ticked box and the filled circle say it only to the eye.
+private struct AssistantQuestionOptionRow: View {
+    let option: String
+    let chosen: Bool
+    let multiple: Bool
+    let open: Bool
+    let active: Bool
+    let choose: () -> Void
+
+    var body: some View {
+        Button(action: choose) {
+            HStack(spacing: 8) {
+                Image(systemName: symbol)
+                    .foregroundStyle(chosen ? ModuleTint.assistant : .secondary)
+                    .accessibilityHidden(true)
+                Text(verbatim: option)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .multilineTextAlignment(.leading)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .frame(minHeight: 44)
+            .contentShape(.rect)
+            .background(chosen ? ModuleTint.assistant.opacity(0.12) : .clear, in: .rect(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
+        .disabled(!active)
+        .opacity(!open && !chosen ? 0.6 : 1)
+        .accessibilityLabel(Text(verbatim: option))
+        .accessibilityAddTraits(chosen ? .isSelected : [])
+        .accessibilityHint(hint)
+    }
+
+    /// The box or the circle, ticked or not.
+    private var symbol: String {
+        guard chosen else { return multiple ? "square" : "circle" }
+        return multiple ? "checkmark.square.fill" : "largecircle.fill.circle"
+    }
+
+    private var hint: Text {
+        guard open else { return Text(verbatim: "") }
+        return multiple ? Text("Ticks or unticks it") : Text("Answers with it")
     }
 }
 
@@ -103,76 +222,39 @@ struct AssistantRemindersCard: View {
         let open = isOpen
         let active = open && !busy && !posting
         VStack(alignment: .leading, spacing: 8) {
-            Label {
-                Text(verbatim: edit.summary).font(.callout.weight(.semibold))
-                    .fixedSize(horizontal: false, vertical: true)
-            } icon: {
-                Image(systemName: "checklist").foregroundStyle(ModuleTint.assistant)
+            AssistantEditCardHeader(summary: edit.summary, systemImage: "checklist")
+            AssistantEditOpsList(count: edit.ops.count) { index in
+                row(edit.ops[index], index: index, open: open)
             }
-            VStack(alignment: .leading, spacing: 6) {
-                ForEach(Array(edit.ops.enumerated()), id: \.offset) { index, op in
-                    row(op, index: index, open: open)
-                }
-            }
-            .padding(.vertical, 2)
             if open || posting {
                 if open, refused || reminders.access == .denied || reminders.access == .restricted
                     || reminders.access == .writeOnly {
                     noAccess
                 }
-                HStack(spacing: 8) {
-                    Spacer(minLength: 0)
-                    Button("Don’t Apply") {
-                        store.declineReminders(edit.id)
-                    }
-                    .buttonStyle(.bordered)
-                    Button {
-                        apply()
-                    } label: {
-                        if posting {
-                            ProgressView().controlSize(.small)
-                        } else {
-                            Text("Apply")
-                        }
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(ModuleTint.assistant)
-                    .accessibilityLabel(Text("Apply: \(edit.summary)"))
-                }
-                .disabled(!active)
+                AssistantEditApplyButtons(summary: edit.summary, busy: posting, enabled: active,
+                                          decline: { store.declineReminders(edit.id) }, apply: { apply() })
             }
-            if let outcome = edit.outcome {
-                AssistantEditOutcome(text: outcome, answer: edit.answer)
-            }
+            AssistantEditOutcome.line(outcome: edit.outcome, answer: edit.answer)
         }
         .contentCard(cornerRadius: 18, padding: 12)
         .task(id: reminders.revision) { reminders.refreshAccess() }
     }
 
-    private func row(_ op: AssistantReminderOp, index: Int, open: Bool) -> AssistantEditOpRow {
+    private func row(_ operation: AssistantReminderOp, index: Int, open: Bool) -> AssistantEditOpRow {
         // While it waits, an update to another list reads as a move (the reminder's list now).
-        let currentList = open && op.op == "update" && reminders.access.isGranted
-            ? op.id.flatMap { reminders.reminder($0)?.listID } : nil
-        let line = AssistantReminderOpLine.make(op, currentListID: currentList)
+        let currentList = open && operation.op == "update" && reminders.access.isGranted
+            ? operation.id.flatMap { reminders.reminder($0)?.listID } : nil
+        let line = AssistantReminderOpLine.make(operation, currentListID: currentList)
         return AssistantEditOpRow(icon: line.icon, text: line.text, detail: line.detail, destructive: line.destructive,
                                   result: edit.answer?.results.flatMap { index < $0.count ? $0[index] : nil },
                                   declined: edit.answer?.applied == false || edit.skipped)
     }
 
     private var noAccess: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Label(reminders.access == .restricted
-                  ? "Reminders aren’t allowed on this device."
-                  : "Ohana has no access to your reminders.",
-                  systemImage: "exclamationmark.triangle")
-                .foregroundStyle(.orange)
-            if reminders.access != .restricted, let url = RemindersStore.settingsURL {
-                Link(destination: url) {
-                    Label("Open Settings", systemImage: "gear")
-                }
-            }
-        }
-        .font(.caption)
+        AssistantNoAccessNote(restrictedText: "Reminders aren’t allowed on this device.",
+                              deniedText: "Ohana has no access to your reminders.",
+                              restricted: reminders.access == .restricted,
+                              settingsURL: reminders.access == .restricted ? nil : RemindersStore.settingsURL)
     }
 
     private func apply() {
@@ -205,69 +287,38 @@ struct AssistantCalendarCard: View {
         let open = isOpen
         let active = open && !busy
         VStack(alignment: .leading, spacing: 8) {
-            Label {
-                Text(verbatim: edit.summary).font(.callout.weight(.semibold))
-                    .fixedSize(horizontal: false, vertical: true)
-            } icon: {
-                Image(systemName: "calendar").foregroundStyle(ModuleTint.assistant)
+            AssistantEditCardHeader(summary: edit.summary, systemImage: "calendar")
+            AssistantEditOpsList(count: edit.ops.count) { index in
+                row(edit.ops[index], index: index, open: open)
             }
-            VStack(alignment: .leading, spacing: 6) {
-                ForEach(Array(edit.ops.enumerated()), id: \.offset) { index, op in
-                    row(op, index: index, open: open)
-                }
-            }
-            .padding(.vertical, 2)
             if open {
                 if refused || !calendars.hasAccess {
                     noAccess
                 }
-                HStack(spacing: 8) {
-                    Spacer(minLength: 0)
-                    Button("Don’t Apply") {
-                        store.declineCalendar(edit.id)
-                    }
-                    .buttonStyle(.bordered)
-                    Button("Apply") {
-                        apply()
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(ModuleTint.assistant)
-                    .accessibilityLabel(Text("Apply: \(edit.summary)"))
-                }
-                .disabled(!active)
+                AssistantEditApplyButtons(summary: edit.summary, enabled: active,
+                                          decline: { store.declineCalendar(edit.id) }, apply: { apply() })
             }
-            if let outcome = edit.outcome {
-                AssistantEditOutcome(text: outcome, answer: edit.answer)
-            }
+            AssistantEditOutcome.line(outcome: edit.outcome, answer: edit.answer)
         }
         .contentCard(cornerRadius: 18, padding: 12)
         .task(id: calendars.revision) { calendars.refreshAccess() }
     }
 
-    private func row(_ op: AssistantCalendarOp, index: Int, open: Bool) -> AssistantEditOpRow {
+    private func row(_ operation: AssistantCalendarOp, index: Int, open: Bool) -> AssistantEditOpRow {
         // While it waits, an update to another calendar reads as a move (the event's calendar now).
-        let currentCalendar = open && op.op == "update" && calendars.hasAccess
-            ? op.id.flatMap { calendars.calendarID(of: DeviceEventRef($0)) } : nil
-        let line = AssistantCalendarOpLine.make(op, currentCalendarID: currentCalendar)
+        let currentCalendar = open && operation.op == "update" && calendars.hasAccess
+            ? operation.id.flatMap { calendars.calendarID(of: DeviceEventRef($0)) } : nil
+        let line = AssistantCalendarOpLine.make(operation, currentCalendarID: currentCalendar)
         return AssistantEditOpRow(icon: line.icon, text: line.text, detail: line.detail, destructive: line.destructive,
                                   result: edit.answer?.results.flatMap { index < $0.count ? $0[index] : nil },
                                   declined: edit.answer?.applied == false || edit.skipped)
     }
 
     private var noAccess: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Label(calendars.access == .restricted
-                  ? "Calendars aren’t allowed on this device."
-                  : "Ohana has no access to your calendars.",
-                  systemImage: "exclamationmark.triangle")
-                .foregroundStyle(.orange)
-            if calendars.access != .restricted, let url = DeviceCalendarStore.settingsURL {
-                Link(destination: url) {
-                    Label("Open Settings", systemImage: "gear")
-                }
-            }
-        }
-        .font(.caption)
+        AssistantNoAccessNote(restrictedText: "Calendars aren’t allowed on this device.",
+                              deniedText: "Ohana has no access to your calendars.",
+                              restricted: calendars.access == .restricted,
+                              settingsURL: calendars.access == .restricted ? nil : DeviceCalendarStore.settingsURL)
     }
 
     private func apply() {
@@ -299,15 +350,10 @@ struct AssistantNotesCard: View {
         let active = open && !busy && !posting
         let declined = edit.answer?.applied == false || edit.skipped
         VStack(alignment: .leading, spacing: 8) {
-            Label {
-                Text(verbatim: edit.summary).font(.callout.weight(.semibold))
-                    .fixedSize(horizontal: false, vertical: true)
-            } icon: {
-                Image(systemName: "note.text").foregroundStyle(ModuleTint.assistant)
-            }
+            AssistantEditCardHeader(summary: edit.summary, systemImage: "note.text")
             VStack(alignment: .leading, spacing: 8) {
-                ForEach(Array(edit.ops.enumerated()), id: \.offset) { index, op in
-                    let line = AssistantNoteOpLine.make(op)
+                ForEach(Array(edit.ops.enumerated()), id: \.offset) { index, operation in
+                    let line = AssistantNoteOpLine.make(operation)
                     VStack(alignment: .leading, spacing: 4) {
                         AssistantEditOpRow(icon: line.icon, text: line.text, detail: line.detail, destructive: false,
                                            result: edit.answer?.results.flatMap { index < $0.count ? $0[index] : nil },
@@ -324,30 +370,10 @@ struct AssistantNotesCard: View {
             }
             .padding(.vertical, 2)
             if open || posting {
-                HStack(spacing: 8) {
-                    Spacer(minLength: 0)
-                    Button("Don’t Apply") {
-                        store.declineNotes(edit.id)
-                    }
-                    .buttonStyle(.bordered)
-                    Button {
-                        apply()
-                    } label: {
-                        if posting {
-                            ProgressView().controlSize(.small)
-                        } else {
-                            Text("Apply")
-                        }
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(ModuleTint.assistant)
-                    .accessibilityLabel(Text("Apply: \(edit.summary)"))
-                }
-                .disabled(!active)
+                AssistantEditApplyButtons(summary: edit.summary, busy: posting, enabled: active,
+                                          decline: { store.declineNotes(edit.id) }, apply: { apply() })
             }
-            if let outcome = edit.outcome {
-                AssistantEditOutcome(text: outcome, answer: edit.answer)
-            }
+            AssistantEditOutcome.line(outcome: edit.outcome, answer: edit.answer)
         }
         .contentCard(cornerRadius: 18, padding: 12)
     }
