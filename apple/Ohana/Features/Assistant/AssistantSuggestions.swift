@@ -105,12 +105,12 @@ nonisolated struct AssistantSuggestionOp: Decodable, Equatable, Sendable {
     }
 
     init(from decoder: any Decoder) throws {
-        guard let c = try? decoder.container(keyedBy: Keys.self) else {
+        guard let fields = try? decoder.container(keyedBy: Keys.self) else {
             self.init(op: "", title: "")
             return
         }
         func opt(_ key: Keys) -> String? {
-            guard let text = try? c.decodeIfPresent(String.self, forKey: key) else { return nil }
+            guard let text = try? fields.decodeIfPresent(String.self, forKey: key) else { return nil }
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
             return trimmed.isEmpty ? nil : trimmed
         }
