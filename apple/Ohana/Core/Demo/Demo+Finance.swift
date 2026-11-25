@@ -58,11 +58,11 @@ private struct DemoFinance {
         self.base = base
         transactions = all.enumerated()
             .filter { $0.element.date <= today }
-            .sorted { a, b in a.element.date != b.element.date ? a.element.date > b.element.date : a.offset < b.offset }
+            .sorted { lhs, rhs in lhs.element.date != rhs.element.date ? lhs.element.date > rhs.element.date : lhs.offset < rhs.offset }
             .map(\.element)
         var groups: [String: [FinanceTransaction]] = [:]
-        for t in transactions {
-            if let id = t.transferId { groups[id, default: []].append(t) }
+        for txn in transactions {
+            if let id = txn.transferId { groups[id, default: []].append(txn) }
         }
         self.groups = groups.filter { $0.value.count >= 2 }
             .mapValues { $0.sorted { ($0.date, $0.id) < ($1.date, $1.id) } }
@@ -109,9 +109,9 @@ private struct DemoFinance {
             byKey[key] = entry
         }
         let income = query["kind"] == "income"
-        let all = byKey.values.map(\.payee).sorted { a, b in
-            let (x, y) = income ? (a.incomeCents, b.incomeCents) : (a.expenseCents, b.expenseCents)
-            return x != y ? x > y : a.key < b.key
+        let all = byKey.values.map(\.payee).sorted { lhs, rhs in
+            let (lhsCents, rhsCents) = income ? (lhs.incomeCents, rhs.incomeCents) : (lhs.expenseCents, rhs.expenseCents)
+            return lhsCents != rhsCents ? lhsCents > rhsCents : lhs.key < rhs.key
         }
         let limit = min(100, max(1, query["limit"].flatMap { Int($0) } ?? 20))
         return FinancePayeeList(payees: Array(all.prefix(limit)), more: max(0, all.count - limit))
@@ -120,9 +120,9 @@ private struct DemoFinance {
     /// server/lib/finance/finance.ts similarKey: the first three words (two letters or more) of
     /// the payee, else of the description, lower case, without numbers and punctuation.
     static func payeeKey(payee: String, description: String) -> String {
-        func words(_ s: String) -> [String] {
-            let kept = s.lowercased().unicodeScalars.map { c -> Character in
-                CharacterSet.letters.contains(c) || CharacterSet.whitespacesAndNewlines.contains(c) ? Character(c) : " "
+        func words(_ text: String) -> [String] {
+            let kept = text.lowercased().unicodeScalars.map { scalar -> Character in
+                CharacterSet.letters.contains(scalar) || CharacterSet.whitespacesAndNewlines.contains(scalar) ? Character(scalar) : " "
             }
             return String(kept).split(whereSeparator: \.isWhitespace).map(String.init).filter { $0.count > 1 }
         }
@@ -141,16 +141,16 @@ private struct DemoFinance {
                 rows = rows.filter { $0.categoryId == nil }
             } else {
                 let ids = subtree(category)
-                rows = rows.filter { t in t.categoryId.map { ids.contains($0) } ?? false }
+                rows = rows.filter { row in row.categoryId.map { ids.contains($0) } ?? false }
             }
         }
         if let payee = query["payee"]?.trimmingCharacters(in: .whitespaces), !payee.isEmpty {
             rows = rows.filter { Self.payeeKey(payee: $0.payee, description: $0.description) == payee }
         }
-        if let q = query["q"]?.trimmingCharacters(in: .whitespaces).lowercased(), !q.isEmpty {
+        if let searchText = query["q"]?.trimmingCharacters(in: .whitespaces).lowercased(), !searchText.isEmpty {
             rows = rows.filter {
-                $0.payee.lowercased().contains(q) || $0.description.lowercased().contains(q)
-                    || $0.note.lowercased().contains(q)
+                $0.payee.lowercased().contains(searchText) || $0.description.lowercased().contains(searchText)
+                    || $0.note.lowercased().contains(searchText)
             }
         }
         if let source = query["source"], !source.isEmpty {
@@ -188,8 +188,8 @@ private struct DemoFinance {
             return FinanceSummaryCategory(categoryId: id, incomeCents: income, expenseCents: expense, count: list.count)
         }
         let byExpense = categories.enumerated()
-            .sorted { a, b in a.element.expenseCents != b.element.expenseCents
-                ? a.element.expenseCents > b.element.expenseCents : a.offset < b.offset }
+            .sorted { lhs, rhs in lhs.element.expenseCents != rhs.element.expenseCents
+                ? lhs.element.expenseCents > rhs.element.expenseCents : lhs.offset < rhs.offset }
             .map(\.element)
         let (income, expense) = totals(items)
         return FinanceSummary(currency: base.currency, incomeCents: income, expenseCents: expense, count: items.count,
@@ -200,29 +200,29 @@ private struct DemoFinance {
     /// aren't legs of a transfer yet; the demo has no split bookings).
     func suggestions(from: String?, to: String?) -> FinanceTransferSuggestions {
         let rows = inRange(from, to).filter { group(of: $0) == nil }
-        func lead(_ a: FinanceTransaction, _ b: FinanceTransaction) -> Bool { (a.date, a.id) < (b.date, b.id) }
+        func lead(_ lhs: FinanceTransaction, _ rhs: FinanceTransaction) -> Bool { (lhs.date, lhs.id) < (rhs.date, rhs.id) }
         var candidates: [(out: FinanceTransaction, in: FinanceTransaction, gap: Int)] = []
         for out in rows where out.amountCents < 0 {
             for into in rows where into.amountCents == -out.amountCents && into.accountId != out.accountId {
-                guard let a = Day(out.date), let b = Day(into.date) else { continue }
-                let gap = abs(FinanceDates.days(from: a, to: b))
+                guard let outDay = Day(out.date), let intoDay = Day(into.date) else { continue }
+                let gap = abs(FinanceDates.days(from: outDay, to: intoDay))
                 if gap <= 4 { candidates.append((out, into, gap)) }
             }
         }
-        candidates.sort { a, b in
-            if a.gap != b.gap { return a.gap < b.gap }
-            if a.out.date != b.out.date { return a.out.date > b.out.date }
-            if a.out.id != b.out.id { return lead(a.out, b.out) }
-            return lead(a.in, b.in)
+        candidates.sort { left, right in
+            if left.gap != right.gap { return left.gap < right.gap }
+            if left.out.date != right.out.date { return left.out.date > right.out.date }
+            if left.out.id != right.out.id { return lead(left.out, right.out) }
+            return lead(left.in, right.in)
         }
         var used = Set<String>()
         var pairs: [FinanceTransferPair] = []
-        for c in candidates where !used.contains(c.out.id) && !used.contains(c.in.id) {
-            used.formUnion([c.out.id, c.in.id])
-            pairs.append(FinanceTransferPair(out: unlinked(c.out), incoming: unlinked(c.in)))
+        for candidate in candidates where !used.contains(candidate.out.id) && !used.contains(candidate.in.id) {
+            used.formUnion([candidate.out.id, candidate.in.id])
+            pairs.append(FinanceTransferPair(out: unlinked(candidate.out), incoming: unlinked(candidate.in)))
         }
-        func latest(_ p: FinanceTransferPair) -> String { max(p.out.date, p.incoming.date) }
-        pairs.sort { a, b in latest(a) != latest(b) ? latest(a) > latest(b) : a.out.date > b.out.date }
+        func latest(_ pair: FinanceTransferPair) -> String { max(pair.out.date, pair.incoming.date) }
+        pairs.sort { lhs, rhs in latest(lhs) != latest(rhs) ? latest(lhs) > latest(rhs) : lhs.out.date > rhs.out.date }
         return FinanceTransferSuggestions(pairs: Array(pairs.prefix(200)))
     }
 
@@ -233,15 +233,15 @@ private struct DemoFinance {
         base.accounts.map { account in
             var account = account
             account.balanceCents = account.openingCents + transactions
-                .filter { t in t.accountId == account.id && (at.map { t.date <= $0 } ?? true) }
+                .filter { txn in txn.accountId == account.id && (at.map { txn.date <= $0 } ?? true) }
                 .reduce(0) { $0 + $1.amountCents }
             return account
         }
     }
 
     private func inRange(_ from: String?, _ to: String?) -> [FinanceTransaction] {
-        transactions.filter { t in
-            (from.map { $0.isEmpty || t.date >= $0 } ?? true) && (to.map { $0.isEmpty || t.date <= $0 } ?? true)
+        transactions.filter { txn in
+            (from.map { $0.isEmpty || txn.date >= $0 } ?? true) && (to.map { $0.isEmpty || txn.date <= $0 } ?? true)
         }
     }
 
@@ -251,34 +251,34 @@ private struct DemoFinance {
         var added = true
         while added {
             added = false
-            for c in base.categories where c.parentId.map({ ids.contains($0) }) == true && !ids.contains(c.id) {
-                ids.insert(c.id)
+            for node in base.categories where node.parentId.map({ ids.contains($0) }) == true && !ids.contains(node.id) {
+                ids.insert(node.id)
                 added = true
             }
         }
         return ids
     }
 
-    private func group(of t: FinanceTransaction) -> [FinanceTransaction]? {
-        t.transferId.flatMap { groups[$0] }
+    private func group(of txn: FinanceTransaction) -> [FinanceTransaction]? {
+        txn.transferId.flatMap { groups[$0] }
     }
 
     /// What a transaction counts as: its amount, or the net of its transfer.
-    private func net(of t: FinanceTransaction) -> Int {
-        group(of: t).map { $0.reduce(0) { $0 + $1.amountCents } } ?? t.amountCents
+    private func net(of txn: FinanceTransaction) -> Int {
+        group(of: txn).map { $0.reduce(0) { $0 + $1.amountCents } } ?? txn.amountCents
     }
 
     /// Net counting: a transfer counts once, on its lead leg, with its net (nothing when 0).
     private func netItems(_ rows: [FinanceTransaction]) -> [NetItem] {
-        rows.compactMap { t in
-            guard let legs = group(of: t) else {
-                return NetItem(date: t.date, amountCents: t.amountCents, categoryId: t.categoryId,
-                               payee: t.payee, description: t.description)
+        rows.compactMap { txn in
+            guard let legs = group(of: txn) else {
+                return NetItem(date: txn.date, amountCents: txn.amountCents, categoryId: txn.categoryId,
+                               payee: txn.payee, description: txn.description)
             }
-            let net = net(of: t)
-            guard legs.first?.id == t.id, net != 0 else { return nil }
-            return NetItem(date: t.date, amountCents: net, categoryId: legs.first { $0.categoryId != nil }?.categoryId,
-                           payee: t.payee, description: t.description)
+            let net = net(of: txn)
+            guard legs.first?.id == txn.id, net != 0 else { return nil }
+            return NetItem(date: txn.date, amountCents: net, categoryId: legs.first { $0.categoryId != nil }?.categoryId,
+                           payee: txn.payee, description: txn.description)
         }
     }
 
@@ -299,15 +299,15 @@ private struct DemoFinance {
     }
 
     /// As the list shows it: the transfer id only on legs of a transfer.
-    private func linked(_ t: FinanceTransaction) -> FinanceTransaction {
-        var t = t
-        if group(of: t) == nil { t.transferId = nil }
-        return t
+    private func linked(_ txn: FinanceTransaction) -> FinanceTransaction {
+        var updated = txn
+        if group(of: updated) == nil { updated.transferId = nil }
+        return updated
     }
 
-    private func unlinked(_ t: FinanceTransaction) -> FinanceTransaction {
-        var t = t
-        t.transferId = nil
-        return t
+    private func unlinked(_ txn: FinanceTransaction) -> FinanceTransaction {
+        var stripped = txn
+        stripped.transferId = nil
+        return stripped
     }
 }
