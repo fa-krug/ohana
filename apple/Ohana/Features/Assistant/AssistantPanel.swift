@@ -123,7 +123,6 @@ struct AssistantSetupView: View {
                 .foregroundStyle(ModuleTint.assistant)
         } description: {
             if canEdit {
-                // leuchtfeuer:ignore swiftlint:line_length one localized string: splitting the literal would change its String Catalog key
                 Text("Connect any OpenAI-compatible AI (OpenAI, OpenRouter, Mistral, Gemini, a local model …) in the settings. It can then look things up on the web and plan in your calendar and finances.")
             } else {
                 Text("Nobody has set up the assistant for this family yet. Ask an editor of the family to do it in the settings.")
