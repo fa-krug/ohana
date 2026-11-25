@@ -124,8 +124,9 @@ nonisolated enum MemberPhoto {
     static func prepare(from data: Data, maxPixels: Int = maxPixels, quality: Double = 0.85) -> PreparedMemberPhoto? {
         guard let image = upright(data, maxPixels: maxPixels) else { return nil }
         let pixelWidth = image.width, pixelHeight = image.height
-        guard let ctx = CGContext(data: nil, width: pixelWidth, height: pixelHeight, bitsPerComponent: 8, bytesPerRow: 0,
-                                  space: CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB(),
+        let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
+        guard let ctx = CGContext(data: nil, width: pixelWidth, height: pixelHeight, bitsPerComponent: 8,
+                                  bytesPerRow: 0, space: colorSpace,
                                   bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue) else { return nil }
         ctx.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
         ctx.fill(CGRect(x: 0, y: 0, width: pixelWidth, height: pixelHeight))
