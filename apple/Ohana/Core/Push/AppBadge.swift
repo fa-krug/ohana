@@ -84,7 +84,7 @@ enum AppBadge {
         }
         return [
             "today": "\(pad(components.year, 4))-\(pad(components.month))-\(pad(components.day))",
-            "time": "\(pad(components.hour)):\(pad(components.minute))",
+            "time": "\(pad(components.hour)):\(pad(components.minute))"
         ]
     }
 
