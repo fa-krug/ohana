@@ -21,7 +21,8 @@ nonisolated enum AssistantMarkdownBlock: Equatable, Sendable {
 
     static func == (lhs: Self, rhs: Self) -> Bool {
         switch (lhs, rhs) {
-        case let (.paragraph(leftText), .paragraph(rightText)), let (.heading(leftText), .heading(rightText)), let (.code(leftText), .code(rightText)): leftText == rightText
+        case let (.paragraph(leftText), .paragraph(rightText)), let (.heading(leftText), .heading(rightText)),
+             let (.code(leftText), .code(rightText)): leftText == rightText
         case let (.list(leftItems), .list(rightItems)): leftItems == rightItems
         case let (.table(h1, _, r1), .table(h2, _, r2)): h1 == h2 && r1 == r2
         default: false
@@ -45,8 +46,8 @@ nonisolated enum AssistantMarkdownBlock: Equatable, Sendable {
     }
 
     private static func isTableStart(_ lines: [String], _ lineIndex: Int) -> Bool {
-        lines[lineIndex].contains("|") && lineIndex + 1 < lines.count && lines[lineIndex + 1].wholeMatch(of: tableRule) != nil
-            && cells(lines[lineIndex + 1]).count == cells(lines[lineIndex]).count
+        guard lineIndex + 1 < lines.count, lines[lineIndex + 1].wholeMatch(of: tableRule) != nil else { return false }
+        return lines[lineIndex].contains("|") && cells(lines[lineIndex + 1]).count == cells(lines[lineIndex]).count
     }
 
     // The regexes only where they can match: they are slow, and every line of an answer is tried
@@ -89,7 +90,9 @@ nonisolated enum AssistantMarkdownBlock: Equatable, Sendable {
             var line = lines[lineIndex]
             if line.trimmingCharacters(in: .whitespaces).isEmpty {
                 var nextLine = lineIndex
-                while nextLine < lines.count, lines[nextLine].trimmingCharacters(in: .whitespaces).isEmpty { nextLine += 1 }
+                while nextLine < lines.count, lines[nextLine].trimmingCharacters(in: .whitespaces).isEmpty {
+                    nextLine += 1
+                }
                 guard nextLine < lines.count, isListItem(lines[nextLine]), let first = items.first,
                       indent(lines[nextLine]) >= (indents.first ?? 0) + 2
                         || (lines[nextLine].prefixMatch(of: listItem)?.2 != nil) == (first.number != nil) else { break }
@@ -155,8 +158,9 @@ nonisolated enum AssistantMarkdownBlock: Equatable, Sendable {
                 continue
             }
             var para: [String] = []
-            while lineIndex < lines.count, !lines[lineIndex].trimmingCharacters(in: .whitespaces).isEmpty, !lines[lineIndex].hasPrefix("```"),
-                  heading(lines[lineIndex]) == nil, !isListItem(lines[lineIndex]), !isTableStart(lines, lineIndex) {
+            while lineIndex < lines.count, !lines[lineIndex].trimmingCharacters(in: .whitespaces).isEmpty,
+                  !lines[lineIndex].hasPrefix("```"), heading(lines[lineIndex]) == nil,
+                  !isListItem(lines[lineIndex]), !isTableStart(lines, lineIndex) {
                 para.append(lines[lineIndex])
                 lineIndex += 1
             }
@@ -205,7 +209,8 @@ nonisolated enum AssistantMarkdownBlock: Equatable, Sendable {
         guard let detector, text.contains(where: { $0 == "." || $0 == "@" || $0.isNumber }) else { return }
         let matches = detector.matches(in: text, range: NSRange(text.startIndex..., in: text))
         for match in matches {
-            guard let range = Range<AttributedString.Index>(match.range, in: attributed), let url = linkURL(match) else { continue }
+            guard let range = Range<AttributedString.Index>(match.range, in: attributed),
+                  let url = linkURL(match) else { continue }
             let taken = attributed[range].runs.contains { run in
                 run.link != nil || run.inlinePresentationIntent?.contains(.code) == true
             }
@@ -370,15 +375,19 @@ struct AssistantMarkdownView: View {
                 Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 6) {
                     GridRow {
                         ForEach(Array(header.enumerated()), id: \.offset) { columnIndex, cell in
+                            let alignment = alignments.indices.contains(columnIndex)
+                                ? alignments[columnIndex] ?? .leading
+                                : .leading
                             Text(AssistantMarkdownCache.inline(cell)).bold()
-                                .gridColumnAlignment(alignments.indices.contains(columnIndex) ? alignments[columnIndex] ?? .leading : .leading)
+                                .gridColumnAlignment(alignment)
                         }
                     }
                     Divider()
                     ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
                         GridRow {
                             ForEach(header.indices, id: \.self) { columnIndex in
-                                Text(AssistantMarkdownCache.inline(row.indices.contains(columnIndex) ? row[columnIndex] : ""))
+                                let cell = row.indices.contains(columnIndex) ? row[columnIndex] : ""
+                                Text(AssistantMarkdownCache.inline(cell))
                             }
                         }
                     }
