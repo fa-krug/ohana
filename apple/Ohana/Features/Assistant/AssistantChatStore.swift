@@ -361,28 +361,34 @@ extension AssistantChatStore {
             summary(snapshot.chat)
             if snapshot.chat.isRunning, following { follow(id) }
         } catch {
-            guard currentID == id, !(error is CancellationError) else { return }
-            if savedCopy != nil, APIError.isTemporary(error) {
-                // The copy stays: silently, unless the server answered with an error.
-                savedCopy?.updating = false
-                ErrorBanner.shared.showUnlessUnreachable(error)
-                return
-            }
-            if (error as? APIError)?.status == 404 {
-                chats.removeAll { $0.id == id }
-                currentID = nil
-            }
-            if savedCopy != nil {
-                current = nil
-                savedCopy = nil
-            }
-            // Nothing to show: the chat says so (and tries again), not a placeholder for good.
-            if currentID == id, current == nil {
-                openError = error.localizedDescription
-                if APIError.isUnreachable(error) { return }
-            }
-            ErrorBanner.shared.show(error)
+            tellFetchFailure(id, error)
         }
+    }
+
+    /// What a fetch of the open chat that failed leaves behind: the copy on the device for a
+    /// while, the chat gone when the server no longer has it, and a message when nothing is left.
+    private func tellFetchFailure(_ id: String, _ error: any Error) {
+        guard currentID == id, !(error is CancellationError) else { return }
+        if savedCopy != nil, APIError.isTemporary(error) {
+            // The copy stays: silently, unless the server answered with an error.
+            savedCopy?.updating = false
+            ErrorBanner.shared.showUnlessUnreachable(error)
+            return
+        }
+        if (error as? APIError)?.status == 404 {
+            chats.removeAll { $0.id == id }
+            currentID = nil
+        }
+        if savedCopy != nil {
+            current = nil
+            savedCopy = nil
+        }
+        // Nothing to show: the chat says so (and tries again), not a placeholder for good.
+        if currentID == id, current == nil {
+            openError = error.localizedDescription
+            if APIError.isUnreachable(error) { return }
+        }
+        ErrorBanner.shared.show(error)
     }
 
     func remove(_ id: String) async {
@@ -532,7 +538,8 @@ extension AssistantChatStore {
         }
         current?.queued.append(shown)
         do {
-            let queueResult = try await api.send(.post, "/ai/chats/\(Self.enc(id))/queue", body: input, as: AssistantQueueResult.self)
+            let queuePath = "/ai/chats/\(Self.enc(id))/queue"
+            let queueResult = try await api.send(.post, queuePath, body: input, as: AssistantQueueResult.self)
             summary(queueResult.chat)
             guard current?.id == id else { return }
             // Worked out before the assignment: reading `current` inside `current?.queued = …`
@@ -576,15 +583,20 @@ extension AssistantChatStore {
               let index = items.lastIndex(where: \.canWait),
               !items[(index + 1)...].contains(where: \.isUser)
         else { return nil }
-        switch items[index] {
-        case let .question(inquiry) where inquiry.answer == nil && !inquiry.skipped: return index
-        case let .reminders(edit) where edit.answer == nil && !edit.skipped: return index
-        case let .calendar(edit) where edit.answer == nil && !edit.skipped: return index
-        case let .suggestions(edit) where edit.answer == nil && !edit.skipped: return index
-        case let .notes(edit) where edit.answer == nil && !edit.skipped: return index
-        case let .memories(edit) where edit.answer == nil && !edit.skipped: return index
-        case let .pages(request) where request.answer == nil && !request.skipped: return index
-        default: return nil
+        return awaitsAnswer(items[index]) ? index : nil
+    }
+
+    /// The item still waits for the user: nothing answered yet, and not skipped.
+    private func awaitsAnswer(_ item: AssistantItem) -> Bool {
+        switch item {
+        case let .question(inquiry): return inquiry.answer == nil && !inquiry.skipped
+        case let .reminders(edit): return edit.answer == nil && !edit.skipped
+        case let .calendar(edit): return edit.answer == nil && !edit.skipped
+        case let .suggestions(edit): return edit.answer == nil && !edit.skipped
+        case let .notes(edit): return edit.answer == nil && !edit.skipped
+        case let .memories(edit): return edit.answer == nil && !edit.skipped
+        case let .pages(request): return request.answer == nil && !request.skipped
+        default: return false
         }
     }
 
@@ -1392,7 +1404,8 @@ extension AssistantChatStore {
         guard var openChat = current else { return }
         var changed = false
         for (chat, seq, text) in deltas where chat == openChat.id {
-            guard openChat.items.indices.contains(seq), case let .assistant(before, sources) = openChat.items[seq] else { continue }
+            guard openChat.items.indices.contains(seq),
+                  case let .assistant(before, sources) = openChat.items[seq] else { continue }
             openChat.items[seq] = .assistant(text: before + text, sources: sources)
             changed = true
         }
@@ -1401,7 +1414,9 @@ extension AssistantChatStore {
         let now = Date.now
         lastTextAt = now
         // Not with every piece: what reads the activity would be drawn again with each.
-        if let lastActivity = activity, lastActivity.activity.kind == "writing", now.timeIntervalSince(lastActivity.at) < Self.activityRefresh { return }
+        let writing = activity?.activity.kind == "writing"
+        let since = now.timeIntervalSince(activity?.at ?? now)
+        if writing, since < Self.activityRefresh { return }
         activity = .init(activity: .init(kind: "writing"), at: now)
     }
 
@@ -1415,46 +1430,57 @@ extension AssistantChatStore {
         }
         let isOpen = current?.id == id
         switch event {
-        case let .chat(chatSummary):
-            summary(chatSummary)
-            guard isOpen, var openChat = current else { break }
-            openChat.title = chatSummary.title
-            openChat.status = chatSummary.status
-            openChat.usage = chatSummary.usage ?? openChat.usage
-            openChat.page = chatSummary.page ?? openChat.page
-            openChat.queued = Self.queued(chatSummary, before: openChat.queued)
-            current = openChat
-            // From the server: with the items since the copy's revision, the chat is up to date.
-            savedCopy = nil
-            if let reported = chatSummary.activity, chatSummary.isRunning {
-                if activity?.activity != reported { activity = .init(activity: reported, at: .now) }
-            } else {
-                activity = nil
-            }
-        case let .items(rev, items):
-            guard isOpen, var openChat = current else { break }
-            var changed: [DataArea] = []
-            for (seq, item) in items where seq >= 0 {
-                while openChat.items.count <= seq { openChat.items.append(.unknown(kind: "")) }
-                openChat.items[seq] = item
-                changed += markSeen(item)
-            }
-            if let rev { openChat.rev = max(openChat.rev, rev) }
-            current = openChat
-            let areas = AssistantChangeAreas.unique(changed)
-            if !areas.isEmpty { onChange(areas) }
-        case let .delta(seq, text):
-            applyDeltas([(id, seq, text)])
-        case let .end(deleted):
-            if deleted {
-                chats.removeAll { $0.id == id }
-                if isOpen { newChat() }
-            } else if isOpen {
-                current?.status = "idle"
-                activity = nil
-            }
+        case let .chat(chatSummary): applyChat(chatSummary, isOpen: isOpen)
+        case let .items(rev, items): applyItems(rev, items, isOpen: isOpen)
+        case let .delta(seq, text): applyDeltas([(id, seq, text)])
+        case let .end(deleted): applyEnd(deleted, id: id, isOpen: isOpen)
         case .reconnect:
             break
+        }
+    }
+
+    /// The chat's own fields from the stream: title, status, usage, page, what's queued.
+    private func applyChat(_ chatSummary: AssistantChatSummary, isOpen: Bool) {
+        summary(chatSummary)
+        guard isOpen, var openChat = current else { return }
+        openChat.title = chatSummary.title
+        openChat.status = chatSummary.status
+        openChat.usage = chatSummary.usage ?? openChat.usage
+        openChat.page = chatSummary.page ?? openChat.page
+        openChat.queued = Self.queued(chatSummary, before: openChat.queued)
+        current = openChat
+        // From the server: with the items since the copy's revision, the chat is up to date.
+        savedCopy = nil
+        guard let reported = chatSummary.activity, chatSummary.isRunning else {
+            activity = nil
+            return
+        }
+        if activity?.activity != reported { activity = .init(activity: reported, at: .now) }
+    }
+
+    /// The items the stream brings: each into its place, with the areas they changed.
+    private func applyItems(_ rev: Int?, _ items: [(seq: Int, item: AssistantItem)], isOpen: Bool) {
+        guard isOpen, var openChat = current else { return }
+        var changed: [DataArea] = []
+        for (seq, item) in items where seq >= 0 {
+            while openChat.items.count <= seq { openChat.items.append(.unknown(kind: "")) }
+            openChat.items[seq] = item
+            changed += markSeen(item)
+        }
+        if let rev { openChat.rev = max(openChat.rev, rev) }
+        current = openChat
+        let areas = AssistantChangeAreas.unique(changed)
+        if !areas.isEmpty { onChange(areas) }
+    }
+
+    /// The stream's end: the chat out of the list when the server deleted it, else idle again.
+    private func applyEnd(_ deleted: Bool, id: String, isOpen: Bool) {
+        if deleted {
+            chats.removeAll { $0.id == id }
+            if isOpen { newChat() }
+        } else if isOpen {
+            current?.status = "idle"
+            activity = nil
         }
     }
 
@@ -1468,11 +1494,19 @@ extension AssistantChatStore {
 
     // MARK: Undo
 
+    /// The place of the change card with this id, if the chat has one.
+    private static func changeIndex(_ chat: AssistantChat, _ changeID: String) -> Int? {
+        chat.items.firstIndex { item in
+            if case let .change(found) = item { return found.id == changeID }
+            return false
+        }
+    }
+
     /// Undoes a change of the open chat: replays its undo requests on the family API, then tells
     /// the chat (the model hears it with the next message).
     func undo(_ changeID: String) async {
         guard let chat = current, !chat.id.isEmpty, savedCopy == nil,
-              let index = chat.items.firstIndex(where: { if case let .change(found) = $0 { found.id == changeID } else { false } }),
+              let index = Self.changeIndex(chat, changeID),
               case let .change(change) = chat.items[index], !change.undone else { return }
         do {
             for step in change.undo { try await replay(step) }
