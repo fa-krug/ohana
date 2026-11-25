@@ -110,17 +110,17 @@ enum AdminRules {
 
     /// The users' list filtered by a search in names and emails.
     static func filter(_ users: [AdminUser], _ query: String) -> [AdminUser] {
-        let q = query.trimmingCharacters(in: .whitespaces)
-        guard !q.isEmpty else { return users }
-        return users.filter { $0.email.localizedCaseInsensitiveContains(q) || $0.name.localizedCaseInsensitiveContains(q) }
+        let searchTerm = query.trimmingCharacters(in: .whitespaces)
+        guard !searchTerm.isEmpty else { return users }
+        return users.filter { $0.email.localizedCaseInsensitiveContains(searchTerm) || $0.name.localizedCaseInsensitiveContains(searchTerm) }
     }
 
     static func filter(_ families: [AdminFamily], _ query: String) -> [AdminFamily] {
-        let q = query.trimmingCharacters(in: .whitespaces)
-        guard !q.isEmpty else { return families }
+        let searchTerm = query.trimmingCharacters(in: .whitespaces)
+        guard !searchTerm.isEmpty else { return families }
         return families.filter { family in
-            family.name.localizedCaseInsensitiveContains(q)
-                || family.members.contains { $0.email.localizedCaseInsensitiveContains(q) || $0.name.localizedCaseInsensitiveContains(q) }
+            family.name.localizedCaseInsensitiveContains(searchTerm)
+                || family.members.contains { $0.email.localizedCaseInsensitiveContains(searchTerm) || $0.name.localizedCaseInsensitiveContains(searchTerm) }
         }
     }
 }
