@@ -78,8 +78,10 @@ nonisolated enum ScanCrop {
             var previousPosition = points.count - 1
             for position in points.indices {
                 let corner = points[position], previousCorner = points[previousPosition]
-                if (corner.y > point.y) != (previousCorner.y > point.y),
-                   point.x < (previousCorner.x - corner.x) * (point.y - corner.y) / (previousCorner.y - corner.y) + corner.x {
+                let straddles = (corner.y > point.y) != (previousCorner.y > point.y)
+                let rise = point.y - corner.y
+                let edgeX = (previousCorner.x - corner.x) * rise / (previousCorner.y - corner.y) + corner.x
+                if straddles, point.x < edgeX {
                     inside.toggle()
                 }
                 previousPosition = position
