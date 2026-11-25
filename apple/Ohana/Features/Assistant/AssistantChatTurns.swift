@@ -28,15 +28,15 @@ struct AssistantTurnLayout: Layout {
     /// The height of it all (the last turn at least `turnHeight` from its start), and each item's top.
     private func arrange(_ sizes: [CGSize], subviews: Subviews) -> (CGFloat, [CGFloat]) {
         var tops: [CGFloat] = []
-        var y: CGFloat = 0
+        var nextTop: CGFloat = 0
         var turnStart: CGFloat?
         for (index, size) in sizes.enumerated() {
-            if index > 0 { y += spacing }
-            if subviews[index][AssistantTurnStart.self] { turnStart = y }
-            tops.append(y)
-            y += size.height
+            if index > 0 { nextTop += spacing }
+            if subviews[index][AssistantTurnStart.self] { turnStart = nextTop }
+            tops.append(nextTop)
+            nextTop += size.height
         }
-        return (max(y, turnStart.map { $0 + turnHeight } ?? 0), tops)
+        return (max(nextTop, turnStart.map { $0 + turnHeight } ?? 0), tops)
     }
 }
 
@@ -98,8 +98,8 @@ struct AssistantToolGroupRow: View, Equatable {
     var open: (AppRoute) -> Void = { _ in }
     @State private var expanded = false
 
-    static func == (a: Self, b: Self) -> Bool {
-        a.tools == b.tools && a.familyID == b.familyID
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.tools == rhs.tools && lhs.familyID == rhs.familyID
     }
 
     var body: some View {
