@@ -286,30 +286,30 @@ struct AppointmentSearchInput: Codable, Hashable {
     init() {}
 
     /// A stored search as the input that saves it again.
-    init(_ s: AppointmentSearch) {
-        name = s.name
-        sources = s.sources
-        specialitySlug = s.specialitySlug
-        specialityLabel = s.specialityLabel
-        jamedaSpecialitySlug = s.jamedaSpecialitySlug
-        jamedaSpecialityLabel = s.jamedaSpecialityLabel
-        jamedaSpecialityType = s.jamedaSpecialityType
-        jamedaInsuranceType = s.jamedaInsuranceType
-        jamedaKidsFriendly = s.jamedaKidsFriendly
-        jamedaVideo = s.jamedaVideo
-        latitude = s.latitude
-        longitude = s.longitude
-        locationLabel = s.locationLabel
-        insuranceSector = s.insuranceSector
-        dayLimit = s.dayLimit
-        maxPages = s.maxPages
-        enabled = s.enabled
-        scheduleType = s.scheduleType
-        scheduleMinutes = s.scheduleMinutes
-        cron = s.cron
-        notifyOnlyEarlier = s.notifyOnlyEarlier
-        notifyApp = s.notifyApp
-        channelIds = s.channelIds
+    init(_ storedSearch: AppointmentSearch) {
+        name = storedSearch.name
+        sources = storedSearch.sources
+        specialitySlug = storedSearch.specialitySlug
+        specialityLabel = storedSearch.specialityLabel
+        jamedaSpecialitySlug = storedSearch.jamedaSpecialitySlug
+        jamedaSpecialityLabel = storedSearch.jamedaSpecialityLabel
+        jamedaSpecialityType = storedSearch.jamedaSpecialityType
+        jamedaInsuranceType = storedSearch.jamedaInsuranceType
+        jamedaKidsFriendly = storedSearch.jamedaKidsFriendly
+        jamedaVideo = storedSearch.jamedaVideo
+        latitude = storedSearch.latitude
+        longitude = storedSearch.longitude
+        locationLabel = storedSearch.locationLabel
+        insuranceSector = storedSearch.insuranceSector
+        dayLimit = storedSearch.dayLimit
+        maxPages = storedSearch.maxPages
+        enabled = storedSearch.enabled
+        scheduleType = storedSearch.scheduleType
+        scheduleMinutes = storedSearch.scheduleMinutes
+        cron = storedSearch.cron
+        notifyOnlyEarlier = storedSearch.notifyOnlyEarlier
+        notifyApp = storedSearch.notifyApp
+        channelIds = storedSearch.channelIds
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -320,62 +320,62 @@ struct AppointmentSearchInput: Codable, Hashable {
     }
 
     init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        name = try c.decode(String.self, forKey: .name)
-        sources = try c.decodeIfPresent(String.self, forKey: .sources) ?? "doctolib"
-        specialitySlug = try c.decodeIfPresent(String.self, forKey: .specialitySlug) ?? ""
-        specialityLabel = try c.decodeIfPresent(String.self, forKey: .specialityLabel) ?? ""
-        jamedaSpecialitySlug = try c.decodeIfPresent(String.self, forKey: .jamedaSpecialitySlug) ?? ""
-        jamedaSpecialityLabel = try c.decodeIfPresent(String.self, forKey: .jamedaSpecialityLabel) ?? ""
-        jamedaSpecialityType = try c.decodeIfPresent(String.self, forKey: .jamedaSpecialityType) ?? "leistung"
-        jamedaInsuranceType = try c.decodeIfPresent(String.self, forKey: .jamedaInsuranceType) ?? ""
-        jamedaKidsFriendly = try c.decodeIfPresent(Bool.self, forKey: .jamedaKidsFriendly) ?? false
-        jamedaVideo = try c.decodeIfPresent(String.self, forKey: .jamedaVideo) ?? "any"
-        latitude = try c.decodeIfPresent(String.self, forKey: .latitude) ?? ""
-        longitude = try c.decodeIfPresent(String.self, forKey: .longitude) ?? ""
-        locationLabel = try c.decodeIfPresent(String.self, forKey: .locationLabel) ?? ""
-        insuranceSector = try c.decodeIfPresent(String.self, forKey: .insuranceSector) ?? ""
-        dayLimit = try c.decodeIfPresent(Int.self, forKey: .dayLimit) ?? 14
-        maxPages = try c.decodeIfPresent(Int.self, forKey: .maxPages) ?? 3
-        enabled = try c.decodeIfPresent(Bool.self, forKey: .enabled) ?? true
-        scheduleType = try c.decodeIfPresent(String.self, forKey: .scheduleType) ?? "MINUTES"
-        scheduleMinutes = try c.decodeIfPresent(Int.self, forKey: .scheduleMinutes)
-        cron = try c.decodeIfPresent(String.self, forKey: .cron) ?? ""
-        notifyOnlyEarlier = try c.decodeIfPresent(Bool.self, forKey: .notifyOnlyEarlier) ?? false
-        notifyApp = try c.decodeIfPresent(Bool.self, forKey: .notifyApp)
-        channelIds = try c.decodeIfPresent([String].self, forKey: .channelIds) ?? []
+        let fields = try decoder.container(keyedBy: CodingKeys.self)
+        name = try fields.decode(String.self, forKey: .name)
+        sources = try fields.decodeIfPresent(String.self, forKey: .sources) ?? "doctolib"
+        specialitySlug = try fields.decodeIfPresent(String.self, forKey: .specialitySlug) ?? ""
+        specialityLabel = try fields.decodeIfPresent(String.self, forKey: .specialityLabel) ?? ""
+        jamedaSpecialitySlug = try fields.decodeIfPresent(String.self, forKey: .jamedaSpecialitySlug) ?? ""
+        jamedaSpecialityLabel = try fields.decodeIfPresent(String.self, forKey: .jamedaSpecialityLabel) ?? ""
+        jamedaSpecialityType = try fields.decodeIfPresent(String.self, forKey: .jamedaSpecialityType) ?? "leistung"
+        jamedaInsuranceType = try fields.decodeIfPresent(String.self, forKey: .jamedaInsuranceType) ?? ""
+        jamedaKidsFriendly = try fields.decodeIfPresent(Bool.self, forKey: .jamedaKidsFriendly) ?? false
+        jamedaVideo = try fields.decodeIfPresent(String.self, forKey: .jamedaVideo) ?? "any"
+        latitude = try fields.decodeIfPresent(String.self, forKey: .latitude) ?? ""
+        longitude = try fields.decodeIfPresent(String.self, forKey: .longitude) ?? ""
+        locationLabel = try fields.decodeIfPresent(String.self, forKey: .locationLabel) ?? ""
+        insuranceSector = try fields.decodeIfPresent(String.self, forKey: .insuranceSector) ?? ""
+        dayLimit = try fields.decodeIfPresent(Int.self, forKey: .dayLimit) ?? 14
+        maxPages = try fields.decodeIfPresent(Int.self, forKey: .maxPages) ?? 3
+        enabled = try fields.decodeIfPresent(Bool.self, forKey: .enabled) ?? true
+        scheduleType = try fields.decodeIfPresent(String.self, forKey: .scheduleType) ?? "MINUTES"
+        scheduleMinutes = try fields.decodeIfPresent(Int.self, forKey: .scheduleMinutes)
+        cron = try fields.decodeIfPresent(String.self, forKey: .cron) ?? ""
+        notifyOnlyEarlier = try fields.decodeIfPresent(Bool.self, forKey: .notifyOnlyEarlier) ?? false
+        notifyApp = try fields.decodeIfPresent(Bool.self, forKey: .notifyApp)
+        channelIds = try fields.decodeIfPresent([String].self, forKey: .channelIds) ?? []
     }
 
     /// As the web form sends it: `scheduleMinutes` only for MINUTES (else null, explicitly).
     func encode(to encoder: any Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(name, forKey: .name)
-        try c.encode(sources, forKey: .sources)
-        try c.encode(specialitySlug, forKey: .specialitySlug)
-        try c.encode(specialityLabel, forKey: .specialityLabel)
-        try c.encode(jamedaSpecialitySlug, forKey: .jamedaSpecialitySlug)
-        try c.encode(jamedaSpecialityLabel, forKey: .jamedaSpecialityLabel)
-        try c.encode(jamedaSpecialityType, forKey: .jamedaSpecialityType)
-        try c.encode(jamedaInsuranceType, forKey: .jamedaInsuranceType)
-        try c.encode(jamedaKidsFriendly, forKey: .jamedaKidsFriendly)
-        try c.encode(jamedaVideo, forKey: .jamedaVideo)
-        try c.encode(latitude, forKey: .latitude)
-        try c.encode(longitude, forKey: .longitude)
-        try c.encode(locationLabel, forKey: .locationLabel)
-        try c.encode(insuranceSector, forKey: .insuranceSector)
-        try c.encode(dayLimit, forKey: .dayLimit)
-        try c.encode(maxPages, forKey: .maxPages)
-        try c.encode(enabled, forKey: .enabled)
-        try c.encode(scheduleType, forKey: .scheduleType)
+        var fields = encoder.container(keyedBy: CodingKeys.self)
+        try fields.encode(name, forKey: .name)
+        try fields.encode(sources, forKey: .sources)
+        try fields.encode(specialitySlug, forKey: .specialitySlug)
+        try fields.encode(specialityLabel, forKey: .specialityLabel)
+        try fields.encode(jamedaSpecialitySlug, forKey: .jamedaSpecialitySlug)
+        try fields.encode(jamedaSpecialityLabel, forKey: .jamedaSpecialityLabel)
+        try fields.encode(jamedaSpecialityType, forKey: .jamedaSpecialityType)
+        try fields.encode(jamedaInsuranceType, forKey: .jamedaInsuranceType)
+        try fields.encode(jamedaKidsFriendly, forKey: .jamedaKidsFriendly)
+        try fields.encode(jamedaVideo, forKey: .jamedaVideo)
+        try fields.encode(latitude, forKey: .latitude)
+        try fields.encode(longitude, forKey: .longitude)
+        try fields.encode(locationLabel, forKey: .locationLabel)
+        try fields.encode(insuranceSector, forKey: .insuranceSector)
+        try fields.encode(dayLimit, forKey: .dayLimit)
+        try fields.encode(maxPages, forKey: .maxPages)
+        try fields.encode(enabled, forKey: .enabled)
+        try fields.encode(scheduleType, forKey: .scheduleType)
         if scheduleType == "MINUTES", let scheduleMinutes {
-            try c.encode(scheduleMinutes, forKey: .scheduleMinutes)
+            try fields.encode(scheduleMinutes, forKey: .scheduleMinutes)
         } else {
-            try c.encodeNil(forKey: .scheduleMinutes)
+            try fields.encodeNil(forKey: .scheduleMinutes)
         }
-        try c.encode(cron, forKey: .cron)
-        try c.encode(notifyOnlyEarlier, forKey: .notifyOnlyEarlier)
-        try c.encodeIfPresent(notifyApp, forKey: .notifyApp)
-        try c.encode(channelIds, forKey: .channelIds)
+        try fields.encode(cron, forKey: .cron)
+        try fields.encode(notifyOnlyEarlier, forKey: .notifyOnlyEarlier)
+        try fields.encodeIfPresent(notifyApp, forKey: .notifyApp)
+        try fields.encode(channelIds, forKey: .channelIds)
     }
 
     // MARK: Sources as two switches (the stored string is derived)
