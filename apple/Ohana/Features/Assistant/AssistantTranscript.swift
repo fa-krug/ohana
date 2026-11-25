@@ -29,11 +29,11 @@ enum AssistantTranscript {
                     .filter { !$0.isEmpty }.joined(separator: "\n"))
             case let .change(change):
                 out.append("✅ \(change.summary)" + (change.undone ? " (\(String(localized: "Undone")))" : ""))
-            case let .question(q):
-                let picked = q.answer?.selected ?? []
-                var lines = ["**❓ \(q.question)**"] + q.options.map { "- [\(picked.contains($0) ? "x" : " ")] \($0)" }
-                if let text = q.answer?.text { lines.append("**\(you):** \(text)") }
-                else if q.skipped { lines.append("(\(String(localized: "Not answered")))") }
+            case let .question(asked):
+                let picked = asked.answer?.selected ?? []
+                var lines = ["**❓ \(asked.question)**"] + asked.options.map { "- [\(picked.contains($0) ? "x" : " ")] \($0)" }
+                if let text = asked.answer?.text { lines.append("**\(you):** \(text)") }
+                else if asked.skipped { lines.append("(\(String(localized: "Not answered")))") }
                 out.append(lines.joined(separator: "\n"))
             case let .reminders(edit):
                 var lines = ["**☑️ \(edit.summary)**"]
