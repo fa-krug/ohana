@@ -214,6 +214,11 @@ extension AssistantAttachments {
     static func wasCut(_ attachment: AssistantPendingAttachment) -> Bool {
         attachment.kind == "file" && (attachment.text?.hasSuffix("\n…(cut off)") ?? false)
     }
+
+    /// The message when a long file only goes with the message as far as it was read.
+    static func cutMessage(_ name: String) -> String {
+        String(localized: "“\(name)” is long: only the first 50,000 characters are sent.")
+    }
 }
 
 /// An image on the clipboard, for paste (iOS: `pasteDestination`).
