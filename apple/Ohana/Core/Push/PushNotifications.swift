@@ -47,14 +47,14 @@ final class PushNotifications: NSObject {
         return sameRelay(server, relay)
     }
 
-    static func sameRelay(_ a: URL, _ b: URL) -> Bool {
-        func normalized(_ u: URL) -> String {
-            var path = u.path(percentEncoded: false)
+    static func sameRelay(_ serverRelay: URL, _ buildRelay: URL) -> Bool {
+        func normalized(_ address: URL) -> String {
+            var path = address.path(percentEncoded: false)
             while path.hasSuffix("/") { path.removeLast() }
-            let port = u.port.map { ":\($0)" } ?? ""
-            return "\(u.scheme?.lowercased() ?? "")://\(u.host()?.lowercased() ?? "")\(port)\(path)"
+            let port = address.port.map { ":\($0)" } ?? ""
+            return "\(address.scheme?.lowercased() ?? "")://\(address.host()?.lowercased() ?? "")\(port)\(path)"
         }
-        return normalized(a) == normalized(b)
+        return normalized(serverRelay) == normalized(buildRelay)
     }
 
     /// The user turned push on for this device (and its server); remembered per device.
