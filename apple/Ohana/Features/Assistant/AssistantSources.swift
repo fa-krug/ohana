@@ -40,14 +40,14 @@ nonisolated struct AssistantSource: Decodable, Hashable, Identifiable, Sendable 
     private enum Keys: String, CodingKey { case ref, chunkId, documentId, name, path, page, quote, excerpt }
 
     init(from decoder: any Decoder) throws {
-        guard let c = try? decoder.container(keyedBy: Keys.self) else {
+        guard let values = try? decoder.container(keyedBy: Keys.self) else {
             self.init(ref: "", documentId: "", name: "")
             return
         }
-        func str(_ key: Keys) -> String { (try? c.decodeIfPresent(String.self, forKey: key)) ?? "" }
+        func str(_ key: Keys) -> String { (try? values.decodeIfPresent(String.self, forKey: key)) ?? "" }
         func int(_ key: Keys) -> Int? {
-            if let n = try? c.decodeIfPresent(Int.self, forKey: key) { return n }
-            return (try? c.decodeIfPresent(Double.self, forKey: key)).flatMap { $0 == $0.rounded() ? Int($0) : nil }
+            if let wholeNumber = try? values.decodeIfPresent(Int.self, forKey: key) { return wholeNumber }
+            return (try? values.decodeIfPresent(Double.self, forKey: key)).flatMap { $0 == $0.rounded() ? Int($0) : nil }
         }
         let path = str(.path)
         let name = str(.name)
