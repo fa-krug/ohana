@@ -17,6 +17,11 @@ on:
     branches: [main]
     paths: ['server/**', 'docker-compose*.yml', '.github/workflows/ci.yml']
 
+# Read-only by default; the jobs that push the image or mint the deploy token ask for their
+# scopes themselves.
+permissions:
+  contents: read
+
 # A newer push waits for the running release (a deploy is never cut off) and replaces any older
 # one still waiting; on pull requests it cancels the running tests.
 concurrency:
