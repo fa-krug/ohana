@@ -135,18 +135,18 @@ nonisolated struct KnowledgeUploadQueue: Codable, Equatable, Sendable {
         if byPath.isEmpty { order = [] }
     }
 
-    static func == (a: Self, b: Self) -> Bool { a.items == b.items }
+    static func == (lhs: Self, rhs: Self) -> Bool { lhs.items == rhs.items }
 
     private enum CodingKeys: String, CodingKey { case items }
 
     init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        self.init(try c.decode([KnowledgeUpload].self, forKey: .items))
+        let codingContainer = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(try codingContainer.decode([KnowledgeUpload].self, forKey: .items))
     }
 
     func encode(to encoder: any Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(items, forKey: .items)
+        var codingContainer = encoder.container(keyedBy: CodingKeys.self)
+        try codingContainer.encode(items, forKey: .items)
     }
 
     static func load(_ file: URL) -> KnowledgeUploadQueue {
