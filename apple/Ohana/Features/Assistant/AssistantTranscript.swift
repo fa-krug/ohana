@@ -9,95 +9,155 @@ import AppKit
 /// shows, plus every tool call with its arguments and its result.
 enum AssistantTranscript {
     static func markdown(_ items: [AssistantItem], result: (String) -> String? = { _ in nil }) -> String {
-        let you = String(localized: "You")
         var out: [String] = []
         for item in items where item.isVisible {
-            switch item {
-            case let .user(text, attachments):
-                let lines = ["**\(you):** \(text)"] + attachments.map { "📎 \($0.name)" }
-                let block = lines.joined(separator: "\n")
-                out.append(out.isEmpty ? block : "---\n\n" + block)
-            case let .assistant(text, sources):
-                out.append(AssistantSourceMarkers.transcript(text, sources: sources))
-            case let .tool(tool):
-                let label = [AssistantToolLabels.label(tool), AssistantToolLabels.detail(tool)]
-                    .filter { !$0.isEmpty }.joined(separator: " · ")
-                let status = tool.status == "running" ? "…" : tool.status == "ok" ? "✓" : "✗"
-                let args = pretty(JSONValue.object(tool.args)) ?? "{}"
-                let answer = result(tool.id).map { fence(prettyText($0), lang: "json") } ?? tool.summary ?? ""
-                out.append(["**🔧 \(label)** \(status)", fence("\(tool.name) \(args)"), answer]
-                    .filter { !$0.isEmpty }.joined(separator: "\n"))
-            case let .change(change):
-                out.append("✅ \(change.summary)" + (change.undone ? " (\(String(localized: "Undone")))" : ""))
-            case let .question(q):
-                let picked = q.answer?.selected ?? []
-                var lines = ["**❓ \(q.question)**"] + q.options.map { "- [\(picked.contains($0) ? "x" : " ")] \($0)" }
-                if let text = q.answer?.text { lines.append("**\(you):** \(text)") }
-                else if q.skipped { lines.append("(\(String(localized: "Not answered")))") }
-                out.append(lines.joined(separator: "\n"))
-            case let .reminders(edit):
-                var lines = ["**☑️ \(edit.summary)**"]
-                for (index, op) in edit.ops.enumerated() {
-                    let result = edit.answer?.results.flatMap { index < $0.count ? $0[index] : nil }
-                    let mark = result.map(Self.mark) ?? ""
-                    lines.append("- " + AssistantReminderOpLine.make(op).text + mark)
-                }
-                if let outcome = edit.outcome { lines.append("(\(outcome))") }
-                out.append(lines.joined(separator: "\n"))
-            case let .calendar(edit):
-                var lines = ["**📅 \(edit.summary)**"]
-                for (index, op) in edit.ops.enumerated() {
-                    let result = edit.answer?.results.flatMap { index < $0.count ? $0[index] : nil }
-                    let mark = result.map(Self.mark) ?? ""
-                    let line = AssistantCalendarOpLine.make(op)
-                    lines.append("- " + ([line.text, line.detail ?? ""].filter { !$0.isEmpty }.joined(separator: " · ")) + mark)
-                }
-                if let outcome = edit.outcome { lines.append("(\(outcome))") }
-                out.append(lines.joined(separator: "\n"))
-            case let .suggestions(edit):
-                var lines = ["**📄 \(edit.summary)**"]
-                if let source = edit.source { lines.append("*\(source)*") }
-                for (index, op) in edit.ops.enumerated() {
-                    let result = edit.answer?.results.flatMap { index < $0.count ? $0[index] : nil }
-                    let line = AssistantSuggestionLine.make(op)
-                    let text = [line.title, line.when, line.detail].compactMap { $0 }.filter { !$0.isEmpty }
-                    lines.append("- " + text.joined(separator: " · ") + (result.map(Self.mark) ?? ""))
-                }
-                if let outcome = edit.outcome { lines.append("(\(outcome))") }
-                out.append(lines.joined(separator: "\n"))
-            case let .notes(edit):
-                var lines = ["**📝 \(edit.summary)**"]
-                for (index, op) in edit.ops.enumerated() {
-                    let result = edit.answer?.results.flatMap { index < $0.count ? $0[index] : nil }
-                    let line = AssistantNoteOpLine.make(op)
-                    let text = [line.text, line.detail ?? ""].filter { !$0.isEmpty }.joined(separator: " · ")
-                    lines.append("- " + text + (result.map(Self.mark) ?? ""))
-                }
-                if let outcome = edit.outcome { lines.append("(\(outcome))") }
-                out.append(lines.joined(separator: "\n"))
-            case let .memories(edit):
-                var lines = ["**🧠 \(edit.summary)**"]
-                for (index, op) in edit.ops.enumerated() {
-                    let result = edit.answer?.results.flatMap { index < $0.count ? $0[index] : nil }
-                    let text = op.action == .update ? "\(op.old?.text ?? "") → \(op.text)" : op.text
-                    let prefix = op.action == .remove ? "~~\(text)~~" : text
-                    lines.append("- " + prefix + (result.map(Self.mark) ?? ""))
-                }
-                if let outcome = edit.outcome { lines.append("(\(outcome))") }
-                out.append(lines.joined(separator: "\n"))
-            case let .pages(request):
-                var lines = ["**🖼️ \(request.summary)**", request.path]
-                if let outcome = request.outcome { lines.append("(\(outcome))") }
-                out.append(lines.joined(separator: "\n"))
-            case .compacted:
-                out.append("*\(String(localized: "Earlier messages condensed for the model"))*")
-            case let .error(text):
-                out.append("⚠️ \(text)")
-            case .unknown:
-                break
-            }
+            guard let block = block(for: item, result: result) else { continue }
+            out.append(out.isEmpty ? block : "---\n\n" + block)
         }
         return out.joined(separator: "\n\n")
+    }
+
+    /// "You", as the transcript labels what the user wrote.
+    private static var you: String { String(localized: "You") }
+
+    /// One chat entry as Markdown; nil for what the transcript leaves out. The edits (questions,
+    /// reminders, calendar, suggestions, notes, memories, pages) answer in `editBlock`.
+    private static func block(for item: AssistantItem, result: (String) -> String?) -> String? {
+        switch item {
+        case let .user(text, attachments):
+            return userBlock(text: text, attachments: attachments)
+        case let .assistant(text, sources):
+            return AssistantSourceMarkers.transcript(text, sources: sources)
+        case let .tool(tool):
+            return toolBlock(tool, result: result)
+        case let .change(change):
+            return "✅ \(change.summary)" + (change.undone ? " (\(String(localized: "Undone")))" : "")
+        case .compacted:
+            return "*\(String(localized: "Earlier messages condensed for the model"))*"
+        case let .error(text):
+            return "⚠️ \(text)"
+        case .unknown:
+            return nil
+        default:
+            return editBlock(for: item)
+        }
+    }
+
+    /// The cards that wait for the user: one question, or an edit of reminders, calendars,
+    /// suggestions, notes, memories, or the pages asked for.
+    private static func editBlock(for item: AssistantItem) -> String? {
+        switch item {
+        case let .question(ask):
+            return questionBlock(ask)
+        case let .reminders(edit):
+            return remindersBlock(edit)
+        case let .calendar(edit):
+            return calendarBlock(edit)
+        case let .suggestions(edit):
+            return suggestionsBlock(edit)
+        case let .notes(edit):
+            return notesBlock(edit)
+        case let .memories(edit):
+            return memoriesBlock(edit)
+        case let .pages(request):
+            return pagesBlock(request)
+        default:
+            return nil
+        }
+    }
+
+    private static func userBlock(text: String, attachments: [AssistantAttachmentRef]) -> String {
+        let lines = ["**\(you):** \(text)"] + attachments.map { "📎 \($0.name)" }
+        return lines.joined(separator: "\n")
+    }
+
+    private static func toolBlock(_ tool: AssistantToolCall, result: (String) -> String?) -> String {
+        let label = [AssistantToolLabels.label(tool), AssistantToolLabels.detail(tool)]
+            .filter { !$0.isEmpty }.joined(separator: " · ")
+        let status = tool.status == "running" ? "…" : tool.status == "ok" ? "✓" : "✗"
+        let args = pretty(JSONValue.object(tool.args)) ?? "{}"
+        let answer = result(tool.id).map { fence(prettyText($0), lang: "json") } ?? tool.summary ?? ""
+        return ["**🔧 \(label)** \(status)", fence("\(tool.name) \(args)"), answer]
+            .filter { !$0.isEmpty }.joined(separator: "\n")
+    }
+
+    private static func questionBlock(_ ask: AssistantQuestion) -> String {
+        let picked = ask.answer?.selected ?? []
+        var lines = ["**❓ \(ask.question)**"] + ask.options.map { "- [\(picked.contains($0) ? "x" : " ")] \($0)" }
+        if let text = ask.answer?.text { lines.append("**\(you):** \(text)") }
+        else if ask.skipped { lines.append("(\(String(localized: "Not answered")))") }
+        return lines.joined(separator: "\n")
+    }
+
+    private static func remindersBlock(_ edit: AssistantRemindersEdit) -> String {
+        var lines = ["**☑️ \(edit.summary)**"]
+        for (index, op) in edit.ops.enumerated() {
+            let mark = resultMark(edit.answer?.results, at: index)
+            lines.append("- " + AssistantReminderOpLine.make(op).text + mark)
+        }
+        if let outcome = edit.outcome { lines.append("(\(outcome))") }
+        return lines.joined(separator: "\n")
+    }
+
+    private static func calendarBlock(_ edit: AssistantCalendarEdit) -> String {
+        var lines = ["**📅 \(edit.summary)**"]
+        for (index, op) in edit.ops.enumerated() {
+            let mark = resultMark(edit.answer?.results, at: index)
+            let line = AssistantCalendarOpLine.make(op)
+            let text = [line.text, line.detail ?? ""].filter { !$0.isEmpty }.joined(separator: " · ")
+            lines.append("- " + text + mark)
+        }
+        if let outcome = edit.outcome { lines.append("(\(outcome))") }
+        return lines.joined(separator: "\n")
+    }
+
+    private static func suggestionsBlock(_ edit: AssistantSuggestions) -> String {
+        var lines = ["**📄 \(edit.summary)**"]
+        if let source = edit.source { lines.append("*\(source)*") }
+        for (index, op) in edit.ops.enumerated() {
+            let mark = resultMark(edit.answer?.results, at: index)
+            let line = AssistantSuggestionLine.make(op)
+            let text = [line.title, line.when, line.detail].compactMap { $0 }.filter { !$0.isEmpty }
+            lines.append("- " + text.joined(separator: " · ") + mark)
+        }
+        if let outcome = edit.outcome { lines.append("(\(outcome))") }
+        return lines.joined(separator: "\n")
+    }
+
+    private static func notesBlock(_ edit: AssistantNotesEdit) -> String {
+        var lines = ["**📝 \(edit.summary)**"]
+        for (index, op) in edit.ops.enumerated() {
+            let mark = resultMark(edit.answer?.results, at: index)
+            let line = AssistantNoteOpLine.make(op)
+            let text = [line.text, line.detail ?? ""].filter { !$0.isEmpty }.joined(separator: " · ")
+            lines.append("- " + text + mark)
+        }
+        if let outcome = edit.outcome { lines.append("(\(outcome))") }
+        return lines.joined(separator: "\n")
+    }
+
+    private static func memoriesBlock(_ edit: AssistantMemoriesEdit) -> String {
+        var lines = ["**🧠 \(edit.summary)**"]
+        for (index, op) in edit.ops.enumerated() {
+            let mark = resultMark(edit.answer?.results, at: index)
+            let text = op.action == .update ? "\(op.old?.text ?? "") → \(op.text)" : op.text
+            let prefix = op.action == .remove ? "~~\(text)~~" : text
+            lines.append("- " + prefix + mark)
+        }
+        if let outcome = edit.outcome { lines.append("(\(outcome))") }
+        return lines.joined(separator: "\n")
+    }
+
+    private static func pagesBlock(_ request: AssistantPagesRequest) -> String {
+        var lines = ["**🖼️ \(request.summary)**", request.path]
+        if let outcome = request.outcome { lines.append("(\(outcome))") }
+        return lines.joined(separator: "\n")
+    }
+
+    /// The mark of the op at `index` in an edit's results, "" while it has none (or none for it).
+    private static func resultMark(_ results: [AssistantReminderResult]?, at index: Int) -> String {
+        let one = results.flatMap { index < $0.count ? $0[index] : nil }
+        return one.map(Self.mark) ?? ""
     }
 
     /// How an op went: ✓, – (left out) or ✗ with the error.
