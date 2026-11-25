@@ -17,10 +17,10 @@ struct AssistantItemView: View, Equatable {
     /// Opens a place of the app a tool call names.
     var open: (AppRoute) -> Void = { _ in }
 
-    static func == (lhs: Self, rhs: Self) -> Bool {
+    static func == (a: Self, b: Self) -> Bool {
         // `busy` counts only for what can wait: the other items aren't drawn again as turns start and end.
-        lhs.item == rhs.item && lhs.store === rhs.store && lhs.saved == rhs.saved && lhs.waiting == rhs.waiting
-            && (lhs.busy == rhs.busy || !lhs.item.canWait)
+        a.item == b.item && a.store === b.store && a.saved == b.saved && a.waiting == b.waiting
+            && (a.busy == b.busy || !a.item.canWait)
     }
 
     var body: some View {
@@ -60,7 +60,7 @@ struct AssistantItemView: View, Equatable {
                     .layoutPriority(1)
                 VStack { Divider() }
             }
-            .help(AssistantContextMeter.helpNote)
+            .help(Text("How much of the model’s context window this chat uses. Before it is full, older messages are condensed into a summary, so long tasks can go on."))
         case let .error(text):
             Label {
                 Text(verbatim: text)
@@ -88,8 +88,8 @@ struct AssistantUserBubble: View {
             VStack(alignment: .trailing, spacing: 6) {
                 if !attachments.isEmpty {
                     AssistantFlow(spacing: 6) {
-                        ForEach(Array(attachments.enumerated()), id: \.offset) { _, sentAttachment in
-                            AssistantSentAttachment(attachment: sentAttachment, onTint: !queued)
+                        ForEach(Array(attachments.enumerated()), id: \.offset) { _, a in
+                            AssistantSentAttachment(attachment: a, onTint: !queued)
                         }
                     }
                 }
@@ -231,13 +231,13 @@ struct AssistantToolRow: View {
 
     /// The label, then the detail a little fainter.
     static func line(_ label: String, _ detail: String, linked: Bool = false) -> AttributedString {
-        var lineText = AttributedString(label)
+        var s = AttributedString(label)
         if !detail.isEmpty {
-            var detailText = AttributedString(" · " + detail)
-            detailText.foregroundColor = linked ? ModuleTint.assistant : .secondary.opacity(0.7)
-            lineText += detailText
+            var d = AttributedString(" · " + detail)
+            d.foregroundColor = linked ? ModuleTint.assistant : .secondary.opacity(0.7)
+            s += d
         }
-        return lineText
+        return s
     }
 }
 
@@ -283,6 +283,364 @@ struct AssistantChangeRow: View {
         .font(.callout)
         .opacity(change.undone ? 0.6 : 1)
         .contentCard(cornerRadius: 14, padding: 10)
+    }
+}
+
+/// A question of the assistant: a tap on an option answers it (or, with several to pick, ticks
+/// it, and **Answer** sends the ticked ones). An own answer is written in the composer, whose Send
+/// answers the question while it waits (with the ticked options). Once answered, it shows the answer.
+struct AssistantQuestionCard: View {
+    let question: AssistantQuestion
+    let store: AssistantChatStore
+
+    /// It waits for the user (the chat's last open question or edit), and whether a turn runs:
+    /// given by the chat, which works them out once for all its items, so a card isn't drawn again
+    /// with every piece of an answer being written.
+    var isOpen = false
+    var busy = false
+
+    var body: some View {
+        let open = isOpen
+        let active = open && !busy
+        let picked = store.picks(question)
+        let chosen = question.answer?.selected ?? picked
+        VStack(alignment: .leading, spacing: 8) {
+            Text(verbatim: question.question).font(.callout.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
+            ForEach(question.options, id: \.self) { option in
+                let on = chosen.contains(option)
+                Button {
+                    if question.multiple {
+                        store.togglePick(question, option)
+                    } else {
+                        store.answer(selected: [option], text: "")
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: on
+                              ? (question.multiple ? "checkmark.square.fill" : "largecircle.fill.circle")
+                              : (question.multiple ? "square" : "circle"))
+                            .foregroundStyle(on ? ModuleTint.assistant : .secondary)
+                            .accessibilityHidden(true)
+                        Text(verbatim: option)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .multilineTextAlignment(.leading)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .frame(minHeight: 44)
+                    .contentShape(.rect)
+                    .background(on ? ModuleTint.assistant.opacity(0.12) : .clear, in: .rect(cornerRadius: 10))
+                }
+                .buttonStyle(.plain)
+                .disabled(!active)
+                .opacity(!open && !on ? 0.6 : 1)
+                // The ticked box and filled circle say it only to the eye.
+                .accessibilityLabel(Text(verbatim: option))
+                .accessibilityAddTraits(on ? .isSelected : [])
+                .accessibilityHint(open
+                                   ? (question.multiple ? Text("Ticks or unticks it") : Text("Answers with it"))
+                                   : Text(verbatim: ""))
+            }
+            if open, question.multiple {
+                HStack {
+                    Spacer(minLength: 0)
+                    Button("Answer") {
+                        store.answer(selected: picked, text: "")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(ModuleTint.assistant)
+                    .disabled(!active || picked.isEmpty)
+                }
+            }
+            if let own = question.answer?.text {
+                AssistantUserBubble(text: own, attachments: [])
+            }
+            if question.skipped {
+                Text("Not answered").font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .contentCard(cornerRadius: 18, padding: 12)
+    }
+}
+
+/// A change of the user's Reminders the assistant suggests: what it does, op by op in plain
+/// words (deletes in red), and **Apply** / **Don't apply** while it waits. Apply asks for the
+/// access to Reminders first when it wasn't asked for yet (and points to the Settings when it was
+/// refused). Once answered, each op shows how it went and the card how it ended.
+struct AssistantRemindersCard: View {
+    let edit: AssistantRemindersEdit
+    let store: AssistantChatStore
+    @State private var reminders = RemindersStore.shared
+    @State private var posting = false
+    /// Apply found no access.
+    @State private var refused = false
+
+    /// It waits for the user (the chat's last open question or edit), and whether a turn runs:
+    /// given by the chat, which works them out once for all its items, so a card isn't drawn again
+    /// with every piece of an answer being written.
+    var isOpen = false
+    var busy = false
+
+    var body: some View {
+        let open = isOpen
+        let active = open && !busy && !posting
+        VStack(alignment: .leading, spacing: 8) {
+            Label {
+                Text(verbatim: edit.summary).font(.callout.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
+            } icon: {
+                Image(systemName: "checklist").foregroundStyle(ModuleTint.assistant)
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(Array(edit.ops.enumerated()), id: \.offset) { index, op in
+                    row(op, index: index, open: open)
+                }
+            }
+            .padding(.vertical, 2)
+            if open || posting {
+                if open, refused || reminders.access == .denied || reminders.access == .restricted
+                    || reminders.access == .writeOnly {
+                    noAccess
+                }
+                HStack(spacing: 8) {
+                    Spacer(minLength: 0)
+                    Button("Don’t Apply") {
+                        store.declineReminders(edit.id)
+                    }
+                    .buttonStyle(.bordered)
+                    Button {
+                        apply()
+                    } label: {
+                        if posting {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Text("Apply")
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(ModuleTint.assistant)
+                    .accessibilityLabel(Text("Apply: \(edit.summary)"))
+                }
+                .disabled(!active)
+            }
+            if let outcome = edit.outcome {
+                AssistantEditOutcome(text: outcome, answer: edit.answer)
+            }
+        }
+        .contentCard(cornerRadius: 18, padding: 12)
+        .task(id: reminders.revision) { reminders.refreshAccess() }
+    }
+
+    private func row(_ op: AssistantReminderOp, index: Int, open: Bool) -> AssistantEditOpRow {
+        // While it waits, an update to another list reads as a move (the reminder's list now).
+        let currentList = open && op.op == "update" && reminders.access.isGranted
+            ? op.id.flatMap { reminders.reminder($0)?.listID } : nil
+        let line = AssistantReminderOpLine.make(op, currentListID: currentList)
+        return AssistantEditOpRow(icon: line.icon, text: line.text, detail: line.detail, destructive: line.destructive,
+                                  result: edit.answer?.results.flatMap { index < $0.count ? $0[index] : nil },
+                                  declined: edit.answer?.applied == false || edit.skipped)
+    }
+
+    private var noAccess: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label(reminders.access == .restricted
+                  ? "Reminders aren’t allowed on this device."
+                  : "Ohana has no access to your reminders.",
+                  systemImage: "exclamationmark.triangle")
+                .foregroundStyle(.orange)
+            if reminders.access != .restricted, let url = RemindersStore.settingsURL {
+                Link(destination: url) {
+                    Label("Open Settings", systemImage: "gear")
+                }
+            }
+        }
+        .font(.caption)
+    }
+
+    private func apply() {
+        posting = true
+        Task {
+            defer { posting = false }
+            refused = await store.applyReminders(edit.id) == .noAccess
+        }
+    }
+}
+
+/// A change of the device's calendars the assistant suggests, like the Reminders card: what it
+/// does, op by op (the event, when it is, the calendar; deletes in red), and **Apply** /
+/// **Don't apply** while it waits. Without access to the calendars (taken away since the message)
+/// it points to the Settings. Once answered, each op shows how it went and the card how it ended.
+struct AssistantCalendarCard: View {
+    let edit: AssistantCalendarEdit
+    let store: AssistantChatStore
+    @State private var calendars = DeviceCalendarStore.shared
+    /// Apply found no access.
+    @State private var refused = false
+
+    /// It waits for the user (the chat's last open question or edit), and whether a turn runs:
+    /// given by the chat, which works them out once for all its items, so a card isn't drawn again
+    /// with every piece of an answer being written.
+    var isOpen = false
+    var busy = false
+
+    var body: some View {
+        let open = isOpen
+        let active = open && !busy
+        VStack(alignment: .leading, spacing: 8) {
+            Label {
+                Text(verbatim: edit.summary).font(.callout.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
+            } icon: {
+                Image(systemName: "calendar").foregroundStyle(ModuleTint.assistant)
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(Array(edit.ops.enumerated()), id: \.offset) { index, op in
+                    row(op, index: index, open: open)
+                }
+            }
+            .padding(.vertical, 2)
+            if open {
+                if refused || !calendars.hasAccess {
+                    noAccess
+                }
+                HStack(spacing: 8) {
+                    Spacer(minLength: 0)
+                    Button("Don’t Apply") {
+                        store.declineCalendar(edit.id)
+                    }
+                    .buttonStyle(.bordered)
+                    Button("Apply") {
+                        apply()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(ModuleTint.assistant)
+                    .accessibilityLabel(Text("Apply: \(edit.summary)"))
+                }
+                .disabled(!active)
+            }
+            if let outcome = edit.outcome {
+                AssistantEditOutcome(text: outcome, answer: edit.answer)
+            }
+        }
+        .contentCard(cornerRadius: 18, padding: 12)
+        .task(id: calendars.revision) { calendars.refreshAccess() }
+    }
+
+    private func row(_ op: AssistantCalendarOp, index: Int, open: Bool) -> AssistantEditOpRow {
+        // While it waits, an update to another calendar reads as a move (the event's calendar now).
+        let currentCalendar = open && op.op == "update" && calendars.hasAccess
+            ? op.id.flatMap { calendars.calendarID(of: DeviceEventRef($0)) } : nil
+        let line = AssistantCalendarOpLine.make(op, currentCalendarID: currentCalendar)
+        return AssistantEditOpRow(icon: line.icon, text: line.text, detail: line.detail, destructive: line.destructive,
+                                  result: edit.answer?.results.flatMap { index < $0.count ? $0[index] : nil },
+                                  declined: edit.answer?.applied == false || edit.skipped)
+    }
+
+    private var noAccess: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label(calendars.access == .restricted
+                  ? "Calendars aren’t allowed on this device."
+                  : "Ohana has no access to your calendars.",
+                  systemImage: "exclamationmark.triangle")
+                .foregroundStyle(.orange)
+            if calendars.access != .restricted, let url = DeviceCalendarStore.settingsURL {
+                Link(destination: url) {
+                    Label("Open Settings", systemImage: "gear")
+                }
+            }
+        }
+        .font(.caption)
+    }
+
+    private func apply() {
+        // Applied right away (the answer then goes out like a message).
+        refused = store.applyCalendar(edit.id) == .noAccess
+    }
+}
+
+/// Notes for the family's knowledge folder the assistant suggests, like the Reminders card: each
+/// note (made or changed, where, its tags) with what it writes (a new note's or a rewritten text
+/// a few lines long until expanded, the text added, what is replaced), and **Apply** / **Don't
+/// apply** while it waits (a new note never overwrites a file, a change only a file still as the
+/// assistant read it). Once answered, each note shows how it went and the card how it ended.
+struct AssistantNotesCard: View {
+    let edit: AssistantNotesEdit
+    let store: AssistantChatStore
+    @State private var posting = false
+    /// The ops whose text shows whole.
+    @State private var expanded: Set<Int> = []
+
+    /// It waits for the user (the chat's last open question or edit), and whether a turn runs:
+    /// given by the chat, which works them out once for all its items, so a card isn't drawn again
+    /// with every piece of an answer being written.
+    var isOpen = false
+    var busy = false
+
+    var body: some View {
+        let open = isOpen
+        let active = open && !busy && !posting
+        let declined = edit.answer?.applied == false || edit.skipped
+        VStack(alignment: .leading, spacing: 8) {
+            Label {
+                Text(verbatim: edit.summary).font(.callout.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
+            } icon: {
+                Image(systemName: "note.text").foregroundStyle(ModuleTint.assistant)
+            }
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(Array(edit.ops.enumerated()), id: \.offset) { index, op in
+                    let line = AssistantNoteOpLine.make(op)
+                    VStack(alignment: .leading, spacing: 4) {
+                        AssistantEditOpRow(icon: line.icon, text: line.text, detail: line.detail, destructive: false,
+                                           result: edit.answer?.results.flatMap { index < $0.count ? $0[index] : nil },
+                                           declined: declined)
+                        if let preview = line.preview {
+                            AssistantNotePreview(preview: preview, expanded: expanded.contains(index)) {
+                                if expanded.remove(index) == nil { expanded.insert(index) }
+                            }
+                            .padding(.leading, 26)
+                            .opacity(declined ? 0.6 : 1)
+                        }
+                    }
+                }
+            }
+            .padding(.vertical, 2)
+            if open || posting {
+                HStack(spacing: 8) {
+                    Spacer(minLength: 0)
+                    Button("Don’t Apply") {
+                        store.declineNotes(edit.id)
+                    }
+                    .buttonStyle(.bordered)
+                    Button {
+                        apply()
+                    } label: {
+                        if posting {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Text("Apply")
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(ModuleTint.assistant)
+                    .accessibilityLabel(Text("Apply: \(edit.summary)"))
+                }
+                .disabled(!active)
+            }
+            if let outcome = edit.outcome {
+                AssistantEditOutcome(text: outcome, answer: edit.answer)
+            }
+        }
+        .contentCard(cornerRadius: 18, padding: 12)
+    }
+
+    private func apply() {
+        posting = true
+        Task {
+            defer { posting = false }
+            _ = await store.applyNotes(edit.id)
+        }
     }
 }
 
@@ -381,5 +739,416 @@ struct AssistantEditOpRow: View {
         .font(.callout)
         .opacity(declined || result?.isDeclined == true ? 0.6 : 1)
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// Events, tasks and deadlines the assistant found (e.g. in a scanned letter), to pick from: one
+/// row per suggestion with a tick (all ticked at first), what it is, when, and a fainter detail;
+/// **Add N** / **Don't add** while it waits. Add asks for the access to Reminders first when a
+/// task or deadline is ticked (and points to the Settings when it was refused: those can be
+/// unticked and the rest added). Once answered, each row shows how it went and the card how it
+/// ended.
+struct AssistantSuggestionsCard: View {
+    let edit: AssistantSuggestions
+    let store: AssistantChatStore
+    @State private var reminders = RemindersStore.shared
+    @State private var posting = false
+    /// Add found no access to Reminders.
+    @State private var refused = false
+
+    /// It waits for the user (the chat's last open question or edit), and whether a turn runs:
+    /// given by the chat, which works them out once for all its items, so a card isn't drawn again
+    /// with every piece of an answer being written.
+    var isOpen = false
+    var busy = false
+
+    var body: some View {
+        let open = isOpen
+        let active = open && !busy && !posting
+        let picks = store.picks(edit)
+        VStack(alignment: .leading, spacing: 8) {
+            Label {
+                Text(verbatim: edit.summary).font(.callout.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
+            } icon: {
+                Image(systemName: "doc.text.viewfinder").foregroundStyle(ModuleTint.assistant)
+            }
+            if let source = edit.source {
+                Text(verbatim: source)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                ForEach(Array(edit.ops.enumerated()), id: \.offset) { index, op in
+                    AssistantSuggestionRow(
+                        line: AssistantSuggestionLine.make(op), picked: picks.contains(index), open: open || posting,
+                        enabled: active, result: edit.answer?.results.flatMap { index < $0.count ? $0[index] : nil },
+                        declined: edit.answer?.applied == false || edit.skipped
+                    ) {
+                        store.togglePick(edit, index)
+                    }
+                }
+            }
+            if open || posting {
+                if open, edit.needsReminders(picks), refused || reminders.access == .denied
+                    || reminders.access == .restricted || reminders.access == .writeOnly {
+                    noAccess
+                }
+                HStack(spacing: 8) {
+                    Spacer(minLength: 0)
+                    Button("Don’t Add") {
+                        store.declineSuggestions(edit.id)
+                    }
+                    .buttonStyle(.bordered)
+                    Button {
+                        add(picks)
+                    } label: {
+                        if posting {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Text("Add \(picks.count)")
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(ModuleTint.assistant)
+                    .disabled(picks.isEmpty)
+                    .accessibilityLabel(Text("Add \(picks.count): \(edit.summary)"))
+                }
+                .disabled(!active)
+            }
+            if let outcome = edit.outcome {
+                AssistantEditOutcome(text: outcome, answer: edit.answer)
+            }
+        }
+        .contentCard(cornerRadius: 18, padding: 12)
+        .task(id: reminders.revision) { reminders.refreshAccess() }
+        .onChange(of: picks) { refused = false }
+    }
+
+    private var noAccess: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label(reminders.access == .restricted
+                  ? "Reminders aren’t allowed on this device."
+                  : "Ohana has no access to your reminders.",
+                  systemImage: "exclamationmark.triangle")
+                .foregroundStyle(.orange)
+            if reminders.access != .restricted, let url = RemindersStore.settingsURL {
+                Link(destination: url) {
+                    Label("Open Settings", systemImage: "gear")
+                }
+            }
+        }
+        .font(.caption)
+    }
+
+    private func add(_ picks: Set<Int>) {
+        posting = true
+        Task {
+            defer { posting = false }
+            refused = await store.applySuggestions(edit.id, selected: picks) == .noAccess
+        }
+    }
+}
+
+/// One suggestion of the card: while it waits a tap ticks or unticks it; once answered it shows
+/// how it went (added, left out: faded, failed: in orange with the error).
+struct AssistantSuggestionRow: View {
+    let line: AssistantSuggestionLine
+    let picked: Bool
+    /// It waits (or is being added): the tick shows.
+    let open: Bool
+    let enabled: Bool
+    let result: AssistantReminderResult?
+    /// None of them was added (Don't add, or a new message instead).
+    let declined: Bool
+    let toggle: () -> Void
+
+    var body: some View {
+        Group {
+            if open {
+                Button { withAnimation(.snappy) { toggle() } } label: { content }
+                    .buttonStyle(.plain)
+                    .disabled(!enabled)
+                    .accessibilityAddTraits(picked ? .isSelected : [])
+                    .accessibilityHint(Text("Ticks or unticks it"))
+            } else {
+                content
+            }
+        }
+        // Answered: the tick gives way to how it went.
+        .animation(.snappy, value: open)
+    }
+
+    private var faded: Bool { declined || result?.isDeclined == true }
+
+    private var content: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            if open {
+                Image(systemName: picked ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(picked ? ModuleTint.assistant : .secondary)
+                    .contentTransition(.symbolEffect(.replace.magic(fallback: .downUp.byLayer)))
+                    .accessibilityHidden(true)
+            }
+            Image(systemName: line.icon)
+                .foregroundStyle(.secondary)
+                .frame(width: 18)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(verbatim: line.title)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let when = line.when {
+                    Text(verbatim: when)
+                        .font(.caption)
+                }
+                if let detail = line.detail, !detail.isEmpty {
+                    Text(verbatim: detail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(3)
+                }
+                if let result, result.failed {
+                    Text(verbatim: result.error ?? "")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if let result {
+                if result.ok {
+                    Image(systemName: "checkmark")
+                        .font(.caption.bold())
+                        .foregroundStyle(.green)
+                        .accessibilityLabel(Text("Added"))
+                } else if result.failed {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .font(.caption.bold())
+                        .foregroundStyle(.orange)
+                        .accessibilityLabel(Text("Failed"))
+                } else {
+                    Text("Not added")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .font(.callout)
+        .padding(.vertical, 6)
+        .padding(.horizontal, open ? 4 : 0)
+        .frame(minHeight: open ? 44 : nil)
+        .contentShape(.rect)
+        .opacity(faded ? 0.6 : 1)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// How a Reminders or calendar edit ended: applied (some ops failed: in orange), not applied, not
+/// answered.
+struct AssistantEditOutcome: View {
+    let text: String
+    let answer: AssistantRemindersEdit.Answer?
+
+    var body: some View {
+        let applied = answer?.applied == true
+        let failed = (answer?.failures ?? 0) > 0
+        Label {
+            Text(verbatim: text)
+        } icon: {
+            if applied {
+                Image(systemName: failed ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                    .foregroundStyle(failed ? Color.orange : .green)
+                    .transition(.symbolEffect(.appear))
+            } else if answer != nil {
+                Image(systemName: "xmark.circle")
+                    .transition(.symbolEffect(.appear))
+            }
+        }
+        .animation(.snappy, value: answer?.applied)
+        .font(.caption)
+        .foregroundStyle(.secondary)
+    }
+}
+
+/// A message that waits for the answer to end (it goes next); it can be taken back until then.
+struct AssistantQueuedRow: View {
+    let entry: AssistantQueued
+    let store: AssistantChatStore
+
+    var body: some View {
+        VStack(alignment: .trailing, spacing: 4) {
+            AssistantUserBubble(
+                text: entry.text,
+                attachments: (entry.attachments ?? []).map { .init(kind: $0.kind, name: $0.name) },
+                queued: true
+            )
+            HStack(spacing: 6) {
+                Label("Queued", systemImage: "clock")
+                if entry.isLocal {
+                    ProgressView().controlSize(.mini)
+                } else {
+                    Button {
+                        Task { await store.unqueue(entry.id) }
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            // A finger-sized target around the small icon, without growing the row.
+                            .padding(12)
+                            .contentShape(.rect)
+                            .padding(-12)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text("Take back this message"))
+                    .help(Text("Take back this message"))
+                }
+            }
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// What the assistant is doing right now, under the chat while it answers: the sparkles, gently
+/// pulsing on iOS (still under Reduce Motion, and always on the Mac), and the status, cross-fading
+/// as it changes. The only thing in the chat that moves on its own; nothing ticks: "Writing…" turns
+/// into "Thinking…" after a pause by a task that waits for that moment.
+struct AssistantActivityLine: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let store: AssistantChatStore
+
+    /// After this long without a new piece of text, the model is busy with its next step.
+    private static let writingPause: TimeInterval = 2
+
+    /// The piece of text (its time) the pause came after.
+    @State private var pausedAfter: Date?
+
+    var body: some View {
+        let a = store.activity
+        let status = text(a)
+        HStack(spacing: 8) {
+            Image(systemName: "sparkles")
+                .foregroundStyle(ModuleTint.assistant)
+                // Not on the Mac: there the repeating pulse drew a frame after frame that waited
+                // for the window server (for good while the window was covered), and the main
+                // actor's tasks never got their turn: the chat's stream didn't end, it showed
+                // "Thinking…" for good and nothing more could be sent.
+                #if os(iOS)
+                .symbolEffect(.pulse, options: .repeating, isActive: !reduceMotion)
+                #endif
+                .accessibilityHidden(true)
+            Text(verbatim: status)
+                .lineLimit(1)
+                .contentTransition(.opacity)
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: status)
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 4)
+        .task(id: a?.at) {
+            guard let a, a.activity.kind == "writing" else { return }
+            let left = a.at.addingTimeInterval(Self.writingPause).timeIntervalSinceNow
+            if left > 0 { try? await Task.sleep(for: .seconds(left)) }
+            guard !Task.isCancelled else { return }
+            pausedAfter = a.at
+        }
+    }
+
+    private func text(_ a: AssistantActivityState?) -> String {
+        guard let a else { return String(localized: "Thinking…") }
+        let running = (store.current?.items ?? []).compactMap { item -> AssistantToolCall? in
+            if case let .tool(t) = item, t.status == "running" { t } else { nil }
+        }
+        switch a.activity.kind {
+        case "retrying":
+            let n = a.activity.attempt ?? 1, max = a.activity.max ?? 1
+            return String(localized: "The model didn’t answer – trying again (\(n)/\(max))…")
+        case "compacting":
+            return String(localized: "Condensing the earlier conversation…")
+        case "tool" where !running.isEmpty:
+            let more = running.count > 1 ? " (+\(running.count - 1))" : ""
+            return AssistantToolLabels.label(running[running.count - 1]) + more + "…"
+        case "writing" where pausedAfter != a.at:
+            return String(localized: "Writing…")
+        default:
+            return String(localized: "Thinking…")
+        }
+    }
+}
+
+/// How much of the model's context window the open chat uses; the worker condenses the older
+/// messages before it is full. The composer shows it only once that is near (`shows`, in orange).
+struct AssistantContextMeter: View {
+    let usage: AssistantUsage
+
+    /// From this share of the window on, the meter shows (orange).
+    static let warning = 70
+
+    static func percent(_ usage: AssistantUsage) -> Int {
+        Int((min(1, usage.used / Swift.max(usage.max, 1)) * 100).rounded())
+    }
+
+    static func shows(_ usage: AssistantUsage) -> Bool {
+        usage.max > 0 && percent(usage) >= warning
+    }
+
+    var body: some View {
+        let fraction = min(1, usage.used / Swift.max(usage.max, 1))
+        let pct = Self.percent(usage)
+        let used = usage.used.formatted(.number.notation(.compactName).precision(.fractionLength(0...1)))
+        let max = usage.max.formatted(.number.notation(.compactName).precision(.fractionLength(0...1)))
+        HStack(spacing: 8) {
+            ProgressView(value: fraction)
+                .tint(pct >= Self.warning ? .orange : ModuleTint.assistant)
+                .frame(minWidth: 40)
+            Text("Context: \(used) of \(max) tokens (\(pct)%)")
+                .monospacedDigit()
+                .fixedSize()
+        }
+        .font(.caption2)
+        .foregroundStyle(.secondary)
+        .help(Text("How much of the model’s context window this chat uses. Before it is full, older messages are condensed into a summary, so long tasks can go on."))
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// Lays out chips in rows (attachments).
+struct AssistantFlow: Layout {
+    var spacing: CGFloat = 6
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let rows = arrange(width: proposal.width ?? .infinity, subviews: subviews)
+        let width = rows.map { $0.width }.max() ?? 0
+        let height = rows.reduce(0) { $0 + $1.height } + spacing * CGFloat(max(0, rows.count - 1))
+        return CGSize(width: width, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var y = bounds.minY
+        for row in arrange(width: bounds.width, subviews: subviews) {
+            var x = bounds.maxX - row.width
+            for index in row.indices {
+                let size = subviews[index].sizeThatFits(.unspecified)
+                subviews[index].place(at: CGPoint(x: x, y: y), proposal: .unspecified)
+                x += size.width + spacing
+            }
+            y += row.height + spacing
+        }
+    }
+
+    private struct Row { var indices: [Int] = []; var width: CGFloat = 0; var height: CGFloat = 0 }
+
+    private func arrange(width: CGFloat, subviews: Subviews) -> [Row] {
+        var rows: [Row] = [Row()]
+        for (index, view) in subviews.enumerated() {
+            let size = view.sizeThatFits(.unspecified)
+            let extra = rows[rows.count - 1].indices.isEmpty ? size.width : rows[rows.count - 1].width + spacing + size.width
+            if extra > width, !rows[rows.count - 1].indices.isEmpty {
+                rows.append(Row())
+            }
+            var row = rows[rows.count - 1]
+            row.width = row.indices.isEmpty ? size.width : row.width + spacing + size.width
+            row.height = max(row.height, size.height)
+            row.indices.append(index)
+            rows[rows.count - 1] = row
+        }
+        return rows.filter { !$0.indices.isEmpty }
     }
 }
