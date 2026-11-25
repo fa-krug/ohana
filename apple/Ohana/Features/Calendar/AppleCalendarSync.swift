@@ -24,8 +24,8 @@ private struct AppleImportBody: Encodable {
 
     func encode(to encoder: any Encoder) throws {
         try input.encode(to: encoder)
-        var values = encoder.container(keyedBy: CodingKeys.self)
-        try values.encode(externalId, forKey: .externalId)
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(externalId, forKey: .externalId)
     }
 }
 
@@ -203,9 +203,7 @@ final class AppleCalendarSync {
     func error(_ api: FamilyAPI) -> String? { Self.key(api).flatMap { errors[$0] } }
     func heldBack(_ api: FamilyAPI) -> Int { Self.key(api).flatMap { heldBack[$0] } ?? 0 }
     func isRunning(_ api: FamilyAPI) -> Bool { Self.key(api).map { running.contains($0) } ?? false }
-}
 
-extension AppleCalendarSync {
     // MARK: When it runs
 
     /// Every family this device syncs, shortly (several reasons at once run once).
@@ -283,79 +281,39 @@ extension AppleCalendarSync {
         var again = false
     }
 
-    /// What one pass writes and keeps while its steps run: the plan's links and entries, what its
-    /// steps add to them, and what they couldn't do. A class, so its steps can add to it as they go.
-    private final class Writing {
-        let context: FamilyContext
-        let calendar: EKCalendar
-        /// The Apple events read for this pass, with their masters.
-        let events: AppleEvents
-        let family: String
-        /// The steps the planner made, in their order.
-        let steps: [AppleSyncStep]
-        /// The links this pass starts from, by Ohana event: a step that fails keeps them.
-        let previous: [String: AppleSyncLink]
-        /// The Ohana events that had a link when the plan was made.
-        let linked: Set<String>
-        var pass: Pass
-        var links: [AppleSyncLink]
-        var entryIDs: [String]
-        /// Occurrences whose step failed: their last state stays, so they are tried again.
-        var failedDays: [String: Set<Day>] = [:]
-
-        init(context: FamilyContext, calendar: EKCalendar, events: AppleEvents, family: String,
-             plan: AppleSyncPlan, state: AppleCalendarSyncState) {
-            self.context = context
-            self.calendar = calendar
-            self.events = events
-            self.family = family
-            steps = plan.steps
-            links = plan.keep
-            entryIDs = plan.keepEntries
-            pass = Pass(heldBack: plan.heldBack, again: plan.needsAnotherPass)
-            previous = Dictionary(state.links.map { ($0.ohanaID, $0) }, uniquingKeysWith: { first, _ in first })
-            linked = Set(plan.keep.map(\.ohanaID))
-        }
-    }
-
-    /// What Ohana has for one pass: the events as the planner wants them and, when the family syncs
-    /// its day entries too, the runs of entry types.
-    private func readOhana(_ context: FamilyContext, state: AppleCalendarSyncState, window: ClosedRange<Day>)
-        async throws -> (ohana: [OhanaSyncItem], spans: [AppleSyncSpan]?, reach: ClosedRange<Day>) {
-        let reach = Self.reach(window)
-        // Ohana: every event as stored, the occurrences around the window, the entries.
-        let series: CalendarEventSeriesResponse = try await context.api.get("/events", query: ["raw": "1"])
-        let listed: CalendarEventsResponse = try await context.api.get(
-            "/events", query: ["from": reach.lowerBound.description, "to": reach.upperBound.description])
-        let ohana = Self.items(series.events, occurrences: listed.events, window: window, reach: reach)
-        guard state.entries else { return (ohana, nil, reach) }
-        var types: [Int: [CalendarEntryType]] = [:]
-        var entries: [Day: [String]] = [:]
-        var members: [String: String] = [:]
-        for year in window.lowerBound.year...window.upperBound.year {
-            let calendarYear: CalendarState = try await context.api.get("", query: ["year": String(year)])
-            types[year] = calendarYear.types
-            for (day, ids) in calendarYear.entries { if let day = Day(day), day.year == year { entries[day] = ids } }
-            for member in calendarYear.members ?? [] { members[member.id] = member.name }
-        }
-        return (ohana, AppleSyncMapping.spans(entries: entries, types: types, members: members, window: window), reach)
-    }
-
     /// One sync: reads both sides, plans, does it, keeps the links.
     private func syncPass(_ context: FamilyContext, calendar: EKCalendar, key: String) async throws -> Pass {
         guard let state = state(for: context.api) else { return Pass() }
         let family = context.family.id
         let window = Self.window()
-        let reading = try await readOhana(context, state: state, window: window)
+        let reach = Self.reach(window)
+
+        // Ohana: every event as stored, the occurrences around the window, the entries.
+        let series: CalendarEventSeriesResponse = try await context.api.get("/events", query: ["raw": "1"])
+        let listed: CalendarEventsResponse = try await context.api.get(
+            "/events", query: ["from": reach.lowerBound.description, "to": reach.upperBound.description])
+        let ohana = Self.items(series.events, occurrences: listed.events, window: window, reach: reach)
+        var spans: [AppleSyncSpan]?
+        if state.entries {
+            var types: [Int: [CalendarEntryType]] = [:]
+            var entries: [Day: [String]] = [:]
+            var members: [String: String] = [:]
+            for year in window.lowerBound.year...window.upperBound.year {
+                let calendarYear: CalendarState = try await context.api.get("", query: ["year": String(year)])
+                types[year] = calendarYear.types
+                for (day, ids) in calendarYear.entries { if let day = Day(day), day.year == year { entries[day] = ids } }
+                for member in calendarYear.members ?? [] { members[member.id] = member.name }
+            }
+            spans = AppleSyncMapping.spans(entries: entries, types: types, members: members, window: window)
+        }
         guard self.state(for: context.api)?.calendarID == state.calendarID else { return Pass() } // stopped meanwhile
 
         // Apple: the events around the window, a series by its first occurrence.
         var events = AppleEvents()
-        let fetched = fetch(calendar, range: reading.reach)
-        let apple = Self.appleItems(fetched, window: window, events: &events) { self.master($0) }
+        let apple = Self.appleItems(fetch(calendar, range: reach), window: window, events: &events) { self.master($0) }
         let plan = AppleSyncPlanner.plan(
-            family: family, ohana: reading.ohana, apple: apple, window: window, links: state.links,
-            canEdit: context.canEdit, spans: reading.spans, entryIDs: Set(state.entryIDs)
+            family: family, ohana: ohana, apple: apple, window: window, links: state.links,
+            canEdit: context.canEdit, spans: spans, entryIDs: Set(state.entryIDs)
         ) { link in
             guard let event = self.master(link.appleID) ?? self.master(byKey: link.appleKey, in: calendar),
                   event.calendar?.calendarIdentifier == calendar.calendarIdentifier else { return .gone }
@@ -365,172 +323,118 @@ extension AppleCalendarSync {
                                          fields: snapshot.fields, inWindow: false))
         }
 
-        let writing = Writing(context: context, calendar: calendar, events: events, family: family,
-                              plan: plan, state: state)
-        await applySteps(writing)
-        keepFailedOccurrences(writing)
-
+        var pass = Pass(heldBack: plan.heldBack, again: plan.needsAnotherPass)
+        var links = plan.keep
+        var entryIDs = plan.keepEntries
+        let previous = Dictionary(state.links.map { ($0.ohanaID, $0) }, uniquingKeysWith: { a, _ in a })
+        let linked = Set(links.map(\.ohanaID))
+        /// Occurrences whose step failed: their last state stays, so they are tried again.
+        var failedDays: [String: Set<Day>] = [:]
+        for step in plan.steps {
+            do {
+                switch step {
+                case let .createApple(o):
+                    let event = EKEvent(eventStore: store)
+                    event.calendar = calendar
+                    Self.write(o.fields, to: event, isNew: true, rule: true)
+                    event.url = AppleSyncMark.url(family: family, day: o.fields.date, .event(o.id))
+                    try store.save(event, span: .thisEvent, commit: true)
+                    links.append(Self.link(o.id, o.fields, event))
+                case let .updateApple(o, appleID):
+                    guard let event = events.masters[appleID] else { continue }
+                    let span: EKSpan = event.hasRecurrenceRules || o.fields.rrule != nil ? .futureEvents : .thisEvent
+                    Self.write(o.fields, to: event, isNew: false, rule: true)
+                    if AppleSyncMark(event.url, family: family) != nil {
+                        event.url = AppleSyncMark.url(family: family, day: o.fields.date, .event(o.id))
+                    }
+                    try store.save(event, span: span, commit: true)
+                    links.append(Self.link(o.id, o.fields, event, exceptions: Self.kept(previous[o.id], rule: o.fields.rrule)))
+                case let .link(o, a, exceptions):
+                    links.append(AppleSyncLink(ohanaID: o.id, appleID: a.localID, appleKey: a.key, ohana: o.fields,
+                                               apple: a.fields, exceptions: exceptions))
+                case let .createOhana(a):
+                    let fields = AppleSyncMapping.ohana(a.fields, url: a.url, current: nil)
+                    let o: CalendarEventSeries = try await context.api.send(
+                        .post, "/events", body: AppleImportBody(input: fields.input, externalId: a.key))
+                    pass.changedOhana = true
+                    guard !linked.contains(o.id), !links.contains(where: { $0.ohanaID == o.id }) else { continue }
+                    links.append(AppleSyncLink(ohanaID: o.id, appleID: a.localID, appleKey: a.key,
+                                               ohana: OhanaSyncFields(o), apple: a.fields))
+                case let .updateOhana(id, fields, a):
+                    let o: CalendarEventSeries = try await context.api.send(.patch, "/events/\(id)", body: fields.input)
+                    pass.changedOhana = true
+                    links.append(AppleSyncLink(ohanaID: o.id, appleID: a.localID, appleKey: a.key, ohana: OhanaSyncFields(o),
+                                               apple: a.fields, exceptions: Self.kept(previous[id], rule: fields.rrule)))
+                case let .deleteApple(appleID):
+                    if let event = events.masters[appleID] { try store.remove(event, span: .futureEvents, commit: true) }
+                case let .deleteOhana(id):
+                    do {
+                        try await context.api.perform(.delete, "/events/\(id)")
+                    } catch let error as APIError where error.status == 404 {}
+                    pass.changedOhana = true
+                case let .updateAppleOccurrence(appleID, day, fields, ohanaID):
+                    guard let event = events.occurrences[AppleEvents.occurrenceKey(appleID, day)] else {
+                        failedDays[ohanaID, default: []].insert(day)
+                        continue
+                    }
+                    Self.write(fields, to: event, isNew: false, rule: false)
+                    try store.save(event, span: .thisEvent, commit: true)
+                case let .deleteAppleOccurrence(appleID, day, _):
+                    if let event = events.occurrences[AppleEvents.occurrenceKey(appleID, day)] {
+                        try store.remove(event, span: .thisEvent, commit: true)
+                    }
+                case let .updateOhanaOccurrence(id, day, fields):
+                    let _: CalendarEventSeries = try await context.api.send(
+                        .patch, "/events/\(id)", query: Self.occurrenceQuery(day), body: fields.input)
+                    pass.changedOhana = true
+                case let .deleteOhanaOccurrence(id, day):
+                    do {
+                        let _: JSONValue = try await context.api.send(.delete, "/events/\(id)", query: Self.occurrenceQuery(day))
+                    } catch let error as APIError where error.status == 404 {}
+                    pass.changedOhana = true
+                case let .createEntry(span):
+                    let event = EKEvent(eventStore: store)
+                    event.calendar = calendar
+                    event.title = span.title
+                    event.isAllDay = true
+                    event.startDate = Day.calendar.startOfDay(for: span.first.date)
+                    // Noon of the last day: read back as that day however the account stores the end.
+                    event.endDate = span.last.date
+                    event.url = AppleSyncMark.url(family: family, day: span.first, .entry(span.typeID))
+                    try store.save(event, span: .thisEvent, commit: true)
+                    entryIDs.append(event.calendarItemIdentifier)
+                case let .deleteEntry(appleID):
+                    if let event = events.masters[appleID] { try store.remove(event, span: .futureEvents, commit: true) }
+                }
+            } catch {
+                pass.failed = error
+                switch step {
+                case let .updateAppleOccurrence(_, day, _, ohanaID), let .deleteAppleOccurrence(_, day, ohanaID):
+                    failedDays[ohanaID, default: []].insert(day)
+                case let .updateOhanaOccurrence(id, day, _), let .deleteOhanaOccurrence(id, day):
+                    failedDays[id, default: []].insert(day)
+                case let .updateApple(o, _), let .link(o, _, _):
+                    // A link that couldn't be brought up to date stays as it was: tried again next time.
+                    if let link = previous[o.id], !links.contains(where: { $0.ohanaID == o.id }) { links.append(link) }
+                case let .updateOhana(id, _, _):
+                    if let link = previous[id], !links.contains(where: { $0.ohanaID == id }) { links.append(link) }
+                default:
+                    break
+                }
+            }
+        }
+        for (id, days) in failedDays {
+            guard let i = links.firstIndex(where: { $0.ohanaID == id }) else { continue }
+            for day in days { links[i].exceptions[day] = previous[id]?.exceptions[day] }
+        }
         // Stopped or moved to another calendar meanwhile: this sync's links are of no use. Settings
         // changed meanwhile stay.
-        guard var current = self.state(for: context.api), current.calendarID == state.calendarID else {
-            return writing.pass
-        }
-        current.links = writing.links
-        current.entryIDs = writing.entryIDs
+        guard var current = self.state(for: context.api), current.calendarID == state.calendarID else { return pass }
+        current.links = links
+        current.entryIDs = entryIDs
         current.lastSync = Date()
         save(current, key: key)
-        return writing.pass
-    }
-
-    // MARK: Doing the steps of a plan
-
-    /// The steps one after another; what a step writes and keeps goes into `writing`.
-    private func applySteps(_ writing: Writing) async {
-        for step in writing.steps {
-            do {
-                try applyAppleStep(step, writing)
-                try applyEntryStep(step, writing)
-                try await applyOhanaStep(step, writing)
-            } catch {
-                keepWhatFailed(step, error: error, writing)
-            }
-        }
-    }
-
-    /// The steps that write on the Apple side; the other steps are for the passes below.
-    private func applyAppleStep(_ step: AppleSyncStep, _ writing: Writing) throws {
-        switch step {
-        case let .createApple(item):
-            let event = EKEvent(eventStore: store)
-            event.calendar = writing.calendar
-            Self.write(item.fields, to: event, isNew: true, rule: true)
-            event.url = AppleSyncMark.url(family: writing.family, day: item.fields.date, .event(item.id))
-            try store.save(event, span: .thisEvent, commit: true)
-            writing.links.append(Self.link(item.id, item.fields, event))
-        case let .updateApple(item, appleID):
-            try updateOnApple(item, appleID: appleID, writing)
-        case let .link(item, apple, exceptions):
-            writing.links.append(AppleSyncLink(ohanaID: item.id, appleID: apple.localID, appleKey: apple.key,
-                                               ohana: item.fields, apple: apple.fields, exceptions: exceptions))
-        case let .deleteApple(appleID):
-            if let event = writing.events.masters[appleID] {
-                try store.remove(event, span: .futureEvents, commit: true)
-            }
-        default:
-            break
-        }
-    }
-
-    /// An Ohana event written into its Apple event: as a series when it or the Apple event has a rule.
-    private func updateOnApple(_ item: OhanaSyncItem, appleID: String, _ writing: Writing) throws {
-        guard let event = writing.events.masters[appleID] else { return }
-        let span: EKSpan = event.hasRecurrenceRules || item.fields.rrule != nil ? .futureEvents : .thisEvent
-        Self.write(item.fields, to: event, isNew: false, rule: true)
-        if AppleSyncMark(event.url, family: writing.family) != nil {
-            event.url = AppleSyncMark.url(family: writing.family, day: item.fields.date, .event(item.id))
-        }
-        try store.save(event, span: span, commit: true)
-        let kept = Self.kept(writing.previous[item.id], rule: item.fields.rrule)
-        writing.links.append(Self.link(item.id, item.fields, event, exceptions: kept))
-    }
-
-    /// The steps that write a day entry as an all-day event, or take it out again.
-    private func applyEntryStep(_ step: AppleSyncStep, _ writing: Writing) throws {
-        switch step {
-        case let .createEntry(entry):
-            let event = EKEvent(eventStore: store)
-            event.calendar = writing.calendar
-            event.title = entry.title
-            event.isAllDay = true
-            event.startDate = Day.calendar.startOfDay(for: entry.first.date)
-            // Noon of the last day: read back as that day however the account stores the end.
-            event.endDate = entry.last.date
-            event.url = AppleSyncMark.url(family: writing.family, day: entry.first, .entry(entry.typeID))
-            try store.save(event, span: .thisEvent, commit: true)
-            writing.entryIDs.append(event.calendarItemIdentifier)
-        case let .deleteEntry(appleID):
-            if let event = writing.events.masters[appleID] {
-                try store.remove(event, span: .futureEvents, commit: true)
-            }
-        default:
-            break
-        }
-    }
-
-    /// The steps that write in Ohana.
-    private func applyOhanaStep(_ step: AppleSyncStep, _ writing: Writing) async throws {
-        switch step {
-        case let .createOhana(apple):
-            try await importToOhana(apple, writing)
-        case let .updateOhana(id, fields, apple):
-            let updated: CalendarEventSeries = try await writing.context.api.send(
-                .patch, "/events/\(id)", body: fields.input)
-            writing.pass.changedOhana = true
-            let kept = Self.kept(writing.previous[id], rule: fields.rrule)
-            writing.links.append(AppleSyncLink(ohanaID: updated.id, appleID: apple.localID, appleKey: apple.key,
-                                               ohana: OhanaSyncFields(updated), apple: apple.fields, exceptions: kept))
-        case let .deleteOhana(id):
-            do {
-                try await writing.context.api.perform(.delete, "/events/\(id)")
-            } catch let apiError as APIError where apiError.status == 404 {}
-            writing.pass.changedOhana = true
-        case let .updateOhanaOccurrence(id, day, fields):
-            let _: CalendarEventSeries = try await writing.context.api.send(
-                .patch, "/events/\(id)", query: Self.occurrenceQuery(day), body: fields.input)
-            writing.pass.changedOhana = true
-        case let .deleteOhanaOccurrence(id, day):
-            do {
-                let _: JSONValue = try await writing.context.api.send(
-                    .delete, "/events/\(id)", query: Self.occurrenceQuery(day))
-            } catch let apiError as APIError where apiError.status == 404 {}
-            writing.pass.changedOhana = true
-        default:
-            break
-        }
-    }
-
-    /// An Apple event brought into Ohana; its link stays only when the event isn't linked twice.
-    private func importToOhana(_ apple: AppleSyncEvent, _ writing: Writing) async throws {
-        let fields = AppleSyncMapping.ohana(apple.fields, url: apple.url, current: nil)
-        let created: CalendarEventSeries = try await writing.context.api.send(
-            .post, "/events", body: AppleImportBody(input: fields.input, externalId: apple.key))
-        writing.pass.changedOhana = true
-        let alreadyLinked = writing.links.contains(where: { $0.ohanaID == created.id })
-        guard !writing.linked.contains(created.id), !alreadyLinked else { return }
-        writing.links.append(AppleSyncLink(ohanaID: created.id, appleID: apple.localID, appleKey: apple.key,
-                                           ohana: OhanaSyncFields(created), apple: apple.fields))
-    }
-
-    /// A step that failed: what it would have written stays as it was, so it is tried again.
-    private func keepWhatFailed(_ step: AppleSyncStep, error: any Error, _ writing: Writing) {
-        writing.pass.failed = error
-        switch step {
-        case let .updateAppleOccurrence(_, day, _, ohanaID), let .deleteAppleOccurrence(_, day, ohanaID):
-            writing.failedDays[ohanaID, default: []].insert(day)
-        case let .updateOhanaOccurrence(id, day, _), let .deleteOhanaOccurrence(id, day):
-            writing.failedDays[id, default: []].insert(day)
-        case let .updateApple(item, _), let .link(item, _, _):
-            keepLink(of: item.id, writing)
-        case let .updateOhana(id, _, _):
-            keepLink(of: id, writing)
-        default:
-            break
-        }
-    }
-
-    /// The link an Ohana event had before this pass, unless the pass made a new one for it.
-    private func keepLink(of id: String, _ writing: Writing) {
-        // A link that couldn't be brought up to date stays as it was: tried again next time.
-        guard let link = writing.previous[id], !writing.links.contains(where: { $0.ohanaID == id }) else { return }
-        writing.links.append(link)
-    }
-
-    /// The occurrences whose step failed: their last state stays, so they are tried again.
-    private func keepFailedOccurrences(_ writing: Writing) {
-        for (id, days) in writing.failedDays {
-            guard let index = writing.links.firstIndex(where: { $0.ohanaID == id }) else { continue }
-            for day in days { writing.links[index].exceptions[day] = writing.previous[id]?.exceptions[day] }
-        }
+        return pass
     }
 
     /// A link's occurrences after its series changed as a whole: kept while the rule stays.
@@ -561,9 +465,9 @@ extension AppleCalendarSync {
 
     private static func link(_ id: String, _ fields: OhanaSyncFields, _ event: EKEvent,
                              exceptions: [Day: AppleSyncException] = [:]) -> AppleSyncLink {
-        let apple = Self.event(event)
-        return AppleSyncLink(ohanaID: id, appleID: apple.localID, appleKey: apple.key, ohana: fields,
-                             apple: apple.fields, exceptions: exceptions)
+        let a = Self.event(event)
+        return AppleSyncLink(ohanaID: id, appleID: a.localID, appleKey: a.key, ohana: fields, apple: a.fields,
+                             exceptions: exceptions)
     }
 
     // MARK: Ohana ↔ the planner
@@ -573,34 +477,29 @@ extension AppleCalendarSync {
     static func items(_ series: [CalendarEventSeries], occurrences: [CalendarEvent], window: ClosedRange<Day>,
                       reach: ClosedRange<Day>) -> [OhanaSyncItem] {
         let byID = Dictionary(grouping: occurrences, by: \.id)
-        return series.map { seriesItem in
-            let listed = byID[seriesItem.id] ?? []
+        return series.map { s in
+            let listed = byID[s.id] ?? []
             var item = OhanaSyncItem(
-                id: seriesItem.id, externalId: seriesItem.externalId, fields: OhanaSyncFields(seriesItem),
+                id: s.id, externalId: s.externalId, fields: OhanaSyncFields(s),
                 inWindow: listed.contains { $0.date <= window.upperBound && $0.endDate >= window.lowerBound }
-                    || (seriesItem.date <= window.upperBound && seriesItem.endDate >= window.lowerBound)
+                    || (s.date <= window.upperBound && s.endDate >= window.lowerBound)
             )
-            guard seriesItem.repeats else { return item }
-            let overrides = Dictionary(seriesItem.overrides.map { ($0.occurrence, $0) },
-                                       uniquingKeysWith: { first, _ in first })
-            for found in listed {
-                guard let day = found.occurrence else { continue }
-                let fields = OhanaSyncFields(occurrence: found)
+            guard s.repeats else { return item }
+            let overrides = Dictionary(s.overrides.map { ($0.occurrence, $0) }, uniquingKeysWith: { a, _ in a })
+            for e in listed {
+                guard let day = e.occurrence else { continue }
+                let fields = OhanaSyncFields(occurrence: e)
                 item.occurrenceFields[day] = fields
                 item.occurrences[day] = overrides[day] == nil ? .normal : .changed(fields)
             }
             // Changed ones moved far away still count on their own day.
-            for override in seriesItem.overrides
-            where reach.contains(override.occurrence) && item.occurrences[override.occurrence] == nil {
-                let fields = OhanaSyncFields(
-                    date: override.date, endDate: override.endDate, start: override.start, end: override.end,
-                    title: override.title, location: override.location, person: override.person,
-                    note: override.note, url: override.url
-                )
-                item.occurrenceFields[override.occurrence] = fields
-                item.occurrences[override.occurrence] = .changed(fields)
+            for o in s.overrides where reach.contains(o.occurrence) && item.occurrences[o.occurrence] == nil {
+                let fields = OhanaSyncFields(date: o.date, endDate: o.endDate, start: o.start, end: o.end, title: o.title,
+                                             location: o.location, person: o.person, note: o.note, url: o.url)
+                item.occurrenceFields[o.occurrence] = fields
+                item.occurrences[o.occurrence] = .changed(fields)
             }
-            for day in seriesItem.exdates where reach.contains(day) { item.occurrences[day] = .deleted }
+            for day in s.exdates where reach.contains(day) { item.occurrences[day] = .deleted }
             return item
         }
     }
@@ -622,34 +521,33 @@ extension AppleCalendarSync {
                                    master: (String) -> EKEvent?) -> [AppleSyncEvent] {
         var order: [String] = []
         var groups: [String: [EKEvent]] = [:]
-        for found in fetched {
-            let id = found.calendarItemIdentifier
+        for e in fetched {
+            let id = e.calendarItemIdentifier
             if groups[id] == nil { order.append(id) }
-            groups[id, default: []].append(found)
+            groups[id, default: []].append(e)
         }
         return order.compactMap { id in
             let list = groups[id]!
-            let inWindow = list.contains { found in
-                let fields = event(found).fields
-                return fields.day <= window.upperBound && fields.lastDay >= window.lowerBound
+            let inWindow = list.contains { e in
+                let a = event(e).fields
+                return a.day <= window.upperBound && a.lastDay >= window.lowerBound
             }
             guard list.contains(where: { $0.hasRecurrenceRules || $0.isDetached }) else {
                 events.masters[id] = list[0]
-                let snapshot = event(list[0])
-                return AppleSyncEvent(localID: snapshot.localID, key: snapshot.key, url: list[0].url,
-                                      fields: snapshot.fields, inWindow: inWindow)
+                let a = event(list[0])
+                return AppleSyncEvent(localID: a.localID, key: a.key, url: list[0].url, fields: a.fields, inWindow: inWindow)
             }
             guard let first = master(id) else { return nil }
             events.masters[id] = first
             var occurrences: [Day: AppleOccurrence] = [:]
-            for found in list {
-                let day = Day(found.occurrenceDate ?? found.startDate)
-                events.occurrences[AppleEvents.occurrenceKey(id, day)] = found
-                occurrences[day] = found.isDetached ? .changed(fields(found, rule: false)) : .normal
+            for e in list {
+                let day = Day(e.occurrenceDate ?? e.startDate)
+                events.occurrences[AppleEvents.occurrenceKey(id, day)] = e
+                occurrences[day] = e.isDetached ? .changed(fields(e, rule: false)) : .normal
             }
-            let snapshot = event(first)
-            return AppleSyncEvent(localID: snapshot.localID, key: snapshot.key, url: first.url,
-                                  fields: snapshot.fields, inWindow: inWindow, occurrences: occurrences)
+            let a = event(first)
+            return AppleSyncEvent(localID: a.localID, key: a.key, url: first.url, fields: a.fields, inWindow: inWindow,
+                                  occurrences: occurrences)
         }
     }
 
@@ -683,63 +581,46 @@ extension AppleCalendarSync {
     }
 
     /// Writes Ohana's event into the Apple event: the days and times, the texts and (`rule`, a series
-    /// or a single event as a whole) the rule.
-    static func write(_ ohana: OhanaSyncFields, to event: EKEvent, isNew: Bool, rule: Bool) {
-        writeTexts(ohana, to: event, isNew: isNew)
-        writeDays(ohana, to: event, isNew: isNew)
-        if rule {
-            event.recurrenceRules = ohana.rrule.flatMap(RepeatRule.init).map { [$0.ekRule] }
-        }
-    }
-
-    /// The texts of an event: one that only reads the same as Ohana's keeps what Apple has (a long
-    /// note isn't cut).
-    private static func writeTexts(_ ohana: OhanaSyncFields, to event: EKEvent, isNew: Bool) {
-        let apple = AppleSyncMapping.apple(ohana)
+    /// or a single event as a whole) the rule. A timed event without an end keeps its length; a text
+    /// that only reads the same as Ohana keeps it stays as Apple has it (a long note isn't cut).
+    static func write(_ o: OhanaSyncFields, to event: EKEvent, isNew: Bool, rule: Bool) {
+        let a = AppleSyncMapping.apple(o)
         let same = isNew ? (title: false, location: false, notes: false)
-            : AppleSyncMapping.unchangedTexts(ohana, over: fields(event, rule: false))
-        if !same.title { event.title = apple.title }
-        if !same.location { event.location = apple.location.isEmpty ? nil : apple.location }
-        if !same.notes { event.notes = apple.notes.isEmpty ? nil : apple.notes }
-    }
-
-    /// The days and times of an event: a timed one keeps its length, an all-day one ends at noon of
-    /// its last day.
-    private static func writeDays(_ ohana: OhanaSyncFields, to event: EKEvent, isNew: Bool) {
+            : AppleSyncMapping.unchangedTexts(o, over: fields(event, rule: false))
+        if !same.title { event.title = a.title }
+        if !same.location { event.location = a.location.isEmpty ? nil : a.location }
+        if !same.notes { event.notes = a.notes.isEmpty ? nil : a.notes }
         let calendar = Day.calendar
-        let midnight = calendar.startOfDay(for: ohana.date.date)
+        let midnight = calendar.startOfDay(for: o.date.date)
         let oldStart: Date? = isNew ? nil : event.startDate
         let oldEnd: Date? = isNew ? nil : event.endDate
-        let wasAllDay = event.isAllDay
-        guard let start = ohana.start, let begin = date(start, on: midnight) else {
+        if let start = o.start, let begin = date(start, on: midnight) {
+            let lastMidnight = calendar.startOfDay(for: o.endDate.date)
+            var length: TimeInterval = 3600
+            if !event.isAllDay, let oldStart, let oldEnd, oldEnd > oldStart { length = oldEnd.timeIntervalSince(oldStart) }
+            event.isAllDay = false
+            event.startDate = begin
+            if let end = o.end.flatMap({ date($0, on: lastMidnight) }) {
+                event.endDate = max(end, begin)
+            } else if o.endDate > o.date {
+                event.endDate = calendar.startOfDay(for: o.endDate.adding(days: 1).date)
+            } else {
+                event.endDate = begin.addingTimeInterval(length)
+            }
+        } else {
             event.isAllDay = true
             event.startDate = midnight
             // Noon of the last day: read back as that day however the account stores the end.
-            event.endDate = ohana.endDate.date
-            return
+            event.endDate = o.endDate.date
         }
-        event.isAllDay = false
-        event.startDate = begin
-        event.endDate = endDate(ohana, begin: begin, lastMidnight: calendar.startOfDay(for: ohana.endDate.date),
-                                wasAllDay: wasAllDay, oldStart: oldStart, oldEnd: oldEnd)
-    }
-
-    /// When a timed event ends: the time Ohana gives, the end of its last day when it runs over more
-    /// than one day, or the length it had.
-    private static func endDate(_ ohana: OhanaSyncFields, begin: Date, lastMidnight: Date, wasAllDay: Bool,
-                                oldStart: Date?, oldEnd: Date?) -> Date {
-        if let end = ohana.end.flatMap({ date($0, on: lastMidnight) }) { return max(end, begin) }
-        guard ohana.endDate > ohana.date else {
-            var length: TimeInterval = 3600
-            if !wasAllDay, let oldStart, let oldEnd, oldEnd > oldStart { length = oldEnd.timeIntervalSince(oldStart) }
-            return begin.addingTimeInterval(length)
+        if rule {
+            event.recurrenceRules = o.rrule.flatMap(RepeatRule.init).map { [$0.ekRule] }
         }
-        return Day.calendar.startOfDay(for: ohana.endDate.adding(days: 1).date)
     }
 
     private static func time(_ date: Date) -> String {
-        let components = Day.calendar.dateComponents([.hour, .minute], from: date)
-        return String(format: "%02d:%02d", components.hour ?? 0, components.minute ?? 0)
+        let c = Day.calendar.dateComponents([.hour, .minute], from: date)
+        return String(format: "%02d:%02d", c.hour ?? 0, c.minute ?? 0)
     }
 
     private static func date(_ time: String, on midnight: Date) -> Date? {
