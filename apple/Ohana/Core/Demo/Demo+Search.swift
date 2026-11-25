@@ -32,47 +32,47 @@ extension DemoServer {
 
     /// The demo's items by kind, in the server's order.
     private static func candidates(_ request: Request) -> [(String, [DemoSearchItem])] {
-        let s = { (value: JSONValue?, key: String) in value?[key]?.stringValue ?? "" }
+        let field = { (value: JSONValue?, key: String) in value?[key]?.stringValue ?? "" }
         let recipes = (request.json("meals-recipes")?["items"]?.arrayValue ?? []).map {
-            DemoSearchItem(id: s($0, "id"), title: s($0, "title"), detail: firstLine(s($0, "description")),
-                           text: [s($0, "description")])
+            DemoSearchItem(id: field($0, "id"), title: field($0, "title"), detail: firstLine(field($0, "description")),
+                           text: [field($0, "description")])
         }
         let calendar = request.json("calendar")
         let events = (calendar?["events"]?.arrayValue ?? []).map {
-            DemoSearchItem(id: s($0, "id"), title: s($0, "title"), detail: joined(s($0, "location"), s($0, "person")),
-                           text: [s($0, "note")], day: s($0, "date"), extra: ["time": $0["start"] ?? .null])
+            DemoSearchItem(id: field($0, "id"), title: field($0, "title"), detail: joined(field($0, "location"), field($0, "person")),
+                           text: [field($0, "note")], day: field($0, "date"), extra: ["time": $0["start"] ?? .null])
         }
         let notes = (calendar?["notes"]?.objectValue ?? [:]).compactMap { day, note -> DemoSearchItem? in
-            let comment = s(note, "comment")
+            let comment = field(note, "comment")
             guard !comment.isEmpty else { return nil }
-            let icon = s(note, "icon")
+            let icon = field(note, "icon")
             return DemoSearchItem(id: day, title: firstLine(comment), detail: "", text: [comment], day: day,
                                   extra: icon.isEmpty ? [:] : ["icon": .string(icon)])
         }
-        let categories = Dictionary((request.json("finance")?["categories"]?.arrayValue ?? []).map { (s($0, "id"), s($0, "name")) },
-                                    uniquingKeysWith: { a, _ in a })
-        let transactions = (request.json("finance-transactions")?["transactions"]?.arrayValue ?? []).map { t in
-            let payee = s(t, "payee")
-            return DemoSearchItem(id: s(t, "id"), title: payee.isEmpty ? firstLine(s(t, "description")) : payee,
-                                  detail: joined(payee.isEmpty ? "" : firstLine(s(t, "description")), categories[s(t, "categoryId")] ?? ""),
-                                  text: [s(t, "description"), s(t, "note")], day: s(t, "date"),
-                                  extra: ["amountCents": t["amountCents"] ?? .number(0)])
+        let categories = Dictionary((request.json("finance")?["categories"]?.arrayValue ?? []).map { (field($0, "id"), field($0, "name")) },
+                                    uniquingKeysWith: { existing, _ in existing })
+        let transactions = (request.json("finance-transactions")?["transactions"]?.arrayValue ?? []).map { row in
+            let payee = field(row, "payee")
+            return DemoSearchItem(id: field(row, "id"), title: payee.isEmpty ? firstLine(field(row, "description")) : payee,
+                                  detail: joined(payee.isEmpty ? "" : firstLine(field(row, "description")), categories[field(row, "categoryId")] ?? ""),
+                                  text: [field(row, "description"), field(row, "note")], day: field(row, "date"),
+                                  extra: ["amountCents": row["amountCents"] ?? .number(0)])
         }
         let searches = (request.json("appointments")?["searches"]?.arrayValue ?? []).map {
-            let speciality = s($0, "specialityLabel").isEmpty ? s($0, "jamedaSpecialityLabel") : s($0, "specialityLabel")
-            return DemoSearchItem(id: s($0, "id"), title: s($0, "name"), detail: joined(speciality, s($0, "locationLabel")))
+            let speciality = field($0, "specialityLabel").isEmpty ? field($0, "jamedaSpecialityLabel") : field($0, "specialityLabel")
+            return DemoSearchItem(id: field($0, "id"), title: field($0, "name"), detail: joined(speciality, field($0, "locationLabel")))
         }
         let household = request.json("household")
         let members = (household?["members"]?.arrayValue ?? []).map {
-            let name = s($0, "name")
-            return DemoSearchItem(id: s($0, "userId"), title: name.isEmpty ? s($0, "email") : name,
-                                  detail: name.isEmpty ? "" : s($0, "email"), extra: ["account": .bool(true)])
+            let name = field($0, "name")
+            return DemoSearchItem(id: field($0, "userId"), title: name.isEmpty ? field($0, "email") : name,
+                                  detail: name.isEmpty ? "" : field($0, "email"), extra: ["account": .bool(true)])
         }
         let people = (household?["people"]?.arrayValue ?? []).map {
-            DemoSearchItem(id: s($0, "id"), title: s($0, "name"), detail: "", extra: ["account": .bool(false)])
+            DemoSearchItem(id: field($0, "id"), title: field($0, "name"), detail: "", extra: ["account": .bool(false)])
         }
         let chats = (request.json("ai-chats")?["chats"]?.arrayValue ?? []).map {
-            DemoSearchItem(id: s($0, "id"), title: s($0, "title"), detail: "", day: String(s($0, "updatedAt").prefix(10)))
+            DemoSearchItem(id: field($0, "id"), title: field($0, "title"), detail: "", day: String(field($0, "updatedAt").prefix(10)))
         }
         return [("recipe", recipes), ("event", events), ("note", notes), ("transaction", transactions),
                 ("search", searches), ("person", members + people), ("chat", chats)]
@@ -108,18 +108,18 @@ private struct DemoSearchItem {
 
     /// 0: not every term is in it; title as the phrase 4, starting with it 3, holding every term 2, else 1.
     func score(_ terms: [String], _ phrase: String) -> Int {
-        let t = DemoServer.fold(title)
+        let foldedTitle = DemoServer.fold(title)
         let all = DemoServer.fold(([title, detail] + text).joined(separator: "\n"))
         guard terms.allSatisfy({ all.contains($0) }) else { return 0 }
-        if t == phrase { return 4 }
-        if t.hasPrefix(phrase) { return 3 }
-        return terms.allSatisfy { t.contains($0) } ? 2 : 1
+        if foldedTitle == phrase { return 4 }
+        if foldedTitle.hasPrefix(phrase) { return 3 }
+        return terms.allSatisfy { foldedTitle.contains($0) } ? 2 : 1
     }
 
     func json(_ kind: String) -> JSONValue {
-        var o: [String: JSONValue] = ["kind": .string(kind), "id": .string(id), "title": .string(title),
+        var payload: [String: JSONValue] = ["kind": .string(kind), "id": .string(id), "title": .string(title),
                                       "detail": .string(detail), "day": day.map { .string($0) } ?? .null]
-        o.merge(extra) { _, new in new }
-        return .object(o)
+        payload.merge(extra) { _, new in new }
+        return .object(payload)
     }
 }
