@@ -226,15 +226,15 @@ nonisolated struct AssistantReminderOp: Decodable, Equatable, Sendable {
     private enum Keys: String, CodingKey { case op, id, itemTitle, list, listTitle, title, notes, due }
 
     init(from decoder: any Decoder) throws {
-        guard let c = try? decoder.container(keyedBy: Keys.self) else {
+        guard let values = try? decoder.container(keyedBy: Keys.self) else {
             self.init(op: "", list: "", listTitle: "", dueText: .keep)
             return
         }
-        func opt(_ key: Keys) -> String? { try? c.decodeIfPresent(String.self, forKey: key) }
+        func opt(_ key: Keys) -> String? { try? values.decodeIfPresent(String.self, forKey: key) }
         let due: DueText
-        if !c.contains(.due) {
+        if !values.contains(.due) {
             due = .keep
-        } else if (try? c.decodeNil(forKey: .due)) == true {
+        } else if (try? values.decodeNil(forKey: .due)) == true {
             due = .clear
         } else if let text = opt(.due), let value = Self.dueDescription(text) {
             due = .set(value)
@@ -382,12 +382,12 @@ nonisolated struct AssistantCalendarOp: Decodable, Equatable, Sendable {
     }
 
     init(from decoder: any Decoder) throws {
-        guard let c = try? decoder.container(keyedBy: Keys.self) else {
+        guard let values = try? decoder.container(keyedBy: Keys.self) else {
             self.init(op: "", calendar: "", calendarTitle: "")
             return
         }
-        func opt(_ key: Keys) -> String? { try? c.decodeIfPresent(String.self, forKey: key) }
-        func flag(_ key: Keys) -> Bool? { try? c.decodeIfPresent(Bool.self, forKey: key) }
+        func opt(_ key: Keys) -> String? { try? values.decodeIfPresent(String.self, forKey: key) }
+        func flag(_ key: Keys) -> Bool? { try? values.decodeIfPresent(Bool.self, forKey: key) }
         let op = opt(.op) ?? ""
         // A delete has nothing to change: its times, if any, are the event's.
         let deletes = op == "delete"
@@ -471,18 +471,18 @@ nonisolated struct AssistantNoteOp: Decodable, Equatable, Sendable {
     }
 
     init(from decoder: any Decoder) throws {
-        guard let c = try? decoder.container(keyedBy: Keys.self) else {
+        guard let values = try? decoder.container(keyedBy: Keys.self) else {
             self.init(op: "", path: "")
             return
         }
-        func opt(_ key: Keys) -> String? { try? c.decodeIfPresent(String.self, forKey: key) }
+        func opt(_ key: Keys) -> String? { try? values.decodeIfPresent(String.self, forKey: key) }
         let title = opt(.title)
         self.init(
             op: opt(.op) ?? "", documentId: opt(.documentId), path: opt(.path) ?? "",
             title: title?.isEmpty == false ? title : nil, baseHash: opt(.baseHash), change: opt(.change),
             content: opt(.content) ?? "", added: opt(.added),
-            replacements: (try? c.decodeIfPresent([Replacement].self, forKey: .replacements)) ?? [],
-            tags: try? c.decodeIfPresent([String].self, forKey: .tags)
+            replacements: (try? values.decodeIfPresent([Replacement].self, forKey: .replacements)) ?? [],
+            tags: try? values.decodeIfPresent([String].self, forKey: .tags)
         )
     }
 
@@ -538,24 +538,24 @@ nonisolated struct AssistantPagesRequest: Decodable, Equatable, Sendable {
     }
 
     init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: Keys.self)
-        func str(_ key: Keys) -> String { (try? c.decodeIfPresent(String.self, forKey: key)) ?? "" }
+        let values = try decoder.container(keyedBy: Keys.self)
+        func str(_ key: Keys) -> String { (try? values.decodeIfPresent(String.self, forKey: key)) ?? "" }
         var answer: Answer?
-        if let a = try? c.nestedContainer(keyedBy: AnswerKeys.self, forKey: .answer) {
-            if let sent = try? a.decode([Int].self, forKey: .sent) {
+        if let answerContainer = try? values.nestedContainer(keyedBy: AnswerKeys.self, forKey: .answer) {
+            if let sent = try? answerContainer.decode([Int].self, forKey: .sent) {
                 answer = .sent(sent)
-            } else if (try? a.decode(Bool.self, forKey: .declined)) == true {
+            } else if (try? answerContainer.decode(Bool.self, forKey: .declined)) == true {
                 answer = .declined
-            } else if let error = try? a.decode(String.self, forKey: .error) {
+            } else if let error = try? answerContainer.decode(String.self, forKey: .error) {
                 answer = .failed(error)
             }
         }
         self.init(
             id: str(.id), summary: str(.summary), documentId: str(.documentId), name: str(.name), path: str(.path),
-            pages: (try? c.decodeIfPresent([Int].self, forKey: .pages)) ?? [],
-            total: (try? c.decodeIfPresent(Int.self, forKey: .total)) ?? 0,
-            auto: (try? c.decodeIfPresent(Bool.self, forKey: .auto)) ?? false,
-            answer: answer, skipped: (try? c.decodeIfPresent(Bool.self, forKey: .skipped)) ?? false
+            pages: (try? values.decodeIfPresent([Int].self, forKey: .pages)) ?? [],
+            total: (try? values.decodeIfPresent(Int.self, forKey: .total)) ?? 0,
+            auto: (try? values.decodeIfPresent(Bool.self, forKey: .auto)) ?? false,
+            answer: answer, skipped: (try? values.decodeIfPresent(Bool.self, forKey: .skipped)) ?? false
         )
     }
 }
@@ -600,68 +600,68 @@ nonisolated enum AssistantItem: Decodable, Equatable, Sendable {
             self = .unknown(kind: "")
             return
         }
-        guard let c = try? decoder.container(keyedBy: Keys.self) else {
+        guard let values = try? decoder.container(keyedBy: Keys.self) else {
             self = .unknown(kind: "")
             return
         }
-        let kind = (try? c.decode(String.self, forKey: .kind)) ?? ""
-        func str(_ key: Keys) -> String { (try? c.decodeIfPresent(String.self, forKey: key)) ?? "" }
-        func opt(_ key: Keys) -> String? { try? c.decodeIfPresent(String.self, forKey: key) }
-        func flag(_ key: Keys) -> Bool { (try? c.decodeIfPresent(Bool.self, forKey: key)) ?? false }
+        let kind = (try? values.decode(String.self, forKey: .kind)) ?? ""
+        func str(_ key: Keys) -> String { (try? values.decodeIfPresent(String.self, forKey: key)) ?? "" }
+        func opt(_ key: Keys) -> String? { try? values.decodeIfPresent(String.self, forKey: key) }
+        func flag(_ key: Keys) -> Bool { (try? values.decodeIfPresent(Bool.self, forKey: key)) ?? false }
         switch kind {
         case "user":
-            let attachments = try? c.decodeIfPresent([AssistantAttachmentRef].self, forKey: .attachments)
+            let attachments = try? values.decodeIfPresent([AssistantAttachmentRef].self, forKey: .attachments)
             self = .user(text: str(.text), attachments: attachments ?? [])
         case "assistant":
-            let sources = try? c.decodeIfPresent([AssistantSource].self, forKey: .sources)
+            let sources = try? values.decodeIfPresent([AssistantSource].self, forKey: .sources)
             self = .assistant(text: str(.text), sources: AssistantSource.list(sources))
         case "tool":
-            let args = (try? c.decodeIfPresent(JSONValue.self, forKey: .args))?.objectValue ?? [:]
+            let args = (try? values.decodeIfPresent(JSONValue.self, forKey: .args))?.objectValue ?? [:]
             self = .tool(AssistantToolCall(
                 id: str(.id), name: str(.name), args: args, status: opt(.status) ?? "ok",
                 summary: opt(.summary), result: opt(.result), interrupted: flag(.interrupted)
             ))
         case "change":
-            let undo = try? c.decodeIfPresent([AssistantUndoStep].self, forKey: .undo)
+            let undo = try? values.decodeIfPresent([AssistantUndoStep].self, forKey: .undo)
             self = .change(AssistantChange(
                 id: str(.id), change: str(.change), summary: str(.summary), undo: undo ?? [], undone: flag(.undone)
             ))
         case "question":
-            let options = try? c.decodeIfPresent([String].self, forKey: .options)
-            let answer = try? c.decodeIfPresent(AssistantQuestion.Answer.self, forKey: .answer)
+            let options = try? values.decodeIfPresent([String].self, forKey: .options)
+            let answer = try? values.decodeIfPresent(AssistantQuestion.Answer.self, forKey: .answer)
             self = .question(AssistantQuestion(
                 id: str(.id), question: str(.question), options: options ?? [], multiple: flag(.multiple),
                 answer: answer, skipped: flag(.skipped)
             ))
         case "reminders":
-            let ops = try? c.decodeIfPresent([AssistantReminderOp].self, forKey: .ops)
-            let answer = try? c.decodeIfPresent(AssistantRemindersEdit.Answer.self, forKey: .answer)
+            let ops = try? values.decodeIfPresent([AssistantReminderOp].self, forKey: .ops)
+            let answer = try? values.decodeIfPresent(AssistantRemindersEdit.Answer.self, forKey: .answer)
             self = .reminders(AssistantRemindersEdit(
                 id: str(.id), summary: str(.summary), ops: ops ?? [], answer: answer, skipped: flag(.skipped)
             ))
         case "calendar":
-            let ops = try? c.decodeIfPresent([AssistantCalendarOp].self, forKey: .ops)
-            let answer = try? c.decodeIfPresent(AssistantCalendarEdit.Answer.self, forKey: .answer)
+            let ops = try? values.decodeIfPresent([AssistantCalendarOp].self, forKey: .ops)
+            let answer = try? values.decodeIfPresent(AssistantCalendarEdit.Answer.self, forKey: .answer)
             self = .calendar(AssistantCalendarEdit(
                 id: str(.id), summary: str(.summary), ops: ops ?? [], answer: answer, skipped: flag(.skipped)
             ))
         case "suggestions":
-            let ops = try? c.decodeIfPresent([AssistantSuggestionOp].self, forKey: .ops)
-            let answer = try? c.decodeIfPresent(AssistantSuggestions.Answer.self, forKey: .answer)
+            let ops = try? values.decodeIfPresent([AssistantSuggestionOp].self, forKey: .ops)
+            let answer = try? values.decodeIfPresent(AssistantSuggestions.Answer.self, forKey: .answer)
             let source = opt(.source)
             self = .suggestions(AssistantSuggestions(
                 id: str(.id), summary: str(.summary), source: source?.isEmpty == false ? source : nil, ops: ops ?? [],
                 answer: answer, skipped: flag(.skipped)
             ))
         case "notes":
-            let ops = try? c.decodeIfPresent([AssistantNoteOp].self, forKey: .ops)
-            let answer = try? c.decodeIfPresent(AssistantNotesEdit.Answer.self, forKey: .answer)
+            let ops = try? values.decodeIfPresent([AssistantNoteOp].self, forKey: .ops)
+            let answer = try? values.decodeIfPresent(AssistantNotesEdit.Answer.self, forKey: .answer)
             self = .notes(AssistantNotesEdit(
                 id: str(.id), summary: str(.summary), ops: ops ?? [], answer: answer, skipped: flag(.skipped)
             ))
         case "memories":
-            let ops = try? c.decodeIfPresent([AssistantMemoryOp].self, forKey: .ops)
-            let answer = try? c.decodeIfPresent(AssistantMemoriesEdit.Answer.self, forKey: .answer)
+            let ops = try? values.decodeIfPresent([AssistantMemoryOp].self, forKey: .ops)
+            let answer = try? values.decodeIfPresent(AssistantMemoriesEdit.Answer.self, forKey: .answer)
             self = .memories(AssistantMemoriesEdit(
                 id: str(.id), summary: str(.summary), ops: ops ?? [], answer: answer, skipped: flag(.skipped)
             ))
@@ -713,9 +713,9 @@ nonisolated enum AssistantChatEvent: Equatable, Sendable {
     case end(deleted: Bool)
     case reconnect
 
-    static func == (a: Self, b: Self) -> Bool {
-        switch (a, b) {
-        case let (.chat(x), .chat(y)): x == y
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        switch (lhs, rhs) {
+        case let (.chat(leftChat), .chat(rightChat)): leftChat == rightChat
         case let (.items(r1, i1), .items(r2, i2)):
             r1 == r2 && i1.count == i2.count && zip(i1, i2).allSatisfy { $0.seq == $1.seq && $0.item == $1.item }
         case let (.delta(s1, t1), .delta(s2, t2)): s1 == s2 && t1 == t2
@@ -742,11 +742,11 @@ nonisolated enum AssistantChatEvent: Equatable, Sendable {
         case "chat":
             return .chat(try decoder.decode(AssistantChatSummary.self, from: bytes))
         case "items":
-            let d = try decoder.decode(ItemsData.self, from: bytes)
-            return .items(rev: d.rev, items: d.items.map { ($0.seq, $0.item) })
+            let itemsData = try decoder.decode(ItemsData.self, from: bytes)
+            return .items(rev: itemsData.rev, items: itemsData.items.map { ($0.seq, $0.item) })
         case "delta":
-            let d = try decoder.decode(DeltaData.self, from: bytes)
-            return .delta(seq: d.seq, text: d.text)
+            let deltaData = try decoder.decode(DeltaData.self, from: bytes)
+            return .delta(seq: deltaData.seq, text: deltaData.text)
         case "end":
             return .end(deleted: (try? decoder.decode(EndData.self, from: bytes))?.deleted ?? false)
         case "reconnect":
@@ -894,9 +894,9 @@ nonisolated struct AssistantOutgoingAttachment: Encodable, Equatable {
 
 enum AssistantDates {
     private static let fractional: ISO8601DateFormatter = {
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return f
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
     }()
 
     private static let plain = ISO8601DateFormatter()
@@ -907,7 +907,7 @@ enum AssistantDates {
 
     /// "YYYY-MM-DD" of a date in the device's calendar.
     static func day(_ date: Date = .now) -> String {
-        let c = Calendar.current.dateComponents([.year, .month, .day], from: date)
-        return String(format: "%04d-%02d-%02d", c.year ?? 1970, c.month ?? 1, c.day ?? 1)
+        let dateParts = Calendar.current.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", dateParts.year ?? 1970, dateParts.month ?? 1, dateParts.day ?? 1)
     }
 }
