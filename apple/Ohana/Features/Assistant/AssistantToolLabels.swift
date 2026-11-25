@@ -10,13 +10,13 @@ enum AssistantToolLabels {
     /// What the tool is doing, e.g. "Reading transactions"; a tool the app doesn't know yet
     /// shows its name.
     static func label(_ tool: AssistantToolCall) -> String {
-        let a = tool.args
+        let callArgs = tool.args
         switch tool.name {
         case "web_search":
-            let q = a["query"]?.stringValue ?? ""
-            return String(localized: "Searching the web: \(q)")
+            let searchQuery = callArgs["query"]?.stringValue ?? ""
+            return String(localized: "Searching the web: \(searchQuery)")
         case "fetch_page":
-            let raw = a["url"]?.stringValue ?? ""
+            let raw = callArgs["url"]?.stringValue ?? ""
             let host = URL(string: raw)?.host() ?? raw
             return String(localized: "Reading \(host)")
         case "get_calendar": return String(localized: "Reading the calendar")
@@ -99,32 +99,32 @@ enum AssistantToolLabels {
     private static let uuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
     private static let dayPattern = /^\d{4}-\d{2}-\d{2}$/
 
-    private static func str(_ v: JSONValue?) -> String {
-        v?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    private static func str(_ value: JSONValue?) -> String {
+        value?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     }
 
-    private static func date(_ v: JSONValue?) -> String {
-        guard let s = v?.stringValue, s.wholeMatch(of: dayPattern) != nil else { return "" }
-        return s
+    private static func date(_ value: JSONValue?) -> String {
+        guard let dayText = value?.stringValue, dayText.wholeMatch(of: dayPattern) != nil else { return "" }
+        return dayText
     }
 
     /// An id or name the model passed: names are shown, ids (uuids) aren't worth reading.
-    private static func named(_ v: JSONValue?) -> String {
-        let s = str(v)
-        return s.isEmpty || s.wholeMatch(of: uuid) != nil ? "" : s
+    private static func named(_ value: JSONValue?) -> String {
+        let nameText = str(value)
+        return nameText.isEmpty || nameText.wholeMatch(of: uuid) != nil ? "" : nameText
     }
 
-    static func quoted(_ v: String) -> String { isGerman ? "„\(v)“" : "“\(v)”" }
+    static func quoted(_ value: String) -> String { isGerman ? "„\(value)“" : "“\(value)”" }
 
     private static func noon(_ day: String) -> Date? {
-        let p = day.split(separator: "-").compactMap { Int($0) }
-        guard p.count == 3 else { return nil }
-        return Calendar.current.date(from: DateComponents(year: p[0], month: p[1], day: p[2], hour: 12))
+        let dayParts = day.split(separator: "-").compactMap { Int($0) }
+        guard dayParts.count == 3 else { return nil }
+        return Calendar.current.date(from: DateComponents(year: dayParts[0], month: dayParts[1], day: dayParts[2], hour: 12))
     }
 
     private static func formatted(_ day: String, template: String) -> String {
-        guard let d = noon(day) else { return day }
-        return formatter(template).string(from: d)
+        guard let dayDate = noon(day) else { return day }
+        return formatter(template).string(from: dayDate)
     }
 
     /// Formatters by template (and the locale they were made for): making one takes long, and a
@@ -134,25 +134,25 @@ enum AssistantToolLabels {
 
     private static func formatter(_ template: String) -> DateFormatter {
         let key = Locale.current.identifier + "|" + template
-        if let f = formatters[key] { return f }
-        let f = DateFormatter()
-        f.setLocalizedDateFormatFromTemplate(template)
-        formatters[key] = f
-        return f
+        if let cached = formatters[key] { return cached }
+        let newFormatter = DateFormatter()
+        newFormatter.setLocalizedDateFormatFromTemplate(template)
+        formatters[key] = newFormatter
+        return newFormatter
     }
 
     private static func interval() -> DateIntervalFormatter {
         let key = Locale.current.identifier
-        if let f = intervalFormatters[key] { return f }
-        let f = DateIntervalFormatter()
-        f.dateTemplate = "dMMMy"
-        intervalFormatters[key] = f
-        return f
+        if let cached = intervalFormatters[key] { return cached }
+        let newFormatter = DateIntervalFormatter()
+        newFormatter.dateTemplate = "dMMMy"
+        intervalFormatters[key] = newFormatter
+        return newFormatter
     }
 
     private static func lastOfMonth(_ day: String) -> Int {
-        guard let d = noon(day) else { return 31 }
-        return Calendar.current.range(of: .day, in: .month, for: d)?.count ?? 31
+        guard let dayDate = noon(day) else { return 31 }
+        return Calendar.current.range(of: .day, in: .month, for: dayDate)?.count ?? 31
     }
 
     /// A day range in short: "2026", "March 2026", "3 – 7 Aug 2026", "from 1 Mar 2026".
@@ -161,31 +161,31 @@ enum AssistantToolLabels {
         if !from.isEmpty, !to.isEmpty {
             if from > to { swap(&from, &to) }
             if from.hasSuffix("-01-01"), to.hasSuffix("-12-31") {
-                let a = String(from.prefix(4)), b = String(to.prefix(4))
-                return a == b ? a : "\(a) – \(b)"
+                let fromYear = String(from.prefix(4)), toYear = String(to.prefix(4))
+                return fromYear == toYear ? fromYear : "\(fromYear) – \(toYear)"
             }
             if from.prefix(7) == to.prefix(7), from.hasSuffix("-01"), Int(to.suffix(2)) == lastOfMonth(to) {
                 return formatted(from, template: "MMMMy")
             }
             if from == to { return formatted(from, template: "dMMMy") }
-            guard let a = noon(from), let b = noon(to) else { return "\(from) – \(to)" }
-            return interval().string(from: a, to: b)
+            guard let fromDate = noon(from), let toDate = noon(to) else { return "\(from) – \(to)" }
+            return interval().string(from: fromDate, to: toDate)
         }
         if !from.isEmpty {
-            let d = formatted(from, template: "dMMMy")
-            return String(localized: "from \(d)")
+            let dayLabel = formatted(from, template: "dMMMy")
+            return String(localized: "from \(dayLabel)")
         }
         if !to.isEmpty {
-            let d = formatted(to, template: "dMMMy")
-            return String(localized: "until \(d)")
+            let dayLabel = formatted(to, template: "dMMMy")
+            return String(localized: "until \(dayLabel)")
         }
         return ""
     }
 
     /// The days a list of ops touches, as one range.
     private static func opsSpan(_ ops: [[String: JSONValue]]) -> String {
-        let days = ops.flatMap { o in
-            (o["dates"]?.arrayValue?.map { date($0) } ?? []) + [date(o["from"]), date(o["to"])]
+        let days = ops.flatMap { operation in
+            (operation["dates"]?.arrayValue?.map { date($0) } ?? []) + [date(operation["from"]), date(operation["to"])]
         }.filter { !$0.isEmpty }.sorted()
         guard let first = days.first, let last = days.last else { return "" }
         return span(first, last)
@@ -202,51 +202,51 @@ enum AssistantToolLabels {
 
     /// What the call is about, in a few words ("" when there is nothing to add).
     static func detail(_ tool: AssistantToolCall) -> String {
-        let a = tool.args
-        let ops = (a["ops"]?.arrayValue ?? []).compactMap(\.objectValue)
+        let callArgs = tool.args
+        let ops = (callArgs["ops"]?.arrayValue ?? []).compactMap(\.objectValue)
         var parts: [String] = []
         switch tool.name {
         case "get_calendar", "finance_summary", "combine_transfers", "list_events", "get_meal_plan":
-            parts.append(span(date(a["from"]), date(a["to"])))
+            parts.append(span(date(callArgs["from"]), date(callArgs["to"])))
         case "analyze_calendar":
-            parts.append(span(date(a["from"]), date(a["to"])))
-            let types = (a["types"]?.arrayValue ?? [a["types"] ?? .null]).map { named($0) }.filter { !$0.isEmpty }
+            parts.append(span(date(callArgs["from"]), date(callArgs["to"])))
+            let types = (callArgs["types"]?.arrayValue ?? [callArgs["types"] ?? .null]).map { named($0) }.filter { !$0.isEmpty }
             parts.append(list(types))
         case "calculate":
-            let all = a["expressions"]?.arrayValue ?? [a["expressions"] ?? a["expression"] ?? .null]
+            let all = callArgs["expressions"]?.arrayValue ?? [callArgs["expressions"] ?? callArgs["expression"] ?? .null]
             let first = str(all.first)
             parts.append(first.count > 40 ? String(first.prefix(40)) + "…" : first)
             if all.count > 1 { parts.append("+\(all.count - 1)") }
         case "analyze_transactions", "list_transactions":
-            let queries = (a["queries"]?.arrayValue ?? []).compactMap(\.objectValue)
+            let queries = (callArgs["queries"]?.arrayValue ?? []).compactMap(\.objectValue)
             if !queries.isEmpty {
-                parts.append(opsSpan(queries.map { q in
-                    ["from": q["from"] ?? a["from"] ?? .null, "to": q["to"] ?? a["to"] ?? .null]
+                parts.append(opsSpan(queries.map { oneQuery in
+                    ["from": oneQuery["from"] ?? callArgs["from"] ?? .null, "to": oneQuery["to"] ?? callArgs["to"] ?? .null]
                 }))
             } else {
-                parts.append(span(date(a["from"]), date(a["to"])))
+                parts.append(span(date(callArgs["from"]), date(callArgs["to"])))
             }
-            if !str(a["q"]).isEmpty { parts.append(quoted(str(a["q"]))) }
-            if str(a["account"]) == "none" { parts.append(String(localized: "No account")) } else { parts.append(named(a["account"])) }
-            if str(a["category"]) == "none" { parts.append(String(localized: "Uncategorized")) } else { parts.append(named(a["category"])) }
-            switch str(a["kind"]) {
+            if !str(callArgs["q"]).isEmpty { parts.append(quoted(str(callArgs["q"]))) }
+            if str(callArgs["account"]) == "none" { parts.append(String(localized: "No account")) } else { parts.append(named(callArgs["account"])) }
+            if str(callArgs["category"]) == "none" { parts.append(String(localized: "Uncategorized")) } else { parts.append(named(callArgs["category"])) }
+            switch str(callArgs["kind"]) {
             case "income": parts.append(String(localized: "Income"))
             case "expense": parts.append(String(localized: "Expenses"))
             case "transfer": parts.append(String(localized: "Transfers"))
             default: break
             }
-            let offset = Int(a["offset"]?.doubleValue ?? 0)
+            let offset = Int(callArgs["offset"]?.doubleValue ?? 0)
             if offset > 0 {
                 let row = offset + 1
                 parts.append(String(localized: "from row \(row)"))
             }
             if !queries.isEmpty {
-                let n = queries.count
-                parts.append(String(AttributedString(localized: "^[\(n) query](inflect: true)").characters))
+                let total = queries.count
+                parts.append(String(AttributedString(localized: "^[\(total) query](inflect: true)").characters))
             }
         case "change_entries":
-            let types = unique(ops.flatMap { o in
-                ([o["type"]] + (o["types"]?.arrayValue ?? []).map { Optional($0) }).map { named($0) }
+            let types = unique(ops.flatMap { operation in
+                ([operation["type"]] + (operation["types"]?.arrayValue ?? []).map { Optional($0) }).map { named($0) }
             })
             parts.append(opsSpan(ops))
             parts.append(list(types))
@@ -254,104 +254,104 @@ enum AssistantToolLabels {
             parts.append(opsSpan(ops))
         case "change_transactions":
             // A delete op can name many transactions.
-            let n = ops.reduce(0) { sum, o in
-                sum + (str(o["action"]) == "delete" ? (o["ids"]?.arrayValue?.count ?? 1) : 1)
+            let total = ops.reduce(0) { sum, operation in
+                sum + (str(operation["action"]) == "delete" ? (operation["ids"]?.arrayValue?.count ?? 1) : 1)
             }
-            if n > 0 { parts.append(String(AttributedString(localized: "^[\(n) change](inflect: true)").characters)) }
+            if total > 0 { parts.append(String(AttributedString(localized: "^[\(total) change](inflect: true)").characters)) }
         case "manage_entry_types":
-            if str(a["action"]) == "copy_year" {
-                parts.append("\(number(a["from"])) → \(number(a["to"]))")
+            if str(callArgs["action"]) == "copy_year" {
+                parts.append("\(number(callArgs["from"])) → \(number(callArgs["to"]))")
             } else {
-                let name = named(a["name"]).isEmpty ? named(a["type"]) : named(a["name"])
+                let name = named(callArgs["name"]).isEmpty ? named(callArgs["type"]) : named(callArgs["name"])
                 if !name.isEmpty { parts.append(quoted(name)) }
-                if a["year"] != nil, a["year"] != .null { parts.append(number(a["year"])) }
+                if callArgs["year"] != nil, callArgs["year"] != .null { parts.append(number(callArgs["year"])) }
             }
         case "add_event":
-            parts.append(span(date(a["date"]), date(a["date"])))
-            if !str(a["title"]).isEmpty { parts.append(quoted(str(a["title"]))) }
+            parts.append(span(date(callArgs["date"]), date(callArgs["date"])))
+            if !str(callArgs["title"]).isEmpty { parts.append(quoted(str(callArgs["title"]))) }
         case "list_recipes":
-            if !str(a["query"]).isEmpty { parts.append(quoted(str(a["query"]))) }
-            if !str(a["ingredient"]).isEmpty { parts.append(str(a["ingredient"])) }
-            if let tags = a["tags"]?.arrayValue {
+            if !str(callArgs["query"]).isEmpty { parts.append(quoted(str(callArgs["query"]))) }
+            if !str(callArgs["ingredient"]).isEmpty { parts.append(str(callArgs["ingredient"])) }
+            if let tags = callArgs["tags"]?.arrayValue {
                 parts.append(tags.map { named($0) }.filter { !$0.isEmpty }.prefix(3).joined(separator: ", "))
             }
         case "get_recipe":
-            if !named(a["recipe"]).isEmpty { parts.append(quoted(named(a["recipe"]))) }
+            if !named(callArgs["recipe"]).isEmpty { parts.append(quoted(named(callArgs["recipe"]))) }
         case "save_recipe":
-            let title = str(a["title"]).isEmpty ? named(a["recipe"]) : str(a["title"])
+            let title = str(callArgs["title"]).isEmpty ? named(callArgs["recipe"]) : str(callArgs["title"])
             if !title.isEmpty { parts.append(quoted(title)) }
         case "plan_meals":
-            if let tags = a["excludeTags"]?.arrayValue, !tags.isEmpty {
+            if let tags = callArgs["excludeTags"]?.arrayValue, !tags.isEmpty {
                 let names = tags.map { named($0) }.filter { !$0.isEmpty }.joined(separator: ", ")
                 parts.append(String(localized: "without \(names)"))
             }
         case "get_shopping_items":
-            parts.append(span(date(a["from"]), ""))
+            parts.append(span(date(callArgs["from"]), ""))
         case "get_reminders":
-            if !named(a["list"]).isEmpty { parts.append(quoted(named(a["list"]))) }
+            if !named(callArgs["list"]).isEmpty { parts.append(quoted(named(callArgs["list"]))) }
         case "edit_reminders":
             let titles = ops.map { str($0["title"]) }.filter { !$0.isEmpty }
             if !ops.isEmpty {
-                let n = ops.count
-                parts.append(String(AttributedString(localized: "^[\(n) change](inflect: true)").characters))
+                let total = ops.count
+                parts.append(String(AttributedString(localized: "^[\(total) change](inflect: true)").characters))
             }
             parts.append(list(titles, max: 3))
         case "get_apple_calendar":
-            parts.append(span(date(a["from"]), date(a["to"])))
-            if !named(a["calendar"]).isEmpty { parts.append(quoted(named(a["calendar"]))) }
+            parts.append(span(date(callArgs["from"]), date(callArgs["to"])))
+            if !named(callArgs["calendar"]).isEmpty { parts.append(quoted(named(callArgs["calendar"]))) }
         case "edit_apple_calendar":
             let titles = ops.map { str($0["title"]) }.filter { !$0.isEmpty }
             if !ops.isEmpty {
-                let n = ops.count
-                parts.append(String(AttributedString(localized: "^[\(n) change](inflect: true)").characters))
+                let total = ops.count
+                parts.append(String(AttributedString(localized: "^[\(total) change](inflect: true)").characters))
             }
             parts.append(list(titles, max: 3))
         case "suggest_items":
-            let items = (a["items"]?.arrayValue ?? []).compactMap(\.objectValue)
+            let items = (callArgs["items"]?.arrayValue ?? []).compactMap(\.objectValue)
             let titles = items.map { str($0["title"]) }.filter { !$0.isEmpty }
             if !items.isEmpty {
-                let n = items.count
-                parts.append(String(AttributedString(localized: "^[\(n) suggestion](inflect: true)").characters))
+                let total = items.count
+                parts.append(String(AttributedString(localized: "^[\(total) suggestion](inflect: true)").characters))
             }
             parts.append(list(titles, max: 3))
         case "find_doctor_specialities":
-            parts.append(quoted(str(a["query"])))
+            parts.append(quoted(str(callArgs["query"])))
         case "create_appointment_search":
-            if !str(a["speciality"]).isEmpty { parts.append(str(a["speciality"])) }
-            if !date(a["before"]).isEmpty { parts.append(span("", date(a["before"]))) }
-            if !str(a["place"]).isEmpty { parts.append(str(a["place"])) }
+            if !str(callArgs["speciality"]).isEmpty { parts.append(str(callArgs["speciality"])) }
+            if !date(callArgs["before"]).isEmpty { parts.append(span("", date(callArgs["before"]))) }
+            if !str(callArgs["place"]).isEmpty { parts.append(str(callArgs["place"])) }
         case "change_appointment_search", "run_appointment_search", "get_appointment_slot", "book_appointment_slot":
-            if !named(a["search"]).isEmpty { parts.append(quoted(named(a["search"]))) }
+            if !named(callArgs["search"]).isEmpty { parts.append(quoted(named(callArgs["search"]))) }
         case "manage_categories":
-            let name = named(a["name"]).isEmpty ? named(a["category"]) : named(a["name"])
+            let name = named(callArgs["name"]).isEmpty ? named(callArgs["category"]) : named(callArgs["name"])
             if !name.isEmpty { parts.append(quoted(name)) }
-            if !named(a["parent"]).isEmpty { parts.append("→ \(quoted(named(a["parent"])))") }
+            if !named(callArgs["parent"]).isEmpty { parts.append("→ \(quoted(named(callArgs["parent"])))") }
         case "search_knowledge":
-            if !str(a["query"]).isEmpty { parts.append(quoted(str(a["query"]))) }
-            if let tags = a["tags"]?.arrayValue { parts.append(list(tags.map { str($0) }.filter { !$0.isEmpty }, max: 3)) }
-            if !str(a["folder"]).isEmpty { parts.append(KnowledgePath.breadcrumb(str(a["folder"]))) }
+            if !str(callArgs["query"]).isEmpty { parts.append(quoted(str(callArgs["query"]))) }
+            if let tags = callArgs["tags"]?.arrayValue { parts.append(list(tags.map { str($0) }.filter { !$0.isEmpty }, max: 3)) }
+            if !str(callArgs["folder"]).isEmpty { parts.append(KnowledgePath.breadcrumb(str(callArgs["folder"]))) }
         case "knowledge_values":
-            if !str(a["query"]).isEmpty { parts.append(quoted(str(a["query"]))) }
-            if !str(a["person"]).isEmpty { parts.append(str(a["person"])) }
+            if !str(callArgs["query"]).isEmpty { parts.append(quoted(str(callArgs["query"]))) }
+            if !str(callArgs["person"]).isEmpty { parts.append(str(callArgs["person"])) }
         case "edit_knowledge_notes":
             let names = ops.map { KnowledgePath.parts(str($0["path"])).last ?? "" }.filter { !$0.isEmpty }
             if !ops.isEmpty {
-                let n = ops.count
-                parts.append(String(AttributedString(localized: "^[\(n) change](inflect: true)").characters))
+                let total = ops.count
+                parts.append(String(AttributedString(localized: "^[\(total) change](inflect: true)").characters))
             }
             parts.append(list(names, max: 3))
         case "edit_memories":
             let texts = ops.map { str($0["text"]) }.filter { !$0.isEmpty }
                 .map { $0.count > 40 ? String($0.prefix(40)) + "…" : $0 }
             if !ops.isEmpty {
-                let n = ops.count
-                parts.append(String(AttributedString(localized: "^[\(n) change](inflect: true)").characters))
+                let total = ops.count
+                parts.append(String(AttributedString(localized: "^[\(total) change](inflect: true)").characters))
             }
             parts.append(list(texts.map(quoted), max: 2))
         case "read_knowledge":
-            if let page = a["page"]?.doubleValue, page >= 1 {
-                let n = Int(page)
-                parts.append(String(localized: "Page \(n)"))
+            if let page = callArgs["page"]?.doubleValue, page >= 1 {
+                let pageNumber = Int(page)
+                parts.append(String(localized: "Page \(pageNumber)"))
             }
         default:
             break
@@ -359,10 +359,10 @@ enum AssistantToolLabels {
         return parts.filter { !$0.isEmpty }.joined(separator: " · ")
     }
 
-    private static func number(_ v: JSONValue?) -> String {
-        switch v {
-        case let .number(n): n == n.rounded() ? String(Int(n)) : String(n)
-        case let .string(s): s
+    private static func number(_ value: JSONValue?) -> String {
+        switch value {
+        case let .number(numeric): numeric == numeric.rounded() ? String(Int(numeric)) : String(numeric)
+        case let .string(textValue): textValue
         default: ""
         }
     }
