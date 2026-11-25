@@ -58,7 +58,10 @@ private struct DemoFinance {
         self.base = base
         transactions = all.enumerated()
             .filter { $0.element.date <= today }
-            .sorted { lhs, rhs in lhs.element.date != rhs.element.date ? lhs.element.date > rhs.element.date : lhs.offset < rhs.offset }
+            .sorted { lhs, rhs in
+                if lhs.element.date != rhs.element.date { return lhs.element.date > rhs.element.date }
+                return lhs.offset < rhs.offset
+            }
             .map(\.element)
         var groups: [String: [FinanceTransaction]] = [:]
         for txn in transactions {
@@ -110,7 +113,9 @@ private struct DemoFinance {
         }
         let income = query["kind"] == "income"
         let all = byKey.values.map(\.payee).sorted { lhs, rhs in
-            let (lhsCents, rhsCents) = income ? (lhs.incomeCents, rhs.incomeCents) : (lhs.expenseCents, rhs.expenseCents)
+            let (lhsCents, rhsCents) = income
+                ? (lhs.incomeCents, rhs.incomeCents)
+                : (lhs.expenseCents, rhs.expenseCents)
             return lhsCents != rhsCents ? lhsCents > rhsCents : lhs.key < rhs.key
         }
         let limit = min(100, max(1, query["limit"].flatMap { Int($0) } ?? 20))
@@ -122,7 +127,9 @@ private struct DemoFinance {
     static func payeeKey(payee: String, description: String) -> String {
         func words(_ text: String) -> [String] {
             let kept = text.lowercased().unicodeScalars.map { scalar -> Character in
-                CharacterSet.letters.contains(scalar) || CharacterSet.whitespacesAndNewlines.contains(scalar) ? Character(scalar) : " "
+                let isWordCharacter = CharacterSet.letters.contains(scalar)
+                    || CharacterSet.whitespacesAndNewlines.contains(scalar)
+                return isWordCharacter ? Character(scalar) : " "
             }
             return String(kept).split(whereSeparator: \.isWhitespace).map(String.init).filter { $0.count > 1 }
         }
@@ -137,12 +144,7 @@ private struct DemoFinance {
             rows = rows.filter { account == "none" ? $0.accountId == nil : $0.accountId == account }
         }
         if let category = query["category"], !category.isEmpty {
-            if category == "none" {
-                rows = rows.filter { $0.categoryId == nil }
-            } else {
-                let ids = subtree(category)
-                rows = rows.filter { row in row.categoryId.map { ids.contains($0) } ?? false }
-            }
+            rows = filteredByCategory(rows, category)
         }
         if let payee = query["payee"]?.trimmingCharacters(in: .whitespaces), !payee.isEmpty {
             rows = rows.filter { Self.payeeKey(payee: $0.payee, description: $0.description) == payee }
@@ -157,13 +159,24 @@ private struct DemoFinance {
             let wanted = Set(source.split(separator: ",").map { String($0) })
             rows = rows.filter { wanted.contains($0.source ?? ($0.imported ? "csv" : "manual")) }
         }
-        switch query["kind"] {
-        case "transfer": rows = rows.filter { group(of: $0) != nil }
-        case "income": rows = rows.filter { net(of: $0) > 0 }
-        case "expense": rows = rows.filter { net(of: $0) < 0 }
-        default: break
+        return filteredByKind(rows, query["kind"])
+    }
+
+    /// The category filter: "none" for the uncategorized, else the category with its children.
+    private func filteredByCategory(_ rows: [FinanceTransaction], _ category: String) -> [FinanceTransaction] {
+        if category == "none" { return rows.filter { $0.categoryId == nil } }
+        let ids = subtree(category)
+        return rows.filter { row in row.categoryId.map { ids.contains($0) } ?? false }
+    }
+
+    /// The kind filter: transfers, money in, money out; everything else stays as it is.
+    private func filteredByKind(_ rows: [FinanceTransaction], _ kind: String?) -> [FinanceTransaction] {
+        switch kind {
+        case "transfer": return rows.filter { group(of: $0) != nil }
+        case "income": return rows.filter { net(of: $0) > 0 }
+        case "expense": return rows.filter { net(of: $0) < 0 }
+        default: return rows
         }
-        return rows
     }
 
     /// GET /finance/summary?from&to (financeSummary): within a category money in and out cancel
@@ -200,7 +213,9 @@ private struct DemoFinance {
     /// aren't legs of a transfer yet; the demo has no split bookings).
     func suggestions(from: String?, to: String?) -> FinanceTransferSuggestions {
         let rows = inRange(from, to).filter { group(of: $0) == nil }
-        func lead(_ lhs: FinanceTransaction, _ rhs: FinanceTransaction) -> Bool { (lhs.date, lhs.id) < (rhs.date, rhs.id) }
+        func lead(_ lhs: FinanceTransaction, _ rhs: FinanceTransaction) -> Bool {
+            (lhs.date, lhs.id) < (rhs.date, rhs.id)
+        }
         var candidates: [(out: FinanceTransaction, in: FinanceTransaction, gap: Int)] = []
         for out in rows where out.amountCents < 0 {
             for into in rows where into.amountCents == -out.amountCents && into.accountId != out.accountId {
@@ -251,7 +266,9 @@ private struct DemoFinance {
         var added = true
         while added {
             added = false
-            for node in base.categories where node.parentId.map({ ids.contains($0) }) == true && !ids.contains(node.id) {
+            for node in base.categories {
+                let parentInside = node.parentId.map { ids.contains($0) } ?? false
+                guard parentInside, !ids.contains(node.id) else { continue }
                 ids.insert(node.id)
                 added = true
             }
@@ -277,7 +294,8 @@ private struct DemoFinance {
             }
             let net = net(of: txn)
             guard legs.first?.id == txn.id, net != 0 else { return nil }
-            return NetItem(date: txn.date, amountCents: net, categoryId: legs.first { $0.categoryId != nil }?.categoryId,
+            let leadCategory = legs.first { $0.categoryId != nil }?.categoryId
+            return NetItem(date: txn.date, amountCents: net, categoryId: leadCategory,
                            payee: txn.payee, description: txn.description)
         }
     }
