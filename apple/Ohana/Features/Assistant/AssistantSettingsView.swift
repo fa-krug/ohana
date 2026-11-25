@@ -85,6 +85,7 @@ private struct AssistantSettingsForm: View {
     let saved: (AssistantSettings) -> Void
 
     @State private var baseUrl = ""
+    // leuchtfeuer:ignore mobsfscan:ios_hardcoded_secret empty start value of the key field below, not a credential
     @State private var apiKey = ""
     @State private var model = ""
     @State private var imageModel = ""
@@ -185,7 +186,9 @@ private struct AssistantSettingsForm: View {
             }
         }
     }
+}
 
+extension AssistantSettingsForm {
     // MARK: Sections
 
     private var endpointSection: some View {
@@ -211,8 +214,8 @@ private struct AssistantSettingsForm: View {
                 if let models, !models.isEmpty {
                     Picker("Model", selection: $model) {
                         if model.isEmpty { Text("Pick a model").tag("") }
-                        ForEach(Self.unique([model] + models).filter { !$0.isEmpty }, id: \.self) { m in
-                            Text(verbatim: m).tag(m)
+                        ForEach(Self.unique([model] + models).filter { !$0.isEmpty }, id: \.self) { modelName in
+                            Text(verbatim: modelName).tag(modelName)
                         }
                     }
                 } else {
@@ -259,6 +262,7 @@ private struct AssistantSettingsForm: View {
         } header: {
             Text("AI model")
         } footer: {
+            // leuchtfeuer:ignore swiftlint:line_length one localized string: splitting the literal would change its String Catalog key
             Text("Pick the AI service you have an account with and paste its key (stored encrypted, never shown again). Load the models from the API or type one; it needs to support tool calls. Everyone in the family uses this setup.")
         }
     }
@@ -307,8 +311,8 @@ private struct AssistantSettingsForm: View {
                     #endif
                 if let models, !models.isEmpty {
                     Menu {
-                        ForEach(models, id: \.self) { m in
-                            Button { imageModel = m } label: { Text(verbatim: m) }
+                        ForEach(models, id: \.self) { modelName in
+                            Button { imageModel = modelName } label: { Text(verbatim: modelName) }
                         }
                     } label: {
                         Image(systemName: "list.bullet")
@@ -396,15 +400,15 @@ private struct AssistantSettingsForm: View {
 
     // MARK: Actions
 
-    private func apply(_ s: AssistantSettings) {
-        guard applied != s else { return }
-        applied = s
-        baseUrl = s.baseUrl ?? ""
+    private func apply(_ newSettings: AssistantSettings) {
+        guard applied != newSettings else { return }
+        applied = newSettings
+        baseUrl = newSettings.baseUrl ?? ""
         customProvider = AssistantProviders.provider(for: baseUrl) == AssistantProviders.other
-        model = s.model
-        imageModel = s.imageModel ?? ""
-        contextWindow = (s.contextWindow ?? 0) > 0 ? String(s.contextWindow ?? 0) : ""
-        searchProvider = s.searchProvider ?? "none"
+        model = newSettings.model
+        imageModel = newSettings.imageModel ?? ""
+        contextWindow = (newSettings.contextWindow ?? 0) > 0 ? String(newSettings.contextWindow ?? 0) : ""
+        searchProvider = newSettings.searchProvider ?? "none"
         apiKey = ""
         searchKey = ""
     }
@@ -456,9 +460,9 @@ private struct AssistantSettingsForm: View {
         test = nil
         defer { busy = nil }
         do {
-            let r = try await family.api.send(.post, "/ai/test", body: Empty(), as: AssistantTestResult.self)
-            let reply = r.reply.isEmpty ? "…" : r.reply
-            withAnimation(.snappy) { test = (true, String(localized: "\(r.model) answered: \(reply)")) }
+            let testResult = try await family.api.send(.post, "/ai/test", body: Empty(), as: AssistantTestResult.self)
+            let reply = testResult.reply.isEmpty ? "…" : testResult.reply
+            withAnimation(.snappy) { test = (true, String(localized: "\(testResult.model) answered: \(reply)")) }
         } catch {
             withAnimation(.snappy) { test = (false, error.localizedDescription) }
         }
