@@ -85,18 +85,18 @@ nonisolated struct AssistantMemoryOp: Decodable, Equatable, Sendable {
     }
 
     init(from decoder: any Decoder) throws {
-        guard let c = try? decoder.container(keyedBy: Keys.self) else {
+        guard let values = try? decoder.container(keyedBy: Keys.self) else {
             self.init(action: "", text: "")
             return
         }
         func opt(_ key: Keys) -> String? {
-            guard let text = try? c.decodeIfPresent(String.self, forKey: key) else { return nil }
+            guard let text = try? values.decodeIfPresent(String.self, forKey: key) else { return nil }
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
             return trimmed.isEmpty ? nil : trimmed
         }
         self.init(action: opt(.action) ?? "", id: opt(.id),
                   module: opt(.module).map(AssistantMemoryModule.init(rawValue:)) ?? .general,
-                  text: opt(.text) ?? "", old: try? c.decodeIfPresent(Old.self, forKey: .old))
+                  text: opt(.text) ?? "", old: try? values.decodeIfPresent(Old.self, forKey: .old))
     }
 
     /// Its text can be changed on the card (what's saved).
