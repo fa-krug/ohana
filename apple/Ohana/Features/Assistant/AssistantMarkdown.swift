@@ -19,10 +19,10 @@ nonisolated enum AssistantMarkdownBlock: Equatable, Sendable {
     case code(String)
     case table(header: [String], alignments: [HorizontalAlignment?], rows: [[String]])
 
-    static func == (a: Self, b: Self) -> Bool {
-        switch (a, b) {
-        case let (.paragraph(x), .paragraph(y)), let (.heading(x), .heading(y)), let (.code(x), .code(y)): x == y
-        case let (.list(x), .list(y)): x == y
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        switch (lhs, rhs) {
+        case let (.paragraph(leftText), .paragraph(rightText)), let (.heading(leftText), .heading(rightText)), let (.code(leftText), .code(rightText)): leftText == rightText
+        case let (.list(leftItems), .list(rightItems)): leftItems == rightItems
         case let (.table(h1, _, r1), .table(h2, _, r2)): h1 == h2 && r1 == r2
         default: false
         }
@@ -44,9 +44,9 @@ nonisolated enum AssistantMarkdownBlock: Equatable, Sendable {
             .map { $0.replacingOccurrences(of: marker, with: "|").trimmingCharacters(in: .whitespaces) }
     }
 
-    private static func isTableStart(_ lines: [String], _ i: Int) -> Bool {
-        lines[i].contains("|") && i + 1 < lines.count && lines[i + 1].wholeMatch(of: tableRule) != nil
-            && cells(lines[i + 1]).count == cells(lines[i]).count
+    private static func isTableStart(_ lines: [String], _ lineIndex: Int) -> Bool {
+        lines[lineIndex].contains("|") && lineIndex + 1 < lines.count && lines[lineIndex + 1].wholeMatch(of: tableRule) != nil
+            && cells(lines[lineIndex + 1]).count == cells(lines[lineIndex]).count
     }
 
     // The regexes only where they can match: they are slow, and every line of an answer is tried
@@ -71,8 +71,8 @@ nonisolated enum AssistantMarkdownBlock: Equatable, Sendable {
     /// The width of a line's indentation (a tab counts 4).
     private static func indent(_ line: String) -> Int {
         var width = 0
-        for c in line {
-            if c == " " { width += 1 } else if c == "\t" { width += 4 } else { break }
+        for character in line {
+            if character == " " { width += 1 } else if character == "\t" { width += 4 } else { break }
         }
         return width
     }
@@ -84,17 +84,17 @@ nonisolated enum AssistantMarkdownBlock: Equatable, Sendable {
     private static func listItems(_ lines: [String], from start: Int) -> ([AssistantListItem], Int) {
         var items: [AssistantListItem] = []
         var indents: [Int] = []  // the indentation of each open depth
-        var i = start
-        while i < lines.count {
-            var line = lines[i]
+        var lineIndex = start
+        while lineIndex < lines.count {
+            var line = lines[lineIndex]
             if line.trimmingCharacters(in: .whitespaces).isEmpty {
-                var j = i
-                while j < lines.count, lines[j].trimmingCharacters(in: .whitespaces).isEmpty { j += 1 }
-                guard j < lines.count, isListItem(lines[j]), let first = items.first,
-                      indent(lines[j]) >= (indents.first ?? 0) + 2
-                        || (lines[j].prefixMatch(of: listItem)?.2 != nil) == (first.number != nil) else { break }
-                i = j
-                line = lines[i]
+                var nextLine = lineIndex
+                while nextLine < lines.count, lines[nextLine].trimmingCharacters(in: .whitespaces).isEmpty { nextLine += 1 }
+                guard nextLine < lines.count, isListItem(lines[nextLine]), let first = items.first,
+                      indent(lines[nextLine]) >= (indents.first ?? 0) + 2
+                        || (lines[nextLine].prefixMatch(of: listItem)?.2 != nil) == (first.number != nil) else { break }
+                lineIndex = nextLine
+                line = lines[lineIndex]
             }
             guard let match = line.prefixMatch(of: listItem) else { break }
             let width = indent(line)
@@ -105,60 +105,60 @@ nonisolated enum AssistantMarkdownBlock: Equatable, Sendable {
                 level: max(indents.count - 1, 0),
                 number: match.2.flatMap { Int($0) }
             ))
-            i += 1
+            lineIndex += 1
         }
-        return (items, i)
+        return (items, lineIndex)
     }
 
     static func parse(_ text: String) -> [AssistantMarkdownBlock] {
         let lines = text.replacingOccurrences(of: "\r", with: "").components(separatedBy: "\n")
         var blocks: [AssistantMarkdownBlock] = []
-        var i = 0
-        while i < lines.count {
-            let line = lines[i]
+        var lineIndex = 0
+        while lineIndex < lines.count {
+            let line = lines[lineIndex]
             if line.trimmingCharacters(in: .whitespaces).isEmpty {
-                i += 1
+                lineIndex += 1
                 continue
             }
             if line.hasPrefix("```") {
                 var code: [String] = []
-                i += 1
-                while i < lines.count, !lines[i].hasPrefix("```") {
-                    code.append(lines[i])
-                    i += 1
+                lineIndex += 1
+                while lineIndex < lines.count, !lines[lineIndex].hasPrefix("```") {
+                    code.append(lines[lineIndex])
+                    lineIndex += 1
                 }
-                i += 1
+                lineIndex += 1
                 blocks.append(.code(code.joined(separator: "\n")))
                 continue
             }
             if let title = heading(line) {
                 blocks.append(.heading(String(title)))
-                i += 1
+                lineIndex += 1
                 continue
             }
             if isListItem(line) {
-                let (items, next) = listItems(lines, from: i)
+                let (items, next) = listItems(lines, from: lineIndex)
                 blocks.append(.list(items))
-                i = next
+                lineIndex = next
                 continue
             }
-            if isTableStart(lines, i) {
+            if isTableStart(lines, lineIndex) {
                 let header = cells(line)
-                let alignments = cells(lines[i + 1]).map(alignment)
+                let alignments = cells(lines[lineIndex + 1]).map(alignment)
                 var rows: [[String]] = []
-                i += 2
-                while i < lines.count, lines[i].contains("|") {
-                    rows.append(cells(lines[i]))
-                    i += 1
+                lineIndex += 2
+                while lineIndex < lines.count, lines[lineIndex].contains("|") {
+                    rows.append(cells(lines[lineIndex]))
+                    lineIndex += 1
                 }
                 blocks.append(.table(header: header, alignments: alignments, rows: rows))
                 continue
             }
             var para: [String] = []
-            while i < lines.count, !lines[i].trimmingCharacters(in: .whitespaces).isEmpty, !lines[i].hasPrefix("```"),
-                  heading(lines[i]) == nil, !isListItem(lines[i]), !isTableStart(lines, i) {
-                para.append(lines[i])
-                i += 1
+            while lineIndex < lines.count, !lines[lineIndex].trimmingCharacters(in: .whitespaces).isEmpty, !lines[lineIndex].hasPrefix("```"),
+                  heading(lines[lineIndex]) == nil, !isListItem(lines[lineIndex]), !isTableStart(lines, lineIndex) {
+                para.append(lines[lineIndex])
+                lineIndex += 1
             }
             blocks.append(.paragraph(para.joined(separator: "\n")))
         }
@@ -174,21 +174,21 @@ nonisolated enum AssistantMarkdownBlock: Equatable, Sendable {
         let options = AttributedString.MarkdownParsingOptions(
             interpretedSyntax: .inlineOnlyPreservingWhitespace, failurePolicy: .returnPartiallyParsedIfPossible
         )
-        guard var s = try? AttributedString(markdown: text, options: options) else {
+        guard var attributed = try? AttributedString(markdown: text, options: options) else {
             var plain = AttributedString(text)
             detectLinks(in: &plain)
             return AssistantSourceMarkers.chips(in: plain)
         }
-        for run in s.runs {
+        for run in attributed.runs {
             // The app's own pages (/f/{id}/…, e.g. a recipe the assistant saved) open in the app.
             if let link = run.link, !linkSchemes.contains(link.scheme?.lowercased() ?? ""),
                !(link.scheme == nil && link.path.hasPrefix("/f/")) {
-                s[run.range].link = nil
+                attributed[run.range].link = nil
             }
         }
-        detectLinks(in: &s)
+        detectLinks(in: &attributed)
         // The source chips (`AssistantSourceMarkers.prepare`), after the links are sorted out.
-        return AssistantSourceMarkers.chips(in: s)
+        return AssistantSourceMarkers.chips(in: attributed)
     }
 
     // Matching with one is safe from any thread.
@@ -199,17 +199,17 @@ nonisolated enum AssistantMarkdownBlock: Equatable, Sendable {
 
     /// Web addresses, email addresses and phone numbers in the text as links, except inside code
     /// and links already there.
-    static func detectLinks(in s: inout AttributedString) {
-        let text = String(s.characters)
+    static func detectLinks(in attributed: inout AttributedString) {
+        let text = String(attributed.characters)
         // Each kind needs a dot, an "@" or digits.
         guard let detector, text.contains(where: { $0 == "." || $0 == "@" || $0.isNumber }) else { return }
         let matches = detector.matches(in: text, range: NSRange(text.startIndex..., in: text))
         for match in matches {
-            guard let range = Range<AttributedString.Index>(match.range, in: s), let url = linkURL(match) else { continue }
-            let taken = s[range].runs.contains { run in
+            guard let range = Range<AttributedString.Index>(match.range, in: attributed), let url = linkURL(match) else { continue }
+            let taken = attributed[range].runs.contains { run in
                 run.link != nil || run.inlinePresentationIntent?.contains(.code) == true
             }
-            if !taken { s[range].link = url }
+            if !taken { attributed[range].link = url }
         }
     }
 
@@ -369,16 +369,16 @@ struct AssistantMarkdownView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 6) {
                     GridRow {
-                        ForEach(Array(header.enumerated()), id: \.offset) { c, cell in
+                        ForEach(Array(header.enumerated()), id: \.offset) { columnIndex, cell in
                             Text(AssistantMarkdownCache.inline(cell)).bold()
-                                .gridColumnAlignment(alignments.indices.contains(c) ? alignments[c] ?? .leading : .leading)
+                                .gridColumnAlignment(alignments.indices.contains(columnIndex) ? alignments[columnIndex] ?? .leading : .leading)
                         }
                     }
                     Divider()
                     ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
                         GridRow {
-                            ForEach(header.indices, id: \.self) { c in
-                                Text(AssistantMarkdownCache.inline(row.indices.contains(c) ? row[c] : ""))
+                            ForEach(header.indices, id: \.self) { columnIndex in
+                                Text(AssistantMarkdownCache.inline(row.indices.contains(columnIndex) ? row[columnIndex] : ""))
                             }
                         }
                     }
