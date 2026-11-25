@@ -67,7 +67,9 @@ struct AssistantRemindersContext: Encodable, Equatable {
             .prefix(maxItems)
             .map { snapshotReminder in
                 let notes = snapshotReminder.notes.map { cut($0, maxNotes) } ?? ""
-                return Item(id: snapshotReminder.id, list: snapshotReminder.listID, title: cut(snapshotReminder.title, maxTitle), notes: notes.isEmpty ? nil : notes,
+                return Item(id: snapshotReminder.id, list: snapshotReminder.listID,
+                            title: cut(snapshotReminder.title, maxTitle),
+                            notes: notes.isEmpty ? nil : notes,
                             due: snapshotReminder.due, completed: false)
             }
         let shopping = shoppingListID.flatMap { ids.contains($0) ? $0 : nil }
