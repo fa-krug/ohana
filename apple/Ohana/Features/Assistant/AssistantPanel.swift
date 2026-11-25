@@ -122,11 +122,7 @@ struct AssistantSetupView: View {
             Label("Set up the assistant", systemImage: "sparkles")
                 .foregroundStyle(ModuleTint.assistant)
         } description: {
-            if canEdit {
-                Text("Connect any OpenAI-compatible AI (OpenAI, OpenRouter, Mistral, Gemini, a local model …) in the settings. It can then look things up on the web and plan in your calendar and finances.")
-            } else {
-                Text("Nobody has set up the assistant for this family yet. Ask an editor of the family to do it in the settings.")
-            }
+            if canEdit { setupNote } else { viewerNote }
         } actions: {
             if canEdit {
                 Button("Open the settings", action: openSettings)
@@ -134,5 +130,19 @@ struct AssistantSetupView: View {
                     .tint(ModuleTint.assistant)
             }
         }
+    }
+
+    /// What an editor has to do and what the assistant can then do for the family. The parts read
+    /// as one sentence; each is a key of its own.
+    private var setupNote: Text {
+        Text("Connect any OpenAI-compatible AI (OpenAI, OpenRouter, Mistral, Gemini, a local model …)")
+            + Text(" in the settings.")
+            + Text(" It can then look things up on the web and plan in your calendar and finances.")
+    }
+
+    /// What a viewer sees: nobody has set it up yet, and who can.
+    private var viewerNote: Text {
+        Text("Nobody has set up the assistant for this family yet.")
+            + Text(" Ask an editor of the family to do it in the settings.")
     }
 }
