@@ -152,7 +152,8 @@ extension AssistantAttachments {
     /// The message when more than `maxCount` files are attached at once.
     static var limitMessage: String {
         let limit = maxCount
-        return String(AttributedString(localized: "At most ^[\(limit) attachment](inflect: true) per message.").characters)
+        let text = AttributedString(localized: "At most ^[\(limit) attachment](inflect: true) per message.")
+        return String(text.characters)
     }
 
     /// Reads a dropped item into an attachment: a file, an image, or a file of text. Nil for a
