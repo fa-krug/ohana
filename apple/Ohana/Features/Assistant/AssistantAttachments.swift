@@ -120,13 +120,13 @@ nonisolated enum AssistantAttachments {
 
     /// The image drawn onto white (transparency would turn black in a JPEG).
     private static func onWhite(_ image: CGImage) -> CGImage? {
-        let w = image.width, h = image.height
-        guard let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
+        let widthPx = image.width, heightPx = image.height
+        guard let ctx = CGContext(data: nil, width: widthPx, height: heightPx, bitsPerComponent: 8, bytesPerRow: 0,
                                   space: CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB(),
                                   bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue) else { return nil }
         ctx.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
-        ctx.fill(CGRect(x: 0, y: 0, width: w, height: h))
-        ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+        ctx.fill(CGRect(x: 0, y: 0, width: widthPx, height: heightPx))
+        ctx.draw(image, in: CGRect(x: 0, y: 0, width: widthPx, height: heightPx))
         return ctx.makeImage()
     }
 
@@ -151,8 +151,8 @@ extension AssistantAttachments {
 
     /// The message when more than `maxCount` files are attached at once.
     static var limitMessage: String {
-        let n = maxCount
-        return String(AttributedString(localized: "At most ^[\(n) attachment](inflect: true) per message.").characters)
+        let limit = maxCount
+        return String(AttributedString(localized: "At most ^[\(limit) attachment](inflect: true) per message.").characters)
     }
 
     /// Reads a dropped item into an attachment: a file, an image, or a file of text. Nil for a
@@ -160,9 +160,9 @@ extension AssistantAttachments {
     static func load(_ provider: NSItemProvider) async throws -> AssistantPendingAttachment? {
         let name = provider.suggestedName
         if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
-            let url: URL? = try await withCheckedThrowingContinuation { c in
+            let url: URL? = try await withCheckedThrowingContinuation { continuation in
                 _ = provider.loadObject(ofClass: URL.self) { url, error in
-                    if let error { c.resume(throwing: error) } else { c.resume(returning: url) }
+                    if let error { continuation.resume(throwing: error) } else { continuation.resume(returning: url) }
                 }
             }
             if let url { return try await Task.detached { try read(url) }.value }
@@ -186,9 +186,9 @@ extension AssistantAttachments {
     }
 
     private static func data(of provider: NSItemProvider, as type: UTType, name: String) async throws -> Data {
-        let data: Data? = try await withCheckedThrowingContinuation { c in
+        let data: Data? = try await withCheckedThrowingContinuation { continuation in
             _ = provider.loadDataRepresentation(for: type) { data, error in
-                if let error { c.resume(throwing: error) } else { c.resume(returning: data) }
+                if let error { continuation.resume(throwing: error) } else { continuation.resume(returning: data) }
             }
         }
         guard let data else { throw AssistantAttachmentError.unreadable(name) }
