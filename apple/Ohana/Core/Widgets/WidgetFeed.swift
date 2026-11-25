@@ -213,7 +213,9 @@ private struct OverviewWire: Decodable {
             let codingContainer = try decoder.container(keyedBy: Keys.self)
             switch try codingContainer.decode(String.self, forKey: .kind) {
             case "entry":
-                self = .entry(from: try codingContainer.decode(Day.self, forKey: .date), to: try codingContainer.decode(Day.self, forKey: .to),
+                let fromDay = try codingContainer.decode(Day.self, forKey: .date)
+                let toDay = try codingContainer.decode(Day.self, forKey: .to)
+                self = .entry(from: fromDay, to: toDay,
                               name: try codingContainer.decode(String.self, forKey: .name),
                               color: try codingContainer.decode(String.self, forKey: .color))
             case "event":
