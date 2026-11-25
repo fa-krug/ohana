@@ -83,7 +83,9 @@ enum AssistantToolLinks {
     }
 
     private static func text(_ jsonValue: JSONValue?) -> String? {
-        guard let trimmed = jsonValue?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty else { return nil }
+        let raw = jsonValue?.stringValue ?? ""
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
         return trimmed
     }
 
