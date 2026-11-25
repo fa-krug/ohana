@@ -179,7 +179,9 @@ extension AppointmentSearchEditor {
             AppointmentAutocomplete(
                 prompt: "Search a city or address…",
                 text: $locationText,
-                fetch: { queryText in try await family.api.get("/geocode", query: ["q": queryText]) as [AppointmentLocationSuggestion] },
+                fetch: { queryText in
+                    try await family.api.get("/geocode", query: ["q": queryText]) as [AppointmentLocationSuggestion]
+                },
                 title: \.label
             ) { place in
                 input.latitude = place.latitude
@@ -215,7 +217,10 @@ extension AppointmentSearchEditor {
                     label: "Speciality",
                     prompt: "Search a speciality…",
                     text: $specialityText,
-                    fetch: { queryText in try await family.api.get("/appointments/doctolib-specialities", query: ["q": queryText]) as [AppointmentSpecialitySuggestion] },
+                    fetch: { queryText in
+                        try await family.api.get("/appointments/doctolib-specialities",
+                                                 query: ["q": queryText]) as [AppointmentSpecialitySuggestion]
+                    },
                     title: \.label
                 ) { item in
                     input.specialitySlug = item.slug
@@ -242,7 +247,10 @@ extension AppointmentSearchEditor {
                     label: "Speciality, treatment or condition",
                     prompt: "Search a speciality…",
                     text: $jamedaText,
-                    fetch: { queryText in try await family.api.get("/appointments/jameda-terms", query: ["q": queryText]) as [AppointmentJamedaTerm] },
+                    fetch: { queryText in
+                        try await family.api.get("/appointments/jameda-terms",
+                                                 query: ["q": queryText]) as [AppointmentJamedaTerm]
+                    },
                     title: \.label,
                     meta: { AppointmentLogic.termTypeLabel($0.type) }
                 ) { term in
