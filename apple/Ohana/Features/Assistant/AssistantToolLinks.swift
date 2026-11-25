@@ -7,12 +7,12 @@ enum AssistantToolLinks {
     /// The route of a successful tool call, or nil when there is nothing to show.
     static func route(_ tool: AssistantToolCall, familyID: String) -> AppRoute? {
         guard tool.status == "ok" else { return nil }
-        let a = tool.args
-        let r = object(tool.result)
+        let callArgs = tool.args
+        let resultObject = object(tool.result)
         /// A string field of the result; a result cut short (the chat keeps 2,000 characters of
         /// it) is searched as text.
         func field(_ key: String) -> String? {
-            if let r { return text(r[key]) }
+            if let resultFields = resultObject { return text(resultFields[key]) }
             return raw(key, in: tool.result)
         }
 
@@ -20,36 +20,36 @@ enum AssistantToolLinks {
         case "save_recipe", "get_recipe":
             if let id = field("id") { return .recipe(id: id) }
         case "add_event":
-            if let day = Day(field("date") ?? text(a["date"]) ?? "") { return .calendarDay(day) }
+            if let day = Day(field("date") ?? text(callArgs["date"]) ?? "") { return .calendarDay(day) }
         case "change_entries", "set_notes":
-            if let day = firstDay(ops: a["ops"]) { return .calendarDay(day) }
+            if let day = firstDay(ops: callArgs["ops"]) { return .calendarDay(day) }
         case "book_appointment_slot":
-            let event = r?["event"]?.objectValue
+            let event = resultObject?["event"]?.objectValue
             if let search = text(event?["searchId"]) ?? raw("searchId", in: tool.result),
-               let result = number(a["resultId"]) {
+               let result = number(callArgs["resultId"]) {
                 return .appointmentSlot(searchID: search, resultID: result)
             }
             if let day = Day(text(event?["date"]) ?? "") { return .calendarDay(day) }
         case "create_appointment_search", "change_appointment_search":
             if let id = field("id") { return .appointmentSearch(id: id) }
         case "get_appointment_slot":
-            if let search = field("searchId"), let result = number(a["resultId"]) {
+            if let search = field("searchId"), let result = number(callArgs["resultId"]) {
                 return .appointmentSlot(searchID: search, resultID: result)
             }
         case "get_meal_plan", "plan_meals", "get_shopping_items":
             return .mealPlan
         case "read_knowledge":
-            if let id = text(a["documentId"]) {
-                let page = a["page"]?.doubleValue.flatMap { $0 >= 1 ? Int($0) : nil }
+            if let id = text(callArgs["documentId"]) {
+                let page = callArgs["page"]?.doubleValue.flatMap { $0 >= 1 ? Int($0) : nil }
                 return .knowledgeDocument(id: id, page: page)
             }
         case "knowledge_values", "view_knowledge_pages":
-            if let id = text(a["documentId"]) { return .knowledgeDocument(id: id, page: nil) }
+            if let id = text(callArgs["documentId"]) { return .knowledgeDocument(id: id, page: nil) }
         case "edit_memories":
             return .settings(.assistantMemory)
         case "manage_categories":
             // Added or changed (a deleted one is gone).
-            if r?["deleted"] == nil, let id = field("id") { return .financeTransactions(categoryID: id) }
+            if resultObject?["deleted"] == nil, let id = field("id") { return .financeTransactions(categoryID: id) }
             return nil
         default:
             break
@@ -77,28 +77,28 @@ enum AssistantToolLinks {
         guard let result else { return nil }
         let pattern = "\"\(NSRegularExpression.escapedPattern(for: key))\"\\s*:\\s*\"([^\"\\\\]+)\""
         guard let re = try? NSRegularExpression(pattern: pattern),
-              let m = re.firstMatch(in: result, range: NSRange(result.startIndex..., in: result)),
-              let range = Range(m.range(at: 1), in: result) else { return nil }
+              let match = re.firstMatch(in: result, range: NSRange(result.startIndex..., in: result)),
+              let range = Range(match.range(at: 1), in: result) else { return nil }
         return String(result[range])
     }
 
-    private static func text(_ v: JSONValue?) -> String? {
-        guard let s = v?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines), !s.isEmpty else { return nil }
-        return s
+    private static func text(_ jsonValue: JSONValue?) -> String? {
+        guard let trimmed = jsonValue?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty else { return nil }
+        return trimmed
     }
 
-    private static func number(_ v: JSONValue?) -> String? {
-        switch v {
-        case let .number(n): n == n.rounded() ? String(Int(n)) : nil
-        case let .string(s): Int(s).map(String.init)
+    private static func number(_ jsonValue: JSONValue?) -> String? {
+        switch jsonValue {
+        case let .number(numeric): numeric == numeric.rounded() ? String(Int(numeric)) : nil
+        case let .string(textValue): Int(textValue).map(String.init)
         default: nil
         }
     }
 
     /// The first day a list of calendar ops touches.
     private static func firstDay(ops: JSONValue?) -> Day? {
-        let days = (ops?.arrayValue ?? []).compactMap(\.objectValue).flatMap { o in
-            (o["dates"]?.arrayValue ?? []) + [o["from"], o["to"]].compactMap { $0 }
+        let days = (ops?.arrayValue ?? []).compactMap(\.objectValue).flatMap { operation in
+            (operation["dates"]?.arrayValue ?? []) + [operation["from"], operation["to"]].compactMap { $0 }
         }.compactMap { $0.stringValue }.filter { $0.wholeMatch(of: /\d{4}-\d{2}-\d{2}/) != nil }.sorted()
         return days.first.flatMap { Day($0) }
     }
