@@ -262,7 +262,6 @@ extension AssistantSettingsForm {
         } header: {
             Text("AI model")
         } footer: {
-            // leuchtfeuer:ignore swiftlint:line_length one localized string: splitting the literal would change its String Catalog key
             Text("Pick the AI service you have an account with and paste its key (stored encrypted, never shown again). Load the models from the API or type one; it needs to support tool calls. Everyone in the family uses this setup.")
         }
     }
