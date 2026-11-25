@@ -47,7 +47,8 @@ nonisolated struct AssistantSource: Decodable, Hashable, Identifiable, Sendable 
         func str(_ key: Keys) -> String { (try? values.decodeIfPresent(String.self, forKey: key)) ?? "" }
         func int(_ key: Keys) -> Int? {
             if let wholeNumber = try? values.decodeIfPresent(Int.self, forKey: key) { return wholeNumber }
-            return (try? values.decodeIfPresent(Double.self, forKey: key)).flatMap { $0 == $0.rounded() ? Int($0) : nil }
+            let fraction = try? values.decodeIfPresent(Double.self, forKey: key)
+            return fraction.flatMap { $0 == $0.rounded() ? Int($0) : nil }
         }
         let path = str(.path)
         let name = str(.name)
