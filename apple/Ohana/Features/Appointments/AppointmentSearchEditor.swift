@@ -156,7 +156,9 @@ struct AppointmentSearchEditor: View {
     private func hasProblem(_ field: AppointmentSearchField) -> Bool {
         issues.contains { $0.field == field }
     }
+}
 
+extension AppointmentSearchEditor {
     // MARK: Sections
 
     private var general: some View {
@@ -177,7 +179,7 @@ struct AppointmentSearchEditor: View {
             AppointmentAutocomplete(
                 prompt: "Search a city or address…",
                 text: $locationText,
-                fetch: { q in try await family.api.get("/geocode", query: ["q": q]) as [AppointmentLocationSuggestion] },
+                fetch: { queryText in try await family.api.get("/geocode", query: ["q": queryText]) as [AppointmentLocationSuggestion] },
                 title: \.label
             ) { place in
                 input.latitude = place.latitude
@@ -213,7 +215,7 @@ struct AppointmentSearchEditor: View {
                     label: "Speciality",
                     prompt: "Search a speciality…",
                     text: $specialityText,
-                    fetch: { q in try await family.api.get("/appointments/doctolib-specialities", query: ["q": q]) as [AppointmentSpecialitySuggestion] },
+                    fetch: { queryText in try await family.api.get("/appointments/doctolib-specialities", query: ["q": queryText]) as [AppointmentSpecialitySuggestion] },
                     title: \.label
                 ) { item in
                     input.specialitySlug = item.slug
@@ -240,7 +242,7 @@ struct AppointmentSearchEditor: View {
                     label: "Speciality, treatment or condition",
                     prompt: "Search a speciality…",
                     text: $jamedaText,
-                    fetch: { q in try await family.api.get("/appointments/jameda-terms", query: ["q": q]) as [AppointmentJamedaTerm] },
+                    fetch: { queryText in try await family.api.get("/appointments/jameda-terms", query: ["q": queryText]) as [AppointmentJamedaTerm] },
                     title: \.label,
                     meta: { AppointmentLogic.termTypeLabel($0.type) }
                 ) { term in
@@ -523,8 +525,8 @@ struct AppointmentAutocomplete<Item: Identifiable & Hashable>: View {
     }
 
     private func search() async {
-        let q = text.trimmingCharacters(in: .whitespaces)
-        guard q.count >= 2, text != chosen else {
+        let queryText = text.trimmingCharacters(in: .whitespaces)
+        guard queryText.count >= 2, text != chosen else {
             suggestions = []
             return
         }
@@ -532,7 +534,7 @@ struct AppointmentAutocomplete<Item: Identifiable & Hashable>: View {
         guard !Task.isCancelled else { return }
         loading = true
         defer { loading = false }
-        let found = (try? await fetch(q)) ?? []
+        let found = (try? await fetch(queryText)) ?? []
         guard !Task.isCancelled else { return }
         suggestions = Array(found.prefix(8))
     }
