@@ -262,8 +262,17 @@ extension AssistantSettingsForm {
         } header: {
             Text("AI model")
         } footer: {
-            Text("Pick the AI service you have an account with and paste its key (stored encrypted, never shown again). Load the models from the API or type one; it needs to support tool calls. Everyone in the family uses this setup.")
+            modelFooter
         }
+    }
+
+    /// Which service to connect with its key, which model to answer with, and that the whole
+    /// family shares it. Each part is a key of its own.
+    private var modelFooter: Text {
+        Text("Pick the AI service you have an account with and paste its key")
+            + Text(" (stored encrypted, never shown again).")
+            + Text(" Load the models from the API or type one; it needs to support tool calls.")
+            + Text(" Everyone in the family uses this setup.")
     }
 
     /// What only some need: another service's address, a model's context window, the image model
