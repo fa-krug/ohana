@@ -277,7 +277,9 @@ nonisolated enum FolderTags {
         for (tag, count) in counts { total[tag.lowercased(), default: 0] += count }
         let ordered = counts.sorted {
             let lhsTotal = total[$0.key.lowercased()]!, rhsTotal = total[$1.key.lowercased()]!
-            return lhsTotal != rhsTotal ? lhsTotal > rhsTotal : $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key
+            if lhsTotal != rhsTotal { return lhsTotal > rhsTotal }
+            if $0.value != $1.value { return $0.value > $1.value }
+            return $0.key < $1.key
         }
         return ScanTags.cleaned(ordered.map(\.key), limit: .max)
     }
