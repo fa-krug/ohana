@@ -13,7 +13,9 @@ struct PushTests {
 
     @Test func opensWhatTheServerSealed() throws {
         let payload = try PushPayload.open(sealed, key: key)
-        #expect(payload == PushPayload(version: 1, title: "Hallo", body: "Grüße 👋", path: "/f/fam/calendar", familyId: "fam", event: nil))
+        let expected = PushPayload(version: 1, title: "Hallo", body: "Grüße 👋",
+                                   path: "/f/fam/calendar", familyId: "fam", event: nil)
+        #expect(payload == expected)
     }
 
     @Test func refusesAnotherKeyOrGarbage() {
