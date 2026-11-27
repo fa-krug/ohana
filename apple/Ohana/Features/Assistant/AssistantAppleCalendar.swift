@@ -64,11 +64,12 @@ struct AssistantCalendarContext: Encodable, Equatable {
             .filter { ids.contains($0.calendarID) && $0.ref.description.count <= maxID }
             .sorted { ($0.start.description, $0.title) < ($1.start.description, $1.title) }
             .prefix(maxEvents)
-            .map { e in
-                Event(id: e.ref.description, calendar: e.calendarID, title: cut(e.title, maxTitle), allDay: e.allDay,
-                      start: e.start.description, end: e.end.description,
-                      location: e.location.flatMap { nonEmpty(cut($0, maxLocation)) },
-                      notes: e.notes.flatMap { nonEmpty(cut($0, maxNotes)) }, rrule: e.rrule)
+            .map { deviceEvent in
+                Event(id: deviceEvent.ref.description, calendar: deviceEvent.calendarID,
+                      title: cut(deviceEvent.title, maxTitle), allDay: deviceEvent.allDay,
+                      start: deviceEvent.start.description, end: deviceEvent.end.description,
+                      location: deviceEvent.location.flatMap { nonEmpty(cut($0, maxLocation)) },
+                      notes: deviceEvent.notes.flatMap { nonEmpty(cut($0, maxNotes)) }, rrule: deviceEvent.rrule)
             }
         return Self(from: from.description, to: to.description, calendars: Array(calendars), events: Array(list))
     }
@@ -277,7 +278,7 @@ struct AssistantCalendarOpLine: Equatable {
     /// "Thu 5 Nov", "Thu 5 – Sat 7 Nov" (all day), "Thu 5 Nov, 09:00 – 10:00" or
     /// "Thu 5 Nov, 22:00 – Fri 6 Nov, 01:00" (in the user's language).
     static func whenText(start: ReminderDue, end: ReminderDue?, allDay: Bool, locale: Locale = .current) -> String {
-        let day = { (d: Day) in AssistantReminderOpLine.dueText(ReminderDue(day: d), locale: locale) }
+        let day = { (oneDay: Day) in AssistantReminderOpLine.dueText(ReminderDue(day: oneDay), locale: locale) }
         if allDay || start.time == nil {
             guard let last = end?.day, last > start.day else { return day(start.day) }
             return "\(day(start.day)) – \(day(last))"

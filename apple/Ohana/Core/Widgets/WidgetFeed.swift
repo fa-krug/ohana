@@ -210,14 +210,16 @@ private struct OverviewWire: Decodable {
         private enum Keys: String, CodingKey { case kind, date, to, name, color, event }
 
         init(from decoder: any Decoder) throws {
-            let c = try decoder.container(keyedBy: Keys.self)
-            switch try c.decode(String.self, forKey: .kind) {
+            let codingContainer = try decoder.container(keyedBy: Keys.self)
+            switch try codingContainer.decode(String.self, forKey: .kind) {
             case "entry":
-                self = .entry(from: try c.decode(Day.self, forKey: .date), to: try c.decode(Day.self, forKey: .to),
-                              name: try c.decode(String.self, forKey: .name),
-                              color: try c.decode(String.self, forKey: .color))
+                let fromDay = try codingContainer.decode(Day.self, forKey: .date)
+                let toDay = try codingContainer.decode(Day.self, forKey: .to)
+                self = .entry(from: fromDay, to: toDay,
+                              name: try codingContainer.decode(String.self, forKey: .name),
+                              color: try codingContainer.decode(String.self, forKey: .color))
             case "event":
-                self = .event(try c.decode(Event.self, forKey: .event))
+                self = .event(try codingContainer.decode(Event.self, forKey: .event))
             default:
                 self = .other
             }

@@ -37,23 +37,23 @@ struct AssistantRemindersContext: Encodable, Equatable {
         private enum Keys: String, CodingKey { case id, list, title, notes, due, completed }
 
         func encode(to encoder: any Encoder) throws {
-            var c = encoder.container(keyedBy: Keys.self)
-            try c.encode(id, forKey: .id)
-            try c.encode(list, forKey: .list)
-            try c.encode(title, forKey: .title)
-            try c.encodeIfPresent(notes, forKey: .notes)
-            try c.encode(due, forKey: .due) // null without a due date
-            try c.encode(completed, forKey: .completed)
+            var values = encoder.container(keyedBy: Keys.self)
+            try values.encode(id, forKey: .id)
+            try values.encode(list, forKey: .list)
+            try values.encode(title, forKey: .title)
+            try values.encodeIfPresent(notes, forKey: .notes)
+            try values.encode(due, forKey: .due) // null without a due date
+            try values.encode(completed, forKey: .completed)
         }
     }
 
     private enum Keys: String, CodingKey { case shoppingListId, lists, items }
 
     func encode(to encoder: any Encoder) throws {
-        var c = encoder.container(keyedBy: Keys.self)
-        try c.encode(shoppingListId, forKey: .shoppingListId) // null when none is chosen
-        try c.encode(lists, forKey: .lists)
-        try c.encode(items, forKey: .items)
+        var values = encoder.container(keyedBy: Keys.self)
+        try values.encode(shoppingListId, forKey: .shoppingListId) // null when none is chosen
+        try values.encode(lists, forKey: .lists)
+        try values.encode(items, forKey: .items)
     }
 
     /// The snapshot of what `RemindersStore` read: writable lists only (at most 100), their open
@@ -65,10 +65,12 @@ struct AssistantRemindersContext: Encodable, Equatable {
             .filter { !$0.isCompleted && ids.contains($0.listID) }
             .sorted(by: ReminderSnapshot.nearestDueFirst)
             .prefix(maxItems)
-            .map { r in
-                let notes = r.notes.map { cut($0, maxNotes) } ?? ""
-                return Item(id: r.id, list: r.listID, title: cut(r.title, maxTitle), notes: notes.isEmpty ? nil : notes,
-                            due: r.due, completed: false)
+            .map { snapshotReminder in
+                let notes = snapshotReminder.notes.map { cut($0, maxNotes) } ?? ""
+                return Item(id: snapshotReminder.id, list: snapshotReminder.listID,
+                            title: cut(snapshotReminder.title, maxTitle),
+                            notes: notes.isEmpty ? nil : notes,
+                            due: snapshotReminder.due, completed: false)
             }
         let shopping = shoppingListID.flatMap { ids.contains($0) ? $0 : nil }
         return Self(shoppingListId: shopping, lists: Array(lists), items: Array(items))

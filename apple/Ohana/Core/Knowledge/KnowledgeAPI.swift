@@ -133,14 +133,14 @@ nonisolated struct KnowledgeManifestFile: Encodable, Equatable, Sendable {
     private enum CodingKeys: String, CodingKey { case path, size, mtime, hash, tags, reader }
 
     func encode(to encoder: any Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(path, forKey: .path)
-        try c.encode(size, forKey: .size)
-        try c.encode(mtime, forKey: .mtime)
+        var codingContainer = encoder.container(keyedBy: CodingKeys.self)
+        try codingContainer.encode(path, forKey: .path)
+        try codingContainer.encode(size, forKey: .size)
+        try codingContainer.encode(mtime, forKey: .mtime)
         // Explicitly null, not left out.
-        try c.encode(hash, forKey: .hash)
-        try c.encode(tags, forKey: .tags)
-        try c.encode(reader, forKey: .reader)
+        try codingContainer.encode(hash, forKey: .hash)
+        try codingContainer.encode(tags, forKey: .tags)
+        try codingContainer.encode(reader, forKey: .reader)
     }
 }
 
@@ -176,17 +176,17 @@ nonisolated struct KnowledgeUploadBody: Encodable, Sendable {
     }
 
     func encode(to encoder: any Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(folderId, forKey: .folderId)
-        try c.encode(file.path, forKey: .path)
-        try c.encode(file.hash, forKey: .hash)
-        try c.encode(file.size, forKey: .size)
-        try c.encode(file.mtime, forKey: .mtime)
-        try c.encode(file.tags, forKey: .tags)
-        try c.encode(pages, forKey: .pages)
-        try c.encode(reader, forKey: .reader)
-        if reread { try c.encode(true, forKey: .reread) }
-        if scansChecked { try c.encode(true, forKey: .scansChecked) }
+        var codingContainer = encoder.container(keyedBy: CodingKeys.self)
+        try codingContainer.encode(folderId, forKey: .folderId)
+        try codingContainer.encode(file.path, forKey: .path)
+        try codingContainer.encode(file.hash, forKey: .hash)
+        try codingContainer.encode(file.size, forKey: .size)
+        try codingContainer.encode(file.mtime, forKey: .mtime)
+        try codingContainer.encode(file.tags, forKey: .tags)
+        try codingContainer.encode(pages, forKey: .pages)
+        try codingContainer.encode(reader, forKey: .reader)
+        if reread { try codingContainer.encode(true, forKey: .reread) }
+        if scansChecked { try codingContainer.encode(true, forKey: .scansChecked) }
     }
 }
 

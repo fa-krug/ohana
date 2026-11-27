@@ -13,7 +13,9 @@ struct PushTests {
 
     @Test func opensWhatTheServerSealed() throws {
         let payload = try PushPayload.open(sealed, key: key)
-        #expect(payload == PushPayload(v: 1, title: "Hallo", body: "Grüße 👋", path: "/f/fam/calendar", familyId: "fam", event: nil))
+        let expected = PushPayload(version: 1, title: "Hallo", body: "Grüße 👋",
+                                   path: "/f/fam/calendar", familyId: "fam", event: nil)
+        #expect(payload == expected)
     }
 
     @Test func refusesAnotherKeyOrGarbage() {
@@ -37,11 +39,11 @@ struct PushTests {
     @Test func setsTheIconsNumberOnlyWhenThePayloadHasOne() {
         let content = UNMutableNotificationContent()
         content.badge = 5
-        PushPayload(v: 1, title: "T", body: "B").apply(to: content)
+        PushPayload(version: 1, title: "T", body: "B").apply(to: content)
         #expect(content.badge == 5)
-        PushPayload(v: 1, title: "T", body: "B", badge: 2).apply(to: content)
+        PushPayload(version: 1, title: "T", body: "B", badge: 2).apply(to: content)
         #expect(content.badge == 2)
-        PushPayload(v: 1, title: "T", body: "B", badge: 0).apply(to: content)
+        PushPayload(version: 1, title: "T", body: "B", badge: 0).apply(to: content)
         #expect(content.badge == 0)
     }
 

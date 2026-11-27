@@ -8,7 +8,8 @@ import UserNotifications
 /// text ("New notification from Ohana") until the Notification Service Extension opens it.
 /// Shared by the app and the extension (`OhanaNotificationService`).
 nonisolated struct PushPayload: Codable, Equatable, Sendable {
-    var v: Int
+    /// The payload's format version; the server's key for it is still `v` (see `CodingKeys`).
+    var version: Int
     var title: String
     var body: String
     /// Where a tap leads: a path of the server (`/f/{id}/…`).
@@ -24,6 +25,13 @@ nonisolated struct PushPayload: Codable, Equatable, Sendable {
     var badgeSteps: [BadgeSchedule.Step]?
 
     enum OpenError: Error { case malformed }
+
+    /// The server's JSON keys (server/lib/push/payload.ts); only the version is spelled
+    /// shorter there than here.
+    enum CodingKeys: String, CodingKey {
+        case version = "v"
+        case title, body, path, familyId, event, badge, badgeTomorrow, badgeSteps
+    }
 
     /// The APNs payload's key for the sealed payload (`{"aps": …, "o": "<base64>"}`).
     static let userInfoKey = "o"

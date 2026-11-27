@@ -165,8 +165,8 @@ enum AccountRules {
 
     /// Trimmed text, nil when blank.
     static func trimmed(_ text: String) -> String? {
-        let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        return t.isEmpty ? nil : t
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedText.isEmpty ? nil : trimmedText
     }
 }
 

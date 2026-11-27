@@ -23,31 +23,31 @@ extension DemoServer {
     /// server/lib/meals/queries/recipes.ts `listRecipes`.
     private static func recipePage(_ request: Request) -> JSONValue? {
         guard var items = request.json("meals-recipes")?["items"]?.arrayValue else { return nil }
-        let q = request.query
-        if let list = q["list"], !list.isEmpty {
+        let params = request.query
+        if let list = params["list"], !list.isEmpty {
             items = items.filter { $0["listType"]?.stringValue == list }
         }
-        let tagIDs = Set((q["tags"] ?? "").split(separator: ",").map(String.init))
+        let tagIDs = Set((params["tags"] ?? "").split(separator: ",").map(String.init))
         if !tagIDs.isEmpty {
             items = items.filter { recipe in
                 (recipe["tags"]?.arrayValue ?? []).contains { tagIDs.contains($0["id"]?.stringValue ?? "") }
             }
         }
         func field(_ recipe: JSONValue, _ key: String) -> String { recipe[key]?.stringValue ?? "" }
-        let search = (q["q"] ?? "").trimmingCharacters(in: .whitespaces)
+        let search = (params["q"] ?? "").trimmingCharacters(in: .whitespaces)
         if !search.isEmpty {
             items = items.filter {
                 field($0, "title").range(of: search, options: [.caseInsensitive, .diacriticInsensitive]) != nil
             }
         }
-        switch q["sort"] ?? "name-asc" {
+        switch params["sort"] ?? "name-asc" {
         case "name-desc": items.sort { field($0, "title").localizedCompare(field($1, "title")) == .orderedDescending }
         case "newest": items.sort { field($0, "createdAt") > field($1, "createdAt") }
         case "updated": items.sort { field($0, "updatedAt") > field($1, "updatedAt") }
         default: items.sort { field($0, "title").localizedCompare(field($1, "title")) == .orderedAscending }
         }
-        let offset = max(0, Int(q["offset"] ?? "") ?? 0)
-        let limit = min(100, max(1, Int(q["limit"] ?? "") ?? 20))
+        let offset = max(0, Int(params["offset"] ?? "") ?? 0)
+        let limit = min(100, max(1, Int(params["limit"] ?? "") ?? 20))
         let page = offset < items.count ? Array(items[offset..<min(items.count, offset + limit)]) : []
         return .object(["items": .array(page), "totalCount": .number(Double(items.count))])
     }

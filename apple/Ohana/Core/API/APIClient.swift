@@ -23,9 +23,9 @@ final class APIClient {
 
     static let decoder = JSONDecoder()
     static let encoder: JSONEncoder = {
-        let e = JSONEncoder()
-        e.outputFormatting = [.withoutEscapingSlashes]
-        return e
+        let jsonEncoder = JSONEncoder()
+        jsonEncoder.outputFormatting = [.withoutEscapingSlashes]
+        return jsonEncoder
     }()
 
     init(baseURL: URL, token: String?, session: URLSession = .shared, cache: ResponseCache? = nil) {
@@ -62,9 +62,9 @@ final class APIClient {
     }
 
     private static func split(_ path: String) -> (String, [URLQueryItem]) {
-        guard let i = path.firstIndex(of: "?") else { return (path, []) }
-        let items = URLComponents(string: "x:/?" + path[path.index(after: i)...])?.queryItems ?? []
-        return (String(path[..<i]), items)
+        guard let mark = path.firstIndex(of: "?") else { return (path, []) }
+        let items = URLComponents(string: "x:/?" + path[path.index(after: mark)...])?.queryItems ?? []
+        return (String(path[..<mark]), items)
     }
 
     func request(_ method: HTTPMethod, _ path: String, query: [String: String?] = [:], body: Data? = nil,
@@ -113,7 +113,10 @@ final class APIClient {
     }
 
     func decode<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
-        if T.self == Empty.self, data.isEmpty { return Empty() as! T }
+        if T.self == Empty.self, data.isEmpty {
+            guard let empty = Empty() as? T else { throw APIError.decoding("\(T.self) is not Empty") }
+            return empty
+        }
         do {
             return try Self.decoder.decode(T.self, from: data)
         } catch {

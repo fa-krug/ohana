@@ -21,7 +21,7 @@ extension RepeatRule {
         case .never: nil
         // The end of the day, so its last occurrence is in at any time.
         case let .until(day): EKRecurrenceEnd(end: Day.calendar.date(bySettingHour: 23, minute: 59, second: 59, of: day.date) ?? day.date)
-        case let .count(n): EKRecurrenceEnd(occurrenceCount: n)
+        case let .count(repeatCount): EKRecurrenceEnd(occurrenceCount: repeatCount)
         }
         func numbers(_ list: [Int]) -> [NSNumber]? { list.isEmpty ? nil : list.map { NSNumber(value: $0) } }
         return EKRecurrenceRule(

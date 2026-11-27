@@ -123,16 +123,17 @@ nonisolated enum MemberPhoto {
     /// fits `maxBytes`.
     static func prepare(from data: Data, maxPixels: Int = maxPixels, quality: Double = 0.85) -> PreparedMemberPhoto? {
         guard let image = upright(data, maxPixels: maxPixels) else { return nil }
-        let w = image.width, h = image.height
-        guard let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
-                                  space: CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB(),
+        let pixelWidth = image.width, pixelHeight = image.height
+        let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
+        guard let ctx = CGContext(data: nil, width: pixelWidth, height: pixelHeight, bitsPerComponent: 8,
+                                  bytesPerRow: 0, space: colorSpace,
                                   bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue) else { return nil }
         ctx.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
-        ctx.fill(CGRect(x: 0, y: 0, width: w, height: h))
-        ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+        ctx.fill(CGRect(x: 0, y: 0, width: pixelWidth, height: pixelHeight))
+        ctx.draw(image, in: CGRect(x: 0, y: 0, width: pixelWidth, height: pixelHeight))
         guard let flat = ctx.makeImage() else { return nil }
-        for q in [quality, 0.7, 0.55, 0.4] where q <= quality {
-            guard let jpeg = encode(flat, quality: q) else { return nil }
+        for tryQuality in [quality, 0.7, 0.55, 0.4] where tryQuality <= quality {
+            guard let jpeg = encode(flat, quality: tryQuality) else { return nil }
             if jpeg.count <= maxBytes { return PreparedMemberPhoto(jpeg: jpeg, image: flat) }
         }
         return nil

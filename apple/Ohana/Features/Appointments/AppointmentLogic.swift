@@ -18,41 +18,51 @@ enum AppointmentLogic {
     // MARK: Validation (searchInputSchema)
 
     /// What keeps the input from saving, in the server's words; empty when it's fine.
-    static func problems(_ i: AppointmentSearchInput) -> [String] {
-        issues(i).map(\.message)
+    static func problems(_ searchInput: AppointmentSearchInput) -> [String] {
+        issues(searchInput).map(\.message)
     }
 
     /// The problems by the field they belong to, so the editor shows each at its field.
-    static func issues(_ i: AppointmentSearchInput) -> [(field: AppointmentSearchField, message: String)] {
+    static func issues(_ searchInput: AppointmentSearchInput) -> [(field: AppointmentSearchField, message: String)] {
         var out: [(field: AppointmentSearchField, message: String)] = []
-        let name = i.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = searchInput.name.trimmingCharacters(in: .whitespacesAndNewlines)
         if name.isEmpty { out.append((.name, String(localized: "Give the search a name."))) }
         if name.count > 200 { out.append((.name, String(localized: "The name is too long (max. 200)."))) }
-        if i.latitude.trimmingCharacters(in: .whitespaces).isEmpty || i.longitude.trimmingCharacters(in: .whitespaces).isEmpty {
+        let latitudeBlank = searchInput.latitude.trimmingCharacters(in: .whitespaces).isEmpty
+        let longitudeBlank = searchInput.longitude.trimmingCharacters(in: .whitespaces).isEmpty
+        if latitudeBlank || longitudeBlank {
             out.append((.location, String(localized: "Pick a location from the suggestions.")))
         }
-        if i.doctolibOn && i.specialitySlug.trimmingCharacters(in: .whitespaces).isEmpty {
+        if searchInput.doctolibOn && searchInput.specialitySlug.trimmingCharacters(in: .whitespaces).isEmpty {
             out.append((.doctolibSpeciality, String(localized: "Pick a Doctolib speciality.")))
         }
-        if i.jamedaOn && i.jamedaSpecialitySlug.trimmingCharacters(in: .whitespaces).isEmpty {
+        if searchInput.jamedaOn && searchInput.jamedaSpecialitySlug.trimmingCharacters(in: .whitespaces).isEmpty {
             out.append((.jamedaSpeciality, String(localized: "Pick a jameda speciality.")))
         }
-        if !(1...365).contains(i.dayLimit) {
+        if !(1...365).contains(searchInput.dayLimit) {
             out.append((.dayLimit, String(localized: "Within (days) must be between 1 and 365.")))
         }
-        if !(1...20).contains(i.maxPages) {
+        if !(1...20).contains(searchInput.maxPages) {
             out.append((.maxPages, String(localized: "Result pages must be between 1 and 20.")))
         }
-        if i.scheduleType == "MINUTES", !(1...1440).contains(i.scheduleMinutes ?? 0) {
+        out.append(contentsOf: scheduleIssues(searchInput))
+        return out
+    }
+
+    /// The schedule part of the problems: the interval's range and the cron expression's shape.
+    static func scheduleIssues(_ searchInput: AppointmentSearchInput)
+        -> [(field: AppointmentSearchField, message: String)] {
+        var out: [(field: AppointmentSearchField, message: String)] = []
+        if searchInput.scheduleType == "MINUTES", !(1...1440).contains(searchInput.scheduleMinutes ?? 0) {
             out.append((.interval, String(localized: "The interval must be between 1 and 1440 minutes.")))
         }
-        if i.scheduleType == "CRON" {
-            let fields = i.cron.split(whereSeparator: \.isWhitespace)
+        if searchInput.scheduleType == "CRON" {
+            let fields = searchInput.cron.split(whereSeparator: \.isWhitespace)
             if fields.count != 5 {
                 out.append((.cron, String(localized: "A cron expression has five fields (m h dom mon dow).")))
             }
         }
-        if i.cron.trimmingCharacters(in: .whitespaces).count > 100 {
+        if searchInput.cron.trimmingCharacters(in: .whitespaces).count > 100 {
             out.append((.cron, String(localized: "The cron expression is too long (max. 100).")))
         }
         return out
@@ -61,10 +71,10 @@ enum AppointmentLogic {
     // MARK: Schedule in plain words
 
     /// The editor's "How often" choice of a stored schedule (`scheduleType`, `scheduleMinutes`).
-    static func schedule(of i: AppointmentSearchInput) -> AppointmentSchedule {
-        switch i.scheduleType {
+    static func schedule(of searchInput: AppointmentSearchInput) -> AppointmentSchedule {
+        switch searchInput.scheduleType {
         case "MINUTES":
-            switch i.scheduleMinutes {
+            switch searchInput.scheduleMinutes {
             case 5: .every5Minutes
             case 15: .every15Minutes
             case 30: .every30Minutes
@@ -78,39 +88,41 @@ enum AppointmentLogic {
 
     /// Stores a "How often" choice. A custom interval keeps the minutes there are (else an hour);
     /// a cron schedule keeps its expression (it's typed under Advanced).
-    static func apply(_ schedule: AppointmentSchedule, to i: inout AppointmentSearchInput) {
+    static func apply(_ schedule: AppointmentSchedule, to searchInput: inout AppointmentSearchInput) {
         switch schedule {
-        case .every5Minutes: i.scheduleType = "MINUTES"; i.scheduleMinutes = 5
-        case .every15Minutes: i.scheduleType = "MINUTES"; i.scheduleMinutes = 15
-        case .every30Minutes: i.scheduleType = "MINUTES"; i.scheduleMinutes = 30
-        case .hourly: i.scheduleType = "HOURLY"
-        case .daily: i.scheduleType = "DAILY"
+        case .every5Minutes: searchInput.scheduleType = "MINUTES"; searchInput.scheduleMinutes = 5
+        case .every15Minutes: searchInput.scheduleType = "MINUTES"; searchInput.scheduleMinutes = 15
+        case .every30Minutes: searchInput.scheduleType = "MINUTES"; searchInput.scheduleMinutes = 30
+        case .hourly: searchInput.scheduleType = "HOURLY"
+        case .daily: searchInput.scheduleType = "DAILY"
         case .customInterval:
-            if i.scheduleType != "MINUTES" { i.scheduleMinutes = i.scheduleMinutes ?? 60 }
-            i.scheduleType = "MINUTES"
-        case .cron: i.scheduleType = "CRON"
+            if searchInput.scheduleType != "MINUTES" { searchInput.scheduleMinutes = searchInput.scheduleMinutes ?? 60 }
+            searchInput.scheduleType = "MINUTES"
+        case .cron: searchInput.scheduleType = "CRON"
         }
     }
 
     // MARK: Summaries (lib/appointments/summary.ts)
 
     /// Specialities of every active source, then the place and the insurance.
-    static func criteriaSummary(_ s: AppointmentSearch) -> String {
-        let doctolib = s.sources == "doctolib" || s.sources == "both"
-        let jameda = s.sources == "jameda" || s.sources == "both"
+    static func criteriaSummary(_ savedSearch: AppointmentSearch) -> String {
+        let doctolib = savedSearch.sources == "doctolib" || savedSearch.sources == "both"
+        let jameda = savedSearch.sources == "jameda" || savedSearch.sources == "both"
         let both = doctolib && jameda
         var specialities: [String] = []
         if doctolib {
-            let label = s.specialityLabel.isEmpty ? s.specialitySlug : s.specialityLabel
+            let label = savedSearch.specialityLabel.isEmpty ? savedSearch.specialitySlug : savedSearch.specialityLabel
             if !label.isEmpty { specialities.append(both ? "Doctolib: \(label)" : label) }
         }
         if jameda {
-            let label = s.jamedaSpecialityLabel.isEmpty ? s.jamedaSpecialitySlug : s.jamedaSpecialityLabel
+            let label = savedSearch.jamedaSpecialityLabel.isEmpty
+                ? savedSearch.jamedaSpecialitySlug
+                : savedSearch.jamedaSpecialityLabel
             if !label.isEmpty { specialities.append(both ? "jameda: \(label)" : label) }
         }
         var parts = [specialities.isEmpty ? "—" : specialities.joined(separator: " · ")]
-        if !s.locationLabel.isEmpty { parts.append(s.locationLabel) }
-        if !s.insuranceSector.isEmpty { parts.append(insuranceLabel(s.insuranceSector)) }
+        if !savedSearch.locationLabel.isEmpty { parts.append(savedSearch.locationLabel) }
+        if !savedSearch.insuranceSector.isEmpty { parts.append(insuranceLabel(savedSearch.insuranceSector)) }
         return parts.joined(separator: " · ")
     }
 
@@ -125,8 +137,13 @@ enum AppointmentLogic {
         }
     }
 
-    static func scheduleSummary(_ s: AppointmentSearch) -> String {
-        scheduleSummary(enabled: s.enabled, type: s.scheduleType, minutes: s.scheduleMinutes, cron: s.cron)
+    static func scheduleSummary(_ savedSearch: AppointmentSearch) -> String {
+        scheduleSummary(
+            enabled: savedSearch.enabled,
+            type: savedSearch.scheduleType,
+            minutes: savedSearch.scheduleMinutes,
+            cron: savedSearch.cron
+        )
     }
 
     /// Doctolib's insurance sector ("" | public | private).
@@ -179,12 +196,12 @@ enum AppointmentLogic {
 
     /// Great-circle distance in km.
     static func haversineKm(_ lat1: Double, _ lng1: Double, _ lat2: Double, _ lng2: Double) -> Double {
-        let r = 6371.0
-        let rad = { (d: Double) in d * .pi / 180 }
+        let earthRadiusKm = 6371.0
+        let rad = { (degrees: Double) in degrees * .pi / 180 }
         let dLat = rad(lat2 - lat1)
         let dLng = rad(lng2 - lng1)
-        let a = pow(sin(dLat / 2), 2) + cos(rad(lat1)) * cos(rad(lat2)) * pow(sin(dLng / 2), 2)
-        return 2 * r * asin(sqrt(a))
+        let chordSquared = pow(sin(dLat / 2), 2) + cos(rad(lat1)) * cos(rad(lat2)) * pow(sin(dLng / 2), 2)
+        return 2 * earthRadiusKm * asin(sqrt(chordSquared))
     }
 
     /// "2.4 km" (one decimal under 10 km), in the user's locale.
@@ -195,8 +212,8 @@ enum AppointmentLogic {
 
     /// The distance of a slot's practice from home, when both are known.
     static func distance(of slot: AppointmentDoctorSlot, homeLat: Double?, homeLng: Double?, locale: Locale = .current) -> String? {
-        guard let homeLat, let homeLng, let p = slot.coordinate else { return nil }
-        return formatKm(haversineKm(homeLat, homeLng, p.lat, p.lng), locale: locale)
+        guard let homeLat, let homeLng, let point = slot.coordinate else { return nil }
+        return formatKm(haversineKm(homeLat, homeLng, point.lat, point.lng), locale: locale)
     }
 
     // MARK: Links
@@ -210,68 +227,85 @@ enum AppointmentLogic {
 
     /// Google search for the doctor (lib/appointments/google-search.ts).
     static func googleSearchURL(_ parts: [String]) -> URL {
-        let q = parts.map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }.joined(separator: " ")
-        var c = URLComponents(string: "https://www.google.com/search")!
-        c.queryItems = [URLQueryItem(name: "q", value: q)]
-        return c.url!
+        let query = parts.map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }.joined(separator: " ")
+        var urlComponents = URLComponents(string: "https://www.google.com/search")!
+        urlComponents.queryItems = [URLQueryItem(name: "q", value: query)]
+        return urlComponents.url!
     }
 
     /// The practice in Apple Maps.
     static func mapsURL(lat: Double, lng: Double, name: String) -> URL {
-        var c = URLComponents(string: "https://maps.apple.com/")!
-        c.queryItems = [URLQueryItem(name: "ll", value: "\(lat),\(lng)"), URLQueryItem(name: "q", value: name)]
-        return c.url!
+        var urlComponents = URLComponents(string: "https://maps.apple.com/")!
+        urlComponents.queryItems = [
+            URLQueryItem(name: "ll", value: "\(lat),\(lng)"),
+            URLQueryItem(name: "q", value: name)
+        ]
+        return urlComponents.url!
     }
 
     /// The search on Doctolib (search-form.tsx `doctolibPreviewUrl`).
-    static func doctolibPreviewURL(_ i: AppointmentSearchInput) -> URL? {
-        guard !i.specialitySlug.isEmpty, !i.latitude.isEmpty, !i.longitude.isEmpty else { return nil }
-        var c = URLComponents(string: "https://www.doctolib.de/search")!
+    static func doctolibPreviewURL(_ searchInput: AppointmentSearchInput) -> URL? {
+        let hasSpeciality = !searchInput.specialitySlug.isEmpty
+        let hasCoordinates = !searchInput.latitude.isEmpty && !searchInput.longitude.isEmpty
+        guard hasSpeciality, hasCoordinates else { return nil }
+        var urlComponents = URLComponents(string: "https://www.doctolib.de/search")!
         var items = [
             URLQueryItem(name: "around_me", value: "true"),
-            URLQueryItem(name: "keyword", value: i.specialitySlug),
-            URLQueryItem(name: "latitude", value: i.latitude),
-            URLQueryItem(name: "longitude", value: i.longitude),
+            URLQueryItem(name: "keyword", value: searchInput.specialitySlug),
+            URLQueryItem(name: "latitude", value: searchInput.latitude),
+            URLQueryItem(name: "longitude", value: searchInput.longitude)
         ]
-        if !i.insuranceSector.isEmpty { items.append(URLQueryItem(name: "insuranceSector", value: i.insuranceSector)) }
-        c.queryItems = items
-        return c.url
+        if !searchInput.insuranceSector.isEmpty {
+            items.append(URLQueryItem(name: "insuranceSector", value: searchInput.insuranceSector))
+        }
+        urlComponents.queryItems = items
+        return urlComponents.url
     }
 
     /// The search on jameda (search-form.tsx `jamedaPreviewUrl`).
-    static func jamedaPreviewURL(_ i: AppointmentSearchInput) -> URL? {
-        let loc = (i.locationLabel.split(separator: ",", omittingEmptySubsequences: false).first.map(String.init) ?? "")
-            .trimmingCharacters(in: .whitespaces)
+    static func jamedaPreviewURL(_ searchInput: AppointmentSearchInput) -> URL? {
+        let firstLabelPart = searchInput.locationLabel.split(separator: ",", omittingEmptySubsequences: false).first
+        let loc = (firstLabelPart.map(String.init) ?? "").trimmingCharacters(in: .whitespaces)
         guard !loc.isEmpty else { return nil }
         var extra: [URLQueryItem] = []
-        if !i.jamedaInsuranceType.isEmpty { extra.append(URLQueryItem(name: "filters[insurance_types][]", value: i.jamedaInsuranceType)) }
-        if i.jamedaKidsFriendly { extra.append(URLQueryItem(name: "filters[kids_friendly][]", value: "true")) }
-        if i.jamedaVideo == "only" { extra.append(URLQueryItem(name: "filters[online_only][]", value: "true")) }
-        if i.jamedaSpecialityType == "specialization", !i.jamedaSpecialitySlug.isEmpty {
-            let city = citySlug(i.locationLabel)
-            guard !city.isEmpty else { return nil }
-            var c = URLComponents(string: "https://www.jameda.de/\(i.jamedaSpecialitySlug)/\(city)")!
-            c.queryItems = extra.isEmpty ? nil : extra
-            return c.url
+        if !searchInput.jamedaInsuranceType.isEmpty {
+            extra.append(URLQueryItem(name: "filters[insurance_types][]", value: searchInput.jamedaInsuranceType))
         }
-        guard !i.jamedaSpecialityLabel.isEmpty else { return nil }
-        var c = URLComponents(string: "https://www.jameda.de/suchen")!
-        c.queryItems = [URLQueryItem(name: "q", value: i.jamedaSpecialityLabel), URLQueryItem(name: "loc", value: loc)] + extra
-        return c.url
+        if searchInput.jamedaKidsFriendly {
+            extra.append(URLQueryItem(name: "filters[kids_friendly][]", value: "true"))
+        }
+        if searchInput.jamedaVideo == "only" {
+            extra.append(URLQueryItem(name: "filters[online_only][]", value: "true"))
+        }
+        if searchInput.jamedaSpecialityType == "specialization", !searchInput.jamedaSpecialitySlug.isEmpty {
+            let city = citySlug(searchInput.locationLabel)
+            guard !city.isEmpty else { return nil }
+            let specialityPath = "https://www.jameda.de/\(searchInput.jamedaSpecialitySlug)/\(city)"
+            var specialityComponents = URLComponents(string: specialityPath)!
+            specialityComponents.queryItems = extra.isEmpty ? nil : extra
+            return specialityComponents.url
+        }
+        guard !searchInput.jamedaSpecialityLabel.isEmpty else { return nil }
+        var urlComponents = URLComponents(string: "https://www.jameda.de/suchen")!
+        urlComponents.queryItems = [
+            URLQueryItem(name: "q", value: searchInput.jamedaSpecialityLabel),
+            URLQueryItem(name: "loc", value: loc)
+        ] + extra
+        return urlComponents.url
     }
 
     /// jameda's city path: "München, Deutschland" → "muenchen" (lib/appointments/jameda/city.ts).
     static func citySlug(_ label: String) -> String {
-        var s = (label.split(separator: ",", omittingEmptySubsequences: false).first.map(String.init) ?? "")
+        var rawSlug = (label.split(separator: ",", omittingEmptySubsequences: false).first.map(String.init) ?? "")
             .trimmingCharacters(in: .whitespaces).lowercased()
         for (from, to) in [("ä", "ae"), ("ö", "oe"), ("ü", "ue"), ("ß", "ss")] {
-            s = s.replacingOccurrences(of: from, with: to)
+            rawSlug = rawSlug.replacingOccurrences(of: from, with: to)
         }
         var out = ""
         var dash = false
-        for ch in s.unicodeScalars {
-            if (97...122).contains(ch.value) || (48...57).contains(ch.value) {
-                out.unicodeScalars.append(ch)
+        for scalar in rawSlug.unicodeScalars {
+            if (97...122).contains(scalar.value) || (48...57).contains(scalar.value) {
+                out.unicodeScalars.append(scalar)
                 dash = false
             } else if !dash {
                 out.append("-")
@@ -285,10 +319,10 @@ enum AppointmentLogic {
 
     /// The slot's local day and time ("YYYY-MM-DD", "HH:MM") on this device.
     static func localParts(_ date: Date, calendar: Calendar = .current) -> (date: String, time: String) {
-        let c = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: date)
+        let dateParts = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: date)
         return (
-            String(format: "%04d-%02d-%02d", c.year!, c.month!, c.day!),
-            String(format: "%02d:%02d", c.hour!, c.minute!)
+            String(format: "%04d-%02d-%02d", dateParts.year!, dateParts.month!, dateParts.day!),
+            String(format: "%02d:%02d", dateParts.hour!, dateParts.minute!)
         )
     }
 
@@ -299,16 +333,16 @@ enum AppointmentLogic {
 
     /// A date at the given day and "HH:MM", for the pickers.
     static func date(day: String, time: String?, calendar: Calendar = .current) -> Date? {
-        guard let d = Day(day) else { return nil }
+        guard let parsedDay = Day(day) else { return nil }
         let hm = (time ?? "").split(separator: ":").compactMap { Int($0) }
-        return calendar.date(from: DateComponents(year: d.year, month: d.month, day: d.day,
+        return calendar.date(from: DateComponents(year: parsedDay.year, month: parsedDay.month, day: parsedDay.day,
                                                   hour: hm.count == 2 ? hm[0] : 0, minute: hm.count == 2 ? hm[1] : 0))
     }
 
     /// "Tue, 3 Nov 2026, 09:30" of a booking (book-dialog.tsx `formatBooking`).
     static func formatBooking(date: String, start: String?) -> String {
-        guard let d = Day(date) else { return date }
-        let day = d.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated).year())
+        guard let parsedDay = Day(date) else { return date }
+        let day = parsedDay.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated).year())
         if let start, !start.isEmpty { return "\(day), \(start)" }
         return day
     }

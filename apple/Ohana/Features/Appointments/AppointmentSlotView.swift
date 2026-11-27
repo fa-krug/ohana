@@ -177,8 +177,8 @@ struct AppointmentSlotView: View {
             .chip(tint: ModuleTint.appointments)
     }
 
-    private func map(_ detail: AppointmentSlotDetail, _ c: (lat: Double, lng: Double)) -> some View {
-        let practice = CLLocationCoordinate2D(latitude: c.lat, longitude: c.lng)
+    private func map(_ detail: AppointmentSlotDetail, _ point: (lat: Double, lng: Double)) -> some View {
+        let practice = CLLocationCoordinate2D(latitude: point.lat, longitude: point.lng)
         let name = detail.slot.practiceName.isEmpty ? detail.slot.doctorName : detail.slot.practiceName
         return Map(initialPosition: .region(MKCoordinateRegion(
             center: practice, latitudinalMeters: 1500, longitudinalMeters: 1500
@@ -195,7 +195,7 @@ struct AppointmentSlotView: View {
         .overlay(alignment: .bottomTrailing) {
             // Floats over the map: glass is right here.
             Button("Open in Maps", systemImage: "map") {
-                openURL(AppointmentLogic.mapsURL(lat: c.lat, lng: c.lng, name: name))
+                openURL(AppointmentLogic.mapsURL(lat: point.lat, lng: point.lng, name: name))
             }
             .buttonStyle(.glass)
             .padding(10)

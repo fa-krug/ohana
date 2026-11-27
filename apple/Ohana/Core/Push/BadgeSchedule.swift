@@ -58,8 +58,8 @@ nonisolated enum BadgeSchedule {
             let ahead = steps.compactMap { step in moment(step.at, calendar: calendar).map { (step, $0) } }
                 .filter { $0.1 > now }
                 .prefix(maxSteps)
-            return ahead.enumerated().map { i, pair in
-                request(stepPrefix + String(i), count: pair.0.count, at: pair.1, calendar: calendar)
+            return ahead.enumerated().map { index, pair in
+                request(stepPrefix + String(index), count: pair.0.count, at: pair.1, calendar: calendar)
             }
         }
         guard let tomorrow, let start = start(of: tomorrow.day, calendar: calendar), start > now else { return [] }

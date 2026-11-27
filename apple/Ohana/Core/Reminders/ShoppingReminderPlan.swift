@@ -63,8 +63,9 @@ struct ShoppingReminderPlan: Equatable {
                 let label = item.label(locale: locale)
                 // A done one first: of two copies (written by two devices at once), the one ticked off.
                 let byMarker = byPath[path, default: []].filter { !used.contains($0.id) }
-                let match = byMarker.first(where: \.isCompleted) ?? byMarker.first ?? reminders.first { r in
-                    !used.contains(r.id) && markers[r.id] == nil && r.due?.day == day.date && r.title == label
+                let match = byMarker.first(where: \.isCompleted) ?? byMarker.first ?? reminders.first { candidate in
+                    !used.contains(candidate.id) && markers[candidate.id] == nil
+                        && candidate.due?.day == day.date && candidate.title == label
                 }
                 guard let match else {
                     if !kept.contains(path) {

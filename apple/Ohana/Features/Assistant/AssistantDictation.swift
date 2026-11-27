@@ -91,8 +91,8 @@ final class AssistantDictation {
 
     /// Asks for speech recognition and the microphone (once; the system remembers).
     nonisolated private static func authorize() async -> Bool {
-        let speech = await withCheckedContinuation { c in
-            SFSpeechRecognizer.requestAuthorization { c.resume(returning: $0) }
+        let speech = await withCheckedContinuation { continuation in
+            SFSpeechRecognizer.requestAuthorization { continuation.resume(returning: $0) }
         }
         guard speech == .authorized else { return false }
         return await AVAudioApplication.requestRecordPermission()

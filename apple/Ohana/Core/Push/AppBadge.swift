@@ -77,14 +77,14 @@ enum AppBadge {
 
     /// The device's wall clock for the server: `today` and `time` ("HH:MM").
     static func clock(_ now: Date = Date(), calendar: Calendar = .current) -> [String: String?] {
-        let c = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: now)
-        func pad(_ n: Int?, _ width: Int = 2) -> String {
-            let s = String(n ?? 0)
-            return String(repeating: "0", count: max(0, width - s.count)) + s
+        let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: now)
+        func pad(_ value: Int?, _ width: Int = 2) -> String {
+            let text = String(value ?? 0)
+            return String(repeating: "0", count: max(0, width - text.count)) + text
         }
         return [
-            "today": "\(pad(c.year, 4))-\(pad(c.month))-\(pad(c.day))",
-            "time": "\(pad(c.hour)):\(pad(c.minute))",
+            "today": "\(pad(components.year, 4))-\(pad(components.month))-\(pad(components.day))",
+            "time": "\(pad(components.hour)):\(pad(components.minute))"
         ]
     }
 

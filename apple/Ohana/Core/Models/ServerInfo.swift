@@ -45,13 +45,13 @@ nonisolated struct ServerInfo: Codable, Equatable, OffMainDecodable {
     /// Lenient: a missing field takes its default (no API version: too old; no module list:
     /// everything on), so a slightly different server is told apart by its API version alone.
     init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        name = try c.decodeIfPresent(String.self, forKey: .name) ?? "Ohana"
-        version = try c.decodeIfPresent(String.self, forKey: .version) ?? ""
-        apiVersion = try c.decodeIfPresent(Int.self, forKey: .apiVersion) ?? 0
-        modules = try c.decodeIfPresent([String].self, forKey: .modules) ?? Self.legacyModules
-        push = try? c.decodeIfPresent(Push.self, forKey: .push)
-        holidays = (try? c.decodeIfPresent(Bool.self, forKey: .holidays)) ?? false
+        let codingContainer = try decoder.container(keyedBy: CodingKeys.self)
+        name = try codingContainer.decodeIfPresent(String.self, forKey: .name) ?? "Ohana"
+        version = try codingContainer.decodeIfPresent(String.self, forKey: .version) ?? ""
+        apiVersion = try codingContainer.decodeIfPresent(Int.self, forKey: .apiVersion) ?? 0
+        modules = try codingContainer.decodeIfPresent([String].self, forKey: .modules) ?? Self.legacyModules
+        push = try? codingContainer.decodeIfPresent(Push.self, forKey: .push)
+        holidays = (try? codingContainer.decodeIfPresent(Bool.self, forKey: .holidays)) ?? false
     }
 
     private enum CodingKeys: String, CodingKey {

@@ -85,12 +85,12 @@ extension AssistantPagesRequest {
     /// "1–3, 7"
     static func pagesText(_ pages: [Int]) -> String {
         var runs: [String] = []
-        var i = 0
-        while i < pages.count {
-            var j = i
-            while j + 1 < pages.count, pages[j + 1] == pages[j] + 1 { j += 1 }
-            runs.append(j > i ? "\(pages[i])–\(pages[j])" : "\(pages[i])")
-            i = j + 1
+        var runStart = 0
+        while runStart < pages.count {
+            var runEnd = runStart
+            while runEnd + 1 < pages.count, pages[runEnd + 1] == pages[runEnd] + 1 { runEnd += 1 }
+            runs.append(runEnd > runStart ? "\(pages[runStart])–\(pages[runEnd])" : "\(pages[runStart])")
+            runStart = runEnd + 1
         }
         return runs.joined(separator: ", ")
     }

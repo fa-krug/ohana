@@ -30,7 +30,7 @@ extension DemoServer {
             } else {
                 from <= day && day <= to ? [day] : []
             }
-            for d in days { byDay[d, default: []].append(choreItem(chore, on: d, repeating: repeating)) }
+            for onDay in days { byDay[onDay, default: []].append(choreItem(chore, on: onDay, repeating: repeating)) }
             if !repeating, chore["done"]?.boolValue != true, day < today {
                 overdue.append((day, choreItem(chore, on: day, repeating: false)))
             }

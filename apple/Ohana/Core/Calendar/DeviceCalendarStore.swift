@@ -172,12 +172,12 @@ struct DeviceEventTimes: Hashable {
     }
 
     private static func time(_ date: Date) -> ReminderDue.Time {
-        let c = Day.calendar.dateComponents([.hour, .minute], from: date)
-        return ReminderDue.Time(hour: c.hour ?? 0, minute: c.minute ?? 0)
+        let components = Day.calendar.dateComponents([.hour, .minute], from: date)
+        return ReminderDue.Time(hour: components.hour ?? 0, minute: components.minute ?? 0)
     }
 
-    private static func days(_ a: Day, _ b: Day) -> Int {
-        Day.calendar.dateComponents([.day], from: a.date, to: b.date).day ?? 0
+    private static func days(_ fromDay: Day, _ toDay: Day) -> Int {
+        Day.calendar.dateComponents([.day], from: fromDay.date, to: toDay.date).day ?? 0
     }
 }
 
@@ -258,22 +258,22 @@ final class DeviceCalendarStore {
         let found = fetch(from: from, to: to, calendars: nil)
         // A changed occurrence may not carry the series' rule.
         var rules: [String: String] = [:]
-        for e in found {
-            if let rule = e.recurrenceRules?.first.flatMap(RepeatRule.init(eventKit:)) {
-                rules[Self.id(e)] = rules[Self.id(e)] ?? rule.string
+        for ekEvent in found {
+            if let rule = ekEvent.recurrenceRules?.first.flatMap(RepeatRule.init(eventKit:)) {
+                rules[Self.id(ekEvent)] = rules[Self.id(ekEvent)] ?? rule.string
             }
         }
-        return found.compactMap { e in
-            guard let calendar = e.calendar, e.startDate != nil else { return nil }
-            let id = Self.id(e)
-            let repeats = e.hasRecurrenceRules || e.isDetached
-            let times = Self.times(e)
+        return found.compactMap { foundEvent in
+            guard let calendar = foundEvent.calendar, foundEvent.startDate != nil else { return nil }
+            let id = Self.id(foundEvent)
+            let repeats = foundEvent.hasRecurrenceRules || foundEvent.isDetached
+            let times = Self.times(foundEvent)
             let text = times.text
             return DeviceEvent(
-                id: id, calendarID: calendar.calendarIdentifier, title: e.title ?? "", allDay: times.allDay,
-                start: text.start, end: text.end, location: e.location, notes: e.notes,
+                id: id, calendarID: calendar.calendarIdentifier, title: foundEvent.title ?? "", allDay: times.allDay,
+                start: text.start, end: text.end, location: foundEvent.location, notes: foundEvent.notes,
                 rrule: repeats ? rules[id] : nil,
-                occurrence: repeats ? Day(e.occurrenceDate ?? e.startDate) : nil
+                occurrence: repeats ? Day(foundEvent.occurrenceDate ?? foundEvent.startDate) : nil
             )
         }
     }
@@ -371,9 +371,9 @@ final class DeviceCalendarStore {
             return store.event(withIdentifier: ref.id) ?? store.calendarItem(withIdentifier: ref.id) as? EKEvent
         }
         let days = [day, near].compactMap { $0 }
-        return fetch(from: days.min() ?? day, to: days.max() ?? day, calendars: nil).first { e in
-            (e.eventIdentifier == ref.id || e.calendarItemIdentifier == ref.id)
-                && Day(e.occurrenceDate ?? e.startDate) == day
+        return fetch(from: days.min() ?? day, to: days.max() ?? day, calendars: nil).first { candidate in
+            (candidate.eventIdentifier == ref.id || candidate.calendarItemIdentifier == ref.id)
+                && Day(candidate.occurrenceDate ?? candidate.startDate) == day
         }
     }
 

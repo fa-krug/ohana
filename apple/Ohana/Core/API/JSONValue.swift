@@ -11,36 +11,43 @@ nonisolated enum JSONValue: Codable, Hashable, Sendable {
     case object([String: JSONValue])
 
     init(from decoder: any Decoder) throws {
-        let c = try decoder.singleValueContainer()
-        if c.decodeNil() { self = .null }
-        else if let b = try? c.decode(Bool.self) { self = .bool(b) }
-        else if let n = try? c.decode(Double.self) { self = .number(n) }
-        else if let s = try? c.decode(String.self) { self = .string(s) }
-        else if let a = try? c.decode([JSONValue].self) { self = .array(a) }
-        else { self = .object(try c.decode([String: JSONValue].self)) }
+        let container = try decoder.singleValueContainer()
+        if container.decodeNil() {
+            self = .null
+        } else if let boolean = try? container.decode(Bool.self) {
+            self = .bool(boolean)
+        } else if let numericValue = try? container.decode(Double.self) {
+            self = .number(numericValue)
+        } else if let textValue = try? container.decode(String.self) {
+            self = .string(textValue)
+        } else if let items = try? container.decode([JSONValue].self) {
+            self = .array(items)
+        } else {
+            self = .object(try container.decode([String: JSONValue].self))
+        }
     }
 
     func encode(to encoder: any Encoder) throws {
-        var c = encoder.singleValueContainer()
+        var container = encoder.singleValueContainer()
         switch self {
-        case .null: try c.encodeNil()
-        case let .bool(b): try c.encode(b)
-        case let .number(n): try c.encode(n)
-        case let .string(s): try c.encode(s)
-        case let .array(a): try c.encode(a)
-        case let .object(o): try c.encode(o)
+        case .null: try container.encodeNil()
+        case let .bool(boolean): try container.encode(boolean)
+        case let .number(numericValue): try container.encode(numericValue)
+        case let .string(textValue): try container.encode(textValue)
+        case let .array(items): try container.encode(items)
+        case let .object(entries): try container.encode(entries)
         }
     }
 
     subscript(key: String) -> JSONValue? {
-        if case let .object(o) = self { o[key] } else { nil }
+        if case let .object(entries) = self { entries[key] } else { nil }
     }
 
-    var stringValue: String? { if case let .string(s) = self { s } else { nil } }
-    var doubleValue: Double? { if case let .number(n) = self { n } else { nil } }
-    var boolValue: Bool? { if case let .bool(b) = self { b } else { nil } }
-    var arrayValue: [JSONValue]? { if case let .array(a) = self { a } else { nil } }
-    var objectValue: [String: JSONValue]? { if case let .object(o) = self { o } else { nil } }
+    var stringValue: String? { if case let .string(textValue) = self { textValue } else { nil } }
+    var doubleValue: Double? { if case let .number(numericValue) = self { numericValue } else { nil } }
+    var boolValue: Bool? { if case let .bool(boolean) = self { boolean } else { nil } }
+    var arrayValue: [JSONValue]? { if case let .array(items) = self { items } else { nil } }
+    var objectValue: [String: JSONValue]? { if case let .object(entries) = self { entries } else { nil } }
 }
 
 /// An empty request or response body.

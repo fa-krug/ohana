@@ -128,9 +128,9 @@ final class RemindersStore {
 
     private static func hex(_ color: CGColor?) -> String? {
         guard let color, let rgb = color.converted(to: CGColorSpace(name: CGColorSpace.sRGB)!, intent: .defaultIntent, options: nil),
-              let c = rgb.components, c.count >= 3 else { return nil }
-        let value = { (x: CGFloat) in Int((min(max(x, 0), 1) * 255).rounded()) }
-        return String(format: "#%02x%02x%02x", value(c[0]), value(c[1]), value(c[2]))
+              let channels = rgb.components, channels.count >= 3 else { return nil }
+        let value = { (channel: CGFloat) in Int((min(max(channel, 0), 1) * 255).rounded()) }
+        return String(format: "#%02x%02x%02x", value(channels[0]), value(channels[1]), value(channels[2]))
     }
 
     // MARK: Reading

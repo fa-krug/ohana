@@ -2,65 +2,109 @@ import Foundation
 
 /// How the chat names a tool call (web: components/assistant/tools.ts): what it does
 /// ("Reading transactions") and, in a few words, what it is about ("March 2026 · “Amazon”"),
-/// from the arguments the model passed.
+/// from the arguments the model passed. The parts of a call live in AssistantToolDetails.swift.
 enum AssistantToolLabels {
-    /// The app's language: German quotes and dates for "de".
-    static var isGerman: Bool { (Bundle.main.preferredLocalizations.first ?? "en").hasPrefix("de") }
-
     /// What the tool is doing, e.g. "Reading transactions"; a tool the app doesn't know yet
     /// shows its name.
     static func label(_ tool: AssistantToolCall) -> String {
-        let a = tool.args
+        chatLabel(tool) ?? calendarLabel(tool.name) ?? financeLabel(tool.name) ?? mealsLabel(tool.name)
+            ?? deviceLabel(tool.name) ?? appointmentsLabel(tool.name) ?? knowledgeLabel(tool.name) ?? tool.name
+    }
+
+    /// The tools the model talks to the family with.
+    private static func chatLabel(_ tool: AssistantToolCall) -> String? {
         switch tool.name {
         case "web_search":
-            let q = a["query"]?.stringValue ?? ""
-            return String(localized: "Searching the web: \(q)")
+            let searchQuery = tool.args["query"]?.stringValue ?? ""
+            String(localized: "Searching the web: \(searchQuery)")
         case "fetch_page":
-            let raw = a["url"]?.stringValue ?? ""
+            let raw = tool.args["url"]?.stringValue ?? ""
             let host = URL(string: raw)?.host() ?? raw
-            return String(localized: "Reading \(host)")
-        case "get_calendar": return String(localized: "Reading the calendar")
-        case "change_entries": return String(localized: "Changing calendar entries")
-        case "set_notes": return String(localized: "Changing day notes")
-        case "manage_entry_types": return String(localized: "Changing entry types")
-        case "list_transactions": return String(localized: "Reading transactions")
-        case "finance_summary": return String(localized: "Summing up the finances")
-        case "analyze_transactions": return String(localized: "Analyzing transactions")
-        case "analyze_calendar": return String(localized: "Counting calendar days")
-        case "calculate": return String(localized: "Calculating")
-        case "manage_categories": return String(localized: "Changing categories")
-        case "change_transactions": return String(localized: "Changing transactions")
-        case "set_statistic_average": return String(localized: "Setting the statistic average")
-        case "combine_transfers": return String(localized: "Combining transfers and split bookings")
-        case "ask_user": return String(localized: "Asking a question")
-        case "list_events": return String(localized: "Reading calendar events")
-        case "add_event": return String(localized: "Adding a calendar event")
-        case "remove_event": return String(localized: "Removing a calendar event")
-        case "list_recipes": return String(localized: "Looking through the recipes")
-        case "get_recipe": return String(localized: "Reading a recipe")
-        case "save_recipe": return String(localized: "Saving a recipe")
-        case "get_meal_plan": return String(localized: "Reading the meal plan")
-        case "plan_meals": return String(localized: "Planning meals")
-        case "get_shopping_items": return String(localized: "Reading what the meal plan needs")
-        case "get_reminders": return String(localized: "Reading your reminders")
-        case "edit_reminders": return String(localized: "Suggesting changes to your reminders")
-        case "get_apple_calendar": return String(localized: "Reading your Apple calendars")
-        case "edit_apple_calendar": return String(localized: "Suggesting changes to your Apple calendars")
-        case "suggest_items": return String(localized: "Suggesting what to add")
-        case "list_appointment_searches": return String(localized: "Reading the appointment searches")
-        case "find_doctor_specialities": return String(localized: "Looking up specialities")
-        case "create_appointment_search": return String(localized: "Creating an appointment search")
-        case "change_appointment_search": return String(localized: "Changing an appointment search")
-        case "run_appointment_search": return String(localized: "Starting an appointment search")
-        case "get_appointment_slot": return String(localized: "Reading a slot")
-        case "book_appointment_slot": return String(localized: "Marking a slot as booked")
-        case "search_knowledge": return String(localized: "Searching the knowledge base")
-        case "read_knowledge": return String(localized: "Reading a document")
-        case "knowledge_values": return String(localized: "Reading values from the documents")
-        case "edit_knowledge_notes": return String(localized: "Suggesting notes for the knowledge folder")
-        case "view_knowledge_pages": return String(localized: "Looking at a document’s pages")
-        case "edit_memories": return String(localized: "Suggesting what to remember")
-        default: return tool.name
+            String(localized: "Reading \(host)")
+        case "ask_user": String(localized: "Asking a question")
+        default: nil
+        }
+    }
+
+    /// The tools that read or change calendar entries.
+    private static func calendarLabel(_ name: String) -> String? {
+        switch name {
+        case "get_calendar": String(localized: "Reading the calendar")
+        case "list_events": String(localized: "Reading calendar events")
+        case "add_event": String(localized: "Adding a calendar event")
+        case "remove_event": String(localized: "Removing a calendar event")
+        case "change_entries": String(localized: "Changing calendar entries")
+        case "set_notes": String(localized: "Changing day notes")
+        case "manage_entry_types": String(localized: "Changing entry types")
+        case "analyze_calendar": String(localized: "Counting calendar days")
+        default: nil
+        }
+    }
+
+    /// The tools that read or change the finances.
+    private static func financeLabel(_ name: String) -> String? {
+        switch name {
+        case "finance_summary": String(localized: "Summing up the finances")
+        case "list_transactions": String(localized: "Reading transactions")
+        case "analyze_transactions": String(localized: "Analyzing transactions")
+        case "change_transactions": String(localized: "Changing transactions")
+        case "combine_transfers": String(localized: "Combining transfers and split bookings")
+        case "manage_categories": String(localized: "Changing categories")
+        case "set_statistic_average": String(localized: "Setting the statistic average")
+        case "calculate": String(localized: "Calculating")
+        default: nil
+        }
+    }
+
+    /// The tools that read or plan the kitchen.
+    private static func mealsLabel(_ name: String) -> String? {
+        switch name {
+        case "list_recipes": String(localized: "Looking through the recipes")
+        case "get_recipe": String(localized: "Reading a recipe")
+        case "save_recipe": String(localized: "Saving a recipe")
+        case "get_meal_plan": String(localized: "Reading the meal plan")
+        case "plan_meals": String(localized: "Planning meals")
+        case "get_shopping_items": String(localized: "Reading what the meal plan needs")
+        default: nil
+        }
+    }
+
+    /// The tools that read or change what is on the device.
+    private static func deviceLabel(_ name: String) -> String? {
+        switch name {
+        case "get_reminders": String(localized: "Reading your reminders")
+        case "edit_reminders": String(localized: "Suggesting changes to your reminders")
+        case "get_apple_calendar": String(localized: "Reading your Apple calendars")
+        case "edit_apple_calendar": String(localized: "Suggesting changes to your Apple calendars")
+        default: nil
+        }
+    }
+
+    /// The tools that look for an appointment.
+    private static func appointmentsLabel(_ name: String) -> String? {
+        switch name {
+        case "suggest_items": String(localized: "Suggesting what to add")
+        case "list_appointment_searches": String(localized: "Reading the appointment searches")
+        case "find_doctor_specialities": String(localized: "Looking up specialities")
+        case "create_appointment_search": String(localized: "Creating an appointment search")
+        case "change_appointment_search": String(localized: "Changing an appointment search")
+        case "run_appointment_search": String(localized: "Starting an appointment search")
+        case "get_appointment_slot": String(localized: "Reading a slot")
+        case "book_appointment_slot": String(localized: "Marking a slot as booked")
+        default: nil
+        }
+    }
+
+    /// The tools that read or note down what the documents know.
+    private static func knowledgeLabel(_ name: String) -> String? {
+        switch name {
+        case "search_knowledge": String(localized: "Searching the knowledge base")
+        case "read_knowledge": String(localized: "Reading a document")
+        case "knowledge_values": String(localized: "Reading values from the documents")
+        case "view_knowledge_pages": String(localized: "Looking at a document’s pages")
+        case "edit_knowledge_notes": String(localized: "Suggesting notes for the knowledge folder")
+        case "edit_memories": String(localized: "Suggesting what to remember")
+        default: nil
         }
     }
 
@@ -94,65 +138,109 @@ enum AssistantToolLabels {
         }
     }
 
-    // MARK: Details
+    // MARK: Reading arguments
 
-    private static let uuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
-    private static let dayPattern = /^\d{4}-\d{2}-\d{2}$/
+    /// The app's language: German quotes and dates for "de".
+    static var isGerman: Bool { (Bundle.main.preferredLocalizations.first ?? "en").hasPrefix("de") }
 
-    private static func str(_ v: JSONValue?) -> String {
-        v?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-    }
+    // The caches and patterns live in the type itself: Swift allows stored properties only in a
+    // type's own declaration, not in the extension that reads a call's parts.
 
-    private static func date(_ v: JSONValue?) -> String {
-        guard let s = v?.stringValue, s.wholeMatch(of: dayPattern) != nil else { return "" }
-        return s
-    }
+    /// A uuid: an id the model passed, not a name worth reading.
+    static let uuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
 
-    /// An id or name the model passed: names are shown, ids (uuids) aren't worth reading.
-    private static func named(_ v: JSONValue?) -> String {
-        let s = str(v)
-        return s.isEmpty || s.wholeMatch(of: uuid) != nil ? "" : s
-    }
-
-    static func quoted(_ v: String) -> String { isGerman ? "„\(v)“" : "“\(v)”" }
-
-    private static func noon(_ day: String) -> Date? {
-        let p = day.split(separator: "-").compactMap { Int($0) }
-        guard p.count == 3 else { return nil }
-        return Calendar.current.date(from: DateComponents(year: p[0], month: p[1], day: p[2], hour: 12))
-    }
-
-    private static func formatted(_ day: String, template: String) -> String {
-        guard let d = noon(day) else { return day }
-        return formatter(template).string(from: d)
-    }
+    /// How a day is written in a tool call: "2026-03-04".
+    static let dayPattern = /^\d{4}-\d{2}-\d{2}$/
 
     /// Formatters by template (and the locale they were made for): making one takes long, and a
     /// chat's tool rows ask for them every time they're drawn.
-    private static var formatters: [String: DateFormatter] = [:]
-    private static var intervalFormatters: [String: DateIntervalFormatter] = [:]
+    static var formatters: [String: DateFormatter] = [:]
+    static var intervalFormatters: [String: DateIntervalFormatter] = [:]
 
-    private static func formatter(_ template: String) -> DateFormatter {
+    static func str(_ value: JSONValue?) -> String {
+        value?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+
+    /// A day the model passed ("" unless it reads as one).
+    static func date(_ value: JSONValue?) -> String {
+        guard let dayText = value?.stringValue, dayText.wholeMatch(of: dayPattern) != nil else { return "" }
+        return dayText
+    }
+
+    /// An id or name the model passed: names are shown, ids (uuids) aren't worth reading.
+    static func named(_ value: JSONValue?) -> String {
+        let nameText = str(value)
+        return nameText.isEmpty || nameText.wholeMatch(of: uuid) != nil ? "" : nameText
+    }
+
+    static func quoted(_ value: String) -> String { isGerman ? "„\(value)“" : "“\(value)”" }
+
+    /// A number the model passed, as text: whole numbers without their decimals.
+    static func number(_ value: JSONValue?) -> String {
+        switch value {
+        case let .number(numeric): numeric == numeric.rounded() ? String(Int(numeric)) : String(numeric)
+        case let .string(textValue): textValue
+        default: ""
+        }
+    }
+
+    /// A text that would read too long: its start and an ellipsis.
+    static func short(_ value: String) -> String {
+        value.count > 40 ? String(value.prefix(40)) + "…" : value
+    }
+
+    /// A counted phrase: "^[\(total) change](inflect: true)" in the app's language.
+    static func counted(_ value: String.LocalizationValue) -> String {
+        String(AttributedString(localized: value).characters)
+    }
+
+    /// The parts of an edit tool (reminders, calendars): how many ops, and the titles they touch.
+    static func editParts(_ operations: [[String: JSONValue]]) -> [String] {
+        let titles = operations.map { str($0["title"]) }.filter { !$0.isEmpty }
+        var parts: [String] = []
+        if !operations.isEmpty {
+            let total = operations.count
+            parts.append(counted("^[\(total) change](inflect: true)"))
+        }
+        parts.append(list(titles, max: 3))
+        return parts
+    }
+
+    // MARK: Days
+
+    static func noon(_ day: String) -> Date? {
+        let dayParts = day.split(separator: "-").compactMap { Int($0) }
+        guard dayParts.count == 3 else { return nil }
+        let noon = DateComponents(year: dayParts[0], month: dayParts[1], day: dayParts[2], hour: 12)
+        return Calendar.current.date(from: noon)
+    }
+
+    static func formatted(_ day: String, template: String) -> String {
+        guard let dayDate = noon(day) else { return day }
+        return formatter(template).string(from: dayDate)
+    }
+
+    static func formatter(_ template: String) -> DateFormatter {
         let key = Locale.current.identifier + "|" + template
-        if let f = formatters[key] { return f }
-        let f = DateFormatter()
-        f.setLocalizedDateFormatFromTemplate(template)
-        formatters[key] = f
-        return f
+        if let cached = formatters[key] { return cached }
+        let newFormatter = DateFormatter()
+        newFormatter.setLocalizedDateFormatFromTemplate(template)
+        formatters[key] = newFormatter
+        return newFormatter
     }
 
-    private static func interval() -> DateIntervalFormatter {
+    static func interval() -> DateIntervalFormatter {
         let key = Locale.current.identifier
-        if let f = intervalFormatters[key] { return f }
-        let f = DateIntervalFormatter()
-        f.dateTemplate = "dMMMy"
-        intervalFormatters[key] = f
-        return f
+        if let cached = intervalFormatters[key] { return cached }
+        let newFormatter = DateIntervalFormatter()
+        newFormatter.dateTemplate = "dMMMy"
+        intervalFormatters[key] = newFormatter
+        return newFormatter
     }
 
-    private static func lastOfMonth(_ day: String) -> Int {
-        guard let d = noon(day) else { return 31 }
-        return Calendar.current.range(of: .day, in: .month, for: d)?.count ?? 31
+    static func lastOfMonth(_ day: String) -> Int {
+        guard let dayDate = noon(day) else { return 31 }
+        return Calendar.current.range(of: .day, in: .month, for: dayDate)?.count ?? 31
     }
 
     /// A day range in short: "2026", "March 2026", "3 – 7 Aug 2026", "from 1 Mar 2026".
@@ -161,209 +249,47 @@ enum AssistantToolLabels {
         if !from.isEmpty, !to.isEmpty {
             if from > to { swap(&from, &to) }
             if from.hasSuffix("-01-01"), to.hasSuffix("-12-31") {
-                let a = String(from.prefix(4)), b = String(to.prefix(4))
-                return a == b ? a : "\(a) – \(b)"
+                let fromYear = String(from.prefix(4)), toYear = String(to.prefix(4))
+                return fromYear == toYear ? fromYear : "\(fromYear) – \(toYear)"
             }
             if from.prefix(7) == to.prefix(7), from.hasSuffix("-01"), Int(to.suffix(2)) == lastOfMonth(to) {
                 return formatted(from, template: "MMMMy")
             }
             if from == to { return formatted(from, template: "dMMMy") }
-            guard let a = noon(from), let b = noon(to) else { return "\(from) – \(to)" }
-            return interval().string(from: a, to: b)
+            guard let fromDate = noon(from), let toDate = noon(to) else { return "\(from) – \(to)" }
+            return interval().string(from: fromDate, to: toDate)
         }
         if !from.isEmpty {
-            let d = formatted(from, template: "dMMMy")
-            return String(localized: "from \(d)")
+            let dayLabel = formatted(from, template: "dMMMy")
+            return String(localized: "from \(dayLabel)")
         }
         if !to.isEmpty {
-            let d = formatted(to, template: "dMMMy")
-            return String(localized: "until \(d)")
+            let dayLabel = formatted(to, template: "dMMMy")
+            return String(localized: "until \(dayLabel)")
         }
         return ""
     }
 
     /// The days a list of ops touches, as one range.
-    private static func opsSpan(_ ops: [[String: JSONValue]]) -> String {
-        let days = ops.flatMap { o in
-            (o["dates"]?.arrayValue?.map { date($0) } ?? []) + [date(o["from"]), date(o["to"])]
+    static func opsSpan(_ ops: [[String: JSONValue]]) -> String {
+        let days = ops.flatMap { operation in
+            (operation["dates"]?.arrayValue?.map { date($0) } ?? [])
+                + [date(operation["from"]), date(operation["to"])]
         }.filter { !$0.isEmpty }.sorted()
         guard let first = days.first, let last = days.last else { return "" }
         return span(first, last)
     }
 
-    private static func list(_ names: [String], max: Int = 2) -> String {
+    // MARK: Words
+
+    /// A few names in one line, with an ellipsis when there are more.
+    static func list(_ names: [String], max: Int = 2) -> String {
         names.prefix(max).joined(separator: ", ") + (names.count > max ? " …" : "")
     }
 
-    private static func unique(_ names: [String]) -> [String] {
+    /// The names in order, each once and none empty.
+    static func unique(_ names: [String]) -> [String] {
         var seen = Set<String>()
         return names.filter { !$0.isEmpty && seen.insert($0).inserted }
-    }
-
-    /// What the call is about, in a few words ("" when there is nothing to add).
-    static func detail(_ tool: AssistantToolCall) -> String {
-        let a = tool.args
-        let ops = (a["ops"]?.arrayValue ?? []).compactMap(\.objectValue)
-        var parts: [String] = []
-        switch tool.name {
-        case "get_calendar", "finance_summary", "combine_transfers", "list_events", "get_meal_plan":
-            parts.append(span(date(a["from"]), date(a["to"])))
-        case "analyze_calendar":
-            parts.append(span(date(a["from"]), date(a["to"])))
-            let types = (a["types"]?.arrayValue ?? [a["types"] ?? .null]).map { named($0) }.filter { !$0.isEmpty }
-            parts.append(list(types))
-        case "calculate":
-            let all = a["expressions"]?.arrayValue ?? [a["expressions"] ?? a["expression"] ?? .null]
-            let first = str(all.first)
-            parts.append(first.count > 40 ? String(first.prefix(40)) + "…" : first)
-            if all.count > 1 { parts.append("+\(all.count - 1)") }
-        case "analyze_transactions", "list_transactions":
-            let queries = (a["queries"]?.arrayValue ?? []).compactMap(\.objectValue)
-            if !queries.isEmpty {
-                parts.append(opsSpan(queries.map { q in
-                    ["from": q["from"] ?? a["from"] ?? .null, "to": q["to"] ?? a["to"] ?? .null]
-                }))
-            } else {
-                parts.append(span(date(a["from"]), date(a["to"])))
-            }
-            if !str(a["q"]).isEmpty { parts.append(quoted(str(a["q"]))) }
-            if str(a["account"]) == "none" { parts.append(String(localized: "No account")) } else { parts.append(named(a["account"])) }
-            if str(a["category"]) == "none" { parts.append(String(localized: "Uncategorized")) } else { parts.append(named(a["category"])) }
-            switch str(a["kind"]) {
-            case "income": parts.append(String(localized: "Income"))
-            case "expense": parts.append(String(localized: "Expenses"))
-            case "transfer": parts.append(String(localized: "Transfers"))
-            default: break
-            }
-            let offset = Int(a["offset"]?.doubleValue ?? 0)
-            if offset > 0 {
-                let row = offset + 1
-                parts.append(String(localized: "from row \(row)"))
-            }
-            if !queries.isEmpty {
-                let n = queries.count
-                parts.append(String(AttributedString(localized: "^[\(n) query](inflect: true)").characters))
-            }
-        case "change_entries":
-            let types = unique(ops.flatMap { o in
-                ([o["type"]] + (o["types"]?.arrayValue ?? []).map { Optional($0) }).map { named($0) }
-            })
-            parts.append(opsSpan(ops))
-            parts.append(list(types))
-        case "set_notes":
-            parts.append(opsSpan(ops))
-        case "change_transactions":
-            // A delete op can name many transactions.
-            let n = ops.reduce(0) { sum, o in
-                sum + (str(o["action"]) == "delete" ? (o["ids"]?.arrayValue?.count ?? 1) : 1)
-            }
-            if n > 0 { parts.append(String(AttributedString(localized: "^[\(n) change](inflect: true)").characters)) }
-        case "manage_entry_types":
-            if str(a["action"]) == "copy_year" {
-                parts.append("\(number(a["from"])) → \(number(a["to"]))")
-            } else {
-                let name = named(a["name"]).isEmpty ? named(a["type"]) : named(a["name"])
-                if !name.isEmpty { parts.append(quoted(name)) }
-                if a["year"] != nil, a["year"] != .null { parts.append(number(a["year"])) }
-            }
-        case "add_event":
-            parts.append(span(date(a["date"]), date(a["date"])))
-            if !str(a["title"]).isEmpty { parts.append(quoted(str(a["title"]))) }
-        case "list_recipes":
-            if !str(a["query"]).isEmpty { parts.append(quoted(str(a["query"]))) }
-            if !str(a["ingredient"]).isEmpty { parts.append(str(a["ingredient"])) }
-            if let tags = a["tags"]?.arrayValue {
-                parts.append(tags.map { named($0) }.filter { !$0.isEmpty }.prefix(3).joined(separator: ", "))
-            }
-        case "get_recipe":
-            if !named(a["recipe"]).isEmpty { parts.append(quoted(named(a["recipe"]))) }
-        case "save_recipe":
-            let title = str(a["title"]).isEmpty ? named(a["recipe"]) : str(a["title"])
-            if !title.isEmpty { parts.append(quoted(title)) }
-        case "plan_meals":
-            if let tags = a["excludeTags"]?.arrayValue, !tags.isEmpty {
-                let names = tags.map { named($0) }.filter { !$0.isEmpty }.joined(separator: ", ")
-                parts.append(String(localized: "without \(names)"))
-            }
-        case "get_shopping_items":
-            parts.append(span(date(a["from"]), ""))
-        case "get_reminders":
-            if !named(a["list"]).isEmpty { parts.append(quoted(named(a["list"]))) }
-        case "edit_reminders":
-            let titles = ops.map { str($0["title"]) }.filter { !$0.isEmpty }
-            if !ops.isEmpty {
-                let n = ops.count
-                parts.append(String(AttributedString(localized: "^[\(n) change](inflect: true)").characters))
-            }
-            parts.append(list(titles, max: 3))
-        case "get_apple_calendar":
-            parts.append(span(date(a["from"]), date(a["to"])))
-            if !named(a["calendar"]).isEmpty { parts.append(quoted(named(a["calendar"]))) }
-        case "edit_apple_calendar":
-            let titles = ops.map { str($0["title"]) }.filter { !$0.isEmpty }
-            if !ops.isEmpty {
-                let n = ops.count
-                parts.append(String(AttributedString(localized: "^[\(n) change](inflect: true)").characters))
-            }
-            parts.append(list(titles, max: 3))
-        case "suggest_items":
-            let items = (a["items"]?.arrayValue ?? []).compactMap(\.objectValue)
-            let titles = items.map { str($0["title"]) }.filter { !$0.isEmpty }
-            if !items.isEmpty {
-                let n = items.count
-                parts.append(String(AttributedString(localized: "^[\(n) suggestion](inflect: true)").characters))
-            }
-            parts.append(list(titles, max: 3))
-        case "find_doctor_specialities":
-            parts.append(quoted(str(a["query"])))
-        case "create_appointment_search":
-            if !str(a["speciality"]).isEmpty { parts.append(str(a["speciality"])) }
-            if !date(a["before"]).isEmpty { parts.append(span("", date(a["before"]))) }
-            if !str(a["place"]).isEmpty { parts.append(str(a["place"])) }
-        case "change_appointment_search", "run_appointment_search", "get_appointment_slot", "book_appointment_slot":
-            if !named(a["search"]).isEmpty { parts.append(quoted(named(a["search"]))) }
-        case "manage_categories":
-            let name = named(a["name"]).isEmpty ? named(a["category"]) : named(a["name"])
-            if !name.isEmpty { parts.append(quoted(name)) }
-            if !named(a["parent"]).isEmpty { parts.append("→ \(quoted(named(a["parent"])))") }
-        case "search_knowledge":
-            if !str(a["query"]).isEmpty { parts.append(quoted(str(a["query"]))) }
-            if let tags = a["tags"]?.arrayValue { parts.append(list(tags.map { str($0) }.filter { !$0.isEmpty }, max: 3)) }
-            if !str(a["folder"]).isEmpty { parts.append(KnowledgePath.breadcrumb(str(a["folder"]))) }
-        case "knowledge_values":
-            if !str(a["query"]).isEmpty { parts.append(quoted(str(a["query"]))) }
-            if !str(a["person"]).isEmpty { parts.append(str(a["person"])) }
-        case "edit_knowledge_notes":
-            let names = ops.map { KnowledgePath.parts(str($0["path"])).last ?? "" }.filter { !$0.isEmpty }
-            if !ops.isEmpty {
-                let n = ops.count
-                parts.append(String(AttributedString(localized: "^[\(n) change](inflect: true)").characters))
-            }
-            parts.append(list(names, max: 3))
-        case "edit_memories":
-            let texts = ops.map { str($0["text"]) }.filter { !$0.isEmpty }
-                .map { $0.count > 40 ? String($0.prefix(40)) + "…" : $0 }
-            if !ops.isEmpty {
-                let n = ops.count
-                parts.append(String(AttributedString(localized: "^[\(n) change](inflect: true)").characters))
-            }
-            parts.append(list(texts.map(quoted), max: 2))
-        case "read_knowledge":
-            if let page = a["page"]?.doubleValue, page >= 1 {
-                let n = Int(page)
-                parts.append(String(localized: "Page \(n)"))
-            }
-        default:
-            break
-        }
-        return parts.filter { !$0.isEmpty }.joined(separator: " · ")
-    }
-
-    private static func number(_ v: JSONValue?) -> String {
-        switch v {
-        case let .number(n): n == n.rounded() ? String(Int(n)) : String(n)
-        case let .string(s): s
-        default: ""
-        }
     }
 }

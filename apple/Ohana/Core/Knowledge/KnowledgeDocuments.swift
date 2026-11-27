@@ -79,26 +79,26 @@ nonisolated struct KnowledgeDocumentSummary: Decodable, Hashable, Identifiable, 
     }
 
     init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        id = try c.decode(String.self, forKey: .id)
-        folderId = try c.decodeIfPresent(String.self, forKey: .folderId) ?? ""
-        path = try c.decodeIfPresent(String.self, forKey: .path) ?? ""
+        let codingContainer = try decoder.container(keyedBy: CodingKeys.self)
+        id = try codingContainer.decode(String.self, forKey: .id)
+        folderId = try codingContainer.decodeIfPresent(String.self, forKey: .folderId) ?? ""
+        path = try codingContainer.decodeIfPresent(String.self, forKey: .path) ?? ""
         let last = path.split(separator: "/").last.map(String.init) ?? path
-        name = try c.decodeIfPresent(String.self, forKey: .name) ?? last
-        tags = (try? c.decodeIfPresent([String].self, forKey: .tags)) ?? []
-        size = (try? c.decodeIfPresent(Int64.self, forKey: .size)) ?? 0
-        mtime = (try? c.decodeIfPresent(Int64.self, forKey: .mtime)) ?? 0
-        hash = (try? c.decodeIfPresent(String.self, forKey: .hash)) ?? ""
-        pages = (try? c.decodeIfPresent(Int.self, forKey: .pages)) ?? 0
-        status = try c.decodeIfPresent(KnowledgeDocumentStatus.self, forKey: .status) ?? .ready
-        error = try? c.decodeIfPresent(String.self, forKey: .error)
-        summary = try? c.decodeIfPresent(String.self, forKey: .summary)
-        docDate = try? c.decodeIfPresent(String.self, forKey: .docDate)
-        person = try? c.decodeIfPresent(KnowledgePerson.self, forKey: .person)
-        missingSince = try? c.decodeIfPresent(String.self, forKey: .missingSince)
-        cardStatus = try? c.decodeIfPresent(KnowledgeCardStatus.self, forKey: .cardStatus)
-        cardError = try? c.decodeIfPresent(String.self, forKey: .cardError)
-        aiPages = (try? c.decodeIfPresent([Int].self, forKey: .aiPages)) ?? []
+        name = try codingContainer.decodeIfPresent(String.self, forKey: .name) ?? last
+        tags = (try? codingContainer.decodeIfPresent([String].self, forKey: .tags)) ?? []
+        size = (try? codingContainer.decodeIfPresent(Int64.self, forKey: .size)) ?? 0
+        mtime = (try? codingContainer.decodeIfPresent(Int64.self, forKey: .mtime)) ?? 0
+        hash = (try? codingContainer.decodeIfPresent(String.self, forKey: .hash)) ?? ""
+        pages = (try? codingContainer.decodeIfPresent(Int.self, forKey: .pages)) ?? 0
+        status = try codingContainer.decodeIfPresent(KnowledgeDocumentStatus.self, forKey: .status) ?? .ready
+        error = try? codingContainer.decodeIfPresent(String.self, forKey: .error)
+        summary = try? codingContainer.decodeIfPresent(String.self, forKey: .summary)
+        docDate = try? codingContainer.decodeIfPresent(String.self, forKey: .docDate)
+        person = try? codingContainer.decodeIfPresent(KnowledgePerson.self, forKey: .person)
+        missingSince = try? codingContainer.decodeIfPresent(String.self, forKey: .missingSince)
+        cardStatus = try? codingContainer.decodeIfPresent(KnowledgeCardStatus.self, forKey: .cardStatus)
+        cardError = try? codingContainer.decodeIfPresent(String.self, forKey: .cardError)
+        aiPages = (try? codingContainer.decodeIfPresent([Int].self, forKey: .aiPages)) ?? []
     }
 
     /// The folders the file is in (relative to the knowledge folder; empty at its top).
@@ -129,11 +129,11 @@ nonisolated struct KnowledgeFact: Decodable, Hashable, Sendable {
     }
 
     init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        text = (try? c.decodeIfPresent(String.self, forKey: .text)) ?? ""
-        quote = (try? c.decodeIfPresent(String.self, forKey: .quote)) ?? ""
-        chunkId = try? c.decodeIfPresent(Int.self, forKey: .chunkId)
-        page = try? c.decodeIfPresent(Int.self, forKey: .page)
+        let codingContainer = try decoder.container(keyedBy: CodingKeys.self)
+        text = (try? codingContainer.decodeIfPresent(String.self, forKey: .text)) ?? ""
+        quote = (try? codingContainer.decodeIfPresent(String.self, forKey: .quote)) ?? ""
+        chunkId = try? codingContainer.decodeIfPresent(Int.self, forKey: .chunkId)
+        page = try? codingContainer.decodeIfPresent(Int.self, forKey: .page)
     }
 }
 
@@ -169,15 +169,15 @@ nonisolated struct KnowledgeValue: Decodable, Hashable, Sendable {
     }
 
     init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        name = (try? c.decodeIfPresent(String.self, forKey: .name)) ?? ""
-        value = (try? c.decodeIfPresent(String.self, forKey: .value)) ?? ""
-        unit = try? c.decodeIfPresent(String.self, forKey: .unit)
-        range = try? c.decodeIfPresent(String.self, forKey: .range)
-        group = try? c.decodeIfPresent(String.self, forKey: .group)
-        date = try? c.decodeIfPresent(String.self, forKey: .date)
-        note = try? c.decodeIfPresent(String.self, forKey: .note)
-        page = try? c.decodeIfPresent(Int.self, forKey: .page)
+        let codingContainer = try decoder.container(keyedBy: CodingKeys.self)
+        name = (try? codingContainer.decodeIfPresent(String.self, forKey: .name)) ?? ""
+        value = (try? codingContainer.decodeIfPresent(String.self, forKey: .value)) ?? ""
+        unit = try? codingContainer.decodeIfPresent(String.self, forKey: .unit)
+        range = try? codingContainer.decodeIfPresent(String.self, forKey: .range)
+        group = try? codingContainer.decodeIfPresent(String.self, forKey: .group)
+        date = try? codingContainer.decodeIfPresent(String.self, forKey: .date)
+        note = try? codingContainer.decodeIfPresent(String.self, forKey: .note)
+        page = try? codingContainer.decodeIfPresent(Int.self, forKey: .page)
     }
 
     /// The value with its unit: "13,5 g/dl".
@@ -238,14 +238,14 @@ nonisolated struct KnowledgeDocumentDetail: Decodable, Hashable, Sendable {
 
     init(from decoder: any Decoder) throws {
         document = try KnowledgeDocumentSummary(from: decoder)
-        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let codingContainer = try decoder.container(keyedBy: CodingKeys.self)
         // Facts without their text (an older card) are left out.
-        facts = (try? c.decodeIfPresent([KnowledgeFact].self, forKey: .facts))?
+        facts = (try? codingContainer.decodeIfPresent([KnowledgeFact].self, forKey: .facts))?
             .map { $0.filter { !$0.text.isEmpty } }
-        values = ((try? c.decodeIfPresent([KnowledgeValue].self, forKey: .values)) ?? [])
+        values = ((try? codingContainer.decodeIfPresent([KnowledgeValue].self, forKey: .values)) ?? [])
             .filter { !$0.name.isEmpty && !$0.value.isEmpty }
-        chunks = (try? c.decodeIfPresent([KnowledgeChunk].self, forKey: .chunks)) ?? []
-        scans = ((try? c.decodeIfPresent([KnowledgePageScanState].self, forKey: .scans)) ?? [])
+        chunks = (try? codingContainer.decodeIfPresent([KnowledgeChunk].self, forKey: .chunks)) ?? []
+        scans = ((try? codingContainer.decodeIfPresent([KnowledgePageScanState].self, forKey: .scans)) ?? [])
             .filter { $0.status != .done }
         textByPage = Self.pages(chunks)
     }
@@ -287,9 +287,9 @@ nonisolated struct KnowledgeDocumentsPage: Decodable, Hashable, OffMainDecodable
     }
 
     init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        documents = try c.decode([KnowledgeDocumentSummary].self, forKey: .documents)
-        nextCursor = try? c.decodeIfPresent(String.self, forKey: .nextCursor)
+        let codingContainer = try decoder.container(keyedBy: CodingKeys.self)
+        documents = try codingContainer.decode([KnowledgeDocumentSummary].self, forKey: .documents)
+        nextCursor = try? codingContainer.decodeIfPresent(String.self, forKey: .nextCursor)
     }
 }
 

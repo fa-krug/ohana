@@ -2,9 +2,10 @@ import CoreTransferable
 import UniformTypeIdentifiers
 
 // What can be dragged inside the app (iPad and Mac): a recipe or a planned meal onto a day of
-// the meal plan, a calendar event onto another day, an entry type onto another place in the list. Each has a type of its own, declared in the apps' Info.plists (project.yml, UTExportedTypeDeclarations),
-// so other apps' text or files are never taken for one. Each payload names its family: a drop
-// in a window showing another family is ignored.
+// the meal plan, a calendar event onto another day, an entry type onto another place in the
+// list. Each has a type of its own, declared in the apps' Info.plists (project.yml,
+// UTExportedTypeDeclarations), so other apps' text or files are never taken for one. Each
+// payload names its family: a drop in a window showing another family is ignored.
 
 extension UTType {
     nonisolated static let ohanaMeal = UTType(exportedAs: "de.fa-krug.ohana.meal")

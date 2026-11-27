@@ -39,8 +39,8 @@ nonisolated struct Day: Hashable, Comparable, Codable, CustomStringConvertible, 
     private static let cachedCalendar = OSAllocatedUnfairLock<Calendar?>(initialState: nil)
 
     init(_ date: Date, calendar: Calendar = Day.calendar) {
-        let c = calendar.dateComponents([.year, .month, .day], from: date)
-        self.init(year: c.year!, month: c.month!, day: c.day!)
+        let components = calendar.dateComponents([.year, .month, .day], from: date)
+        self.init(year: components.year!, month: components.month!, day: components.day!)
     }
 
     static var today: Day { Day(Date()) }
@@ -54,8 +54,8 @@ nonisolated struct Day: Hashable, Comparable, Codable, CustomStringConvertible, 
     }
 
     func encode(to encoder: any Encoder) throws {
-        var c = encoder.singleValueContainer()
-        try c.encode(description)
+        var container = encoder.singleValueContainer()
+        try container.encode(description)
     }
 
     var description: String { String(format: "%04d-%02d-%02d", year, month, day) }
@@ -71,8 +71,8 @@ nonisolated struct Day: Hashable, Comparable, Codable, CustomStringConvertible, 
     /// 1 = Sunday … 7 = Saturday.
     var weekday: Int { Day.calendar.component(.weekday, from: date) }
 
-    static func < (a: Day, b: Day) -> Bool {
-        (a.year, a.month, a.day) < (b.year, b.month, b.day)
+    static func < (lhs: Day, rhs: Day) -> Bool {
+        (lhs.year, lhs.month, lhs.day) < (rhs.year, rhs.month, rhs.day)
     }
 
     func formatted(_ style: Date.FormatStyle = .dateTime.weekday(.abbreviated).day().month(.abbreviated)) -> String {

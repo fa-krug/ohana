@@ -107,8 +107,8 @@ struct ReminderDue: Hashable, Codable, CustomStringConvertible {
     }
 
     func encode(to encoder: any Encoder) throws {
-        var c = encoder.singleValueContainer()
-        try c.encode(description)
+        var container = encoder.singleValueContainer()
+        try container.encode(description)
     }
 }
 
@@ -139,16 +139,16 @@ struct ReminderSnapshot: Hashable, Identifiable {
 
     /// Nearest due first (by day, then time; all day before timed), those without a due date last,
     /// then by title.
-    static func nearestDueFirst(_ a: ReminderSnapshot, _ b: ReminderSnapshot) -> Bool {
-        switch (a.due, b.due) {
-        case let (x?, y?) where x != y:
-            if x.day != y.day { return x.day < y.day }
-            let tx = x.time.map { $0.hour * 60 + $0.minute } ?? -1
-            let ty = y.time.map { $0.hour * 60 + $0.minute } ?? -1
-            return tx < ty
+    static func nearestDueFirst(_ lhs: ReminderSnapshot, _ rhs: ReminderSnapshot) -> Bool {
+        switch (lhs.due, rhs.due) {
+        case let (lhsDue?, rhsDue?) where lhsDue != rhsDue:
+            if lhsDue.day != rhsDue.day { return lhsDue.day < rhsDue.day }
+            let lhsMinutes = lhsDue.time.map { $0.hour * 60 + $0.minute } ?? -1
+            let rhsMinutes = rhsDue.time.map { $0.hour * 60 + $0.minute } ?? -1
+            return lhsMinutes < rhsMinutes
         case (.some, nil): return true
         case (nil, .some): return false
-        default: return a.title.localizedStandardCompare(b.title) == .orderedAscending
+        default: return lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
         }
     }
 }
