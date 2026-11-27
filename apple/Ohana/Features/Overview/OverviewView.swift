@@ -32,6 +32,12 @@ struct OverviewView: View {
         .ohanaBackground(ModuleTint.overview)
         .navigationTitle("Overview")
         .toolbar {
+            // On iPhone scanning a letter is otherwise only on the family page.
+            if Module.onPhone {
+                ToolbarItem {
+                    Button("Scan letter", systemImage: "doc.text.viewfinder") { family.scanLetter() }
+                }
+            }
             ToolbarItem {
                 Menu {
                     Section("Cards") {
