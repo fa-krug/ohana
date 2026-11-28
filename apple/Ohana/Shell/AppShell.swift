@@ -181,11 +181,19 @@ struct AppShell: View {
         } else {
             TabView(selection: selection) {
                 tab(.overview, assistantOn: assistantOn)
+                #if os(iOS)
+                // Tabs of their own, no section: with the sidebar collapsed the iPad's tab bar shows
+                // a section as one item ("Modules") instead of its modules.
+                ForEach(Module.modules.filter { context.isEnabled($0) }) {
+                    tab($0, assistantOn: assistantOn)
+                }
+                #else
                 TabSection("Modules") {
                     ForEach(Module.modules.filter { context.isEnabled($0) && !Self.ownSection.contains($0) }) {
                         tab($0, assistantOn: assistantOn)
                     }
                 }
+                #endif
                 #if os(macOS)
                 // The assistant and scanning a letter, a section of their own below the modules.
                 TabSection("Tools") {
